@@ -170,15 +170,19 @@ final class IslandWindow {
                 .setNormal(pose, nx, ny, nz);
     }
 
-    /** How wide the island is in the room (blocks), whatever size it was scanned at. */
-    private static final float ISLAND_WIDTH = 0.55F;
+    /**
+     * Every island fits the same space in the room, whatever size it was scanned at: its biggest side (width, or
+     * height of the part that has blocks) is this long, in blocks.
+     */
+    private static final float ISLAND_BOX = 0.55F;
     /** How high above the room's floor the island's lowest block floats (blocks). */
     private static final float ISLAND_LIFT = 0.16F;
 
-    /** The island low in the room, always the same width, centred left-right and front-back. */
+    /** The island in the same place and at the same overall size for every island: centred, bottom at a fixed height. */
     private static void placeIsland(PoseStack poseStack, IslandView view) {
         int bottom = view.lowestLayer();
-        float scale = ISLAND_WIDTH / view.size;
+        int tall = view.highestLayer() - bottom + 1;
+        float scale = ISLAND_BOX / Math.max(view.size, tall);
         poseStack.translate(0.5F, LO + ISLAND_LIFT, 1.0F + DEPTH / 2.0F);
         poseStack.scale(scale, scale, scale);
         poseStack.translate(-view.size / 2.0F, -bottom, -view.size / 2.0F);
