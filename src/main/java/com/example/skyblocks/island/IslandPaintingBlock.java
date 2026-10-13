@@ -36,20 +36,21 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The Island Painting: a framed shadow box hung on a wall. Right-click it with a Sky Island to put the island inside,
- * where it is shown in 3D, mobs and all (client/island/SkyIslandRenderer); right-click with an empty hand to take it
- * out. It uses the Sky Island's block entity to hold the island.
+ * The Island Painting: a flat frame on a wall, like a painting. Right-click it with a Sky Island and the picture
+ * becomes a window into a little room inside the wall with the island in it, mobs and all
+ * (client/island/IslandWindow); right-click with an empty hand to take the island out. It uses the Sky Island's
+ * block entity to hold the island.
  */
 public class IslandPaintingBlock extends BaseEntityBlock {
     public static final MapCodec<IslandPaintingBlock> CODEC = simpleCodec(IslandPaintingBlock::new);
     /** The way the painting faces (away from the wall it hangs on). */
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
 
-    /** The frame's box for each facing (half a block deep, against the wall). */
-    private static final VoxelShape NORTH = Block.box(0, 0, 8, 16, 16, 16);
-    private static final VoxelShape SOUTH = Block.box(0, 0, 0, 16, 16, 8);
-    private static final VoxelShape WEST = Block.box(8, 0, 0, 16, 16, 16);
-    private static final VoxelShape EAST = Block.box(0, 0, 0, 8, 16, 16);
+    /** The frame for each facing: flat against the wall, 1 pixel thick, like a painting. */
+    private static final VoxelShape NORTH = Block.box(0, 0, 15, 16, 16, 16);
+    private static final VoxelShape SOUTH = Block.box(0, 0, 0, 16, 16, 1);
+    private static final VoxelShape WEST = Block.box(15, 0, 0, 16, 16, 16);
+    private static final VoxelShape EAST = Block.box(0, 0, 0, 1, 16, 16);
 
     public IslandPaintingBlock(Properties properties) {
         super(properties);

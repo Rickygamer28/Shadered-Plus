@@ -23,6 +23,8 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void clientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(ShaderedSkies::register);
+        // The Island Painting's window needs a stencil buffer (client/island/IslandWindow).
+        event.enqueueWork(() -> net.minecraft.client.Minecraft.getInstance().getMainRenderTarget().enableStencil());
     }
 
     @SubscribeEvent
