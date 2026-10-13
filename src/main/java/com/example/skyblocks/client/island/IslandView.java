@@ -275,6 +275,40 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
         return Double.NaN;
     }
 
+    private int lowest = -1, highest = -1;
+
+    /** Lowest and highest layers that have any block (0 and height-1 if empty). */
+    int lowestLayer() {
+        findLayers();
+        return lowest;
+    }
+
+    int highestLayer() {
+        findLayers();
+        return highest;
+    }
+
+    private void findLayers() {
+        if (lowest >= 0) {
+            return;
+        }
+        lowest = 0;
+        highest = height - 1;
+        boolean found = false;
+        for (int y = 0; y < height; y++) {
+            for (int i = y * size * size; i < (y + 1) * size * size; i++) {
+                if (!states[i].isAir()) {
+                    if (!found) {
+                        lowest = y;
+                        found = true;
+                    }
+                    highest = y;
+                    break;
+                }
+            }
+        }
+    }
+
     IslandMesh mesh() {
         if (mesh == null || meshGeneration != generation) {
             if (mesh != null) {
@@ -360,6 +394,36 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
                     int i = index(x, y, z);
                     light = Math.max(0, light - opacity[i]);
                     skyLight[i] = (byte) light;
+                }
+            }
+        }
+        // Open air around the island (connected to its sides or bottom) is in daylight: a floating island is lit from
+        // the sides too, so its underside isn't black. Closed caves stay dark.
+        ArrayDeque<Integer> open = new ArrayDeque<>();
+        for (int y = 0; y < height; y++) {
+            for (int z = 0; z < size; z++) {
+                for (int x = 0; x < size; x++) {
+                    boolean border = y == 0 || x == 0 || z == 0 || x == size - 1 || z == size - 1;
+                    int i = index(x, y, z);
+                    if (border && opacity[i] == 0 && skyLight[i] < 15) {
+                        skyLight[i] = 15;
+                        open.add(i);
+                    }
+                }
+            }
+        }
+        int layer = size * size;
+        while (!open.isEmpty()) {
+            int i = open.poll();
+            int x = i % size, z = (i / size) % size, y = i / layer;
+            for (Direction d : Direction.values()) {
+                int nx = x + d.getStepX(), ny = y + d.getStepY(), nz = z + d.getStepZ();
+                if (inside(nx, ny, nz)) {
+                    int n = index(nx, ny, nz);
+                    if (opacity[n] == 0 && skyLight[n] < 15) {
+                        skyLight[n] = 15;
+                        open.add(n);
+                    }
                 }
             }
         }

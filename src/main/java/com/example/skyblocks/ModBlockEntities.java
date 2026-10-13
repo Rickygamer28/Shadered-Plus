@@ -22,7 +22,8 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(IslandScannerBlockEntity::new, ModBlocks.ISLAND_SCANNER.get()).build(null));
 
     public static final Supplier<BlockEntityType<SkyIslandBlockEntity>> SKY_ISLAND = TYPES.register("sky_island",
-            () -> BlockEntityType.Builder.of(SkyIslandBlockEntity::new, ModBlocks.SKY_ISLAND.get()).build(null));
+            () -> BlockEntityType.Builder.of(SkyIslandBlockEntity::new, ModBlocks.SKY_ISLAND.get(),
+                    ModBlocks.ISLAND_PAINTING.get()).build(null));
 
     private ModBlockEntities() {}
 }

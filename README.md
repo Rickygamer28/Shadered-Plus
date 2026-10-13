@@ -68,6 +68,11 @@ blockstate/models/loot/lang and adjust the scale. Models with a skeleton can use
   look-alikes, not real mobs: they can't be hit, don't drop anything and can't be used to duplicate anything. Mobs that
   were standing on the ground wander around the island now and then and look around; flying and swimming ones stay where
   they were. Breaking the pedestal gives the item back, island included.
+- **Island Painting** (`skyblocks:island_painting`, recipe: 8 sticks around an Amethyst Shard). Hang it on the side of
+  a block like a painting: a framed box with a painted sky. Right-click it with a Sky Island to put the island inside,
+  shown in 3D (as big as fits, mobs wandering); right-click with an empty hand to take it back out. Breaking it gives
+  back the painting and the island.
+- Islands are lit by daylight from all sides, so their undersides aren't dark (closed caves still are).
 - How it's drawn: the island is a tiny stand-alone "level" (`client/island/IslandView`). Minecraft's own block and fluid
   renderers turn it into quads once (`IslandMesh`), with biome colours and light (sunlight, torches, lava...) worked
   out from the copy; every frame those quads go through the normal render buffers, the way falling blocks do. So

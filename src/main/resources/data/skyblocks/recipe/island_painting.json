@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "decorations",
+  "pattern": [
+    "SSS",
+    "SAS",
+    "SSS"
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:stick"
+    },
+    "A": {
+      "item": "minecraft:amethyst_shard"
+    }
+  },
+  "result": {
+    "id": "skyblocks:island_painting",
+    "count": 1
+  }
+}

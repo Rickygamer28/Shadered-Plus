@@ -1,5 +1,6 @@
 package com.example.skyblocks;
 
+import com.example.skyblocks.island.IslandPaintingBlock;
 import com.example.skyblocks.island.IslandScannerBlock;
 import com.example.skyblocks.island.SkyIslandBlock;
 import net.minecraft.world.level.block.Blocks;
@@ -28,6 +29,11 @@ public final class ModBlocks {
     /** A placed Sky Island: a pedestal with the scanned island floating above it (island/SkyIslandBlock). */
     public static final DeferredBlock<SkyIslandBlock> SKY_ISLAND = BLOCKS.registerBlock("sky_island", SkyIslandBlock::new,
             BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.AMETHYST).noOcclusion());
+
+    /** A framed shadow box for the wall that shows a Sky Island inside (island/IslandPaintingBlock). */
+    public static final DeferredBlock<IslandPaintingBlock> ISLAND_PAINTING = BLOCKS.registerBlock("island_painting",
+            IslandPaintingBlock::new, BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.WOOD).noOcclusion()
+                    .pushReaction(PushReaction.DESTROY));
 
     private ModBlocks() {}
 }

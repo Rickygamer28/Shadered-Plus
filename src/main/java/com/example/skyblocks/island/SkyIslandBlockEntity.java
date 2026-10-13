@@ -38,6 +38,15 @@ public class SkyIslandBlockEntity extends BlockEntity {
         return DISPLAY_WIDTH;
     }
 
+    /** Island Painting: puts an island in (or takes it out with null). */
+    void setIsland(@Nullable IslandData island) {
+        this.island = island;
+        setChanged();
+        if (level != null) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+    }
+
 
     // The island travels between the item and the block as the skyblocks:island component.
     @Override

@@ -45,6 +45,7 @@ public class SkyBlocksMod {
         }
         event.accept(ModItems.OIIA_CAT.get());
         event.accept(ModItems.ISLAND_SCANNER.get());
+        event.accept(ModItems.ISLAND_PAINTING.get());
     }
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {

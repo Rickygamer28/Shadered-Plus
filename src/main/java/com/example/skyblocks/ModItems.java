@@ -37,5 +37,7 @@ public final class ModItems {
     public static final DeferredItem<SkyIslandItem> SKY_ISLAND = ITEMS.register("sky_island",
             () -> new SkyIslandItem(ModBlocks.SKY_ISLAND.get(), new Item.Properties().stacksTo(1)));
 
+    public static final DeferredItem<BlockItem> ISLAND_PAINTING = ITEMS.registerSimpleBlockItem("island_painting", ModBlocks.ISLAND_PAINTING);
+
     private ModItems() {}
 }

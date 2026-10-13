@@ -28,5 +28,6 @@
   "screen.skyblocks.area_hidden": "Area: Hidden",
   "message.skyblocks.island_too_far": "Too far from the Island Scanner",
   "message.skyblocks.island_wait": "Wait a moment before scanning again",
-  "message.skyblocks.island_failed": "Scan failed (see the log)"
+  "message.skyblocks.island_failed": "Scan failed (see the log)",
+  "block.skyblocks.island_painting": "Island Painting"
 }
