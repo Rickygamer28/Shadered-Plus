@@ -58,7 +58,8 @@ blockstate/models/loot/lang and adjust the scale. Models with a skeleton can use
   Shift-click - / + for bigger steps. **Scan** gives you a Sky Island item (a message says why if it can't scan).
   The scanner has its own model: a dark machine with a screen showing a little island on each side and a glowing
   amethyst lens on top; it gives off a little light. Above the lens floats a slowly turning **live preview** of the
-  island a scan would make right now (follows the menu's settings as you change them, and updates every 2 seconds).
+  island a scan would make right now, Shadered sky blocks, chests and signs included (follows the menu's settings
+  as you change them, and updates every 2 seconds).
 - **Sky Island** item: a snapshot of the area. Everything from the ground layer up is copied as it is; below it the
   island narrows into a rough rounded point, like a floating island. The original area is not changed.
   Mobs (and armor stands, item frames, paintings) in the area are copied too (up to 64). Tooltip: size and mob count.

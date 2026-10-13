@@ -228,7 +228,25 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
                 columns[z * size + x] = level.getBiome(origin.offset(x, ground, z)).value();
             }
         }
-        return new IslandView(null, size, height, states, columns);
+        IslandView view = new IslandView(null, size, height, states, columns);
+        // Blocks drawn by block entities (Shadered's sky blocks, chests, signs, banners...): draw the real ones,
+        // at their place in the miniature.
+        for (int y = 0; y < height; y++) {
+            for (int z = 0; z < size; z++) {
+                for (int x = 0; x < size; x++) {
+                    BlockState state = states[(y * size + z) * size + x];
+                    if (!state.hasBlockEntity()) {
+                        continue;
+                    }
+                    BlockEntity be = level.getBlockEntity(origin.offset(x, y, z));
+                    if (be != null && !(be instanceof com.example.skyblocks.island.SkyIslandBlockEntity)
+                            && !(be instanceof com.example.skyblocks.island.IslandScannerBlockEntity)) {
+                        view.blockEntities.add(new IslandBlockEntity(be, x, y, z, null));
+                    }
+                }
+            }
+        }
+        return view;
     }
 
     // ---- island access ----
