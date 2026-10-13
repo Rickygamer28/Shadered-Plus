@@ -44,7 +44,12 @@ final class IslandWindow {
     /** The picture area, inside the 1-pixel frame. */
     private static final float LO = 1.0F / 16.0F, HI = 15.0F / 16.0F;
     /** Just in front of the wall's face (local z = 1 for a north-facing painting). */
-    private static final float PICTURE_Z = 1.0F - 0.03F; // far enough from the wall not to flicker at a distance
+    /**
+     * Exactly on the wall's face (local z = 1 for a north-facing painting), so the window's edges line up with the
+     * frame's opening from every angle. It is pulled slightly towards the camera in depth only (polygon offset)
+     * so it doesn't flicker against the wall.
+     */
+    private static final float PICTURE_Z = 1.0F;
     private static final ResourceLocation BACKDROP =
             ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "textures/block/island_painting_backdrop.png");
 
@@ -223,6 +228,17 @@ final class IslandWindow {
 
     /** The picture area as a plain quad (only depth / stencil are written while it is drawn). */
     private static void drawPicture(Matrix4f m) {
+        RenderSystem.enablePolygonOffset();
+        RenderSystem.polygonOffset(-1.0F, -10.0F);
+        try {
+            drawPictureQuad(m);
+        } finally {
+            RenderSystem.polygonOffset(0.0F, 0.0F);
+            RenderSystem.disablePolygonOffset();
+        }
+    }
+
+    private static void drawPictureQuad(Matrix4f m) {
         BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
         builder.addVertex(m, LO, LO, PICTURE_Z);
         builder.addVertex(m, HI, LO, PICTURE_Z);
