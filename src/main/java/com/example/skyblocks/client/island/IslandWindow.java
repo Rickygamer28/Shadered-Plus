@@ -171,9 +171,9 @@ final class IslandWindow {
     }
 
     /** How wide the island is in the room (blocks), whatever size it was scanned at. */
-    private static final float ISLAND_WIDTH = 0.7F;
+    private static final float ISLAND_WIDTH = 0.55F;
     /** How high above the room's floor the island's lowest block floats (blocks). */
-    private static final float ISLAND_LIFT = 0.04F;
+    private static final float ISLAND_LIFT = 0.16F;
 
     /** The island low in the room, always the same width, centred left-right and front-back. */
     private static void placeIsland(PoseStack poseStack, IslandView view) {
