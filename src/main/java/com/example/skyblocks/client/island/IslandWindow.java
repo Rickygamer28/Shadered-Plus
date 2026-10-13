@@ -238,13 +238,12 @@ final class IslandWindow {
         if (background.isEmpty()) {
             return false;
         }
-        com.noodlegamer76.shadered.item.SkyblockData data =
-                background.get(com.noodlegamer76.shadered.util.InitDataComponents.SKYBLOCK_DATA.get());
-        if (data == null || data.type() == null) {
+        com.example.skyblocks.island.ShaderedSkyItems.Sky data = com.example.skyblocks.island.ShaderedSkyItems.sky(background);
+        if (data == null) {
             return false;
         }
         Integer sky = SkyblockRenderer.DATA_LIST.get(SkyblockRenderer.getData(data.type()));
-        SkyblockPass pass = data.pass() != null ? data.pass() : SkyblockPass.NORMAL;
+        SkyblockPass pass = data.pass();
         ShaderInstance shader = RegisterShaders.get(pass.getShaderName());
         if (sky == null || shader == null) {
             return false;

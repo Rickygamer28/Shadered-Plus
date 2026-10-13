@@ -21,7 +21,17 @@ jobs:
           gradle-version: 8.10.2
 
       - name: Build
-        run: gradle build --no-daemon
+        run: |
+          set -o pipefail
+          gradle build --no-daemon 2>&1 | tee build.log
+
+      # Show Java compile errors as annotations on the run (readable without opening the log).
+      - name: Report compile errors
+        if: failure()
+        run: |
+          grep -E "\.java:[0-9]+: error:" -A2 build.log | head -60 | while IFS= read -r line; do
+            echo "::error::$line"
+          done
 
       - name: Upload jar
         uses: actions/upload-artifact@v4

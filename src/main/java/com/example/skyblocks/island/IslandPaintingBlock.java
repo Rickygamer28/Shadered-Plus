@@ -3,7 +3,6 @@ package com.example.skyblocks.island;
 import com.example.skyblocks.ModComponents;
 import com.example.skyblocks.ModItems;
 import com.mojang.serialization.MapCodec;
-import com.noodlegamer76.shadered.util.InitDataComponents;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -129,7 +128,7 @@ public class IslandPaintingBlock extends BaseEntityBlock {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
         // A Shadered sky block (Shadered's or ours, filters included): becomes the room's background.
-        if (stack.get(InitDataComponents.SKYBLOCK_DATA.get()) != null) {
+        if (ShaderedSkyItems.isSkyBlock(stack)) {
             if (!level.isClientSide) {
                 ItemStack old = painting.background();
                 painting.setBackground(stack.copyWithCount(1));
