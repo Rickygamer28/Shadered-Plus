@@ -21,7 +21,6 @@
   "screen.skyblocks.island_above": "Height above: %s",
   "screen.skyblocks.island_depth": "Depth below: %s",
   "message.skyblocks.island_scanned": "Scanned a %sx%s sky island (%s mobs)",
-  "message.skyblocks.island_width": "Island shown %s blocks wide",
   "tooltip.skyblocks.island_empty": "Empty: scan an area with an Island Scanner",
   "tooltip.skyblocks.island_size": "%sx%s island, %s blocks tall",
   "tooltip.skyblocks.island_mobs": "%s mobs",

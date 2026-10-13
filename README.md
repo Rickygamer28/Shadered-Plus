@@ -63,8 +63,8 @@ blockstate/models/loot/lang and adjust the scale. Models with a skeleton can use
 - **Sky Island** item: a snapshot of the area. Everything from the ground layer up is copied as it is; below it the
   island narrows into a rough rounded point, like a floating island. The original area is not changed.
   Mobs (and armor stands, item frames, paintings) in the area are copied too (up to 64). Tooltip: size and mob count.
-- **Placing** it puts down a small pedestal with the island floating and gently bobbing above it as a miniature
-  (2 blocks wide by default; right-click with an empty hand: 1, 2, 3 or 4 blocks wide). The mini mobs are
+- **Placing** it puts down a small pedestal with the island floating and gently bobbing above it as a 1-block-wide
+  miniature. The mini mobs are
   look-alikes, not real mobs: they can't be hit, don't drop anything and can't be used to duplicate anything. Mobs that
   were standing on the ground wander around the island now and then and look around; flying and swimming ones stay where
   they were. Breaking the pedestal gives the item back, island included.
