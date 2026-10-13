@@ -11,7 +11,20 @@ import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.math.Axis;
+import com.noodlegamer76.shadered.client.renderer.ComplexPassRenderer;
+import com.noodlegamer76.shadered.client.renderer.SkyblockRenderer;
+import com.noodlegamer76.shadered.client.util.RenderCube;
+import com.noodlegamer76.shadered.client.util.SkyblockType;
+import com.noodlegamer76.shadered.client.util.skyblock.SkyblockBatchData;
+import com.noodlegamer76.shadered.client.util.skyblock.SkyblockPass;
+import com.noodlegamer76.shadered.event.RegisterShaders;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.ShaderInstance;
+import net.minecraft.core.BlockPos;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -40,6 +53,11 @@ final class IslandWindow {
             ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "textures/block/island_painting_backdrop.png");
 
     private static ByteBufferBuilder memory;
+
+    /** Shadered sky blocks of the island being drawn in a window (collected by IslandBlockEntity), or null. */
+    static List<Sky> capturing;
+
+    record Sky(SkyblockType type, SkyblockPass pass, Matrix4f pose) {}
 
     private static ByteBufferBuilder memory() {
         if (memory == null) {
@@ -94,13 +112,20 @@ final class IslandWindow {
             // 3. The room and the island, only inside the mark.
             MultiBufferSource.BufferSource scene = MultiBufferSource.immediate(memory());
             drawRoom(poseStack, scene, light);
+            List<Sky> skies = new ArrayList<>();
             if (view != null && mesh != null) {
                 placeIsland(poseStack, view);
                 mesh.render(poseStack.last(), scene);
-                view.renderBlockEntities(poseStack, scene, partialTick);
+                capturing = skies;
+                try {
+                    view.renderBlockEntities(poseStack, scene, partialTick);
+                } finally {
+                    capturing = null;
+                }
                 view.renderFigures(poseStack, scene, partialTick);
             }
             scene.endBatch();
+            drawSkyBlocks(skies);
 
             // 4. Put the picture's own depth back (so later effects treat it as the wall) and clear the mark.
             RenderSystem.disableCull();
@@ -122,6 +147,38 @@ final class IslandWindow {
             GL11.glDisable(GL11.GL_STENCIL_TEST);
             RenderSystem.enableCull();
             poseStack.popPose();
+        }
+    }
+
+    /**
+     * Draws Shadered sky blocks now (inside the window's mask), the way Shadered's own pass draws them: cube faces
+     * showing that sky's picture, which Shadered renders earlier in the frame.
+     */
+    private static void drawSkyBlocks(List<Sky> skies) {
+        if (skies.isEmpty()) {
+            return;
+        }
+        Map<SkyblockType, SkyblockBatchData> byType = new HashMap<>();
+        BlockPos nowhere = new BlockPos(29_000_000, 0, 29_000_000); // no neighbours there, so no face is skipped
+        for (Sky sky : skies) {
+            byType.computeIfAbsent(sky.type(), t -> new SkyblockBatchData()).add(sky.pass(), nowhere, sky.pose(), false, 1.0F);
+        }
+        int passDepth = ComplexPassRenderer.getInstance().getRenderBuffer().getDepthTextureId();
+        for (Map.Entry<SkyblockType, SkyblockBatchData> entry : byType.entrySet()) {
+            Integer sky = SkyblockRenderer.DATA_LIST.get(SkyblockRenderer.getData(entry.getKey()));
+            if (sky == null) {
+                continue; // that sky's picture isn't drawn this frame
+            }
+            for (SkyblockPass pass : SkyblockPass.values()) {
+                SkyblockBatchData.PassData data = entry.getValue().get(pass);
+                ShaderInstance shader = RegisterShaders.get(pass.getShaderName());
+                if (data == null || shader == null) {
+                    continue;
+                }
+                shader.setSampler("Skybox", sky);
+                shader.setSampler("PassDepth", passDepth);
+                RenderCube.renderSkyBlocks(data, false, shader);
+            }
         }
     }
 
