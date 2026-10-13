@@ -48,6 +48,35 @@ like Shadered's `MaxwellRenderer`. Shadered's animator only animates skeletons, 
 To add another model: put the .glb in `models/complex/`, then copy the OIIA Cat block, block entity, renderers,
 blockstate/models/loot/lang and adjust the scale. Models with a skeleton can use Shadered's `Animator` instead.
 
+## Sky Islands (miniature copies of an area)
+- **Island Scanner** (`skyblocks:island_scanner`, in Shadered's creative tab). Recipe: Glass x3 on top, Amethyst Shard /
+  Spyglass / Amethyst Shard in the middle, Iron Ingot x3 at the bottom.
+  Place it in the middle of the area you want and right-click it. The menu sets the **area** (3x3 up to 25x25, centred
+  on the scanner), the **height above** (1-24 layers, starting at the scanner's own layer) and the **depth below**
+  (0-24 layers under the block the scanner stands on). While the menu is open the area is outlined in the world
+  (white), with the ground layer in green. Shift-click - / + for bigger steps. **Scan** gives you a Sky Island item.
+- **Sky Island** item: a snapshot of the area. Everything from the ground layer up is copied as it is; below it the
+  island narrows into a rough rounded point, like a floating island. The original area is not changed.
+  Mobs (and armor stands, item frames, paintings) in the area are copied too (up to 64). Tooltip: size and mob count.
+- **Placing** it puts down a small pedestal with the island floating and gently bobbing above it as a miniature
+  (2 blocks wide by default; right-click with an empty hand: 1, 2, 3 or 4 blocks wide). The mini mobs are
+  look-alikes, not real mobs: they can't be hit, don't drop anything and can't be used to duplicate anything. Mobs that
+  were standing on the ground wander around the island now and then and look around; flying and swimming ones stay where
+  they were. Breaking the pedestal gives the item back, island included.
+- How it's drawn: the island is a tiny stand-alone "level" (`client/island/IslandView`). Minecraft's own block and fluid
+  renderers turn it into quads once (`IslandMesh`), with biome colours and light (sunlight, torches, lava...) worked
+  out from the copy; every frame those quads go through the normal render buffers, the way falling blocks do. So
+  see-through blocks (water, glass, ice) are depth-sorted, Fabulous graphics handles them, and shader packs (Iris)
+  treat the island like falling blocks.
+- Chests, beds, signs, banners, heads, lecterns, campfires, decorated pots, shulker boxes... are saved with what
+  players normally see of them (sign text, banner patterns, head owners; never chest contents or other server-only
+  data) and drawn by their normal renderers (`IslandBlockEntity`).
+- Mobs are client-only entities drawn by their normal renderers (`IslandFigure`); water mobs are told they're in water
+  so fish swim upright (`mixin/EntityAccessor`).
+- Notes: block entities and mobs are frozen in their resting look (closed chests, still enchanting-table books, no
+  beacon beams). Big islands send all their quads every frame, so many large islands in view at once cost some
+  performance. Saved mob data is trimmed (inventories, trades, AI memory) to keep the item small.
+
 ## Build
 Requires JDK 21 and internet access (Gradle downloads NeoForge, Shadered from Modrinth's maven, and GeckoLib).
     gradle wrapper --gradle-version 8.10.2

@@ -11,6 +11,7 @@
     "SkyblockTypeMixin"
   ],
   "client": [
+    "EntityAccessor",
     "ModRenderTypesMixin",
     "SkyblockEntityRendererMixin",
     "SkyblockRendererMixin"

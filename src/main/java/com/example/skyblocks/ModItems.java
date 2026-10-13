@@ -1,5 +1,7 @@
 package com.example.skyblocks;
 
+import com.example.skyblocks.island.SkyIslandItem;
+
 import com.noodlegamer76.shadered.block.InitBlocks;
 import com.noodlegamer76.shadered.item.SkyblockItem;
 import java.util.ArrayList;
@@ -28,6 +30,12 @@ public final class ModItems {
 
     /** The OIIA cat model block (its renderer is registered in client/ClientSetup). */
     public static final DeferredItem<BlockItem> OIIA_CAT = ITEMS.registerSimpleBlockItem("oiia_cat", ModBlocks.OIIA_CAT);
+
+    public static final DeferredItem<BlockItem> ISLAND_SCANNER = ITEMS.registerSimpleBlockItem("island_scanner", ModBlocks.ISLAND_SCANNER);
+
+    /** Holds a scanned island (only made by the Island Scanner). */
+    public static final DeferredItem<SkyIslandItem> SKY_ISLAND = ITEMS.register("sky_island",
+            () -> new SkyIslandItem(ModBlocks.SKY_ISLAND.get(), new Item.Properties().stacksTo(1)));
 
     private ModItems() {}
 }

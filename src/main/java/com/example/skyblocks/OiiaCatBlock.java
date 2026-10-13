@@ -76,7 +76,7 @@ public class OiiaCatBlock extends HorizontalDirectionalBlock implements EntityBl
 
     /** Redstone on/off switches the animation (synced to clients through the block state). */
     @Override
-    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
+    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
                                    BlockPos neighborPos, boolean movedByPiston) {
         super.neighborChanged(state, level, pos, neighborBlock, neighborPos, movedByPiston);
         if (level.isClientSide) {

@@ -4,6 +4,8 @@ import com.example.skyblocks.ModBlockEntities;
 import com.example.skyblocks.OiiaCatBlockEntity;
 import com.example.skyblocks.ModItems;
 import com.example.skyblocks.SkyBlocksMod;
+import com.example.skyblocks.client.island.IslandScannerRenderer;
+import com.example.skyblocks.client.island.SkyIslandRenderer;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.neoforged.api.distmarker.Dist;
@@ -28,6 +30,8 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.OIIA_CAT.get(), OiiaCatRenderer::new);
         BlockEntityRendererProvider<OiiaCatBlockEntity> big = OiiaCatRenderer::new;
         event.registerBlockEntityRenderer(ModBlockEntities.BIG_OIIA_CAT.get(), big);
+        event.registerBlockEntityRenderer(ModBlockEntities.SKY_ISLAND.get(), SkyIslandRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.ISLAND_SCANNER.get(), IslandScannerRenderer::new);
     }
 
     @SubscribeEvent

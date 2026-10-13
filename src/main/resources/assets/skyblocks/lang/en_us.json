@@ -12,5 +12,17 @@
   "item.skyblocks.golden_hour_sky_block": "Golden Hour Sky Block",
   "skyblock_type.skyblocks.golden_hour": "Golden Hour",
   "block.skyblocks.oiia_cat": "OIIA Cat",
-  "block.skyblocks.big_oiia_cat": "Big OIIA Cat"
+  "block.skyblocks.big_oiia_cat": "Big OIIA Cat",
+  "block.skyblocks.island_scanner": "Island Scanner",
+  "block.skyblocks.sky_island": "Sky Island",
+  "screen.skyblocks.island_scanner": "Island Scanner",
+  "screen.skyblocks.scan": "Scan",
+  "screen.skyblocks.island_size": "Area: %s x %s",
+  "screen.skyblocks.island_above": "Height above: %s",
+  "screen.skyblocks.island_depth": "Depth below: %s",
+  "message.skyblocks.island_scanned": "Scanned a %sx%s sky island (%s mobs)",
+  "message.skyblocks.island_width": "Island shown %s blocks wide",
+  "tooltip.skyblocks.island_empty": "Empty: scan an area with an Island Scanner",
+  "tooltip.skyblocks.island_size": "%sx%s island, %s blocks tall",
+  "tooltip.skyblocks.island_mobs": "%s mobs"
 }

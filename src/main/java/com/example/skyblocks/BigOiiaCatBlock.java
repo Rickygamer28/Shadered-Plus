@@ -323,7 +323,7 @@ public class BigOiiaCatBlock extends Block implements EntityBlock {
     // ---- redstone ----
 
     @Override
-    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
+    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
                                    BlockPos neighborPos, boolean movedByPiston) {
         super.neighborChanged(state, level, pos, neighborBlock, neighborPos, movedByPiston);
         if (level.isClientSide || busy) {
@@ -365,7 +365,7 @@ public class BigOiiaCatBlock extends Block implements EntityBlock {
 
     /** Any other removal (explosion, command, ...): the same, with the cats dropped. */
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
         if (!level.isClientSide && !busy && !newState.is(this)) {
             dismantle(level, pos, state, true);
         }

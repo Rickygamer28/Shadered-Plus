@@ -1,5 +1,6 @@
 package com.example.skyblocks;
 
+import com.example.skyblocks.island.ScanIslandPayload;
 import com.noodlegamer76.shadered.client.util.skyblock.SkyblockPass;
 import com.noodlegamer76.shadered.item.SkyblockHolderBlockItem;
 import net.minecraft.core.registries.Registries;
@@ -9,6 +10,7 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
 /**
  * Shadered+: adds skies to Shadered as real Shadered sky types (see the mixins in skyblocks.mixins.json).
@@ -27,7 +29,9 @@ public class SkyBlocksMod {
         ModBlocks.BLOCKS.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
         ModBlockEntities.TYPES.register(modEventBus);
+        ModComponents.COMPONENTS.register(modEventBus);
         modEventBus.addListener(SkyBlocksMod::addToShaderedTab);
+        modEventBus.addListener(SkyBlocksMod::registerPayloads);
     }
 
     /** Our skyblock items, like Shadered lists its own (Illusorite ores for our skies are added by Shadered itself). */
@@ -39,5 +43,10 @@ public class SkyBlocksMod {
             event.accept(SkyblockHolderBlockItem.create(SkyTypes.type(i), SkyblockPass.NORMAL, ModItems.SKY_ITEMS.get(i).get()));
         }
         event.accept(ModItems.OIIA_CAT.get());
+        event.accept(ModItems.ISLAND_SCANNER.get());
+    }
+
+    private static void registerPayloads(RegisterPayloadHandlersEvent event) {
+        event.registrar("1").playToServer(ScanIslandPayload.TYPE, ScanIslandPayload.STREAM_CODEC, ScanIslandPayload::handle);
     }
 }

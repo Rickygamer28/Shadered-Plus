@@ -1,5 +1,7 @@
 package com.example.skyblocks;
 
+import com.example.skyblocks.island.IslandScannerBlock;
+import com.example.skyblocks.island.SkyIslandBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -18,6 +20,14 @@ public final class ModBlocks {
     public static final DeferredBlock<BigOiiaCatBlock> BIG_OIIA_CAT = BLOCKS.registerBlock("big_oiia_cat", BigOiiaCatBlock::new,
             BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).sound(SoundType.WOOL).noOcclusion()
                     .pushReaction(PushReaction.BLOCK));
+
+    /** Scans the area around it into a Sky Island item (island/IslandScannerBlock). */
+    public static final DeferredBlock<IslandScannerBlock> ISLAND_SCANNER = BLOCKS.registerBlock("island_scanner",
+            IslandScannerBlock::new, BlockBehaviour.Properties.ofFullCopy(Blocks.LODESTONE));
+
+    /** A placed Sky Island: a pedestal with the scanned island floating above it (island/SkyIslandBlock). */
+    public static final DeferredBlock<SkyIslandBlock> SKY_ISLAND = BLOCKS.registerBlock("sky_island", SkyIslandBlock::new,
+            BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.AMETHYST).noOcclusion());
 
     private ModBlocks() {}
 }

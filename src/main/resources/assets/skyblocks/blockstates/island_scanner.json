@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "skyblocks:block/island_scanner"
+    }
+  }
+}

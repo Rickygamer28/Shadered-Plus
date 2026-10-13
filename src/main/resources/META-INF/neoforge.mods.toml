@@ -6,7 +6,7 @@ license="MIT"
 modId="${mod_id}"
 version="${mod_version}"
 displayName="Shadered+"
-description='''An addon for Shadered: four new Shadered sky types (Jupiter, Cat, Twilight, Hell) for skyblocks, the Sky Emitter, Illusorite ore and more.
+description='''An addon for Shadered: six new Shadered sky types (Jupiter, Cat, Twilight, Hell, Nebula, Golden Hour) for skyblocks, the Sky Emitter, Illusorite ore and more; the OIIA Cat model block (and the Big OIIA Cat from a cube of cats); and the Island Scanner, which turns an area into a floating miniature Sky Island, mobs included.
 
 Requires Shadered by Noodlegamer76 (https://github.com/Noodlegamer76/Shadered, CC BY-NC 4.0); made with the author's permission.
 Shadered+ is an unofficial addon, not made by the Shadered author.'''
