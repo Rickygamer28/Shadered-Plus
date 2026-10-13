@@ -11,7 +11,7 @@ public final class ClientAccess {
     public static void openIslandScanner(BlockPos pos) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.level.getBlockEntity(pos) instanceof IslandScannerBlockEntity scanner) {
-            mc.setScreen(new IslandScannerScreen(pos, scanner.size(), scanner.above(), scanner.depth()));
+            mc.setScreen(new IslandScannerScreen(pos, scanner.size(), scanner.above(), scanner.depth(), scanner.showArea()));
         }
     }
 

@@ -12,8 +12,8 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.world.phys.AABB;
 
 /**
- * While the scanner's menu is open: outlines the area it will scan (white) and the ground layer, where the
- * floating-island underside starts (green).
+ * When the scanner's Area button is on: outlines the area it will scan (white) and the ground layer, where the
+ * floating-island underside starts (green). While its menu is open, the outline follows the menu's values.
  */
 public class IslandScannerRenderer implements BlockEntityRenderer<IslandScannerBlockEntity> {
 
@@ -22,12 +22,25 @@ public class IslandScannerRenderer implements BlockEntityRenderer<IslandScannerB
     @Override
     public void render(IslandScannerBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffer,
                        int packedLight, int packedOverlay) {
-        if (!(Minecraft.getInstance().screen instanceof IslandScannerScreen screen) || !screen.pos().equals(be.getBlockPos())) {
-            return;
+        int size, above, depth;
+        if (Minecraft.getInstance().screen instanceof IslandScannerScreen screen && screen.pos().equals(be.getBlockPos())) {
+            if (!screen.showArea()) {
+                return;
+            }
+            size = screen.size();
+            above = screen.above();
+            depth = screen.depth();
+        } else {
+            if (!be.showArea()) {
+                return;
+            }
+            size = be.size();
+            above = be.above();
+            depth = be.depth();
         }
-        int r = screen.size() / 2;
+        int r = size / 2;
         VertexConsumer lines = buffer.getBuffer(RenderType.lines());
-        LevelRenderer.renderLineBox(poseStack, lines, -r, -1 - screen.depth(), -r, r + 1, screen.above(), r + 1,
+        LevelRenderer.renderLineBox(poseStack, lines, -r, -1 - depth, -r, r + 1, above, r + 1,
                 1.0F, 1.0F, 1.0F, 1.0F);
         LevelRenderer.renderLineBox(poseStack, lines, -r, -1, -r, r + 1, 0, r + 1, 0.4F, 1.0F, 0.5F, 1.0F);
     }

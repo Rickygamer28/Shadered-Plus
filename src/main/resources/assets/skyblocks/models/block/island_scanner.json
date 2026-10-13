@@ -1,8 +1,314 @@
 {
-  "parent": "minecraft:block/cube_bottom_top",
+  "parent": "minecraft:block/block",
   "textures": {
-    "top": "minecraft:block/amethyst_block",
-    "side": "minecraft:block/lodestone_side",
-    "bottom": "minecraft:block/lodestone_top"
-  }
+    "particle": "skyblocks:block/island_scanner_base_side",
+    "base_side": "skyblocks:block/island_scanner_base_side",
+    "base_top": "skyblocks:block/island_scanner_base_top",
+    "bottom": "skyblocks:block/island_scanner_bottom",
+    "core": "skyblocks:block/island_scanner_core",
+    "core_top": "skyblocks:block/island_scanner_core_top",
+    "lens": "skyblocks:block/island_scanner_lens"
+  },
+  "elements": [
+    {
+      "name": "base",
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        6,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#base_side",
+          "uv": [
+            0,
+            4,
+            16,
+            10
+          ],
+          "cullface": "north"
+        },
+        "south": {
+          "texture": "#base_side",
+          "uv": [
+            0,
+            4,
+            16,
+            10
+          ],
+          "cullface": "south"
+        },
+        "east": {
+          "texture": "#base_side",
+          "uv": [
+            0,
+            4,
+            16,
+            10
+          ],
+          "cullface": "east"
+        },
+        "west": {
+          "texture": "#base_side",
+          "uv": [
+            0,
+            4,
+            16,
+            10
+          ],
+          "cullface": "west"
+        },
+        "up": {
+          "texture": "#base_top",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#bottom",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "name": "core",
+      "from": [
+        3,
+        6,
+        3
+      ],
+      "to": [
+        13,
+        14,
+        13
+      ],
+      "faces": {
+        "north": {
+          "texture": "#core",
+          "uv": [
+            2,
+            3,
+            14,
+            13
+          ]
+        },
+        "south": {
+          "texture": "#core",
+          "uv": [
+            2,
+            3,
+            14,
+            13
+          ]
+        },
+        "east": {
+          "texture": "#core",
+          "uv": [
+            2,
+            3,
+            14,
+            13
+          ]
+        },
+        "west": {
+          "texture": "#core",
+          "uv": [
+            2,
+            3,
+            14,
+            13
+          ]
+        },
+        "up": {
+          "texture": "#core_top",
+          "uv": [
+            3,
+            3,
+            13,
+            13
+          ]
+        },
+        "down": {
+          "texture": "#bottom",
+          "uv": [
+            3,
+            3,
+            13,
+            13
+          ]
+        }
+      }
+    },
+    {
+      "name": "lens",
+      "from": [
+        5,
+        14,
+        5
+      ],
+      "to": [
+        11,
+        16,
+        11
+      ],
+      "neoforge_data": {
+        "block_light": 15,
+        "sky_light": 15,
+        "ambient_occlusion": false
+      },
+      "faces": {
+        "north": {
+          "texture": "#lens",
+          "uv": [
+            5,
+            7,
+            11,
+            9
+          ]
+        },
+        "south": {
+          "texture": "#lens",
+          "uv": [
+            5,
+            7,
+            11,
+            9
+          ]
+        },
+        "east": {
+          "texture": "#lens",
+          "uv": [
+            5,
+            7,
+            11,
+            9
+          ]
+        },
+        "west": {
+          "texture": "#lens",
+          "uv": [
+            5,
+            7,
+            11,
+            9
+          ]
+        },
+        "up": {
+          "texture": "#lens",
+          "uv": [
+            5,
+            5,
+            11,
+            11
+          ]
+        },
+        "down": {
+          "texture": "#lens",
+          "uv": [
+            5,
+            5,
+            11,
+            11
+          ]
+        }
+      }
+    },
+    {
+      "name": "crystal",
+      "from": [
+        7,
+        16,
+        7
+      ],
+      "to": [
+        9,
+        19,
+        9
+      ],
+      "rotation": {
+        "origin": [
+          8,
+          16,
+          8
+        ],
+        "axis": "y",
+        "angle": 45
+      },
+      "neoforge_data": {
+        "block_light": 15,
+        "sky_light": 15,
+        "ambient_occlusion": false
+      },
+      "faces": {
+        "north": {
+          "texture": "#lens",
+          "uv": [
+            2,
+            1,
+            4,
+            4
+          ]
+        },
+        "south": {
+          "texture": "#lens",
+          "uv": [
+            2,
+            1,
+            4,
+            4
+          ]
+        },
+        "east": {
+          "texture": "#lens",
+          "uv": [
+            2,
+            1,
+            4,
+            4
+          ]
+        },
+        "west": {
+          "texture": "#lens",
+          "uv": [
+            2,
+            1,
+            4,
+            4
+          ]
+        },
+        "up": {
+          "texture": "#lens",
+          "uv": [
+            2,
+            2,
+            4,
+            4
+          ]
+        },
+        "down": {
+          "texture": "#lens",
+          "uv": [
+            2,
+            2,
+            4,
+            4
+          ]
+        }
+      }
+    }
+  ]
 }

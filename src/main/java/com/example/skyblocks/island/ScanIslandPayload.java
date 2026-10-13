@@ -18,7 +18,8 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /** Island Scanner menu -> server: save the settings, and scan if asked. */
-public record ScanIslandPayload(BlockPos pos, int size, int above, int depth, boolean scan) implements CustomPacketPayload {
+public record ScanIslandPayload(BlockPos pos, int size, int above, int depth, boolean showArea, boolean scan)
+        implements CustomPacketPayload {
     public static final Type<ScanIslandPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "scan_island"));
 
@@ -27,6 +28,7 @@ public record ScanIslandPayload(BlockPos pos, int size, int above, int depth, bo
             ByteBufCodecs.VAR_INT, ScanIslandPayload::size,
             ByteBufCodecs.VAR_INT, ScanIslandPayload::above,
             ByteBufCodecs.VAR_INT, ScanIslandPayload::depth,
+            ByteBufCodecs.BOOL, ScanIslandPayload::showArea,
             ByteBufCodecs.BOOL, ScanIslandPayload::scan,
             ScanIslandPayload::new);
 
@@ -39,16 +41,32 @@ public record ScanIslandPayload(BlockPos pos, int size, int above, int depth, bo
         context.enqueueWork(() -> {
             Player player = context.player();
             if (!(player.level() instanceof ServerLevel level)
-                    || player.distanceToSqr(payload.pos().getCenter()) > 8 * 8
                     || !level.isLoaded(payload.pos())
                     || !(level.getBlockEntity(payload.pos()) instanceof IslandScannerBlockEntity scanner)) {
                 return;
             }
-            scanner.setSettings(payload.size(), payload.above(), payload.depth());
-            if (!payload.scan() || !scanner.tryStartScan(level.getGameTime())) {
+            if (player.distanceToSqr(payload.pos().getCenter()) > 8 * 8) {
+                if (payload.scan()) {
+                    player.displayClientMessage(Component.translatable("message.skyblocks.island_too_far"), true);
+                }
                 return;
             }
-            IslandData island = IslandScan.scan(level, payload.pos(), scanner.size(), scanner.above(), scanner.depth());
+            scanner.setSettings(payload.size(), payload.above(), payload.depth(), payload.showArea());
+            if (!payload.scan()) {
+                return;
+            }
+            if (!scanner.tryStartScan(level.getGameTime())) {
+                player.displayClientMessage(Component.translatable("message.skyblocks.island_wait"), true);
+                return;
+            }
+            IslandData island;
+            try {
+                island = IslandScan.scan(level, payload.pos(), scanner.size(), scanner.above(), scanner.depth());
+            } catch (RuntimeException e) {
+                SkyBlocksMod.LOGGER.error("Island scan at {} failed", payload.pos(), e);
+                player.displayClientMessage(Component.translatable("message.skyblocks.island_failed"), true);
+                return;
+            }
             ItemStack stack = new ItemStack(ModItems.SKY_ISLAND.get());
             stack.set(ModComponents.ISLAND.get(), island);
             if (!player.getInventory().add(stack)) {

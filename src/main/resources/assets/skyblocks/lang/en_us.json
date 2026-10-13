@@ -24,5 +24,10 @@
   "message.skyblocks.island_width": "Island shown %s blocks wide",
   "tooltip.skyblocks.island_empty": "Empty: scan an area with an Island Scanner",
   "tooltip.skyblocks.island_size": "%sx%s island, %s blocks tall",
-  "tooltip.skyblocks.island_mobs": "%s mobs"
+  "tooltip.skyblocks.island_mobs": "%s mobs",
+  "screen.skyblocks.area_shown": "Area: Shown",
+  "screen.skyblocks.area_hidden": "Area: Hidden",
+  "message.skyblocks.island_too_far": "Too far from the Island Scanner",
+  "message.skyblocks.island_wait": "Wait a moment before scanning again",
+  "message.skyblocks.island_failed": "Scan failed (see the log)"
 }

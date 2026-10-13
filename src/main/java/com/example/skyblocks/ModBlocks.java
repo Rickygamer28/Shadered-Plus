@@ -23,7 +23,7 @@ public final class ModBlocks {
 
     /** Scans the area around it into a Sky Island item (island/IslandScannerBlock). */
     public static final DeferredBlock<IslandScannerBlock> ISLAND_SCANNER = BLOCKS.registerBlock("island_scanner",
-            IslandScannerBlock::new, BlockBehaviour.Properties.ofFullCopy(Blocks.LODESTONE));
+            IslandScannerBlock::new, BlockBehaviour.Properties.ofFullCopy(Blocks.LODESTONE).noOcclusion().lightLevel(state -> 7));
 
     /** A placed Sky Island: a pedestal with the scanned island floating above it (island/SkyIslandBlock). */
     public static final DeferredBlock<SkyIslandBlock> SKY_ISLAND = BLOCKS.registerBlock("sky_island", SkyIslandBlock::new,

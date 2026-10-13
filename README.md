@@ -53,8 +53,11 @@ blockstate/models/loot/lang and adjust the scale. Models with a skeleton can use
   Spyglass / Amethyst Shard in the middle, Iron Ingot x3 at the bottom.
   Place it in the middle of the area you want and right-click it. The menu sets the **area** (3x3 up to 25x25, centred
   on the scanner), the **height above** (1-24 layers, starting at the scanner's own layer) and the **depth below**
-  (0-24 layers under the block the scanner stands on). While the menu is open the area is outlined in the world
-  (white), with the ground layer in green. Shift-click - / + for bigger steps. **Scan** gives you a Sky Island item.
+  (0-24 layers under the block the scanner stands on). The **Area** button shows or hides the outline of the area in
+  the world (white, with the ground layer in green); it stays on after closing the menu, until you turn it off.
+  Shift-click - / + for bigger steps. **Scan** gives you a Sky Island item (a message says why if it can't scan).
+  The scanner has its own model: a dark machine with a screen showing a little island on each side and a glowing
+  amethyst lens on top; it gives off a little light.
 - **Sky Island** item: a snapshot of the area. Everything from the ground layer up is copied as it is; below it the
   island narrows into a rough rounded point, like a floating island. The original area is not changed.
   Mobs (and armor stands, item frames, paintings) in the area are copied too (up to 64). Tooltip: size and mob count.

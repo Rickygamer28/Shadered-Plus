@@ -20,6 +20,7 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 @Mod(SkyBlocksMod.MOD_ID)
 public class SkyBlocksMod {
     public static final String MOD_ID = "skyblocks";
+    public static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
 
     /** Shadered's creative tab (shadered:shadered_tab). */
     public static final ResourceKey<CreativeModeTab> SHADERED_TAB = ResourceKey.create(
