@@ -30,6 +30,8 @@ final class IslandFigure {
     private int idle;
     private float body;
     private final float phase;
+    /** The first target is picked on the first tick (the island isn't known in the constructor's caller order). */
+    private boolean firstRest;
 
     IslandFigure(Entity entity, double x, double y, double z, RandomSource random, IslandView island) {
         this.entity = entity;
@@ -41,6 +43,7 @@ final class IslandFigure {
         this.body = entity instanceof LivingEntity living ? living.yBodyRot : entity.getYRot();
         this.walker = entity instanceof Mob && !(entity instanceof FlyingMob) && entity.onGround();
         this.idle = 20 + random.nextInt(120);
+        this.firstRest = true;
         this.phase = random.nextFloat() * 100.0F;
         entity.setYRot(body);
         entity.yRotO = body;
@@ -69,27 +72,33 @@ final class IslandFigure {
         living.yRotO = living.getYRot();
         living.xRotO = living.getXRot();
 
+        if (walker && firstRest) {
+            firstRest = false;
+            rest(island, random, idle);
+        }
         float moved = 0;
         if (walker && idle <= 0) {
             double dx = targetX - x, dz = targetZ - z;
             double dist = Math.sqrt(dx * dx + dz * dz);
             if (dist < 0.25) {
-                rest(random);
+                rest(island, random, 40 + random.nextInt(160)); // arrived: look around for a while
             } else {
                 float want = (float) (Mth.atan2(dz, dx) * Mth.RAD_TO_DEG) - 90.0F;
                 body = Mth.approachDegrees(body, want, 15.0F);
-                double step = Math.min(SPEED, dist);
-                double nx = x - Mth.sin(body * DEG) * step;
-                double nz = z + Mth.cos(body * DEG) * step;
-                double floor = island.floorBelow(nx, y, nz);
-                boolean onIsland = nx > 0.3 && nz > 0.3 && nx < island.size - 0.3 && nz < island.size - 0.3;
-                if (!onIsland || Double.isNaN(floor) || floor > y + 1.05) {
-                    rest(random); // wall, edge or drop: stop and pick somewhere else later
-                } else {
-                    x = nx;
-                    z = nz;
-                    y = floor;
-                    moved = (float) step;
+                // turn first, walk once roughly facing the target
+                if (Math.abs(Mth.degreesDifference(body, want)) < 35.0F) {
+                    double step = Math.min(SPEED, dist);
+                    double nx = x - Mth.sin(body * DEG) * step;
+                    double nz = z + Mth.cos(body * DEG) * step;
+                    double floor = standable(island, nx, nz, y);
+                    if (Double.isNaN(floor)) {
+                        rest(island, random, 10 + random.nextInt(20)); // blocked after all: pick another spot soon
+                    } else {
+                        x = nx;
+                        z = nz;
+                        y = floor;
+                        moved = (float) step;
+                    }
                 }
             }
         } else if (walker) {
@@ -107,10 +116,56 @@ final class IslandFigure {
         }
     }
 
-    private void rest(RandomSource random) {
-        idle = 40 + random.nextInt(160);
-        targetX = x + (random.nextDouble() - 0.5) * 10;
-        targetZ = z + (random.nextDouble() - 0.5) * 10;
+    /**
+     * Stops for the given time and picks the next spot to walk to: a random spot on the island that can be reached
+     * in a straight line without walking off an edge, into a wall or down a big drop. If none is found the mob just
+     * stays and looks around.
+     */
+    private void rest(IslandView island, RandomSource random, int ticks) {
+        idle = ticks;
+        targetX = x;
+        targetZ = z;
+        for (int attempt = 0; attempt < 12; attempt++) {
+            double tx = x + (random.nextDouble() - 0.5) * 12;
+            double tz = z + (random.nextDouble() - 0.5) * 12;
+            if (reachable(island, tx, tz)) {
+                targetX = tx;
+                targetZ = tz;
+                return;
+            }
+        }
+    }
+
+    /** Whether the straight line from here to (tx, tz) has floor all the way (checked every half block). */
+    private boolean reachable(IslandView island, double tx, double tz) {
+        double dx = tx - x, dz = tz - z;
+        double dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist < 1.0) {
+            return false;
+        }
+        int steps = (int) Math.ceil(dist / 0.5);
+        double height = y;
+        for (int i = 1; i <= steps; i++) {
+            double f = (double) i / steps;
+            double floor = standable(island, x + dx * f, z + dz * f, height);
+            if (Double.isNaN(floor)) {
+                return false;
+            }
+            height = floor;
+        }
+        return true;
+    }
+
+    /** Floor height a mob at height y can step onto at (px, pz), or NaN (off the island, wall, or big drop). */
+    private static double standable(IslandView island, double px, double pz, double y) {
+        if (px < 0.4 || pz < 0.4 || px > island.size - 0.4 || pz > island.size - 0.4) {
+            return Double.NaN;
+        }
+        double floor = island.floorBelow(px, y, pz);
+        if (Double.isNaN(floor) || floor > y + 1.05 || floor < y - 3.0) {
+            return Double.NaN;
+        }
+        return floor;
     }
 
     /**
