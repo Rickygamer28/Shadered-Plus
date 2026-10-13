@@ -48,7 +48,9 @@ final class IslandWindow {
         return memory;
     }
 
-    static void render(IslandView view, IslandMesh mesh, Direction facing, PoseStack poseStack, float partialTick, int light) {
+    /** Draws the window; view and mesh are null for an empty painting (just the room). */
+    static void render(@org.jetbrains.annotations.Nullable IslandView view, @org.jetbrains.annotations.Nullable IslandMesh mesh,
+                       Direction facing, PoseStack poseStack, float partialTick, int light) {
         poseStack.pushPose();
         // work in a north-facing painting's space: the wall behind is at z = 1..2, the room goes from z = 1 to 1 + DEPTH
         float yRot = switch (facing) {
@@ -92,10 +94,12 @@ final class IslandWindow {
             // 3. The room and the island, only inside the mark.
             MultiBufferSource.BufferSource scene = MultiBufferSource.immediate(memory());
             drawRoom(poseStack, scene, light);
-            placeIsland(poseStack, view);
-            mesh.render(poseStack.last(), scene);
-            view.renderBlockEntities(poseStack, scene, partialTick);
-            view.renderFigures(poseStack, scene, partialTick);
+            if (view != null && mesh != null) {
+                placeIsland(poseStack, view);
+                mesh.render(poseStack.last(), scene);
+                view.renderBlockEntities(poseStack, scene, partialTick);
+                view.renderFigures(poseStack, scene, partialTick);
+            }
             scene.endBatch();
 
             // 4. Put the picture's own depth back (so later effects treat it as the wall) and clear the mark.

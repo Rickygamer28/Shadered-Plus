@@ -69,8 +69,8 @@ blockstate/models/loot/lang and adjust the scale. Models with a skeleton can use
   were standing on the ground wander around the island now and then and look around; flying and swimming ones stay where
   they were. Breaking the pedestal gives the item back, island included.
 - **Island Painting** (`skyblocks:island_painting`, recipe: 8 sticks around an Amethyst Shard). Hang it on the side of
-  a block: a flat frame, 1 pixel thick like a painting. Right-click it with a Sky Island and the picture becomes a
-  window into a little sky room that goes a block deep into the wall, with the island floating in it (mobs wandering);
+  a block: a flat frame, 1 pixel thick like a painting, whose picture is a window into a little sky room that goes a
+  block deep into the wall. Right-click it with a Sky Island and the island floats in the room (mobs wandering);
   the room is lit like a painting. Right-click with an empty hand to take the island back out. Breaking it gives back
   the painting and the island. (The window uses the stencil buffer; with some shader packs it may show over things
   standing right in front of the painting, and with Fabulous graphics see-through blocks inside it may not show.)

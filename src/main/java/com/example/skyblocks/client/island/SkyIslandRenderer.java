@@ -28,15 +28,24 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
                        int packedLight, int packedOverlay) {
         IslandData data = be.island();
         Level level = be.getLevel();
+        BlockState state = be.getBlockState();
+        boolean painting = state.getBlock() instanceof IslandPaintingBlock;
         if (data == null || level == null) {
             if (be.clientView instanceof IslandView old) {
                 old.close(); // island taken out of a painting
                 be.clientView = null;
             }
+            if (painting && level != null) {
+                // an empty painting still shows its room
+                IslandWindow.render(null, null, state.getValue(IslandPaintingBlock.FACING), poseStack, partialTick, packedLight);
+            }
             return;
         }
         if (be.clientView instanceof Broken broken) {
             if (broken.source.equals(data)) {
+                if (painting) {
+                    IslandWindow.render(null, null, state.getValue(IslandPaintingBlock.FACING), poseStack, partialTick, packedLight);
+                }
                 return; // same island that failed before: don't retry every frame
             }
             be.clientView = null;
@@ -68,8 +77,7 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         long time = level.getGameTime();
         view.tickTo(time);
 
-        BlockState state = be.getBlockState();
-        if (state.getBlock() instanceof IslandPaintingBlock) {
+        if (painting) {
             IslandWindow.render(view, mesh, state.getValue(IslandPaintingBlock.FACING), poseStack, partialTick, packedLight);
             return;
         }

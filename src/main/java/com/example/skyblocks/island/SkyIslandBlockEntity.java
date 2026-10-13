@@ -85,6 +85,9 @@ public class SkyIslandBlockEntity extends BlockEntity {
         if (island != null) {
             tag.put("island", island.tag());
         }
+        // Always write something: clients ignore an empty update, so without this, taking the island out of a
+        // painting would never reach them and it would still be shown.
+        tag.putBoolean("has_island", island != null);
     }
 
     @Override
