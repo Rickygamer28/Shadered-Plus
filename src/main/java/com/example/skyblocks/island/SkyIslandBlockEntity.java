@@ -39,6 +39,21 @@ public class SkyIslandBlockEntity extends BlockEntity {
         return DISPLAY_WIDTH;
     }
 
+    /** Island Painting: how the island is turned, in steps of 45 degrees (0-7). */
+    private int rotation;
+
+    public int rotation() {
+        return rotation;
+    }
+
+    void rotate() {
+        rotation = (rotation + 1) % 8;
+        setChanged();
+        if (level != null) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+    }
+
     /** Island Painting: the Shadered sky block used as the room's background (empty = painted sky). */
     private ItemStack background = ItemStack.EMPTY;
 
@@ -89,6 +104,7 @@ public class SkyIslandBlockEntity extends BlockEntity {
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
+        rotation = Math.floorMod(tag.getInt("rotation"), 8);
         background = tag.contains("background")
                 ? ItemStack.parse(registries, tag.getCompound("background")).orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
         IslandData loaded = tag.contains("island") ? new IslandData(tag.getCompound("island")) : null;
@@ -106,6 +122,7 @@ public class SkyIslandBlockEntity extends BlockEntity {
         // Always write something: clients ignore an empty update, so without this, taking the island out of a
         // painting would never reach them and it would still be shown.
         tag.putBoolean("has_island", island != null);
+        tag.putInt("rotation", rotation);
         if (!background.isEmpty()) {
             tag.put("background", background.save(registries));
         }

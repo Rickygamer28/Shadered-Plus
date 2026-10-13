@@ -61,7 +61,7 @@ final class IslandWindow {
 
     /** Draws the window; view and mesh are null for an empty painting (just the room). */
     static void render(@org.jetbrains.annotations.Nullable IslandView view, @org.jetbrains.annotations.Nullable IslandMesh mesh,
-                       net.minecraft.world.item.ItemStack background, Direction facing, PoseStack poseStack,
+                       net.minecraft.world.item.ItemStack background, int rotation, Direction facing, PoseStack poseStack,
                        float partialTick, int light) {
         poseStack.pushPose();
         // work in a north-facing painting's space: the wall behind is at z = 1..2, the room goes from z = 1 to 1 + DEPTH
@@ -110,7 +110,7 @@ final class IslandWindow {
             }
             Map<SkyblockBatchData, SkyblockBatchData> skies = new HashMap<>();
             if (view != null && mesh != null) {
-                placeIsland(poseStack, view);
+                placeIsland(poseStack, view, rotation);
                 mesh.render(poseStack.last(), scene);
                 // Shadered's renderers (sky blocks, Illusorite ores...) only queue their sky cubes for Shadered's own
                 // pass later in the frame, which would draw them outside this window: take what they queue here and
@@ -319,10 +319,22 @@ final class IslandWindow {
     /** Room left above the island's bottom; only islands taller than this are shrunk to stay inside. */
     private static final float MAX_TALL = HI - (LO + ISLAND_LIFT) - 0.03F;
 
-    /** Every block the same size; the island centred on its blocks, bottom at a fixed height. */
-    private static void placeIsland(PoseStack poseStack, IslandView view) {
+    /**
+     * Every block the same size; the island centred on its blocks, bottom at a fixed height, turned by
+     * {@code rotation} x 45 degrees. Only an island too tall, or too wide when turned, for the room is shrunk.
+     */
+    private static void placeIsland(PoseStack poseStack, IslandView view, int rotation) {
+        float angle = rotation * 45.0F;
+        double radians = Math.toRadians(angle);
+        float turnedWidth = (float) (Math.abs(view.contentWidth() * Math.cos(radians))
+                + Math.abs(view.contentDepth() * Math.sin(radians)));
+        float turnedDepth = (float) (Math.abs(view.contentWidth() * Math.sin(radians))
+                + Math.abs(view.contentDepth() * Math.cos(radians)));
+        float room = HI - LO - 0.06F;
         float scale = Math.min(BLOCK_SCALE, MAX_TALL / view.contentHeight());
+        scale = Math.min(scale, Math.min(room / turnedWidth, DEPTH * 0.9F / turnedDepth));
         poseStack.translate(0.5F, LO + ISLAND_LIFT, 1.0F + DEPTH / 2.0F);
+        poseStack.mulPose(Axis.YP.rotationDegrees(angle));
         poseStack.scale(scale, scale, scale);
         poseStack.translate(-view.contentCenterX(), -view.lowestLayer(), -view.contentCenterZ());
     }

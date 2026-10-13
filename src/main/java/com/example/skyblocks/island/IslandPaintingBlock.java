@@ -161,6 +161,17 @@ public class IslandPaintingBlock extends BaseEntityBlock {
                 || (painting.island() == null && painting.background().isEmpty())) {
             return InteractionResult.PASS;
         }
+        if (player.isShiftKeyDown()) {
+            // sneak + empty hand: turn the island 45 degrees
+            if (painting.island() == null) {
+                return InteractionResult.PASS;
+            }
+            if (!level.isClientSide) {
+                painting.rotate();
+                level.playSound(null, pos, SoundEvents.ITEM_FRAME_ROTATE_ITEM, SoundSource.BLOCKS, 1.0F, 1.0F);
+            }
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
         if (!level.isClientSide) {
             // the island comes out first, then the background
             if (painting.island() != null) {
