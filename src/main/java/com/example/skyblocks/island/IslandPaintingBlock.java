@@ -3,6 +3,7 @@ package com.example.skyblocks.island;
 import com.example.skyblocks.ModComponents;
 import com.example.skyblocks.ModItems;
 import com.mojang.serialization.MapCodec;
+import com.noodlegamer76.shadered.util.InitDataComponents;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -124,8 +125,24 @@ public class IslandPaintingBlock extends BaseEntityBlock {
     @Override
     public ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
                                            InteractionHand hand, BlockHitResult hit) {
+        if (!(level.getBlockEntity(pos) instanceof SkyIslandBlockEntity painting)) {
+            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        }
+        // A Shadered sky block (Shadered's or ours, filters included): becomes the room's background.
+        if (stack.get(InitDataComponents.SKYBLOCK_DATA.get()) != null) {
+            if (!level.isClientSide) {
+                ItemStack old = painting.background();
+                painting.setBackground(stack.copyWithCount(1));
+                stack.consume(1, player);
+                if (!old.isEmpty()) {
+                    give(player, old);
+                }
+                level.playSound(null, pos, SoundEvents.ITEM_FRAME_ADD_ITEM, SoundSource.BLOCKS, 1.0F, 1.2F);
+            }
+            return ItemInteractionResult.sidedSuccess(level.isClientSide);
+        }
         IslandData island = stack.get(ModComponents.ISLAND.get());
-        if (island == null || !(level.getBlockEntity(pos) instanceof SkyIslandBlockEntity painting)) {
+        if (island == null) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
         if (painting.island() != null) {
@@ -142,18 +159,29 @@ public class IslandPaintingBlock extends BaseEntityBlock {
     @Override
     public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!player.getMainHandItem().isEmpty() || !(level.getBlockEntity(pos) instanceof SkyIslandBlockEntity painting)
-                || painting.island() == null) {
+                || (painting.island() == null && painting.background().isEmpty())) {
             return InteractionResult.PASS;
         }
         if (!level.isClientSide) {
-            ItemStack island = islandItem(painting);
-            painting.setIsland(null);
-            if (!player.getInventory().add(island)) {
-                player.drop(island, false);
+            // the island comes out first, then the background
+            if (painting.island() != null) {
+                ItemStack island = islandItem(painting);
+                painting.setIsland(null);
+                give(player, island);
+            } else {
+                ItemStack background = painting.background();
+                painting.setBackground(ItemStack.EMPTY);
+                give(player, background);
             }
             level.playSound(null, pos, SoundEvents.ITEM_FRAME_REMOVE_ITEM, SoundSource.BLOCKS, 1.0F, 1.0F);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    private static void give(Player player, ItemStack stack) {
+        if (!player.getInventory().add(stack)) {
+            player.drop(stack, false);
+        }
     }
 
     private static ItemStack islandItem(SkyIslandBlockEntity painting) {
@@ -162,14 +190,18 @@ public class IslandPaintingBlock extends BaseEntityBlock {
         return stack;
     }
 
-    /** The painting, plus the island inside it (no loot table: the island comes from the block entity). */
+    /** The painting, plus the island and background inside it (no loot table: the island comes from the block entity). */
     @Override
     public List<ItemStack> getDrops(BlockState state, LootParams.Builder builder) {
         List<ItemStack> drops = new ArrayList<>();
         drops.add(new ItemStack(ModItems.ISLAND_PAINTING.get()));
-        if (builder.getOptionalParameter(LootContextParams.BLOCK_ENTITY) instanceof SkyIslandBlockEntity painting
-                && painting.island() != null) {
-            drops.add(islandItem(painting));
+        if (builder.getOptionalParameter(LootContextParams.BLOCK_ENTITY) instanceof SkyIslandBlockEntity painting) {
+            if (painting.island() != null) {
+                drops.add(islandItem(painting));
+            }
+            if (!painting.background().isEmpty()) {
+                drops.add(painting.background().copy());
+            }
         }
         return drops;
     }

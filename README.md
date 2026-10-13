@@ -73,8 +73,10 @@ blockstate/models/loot/lang and adjust the scale. Models with a skeleton can use
   block deep into the wall. Right-click it with a Sky Island and the island floats in the lower part of the room, at the
   blocks drawn the same size in every painting (a 25x25 island just fills the room's width, a 3x3 one is small),
   centred on its blocks; only islands too tall for the room are shrunk to fit; mobs wandering;
-  the room is lit like a painting. Right-click with an empty hand to take the island back out. Breaking it gives back
-  the painting and the island. (The window uses the stencil buffer; with some shader packs it may show over things
+  the room is lit like a painting. Right-click it with any Shadered sky block (Shadered's or ours, filters included)
+  to use that sky as the room's background: its walls then show the sky like a sky block does; another sky block swaps
+  it. Right-click with an empty hand to take the island out, then (again) the background. Breaking it gives back the
+  painting, the island and the background. (The window uses the stencil buffer; with some shader packs it may show over things
   standing right in front of the painting, and with Fabulous graphics see-through blocks inside it may not show.)
 - Islands are lit by daylight from all sides, so their undersides aren't dark (closed caves still are).
 - How it's drawn: the island is a tiny stand-alone "level" (`client/island/IslandView`). Minecraft's own block and fluid

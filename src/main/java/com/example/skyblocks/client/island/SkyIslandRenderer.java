@@ -37,14 +37,14 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
             }
             if (painting && level != null) {
                 // an empty painting still shows its room
-                IslandWindow.render(null, null, state.getValue(IslandPaintingBlock.FACING), poseStack, partialTick, packedLight);
+                IslandWindow.render(null, null, be.background(), state.getValue(IslandPaintingBlock.FACING), poseStack, partialTick, packedLight);
             }
             return;
         }
         if (be.clientView instanceof Broken broken) {
             if (broken.source.equals(data)) {
                 if (painting) {
-                    IslandWindow.render(null, null, state.getValue(IslandPaintingBlock.FACING), poseStack, partialTick, packedLight);
+                    IslandWindow.render(null, null, be.background(), state.getValue(IslandPaintingBlock.FACING), poseStack, partialTick, packedLight);
                 }
                 return; // same island that failed before: don't retry every frame
             }
@@ -78,7 +78,7 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         view.tickTo(time);
 
         if (painting) {
-            IslandWindow.render(view, mesh, state.getValue(IslandPaintingBlock.FACING), poseStack, partialTick, packedLight);
+            IslandWindow.render(view, mesh, be.background(), state.getValue(IslandPaintingBlock.FACING), poseStack, partialTick, packedLight);
             return;
         }
         poseStack.pushPose();

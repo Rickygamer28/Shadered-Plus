@@ -6,6 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -36,6 +37,21 @@ public class SkyIslandBlockEntity extends BlockEntity {
 
     public int displayWidth() {
         return DISPLAY_WIDTH;
+    }
+
+    /** Island Painting: the Shadered sky block used as the room's background (empty = painted sky). */
+    private ItemStack background = ItemStack.EMPTY;
+
+    public ItemStack background() {
+        return background;
+    }
+
+    void setBackground(ItemStack background) {
+        this.background = background.copy();
+        setChanged();
+        if (level != null) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
     }
 
     /** Island Painting: puts an island in (or takes it out with null). */
@@ -73,6 +89,8 @@ public class SkyIslandBlockEntity extends BlockEntity {
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
+        background = tag.contains("background")
+                ? ItemStack.parse(registries, tag.getCompound("background")).orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
         IslandData loaded = tag.contains("island") ? new IslandData(tag.getCompound("island")) : null;
         if (loaded == null || !loaded.equals(island)) {
             island = loaded; // keep the same instance when nothing changed (the client renderer compares it)
@@ -88,6 +106,9 @@ public class SkyIslandBlockEntity extends BlockEntity {
         // Always write something: clients ignore an empty update, so without this, taking the island out of a
         // painting would never reach them and it would still be shown.
         tag.putBoolean("has_island", island != null);
+        if (!background.isEmpty()) {
+            tag.put("background", background.save(registries));
+        }
     }
 
     @Override

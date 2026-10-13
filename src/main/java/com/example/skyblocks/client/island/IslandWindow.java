@@ -61,7 +61,8 @@ final class IslandWindow {
 
     /** Draws the window; view and mesh are null for an empty painting (just the room). */
     static void render(@org.jetbrains.annotations.Nullable IslandView view, @org.jetbrains.annotations.Nullable IslandMesh mesh,
-                       Direction facing, PoseStack poseStack, float partialTick, int light) {
+                       net.minecraft.world.item.ItemStack background, Direction facing, PoseStack poseStack,
+                       float partialTick, int light) {
         poseStack.pushPose();
         // work in a north-facing painting's space: the wall behind is at z = 1..2, the room goes from z = 1 to 1 + DEPTH
         float yRot = switch (facing) {
@@ -104,7 +105,9 @@ final class IslandWindow {
 
             // 3. The room and the island, only inside the mark.
             MultiBufferSource.BufferSource scene = MultiBufferSource.immediate(memory());
-            drawRoom(poseStack, scene, light);
+            if (!drawSkyRoom(poseStack, background)) {
+                drawRoom(poseStack, scene, light);
+            }
             Map<SkyblockBatchData, SkyblockBatchData> skies = new HashMap<>();
             if (view != null && mesh != null) {
                 placeIsland(poseStack, view);
@@ -225,6 +228,50 @@ final class IslandWindow {
         builder.addVertex(m, LO, HI, PICTURE_Z);
         RenderSystem.setShader(GameRenderer::getPositionShader);
         BufferUploader.drawWithShader(builder.buildOrThrow());
+    }
+
+    /**
+     * A Shadered sky block as the background: the room's walls show that sky the way Shadered's sky blocks do (a
+     * window onto a faraway sky), with the block's filter. False if there is no such sky to draw (painted sky then).
+     */
+    private static boolean drawSkyRoom(PoseStack poseStack, net.minecraft.world.item.ItemStack background) {
+        if (background.isEmpty()) {
+            return false;
+        }
+        com.noodlegamer76.shadered.item.SkyblockData data =
+                background.get(com.noodlegamer76.shadered.util.InitDataComponents.SKYBLOCK_DATA.get());
+        if (data == null || data.type() == null) {
+            return false;
+        }
+        Integer sky = SkyblockRenderer.DATA_LIST.get(SkyblockRenderer.getData(data.type()));
+        SkyblockPass pass = data.pass() != null ? data.pass() : SkyblockPass.NORMAL;
+        ShaderInstance shader = RegisterShaders.get(pass.getShaderName());
+        if (sky == null || shader == null) {
+            return false;
+        }
+        shader.setSampler("Skybox", sky);
+        shader.setSampler("PassDepth", ComplexPassRenderer.getInstance().getRenderBuffer().getDepthTextureId());
+        RenderSystem.setShader(() -> shader);
+        RenderSystem.disableCull();
+        Matrix4f m = poseStack.last().pose();
+        float z0 = 1.0F, z1 = 1.0F + DEPTH;
+        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        skyQuad(builder, m, LO, LO, z1, HI, LO, z1, HI, HI, z1, LO, HI, z1); // back
+        skyQuad(builder, m, LO, LO, z0, LO, LO, z1, LO, HI, z1, LO, HI, z0); // left
+        skyQuad(builder, m, HI, LO, z1, HI, LO, z0, HI, HI, z0, HI, HI, z1); // right
+        skyQuad(builder, m, LO, HI, z1, HI, HI, z1, HI, HI, z0, LO, HI, z0); // top
+        skyQuad(builder, m, LO, LO, z0, HI, LO, z0, HI, LO, z1, LO, LO, z1); // floor
+        BufferUploader.drawWithShader(builder.buildOrThrow());
+        RenderSystem.enableCull();
+        return true;
+    }
+
+    private static void skyQuad(BufferBuilder b, Matrix4f m, float x0, float y0, float z0, float x1, float y1, float z1,
+                                float x2, float y2, float z2, float x3, float y3, float z3) {
+        b.addVertex(m, x0, y0, z0).setUv(0, 1).setColor(255, 255, 255, 255);
+        b.addVertex(m, x1, y1, z1).setUv(1, 1).setColor(255, 255, 255, 255);
+        b.addVertex(m, x2, y2, z2).setUv(1, 0).setColor(255, 255, 255, 255);
+        b.addVertex(m, x3, y3, z3).setUv(0, 0).setColor(255, 255, 255, 255);
     }
 
     /** The room behind the picture: sky on the back, sides, top and (darker) floor; lit like a painting. */
