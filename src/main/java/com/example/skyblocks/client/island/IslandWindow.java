@@ -171,21 +171,22 @@ final class IslandWindow {
     }
 
     /**
-     * Every island fits the same space in the room, whatever size it was scanned at: its biggest side (width, or
-     * height of the part that has blocks) is this long, in blocks.
+     * Every island has the same footprint in the room, whatever size it was scanned at: the wider side of the blocks
+     * actually in it (empty air around them doesn't count) is this long, in blocks.
      */
-    private static final float ISLAND_BOX = 0.55F;
+    private static final float ISLAND_WIDTH = 0.55F;
     /** How high above the room's floor the island's lowest block floats (blocks). */
     private static final float ISLAND_LIFT = 0.16F;
+    /** Room left above the island's bottom, so very tall islands are shrunk to stay inside. */
+    private static final float MAX_TALL = HI - (LO + ISLAND_LIFT) - 0.03F;
 
-    /** The island in the same place and at the same overall size for every island: centred, bottom at a fixed height. */
+    /** Same size and place for every island: centred on its blocks, bottom at a fixed height. */
     private static void placeIsland(PoseStack poseStack, IslandView view) {
-        int bottom = view.lowestLayer();
-        int tall = view.highestLayer() - bottom + 1;
-        float scale = ISLAND_BOX / Math.max(view.size, tall);
+        int footprint = Math.max(view.contentWidth(), view.contentDepth());
+        float scale = Math.min(ISLAND_WIDTH / footprint, MAX_TALL / view.contentHeight());
         poseStack.translate(0.5F, LO + ISLAND_LIFT, 1.0F + DEPTH / 2.0F);
         poseStack.scale(scale, scale, scale);
-        poseStack.translate(-view.size / 2.0F, -bottom, -view.size / 2.0F);
+        poseStack.translate(-view.contentCenterX(), -view.lowestLayer(), -view.contentCenterZ());
     }
 
     private IslandWindow() {}

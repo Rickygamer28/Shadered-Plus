@@ -275,38 +275,56 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
         return Double.NaN;
     }
 
-    private int lowest = -1, highest = -1;
+    /** Bounds of the blocks actually there (computed once): min/max x, y, z; whole island if it is empty. */
+    private int[] bounds;
 
-    /** Lowest and highest layers that have any block (0 and height-1 if empty). */
+    private int[] bounds() {
+        if (bounds == null) {
+            int minX = size, minY = height, minZ = size, maxX = -1, maxY = -1, maxZ = -1;
+            for (int y = 0; y < height; y++) {
+                for (int z = 0; z < size; z++) {
+                    for (int x = 0; x < size; x++) {
+                        if (!states[index(x, y, z)].isAir()) {
+                            minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+                            minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+                            minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
+                        }
+                    }
+                }
+            }
+            bounds = maxX < 0 ? new int[] {0, 0, 0, size - 1, height - 1, size - 1}
+                    : new int[] {minX, minY, minZ, maxX, maxY, maxZ};
+        }
+        return bounds;
+    }
+
     int lowestLayer() {
-        findLayers();
-        return lowest;
+        return bounds()[1];
     }
 
     int highestLayer() {
-        findLayers();
-        return highest;
+        return bounds()[4];
     }
 
-    private void findLayers() {
-        if (lowest >= 0) {
-            return;
-        }
-        lowest = 0;
-        highest = height - 1;
-        boolean found = false;
-        for (int y = 0; y < height; y++) {
-            for (int i = y * size * size; i < (y + 1) * size * size; i++) {
-                if (!states[i].isAir()) {
-                    if (!found) {
-                        lowest = y;
-                        found = true;
-                    }
-                    highest = y;
-                    break;
-                }
-            }
-        }
+    /** Width (x), height and depth (z) of the blocks actually there, and their centre on x / z. */
+    int contentWidth() {
+        return bounds()[3] - bounds()[0] + 1;
+    }
+
+    int contentHeight() {
+        return bounds()[4] - bounds()[1] + 1;
+    }
+
+    int contentDepth() {
+        return bounds()[5] - bounds()[2] + 1;
+    }
+
+    float contentCenterX() {
+        return (bounds()[0] + bounds()[3] + 1) / 2.0F;
+    }
+
+    float contentCenterZ() {
+        return (bounds()[2] + bounds()[5] + 1) / 2.0F;
     }
 
     IslandMesh mesh() {
