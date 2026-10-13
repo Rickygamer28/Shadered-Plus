@@ -171,19 +171,18 @@ final class IslandWindow {
     }
 
     /**
-     * Every island has the same footprint in the room, whatever size it was scanned at: the wider side of the blocks
-     * actually in it (empty air around them doesn't count) is this long, in blocks.
+     * Size of one island block in the room (blocks): the same in every painting, so blocks look the same size whatever
+     * size the island is; the biggest island (25 wide) just fits the room's width.
      */
-    private static final float ISLAND_WIDTH = 0.55F;
+    private static final float BLOCK_SCALE = (HI - LO - 0.06F) / com.example.skyblocks.island.IslandScan.MAX_SIZE;
     /** How high above the room's floor the island's lowest block floats (blocks). */
     private static final float ISLAND_LIFT = 0.16F;
-    /** Room left above the island's bottom, so very tall islands are shrunk to stay inside. */
+    /** Room left above the island's bottom; only islands taller than this are shrunk to stay inside. */
     private static final float MAX_TALL = HI - (LO + ISLAND_LIFT) - 0.03F;
 
-    /** Same size and place for every island: centred on its blocks, bottom at a fixed height. */
+    /** Every block the same size; the island centred on its blocks, bottom at a fixed height. */
     private static void placeIsland(PoseStack poseStack, IslandView view) {
-        int footprint = Math.max(view.contentWidth(), view.contentDepth());
-        float scale = Math.min(ISLAND_WIDTH / footprint, MAX_TALL / view.contentHeight());
+        float scale = Math.min(BLOCK_SCALE, MAX_TALL / view.contentHeight());
         poseStack.translate(0.5F, LO + ISLAND_LIFT, 1.0F + DEPTH / 2.0F);
         poseStack.scale(scale, scale, scale);
         poseStack.translate(-view.contentCenterX(), -view.lowestLayer(), -view.contentCenterZ());
