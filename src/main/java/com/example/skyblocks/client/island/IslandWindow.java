@@ -39,11 +39,10 @@ import org.lwjgl.opengl.GL11;
  * back. The room and island are drawn right away with their own buffers, while that state is set.
  */
 final class IslandWindow {
-    /** How far the room goes into the wall (blocks). */
+    /** How far the room goes into the wall, per block of the painting's smaller side (blocks). */
     private static final float DEPTH = 1.0F;
-    /** The picture area, inside the 1-pixel frame. */
-    private static final float LO = 1.0F / 16.0F, HI = 15.0F / 16.0F;
-    /** Just in front of the wall's face (local z = 1 for a north-facing painting). */
+    /** The 1-pixel frame: the picture starts this far in from the painting's edges. */
+    private static final float LO = 1.0F / 16.0F;
     /**
      * Exactly on the wall's face (local z = 1 for a north-facing painting), so the window's edges line up with the
      * frame's opening from every angle. It is pulled slightly towards the camera in depth only (polygon offset)
@@ -64,10 +63,14 @@ final class IslandWindow {
         return memory;
     }
 
-    /** Draws the window; view and mesh are null for an empty painting (just the room). */
+    /**
+     * Draws the window of a painting {@code width} x {@code height} blocks (joined paintings; 1 x 1 alone), from its
+     * bottom corner block; view and mesh are null for an empty painting (just the room).
+     */
     static void render(@org.jetbrains.annotations.Nullable IslandView view, @org.jetbrains.annotations.Nullable IslandMesh mesh,
-                       net.minecraft.world.item.ItemStack background, int rotation, Direction facing, PoseStack poseStack,
-                       float partialTick, int light) {
+                       net.minecraft.world.item.ItemStack background, int rotation, Direction facing, int width, int height,
+                       PoseStack poseStack, float partialTick, int light) {
+        Box box = new Box(width, height);
         poseStack.pushPose();
         // work in a north-facing painting's space: the wall behind is at z = 1..2, the room goes from z = 1 to 1 + DEPTH
         float yRot = switch (facing) {
@@ -93,7 +96,7 @@ final class IslandWindow {
             RenderSystem.stencilMask(0xFF);
             RenderSystem.stencilFunc(GL11.GL_ALWAYS, 1, 0xFF);
             RenderSystem.stencilOp(GL11.GL_KEEP, GL11.GL_KEEP, GL11.GL_REPLACE);
-            drawPicture(picture);
+            drawPicture(picture, box);
 
             // 2. Push the depth there back to "far", so the room behind the wall can be seen.
             RenderSystem.stencilFunc(GL11.GL_EQUAL, 1, 0xFF);
@@ -102,7 +105,7 @@ final class IslandWindow {
             RenderSystem.depthMask(true);
             RenderSystem.depthFunc(GL11.GL_ALWAYS);
             GL11.glDepthRange(1.0, 1.0);
-            drawPicture(picture);
+            drawPicture(picture, box);
             GL11.glDepthRange(0.0, 1.0);
             RenderSystem.depthFunc(GL11.GL_LEQUAL);
             RenderSystem.colorMask(true, true, true, true);
@@ -110,12 +113,12 @@ final class IslandWindow {
 
             // 3. The room and the island, only inside the mark.
             MultiBufferSource.BufferSource scene = MultiBufferSource.immediate(memory());
-            if (!drawSkyRoom(poseStack, background)) {
-                drawRoom(poseStack, scene, light);
+            if (!drawSkyRoom(poseStack, background, box)) {
+                drawRoom(poseStack, scene, light, box);
             }
             Map<SkyblockBatchData, SkyblockBatchData> skies = new HashMap<>();
             if (view != null && mesh != null) {
-                placeIsland(poseStack, view, rotation);
+                placeIsland(poseStack, view, rotation, box);
                 mesh.render(poseStack.last(), scene);
                 // Shadered's renderers (sky blocks, Illusorite ores...) only queue their sky cubes for Shadered's own
                 // pass later in the frame, which would draw them outside this window: take what they queue here and
@@ -141,7 +144,7 @@ final class IslandWindow {
             RenderSystem.stencilMask(0xFF);
             RenderSystem.stencilFunc(GL11.GL_EQUAL, 1, 0xFF);
             RenderSystem.stencilOp(GL11.GL_KEEP, GL11.GL_KEEP, GL11.GL_ZERO);
-            drawPicture(picture);
+            drawPicture(picture, box);
         } finally {
             GL11.glDepthRange(0.0, 1.0);
             RenderSystem.depthFunc(GL11.GL_LEQUAL);
@@ -226,24 +229,34 @@ final class IslandWindow {
         }
     }
 
+    /**
+     * The room's box, in the bottom corner block's (north-facing) space: the picture from (x0, y0) to (x1, y1) on the
+     * wall's face (z = 1), the room going back to z = 1 + depth. {@code scale} = the painting's smaller side, in blocks.
+     */
+    private record Box(float x0, float y0, float x1, float y1, float depth, float scale) {
+        Box(int width, int height) {
+            this(LO, LO, width - LO, height - LO, DEPTH * Math.min(width, height), Math.min(width, height));
+        }
+    }
+
     /** The picture area as a plain quad (only depth / stencil are written while it is drawn). */
-    private static void drawPicture(Matrix4f m) {
+    private static void drawPicture(Matrix4f m, Box box) {
         RenderSystem.enablePolygonOffset();
         RenderSystem.polygonOffset(-1.0F, -10.0F);
         try {
-            drawPictureQuad(m);
+            drawPictureQuad(m, box);
         } finally {
             RenderSystem.polygonOffset(0.0F, 0.0F);
             RenderSystem.disablePolygonOffset();
         }
     }
 
-    private static void drawPictureQuad(Matrix4f m) {
+    private static void drawPictureQuad(Matrix4f m, Box b) {
         BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
-        builder.addVertex(m, LO, LO, PICTURE_Z);
-        builder.addVertex(m, HI, LO, PICTURE_Z);
-        builder.addVertex(m, HI, HI, PICTURE_Z);
-        builder.addVertex(m, LO, HI, PICTURE_Z);
+        builder.addVertex(m, b.x0(), b.y0(), PICTURE_Z);
+        builder.addVertex(m, b.x1(), b.y0(), PICTURE_Z);
+        builder.addVertex(m, b.x1(), b.y1(), PICTURE_Z);
+        builder.addVertex(m, b.x0(), b.y1(), PICTURE_Z);
         RenderSystem.setShader(GameRenderer::getPositionShader);
         BufferUploader.drawWithShader(builder.buildOrThrow());
     }
@@ -252,7 +265,7 @@ final class IslandWindow {
      * A Shadered sky block as the background: the room's walls show that sky the way Shadered's sky blocks do (a
      * window onto a faraway sky), with the block's filter. False if there is no such sky to draw (painted sky then).
      */
-    private static boolean drawSkyRoom(PoseStack poseStack, net.minecraft.world.item.ItemStack background) {
+    private static boolean drawSkyRoom(PoseStack poseStack, net.minecraft.world.item.ItemStack background, Box b) {
         if (background.isEmpty()) {
             return false;
         }
@@ -271,13 +284,14 @@ final class IslandWindow {
         RenderSystem.setShader(() -> shader);
         RenderSystem.disableCull();
         Matrix4f m = poseStack.last().pose();
-        float z0 = 1.0F, z1 = 1.0F + DEPTH;
+        float z0 = 1.0F, z1 = 1.0F + b.depth();
+        float x0 = b.x0(), x1 = b.x1(), y0 = b.y0(), y1 = b.y1();
         BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-        skyQuad(builder, m, LO, LO, z1, HI, LO, z1, HI, HI, z1, LO, HI, z1); // back
-        skyQuad(builder, m, LO, LO, z0, LO, LO, z1, LO, HI, z1, LO, HI, z0); // left
-        skyQuad(builder, m, HI, LO, z1, HI, LO, z0, HI, HI, z0, HI, HI, z1); // right
-        skyQuad(builder, m, LO, HI, z1, HI, HI, z1, HI, HI, z0, LO, HI, z0); // top
-        skyQuad(builder, m, LO, LO, z0, HI, LO, z0, HI, LO, z1, LO, LO, z1); // floor
+        skyQuad(builder, m, x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1); // back
+        skyQuad(builder, m, x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0); // left
+        skyQuad(builder, m, x1, y0, z1, x1, y0, z0, x1, y1, z0, x1, y1, z1); // right
+        skyQuad(builder, m, x0, y1, z1, x1, y1, z1, x1, y1, z0, x0, y1, z0); // top
+        skyQuad(builder, m, x0, y0, z0, x1, y0, z0, x1, y0, z1, x0, y0, z1); // floor
         BufferUploader.drawWithShader(builder.buildOrThrow());
         RenderSystem.enableCull();
         return true;
@@ -292,18 +306,19 @@ final class IslandWindow {
     }
 
     /** The room behind the picture: sky on the back, sides, top and (darker) floor; lit like a painting. */
-    private static void drawRoom(PoseStack poseStack, MultiBufferSource buffer, int light) {
+    private static void drawRoom(PoseStack poseStack, MultiBufferSource buffer, int light, Box b) {
         VertexConsumer c = buffer.getBuffer(RenderType.entityCutoutNoCull(BACKDROP));
         PoseStack.Pose pose = poseStack.last();
-        float z0 = 1.0F, z1 = 1.0F + DEPTH;
+        float z0 = 1.0F, z1 = 1.0F + b.depth();
+        float x0 = b.x0(), x1 = b.x1(), y0 = b.y0(), y1 = b.y1();
         // back
-        quad(c, pose, light, 1.0F, 0, 0, -1, LO, LO, z1, HI, LO, z1, HI, HI, z1, LO, HI, z1);
+        quad(c, pose, light, 1.0F, 0, 0, -1, x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1);
         // left / right
-        quad(c, pose, light, 0.8F, 1, 0, 0, LO, LO, z0, LO, LO, z1, LO, HI, z1, LO, HI, z0);
-        quad(c, pose, light, 0.8F, -1, 0, 0, HI, LO, z1, HI, LO, z0, HI, HI, z0, HI, HI, z1);
+        quad(c, pose, light, 0.8F, 1, 0, 0, x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0);
+        quad(c, pose, light, 0.8F, -1, 0, 0, x1, y0, z1, x1, y0, z0, x1, y1, z0, x1, y1, z1);
         // top / floor
-        quad(c, pose, light, 0.9F, 0, -1, 0, LO, HI, z1, HI, HI, z1, HI, HI, z0, LO, HI, z0);
-        quad(c, pose, light, 0.55F, 0, 1, 0, LO, LO, z0, HI, LO, z0, HI, LO, z1, LO, LO, z1);
+        quad(c, pose, light, 0.9F, 0, -1, 0, x0, y1, z1, x1, y1, z1, x1, y1, z0, x0, y1, z0);
+        quad(c, pose, light, 0.55F, 0, 1, 0, x0, y0, z0, x1, y0, z0, x1, y0, z1, x0, y0, z1);
     }
 
     private static void quad(VertexConsumer c, PoseStack.Pose pose, int light, float shade, float nx, float ny, float nz,
@@ -329,27 +344,28 @@ final class IslandWindow {
      * Size of one island block in the room (blocks): the same in every painting, so blocks look the same size whatever
      * size the island is; the biggest island (25 wide) just fits the room's width.
      */
-    private static final float BLOCK_SCALE = (HI - LO - 0.06F) / com.example.skyblocks.island.IslandScan.MAX_SIZE;
-    /** How high above the room's floor the island's lowest block floats (blocks). */
+    private static final float BLOCK_SCALE = (1.0F - 2 * LO - 0.06F) / com.example.skyblocks.island.IslandScan.MAX_SIZE;
+    /** How high above the room's floor the island's lowest block floats (blocks, per block of the smaller side). */
     private static final float ISLAND_LIFT = 0.16F;
-    /** Room left above the island's bottom; only islands taller than this are shrunk to stay inside. */
-    private static final float MAX_TALL = HI - (LO + ISLAND_LIFT) - 0.03F;
 
     /**
      * Every block the same size; the island centred on its blocks, bottom at a fixed height, turned by
      * {@code rotation} x 45 degrees. Only an island too tall, or too wide when turned, for the room is shrunk.
      */
-    private static void placeIsland(PoseStack poseStack, IslandView view, int rotation) {
+    private static void placeIsland(PoseStack poseStack, IslandView view, int rotation, Box b) {
         float angle = rotation * 45.0F;
         double radians = Math.toRadians(angle);
         float turnedWidth = (float) (Math.abs(view.contentWidth() * Math.cos(radians))
                 + Math.abs(view.contentDepth() * Math.sin(radians)));
         float turnedDepth = (float) (Math.abs(view.contentWidth() * Math.sin(radians))
                 + Math.abs(view.contentDepth() * Math.cos(radians)));
-        float room = HI - LO - 0.06F;
-        float scale = Math.min(BLOCK_SCALE, MAX_TALL / view.contentHeight());
-        scale = Math.min(scale, Math.min(room / turnedWidth, DEPTH * 0.9F / turnedDepth));
-        poseStack.translate(0.5F, LO + ISLAND_LIFT, 1.0F + DEPTH / 2.0F);
+        // a joined painting shows the island bigger, by its smaller side (2x2 -> twice as big)
+        float lift = ISLAND_LIFT * b.scale();
+        float roomWide = b.x1() - b.x0() - 0.06F * b.scale();
+        float maxTall = b.y1() - (b.y0() + lift) - 0.03F * b.scale();
+        float scale = Math.min(BLOCK_SCALE * b.scale(), maxTall / view.contentHeight());
+        scale = Math.min(scale, Math.min(roomWide / turnedWidth, b.depth() * 0.9F / turnedDepth));
+        poseStack.translate((b.x0() + b.x1()) / 2.0F, b.y0() + lift, 1.0F + b.depth() / 2.0F);
         poseStack.mulPose(Axis.YP.rotationDegrees(angle));
         poseStack.scale(scale, scale, scale);
         poseStack.translate(-view.contentCenterX(), -view.lowestLayer(), -view.contentCenterZ());

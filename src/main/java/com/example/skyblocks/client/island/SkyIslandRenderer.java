@@ -30,6 +30,19 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         Level level = be.getLevel();
         BlockState state = be.getBlockState();
         boolean painting = state.getBlock() instanceof IslandPaintingBlock;
+        int width = 1, height = 1;
+        if (painting && level != null) {
+            if (state.getValue(IslandPaintingBlock.CCW) || state.getValue(IslandPaintingBlock.DOWN)) {
+                // part of a joined painting: its bottom corner block draws the whole thing
+                if (be.clientView instanceof IslandView old) {
+                    old.close();
+                }
+                be.clientView = null;
+                return;
+            }
+            width = IslandPaintingBlock.width(level, be.getBlockPos(), state);
+            height = IslandPaintingBlock.height(level, be.getBlockPos(), state);
+        }
         if (data == null || level == null) {
             if (be.clientView instanceof IslandView old) {
                 old.close(); // island taken out of a painting
@@ -37,14 +50,14 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
             }
             if (painting && level != null) {
                 // an empty painting still shows its room
-                IslandWindow.render(null, null, be.background(), be.rotation(), state.getValue(IslandPaintingBlock.FACING), poseStack, partialTick, packedLight);
+                IslandWindow.render(null, null, be.background(), be.rotation(), state.getValue(IslandPaintingBlock.FACING), width, height, poseStack, partialTick, packedLight);
             }
             return;
         }
         if (be.clientView instanceof Broken broken) {
             if (broken.source.equals(data)) {
                 if (painting) {
-                    IslandWindow.render(null, null, be.background(), be.rotation(), state.getValue(IslandPaintingBlock.FACING), poseStack, partialTick, packedLight);
+                    IslandWindow.render(null, null, be.background(), be.rotation(), state.getValue(IslandPaintingBlock.FACING), width, height, poseStack, partialTick, packedLight);
                 }
                 return; // same island that failed before: don't retry every frame
             }
@@ -78,7 +91,7 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         view.tickTo(time);
 
         if (painting) {
-            IslandWindow.render(view, mesh, be.background(), be.rotation(), state.getValue(IslandPaintingBlock.FACING), poseStack, partialTick, packedLight);
+            IslandWindow.render(view, mesh, be.background(), be.rotation(), state.getValue(IslandPaintingBlock.FACING), width, height, poseStack, partialTick, packedLight);
             return;
         }
         poseStack.pushPose();
@@ -96,8 +109,13 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
     @Override
     public AABB getRenderBoundingBox(SkyIslandBlockEntity be) {
         BlockPos pos = be.getBlockPos();
-        if (be.getBlockState().getBlock() instanceof IslandPaintingBlock) {
-            return new AABB(pos).inflate(1.0); // the room goes into the wall behind it
+        BlockState state = be.getBlockState();
+        if (state.getBlock() instanceof IslandPaintingBlock && be.getLevel() != null) {
+            // a joined painting spans width x height blocks; the room goes into the wall behind it
+            int w = IslandPaintingBlock.width(be.getLevel(), pos, state);
+            int h = IslandPaintingBlock.height(be.getLevel(), pos, state);
+            BlockPos far = pos.relative(state.getValue(IslandPaintingBlock.FACING).getClockWise(), w - 1).above(h - 1);
+            return new AABB(pos).minmax(new AABB(far)).inflate(Math.max(w, h) + 1.0);
         }
         IslandData data = be.island();
         double half = be.displayWidth() / 2.0 + 0.5;

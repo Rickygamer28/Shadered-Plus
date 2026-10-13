@@ -27,6 +27,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
@@ -45,6 +46,17 @@ public class IslandPaintingBlock extends BaseEntityBlock {
     public static final MapCodec<IslandPaintingBlock> CODEC = simpleCodec(IslandPaintingBlock::new);
     /** The way the painting faces (away from the wall it hangs on). */
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    /**
+     * Joined to the painting above / below / on its clockwise / counter-clockwise side (seen from above), when the
+     * paintings make a full rectangle of 2x2 up to 8x8 on the same wall: then the frame is only drawn on the outside
+     * and the bottom counter-clockwise corner block draws one big window for all of them.
+     */
+    public static final BooleanProperty UP = BooleanProperty.create("up");
+    public static final BooleanProperty DOWN = BooleanProperty.create("down");
+    public static final BooleanProperty CW = BooleanProperty.create("cw");
+    public static final BooleanProperty CCW = BooleanProperty.create("ccw");
+    public static final int MIN_JOIN = 2;
+    public static final int MAX_JOIN = 8;
 
     /** The frame for each facing: flat against the wall, 1 pixel thick, like a painting. */
     private static final VoxelShape NORTH = Block.box(0, 0, 15, 16, 16, 16);
@@ -54,7 +66,8 @@ public class IslandPaintingBlock extends BaseEntityBlock {
 
     public IslandPaintingBlock(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
+        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH)
+                .setValue(UP, false).setValue(DOWN, false).setValue(CW, false).setValue(CCW, false));
     }
 
     @Override
@@ -64,7 +77,7 @@ public class IslandPaintingBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
+        builder.add(FACING, UP, DOWN, CW, CCW);
     }
 
     @Nullable
@@ -119,12 +132,144 @@ public class IslandPaintingBlock extends BaseEntityBlock {
         return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
     }
 
-    // ---- putting an island in / taking it out ----
+    // ---- joining into bigger paintings ----
+
+    /** The block that holds and draws a joined painting (its bottom counter-clockwise corner); itself if alone. */
+    public static BlockPos anchor(BlockGetter level, BlockPos pos, BlockState state) {
+        Direction back = state.getValue(FACING).getCounterClockWise();
+        BlockPos p = pos;
+        BlockState s = state;
+        for (int i = 0; i < MAX_JOIN && s.getValue(CCW); i++) {
+            p = p.relative(back);
+            s = level.getBlockState(p);
+            if (!(s.getBlock() instanceof IslandPaintingBlock)) {
+                return pos;
+            }
+        }
+        for (int i = 0; i < MAX_JOIN && s.getValue(DOWN); i++) {
+            p = p.below();
+            s = level.getBlockState(p);
+            if (!(s.getBlock() instanceof IslandPaintingBlock)) {
+                return pos;
+            }
+        }
+        return p;
+    }
+
+    /** How many blocks wide / tall the painting is, from its anchor (1 if alone). */
+    public static int width(BlockGetter level, BlockPos anchor, BlockState state) {
+        Direction cw = state.getValue(FACING).getClockWise();
+        int n = 1;
+        BlockState s = state;
+        BlockPos p = anchor;
+        while (n < MAX_JOIN && s.getBlock() instanceof IslandPaintingBlock && s.getValue(CW)) {
+            p = p.relative(cw);
+            s = level.getBlockState(p);
+            n++;
+        }
+        return n;
+    }
+
+    public static int height(BlockGetter level, BlockPos anchor, BlockState state) {
+        int n = 1;
+        BlockState s = state;
+        BlockPos p = anchor;
+        while (n < MAX_JOIN && s.getBlock() instanceof IslandPaintingBlock && s.getValue(UP)) {
+            p = p.above();
+            s = level.getBlockState(p);
+            n++;
+        }
+        return n;
+    }
+
+    @Override
+    public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean movedByPiston) {
+        super.onPlace(state, level, pos, oldState, movedByPiston);
+        if (!level.isClientSide && !oldState.is(this)) {
+            updateGroup(level, pos);
+        }
+    }
+
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        if (!level.isClientSide && !newState.is(this)) {
+            Direction facing = state.getValue(FACING);
+            for (Direction d : new Direction[] {Direction.UP, Direction.DOWN, facing.getClockWise(), facing.getCounterClockWise()}) {
+                BlockPos next = pos.relative(d);
+                BlockState other = level.getBlockState(next);
+                if (other.is(this) && other.getValue(FACING) == facing) {
+                    updateGroup(level, next);
+                }
+            }
+        }
+        super.onRemove(state, level, pos, newState, movedByPiston);
+    }
+
+    /**
+     * Finds the paintings touching this one on the same wall (same facing) and joins them if they make a full
+     * rectangle of 2x2 to 8x8; otherwise they are all separate.
+     */
+    private void updateGroup(Level level, BlockPos start) {
+        BlockState first = level.getBlockState(start);
+        if (!first.is(this)) {
+            return;
+        }
+        Direction facing = first.getValue(FACING);
+        Direction cw = facing.getClockWise();
+        Direction[] around = {Direction.UP, Direction.DOWN, cw, cw.getOpposite()};
+        java.util.Set<BlockPos> group = new java.util.HashSet<>();
+        java.util.ArrayDeque<BlockPos> queue = new java.util.ArrayDeque<>();
+        group.add(start);
+        queue.add(start);
+        boolean tooBig = false;
+        while (!queue.isEmpty()) {
+            BlockPos p = queue.poll();
+            for (Direction d : around) {
+                BlockPos next = p.relative(d);
+                if (group.contains(next)) {
+                    continue;
+                }
+                BlockState s = level.getBlockState(next);
+                if (s.is(this) && s.getValue(FACING) == facing) {
+                    if (group.size() >= MAX_JOIN * MAX_JOIN) {
+                        tooBig = true;
+                        break;
+                    }
+                    group.add(next);
+                    queue.add(next);
+                }
+            }
+        }
+        int minU = Integer.MAX_VALUE, maxU = Integer.MIN_VALUE, minV = Integer.MAX_VALUE, maxV = Integer.MIN_VALUE;
+        for (BlockPos p : group) {
+            int u = along(p, start, cw), v = p.getY() - start.getY();
+            minU = Math.min(minU, u); maxU = Math.max(maxU, u);
+            minV = Math.min(minV, v); maxV = Math.max(maxV, v);
+        }
+        int w = maxU - minU + 1, h = maxV - minV + 1;
+        boolean joined = !tooBig && group.size() == w * h && w >= MIN_JOIN && h >= MIN_JOIN && w <= MAX_JOIN && h <= MAX_JOIN;
+        for (BlockPos p : group) {
+            BlockState s = level.getBlockState(p);
+            int u = along(p, start, cw), v = p.getY() - start.getY();
+            BlockState joinedState = s.setValue(UP, joined && v < maxV).setValue(DOWN, joined && v > minV)
+                    .setValue(CW, joined && u < maxU).setValue(CCW, joined && u > minU);
+            if (joinedState != s) {
+                level.setBlock(p, joinedState, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+            }
+        }
+    }
+
+    /** Position of p along the wall (towards cw), relative to start. */
+    private static int along(BlockPos p, BlockPos start, Direction cw) {
+        return cw.getStepX() * (p.getX() - start.getX()) + cw.getStepZ() * (p.getZ() - start.getZ());
+    }
+
+    // ---- putting an island in / taking it out (any block of a joined painting works on the whole painting) ----
 
     @Override
     public ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
                                            InteractionHand hand, BlockHitResult hit) {
-        if (!(level.getBlockEntity(pos) instanceof SkyIslandBlockEntity painting)) {
+        if (!(level.getBlockEntity(anchor(level, pos, state)) instanceof SkyIslandBlockEntity painting)) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
         // A Shadered sky block (Shadered's or ours, filters included): becomes the room's background.
@@ -157,7 +302,8 @@ public class IslandPaintingBlock extends BaseEntityBlock {
 
     @Override
     public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        if (!player.getMainHandItem().isEmpty() || !(level.getBlockEntity(pos) instanceof SkyIslandBlockEntity painting)
+        if (!player.getMainHandItem().isEmpty()
+                || !(level.getBlockEntity(anchor(level, pos, state)) instanceof SkyIslandBlockEntity painting)
                 || (painting.island() == null && painting.background().isEmpty())) {
             return InteractionResult.PASS;
         }
