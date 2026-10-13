@@ -368,9 +368,12 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
         var dispatcher = Minecraft.getInstance().getBlockEntityRenderDispatcher();
         EntityRenderDispatcher entities = Minecraft.getInstance().getEntityRenderDispatcher();
         entities.setRenderShadow(false); // e.g. a spawner's mob would cast its shadow on the real world
+        boolean wasInIsland = IslandRendering.inIsland;
+        IslandRendering.inIsland = true;
         try {
             blockEntities.removeIf(be -> !be.render(this, dispatcher, poseStack, buffer, partialTick));
         } finally {
+            IslandRendering.inIsland = wasInIsland;
             entities.setRenderShadow(true);
         }
     }

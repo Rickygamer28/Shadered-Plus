@@ -1,7 +1,9 @@
 package com.example.skyblocks.client;
 
 import com.example.skyblocks.OiiaCatBlockEntity;
+import com.example.skyblocks.client.island.IslandRendering;
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.world.phys.Vec3;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
@@ -45,15 +47,21 @@ public class OiiaCatRenderer implements BlockEntityRenderer<OiiaCatBlockEntity> 
         if (!(be.clientSpinModel instanceof RenderableModel)) {
             be.clientSpinModel = OiiaCatModel.create(OiiaCatModel.SPIN_MODEL);
         }
-        Object chosen = powered ? be.clientSpinModel : be.clientModel;
+        // Inside a Sky Island a fresh model each time: the same cat can be drawn twice in a frame (the real one and the
+        // scanner preview's copy), and a queued model is drawn with the matrix it has last.
+        Object chosen = IslandRendering.inIsland
+                ? OiiaCatModel.create(powered ? OiiaCatModel.SPIN_MODEL : OiiaCatModel.MODEL)
+                : powered ? be.clientSpinModel : be.clientModel;
         if (!(chosen instanceof RenderableModel model)) {
             return; // Shadered hasn't loaded the model (yet)
         }
 
-        // Shadered's model renderer works in world coordinates (like MaxwellRenderer).
-        BlockPos pos = be.getBlockPos();
+        // Start from the pose this renderer was given (camera-relative), so copies inside Sky Islands are drawn in
+        // the miniature, at its size, rather than at their stored world position.
         PoseStack pose = new PoseStack();
-        pose.translate(pos.getX() + center, pos.getY(), pos.getZ() + center);
+        pose.last().pose().set(poseStack.last().pose());
+        pose.last().normal().set(poseStack.last().normal());
+        pose.translate(center, 0, center);
         pose.mulPose(Axis.YP.rotationDegrees(yaw(be.facing())));
         float scale = OiiaCatModel.SCALE * size;
         pose.scale(scale, scale, scale);
@@ -72,8 +80,17 @@ public class OiiaCatRenderer implements BlockEntityRenderer<OiiaCatBlockEntity> 
         }
         float offsetY = OiiaCatModel.animate(pose, seconds); // 0 = the first frame = standing still
 
-        model.modelMatrix = new Matrix4f(pose.last().pose());
-        AssimpRenderer.getInstance().addModel(model);
+        Matrix4f relative = new Matrix4f(pose.last().pose());
+        if (IslandRendering.inWindow) {
+            // inside an Island Painting: draw now, while the window is open (a queued model is drawn later, outside it)
+            model.modelMatrix = relative;
+            AssimpRenderer.getInstance().renderDirect(model, null, false);
+        } else {
+            // Shadered's queued model renderer works in world coordinates (like MaxwellRenderer)
+            Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+            model.modelMatrix = new Matrix4f().translation((float) camera.x, (float) camera.y, (float) camera.z).mul(relative);
+            AssimpRenderer.getInstance().addModel(model);
+        }
 
         // How high the cat's lowest point is above the floor, in blocks (the loaf floats and bobs while spinning).
         float lift = powered ? (OiiaCatModel.SPIN_BOTTOM + offsetY) * scale : 0;
@@ -98,7 +115,8 @@ public class OiiaCatRenderer implements BlockEntityRenderer<OiiaCatBlockEntity> 
             return;
         }
         BlockPos below = be.getBlockPos().below();
-        if (!level.getBlockState(below).isFaceSturdy(level, below, Direction.UP)) {
+        // (a copy inside a Sky Island has no real floor under its stored position: it always gets its shadow)
+        if (!IslandRendering.inIsland && !level.getBlockState(below).isFaceSturdy(level, below, Direction.UP)) {
             return;
         }
         float alpha = 0.5F * Math.max(0, 1 - lift / size * 2.0F);

@@ -116,9 +116,11 @@ final class IslandWindow {
                 // pass later in the frame, which would draw them outside this window: take what they queue here and
                 // draw it now, inside the window.
                 Map<SkyblockBatchData, Map<SkyblockPass, Integer>> before = queuedSizes();
+                IslandRendering.inWindow = true;
                 try {
                     view.renderBlockEntities(poseStack, scene, partialTick);
                 } finally {
+                    IslandRendering.inWindow = false;
                     takeQueued(before, skies);
                 }
                 view.renderFigures(poseStack, scene, partialTick);
