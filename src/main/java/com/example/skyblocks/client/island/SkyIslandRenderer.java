@@ -35,7 +35,7 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
             }
             be.clientView = null;
         }
-        IslandView view = be.clientView instanceof IslandView v && v.source.equals(data) ? v : null;
+        IslandView view = be.clientView instanceof IslandView v && data.equals(v.source) ? v : null;
         if (view == null) {
             if (be.clientView instanceof IslandView old) {
                 old.close();

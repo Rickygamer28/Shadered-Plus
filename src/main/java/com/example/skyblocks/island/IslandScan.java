@@ -227,7 +227,7 @@ public final class IslandScan {
      * The floating-island underside: k layers below the ground layer, keep a block only within a radius that shrinks
      * towards the bottom, with some roughness.
      */
-    static boolean keepUnderground(int x, int z, int k, int depth, int size) {
+    public static boolean keepUnderground(int x, int z, int k, int depth, int size) {
         double c = (size - 1) / 2.0;
         double dx = x - c, dz = z - c;
         double dist = Math.sqrt(dx * dx + dz * dz);

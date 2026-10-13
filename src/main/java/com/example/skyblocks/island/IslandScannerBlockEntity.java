@@ -17,6 +17,11 @@ public class IslandScannerBlockEntity extends BlockEntity {
     private int depth = 6;
     /** Whether the area's outline is shown in the world (the menu's Area button). */
     private boolean showArea;
+    /** Client only: the live island preview shown on top (client/island/IslandView), when it was made, and for which settings. */
+    public Object clientPreview;
+    public long previewTime = -1;
+    public int previewKey;
+
     /** Game time of the last scan (not saved; -1 = none yet): scans are limited to one per second. */
     private long lastScan = -1;
 

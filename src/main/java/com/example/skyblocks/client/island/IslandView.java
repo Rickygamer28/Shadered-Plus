@@ -1,6 +1,7 @@
 package com.example.skyblocks.client.island;
 
 import com.example.skyblocks.island.IslandData;
+import com.example.skyblocks.island.IslandScan;
 import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -42,6 +43,8 @@ import org.jetbrains.annotations.Nullable;
  * lava, etc. inside the island). Coordinates are island coordinates (0..size-1, 0..height-1).
  */
 public final class IslandView implements BlockAndTintGetter, AutoCloseable {
+    /** The scanned island this shows (null for a scanner's live preview). */
+    @Nullable
     final IslandData source;
     final int size;
     final int height;
@@ -70,7 +73,7 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
     /** Bumped on every resource reload (IslandClientEvents). */
     static int generation;
 
-    private IslandView(IslandData source, int size, int height, BlockState[] states, Biome[] columnBiomes) {
+    private IslandView(@Nullable IslandData source, int size, int height, BlockState[] states, Biome[] columnBiomes) {
         this.source = source;
         this.size = size;
         this.height = height;
@@ -192,6 +195,40 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
         }
         LIVE.add(view);
         return view;
+    }
+
+    /**
+     * The Island Scanner's live preview: what a scan would give right now, read from the client's own copy of the
+     * world (blocks only; same floating-island shape as a real scan).
+     */
+    public static IslandView preview(Level level, BlockPos scanner, int size, int above, int depth) {
+        size = IslandScan.clampSize(size);
+        above = IslandScan.clampAbove(above);
+        depth = IslandScan.clampDepth(depth);
+        int height = IslandScan.height(above, depth);
+        int ground = depth;
+        BlockPos origin = IslandScan.origin(scanner, size, depth);
+        BlockState[] states = new BlockState[size * height * size];
+        BlockState air = Blocks.AIR.defaultBlockState();
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int y = 0; y < height; y++) {
+            for (int z = 0; z < size; z++) {
+                for (int x = 0; x < size; x++) {
+                    int i = (y * size + z) * size + x;
+                    p.set(origin.getX() + x, origin.getY() + y, origin.getZ() + z);
+                    boolean keep = !p.equals(scanner)
+                            && (y >= ground || IslandScan.keepUnderground(x, z, ground - y, depth, size));
+                    states[i] = keep ? level.getBlockState(p) : air;
+                }
+            }
+        }
+        Biome[] columns = new Biome[size * size];
+        for (int z = 0; z < size; z++) {
+            for (int x = 0; x < size; x++) {
+                columns[z * size + x] = level.getBiome(origin.offset(x, ground, z)).value();
+            }
+        }
+        return new IslandView(null, size, height, states, columns);
     }
 
     // ---- island access ----
