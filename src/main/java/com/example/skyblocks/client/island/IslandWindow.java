@@ -14,17 +14,13 @@ import com.mojang.math.Axis;
 import com.noodlegamer76.shadered.client.renderer.ComplexPassRenderer;
 import com.noodlegamer76.shadered.client.renderer.SkyblockRenderer;
 import com.noodlegamer76.shadered.client.util.RenderCube;
-import com.noodlegamer76.shadered.client.util.SkyblockType;
 import com.noodlegamer76.shadered.client.util.skyblock.SkyblockBatchData;
 import com.noodlegamer76.shadered.client.util.skyblock.SkyblockPass;
 import com.noodlegamer76.shadered.event.RegisterShaders;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.ShaderInstance;
-import net.minecraft.core.BlockPos;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -54,10 +50,7 @@ final class IslandWindow {
 
     private static ByteBufferBuilder memory;
 
-    /** Shadered sky blocks of the island being drawn in a window (collected by IslandBlockEntity), or null. */
-    static List<Sky> capturing;
 
-    record Sky(SkyblockType type, SkyblockPass pass, Matrix4f pose) {}
 
     private static ByteBufferBuilder memory() {
         if (memory == null) {
@@ -112,15 +105,18 @@ final class IslandWindow {
             // 3. The room and the island, only inside the mark.
             MultiBufferSource.BufferSource scene = MultiBufferSource.immediate(memory());
             drawRoom(poseStack, scene, light);
-            List<Sky> skies = new ArrayList<>();
+            Map<SkyblockBatchData, SkyblockBatchData> skies = new HashMap<>();
             if (view != null && mesh != null) {
                 placeIsland(poseStack, view);
                 mesh.render(poseStack.last(), scene);
-                capturing = skies;
+                // Shadered's renderers (sky blocks, Illusorite ores...) only queue their sky cubes for Shadered's own
+                // pass later in the frame, which would draw them outside this window: take what they queue here and
+                // draw it now, inside the window.
+                Map<SkyblockBatchData, Map<SkyblockPass, Integer>> before = queuedSizes();
                 try {
                     view.renderBlockEntities(poseStack, scene, partialTick);
                 } finally {
-                    capturing = null;
+                    takeQueued(before, skies);
                 }
                 view.renderFigures(poseStack, scene, partialTick);
             }
@@ -150,24 +146,62 @@ final class IslandWindow {
         }
     }
 
+    /** How many sky cubes each of Shadered's skies has queued so far this frame, per pass. */
+    private static Map<SkyblockBatchData, Map<SkyblockPass, Integer>> queuedSizes() {
+        Map<SkyblockBatchData, Map<SkyblockPass, Integer>> sizes = new HashMap<>();
+        for (SkyblockBatchData data : SkyblockRenderer.DATA_LIST.keySet()) {
+            Map<SkyblockPass, Integer> perPass = new HashMap<>();
+            for (SkyblockPass pass : SkyblockPass.values()) {
+                SkyblockBatchData.PassData passData = data.get(pass);
+                perPass.put(pass, passData == null ? 0 : passData.getPositions().size());
+            }
+            sizes.put(data, perPass);
+        }
+        return sizes;
+    }
+
+    /** Moves the sky cubes queued since {@code before} out of Shadered's queues into {@code taken} (sky -> cubes). */
+    private static void takeQueued(Map<SkyblockBatchData, Map<SkyblockPass, Integer>> before,
+                                   Map<SkyblockBatchData, SkyblockBatchData> taken) {
+        for (SkyblockBatchData data : SkyblockRenderer.DATA_LIST.keySet()) {
+            Map<SkyblockPass, Integer> sizes = before.get(data);
+            for (SkyblockPass pass : SkyblockPass.values()) {
+                SkyblockBatchData.PassData passData = data.get(pass);
+                if (passData == null) {
+                    continue;
+                }
+                int from = sizes == null ? 0 : sizes.getOrDefault(pass, 0);
+                int to = passData.getPositions().size();
+                if (to <= from) {
+                    continue;
+                }
+                SkyblockBatchData mine = taken.computeIfAbsent(data, d -> new SkyblockBatchData());
+                for (int i = from; i < to; i++) {
+                    mine.add(pass, passData.getPositions().get(i), passData.getPose().get(i),
+                            passData.getInverts().get(i), passData.getAlphas().get(i));
+                }
+                passData.getPositions().subList(from, to).clear();
+                passData.getPose().subList(from, to).clear();
+                passData.getAlphas().subList(from, to).clear();
+                passData.getInverts().subList(from, to).clear();
+                passData.getInvertedIndices().removeIf(index -> index >= from);
+            }
+        }
+    }
+
     /**
-     * Draws Shadered sky blocks now (inside the window's mask), the way Shadered's own pass draws them: cube faces
+     * Draws the taken sky cubes now (inside the window's mask) the way Shadered's own pass draws them: cube faces
      * showing that sky's picture, which Shadered renders earlier in the frame.
      */
-    private static void drawSkyBlocks(List<Sky> skies) {
+    private static void drawSkyBlocks(Map<SkyblockBatchData, SkyblockBatchData> skies) {
         if (skies.isEmpty()) {
             return;
         }
-        Map<SkyblockType, SkyblockBatchData> byType = new HashMap<>();
-        BlockPos nowhere = new BlockPos(29_000_000, 0, 29_000_000); // no neighbours there, so no face is skipped
-        for (Sky sky : skies) {
-            byType.computeIfAbsent(sky.type(), t -> new SkyblockBatchData()).add(sky.pass(), nowhere, sky.pose(), false, 1.0F);
-        }
         int passDepth = ComplexPassRenderer.getInstance().getRenderBuffer().getDepthTextureId();
-        for (Map.Entry<SkyblockType, SkyblockBatchData> entry : byType.entrySet()) {
-            Integer sky = SkyblockRenderer.DATA_LIST.get(SkyblockRenderer.getData(entry.getKey()));
+        for (Map.Entry<SkyblockBatchData, SkyblockBatchData> entry : skies.entrySet()) {
+            Integer sky = SkyblockRenderer.DATA_LIST.get(entry.getKey());
             if (sky == null) {
-                continue; // that sky's picture isn't drawn this frame
+                continue;
             }
             for (SkyblockPass pass : SkyblockPass.values()) {
                 SkyblockBatchData.PassData data = entry.getValue().get(pass);

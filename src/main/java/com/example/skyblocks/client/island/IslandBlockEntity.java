@@ -35,16 +35,6 @@ final class IslandBlockEntity {
         own.last().pose().set(poseStack.last().pose());
         own.last().normal().set(poseStack.last().normal());
         own.translate(x, y, z);
-        // Inside a painting's window, Shadered's sky blocks are drawn by the window itself (inside its mask)
-        // instead of in Shadered's later pass, which would draw them outside the window.
-        if (IslandWindow.capturing != null
-                && blockEntity instanceof com.noodlegamer76.shadered.entity.block.SkyblockHolderEntity sky
-                && sky.getBlockType() != null) {
-            IslandWindow.capturing.add(new IslandWindow.Sky(sky.getBlockType(),
-                    sky.getPass() != null ? sky.getPass() : com.noodlegamer76.shadered.client.util.skyblock.SkyblockPass.NORMAL,
-                    new org.joml.Matrix4f(own.last().pose())));
-            return true;
-        }
         if (turn != null && turn != Direction.UP) {
             own.translate(0.5F, 0.5F, 0.5F);
             own.mulPose(turn.getRotation());
