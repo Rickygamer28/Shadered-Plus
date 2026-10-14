@@ -109,6 +109,12 @@ final class IslandMesh implements AutoCloseable {
         // queue and the moment it draws the cutout / see-through ones, and what is queued for later doesn't show
         // (grass, leaves, glass... went invisible, only dirt and stone showed). So the miniature is drawn right now,
         // with its own buffer, instead of being queued in the shared one.
+        // Only Minecraft's shared buffer is drawn late; a buffer of our own (the Island Painting's window) is already
+        // drawn right away, in its own order, so it is used as it is.
+        if (shared != Minecraft.getInstance().renderBuffers().bufferSource()) {
+            emit(pose, shared);
+            return;
+        }
         if (now == null) {
             now = new com.mojang.blaze3d.vertex.BufferBuilder(1 << 16);
         }
