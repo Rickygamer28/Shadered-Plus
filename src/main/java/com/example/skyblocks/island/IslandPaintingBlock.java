@@ -325,19 +325,6 @@ public class IslandPaintingBlock extends BaseEntityBlock {
             }
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
-        // A Shadered sky block (Shadered's or ours, filters included): becomes the room's background.
-        if (ShaderedSkyItems.isSkyBlock(stack)) {
-            if (!level.isClientSide) {
-                ItemStack old = painting.background();
-                painting.setBackground(stack.copyWithCount(1));
-                consume(stack, player);
-                if (!old.isEmpty()) {
-                    give(player, old);
-                }
-                level.playSound(null, pos, SoundEvents.ITEM_FRAME_ADD_ITEM, SoundSource.BLOCKS, 1.0F, 1.2F);
-            }
-            return InteractionResult.sidedSuccess(level.isClientSide);
-        }
         IslandData island = stack.is(ModItems.SKY_ISLAND.get()) ? IslandData.get(stack) : null;
         if (island == null) {
             return null;

@@ -4,17 +4,9 @@
   "package": "com.example.skyblocks.mixin",
   "refmap": "skyblocks.refmap.json",
   "compatibilityLevel": "JAVA_17",
-  "mixins": [
-    "SkyblockItemTypesInvoker",
-    "SkyblockItemTypesMixin",
-    "SkyblockRegistryMixin",
-    "SkyblockTypeInvoker",
-    "SkyblockTypeMixin"
-  ],
+  "mixins": [],
   "client": [
-    "EntityAccessor",
-    "ModRenderTypesMixin",
-    "SkyblockRendererMixin"
+    "EntityAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

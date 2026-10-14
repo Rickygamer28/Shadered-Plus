@@ -1,10 +1,11 @@
 # Shadered+ (Forge 1.20.1): an addon for Shadered
 
-> This is the **1.20.1 Forge** branch. It needs **Shadered 1.4.3 or newer for 1.20.1** (built against 1.4.7, the
-> newest when ported); older Shadered versions (1.3.x) don't have the sky types this mod plugs into. The NeoForge
-> 1.21.1 version is on the `main` branch. Differences from 1.21.1: items keep their data as NBT (the island is in
-> the Sky Island item's `BlockEntityTag`), and our skies are drawn by a renderer that wraps Shadered's sky block
-> renderer instead of a mixin.
+> This is the **1.20.1 Forge, Shadered 1.3** branch: for **Shadered 1.3.7 to 1.4.2** (built against 1.3.7). It has
+> the OIIA Cat, the Big OIIA Cat and the Sky Islands (scanner, pedestal, painting with frames and plaques, travel),
+> but **not the six Shadered+ skies** and **no Shadered sky blocks as painting backgrounds**: those need Shadered's sky
+> types, which arrived in 1.4.3 (use the `1.20.1` branch for Shadered 1.4.3+). Shadered sky blocks that are part of an
+> island show on pedestals and in the scanner preview, but not inside paintings (Shadered 1.3 keeps each sky's
+> picture private). The sky sections below don't apply to this version.
 
 Adds six new skies to **Shadered** by Noodlegamer76: Jupiter, Cat, Twilight, Hell, Nebula and Golden Hour.
 They are added as real Shadered sky types, so everything in Shadered that works with sky types works with them:
@@ -14,7 +15,7 @@ They are added as real Shadered sky types, so everything in Shadered that works 
 - **Illusorite ore** veins can hold our skies, Illusorite can roll them, and Shadered's creative tab lists the ores for them.
 - Breaking, pick-block, saving and syncing go through Shadered's own code.
 
-**Requires Shadered for 1.20.1, version 1.4.3 or newer** (built against 1.4.7, https://modrinth.com/mod/shadered) and everything
+**Requires Shadered for 1.20.1, version 1.3.7 to 1.4.2** (built against 1.3.7, https://modrinth.com/mod/shadered) and everything
 Shadered itself needs (GeckoLib, Sodium, ...). Our skyblock items are listed in Shadered's creative tab.
 Our skies have no crafting recipes: like Shadered's own skies, you get them from Illusorite ore veins.
 

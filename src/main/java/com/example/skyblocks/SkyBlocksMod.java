@@ -1,8 +1,6 @@
 package com.example.skyblocks;
 
 import com.example.skyblocks.island.ScanIslandPayload;
-import com.noodlegamer76.shadered.client.util.skyblock.SkyblockPass;
-import com.noodlegamer76.shadered.item.SkyblockHolderBlockItem;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -16,9 +14,8 @@ import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 /**
- * Shadered+: adds skies to Shadered as real Shadered sky types (see the mixins in skyblocks.mixins.json).
- * Everything that uses Shadered's SkyblockType (skyblocks, Illusorite ore veins, Illusorite, Sky Emitter,
- * filters, creative tab ore list...) then knows our skies too.
+ * Shadered+ for Shadered 1.3.7 - 1.4.2 (Forge 1.20.1): the OIIA Cat (and Big OIIA Cat) and the Sky Islands (scanner,
+ * pedestal, painting). The six Shadered+ skies need Shadered 1.4.3+ (the 1.20.1 branch).
  */
 @Mod(SkyBlocksMod.MOD_ID)
 public class SkyBlocksMod {
@@ -43,13 +40,10 @@ public class SkyBlocksMod {
         modEventBus.addListener(SkyBlocksMod::commonSetup);
     }
 
-    /** Our skyblock items, like Shadered lists its own (Illusorite ores for our skies are added by Shadered itself). */
+    /** Our items go in Shadered's creative tab. */
     private static void addToShaderedTab(BuildCreativeModeTabContentsEvent event) {
         if (!event.getTabKey().equals(SHADERED_TAB)) {
             return;
-        }
-        for (int i = 0; i < ModItems.SKY_ITEMS.size(); i++) {
-            event.accept(SkyblockHolderBlockItem.create(SkyTypes.type(i), SkyblockPass.NORMAL, ModItems.SKY_ITEMS.get(i).get()));
         }
         event.accept(ModItems.OIIA_CAT.get());
         event.accept(ModItems.ISLAND_SCANNER.get());

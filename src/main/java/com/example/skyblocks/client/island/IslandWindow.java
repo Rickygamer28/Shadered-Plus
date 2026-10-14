@@ -10,15 +10,12 @@ import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.math.Axis;
-import com.noodlegamer76.shadered.client.renderer.ComplexPassRenderer;
 import com.noodlegamer76.shadered.client.renderer.SkyblockRenderer;
-import com.noodlegamer76.shadered.client.util.RenderCube;
 import com.noodlegamer76.shadered.client.util.skyblock.SkyblockBatchData;
 import com.noodlegamer76.shadered.client.util.skyblock.SkyblockPass;
 import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -160,7 +157,7 @@ final class IslandWindow {
     /** How many sky cubes each of Shadered's skies has queued so far this frame, per pass. */
     private static Map<SkyblockBatchData, Map<SkyblockPass, Integer>> queuedSizes() {
         Map<SkyblockBatchData, Map<SkyblockPass, Integer>> sizes = new HashMap<>();
-        for (SkyblockBatchData data : SkyblockRenderer.DATA_LIST.keySet()) {
+        for (SkyblockBatchData data : skyQueues()) {
             Map<SkyblockPass, Integer> perPass = new HashMap<>();
             for (SkyblockPass pass : SkyblockPass.values()) {
                 SkyblockBatchData.PassData passData = data.get(pass);
@@ -174,7 +171,7 @@ final class IslandWindow {
     /** Moves the sky cubes queued since {@code before} out of Shadered's queues into {@code taken} (sky -> cubes). */
     private static void takeQueued(Map<SkyblockBatchData, Map<SkyblockPass, Integer>> before,
                                    Map<SkyblockBatchData, SkyblockBatchData> taken) {
-        for (SkyblockBatchData data : SkyblockRenderer.DATA_LIST.keySet()) {
+        for (SkyblockBatchData data : skyQueues()) {
             Map<SkyblockPass, Integer> sizes = before.get(data);
             for (SkyblockPass pass : SkyblockPass.values()) {
                 SkyblockBatchData.PassData passData = data.get(pass);
@@ -200,31 +197,20 @@ final class IslandWindow {
         }
     }
 
+    /** Shadered 1.3's sky queues (one per sky block kind). */
+    private static SkyblockBatchData[] skyQueues() {
+        return new SkyblockBatchData[] {SkyblockRenderer.spaceData, SkyblockRenderer.stormyData, SkyblockRenderer.oceanData,
+                SkyblockRenderer.endData, SkyblockRenderer.endSkyData, SkyblockRenderer.eclipseData,
+                SkyblockRenderer.iridiaData, SkyblockRenderer.forestData, SkyblockRenderer.lightData,
+                SkyblockRenderer.mimicData};
+    }
+
     /**
-     * Draws the taken sky cubes now (inside the window's mask) the way Shadered's own pass draws them: cube faces
-     * showing that sky's picture, which Shadered renders earlier in the frame.
+     * Shadered 1.3 draws each sky with its own pass and keeps its picture private, so sky blocks inside a painting's
+     * island can't be drawn inside the window: they are left out there (rather than drawn over the wall). They show on
+     * pedestals and in the scanner's preview.
      */
     private static void drawSkyBlocks(Map<SkyblockBatchData, SkyblockBatchData> skies) {
-        if (skies.isEmpty()) {
-            return;
-        }
-        int passDepth = ComplexPassRenderer.getInstance().getRenderBuffer().getDepthTextureId();
-        for (Map.Entry<SkyblockBatchData, SkyblockBatchData> entry : skies.entrySet()) {
-            Integer sky = SkyblockRenderer.DATA_LIST.get(entry.getKey());
-            if (sky == null) {
-                continue;
-            }
-            for (SkyblockPass pass : SkyblockPass.values()) {
-                SkyblockBatchData.PassData data = entry.getValue().get(pass);
-                ShaderInstance shader = pass.getShader();
-                if (data == null || shader == null) {
-                    continue;
-                }
-                shader.setSampler("Skybox", sky);
-                shader.setSampler("PassDepth", passDepth);
-                RenderCube.renderSkyBlocks(data, false, shader);
-            }
-        }
     }
 
     /**
@@ -260,49 +246,9 @@ final class IslandWindow {
         BufferUploader.drawWithShader(builder.end());
     }
 
-    /**
-     * A Shadered sky block as the background: the room's walls show that sky the way Shadered's sky blocks do (a
-     * window onto a faraway sky), with the block's filter. False if there is no such sky to draw (painted sky then).
-     */
+    /** Sky block backgrounds need Shadered 1.4.3+ (the 1.20.1 branch): this version always shows the painted room. */
     private static boolean drawSkyRoom(PoseStack poseStack, net.minecraft.world.item.ItemStack background, Box b) {
-        if (background.isEmpty()) {
-            return false;
-        }
-        com.example.skyblocks.island.ShaderedSkyItems.Sky data = com.example.skyblocks.island.ShaderedSkyItems.sky(background);
-        if (data == null) {
-            return false;
-        }
-        Integer sky = SkyblockRenderer.DATA_LIST.get(SkyblockRenderer.getData(data.type()));
-        SkyblockPass pass = data.pass();
-        ShaderInstance shader = pass.getShader();
-        if (sky == null || shader == null) {
-            return false;
-        }
-        shader.setSampler("Skybox", sky);
-        shader.setSampler("PassDepth", ComplexPassRenderer.getInstance().getRenderBuffer().getDepthTextureId());
-        RenderSystem.setShader(() -> shader);
-        RenderSystem.disableCull();
-        Matrix4f m = poseStack.last().pose();
-        float z0 = 1.0F, z1 = 1.0F + b.depth();
-        float x0 = b.x0(), x1 = b.x1(), y0 = b.y0(), y1 = b.y1();
-        BufferBuilder builder = Tesselator.getInstance().getBuilder();
-        builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-        skyQuad(builder, m, x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1); // back
-        skyQuad(builder, m, x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0); // left
-        skyQuad(builder, m, x1, y0, z1, x1, y0, z0, x1, y1, z0, x1, y1, z1); // right
-        skyQuad(builder, m, x0, y1, z1, x1, y1, z1, x1, y1, z0, x0, y1, z0); // top
-        skyQuad(builder, m, x0, y0, z0, x1, y0, z0, x1, y0, z1, x0, y0, z1); // floor
-        BufferUploader.drawWithShader(builder.end());
-        RenderSystem.enableCull();
-        return true;
-    }
-
-    private static void skyQuad(BufferBuilder b, Matrix4f m, float x0, float y0, float z0, float x1, float y1, float z1,
-                                float x2, float y2, float z2, float x3, float y3, float z3) {
-        b.vertex(m, x0, y0, z0).uv(0, 1).color(255, 255, 255, 255).endVertex();
-        b.vertex(m, x1, y1, z1).uv(1, 1).color(255, 255, 255, 255).endVertex();
-        b.vertex(m, x2, y2, z2).uv(1, 0).color(255, 255, 255, 255).endVertex();
-        b.vertex(m, x3, y3, z3).uv(0, 0).color(255, 255, 255, 255).endVertex();
+        return false;
     }
 
     /** The room behind the picture: sky on the back, sides, top and (darker) floor; lit like a painting. */

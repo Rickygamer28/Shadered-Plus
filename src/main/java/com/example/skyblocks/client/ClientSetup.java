@@ -18,7 +18,6 @@ public final class ClientSetup {
     /** Add our skies' skybox passes to Shadered's renderer (Shadered adds its own in its client setup). */
     @SubscribeEvent
     public static void clientSetup(FMLClientSetupEvent event) {
-        event.enqueueWork(ShaderedSkies::register);
         // The Island Painting's window needs a stencil buffer (client/island/IslandWindow).
         event.enqueueWork(() -> net.minecraft.client.Minecraft.getInstance().getMainRenderTarget().enableStencil());
     }
@@ -30,9 +29,6 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.BIG_OIIA_CAT.get(), big);
         event.registerBlockEntityRenderer(ModBlockEntities.SKY_ISLAND.get(), SkyIslandRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.ISLAND_SCANNER.get(), IslandScannerRenderer::new);
-        // Shadered's sky blocks: ours replaces Shadered's (we load after Shadered) so our skies are drawn too
-        event.registerBlockEntityRenderer(com.noodlegamer76.shadered.entity.block.InitBlockEntities.SKYBLOCK.get(),
-                OurSkyblockRenderer::new);
     }
 
     private ClientSetup() {}
