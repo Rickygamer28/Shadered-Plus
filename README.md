@@ -90,7 +90,7 @@ blockstate/models/loot/lang and adjust the scale. Models with a skeleton can use
   island out, then (again) the background. Breaking it gives back the
   painting, the island and the background. (The window uses the stencil buffer; with some shader packs it may show over things
   standing right in front of the painting, and with Fabulous graphics see-through blocks inside it may not show.)
-- **Names:** rename a Sky Island in an anvil and the name goes with it: on a small brass plaque on the bottom edge of
+- **Names:** rename a Sky Island in an anvil and the name goes with it: on a small plaque on the bottom edge of
   the painting's frame, styled to match it (brass on oak, polished gold, dark wood with gilded letters, prismarine,
   white marble, blackstone with gold inlay), centred under a joined painting and shrunk to fit long names; and floating above the pedestal
   while you look at it. Taking the island out or breaking the block gives it back with its name.
