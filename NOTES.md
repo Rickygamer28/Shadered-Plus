@@ -42,3 +42,10 @@
 - 1.20.1 BER poses include the camera rotation: OiiaCatRenderer undoes it for AssimpRenderer.addModel (world space).
 - CI starts the client under Xvfb with Shadered + GeckoLib (title screen) to check loading; Shadered 1.4.7 can't start
   a dedicated dev server (LWJGL natives), so no server test.
+
+## Shadered 1.3 version (branch 1.20.1-shadered-1.3, 14 Oct 2026)
+- For Shadered 1.3.7 - 1.4.2 (mods.toml range [1.3.7,1.4.3)); compiled against 1.3.7. No SkyblockType system there,
+  so: no six skies (their code, mixins, textures and lang removed), no sky block backgrounds in paintings, and sky
+  blocks inside a painting's island are dropped from Shadered's queues (SkyblockRenderer.spaceData... static fields)
+  instead of drawn in the window. Pedestals and the scanner preview show them normally.
+- CI load test runs with Shadered 1.4.2: 1.3.7 crashes on Linux by itself (no libassimp.so; fixed in 1.4.2).
