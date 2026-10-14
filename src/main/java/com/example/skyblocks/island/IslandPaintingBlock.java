@@ -40,7 +40,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The Island Painting: a flat frame on a wall, like a painting. Right-click it with a Sky Island and the picture
  * becomes a window into a little room inside the wall with the island in it, mobs and all
- * (client/island/IslandWindow); right-click with an empty hand to take the island out. It uses the Sky Island's
+ * (client/island/IslandWindow); right-click with an empty hand to turn it, sneak + right-click to take it out. It uses the Sky Island's
  * block entity to hold the island.
  */
 public class IslandPaintingBlock extends BaseEntityBlock {
@@ -357,8 +357,8 @@ public class IslandPaintingBlock extends BaseEntityBlock {
                 || (painting.island() == null && painting.background().isEmpty())) {
             return InteractionResult.PASS;
         }
-        if (player.isShiftKeyDown()) {
-            // sneak + empty hand: turn the island 45 degrees
+        if (!player.isShiftKeyDown()) {
+            // empty hand: turn the island 45 degrees (sneak + empty hand takes things out, below)
             if (painting.island() == null) {
                 return InteractionResult.PASS;
             }

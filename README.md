@@ -81,12 +81,12 @@ blockstate/models/loot/lang and adjust the scale. Models with a skeleton can use
   centred on its blocks; only islands too tall for the room are shrunk to fit; mobs wandering;
   the room is lit like a painting. Right-click it with any Shadered sky block (Shadered's or ours, filters included)
   to use that sky as the room's background: its walls then show the sky like a sky block does; another sky block swaps
-  it. Sneak + right-click with an empty hand turns the island 45 degrees.
+  it. Right-click with an empty hand turns the island 45 degrees.
   **Joining:** paintings hung next to each other on the same wall in a full rectangle, from 2x2 up to 8x8, join into
   one big painting: one frame around the outside, one big window into a bigger, deeper room, and the island shown
   bigger (by the painting's smaller side: 2x2 = twice as big). Right-clicking any part works on the whole painting.
   Breaking a part splits it back into single paintings; an island put in a part that isn't the bottom corner is kept
-  (and dropped when that part is broken) but not shown while joined. Right-click with an empty hand to take the
+  (and dropped when that part is broken) but not shown while joined. Sneak + right-click with an empty hand to take the
   island out, then (again) the background. Breaking it gives back the
   painting, the island and the background. (The window uses the stencil buffer; with some shader packs it may show over things
   standing right in front of the painting, and with Fabulous graphics see-through blocks inside it may not show.)
