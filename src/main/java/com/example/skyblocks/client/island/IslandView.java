@@ -166,8 +166,7 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
                     turn = state.getValue(net.minecraft.world.level.block.ShulkerBoxBlock.FACING);
                     copyState = state.setValue(net.minecraft.world.level.block.ShulkerBoxBlock.FACING, Direction.UP);
                 }
-                BlockEntity be = BlockEntity.loadStatic(new BlockPos(FAR + x, y, FAR + z), copyState, entry.getCompound("data"),
-                        level.registryAccess());
+                BlockEntity be = BlockEntity.loadStatic(new BlockPos(FAR + x, y, FAR + z), copyState, entry.getCompound("data"));
                 if (be != null) {
                     be.setLevel(level);
                     view.blockEntities.add(new IslandBlockEntity(be, x, y, z, turn));

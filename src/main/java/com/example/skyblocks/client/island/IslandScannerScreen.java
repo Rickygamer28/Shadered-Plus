@@ -7,7 +7,6 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * The Island Scanner's menu: area size (3x3 to 25x25, centred on the scanner), how far up and down to scan, and
@@ -100,13 +99,9 @@ public class IslandScannerScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        // no blur or dimming, so the outlined area stays visible; just a panel behind the controls
-        graphics.fill(left(), top(), left() + PANEL_W, top() + PANEL_H, 0xC0101018);
-    }
-
-    @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        // no dimming, so the outlined area stays visible; just a panel behind the controls
+        graphics.fill(left(), top(), left() + PANEL_W, top() + PANEL_H, 0xC0101018);
         super.render(graphics, mouseX, mouseY, partialTick);
         int x = left() + 12, y = top() + 30;
         graphics.drawCenteredString(font, title, left() + PANEL_W / 2, top() + 8, 0xFFFFFF);
@@ -116,7 +111,7 @@ public class IslandScannerScreen extends Screen {
     }
 
     private void send(boolean scan) {
-        PacketDistributor.sendToServer(new ScanIslandPayload(pos, size, above, depth, showArea, scan));
+        ScanIslandPayload.send(new ScanIslandPayload(pos, size, above, depth, showArea, scan));
     }
 
     /** Closing keeps the settings (sends them without scanning). */

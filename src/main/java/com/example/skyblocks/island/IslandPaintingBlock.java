@@ -1,8 +1,6 @@
 package com.example.skyblocks.island;
 
-import com.example.skyblocks.ModComponents;
 import com.example.skyblocks.ModItems;
-import com.mojang.serialization.MapCodec;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -11,7 +9,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -44,7 +41,6 @@ import org.jetbrains.annotations.Nullable;
  * block entity to hold the island.
  */
 public class IslandPaintingBlock extends BaseEntityBlock {
-    public static final MapCodec<IslandPaintingBlock> CODEC = simpleCodec(IslandPaintingBlock::new);
     /** The way the painting faces (away from the wall it hangs on). */
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     /**
@@ -74,10 +70,6 @@ public class IslandPaintingBlock extends BaseEntityBlock {
                 .setValue(FRAME, FrameStyle.OAK));
     }
 
-    @Override
-    protected MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
-    }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
@@ -291,17 +283,28 @@ public class IslandPaintingBlock extends BaseEntityBlock {
     // ---- putting an island in / taking it out (any block of a joined painting works on the whole painting) ----
 
     @Override
-    public ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
-                                           InteractionHand hand, BlockHitResult hit) {
+    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand,
+                                 BlockHitResult hit) {
+        ItemStack stack = player.getItemInHand(hand);
+        if (!stack.isEmpty()) {
+            InteractionResult result = useItemOn(stack, state, level, pos, player);
+            return result != null ? result : InteractionResult.PASS;
+        }
+        return hand == InteractionHand.MAIN_HAND ? useWithoutItem(state, level, pos, player) : InteractionResult.PASS;
+    }
+
+    /** With an item in hand; null if the item does nothing here. */
+    @Nullable
+    private InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player) {
         if (!(level.getBlockEntity(anchor(level, pos, state)) instanceof SkyIslandBlockEntity painting)) {
-            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            return null;
         }
         // An ender pearl: travel to where the island was scanned.
         if (IslandTravel.isTravelItem(stack) && painting.island() != null) {
             if (!level.isClientSide) {
                 IslandTravel.travel(level, player, painting.island(), stack);
             }
-            return ItemInteractionResult.sidedSuccess(level.isClientSide);
+            return InteractionResult.sidedSuccess(level.isClientSide);
         }
         // A frame item (gold ingot, dark oak planks, prismarine shard, quartz, blackstone; a stick for plain oak):
         // changes the frame of the whole painting.
@@ -309,49 +312,49 @@ public class IslandPaintingBlock extends BaseEntityBlock {
         if (frame != null) {
             BlockPos anchor = anchor(level, pos, state);
             if (level.getBlockState(anchor).getValue(FRAME) == frame) {
-                return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION; // already that frame
+                return null; // already that frame
             }
             if (!level.isClientSide) {
                 setFrame(level, anchor, frame);
-                stack.consume(1, player);
+                consume(stack, player);
                 level.playSound(null, pos, switch (frame) {
                     case OAK, DARK_OAK -> SoundEvents.WOOD_PLACE;
                     case GOLD -> SoundEvents.METAL_PLACE;
                     default -> SoundEvents.STONE_PLACE;
                 }, SoundSource.BLOCKS, 1.0F, 1.1F);
             }
-            return ItemInteractionResult.sidedSuccess(level.isClientSide);
+            return InteractionResult.sidedSuccess(level.isClientSide);
         }
         // A Shadered sky block (Shadered's or ours, filters included): becomes the room's background.
         if (ShaderedSkyItems.isSkyBlock(stack)) {
             if (!level.isClientSide) {
                 ItemStack old = painting.background();
                 painting.setBackground(stack.copyWithCount(1));
-                stack.consume(1, player);
+                consume(stack, player);
                 if (!old.isEmpty()) {
                     give(player, old);
                 }
                 level.playSound(null, pos, SoundEvents.ITEM_FRAME_ADD_ITEM, SoundSource.BLOCKS, 1.0F, 1.2F);
             }
-            return ItemInteractionResult.sidedSuccess(level.isClientSide);
+            return InteractionResult.sidedSuccess(level.isClientSide);
         }
-        IslandData island = stack.get(ModComponents.ISLAND.get());
+        IslandData island = stack.is(ModItems.SKY_ISLAND.get()) ? IslandData.get(stack) : null;
         if (island == null) {
-            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            return null;
         }
         if (painting.island() != null) {
-            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION; // already has one: take it out first
+            return null; // already has one: take it out first
         }
         if (!level.isClientSide) {
-            painting.setIsland(island, stack.get(net.minecraft.core.component.DataComponents.CUSTOM_NAME));
-            stack.consume(1, player);
+            painting.setIsland(island, stack.hasCustomHoverName() ? stack.getHoverName() : null);
+            consume(stack, player);
             level.playSound(null, pos, SoundEvents.ITEM_FRAME_ADD_ITEM, SoundSource.BLOCKS, 1.0F, 1.0F);
         }
-        return ItemInteractionResult.sidedSuccess(level.isClientSide);
+        return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    @Override
-    public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+    /** With an empty hand: turn the island; sneaking, take it (then the background) out. */
+    private InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player) {
         if (!player.getMainHandItem().isEmpty()
                 || !(level.getBlockEntity(anchor(level, pos, state)) instanceof SkyIslandBlockEntity painting)
                 || (painting.island() == null && painting.background().isEmpty())) {
@@ -400,6 +403,12 @@ public class IslandPaintingBlock extends BaseEntityBlock {
         }
     }
 
+    private static void consume(ItemStack stack, Player player) {
+        if (!player.getAbilities().instabuild) {
+            stack.shrink(1);
+        }
+    }
+
     private static void give(Player player, ItemStack stack) {
         if (!player.getInventory().add(stack)) {
             player.drop(stack, false);
@@ -408,9 +417,9 @@ public class IslandPaintingBlock extends BaseEntityBlock {
 
     private static ItemStack islandItem(SkyIslandBlockEntity painting) {
         ItemStack stack = new ItemStack(ModItems.SKY_ISLAND.get());
-        stack.set(ModComponents.ISLAND.get(), painting.island());
+        IslandData.set(stack, painting.island());
         if (painting.name() != null) {
-            stack.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, painting.name()); // keeps its anvil name
+            stack.setHoverName(painting.name()); // keeps its anvil name
         }
         return stack;
     }
@@ -432,7 +441,7 @@ public class IslandPaintingBlock extends BaseEntityBlock {
     }
 
     @Override
-    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
+    public ItemStack getCloneItemStack(BlockGetter level, BlockPos pos, BlockState state) {
         return new ItemStack(ModItems.ISLAND_PAINTING.get());
     }
 }

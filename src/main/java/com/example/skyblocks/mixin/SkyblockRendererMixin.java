@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /** Batch data for our sky types (used by the Illusorite ore renderer, the Sky Emitter renderer, ...). */
-@Mixin(SkyblockRenderer.class)
+@Mixin(value = SkyblockRenderer.class, remap = false)
 public abstract class SkyblockRendererMixin {
 
     @Inject(method = "getData", at = @At("HEAD"), cancellable = true)

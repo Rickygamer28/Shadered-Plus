@@ -22,12 +22,12 @@ import net.minecraft.util.FormattedCharSequence;
  */
 final class IslandPlaque {
     private static final ResourceLocation RIM =
-            ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "textures/block/island_painting_plaque_rim.png");
+            new ResourceLocation(SkyBlocksMod.MOD_ID, "textures/block/island_painting_plaque_rim.png");
 
     /** Each frame style's plaque: its plate texture, letter colour, rim colour and the two little rivets' colour. */
     private record Look(ResourceLocation plate, int text, int rim, int rivet) {
         static Look of(String style, int text, int rim, int rivet) {
-            return new Look(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID,
+            return new Look(new ResourceLocation(SkyBlocksMod.MOD_ID,
                     "textures/block/island_painting_plaque_" + style + ".png"), text, rim, rivet);
         }
     }
@@ -129,8 +129,8 @@ final class IslandPlaque {
 
     private static void vertex(VertexConsumer vc, PoseStack.Pose pose, float x, float y, float z, float u, float v,
                                int rgb, int light) {
-        vc.addVertex(pose, x, y, z).setColor((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF, 255).setUv(u, v)
-                .setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
+        vc.vertex(pose.pose(), x, y, z).color((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF, 255).uv(u, v)
+                .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(pose.normal(), 0.0F, 0.0F, 1.0F).endVertex();
     }
 
     private IslandPlaque() {}

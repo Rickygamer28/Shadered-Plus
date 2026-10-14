@@ -120,24 +120,6 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
     }
 
     @Override
-    public AABB getRenderBoundingBox(SkyIslandBlockEntity be) {
-        BlockPos pos = be.getBlockPos();
-        BlockState state = be.getBlockState();
-        if (state.getBlock() instanceof IslandPaintingBlock && be.getLevel() != null) {
-            // a joined painting spans width x height blocks; the room goes into the wall behind it
-            int w = IslandPaintingBlock.width(be.getLevel(), pos, state);
-            int h = IslandPaintingBlock.height(be.getLevel(), pos, state);
-            BlockPos far = pos.relative(state.getValue(IslandPaintingBlock.FACING).getClockWise(), w - 1).above(h - 1);
-            return new AABB(pos).minmax(new AABB(far)).inflate(Math.max(w, h) + 1.0);
-        }
-        IslandData data = be.island();
-        double half = be.displayWidth() / 2.0 + 0.5;
-        double top = FLOAT + 1.0 + (data != null && data.size() > 0 ? be.displayWidth() * (double) data.height() / data.size() : 1.0);
-        return new AABB(pos.getX() + 0.5 - half, pos.getY(), pos.getZ() + 0.5 - half,
-                pos.getX() + 0.5 + half, pos.getY() + top, pos.getZ() + 0.5 + half);
-    }
-
-    @Override
     public int getViewDistance() {
         return 128;
     }

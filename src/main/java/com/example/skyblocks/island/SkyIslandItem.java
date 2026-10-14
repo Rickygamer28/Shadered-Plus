@@ -1,6 +1,5 @@
 package com.example.skyblocks.island;
 
-import com.example.skyblocks.ModComponents;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -15,10 +14,27 @@ public class SkyIslandItem extends BlockItem {
         super(block, properties);
     }
 
+    /** Drawn as its pedestal with the island floating above it (client/island/SkyIslandItemRenderer). */
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        super.appendHoverText(stack, context, tooltip, flag);
-        IslandData island = stack.get(ModComponents.ISLAND.get());
+    public void initializeClient(java.util.function.Consumer<net.minecraftforge.client.extensions.common.IClientItemExtensions> consumer) {
+        consumer.accept(new net.minecraftforge.client.extensions.common.IClientItemExtensions() {
+            private net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer renderer;
+
+            @Override
+            public net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (renderer == null) {
+                    renderer = new com.example.skyblocks.client.island.SkyIslandItemRenderer();
+                }
+                return renderer;
+            }
+        });
+    }
+
+    @Override
+    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.Level level,
+                                List<Component> tooltip, TooltipFlag flag) {
+        super.appendHoverText(stack, level, tooltip, flag);
+        IslandData island = IslandData.get(stack);
         if (island == null) {
             tooltip.add(Component.translatable("tooltip.skyblocks.island_empty").withStyle(ChatFormatting.GRAY));
         } else {

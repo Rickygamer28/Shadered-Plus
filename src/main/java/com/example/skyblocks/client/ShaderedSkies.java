@@ -26,7 +26,7 @@ public final class ShaderedSkies {
     static {
         for (int i = 0; i < DATA.length; i++) {
             DATA[i] = new SkyblockBatchData();
-            ResourceLocation folder = ResourceLocation.fromNamespaceAndPath(
+            ResourceLocation folder = new ResourceLocation(
                     SkyBlocksMod.MOD_ID, "textures/environment/" + SkyNames.NAMES[i]);
             // Default translation = the face layout tools/build_shadered_faces.py writes.
             PASSES[i] = new SkyboxRenderPass(folder, DATA[i], new SkyboxTranslation());

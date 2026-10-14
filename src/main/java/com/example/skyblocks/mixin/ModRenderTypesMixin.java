@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /** Item render types (Shadered builds one per sky type) need the screen texture of our skies. */
-@Mixin(ModRenderTypes.class)
+@Mixin(value = ModRenderTypes.class, remap = false)
 public abstract class ModRenderTypesMixin {
 
     @Inject(method = "getSkyboxTextureId", at = @At("HEAD"), cancellable = true)

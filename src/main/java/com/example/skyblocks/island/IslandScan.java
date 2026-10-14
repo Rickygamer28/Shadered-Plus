@@ -101,8 +101,8 @@ public final class IslandScan {
                     // Chests, beds, signs, banners, heads...: keep their data so the miniature can draw them.
                     if (state.hasBlockEntity() && blockEntityBytes < MAX_ALL_BLOCK_ENTITY_BYTES) {
                         CompoundTag saved = saveBlockEntity(level, p);
-                        if (saved != null && blockEntityBytes + saved.sizeInBytes() <= MAX_ALL_BLOCK_ENTITY_BYTES) {
-                            blockEntityBytes += saved.sizeInBytes();
+                        if (saved != null && blockEntityBytes + bytes(saved) <= MAX_ALL_BLOCK_ENTITY_BYTES) {
+                            blockEntityBytes += bytes(saved);
                             CompoundTag entry = new CompoundTag();
                             entry.putInt("x", x);
                             entry.putInt("y", y);
@@ -180,10 +180,10 @@ public final class IslandScan {
             for (String key : HEAVY_ENTITY_DATA) {
                 saved.remove(key);
             }
-            if (saved.sizeInBytes() > MAX_ENTITY_BYTES || total + saved.sizeInBytes() > MAX_ALL_ENTITY_BYTES) {
+            if (bytes(saved) > MAX_ENTITY_BYTES || total + bytes(saved) > MAX_ALL_ENTITY_BYTES) {
                 continue; // keep the item small enough to sync
             }
-            total += saved.sizeInBytes();
+            total += bytes(saved);
             CompoundTag entry = new CompoundTag();
             entry.put("entity", saved);
             entry.putDouble("x", entity.getX() - origin.getX());
@@ -216,7 +216,7 @@ public final class IslandScan {
         // never server-only data such as loot seeds or command block commands.
         CompoundTag saved;
         try {
-            saved = be.getUpdateTag(level.registryAccess());
+            saved = be.getUpdateTag();
         } catch (RuntimeException e) {
             return null;
         }
@@ -225,7 +225,18 @@ public final class IslandScan {
             return null;
         }
         saved.putString("id", id.toString());
-        return saved.sizeInBytes() > MAX_BLOCK_ENTITY_BYTES ? null : saved;
+        return bytes(saved) > MAX_BLOCK_ENTITY_BYTES ? null : saved;
+    }
+
+    /** How big a tag is when saved (to keep items small enough to sync). */
+    private static int bytes(CompoundTag tag) {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        try {
+            net.minecraft.nbt.NbtIo.write(tag, new java.io.DataOutputStream(out));
+        } catch (java.io.IOException e) {
+            return Integer.MAX_VALUE;
+        }
+        return out.size();
     }
 
     /**

@@ -1,13 +1,10 @@
 package com.example.skyblocks.island;
 
-import com.example.skyblocks.ModComponents;
 import com.example.skyblocks.ModItems;
-import com.mojang.serialization.MapCodec;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
@@ -25,17 +22,12 @@ import org.jetbrains.annotations.Nullable;
  * Breaking it gives the item back with the island in it.
  */
 public class SkyIslandBlock extends BaseEntityBlock {
-    public static final MapCodec<SkyIslandBlock> CODEC = simpleCodec(SkyIslandBlock::new);
     private static final VoxelShape SHAPE = Block.box(3, 0, 3, 13, 3, 13);
 
     public SkyIslandBlock(Properties properties) {
         super(properties);
     }
 
-    @Override
-    protected MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
-    }
 
     @Nullable
     @Override
@@ -55,26 +47,37 @@ public class SkyIslandBlock extends BaseEntityBlock {
 
     /** Right-click with an ender pearl: travel to where the island was scanned. */
     @Override
-    public net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, net.minecraft.world.level.Level level,
-                                                               BlockPos pos, net.minecraft.world.entity.player.Player player,
-                                                               net.minecraft.world.InteractionHand hand,
-                                                               net.minecraft.world.phys.BlockHitResult hit) {
+    public net.minecraft.world.InteractionResult use(BlockState state, net.minecraft.world.level.Level level,
+                                                     BlockPos pos, net.minecraft.world.entity.player.Player player,
+                                                     net.minecraft.world.InteractionHand hand,
+                                                     net.minecraft.world.phys.BlockHitResult hit) {
+        ItemStack stack = player.getItemInHand(hand);
         if (IslandTravel.isTravelItem(stack) && level.getBlockEntity(pos) instanceof SkyIslandBlockEntity island
                 && island.island() != null) {
             if (!level.isClientSide) {
                 IslandTravel.travel(level, player, island.island(), stack);
             }
-            return net.minecraft.world.ItemInteractionResult.sidedSuccess(level.isClientSide);
+            return net.minecraft.world.InteractionResult.sidedSuccess(level.isClientSide);
         }
-        return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        return net.minecraft.world.InteractionResult.PASS;
+    }
+
+    /** A renamed Sky Island item keeps its name on the pedestal (the island itself comes in BlockEntityTag). */
+    @Override
+    public void setPlacedBy(net.minecraft.world.level.Level level, BlockPos pos, BlockState state,
+                            @Nullable net.minecraft.world.entity.LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (stack.hasCustomHoverName() && level.getBlockEntity(pos) instanceof SkyIslandBlockEntity island) {
+            island.setName(stack.getHoverName());
+        }
     }
 
     private static ItemStack itemFor(@Nullable BlockEntity be) {
         ItemStack stack = new ItemStack(ModItems.SKY_ISLAND.get());
         if (be instanceof SkyIslandBlockEntity island && island.island() != null) {
-            stack.set(ModComponents.ISLAND.get(), island.island());
+            IslandData.set(stack, island.island());
             if (island.name() != null) {
-                stack.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, island.name());
+                stack.setHoverName(island.name());
             }
         }
         return stack;
@@ -87,7 +90,7 @@ public class SkyIslandBlock extends BaseEntityBlock {
     }
 
     @Override
-    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
+    public ItemStack getCloneItemStack(BlockGetter level, BlockPos pos, BlockState state) {
         return itemFor(level.getBlockEntity(pos));
     }
 }

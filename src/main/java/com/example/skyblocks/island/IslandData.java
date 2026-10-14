@@ -1,13 +1,13 @@
 package com.example.skyblocks.island;
 
 import com.mojang.serialization.Codec;
-import io.netty.buffer.ByteBuf;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * A scanned sky island (the value of the skyblocks:island item component and of the Sky Island block entity).
+ * A scanned sky island (kept on the Sky Island item as BlockEntityTag.island, so placing the item gives the block
+ * entity its island, and in the Sky Island block entity).
  * Immutable; the content is an NBT compound written by IslandScan:
  * <ul>
  *   <li>size, height: the island is size x height x size blocks; ground: the layer the scanner stood on</li>
@@ -19,7 +19,18 @@ import net.minecraft.network.codec.StreamCodec;
  */
 public final class IslandData {
     public static final Codec<IslandData> CODEC = CompoundTag.CODEC.xmap(IslandData::new, IslandData::tag);
-    public static final StreamCodec<ByteBuf, IslandData> STREAM_CODEC = ByteBufCodecs.COMPOUND_TAG.map(IslandData::new, IslandData::tag);
+
+    /** The island on a Sky Island item, or null. */
+    @Nullable
+    public static IslandData get(ItemStack stack) {
+        CompoundTag be = stack.getTagElement("BlockEntityTag");
+        return be != null && be.contains("island", net.minecraft.nbt.Tag.TAG_COMPOUND) ? new IslandData(be.getCompound("island")) : null;
+    }
+
+    /** Puts an island on a Sky Island item. */
+    public static void set(ItemStack stack, IslandData island) {
+        stack.getOrCreateTagElement("BlockEntityTag").put("island", island.tag());
+    }
 
     private final CompoundTag tag;
     private final int hash;

@@ -1,6 +1,5 @@
 package com.example.skyblocks;
 
-import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.LivingEntity;
@@ -27,7 +26,6 @@ import org.jetbrains.annotations.Nullable;
  * (client/OiiaCatRenderer); without a signal it stands still.
  */
 public class OiiaCatBlock extends HorizontalDirectionalBlock implements EntityBlock {
-    public static final MapCodec<OiiaCatBlock> CODEC = simpleCodec(OiiaCatBlock::new);
     private static final VoxelShape SHAPE = Block.box(3, 0, 3, 13, 13, 13);
 
     public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
@@ -37,10 +35,6 @@ public class OiiaCatBlock extends HorizontalDirectionalBlock implements EntityBl
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(POWERED, false));
     }
 
-    @Override
-    protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
-        return CODEC;
-    }
 
     @Nullable
     @Override

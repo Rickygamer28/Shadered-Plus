@@ -15,7 +15,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
-import net.neoforged.neoforge.client.model.data.ModelData;
+import net.minecraftforge.client.model.data.ModelData;
 import org.joml.Matrix4f;
 
 /**
@@ -110,11 +110,14 @@ final class IslandMesh implements AutoCloseable {
             int[] d = entry.getValue();
             for (int i = 0; i < d.length; i += QuadCollector.INTS) {
                 int normal = d[i + 7];
-                consumer.addVertex(matrix, Float.intBitsToFloat(d[i]), Float.intBitsToFloat(d[i + 1]), Float.intBitsToFloat(d[i + 2]))
-                        .setColor(d[i + 3])
-                        .setUv(Float.intBitsToFloat(d[i + 4]), Float.intBitsToFloat(d[i + 5]))
-                        .setLight(d[i + 6])
-                        .setNormal(pose, (byte) normal / 127.0F, (byte) (normal >> 8) / 127.0F, (byte) (normal >> 16) / 127.0F);
+                int color = d[i + 3];
+                int light = d[i + 6];
+                consumer.vertex(matrix, Float.intBitsToFloat(d[i]), Float.intBitsToFloat(d[i + 1]), Float.intBitsToFloat(d[i + 2]))
+                        .color(color >> 16 & 0xFF, color >> 8 & 0xFF, color & 0xFF, color >>> 24)
+                        .uv(Float.intBitsToFloat(d[i + 4]), Float.intBitsToFloat(d[i + 5]))
+                        .uv2(light & 0xFFFF, light >>> 16)
+                        .normal(pose.normal(), (byte) normal / 127.0F, (byte) (normal >> 8) / 127.0F, (byte) (normal >> 16) / 127.0F)
+                        .endVertex();
             }
         }
     }
@@ -150,7 +153,8 @@ final class IslandMesh implements AutoCloseable {
         }
 
         @Override
-        public VertexConsumer addVertex(float x, float y, float z) {
+        public VertexConsumer vertex(double dx, double dy, double dz) {
+            float x = (float) dx, y = (float) dy, z = (float) dz;
             if (size + INTS > data.length) {
                 data = java.util.Arrays.copyOf(data, data.length * 2);
             }
@@ -168,7 +172,7 @@ final class IslandMesh implements AutoCloseable {
         }
 
         @Override
-        public VertexConsumer setColor(int red, int green, int blue, int alpha) {
+        public VertexConsumer color(int red, int green, int blue, int alpha) {
             if (current >= 0) {
                 data[current + 3] = (alpha & 0xFF) << 24 | (red & 0xFF) << 16 | (green & 0xFF) << 8 | (blue & 0xFF);
             }
@@ -176,7 +180,7 @@ final class IslandMesh implements AutoCloseable {
         }
 
         @Override
-        public VertexConsumer setUv(float u, float v) {
+        public VertexConsumer uv(float u, float v) {
             if (current >= 0) {
                 data[current + 4] = Float.floatToRawIntBits(u);
                 data[current + 5] = Float.floatToRawIntBits(v);
@@ -185,12 +189,12 @@ final class IslandMesh implements AutoCloseable {
         }
 
         @Override
-        public VertexConsumer setUv1(int u, int v) {
+        public VertexConsumer overlayCoords(int u, int v) {
             return this; // overlay: not part of the terrain vertex format
         }
 
         @Override
-        public VertexConsumer setUv2(int u, int v) {
+        public VertexConsumer uv2(int u, int v) {
             if (current >= 0) {
                 data[current + 6] = (u & 0xFFFF) | (v & 0xFFFF) << 16;
             }
@@ -198,11 +202,23 @@ final class IslandMesh implements AutoCloseable {
         }
 
         @Override
-        public VertexConsumer setNormal(float x, float y, float z) {
+        public VertexConsumer normal(float x, float y, float z) {
             if (current >= 0) {
                 data[current + 7] = packNormal(x, y, z);
             }
             return this;
+        }
+
+        @Override
+        public void endVertex() {
+        }
+
+        @Override
+        public void defaultColor(int red, int green, int blue, int alpha) {
+        }
+
+        @Override
+        public void unsetDefaultColor() {
         }
 
         private static int packNormal(float x, float y, float z) {

@@ -2,21 +2,17 @@ package com.example.skyblocks.client;
 
 import com.example.skyblocks.ModBlockEntities;
 import com.example.skyblocks.OiiaCatBlockEntity;
-import com.example.skyblocks.ModItems;
 import com.example.skyblocks.SkyBlocksMod;
 import com.example.skyblocks.client.island.IslandScannerRenderer;
 import com.example.skyblocks.client.island.SkyIslandRenderer;
-import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
-import net.neoforged.neoforge.client.event.EntityRenderersEvent;
-import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
-import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.client.event.EntityRenderersEvent;
 
-@EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class ClientSetup {
 
     /** Add our skies' skybox passes to Shadered's renderer (Shadered adds its own in its client setup). */
@@ -34,32 +30,9 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.BIG_OIIA_CAT.get(), big);
         event.registerBlockEntityRenderer(ModBlockEntities.SKY_ISLAND.get(), SkyIslandRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.ISLAND_SCANNER.get(), IslandScannerRenderer::new);
-    }
-
-    @SubscribeEvent
-    public static void registerClientExtensions(RegisterClientExtensionsEvent event) {
-        event.registerItem(new IClientItemExtensions() {
-            private OiiaCatItemRenderer renderer;
-
-            @Override
-            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
-                if (renderer == null) {
-                    renderer = new OiiaCatItemRenderer();
-                }
-                return renderer;
-            }
-        }, ModItems.OIIA_CAT.get());
-        event.registerItem(new IClientItemExtensions() {
-            private com.example.skyblocks.client.island.SkyIslandItemRenderer renderer;
-
-            @Override
-            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
-                if (renderer == null) {
-                    renderer = new com.example.skyblocks.client.island.SkyIslandItemRenderer();
-                }
-                return renderer;
-            }
-        }, ModItems.SKY_ISLAND.get());
+        // Shadered's sky blocks: ours replaces Shadered's (we load after Shadered) so our skies are drawn too
+        event.registerBlockEntityRenderer(com.noodlegamer76.shadered.entity.block.InitBlockEntities.SKYBLOCK.get(),
+                OurSkyblockRenderer::new);
     }
 
     private ClientSetup() {}

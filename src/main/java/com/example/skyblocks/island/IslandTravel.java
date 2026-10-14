@@ -1,6 +1,5 @@
 package com.example.skyblocks.island;
 
-import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -44,7 +43,7 @@ public final class IslandTravel {
         }
         BlockPos spot = safeSpot(target, island.origin());
         from.playSound(null, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
-        serverPlayer.teleportTo(target, spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, Set.of(),
+        serverPlayer.teleportTo(target, spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5,
                 serverPlayer.getYRot(), serverPlayer.getXRot());
         target.playSound(null, spot, SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
         if (!player.getAbilities().instabuild) {

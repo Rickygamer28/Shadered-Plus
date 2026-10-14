@@ -40,4 +40,14 @@ public class OiiaCatBlockEntity extends BlockEntity {
     public double centerOffset() {
         return 0.5;
     }
+
+    /** Around the cat's feet, reaching up and out past the cat (the spinning tail sticks out). */
+    @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox() {
+        int size = Math.max(1, size());
+        BlockPos pos = getBlockPos();
+        double c = centerOffset();
+        return new net.minecraft.world.phys.AABB(pos.getX() + c, pos.getY(), pos.getZ() + c,
+                pos.getX() + c, pos.getY() + size, pos.getZ() + c).inflate(1.5 * size);
+    }
 }

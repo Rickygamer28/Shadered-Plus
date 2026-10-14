@@ -1,6 +1,5 @@
 package com.example.skyblocks;
 
-import com.mojang.serialization.MapCodec;
 import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.HashSet;
@@ -17,7 +16,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.EntityBlock;
@@ -46,7 +44,6 @@ import org.jetbrains.annotations.Nullable;
  * back all N*N*N small cats.
  */
 public class BigOiiaCatBlock extends Block implements EntityBlock {
-    public static final MapCodec<BigOiiaCatBlock> CODEC = simpleCodec(BigOiiaCatBlock::new);
 
     public static final int MIN_SIZE = 2;
     public static final int MAX_SIZE = 23;
@@ -117,10 +114,6 @@ public class BigOiiaCatBlock extends Block implements EntityBlock {
                 .setValue(EDGE_Y, Edge.MID).setValue(EDGE_Z, Edge.MID).setValue(CUT, 0));
     }
 
-    @Override
-    protected MapCodec<? extends Block> codec() {
-        return CODEC;
-    }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
@@ -218,7 +211,7 @@ public class BigOiiaCatBlock extends Block implements EntityBlock {
     }
 
     @Override
-    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
+    public ItemStack getCloneItemStack(BlockGetter level, BlockPos pos, BlockState state) {
         return new ItemStack(ModItems.OIIA_CAT.get());
     }
 
@@ -356,11 +349,11 @@ public class BigOiiaCatBlock extends Block implements EntityBlock {
 
     /** A player breaks a part: remove the rest, and give back the cats unless creative or the wrong tool. */
     @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide) {
             dismantle(level, pos, state, !player.isCreative() && player.hasCorrectToolForDrops(state));
         }
-        return super.playerWillDestroy(level, pos, state, player);
+        super.playerWillDestroy(level, pos, state, player);
     }
 
     /** Any other removal (explosion, command, ...): the same, with the cats dropped. */

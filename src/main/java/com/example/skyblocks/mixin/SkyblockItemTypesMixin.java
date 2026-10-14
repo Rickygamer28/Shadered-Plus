@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** Adds an item type for each of our skies to Shadered's SkyblockItemTypes enum (item: skyblocks:<name>_sky_block). */
-@Mixin(SkyblockItemTypes.class)
+@Mixin(value = SkyblockItemTypes.class, remap = false)
 public abstract class SkyblockItemTypesMixin {
     @Shadow
     @Final

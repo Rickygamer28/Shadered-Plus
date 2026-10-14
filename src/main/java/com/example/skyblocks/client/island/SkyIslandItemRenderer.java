@@ -1,7 +1,6 @@
 package com.example.skyblocks.client.island;
 
 import com.example.skyblocks.ModBlocks;
-import com.example.skyblocks.ModComponents;
 import com.example.skyblocks.island.IslandData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.LinkedHashMap;
@@ -51,7 +50,7 @@ public class SkyIslandItemRenderer extends BlockEntityWithoutLevelRenderer {
         mc.getBlockRenderer().renderSingleBlock(ModBlocks.SKY_ISLAND.get().defaultBlockState(), poseStack, buffer,
                 packedLight, packedOverlay);
 
-        IslandData data = stack.get(ModComponents.ISLAND.get());
+        IslandData data = IslandData.get(stack);
         Level level = mc.level;
         IslandView view = data == null || level == null ? null : view(data, level);
         if (view != null) {
@@ -65,7 +64,7 @@ public class SkyIslandItemRenderer extends BlockEntityWithoutLevelRenderer {
                 poseStack.translate(-view.contentCenterX(), -view.lowestLayer(), -view.contentCenterZ());
                 mesh.render(poseStack.last(), buffer);
                 if (context != ItemDisplayContext.GUI) {
-                    view.renderFigures(poseStack, buffer, mc.getTimer().getGameTimeDeltaPartialTick(false));
+                    view.renderFigures(poseStack, buffer, mc.getFrameTime());
                 }
             } catch (RuntimeException e) {
                 VIEWS.remove(data); // try again later

@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * Adds our skies to Shadered's SkyblockType enum (SKYBLOCKS_JUPITER, ...), right when the enum is created,
  * so values(), valueOf(), saving/loading and every loop over the sky types include them.
  */
-@Mixin(SkyblockType.class)
+@Mixin(value = SkyblockType.class, remap = false)
 public abstract class SkyblockTypeMixin {
     @Shadow
     @Final

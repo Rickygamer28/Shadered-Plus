@@ -7,10 +7,13 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTab;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.simple.SimpleChannel;
 
 /**
  * Shadered+: adds skies to Shadered as real Shadered sky types (see the mixins in skyblocks.mixins.json).
@@ -24,15 +27,20 @@ public class SkyBlocksMod {
 
     /** Shadered's creative tab (shadered:shadered_tab). */
     public static final ResourceKey<CreativeModeTab> SHADERED_TAB = ResourceKey.create(
-            Registries.CREATIVE_MODE_TAB, ResourceLocation.fromNamespaceAndPath("shadered", "shadered_tab"));
+            Registries.CREATIVE_MODE_TAB, new ResourceLocation("shadered", "shadered_tab"));
 
-    public SkyBlocksMod(IEventBus modEventBus) {
+    private static final String PROTOCOL = "1";
+    /** Client to server messages (the Island Scanner's menu). */
+    public static final SimpleChannel NETWORK = NetworkRegistry.newSimpleChannel(
+            new ResourceLocation(MOD_ID, "main"), () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
+
+    public SkyBlocksMod() {
+        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         ModBlocks.BLOCKS.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
         ModBlockEntities.TYPES.register(modEventBus);
-        ModComponents.COMPONENTS.register(modEventBus);
         modEventBus.addListener(SkyBlocksMod::addToShaderedTab);
-        modEventBus.addListener(SkyBlocksMod::registerPayloads);
+        modEventBus.addListener(SkyBlocksMod::commonSetup);
     }
 
     /** Our skyblock items, like Shadered lists its own (Illusorite ores for our skies are added by Shadered itself). */
@@ -48,7 +56,11 @@ public class SkyBlocksMod {
         event.accept(ModItems.ISLAND_PAINTING.get());
     }
 
-    private static void registerPayloads(RegisterPayloadHandlersEvent event) {
-        event.registrar("1").playToServer(ScanIslandPayload.TYPE, ScanIslandPayload.STREAM_CODEC, ScanIslandPayload::handle);
+    private static void commonSetup(FMLCommonSetupEvent event) {
+        NETWORK.messageBuilder(ScanIslandPayload.class, 0, net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER)
+                .encoder(ScanIslandPayload::encode)
+                .decoder(ScanIslandPayload::decode)
+                .consumerMainThread(ScanIslandPayload::handle)
+                .add();
     }
 }

@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** Links each of our sky types to its item type, like Shadered does for its own (drops, pick block, Sky Emitter...). */
-@Mixin(SkyblockRegistry.class)
+@Mixin(value = SkyblockRegistry.class, remap = false)
 public abstract class SkyblockRegistryMixin {
     @Shadow
     @Final

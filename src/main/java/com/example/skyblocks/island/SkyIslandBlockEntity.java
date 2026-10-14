@@ -1,11 +1,7 @@
 package com.example.skyblocks.island;
 
 import com.example.skyblocks.ModBlockEntities;
-import com.example.skyblocks.ModComponents;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.core.component.DataComponentMap;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
@@ -91,40 +87,19 @@ public class SkyIslandBlockEntity extends BlockEntity {
     }
 
 
-    // The island travels between the item and the block as the skyblocks:island component.
-    @Override
-    public void applyImplicitComponents(DataComponentInput input) {
-        super.applyImplicitComponents(input);
-        island = input.get(ModComponents.ISLAND.get());
-        name = input.get(DataComponents.CUSTOM_NAME);
+    /** Pedestal: the name of the item it was placed from (SkyIslandBlock.setPlacedBy). */
+    void setName(@Nullable Component name) {
+        this.name = name;
+        setChanged();
     }
 
     @Override
-    public void collectImplicitComponents(DataComponentMap.Builder builder) {
-        super.collectImplicitComponents(builder);
-        if (island != null) {
-            builder.set(ModComponents.ISLAND.get(), island);
-        }
-        if (name != null) {
-            builder.set(DataComponents.CUSTOM_NAME, name);
-        }
-    }
-
-    /** The island is already on the item as its component; don't copy it into block_entity_data too. */
-    @Override
-    public void removeComponentsFromTag(CompoundTag tag) {
-        super.removeComponentsFromTag(tag);
-        tag.remove("island");
-        tag.remove("CustomName");
-    }
-
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    public void load(CompoundTag tag) {
+        super.load(tag);
         rotation = Math.floorMod(tag.getInt("rotation"), 8);
         background = tag.contains("background")
-                ? ItemStack.parse(registries, tag.getCompound("background")).orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
-        name = tag.contains("CustomName") ? parseCustomNameSafe(tag.getString("CustomName"), registries) : null;
+                ? ItemStack.of(tag.getCompound("background")) : ItemStack.EMPTY;
+        name = tag.contains("CustomName") ? parseName(tag.getString("CustomName")) : null;
         IslandData loaded = tag.contains("island") ? new IslandData(tag.getCompound("island")) : null;
         if (loaded == null || !loaded.equals(island)) {
             island = loaded; // keep the same instance when nothing changed (the client renderer compares it)
@@ -132,8 +107,8 @@ public class SkyIslandBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
         if (island != null) {
             tag.put("island", island.tag());
         }
@@ -142,23 +117,50 @@ public class SkyIslandBlockEntity extends BlockEntity {
         tag.putBoolean("has_island", island != null);
         tag.putInt("rotation", rotation);
         if (name != null) {
-            tag.putString("CustomName", Component.Serializer.toJson(name, registries));
+            tag.putString("CustomName", Component.Serializer.toJson(name));
         }
         if (!background.isEmpty()) {
-            tag.put("background", background.save(registries));
+            tag.put("background", background.save(new CompoundTag()));
+        }
+    }
+
+    @Nullable
+    private static Component parseName(String json) {
+        try {
+            return Component.Serializer.fromJson(json);
+        } catch (RuntimeException e) {
+            return null;
         }
     }
 
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+    public CompoundTag getUpdateTag() {
         CompoundTag tag = new CompoundTag();
-        saveAdditional(tag, registries);
+        saveAdditional(tag);
         return tag;
     }
 
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    /** What the renderer draws: the island above the pedestal, or a (joined) painting and the room behind it. */
+    @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox() {
+        BlockPos pos = getBlockPos();
+        BlockState state = getBlockState();
+        if (state.getBlock() instanceof IslandPaintingBlock && level != null) {
+            // a joined painting spans width x height blocks; the room goes into the wall behind it
+            int w = IslandPaintingBlock.width(level, pos, state);
+            int h = IslandPaintingBlock.height(level, pos, state);
+            BlockPos far = pos.relative(state.getValue(IslandPaintingBlock.FACING).getClockWise(), w - 1).above(h - 1);
+            return new net.minecraft.world.phys.AABB(pos).minmax(new net.minecraft.world.phys.AABB(far)).inflate(Math.max(w, h) + 1.0);
+        }
+        double half = displayWidth() / 2.0 + 0.5;
+        double top = 0.35 + 1.0 + (island != null && island.size() > 0 ? displayWidth() * (double) island.height() / island.size() : 1.0);
+        return new net.minecraft.world.phys.AABB(pos.getX() + 0.5 - half, pos.getY(), pos.getZ() + 0.5 - half,
+                pos.getX() + 0.5 + half, pos.getY() + top, pos.getZ() + 0.5 + half);
     }
 
     /** Client: free the baked model when the block goes away or its chunk unloads. */

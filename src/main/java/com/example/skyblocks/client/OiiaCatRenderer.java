@@ -19,7 +19,6 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.phys.AABB;
 import org.joml.Matrix4f;
 
 /**
@@ -86,9 +85,14 @@ public class OiiaCatRenderer implements BlockEntityRenderer<OiiaCatBlockEntity> 
             model.modelMatrix = relative;
             AssimpRenderer.getInstance().renderDirect(model, null, false);
         } else {
-            // Shadered's queued model renderer works in world coordinates (like MaxwellRenderer)
-            Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-            model.modelMatrix = new Matrix4f().translation((float) camera.x, (float) camera.y, (float) camera.z).mul(relative);
+            // Shadered's queued model renderer works in world coordinates (like MaxwellRenderer). On 1.20.1 the pose we
+            // get starts with the camera's rotation: undo it, then move from camera-relative to world coordinates.
+            net.minecraft.client.Camera cam = Minecraft.getInstance().gameRenderer.getMainCamera();
+            Vec3 camera = cam.getPosition();
+            Matrix4f view = new Matrix4f().rotationX((float) Math.toRadians(cam.getXRot()))
+                    .rotateY((float) Math.toRadians(cam.getYRot() + 180.0F));
+            model.modelMatrix = new Matrix4f().translation((float) camera.x, (float) camera.y, (float) camera.z)
+                    .mul(view.invert()).mul(relative);
             AssimpRenderer.getInstance().addModel(model);
         }
 
@@ -97,7 +101,7 @@ public class OiiaCatRenderer implements BlockEntityRenderer<OiiaCatBlockEntity> 
         renderShadow(be, poseStack, buffer, Math.max(0, lift), size, (float) center);
     }
 
-    private static final ResourceLocation SHADOW = ResourceLocation.withDefaultNamespace("textures/misc/shadow.png");
+    private static final ResourceLocation SHADOW = new ResourceLocation("textures/misc/shadow.png");
     private static final RenderType SHADOW_TYPE = RenderType.entityShadow(SHADOW);
     /** Same size as a cat's (ocelot's) entity shadow. */
     private static final float SHADOW_RADIUS = 0.4F;
@@ -135,12 +139,13 @@ public class OiiaCatRenderer implements BlockEntityRenderer<OiiaCatBlockEntity> 
 
     private static void shadowVertex(VertexConsumer consumer, PoseStack.Pose pose, float x, float y, float z,
                                      float u, float v, float alpha) {
-        consumer.addVertex(pose, x, y, z)
-                .setColor(1.0F, 1.0F, 1.0F, alpha)
-                .setUv(u, v)
-                .setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(LightTexture.FULL_BRIGHT)
-                .setNormal(pose, 0.0F, 1.0F, 0.0F);
+        consumer.vertex(pose.pose(), x, y, z)
+                .color(1.0F, 1.0F, 1.0F, alpha)
+                .uv(u, v)
+                .overlayCoords(OverlayTexture.NO_OVERLAY)
+                .uv2(LightTexture.FULL_BRIGHT)
+                .normal(pose.normal(), 0.0F, 1.0F, 0.0F)
+                .endVertex();
     }
 
     /** The model faces +Z (south); turn it to face the block's FACING. */
@@ -153,17 +158,6 @@ public class OiiaCatRenderer implements BlockEntityRenderer<OiiaCatBlockEntity> 
         };
     }
 
-    @Override
-    public AABB getRenderBoundingBox(OiiaCatBlockEntity be) {
-        int size = Math.max(1, be.size());
-        BlockPos pos = be.getBlockPos();
-        double c = be.centerOffset();
-        // around the cat's feet, reaching up and out past the cat (the spinning tail sticks out)
-        return new AABB(pos.getX() + c, pos.getY(), pos.getZ() + c, pos.getX() + c, pos.getY() + size, pos.getZ() + c)
-                .inflate(1.5 * size);
-    }
-
-    /** Big cats can be seen from further away than block entities usually are. */
     @Override
     public int getViewDistance() {
         return 256;

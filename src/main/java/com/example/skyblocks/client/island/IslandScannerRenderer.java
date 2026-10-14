@@ -98,11 +98,6 @@ public class IslandScannerRenderer implements BlockEntityRenderer<IslandScannerB
     }
 
     @Override
-    public AABB getRenderBoundingBox(IslandScannerBlockEntity be) {
-        return new AABB(be.getBlockPos()).inflate(13, 26, 13);
-    }
-
-    @Override
     public boolean shouldRenderOffScreen(IslandScannerBlockEntity be) {
         return true;
     }

@@ -4,7 +4,6 @@ import com.example.skyblocks.SkyBlocksMod;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
-import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
@@ -16,7 +15,6 @@ import com.noodlegamer76.shadered.client.renderer.SkyblockRenderer;
 import com.noodlegamer76.shadered.client.util.RenderCube;
 import com.noodlegamer76.shadered.client.util.skyblock.SkyblockBatchData;
 import com.noodlegamer76.shadered.client.util.skyblock.SkyblockPass;
-import com.noodlegamer76.shadered.event.RegisterShaders;
 import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.client.renderer.GameRenderer;
@@ -50,15 +48,15 @@ final class IslandWindow {
      */
     private static final float PICTURE_Z = 1.0F;
     private static final ResourceLocation BACKDROP =
-            ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "textures/block/island_painting_backdrop.png");
+            new ResourceLocation(SkyBlocksMod.MOD_ID, "textures/block/island_painting_backdrop.png");
 
-    private static ByteBufferBuilder memory;
+    private static BufferBuilder memory;
 
 
 
-    private static ByteBufferBuilder memory() {
+    private static BufferBuilder memory() {
         if (memory == null) {
-            memory = new ByteBufferBuilder(1 << 18);
+            memory = new BufferBuilder(1 << 18);
         }
         return memory;
     }
@@ -218,7 +216,7 @@ final class IslandWindow {
             }
             for (SkyblockPass pass : SkyblockPass.values()) {
                 SkyblockBatchData.PassData data = entry.getValue().get(pass);
-                ShaderInstance shader = RegisterShaders.get(pass.getShaderName());
+                ShaderInstance shader = pass.getShader();
                 if (data == null || shader == null) {
                     continue;
                 }
@@ -252,13 +250,14 @@ final class IslandWindow {
     }
 
     private static void drawPictureQuad(Matrix4f m, Box b) {
-        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
-        builder.addVertex(m, b.x0(), b.y0(), PICTURE_Z);
-        builder.addVertex(m, b.x1(), b.y0(), PICTURE_Z);
-        builder.addVertex(m, b.x1(), b.y1(), PICTURE_Z);
-        builder.addVertex(m, b.x0(), b.y1(), PICTURE_Z);
+        BufferBuilder builder = Tesselator.getInstance().getBuilder();
+        builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
+        builder.vertex(m, b.x0(), b.y0(), PICTURE_Z).endVertex();
+        builder.vertex(m, b.x1(), b.y0(), PICTURE_Z).endVertex();
+        builder.vertex(m, b.x1(), b.y1(), PICTURE_Z).endVertex();
+        builder.vertex(m, b.x0(), b.y1(), PICTURE_Z).endVertex();
         RenderSystem.setShader(GameRenderer::getPositionShader);
-        BufferUploader.drawWithShader(builder.buildOrThrow());
+        BufferUploader.drawWithShader(builder.end());
     }
 
     /**
@@ -275,7 +274,7 @@ final class IslandWindow {
         }
         Integer sky = SkyblockRenderer.DATA_LIST.get(SkyblockRenderer.getData(data.type()));
         SkyblockPass pass = data.pass();
-        ShaderInstance shader = RegisterShaders.get(pass.getShaderName());
+        ShaderInstance shader = pass.getShader();
         if (sky == null || shader == null) {
             return false;
         }
@@ -286,23 +285,24 @@ final class IslandWindow {
         Matrix4f m = poseStack.last().pose();
         float z0 = 1.0F, z1 = 1.0F + b.depth();
         float x0 = b.x0(), x1 = b.x1(), y0 = b.y0(), y1 = b.y1();
-        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        BufferBuilder builder = Tesselator.getInstance().getBuilder();
+        builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         skyQuad(builder, m, x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1); // back
         skyQuad(builder, m, x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0); // left
         skyQuad(builder, m, x1, y0, z1, x1, y0, z0, x1, y1, z0, x1, y1, z1); // right
         skyQuad(builder, m, x0, y1, z1, x1, y1, z1, x1, y1, z0, x0, y1, z0); // top
         skyQuad(builder, m, x0, y0, z0, x1, y0, z0, x1, y0, z1, x0, y0, z1); // floor
-        BufferUploader.drawWithShader(builder.buildOrThrow());
+        BufferUploader.drawWithShader(builder.end());
         RenderSystem.enableCull();
         return true;
     }
 
     private static void skyQuad(BufferBuilder b, Matrix4f m, float x0, float y0, float z0, float x1, float y1, float z1,
                                 float x2, float y2, float z2, float x3, float y3, float z3) {
-        b.addVertex(m, x0, y0, z0).setUv(0, 1).setColor(255, 255, 255, 255);
-        b.addVertex(m, x1, y1, z1).setUv(1, 1).setColor(255, 255, 255, 255);
-        b.addVertex(m, x2, y2, z2).setUv(1, 0).setColor(255, 255, 255, 255);
-        b.addVertex(m, x3, y3, z3).setUv(0, 0).setColor(255, 255, 255, 255);
+        b.vertex(m, x0, y0, z0).uv(0, 1).color(255, 255, 255, 255).endVertex();
+        b.vertex(m, x1, y1, z1).uv(1, 1).color(255, 255, 255, 255).endVertex();
+        b.vertex(m, x2, y2, z2).uv(1, 0).color(255, 255, 255, 255).endVertex();
+        b.vertex(m, x3, y3, z3).uv(0, 0).color(255, 255, 255, 255).endVertex();
     }
 
     /** The room behind the picture: sky on the back, sides, top and (darker) floor; lit like a painting. */
@@ -332,12 +332,13 @@ final class IslandWindow {
 
     private static void vertex(VertexConsumer c, PoseStack.Pose pose, int light, float shade, float nx, float ny, float nz,
                                float x, float y, float z, float u, float v) {
-        c.addVertex(pose.pose(), x, y, z)
-                .setColor(shade, shade, shade, 1.0F)
-                .setUv(u, v)
-                .setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(light)
-                .setNormal(pose, nx, ny, nz);
+        c.vertex(pose.pose(), x, y, z)
+                .color(shade, shade, shade, 1.0F)
+                .uv(u, v)
+                .overlayCoords(OverlayTexture.NO_OVERLAY)
+                .uv2(light)
+                .normal(pose.normal(), nx, ny, nz)
+                .endVertex();
     }
 
     /**

@@ -25,7 +25,7 @@ import org.joml.Matrix4f;
  * (standing still: as an item it gets no redstone signal).
  */
 public class OiiaCatItemRenderer extends BlockEntityWithoutLevelRenderer {
-    private static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "textures/item/oiia_cat.png");
+    private static final ResourceLocation ICON = new ResourceLocation(SkyBlocksMod.MOD_ID, "textures/item/oiia_cat.png");
 
     public OiiaCatItemRenderer() {
         super(Minecraft.getInstance().getBlockEntityRenderDispatcher(), Minecraft.getInstance().getEntityModels());
@@ -44,12 +44,13 @@ public class OiiaCatItemRenderer extends BlockEntityWithoutLevelRenderer {
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
             Matrix4f m = poseStack.last().pose();
-            BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-            builder.addVertex(m, -1, 1, 0).setUv(0, 0);
-            builder.addVertex(m, -1, -1, 0).setUv(0, 1);
-            builder.addVertex(m, 1, -1, 0).setUv(1, 1);
-            builder.addVertex(m, 1, 1, 0).setUv(1, 0);
-            BufferUploader.drawWithShader(builder.buildOrThrow());
+            BufferBuilder builder = Tesselator.getInstance().getBuilder();
+            builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+            builder.vertex(m, -1, 1, 0).uv(0, 0).endVertex();
+            builder.vertex(m, -1, -1, 0).uv(0, 1).endVertex();
+            builder.vertex(m, 1, -1, 0).uv(1, 1).endVertex();
+            builder.vertex(m, 1, 1, 0).uv(1, 0).endVertex();
+            BufferUploader.drawWithShader(builder.end());
             RenderSystem.disableBlend();
         } else {
             RenderableModel model = OiiaCatModel.create();
