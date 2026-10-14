@@ -24,6 +24,8 @@ import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL30;
 
 /**
  * Shadered's skies for the Island Painting's window, on Shadered 1.3.7 - 1.4.2, which keep them in two different ways:
@@ -161,14 +163,29 @@ final class ShaderedSkies13 {
     @SuppressWarnings("unchecked")
     private static Integer drawPicture(SkyblockRenderPass pass, SkyblockBatchData queue) {
         Minecraft mc = Minecraft.getInstance();
+        // Shader mods (Oculus / Iris) draw the world into their own framebuffer, not the main one: remember what was
+        // bound, and put exactly that back afterwards.
+        int drawFbo = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+        int readFbo = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
+        int[] viewport = new int[4];
+        GL11.glGetIntegerv(GL11.GL_VIEWPORT, viewport);
         try {
             ResourceLocation folder = pass.getTexturePath();
             SkyboxTranslation translation = pass.getTranslation();
             Vector3f speed = (Vector3f) speedField.get(pass);
             ShaderInstance shader = ((Supplier<ShaderInstance>) shaderField.get(pass)).get();
+            if (shader == null || !shader.getName().startsWith("shadered")) {
+                // Minecraft's own sky texture shader: while the world is drawn, shader mods hand out their replacement
+                // from GameRenderer's getters, so take the original by name
+                ShaderInstance plain = mc.gameRenderer.getShader("position_tex_color");
+                if (plain != null) {
+                    shader = plain;
+                }
+            }
             if (folder == null || shader == null) {
                 return null;
             }
+            final ShaderInstance skyShader = shader;
             TextureTarget into = target(queue);
             into.setClearColor(0, 0, 0, 0);
             into.clear(Minecraft.ON_OSX);
@@ -186,13 +203,15 @@ final class ShaderedSkies13 {
                 rotation.mul(Axis.ZP.rotationDegrees(ticks * speed.z));
                 pose.mulPose(rotation);
             }
-            RenderSystem.setShader(() -> shader);
-            SkyBoxRenderer.renderBlockSkybox(pose, folder, shader, translation);
+            RenderSystem.setShader(() -> skyShader);
+            SkyBoxRenderer.renderBlockSkybox(pose, folder, skyShader, translation);
             return into.getColorTextureId();
         } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
             return null;
         } finally {
-            mc.getMainRenderTarget().bindWrite(true);
+            com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, drawFbo);
+            com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, readFbo);
+            RenderSystem.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
         }
     }
 
