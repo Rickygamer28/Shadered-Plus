@@ -41,6 +41,13 @@ public class SkyIslandItemRenderer extends BlockEntityWithoutLevelRenderer {
                              int packedLight, int packedOverlay) {
         Minecraft mc = Minecraft.getInstance();
         poseStack.pushPose();
+        // The pedestal is only 3 pixels tall with the island above it, so held in hand it sat below the view:
+        // lift it so the whole thing is in sight.
+        if (context.firstPerson()) {
+            poseStack.translate(0.0F, 0.45F, 0.0F);
+        } else if (context == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND || context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND) {
+            poseStack.translate(0.0F, 0.2F, 0.0F);
+        }
         mc.getBlockRenderer().renderSingleBlock(ModBlocks.SKY_ISLAND.get().defaultBlockState(), poseStack, buffer,
                 packedLight, packedOverlay);
 
