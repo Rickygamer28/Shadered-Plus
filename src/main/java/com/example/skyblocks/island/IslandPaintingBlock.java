@@ -272,6 +272,13 @@ public class IslandPaintingBlock extends BaseEntityBlock {
         if (!(level.getBlockEntity(anchor(level, pos, state)) instanceof SkyIslandBlockEntity painting)) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
+        // An ender pearl: travel to where the island was scanned.
+        if (IslandTravel.isTravelItem(stack) && painting.island() != null) {
+            if (!level.isClientSide) {
+                IslandTravel.travel(level, player, painting.island(), stack);
+            }
+            return ItemInteractionResult.sidedSuccess(level.isClientSide);
+        }
         // A Shadered sky block (Shadered's or ours, filters included): becomes the room's background.
         if (ShaderedSkyItems.isSkyBlock(stack)) {
             if (!level.isClientSide) {

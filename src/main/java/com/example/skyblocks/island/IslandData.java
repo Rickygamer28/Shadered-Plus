@@ -51,6 +51,25 @@ public final class IslandData {
         return tag.getInt("mobs");
     }
 
+    /** Whether it knows where it was scanned (islands scanned before this was added don't). */
+    public boolean hasOrigin() {
+        return tag.contains("origin_x") && tag.contains("dimension");
+    }
+
+    /** Where the Island Scanner stood. */
+    public net.minecraft.core.BlockPos origin() {
+        return new net.minecraft.core.BlockPos(tag.getInt("origin_x"), tag.getInt("origin_y"), tag.getInt("origin_z"));
+    }
+
+    public String dimension() {
+        return tag.getString("dimension");
+    }
+
+    /** In-game day it was scanned on, or -1 if unknown. */
+    public long scannedDay() {
+        return tag.contains("scanned_day") ? tag.getLong("scanned_day") : -1;
+    }
+
     @Override
     public boolean equals(Object o) {
         return o == this || (o instanceof IslandData other && hash == other.hash && tag.equals(other.tag));

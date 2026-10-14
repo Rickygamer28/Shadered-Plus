@@ -25,6 +25,16 @@ public class SkyIslandItem extends BlockItem {
             tooltip.add(Component.translatable("tooltip.skyblocks.island_size",
                     island.size(), island.size(), island.height()).withStyle(ChatFormatting.GRAY));
             tooltip.add(Component.translatable("tooltip.skyblocks.island_mobs", island.mobs()).withStyle(ChatFormatting.GRAY));
+            if (island.hasOrigin()) {
+                net.minecraft.core.BlockPos o = island.origin();
+                String dim = island.dimension();
+                tooltip.add(Component.translatable("tooltip.skyblocks.island_origin", o.getX(), o.getY(), o.getZ(),
+                        dim.startsWith("minecraft:") ? dim.substring("minecraft:".length()) : dim).withStyle(ChatFormatting.DARK_GRAY));
+                if (island.scannedDay() >= 0) {
+                    tooltip.add(Component.translatable("tooltip.skyblocks.island_day", island.scannedDay()).withStyle(ChatFormatting.DARK_GRAY));
+                }
+                tooltip.add(Component.translatable("tooltip.skyblocks.island_travel").withStyle(ChatFormatting.DARK_PURPLE));
+            }
         }
     }
 }

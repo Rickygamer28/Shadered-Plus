@@ -49,6 +49,17 @@ public final class ClientSetup {
                 return renderer;
             }
         }, ModItems.OIIA_CAT.get());
+        event.registerItem(new IClientItemExtensions() {
+            private com.example.skyblocks.client.island.SkyIslandItemRenderer renderer;
+
+            @Override
+            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (renderer == null) {
+                    renderer = new com.example.skyblocks.client.island.SkyIslandItemRenderer();
+                }
+                return renderer;
+            }
+        }, ModItems.SKY_ISLAND.get());
     }
 
     private ClientSetup() {}

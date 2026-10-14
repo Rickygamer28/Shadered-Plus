@@ -197,6 +197,11 @@ public final class IslandScan {
         tag.put("entities", entities);
         tag.putInt("mobs", mobs);
         tag.putString("dimension", level.dimension().location().toString());
+        // where the scanner stood (for travelling there with an ender pearl) and when (day number)
+        tag.putInt("origin_x", scanner.getX());
+        tag.putInt("origin_y", scanner.getY());
+        tag.putInt("origin_z", scanner.getZ());
+        tag.putLong("scanned_day", level.getDayTime() / 24000L);
         return new IslandData(tag);
     }
 

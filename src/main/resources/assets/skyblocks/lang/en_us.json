@@ -29,5 +29,10 @@
   "message.skyblocks.island_too_far": "Too far from the Island Scanner",
   "message.skyblocks.island_wait": "Wait a moment before scanning again",
   "message.skyblocks.island_failed": "Scan failed (see the log)",
-  "block.skyblocks.island_painting": "Island Painting"
+  "block.skyblocks.island_painting": "Island Painting",
+  "message.skyblocks.island_no_origin": "This island doesn't know where it was scanned (scan it again)",
+  "message.skyblocks.island_no_dimension": "The place this island was scanned in doesn't exist here",
+  "tooltip.skyblocks.island_origin": "Scanned at %s, %s, %s (%s)",
+  "tooltip.skyblocks.island_day": "On day %s",
+  "tooltip.skyblocks.island_travel": "Right-click its pedestal or painting with an ender pearl to go there"
 }

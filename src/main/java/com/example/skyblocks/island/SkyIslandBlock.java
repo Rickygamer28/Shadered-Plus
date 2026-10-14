@@ -53,6 +53,22 @@ public class SkyIslandBlock extends BaseEntityBlock {
         return SHAPE;
     }
 
+    /** Right-click with an ender pearl: travel to where the island was scanned. */
+    @Override
+    public net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, net.minecraft.world.level.Level level,
+                                                               BlockPos pos, net.minecraft.world.entity.player.Player player,
+                                                               net.minecraft.world.InteractionHand hand,
+                                                               net.minecraft.world.phys.BlockHitResult hit) {
+        if (IslandTravel.isTravelItem(stack) && level.getBlockEntity(pos) instanceof SkyIslandBlockEntity island
+                && island.island() != null) {
+            if (!level.isClientSide) {
+                IslandTravel.travel(level, player, island.island(), stack);
+            }
+            return net.minecraft.world.ItemInteractionResult.sidedSuccess(level.isClientSide);
+        }
+        return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
     private static ItemStack itemFor(@Nullable BlockEntity be) {
         ItemStack stack = new ItemStack(ModItems.SKY_ISLAND.get());
         if (be instanceof SkyIslandBlockEntity island && island.island() != null) {

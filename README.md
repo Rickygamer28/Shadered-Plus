@@ -68,6 +68,11 @@ blockstate/models/loot/lang and adjust the scale. Models with a skeleton can use
   look-alikes, not real mobs: they can't be hit, don't drop anything and can't be used to duplicate anything. Mobs that
   were standing on the ground wander around the island now and then and look around; flying and swimming ones stay where
   they were. Breaking the pedestal gives the item back, island included.
+- **Travel:** islands remember where they were scanned (tooltip: place and day). Right-click a Sky Island pedestal
+  or painting with an ender pearl to teleport there, on top of where the scanner stood, in any dimension (the pearl is
+  used up, not in creative). Islands scanned before this was added need a new scan.
+- **3D item:** the Sky Island item shows its pedestal with the island floating above it, in hand, inventories, item
+  frames and on the ground (mobs too, except in inventories; chests, sky blocks and cats only show once placed).
 - **Island Painting** (`skyblocks:island_painting`, recipe: 8 sticks around an Amethyst Shard). Hang it on the side of
   a block: a flat frame, 1 pixel thick like a painting, whose picture is a window into a little sky room that goes a
   block deep into the wall. Right-click it with a Sky Island and the island floats in the lower part of the room, at the
