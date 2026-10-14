@@ -40,8 +40,12 @@ jobs:
       - name: Report compile errors
         if: failure()
         run: |
-          grep -E "\.java:[0-9]+: error:" -A2 build.log | head -60 | while IFS= read -r line; do
-            echo "::error::$line"
+          # GitHub shows at most 10 error notes per step: pack up to 30 errors into each note.
+          grep -E "(\.java:[0-9]+: error:|^> |error: )" build.log | sed 's#.*/src/main/java/##' | awk '!seen[$0]++' > errors.txt || true
+          echo "errors: $(wc -l < errors.txt)"
+          split -l 30 errors.txt part_
+          for f in $(ls part_* 2>/dev/null | head -10); do
+            echo "::error::$(sed ':a;N;$!ba;s/\n/%0A/g' $f)"
           done
 
       - name: Upload jar

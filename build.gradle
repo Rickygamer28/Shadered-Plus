@@ -26,6 +26,7 @@ mixin {
 }
 
 repositories {
+    mavenCentral()
     // Shadered is downloaded from Modrinth's maven at build time.
     maven {
         name = 'Modrinth'
@@ -42,6 +43,7 @@ repositories {
 
 dependencies {
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+    compileOnly 'org.jetbrains:annotations:24.1.0'
     // Shadered+ is an addon: it compiles against Shadered and needs Shadered (and Shadered's own
     // dependencies, e.g. GeckoLib) installed in the game. Not bundled into our jar.
     modCompileOnly "maven.modrinth:shadered:${shadered_version}"
