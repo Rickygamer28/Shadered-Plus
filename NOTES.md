@@ -32,3 +32,13 @@
 - Big OIIA Cat reworked (10 Oct 2026): any exact cube 2..23 (connected small cats must be exactly the cube); master BE stores size/facing/powered; parts link to master. Big cats from the 3x3x3 version in test worlds won't survive (block states changed).
 - Sky Islands (13 Oct 2026): Island Scanner (menu: size 3..25 odd, above 1..24, depth 0..24) -> Sky Island item with skyblocks:island component (IslandData NBT) -> pedestal block whose BER bakes the island (fake BlockAndTintGetter + VertexBuffers) and draws mob figures. User choices: miniature, snapshot, animated figures, centered + menu. Not compiled here (mavens blocked); reviewed by a second agent and fixes applied.
 - Sky Islands round 2 (13 Oct 2026): block entities copied (update tag + id, drawn at far-away fake pos with client level), quads re-emitted via BufferSource (translucentMovingBlock) for sorting/Fabulous/Iris, fish wasTouchingWater accessor mixin. Second review applied.
+
+## 1.20.1 Forge port (branch 1.20.1, 14 Oct 2026)
+- Built with ModDevGradle legacyforge (Forge 47.4.10), Java 17, against Shadered 1.4.7 (Modrinth maven). Shadered's sky
+  type system (SkyblockType, SkyblockItemTypes, SkyblockRegistry, SkyblockEntity) exists from 1.4.3; 1.3.x lacks it.
+- Mixins targeting Shadered use remap = false. Shadered's SkyblockEntityRenderer.render is not mixed into (its name is
+  remapped in production); client/OurSkyblockRenderer replaces Shadered's renderer for its skyblock BE and delegates.
+- Items: data components became NBT (IslandData.get/set use BlockEntityTag.island; names via hover name).
+- 1.20.1 BER poses include the camera rotation: OiiaCatRenderer undoes it for AssimpRenderer.addModel (world space).
+- CI starts the client under Xvfb with Shadered + GeckoLib (title screen) to check loading; Shadered 1.4.7 can't start
+  a dedicated dev server (LWJGL natives), so no server test.

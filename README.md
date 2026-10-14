@@ -1,4 +1,10 @@
-# Shadered+ (NeoForge 1.21.1): an addon for Shadered
+# Shadered+ (Forge 1.20.1): an addon for Shadered
+
+> This is the **1.20.1 Forge** branch. It needs **Shadered 1.4.3 or newer for 1.20.1** (built against 1.4.7, the
+> newest when ported); older Shadered versions (1.3.x) don't have the sky types this mod plugs into. The NeoForge
+> 1.21.1 version is on the `main` branch. Differences from 1.21.1: items keep their data as NBT (the island is in
+> the Sky Island item's `BlockEntityTag`), and our skies are drawn by a renderer that wraps Shadered's sky block
+> renderer instead of a mixin.
 
 Adds six new skies to **Shadered** by Noodlegamer76: Jupiter, Cat, Twilight, Hell, Nebula and Golden Hour.
 They are added as real Shadered sky types, so everything in Shadered that works with sky types works with them:
@@ -8,7 +14,7 @@ They are added as real Shadered sky types, so everything in Shadered that works 
 - **Illusorite ore** veins can hold our skies, Illusorite can roll them, and Shadered's creative tab lists the ores for them.
 - Breaking, pick-block, saving and syncing go through Shadered's own code.
 
-**Requires Shadered for 1.21.1** (built against 1.21.1-1.5.8, https://modrinth.com/mod/shadered) and everything
+**Requires Shadered for 1.20.1, version 1.4.3 or newer** (built against 1.4.7, https://modrinth.com/mod/shadered) and everything
 Shadered itself needs (GeckoLib, Sodium, ...). Our skyblock items are listed in Shadered's creative tab.
 Our skies have no crafting recipes: like Shadered's own skies, you get them from Illusorite ore veins.
 
