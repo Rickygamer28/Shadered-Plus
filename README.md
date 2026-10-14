@@ -63,8 +63,9 @@ blockstate/models/loot/lang and adjust the scale. Models with a skeleton can use
 - **Sky Island** item: a snapshot of the area. Everything from the ground layer up is copied as it is; below it the
   island narrows into a rough rounded point, like a floating island. The original area is not changed.
   Mobs (and armor stands, item frames, paintings) in the area are copied too (up to 64). Tooltip: size and mob count.
-- **Placing** it puts down a small pedestal with the island floating and gently bobbing above it as a 1-block-wide
-  miniature. The mini mobs are
+- **Placing** it puts down a small pedestal with the island floating and gently bobbing above it as a miniature,
+  blocks drawn the same size for every island (a 25x25 island fills the block, a 3x3 one is small; the scanner's
+  preview works the same way). The mini mobs are
   look-alikes, not real mobs: they can't be hit, don't drop anything and can't be used to duplicate anything. Mobs that
   were standing on the ground wander around the island now and then and look around; flying and swimming ones stay where
   they were. Breaking the pedestal gives the item back, island included.
@@ -89,6 +90,13 @@ blockstate/models/loot/lang and adjust the scale. Models with a skeleton can use
   island out, then (again) the background. Breaking it gives back the
   painting, the island and the background. (The window uses the stencil buffer; with some shader packs it may show over things
   standing right in front of the painting, and with Fabulous graphics see-through blocks inside it may not show.)
+- **Names:** rename a Sky Island in an anvil and the name goes with it: on a small brass plaque on the bottom edge of
+  the painting's frame (centred under a joined painting, shrunk to fit long names), and floating above the pedestal
+  while you look at it. Taking the island out or breaking the block gives it back with its name.
+- **Frame styles:** right-click an Island Painting with a gold ingot, dark oak planks, a prismarine shard, quartz or
+  blackstone to change its frame (the item is used up); a stick puts the normal oak frame back. A joined painting
+  changes as a whole and keeps one frame (the one most of its parts had, when they join). Breaking it drops the plain
+  painting.
 - Islands are lit by daylight from all sides, so their undersides aren't dark (closed caves still are).
 - How it's drawn: the island is a tiny stand-alone "level" (`client/island/IslandView`). Minecraft's own block and fluid
   renderers turn it into quads once (`IslandMesh`), with biome colours and light (sunlight, torches, lava...) worked

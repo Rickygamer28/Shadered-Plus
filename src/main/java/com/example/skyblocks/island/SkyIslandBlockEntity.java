@@ -5,6 +5,8 @@ import com.example.skyblocks.ModComponents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.network.protocol.Packet;
@@ -69,9 +71,19 @@ public class SkyIslandBlockEntity extends BlockEntity {
         }
     }
 
-    /** Island Painting: puts an island in (or takes it out with null). */
-    void setIsland(@Nullable IslandData island) {
+    /** The name the Sky Island item was given in an anvil (shown on a plaque), or null. */
+    @Nullable
+    private Component name;
+
+    @Nullable
+    public Component name() {
+        return name;
+    }
+
+    /** Island Painting: puts an island in, with its item's name (or takes it out with null). */
+    void setIsland(@Nullable IslandData island, @Nullable Component name) {
         this.island = island;
+        this.name = island != null ? name : null;
         setChanged();
         if (level != null) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
@@ -84,6 +96,7 @@ public class SkyIslandBlockEntity extends BlockEntity {
     public void applyImplicitComponents(DataComponentInput input) {
         super.applyImplicitComponents(input);
         island = input.get(ModComponents.ISLAND.get());
+        name = input.get(DataComponents.CUSTOM_NAME);
     }
 
     @Override
@@ -92,6 +105,9 @@ public class SkyIslandBlockEntity extends BlockEntity {
         if (island != null) {
             builder.set(ModComponents.ISLAND.get(), island);
         }
+        if (name != null) {
+            builder.set(DataComponents.CUSTOM_NAME, name);
+        }
     }
 
     /** The island is already on the item as its component; don't copy it into block_entity_data too. */
@@ -99,6 +115,7 @@ public class SkyIslandBlockEntity extends BlockEntity {
     public void removeComponentsFromTag(CompoundTag tag) {
         super.removeComponentsFromTag(tag);
         tag.remove("island");
+        tag.remove("CustomName");
     }
 
     @Override
@@ -107,6 +124,7 @@ public class SkyIslandBlockEntity extends BlockEntity {
         rotation = Math.floorMod(tag.getInt("rotation"), 8);
         background = tag.contains("background")
                 ? ItemStack.parse(registries, tag.getCompound("background")).orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
+        name = tag.contains("CustomName") ? parseCustomNameSafe(tag.getString("CustomName"), registries) : null;
         IslandData loaded = tag.contains("island") ? new IslandData(tag.getCompound("island")) : null;
         if (loaded == null || !loaded.equals(island)) {
             island = loaded; // keep the same instance when nothing changed (the client renderer compares it)
@@ -123,6 +141,9 @@ public class SkyIslandBlockEntity extends BlockEntity {
         // painting would never reach them and it would still be shown.
         tag.putBoolean("has_island", island != null);
         tag.putInt("rotation", rotation);
+        if (name != null) {
+            tag.putString("CustomName", Component.Serializer.toJson(name, registries));
+        }
         if (!background.isEmpty()) {
             tag.put("background", background.save(registries));
         }

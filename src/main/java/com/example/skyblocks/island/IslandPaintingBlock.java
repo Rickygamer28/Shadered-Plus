@@ -29,6 +29,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.BlockHitResult;
@@ -55,6 +56,8 @@ public class IslandPaintingBlock extends BaseEntityBlock {
     public static final BooleanProperty DOWN = BooleanProperty.create("down");
     public static final BooleanProperty CW = BooleanProperty.create("cw");
     public static final BooleanProperty CCW = BooleanProperty.create("ccw");
+    /** The frame's look (gold, dark oak...); a joined painting has the same one on all its blocks. */
+    public static final EnumProperty<FrameStyle> FRAME = EnumProperty.create("frame", FrameStyle.class);
     public static final int MIN_JOIN = 2;
     public static final int MAX_JOIN = 8;
 
@@ -67,7 +70,8 @@ public class IslandPaintingBlock extends BaseEntityBlock {
     public IslandPaintingBlock(Properties properties) {
         super(properties);
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH)
-                .setValue(UP, false).setValue(DOWN, false).setValue(CW, false).setValue(CCW, false));
+                .setValue(UP, false).setValue(DOWN, false).setValue(CW, false).setValue(CCW, false)
+                .setValue(FRAME, FrameStyle.OAK));
     }
 
     @Override
@@ -77,7 +81,7 @@ public class IslandPaintingBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, UP, DOWN, CW, CCW);
+        builder.add(FACING, UP, DOWN, CW, CCW, FRAME);
     }
 
     @Nullable
@@ -248,11 +252,31 @@ public class IslandPaintingBlock extends BaseEntityBlock {
         }
         int w = maxU - minU + 1, h = maxV - minV + 1;
         boolean joined = !tooBig && group.size() == w * h && w >= MIN_JOIN && h >= MIN_JOIN && w <= MAX_JOIN && h <= MAX_JOIN;
+        // a joined painting gets one frame: the one most of its blocks have (a styled one wins a tie with oak),
+        // so adding a plain painting to a gold one keeps it gold
+        FrameStyle frame = null;
+        if (joined) {
+            int[] counts = new int[FrameStyle.values().length];
+            for (BlockPos p : group) {
+                counts[level.getBlockState(p).getValue(FRAME).ordinal()]++;
+            }
+            int best = -1;
+            for (FrameStyle style : FrameStyle.values()) {
+                int n = counts[style.ordinal()];
+                if (n > best || (n == best && frame == FrameStyle.OAK)) {
+                    best = n;
+                    frame = style;
+                }
+            }
+        }
         for (BlockPos p : group) {
             BlockState s = level.getBlockState(p);
             int u = along(p, start, cw), v = p.getY() - start.getY();
             BlockState joinedState = s.setValue(UP, joined && v < maxV).setValue(DOWN, joined && v > minV)
                     .setValue(CW, joined && u < maxU).setValue(CCW, joined && u > minU);
+            if (frame != null) {
+                joinedState = joinedState.setValue(FRAME, frame);
+            }
             if (joinedState != s) {
                 level.setBlock(p, joinedState, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
             }
@@ -279,6 +303,25 @@ public class IslandPaintingBlock extends BaseEntityBlock {
             }
             return ItemInteractionResult.sidedSuccess(level.isClientSide);
         }
+        // A frame item (gold ingot, dark oak planks, prismarine shard, quartz, blackstone; a stick for plain oak):
+        // changes the frame of the whole painting.
+        FrameStyle frame = FrameStyle.forItem(stack);
+        if (frame != null) {
+            BlockPos anchor = anchor(level, pos, state);
+            if (level.getBlockState(anchor).getValue(FRAME) == frame) {
+                return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION; // already that frame
+            }
+            if (!level.isClientSide) {
+                setFrame(level, anchor, frame);
+                stack.consume(1, player);
+                level.playSound(null, pos, switch (frame) {
+                    case OAK, DARK_OAK -> SoundEvents.WOOD_PLACE;
+                    case GOLD -> SoundEvents.METAL_PLACE;
+                    default -> SoundEvents.STONE_PLACE;
+                }, SoundSource.BLOCKS, 1.0F, 1.1F);
+            }
+            return ItemInteractionResult.sidedSuccess(level.isClientSide);
+        }
         // A Shadered sky block (Shadered's or ours, filters included): becomes the room's background.
         if (ShaderedSkyItems.isSkyBlock(stack)) {
             if (!level.isClientSide) {
@@ -300,7 +343,7 @@ public class IslandPaintingBlock extends BaseEntityBlock {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION; // already has one: take it out first
         }
         if (!level.isClientSide) {
-            painting.setIsland(island);
+            painting.setIsland(island, stack.get(net.minecraft.core.component.DataComponents.CUSTOM_NAME));
             stack.consume(1, player);
             level.playSound(null, pos, SoundEvents.ITEM_FRAME_ADD_ITEM, SoundSource.BLOCKS, 1.0F, 1.0F);
         }
@@ -329,7 +372,7 @@ public class IslandPaintingBlock extends BaseEntityBlock {
             // the island comes out first, then the background
             if (painting.island() != null) {
                 ItemStack island = islandItem(painting);
-                painting.setIsland(null);
+                painting.setIsland(null, null);
                 give(player, island);
             } else {
                 ItemStack background = painting.background();
@@ -341,6 +384,22 @@ public class IslandPaintingBlock extends BaseEntityBlock {
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
+    /** Sets the frame on every block of the painting whose anchor is given. */
+    private static void setFrame(Level level, BlockPos anchor, FrameStyle frame) {
+        BlockState anchorState = level.getBlockState(anchor);
+        Direction cw = anchorState.getValue(FACING).getClockWise();
+        int w = width(level, anchor, anchorState), h = height(level, anchor, anchorState);
+        for (int u = 0; u < w; u++) {
+            for (int v = 0; v < h; v++) {
+                BlockPos p = anchor.relative(cw, u).above(v);
+                BlockState s = level.getBlockState(p);
+                if (s.getBlock() instanceof IslandPaintingBlock && s.getValue(FRAME) != frame) {
+                    level.setBlock(p, s.setValue(FRAME, frame), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+                }
+            }
+        }
+    }
+
     private static void give(Player player, ItemStack stack) {
         if (!player.getInventory().add(stack)) {
             player.drop(stack, false);
@@ -350,6 +409,9 @@ public class IslandPaintingBlock extends BaseEntityBlock {
     private static ItemStack islandItem(SkyIslandBlockEntity painting) {
         ItemStack stack = new ItemStack(ModItems.SKY_ISLAND.get());
         stack.set(ModComponents.ISLAND.get(), painting.island());
+        if (painting.name() != null) {
+            stack.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, painting.name()); // keeps its anvil name
+        }
         return stack;
     }
 

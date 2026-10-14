@@ -73,6 +73,9 @@ public class SkyIslandBlock extends BaseEntityBlock {
         ItemStack stack = new ItemStack(ModItems.SKY_ISLAND.get());
         if (be instanceof SkyIslandBlockEntity island && island.island() != null) {
             stack.set(ModComponents.ISLAND.get(), island.island());
+            if (island.name() != null) {
+                stack.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, island.name());
+            }
         }
         return stack;
     }

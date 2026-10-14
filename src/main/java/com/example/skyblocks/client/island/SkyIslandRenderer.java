@@ -12,6 +12,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.client.Minecraft;
 
 /** Draws a placed Sky Island: the scanned island as a miniature floating (and gently bobbing) above its pedestal. */
 public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEntity> {
@@ -92,6 +95,9 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
 
         if (painting) {
             IslandWindow.render(view, mesh, be.background(), be.rotation(), state.getValue(IslandPaintingBlock.FACING), width, height, poseStack, partialTick, packedLight);
+            if (be.name() != null) {
+                IslandPlaque.renderOnPainting(be.name(), state.getValue(IslandPaintingBlock.FACING), width, poseStack, buffer, packedLight);
+            }
             return;
         }
         poseStack.pushPose();
@@ -105,6 +111,12 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         view.renderBlockEntities(poseStack, buffer, partialTick);
         view.renderFigures(poseStack, buffer, partialTick);
         poseStack.popPose();
+        // its name floats above it while you look at it
+        if (be.name() != null && Minecraft.getInstance().hitResult instanceof BlockHitResult hit
+                && hit.getType() == HitResult.Type.BLOCK && hit.getBlockPos().equals(be.getBlockPos())) {
+            float top = FLOAT + bob + (view.highestLayer() - view.lowestLayer() + 1) * scale;
+            IslandPlaque.renderAbovePedestal(be.name(), top, poseStack, buffer, packedLight);
+        }
     }
 
     @Override

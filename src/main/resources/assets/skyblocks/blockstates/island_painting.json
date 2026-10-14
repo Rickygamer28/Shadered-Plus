@@ -3,12 +3,16 @@
     {
       "apply": {
         "model": "skyblocks:block/island_painting_particle"
+      },
+      "when": {
+        "frame": "oak"
       }
     },
     {
       "when": {
         "facing": "north",
-        "up": "false"
+        "up": "false",
+        "frame": "oak"
       },
       "apply": {
         "model": "skyblocks:block/island_painting_top"
@@ -17,7 +21,8 @@
     {
       "when": {
         "facing": "north",
-        "down": "false"
+        "down": "false",
+        "frame": "oak"
       },
       "apply": {
         "model": "skyblocks:block/island_painting_bottom"
@@ -26,7 +31,8 @@
     {
       "when": {
         "facing": "north",
-        "cw": "false"
+        "cw": "false",
+        "frame": "oak"
       },
       "apply": {
         "model": "skyblocks:block/island_painting_cw"
@@ -35,7 +41,8 @@
     {
       "when": {
         "facing": "north",
-        "ccw": "false"
+        "ccw": "false",
+        "frame": "oak"
       },
       "apply": {
         "model": "skyblocks:block/island_painting_ccw"
@@ -46,11 +53,13 @@
         "OR": [
           {
             "facing": "north",
-            "up": "false"
+            "up": "false",
+            "frame": "oak"
           },
           {
             "facing": "north",
-            "cw": "false"
+            "cw": "false",
+            "frame": "oak"
           }
         ]
       },
@@ -63,11 +72,13 @@
         "OR": [
           {
             "facing": "north",
-            "up": "false"
+            "up": "false",
+            "frame": "oak"
           },
           {
             "facing": "north",
-            "ccw": "false"
+            "ccw": "false",
+            "frame": "oak"
           }
         ]
       },
@@ -80,11 +91,13 @@
         "OR": [
           {
             "facing": "north",
-            "down": "false"
+            "down": "false",
+            "frame": "oak"
           },
           {
             "facing": "north",
-            "cw": "false"
+            "cw": "false",
+            "frame": "oak"
           }
         ]
       },
@@ -97,11 +110,13 @@
         "OR": [
           {
             "facing": "north",
-            "down": "false"
+            "down": "false",
+            "frame": "oak"
           },
           {
             "facing": "north",
-            "ccw": "false"
+            "ccw": "false",
+            "frame": "oak"
           }
         ]
       },
@@ -112,7 +127,8 @@
     {
       "when": {
         "facing": "east",
-        "up": "false"
+        "up": "false",
+        "frame": "oak"
       },
       "apply": {
         "model": "skyblocks:block/island_painting_top",
@@ -122,7 +138,8 @@
     {
       "when": {
         "facing": "east",
-        "down": "false"
+        "down": "false",
+        "frame": "oak"
       },
       "apply": {
         "model": "skyblocks:block/island_painting_bottom",
@@ -132,7 +149,8 @@
     {
       "when": {
         "facing": "east",
-        "cw": "false"
+        "cw": "false",
+        "frame": "oak"
       },
       "apply": {
         "model": "skyblocks:block/island_painting_cw",
@@ -142,7 +160,8 @@
     {
       "when": {
         "facing": "east",
-        "ccw": "false"
+        "ccw": "false",
+        "frame": "oak"
       },
       "apply": {
         "model": "skyblocks:block/island_painting_ccw",
@@ -154,11 +173,13 @@
         "OR": [
           {
             "facing": "east",
-            "up": "false"
+            "up": "false",
+            "frame": "oak"
           },
           {
             "facing": "east",
-            "cw": "false"
+            "cw": "false",
+            "frame": "oak"
           }
         ]
       },
@@ -172,11 +193,13 @@
         "OR": [
           {
             "facing": "east",
-            "up": "false"
+            "up": "false",
+            "frame": "oak"
           },
           {
             "facing": "east",
-            "ccw": "false"
+            "ccw": "false",
+            "frame": "oak"
           }
         ]
       },
@@ -190,11 +213,13 @@
         "OR": [
           {
             "facing": "east",
-            "down": "false"
+            "down": "false",
+            "frame": "oak"
           },
           {
             "facing": "east",
-            "cw": "false"
+            "cw": "false",
+            "frame": "oak"
           }
         ]
       },
@@ -208,11 +233,13 @@
         "OR": [
           {
             "facing": "east",
-            "down": "false"
+            "down": "false",
+            "frame": "oak"
           },
           {
             "facing": "east",
-            "ccw": "false"
+            "ccw": "false",
+            "frame": "oak"
           }
         ]
       },
@@ -224,7 +251,8 @@
     {
       "when": {
         "facing": "south",
-        "up": "false"
+        "up": "false",
+        "frame": "oak"
       },
       "apply": {
         "model": "skyblocks:block/island_painting_top",
@@ -234,7 +262,8 @@
     {
       "when": {
         "facing": "south",
-        "down": "false"
+        "down": "false",
+        "frame": "oak"
       },
       "apply": {
         "model": "skyblocks:block/island_painting_bottom",
@@ -244,7 +273,8 @@
     {
       "when": {
         "facing": "south",
-        "cw": "false"
+        "cw": "false",
+        "frame": "oak"
       },
       "apply": {
         "model": "skyblocks:block/island_painting_cw",
@@ -254,7 +284,8 @@
     {
       "when": {
         "facing": "south",
-        "ccw": "false"
+        "ccw": "false",
+        "frame": "oak"
       },
       "apply": {
         "model": "skyblocks:block/island_painting_ccw",
@@ -266,11 +297,13 @@
         "OR": [
           {
             "facing": "south",
-            "up": "false"
+            "up": "false",
+            "frame": "oak"
           },
           {
             "facing": "south",
-            "cw": "false"
+            "cw": "false",
+            "frame": "oak"
           }
         ]
       },
@@ -284,11 +317,13 @@
         "OR": [
           {
             "facing": "south",
-            "up": "false"
+            "up": "false",
+            "frame": "oak"
           },
           {
             "facing": "south",
-            "ccw": "false"
+            "ccw": "false",
+            "frame": "oak"
           }
         ]
       },
@@ -302,11 +337,13 @@
         "OR": [
           {
             "facing": "south",
-            "down": "false"
+            "down": "false",
+            "frame": "oak"
           },
           {
             "facing": "south",
-            "cw": "false"
+            "cw": "false",
+            "frame": "oak"
           }
         ]
       },
@@ -320,11 +357,13 @@
         "OR": [
           {
             "facing": "south",
-            "down": "false"
+            "down": "false",
+            "frame": "oak"
           },
           {
             "facing": "south",
-            "ccw": "false"
+            "ccw": "false",
+            "frame": "oak"
           }
         ]
       },
@@ -336,7 +375,8 @@
     {
       "when": {
         "facing": "west",
-        "up": "false"
+        "up": "false",
+        "frame": "oak"
       },
       "apply": {
         "model": "skyblocks:block/island_painting_top",
@@ -346,7 +386,8 @@
     {
       "when": {
         "facing": "west",
-        "down": "false"
+        "down": "false",
+        "frame": "oak"
       },
       "apply": {
         "model": "skyblocks:block/island_painting_bottom",
@@ -356,7 +397,8 @@
     {
       "when": {
         "facing": "west",
-        "cw": "false"
+        "cw": "false",
+        "frame": "oak"
       },
       "apply": {
         "model": "skyblocks:block/island_painting_cw",
@@ -366,7 +408,8 @@
     {
       "when": {
         "facing": "west",
-        "ccw": "false"
+        "ccw": "false",
+        "frame": "oak"
       },
       "apply": {
         "model": "skyblocks:block/island_painting_ccw",
@@ -378,11 +421,13 @@
         "OR": [
           {
             "facing": "west",
-            "up": "false"
+            "up": "false",
+            "frame": "oak"
           },
           {
             "facing": "west",
-            "cw": "false"
+            "cw": "false",
+            "frame": "oak"
           }
         ]
       },
@@ -396,11 +441,13 @@
         "OR": [
           {
             "facing": "west",
-            "up": "false"
+            "up": "false",
+            "frame": "oak"
           },
           {
             "facing": "west",
-            "ccw": "false"
+            "ccw": "false",
+            "frame": "oak"
           }
         ]
       },
@@ -414,11 +461,13 @@
         "OR": [
           {
             "facing": "west",
-            "down": "false"
+            "down": "false",
+            "frame": "oak"
           },
           {
             "facing": "west",
-            "cw": "false"
+            "cw": "false",
+            "frame": "oak"
           }
         ]
       },
@@ -432,16 +481,2498 @@
         "OR": [
           {
             "facing": "west",
-            "down": "false"
+            "down": "false",
+            "frame": "oak"
           },
           {
             "facing": "west",
-            "ccw": "false"
+            "ccw": "false",
+            "frame": "oak"
           }
         ]
       },
       "apply": {
         "model": "skyblocks:block/island_painting_corner_bottom_ccw",
+        "y": 270
+      }
+    },
+    {
+      "apply": {
+        "model": "skyblocks:block/island_painting_particle_gold"
+      },
+      "when": {
+        "frame": "gold"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "up": "false",
+        "frame": "gold"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_top_gold"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "down": "false",
+        "frame": "gold"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_bottom_gold"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "cw": "false",
+        "frame": "gold"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_cw_gold"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "ccw": "false",
+        "frame": "gold"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_ccw_gold"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "north",
+            "up": "false",
+            "frame": "gold"
+          },
+          {
+            "facing": "north",
+            "cw": "false",
+            "frame": "gold"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_cw_gold"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "north",
+            "up": "false",
+            "frame": "gold"
+          },
+          {
+            "facing": "north",
+            "ccw": "false",
+            "frame": "gold"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_ccw_gold"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "north",
+            "down": "false",
+            "frame": "gold"
+          },
+          {
+            "facing": "north",
+            "cw": "false",
+            "frame": "gold"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_cw_gold"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "north",
+            "down": "false",
+            "frame": "gold"
+          },
+          {
+            "facing": "north",
+            "ccw": "false",
+            "frame": "gold"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_ccw_gold"
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "up": "false",
+        "frame": "gold"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_top_gold",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "down": "false",
+        "frame": "gold"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_bottom_gold",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "cw": "false",
+        "frame": "gold"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_cw_gold",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "ccw": "false",
+        "frame": "gold"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_ccw_gold",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "east",
+            "up": "false",
+            "frame": "gold"
+          },
+          {
+            "facing": "east",
+            "cw": "false",
+            "frame": "gold"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_cw_gold",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "east",
+            "up": "false",
+            "frame": "gold"
+          },
+          {
+            "facing": "east",
+            "ccw": "false",
+            "frame": "gold"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_ccw_gold",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "east",
+            "down": "false",
+            "frame": "gold"
+          },
+          {
+            "facing": "east",
+            "cw": "false",
+            "frame": "gold"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_cw_gold",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "east",
+            "down": "false",
+            "frame": "gold"
+          },
+          {
+            "facing": "east",
+            "ccw": "false",
+            "frame": "gold"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_ccw_gold",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "up": "false",
+        "frame": "gold"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_top_gold",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "down": "false",
+        "frame": "gold"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_bottom_gold",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "cw": "false",
+        "frame": "gold"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_cw_gold",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "ccw": "false",
+        "frame": "gold"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_ccw_gold",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "south",
+            "up": "false",
+            "frame": "gold"
+          },
+          {
+            "facing": "south",
+            "cw": "false",
+            "frame": "gold"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_cw_gold",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "south",
+            "up": "false",
+            "frame": "gold"
+          },
+          {
+            "facing": "south",
+            "ccw": "false",
+            "frame": "gold"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_ccw_gold",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "south",
+            "down": "false",
+            "frame": "gold"
+          },
+          {
+            "facing": "south",
+            "cw": "false",
+            "frame": "gold"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_cw_gold",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "south",
+            "down": "false",
+            "frame": "gold"
+          },
+          {
+            "facing": "south",
+            "ccw": "false",
+            "frame": "gold"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_ccw_gold",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "up": "false",
+        "frame": "gold"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_top_gold",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "down": "false",
+        "frame": "gold"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_bottom_gold",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "cw": "false",
+        "frame": "gold"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_cw_gold",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "ccw": "false",
+        "frame": "gold"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_ccw_gold",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "west",
+            "up": "false",
+            "frame": "gold"
+          },
+          {
+            "facing": "west",
+            "cw": "false",
+            "frame": "gold"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_cw_gold",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "west",
+            "up": "false",
+            "frame": "gold"
+          },
+          {
+            "facing": "west",
+            "ccw": "false",
+            "frame": "gold"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_ccw_gold",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "west",
+            "down": "false",
+            "frame": "gold"
+          },
+          {
+            "facing": "west",
+            "cw": "false",
+            "frame": "gold"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_cw_gold",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "west",
+            "down": "false",
+            "frame": "gold"
+          },
+          {
+            "facing": "west",
+            "ccw": "false",
+            "frame": "gold"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_ccw_gold",
+        "y": 270
+      }
+    },
+    {
+      "apply": {
+        "model": "skyblocks:block/island_painting_particle_dark_oak"
+      },
+      "when": {
+        "frame": "dark_oak"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "up": "false",
+        "frame": "dark_oak"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_top_dark_oak"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "down": "false",
+        "frame": "dark_oak"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_bottom_dark_oak"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "cw": "false",
+        "frame": "dark_oak"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_cw_dark_oak"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "ccw": "false",
+        "frame": "dark_oak"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_ccw_dark_oak"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "north",
+            "up": "false",
+            "frame": "dark_oak"
+          },
+          {
+            "facing": "north",
+            "cw": "false",
+            "frame": "dark_oak"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_cw_dark_oak"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "north",
+            "up": "false",
+            "frame": "dark_oak"
+          },
+          {
+            "facing": "north",
+            "ccw": "false",
+            "frame": "dark_oak"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_ccw_dark_oak"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "north",
+            "down": "false",
+            "frame": "dark_oak"
+          },
+          {
+            "facing": "north",
+            "cw": "false",
+            "frame": "dark_oak"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_cw_dark_oak"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "north",
+            "down": "false",
+            "frame": "dark_oak"
+          },
+          {
+            "facing": "north",
+            "ccw": "false",
+            "frame": "dark_oak"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_ccw_dark_oak"
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "up": "false",
+        "frame": "dark_oak"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_top_dark_oak",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "down": "false",
+        "frame": "dark_oak"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_bottom_dark_oak",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "cw": "false",
+        "frame": "dark_oak"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_cw_dark_oak",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "ccw": "false",
+        "frame": "dark_oak"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_ccw_dark_oak",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "east",
+            "up": "false",
+            "frame": "dark_oak"
+          },
+          {
+            "facing": "east",
+            "cw": "false",
+            "frame": "dark_oak"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_cw_dark_oak",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "east",
+            "up": "false",
+            "frame": "dark_oak"
+          },
+          {
+            "facing": "east",
+            "ccw": "false",
+            "frame": "dark_oak"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_ccw_dark_oak",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "east",
+            "down": "false",
+            "frame": "dark_oak"
+          },
+          {
+            "facing": "east",
+            "cw": "false",
+            "frame": "dark_oak"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_cw_dark_oak",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "east",
+            "down": "false",
+            "frame": "dark_oak"
+          },
+          {
+            "facing": "east",
+            "ccw": "false",
+            "frame": "dark_oak"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_ccw_dark_oak",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "up": "false",
+        "frame": "dark_oak"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_top_dark_oak",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "down": "false",
+        "frame": "dark_oak"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_bottom_dark_oak",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "cw": "false",
+        "frame": "dark_oak"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_cw_dark_oak",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "ccw": "false",
+        "frame": "dark_oak"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_ccw_dark_oak",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "south",
+            "up": "false",
+            "frame": "dark_oak"
+          },
+          {
+            "facing": "south",
+            "cw": "false",
+            "frame": "dark_oak"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_cw_dark_oak",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "south",
+            "up": "false",
+            "frame": "dark_oak"
+          },
+          {
+            "facing": "south",
+            "ccw": "false",
+            "frame": "dark_oak"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_ccw_dark_oak",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "south",
+            "down": "false",
+            "frame": "dark_oak"
+          },
+          {
+            "facing": "south",
+            "cw": "false",
+            "frame": "dark_oak"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_cw_dark_oak",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "south",
+            "down": "false",
+            "frame": "dark_oak"
+          },
+          {
+            "facing": "south",
+            "ccw": "false",
+            "frame": "dark_oak"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_ccw_dark_oak",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "up": "false",
+        "frame": "dark_oak"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_top_dark_oak",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "down": "false",
+        "frame": "dark_oak"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_bottom_dark_oak",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "cw": "false",
+        "frame": "dark_oak"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_cw_dark_oak",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "ccw": "false",
+        "frame": "dark_oak"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_ccw_dark_oak",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "west",
+            "up": "false",
+            "frame": "dark_oak"
+          },
+          {
+            "facing": "west",
+            "cw": "false",
+            "frame": "dark_oak"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_cw_dark_oak",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "west",
+            "up": "false",
+            "frame": "dark_oak"
+          },
+          {
+            "facing": "west",
+            "ccw": "false",
+            "frame": "dark_oak"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_ccw_dark_oak",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "west",
+            "down": "false",
+            "frame": "dark_oak"
+          },
+          {
+            "facing": "west",
+            "cw": "false",
+            "frame": "dark_oak"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_cw_dark_oak",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "west",
+            "down": "false",
+            "frame": "dark_oak"
+          },
+          {
+            "facing": "west",
+            "ccw": "false",
+            "frame": "dark_oak"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_ccw_dark_oak",
+        "y": 270
+      }
+    },
+    {
+      "apply": {
+        "model": "skyblocks:block/island_painting_particle_prismarine"
+      },
+      "when": {
+        "frame": "prismarine"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "up": "false",
+        "frame": "prismarine"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_top_prismarine"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "down": "false",
+        "frame": "prismarine"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_bottom_prismarine"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "cw": "false",
+        "frame": "prismarine"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_cw_prismarine"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "ccw": "false",
+        "frame": "prismarine"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_ccw_prismarine"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "north",
+            "up": "false",
+            "frame": "prismarine"
+          },
+          {
+            "facing": "north",
+            "cw": "false",
+            "frame": "prismarine"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_cw_prismarine"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "north",
+            "up": "false",
+            "frame": "prismarine"
+          },
+          {
+            "facing": "north",
+            "ccw": "false",
+            "frame": "prismarine"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_ccw_prismarine"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "north",
+            "down": "false",
+            "frame": "prismarine"
+          },
+          {
+            "facing": "north",
+            "cw": "false",
+            "frame": "prismarine"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_cw_prismarine"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "north",
+            "down": "false",
+            "frame": "prismarine"
+          },
+          {
+            "facing": "north",
+            "ccw": "false",
+            "frame": "prismarine"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_ccw_prismarine"
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "up": "false",
+        "frame": "prismarine"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_top_prismarine",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "down": "false",
+        "frame": "prismarine"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_bottom_prismarine",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "cw": "false",
+        "frame": "prismarine"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_cw_prismarine",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "ccw": "false",
+        "frame": "prismarine"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_ccw_prismarine",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "east",
+            "up": "false",
+            "frame": "prismarine"
+          },
+          {
+            "facing": "east",
+            "cw": "false",
+            "frame": "prismarine"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_cw_prismarine",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "east",
+            "up": "false",
+            "frame": "prismarine"
+          },
+          {
+            "facing": "east",
+            "ccw": "false",
+            "frame": "prismarine"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_ccw_prismarine",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "east",
+            "down": "false",
+            "frame": "prismarine"
+          },
+          {
+            "facing": "east",
+            "cw": "false",
+            "frame": "prismarine"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_cw_prismarine",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "east",
+            "down": "false",
+            "frame": "prismarine"
+          },
+          {
+            "facing": "east",
+            "ccw": "false",
+            "frame": "prismarine"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_ccw_prismarine",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "up": "false",
+        "frame": "prismarine"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_top_prismarine",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "down": "false",
+        "frame": "prismarine"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_bottom_prismarine",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "cw": "false",
+        "frame": "prismarine"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_cw_prismarine",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "ccw": "false",
+        "frame": "prismarine"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_ccw_prismarine",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "south",
+            "up": "false",
+            "frame": "prismarine"
+          },
+          {
+            "facing": "south",
+            "cw": "false",
+            "frame": "prismarine"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_cw_prismarine",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "south",
+            "up": "false",
+            "frame": "prismarine"
+          },
+          {
+            "facing": "south",
+            "ccw": "false",
+            "frame": "prismarine"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_ccw_prismarine",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "south",
+            "down": "false",
+            "frame": "prismarine"
+          },
+          {
+            "facing": "south",
+            "cw": "false",
+            "frame": "prismarine"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_cw_prismarine",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "south",
+            "down": "false",
+            "frame": "prismarine"
+          },
+          {
+            "facing": "south",
+            "ccw": "false",
+            "frame": "prismarine"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_ccw_prismarine",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "up": "false",
+        "frame": "prismarine"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_top_prismarine",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "down": "false",
+        "frame": "prismarine"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_bottom_prismarine",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "cw": "false",
+        "frame": "prismarine"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_cw_prismarine",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "ccw": "false",
+        "frame": "prismarine"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_ccw_prismarine",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "west",
+            "up": "false",
+            "frame": "prismarine"
+          },
+          {
+            "facing": "west",
+            "cw": "false",
+            "frame": "prismarine"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_cw_prismarine",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "west",
+            "up": "false",
+            "frame": "prismarine"
+          },
+          {
+            "facing": "west",
+            "ccw": "false",
+            "frame": "prismarine"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_ccw_prismarine",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "west",
+            "down": "false",
+            "frame": "prismarine"
+          },
+          {
+            "facing": "west",
+            "cw": "false",
+            "frame": "prismarine"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_cw_prismarine",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "west",
+            "down": "false",
+            "frame": "prismarine"
+          },
+          {
+            "facing": "west",
+            "ccw": "false",
+            "frame": "prismarine"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_ccw_prismarine",
+        "y": 270
+      }
+    },
+    {
+      "apply": {
+        "model": "skyblocks:block/island_painting_particle_quartz"
+      },
+      "when": {
+        "frame": "quartz"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "up": "false",
+        "frame": "quartz"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_top_quartz"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "down": "false",
+        "frame": "quartz"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_bottom_quartz"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "cw": "false",
+        "frame": "quartz"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_cw_quartz"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "ccw": "false",
+        "frame": "quartz"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_ccw_quartz"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "north",
+            "up": "false",
+            "frame": "quartz"
+          },
+          {
+            "facing": "north",
+            "cw": "false",
+            "frame": "quartz"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_cw_quartz"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "north",
+            "up": "false",
+            "frame": "quartz"
+          },
+          {
+            "facing": "north",
+            "ccw": "false",
+            "frame": "quartz"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_ccw_quartz"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "north",
+            "down": "false",
+            "frame": "quartz"
+          },
+          {
+            "facing": "north",
+            "cw": "false",
+            "frame": "quartz"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_cw_quartz"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "north",
+            "down": "false",
+            "frame": "quartz"
+          },
+          {
+            "facing": "north",
+            "ccw": "false",
+            "frame": "quartz"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_ccw_quartz"
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "up": "false",
+        "frame": "quartz"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_top_quartz",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "down": "false",
+        "frame": "quartz"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_bottom_quartz",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "cw": "false",
+        "frame": "quartz"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_cw_quartz",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "ccw": "false",
+        "frame": "quartz"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_ccw_quartz",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "east",
+            "up": "false",
+            "frame": "quartz"
+          },
+          {
+            "facing": "east",
+            "cw": "false",
+            "frame": "quartz"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_cw_quartz",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "east",
+            "up": "false",
+            "frame": "quartz"
+          },
+          {
+            "facing": "east",
+            "ccw": "false",
+            "frame": "quartz"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_ccw_quartz",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "east",
+            "down": "false",
+            "frame": "quartz"
+          },
+          {
+            "facing": "east",
+            "cw": "false",
+            "frame": "quartz"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_cw_quartz",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "east",
+            "down": "false",
+            "frame": "quartz"
+          },
+          {
+            "facing": "east",
+            "ccw": "false",
+            "frame": "quartz"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_ccw_quartz",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "up": "false",
+        "frame": "quartz"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_top_quartz",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "down": "false",
+        "frame": "quartz"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_bottom_quartz",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "cw": "false",
+        "frame": "quartz"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_cw_quartz",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "ccw": "false",
+        "frame": "quartz"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_ccw_quartz",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "south",
+            "up": "false",
+            "frame": "quartz"
+          },
+          {
+            "facing": "south",
+            "cw": "false",
+            "frame": "quartz"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_cw_quartz",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "south",
+            "up": "false",
+            "frame": "quartz"
+          },
+          {
+            "facing": "south",
+            "ccw": "false",
+            "frame": "quartz"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_ccw_quartz",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "south",
+            "down": "false",
+            "frame": "quartz"
+          },
+          {
+            "facing": "south",
+            "cw": "false",
+            "frame": "quartz"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_cw_quartz",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "south",
+            "down": "false",
+            "frame": "quartz"
+          },
+          {
+            "facing": "south",
+            "ccw": "false",
+            "frame": "quartz"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_ccw_quartz",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "up": "false",
+        "frame": "quartz"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_top_quartz",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "down": "false",
+        "frame": "quartz"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_bottom_quartz",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "cw": "false",
+        "frame": "quartz"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_cw_quartz",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "ccw": "false",
+        "frame": "quartz"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_ccw_quartz",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "west",
+            "up": "false",
+            "frame": "quartz"
+          },
+          {
+            "facing": "west",
+            "cw": "false",
+            "frame": "quartz"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_cw_quartz",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "west",
+            "up": "false",
+            "frame": "quartz"
+          },
+          {
+            "facing": "west",
+            "ccw": "false",
+            "frame": "quartz"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_ccw_quartz",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "west",
+            "down": "false",
+            "frame": "quartz"
+          },
+          {
+            "facing": "west",
+            "cw": "false",
+            "frame": "quartz"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_cw_quartz",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "west",
+            "down": "false",
+            "frame": "quartz"
+          },
+          {
+            "facing": "west",
+            "ccw": "false",
+            "frame": "quartz"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_ccw_quartz",
+        "y": 270
+      }
+    },
+    {
+      "apply": {
+        "model": "skyblocks:block/island_painting_particle_blackstone"
+      },
+      "when": {
+        "frame": "blackstone"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "up": "false",
+        "frame": "blackstone"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_top_blackstone"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "down": "false",
+        "frame": "blackstone"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_bottom_blackstone"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "cw": "false",
+        "frame": "blackstone"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_cw_blackstone"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "ccw": "false",
+        "frame": "blackstone"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_ccw_blackstone"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "north",
+            "up": "false",
+            "frame": "blackstone"
+          },
+          {
+            "facing": "north",
+            "cw": "false",
+            "frame": "blackstone"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_cw_blackstone"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "north",
+            "up": "false",
+            "frame": "blackstone"
+          },
+          {
+            "facing": "north",
+            "ccw": "false",
+            "frame": "blackstone"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_ccw_blackstone"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "north",
+            "down": "false",
+            "frame": "blackstone"
+          },
+          {
+            "facing": "north",
+            "cw": "false",
+            "frame": "blackstone"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_cw_blackstone"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "north",
+            "down": "false",
+            "frame": "blackstone"
+          },
+          {
+            "facing": "north",
+            "ccw": "false",
+            "frame": "blackstone"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_ccw_blackstone"
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "up": "false",
+        "frame": "blackstone"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_top_blackstone",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "down": "false",
+        "frame": "blackstone"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_bottom_blackstone",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "cw": "false",
+        "frame": "blackstone"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_cw_blackstone",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "ccw": "false",
+        "frame": "blackstone"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_ccw_blackstone",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "east",
+            "up": "false",
+            "frame": "blackstone"
+          },
+          {
+            "facing": "east",
+            "cw": "false",
+            "frame": "blackstone"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_cw_blackstone",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "east",
+            "up": "false",
+            "frame": "blackstone"
+          },
+          {
+            "facing": "east",
+            "ccw": "false",
+            "frame": "blackstone"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_ccw_blackstone",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "east",
+            "down": "false",
+            "frame": "blackstone"
+          },
+          {
+            "facing": "east",
+            "cw": "false",
+            "frame": "blackstone"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_cw_blackstone",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "east",
+            "down": "false",
+            "frame": "blackstone"
+          },
+          {
+            "facing": "east",
+            "ccw": "false",
+            "frame": "blackstone"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_ccw_blackstone",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "up": "false",
+        "frame": "blackstone"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_top_blackstone",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "down": "false",
+        "frame": "blackstone"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_bottom_blackstone",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "cw": "false",
+        "frame": "blackstone"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_cw_blackstone",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "ccw": "false",
+        "frame": "blackstone"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_ccw_blackstone",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "south",
+            "up": "false",
+            "frame": "blackstone"
+          },
+          {
+            "facing": "south",
+            "cw": "false",
+            "frame": "blackstone"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_cw_blackstone",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "south",
+            "up": "false",
+            "frame": "blackstone"
+          },
+          {
+            "facing": "south",
+            "ccw": "false",
+            "frame": "blackstone"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_ccw_blackstone",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "south",
+            "down": "false",
+            "frame": "blackstone"
+          },
+          {
+            "facing": "south",
+            "cw": "false",
+            "frame": "blackstone"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_cw_blackstone",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "south",
+            "down": "false",
+            "frame": "blackstone"
+          },
+          {
+            "facing": "south",
+            "ccw": "false",
+            "frame": "blackstone"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_ccw_blackstone",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "up": "false",
+        "frame": "blackstone"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_top_blackstone",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "down": "false",
+        "frame": "blackstone"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_bottom_blackstone",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "cw": "false",
+        "frame": "blackstone"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_cw_blackstone",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "ccw": "false",
+        "frame": "blackstone"
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_ccw_blackstone",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "west",
+            "up": "false",
+            "frame": "blackstone"
+          },
+          {
+            "facing": "west",
+            "cw": "false",
+            "frame": "blackstone"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_cw_blackstone",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "west",
+            "up": "false",
+            "frame": "blackstone"
+          },
+          {
+            "facing": "west",
+            "ccw": "false",
+            "frame": "blackstone"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_top_ccw_blackstone",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "west",
+            "down": "false",
+            "frame": "blackstone"
+          },
+          {
+            "facing": "west",
+            "cw": "false",
+            "frame": "blackstone"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_cw_blackstone",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "facing": "west",
+            "down": "false",
+            "frame": "blackstone"
+          },
+          {
+            "facing": "west",
+            "ccw": "false",
+            "frame": "blackstone"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/island_painting_corner_bottom_ccw_blackstone",
         "y": 270
       }
     }
