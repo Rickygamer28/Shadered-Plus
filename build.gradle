@@ -49,7 +49,7 @@ dependencies {
     modCompileOnly "maven.modrinth:shadered:${shadered_version}"
     modCompileOnly "software.bernie.geckolib:geckolib-forge-${minecraft_version}:${geckolib_version}"
     // only for running the game from Gradle (and the CI load test), not part of our jar
-    modRuntimeOnly "maven.modrinth:shadered:${shadered_version}"
+    modRuntimeOnly "maven.modrinth:shadered:${shadered_test_version}"
     modRuntimeOnly "software.bernie.geckolib:geckolib-forge-${minecraft_version}:${geckolib_version}"
 }
 
