@@ -101,7 +101,26 @@ final class IslandMesh implements AutoCloseable {
     }
 
     /** Hands the quads to the render buffers; pose = island coordinates -> the block entity's camera-relative pose. */
-    void render(PoseStack.Pose pose, MultiBufferSource buffer) {
+    /** Our own buffer for drawing the miniature right away (see render). */
+    private static com.mojang.blaze3d.vertex.BufferBuilder now;
+
+    void render(PoseStack.Pose pose, MultiBufferSource shared) {
+        // Shadered 1.3 draws its skies between the moment Minecraft draws the solid blocks that block entity renderers
+        // queue and the moment it draws the cutout / see-through ones, and what is queued for later doesn't show
+        // (grass, leaves, glass... went invisible, only dirt and stone showed). So the miniature is drawn right now,
+        // with its own buffer, instead of being queued in the shared one.
+        if (now == null) {
+            now = new com.mojang.blaze3d.vertex.BufferBuilder(1 << 16);
+        }
+        MultiBufferSource.BufferSource buffer = MultiBufferSource.immediate(now);
+        try {
+            emit(pose, buffer);
+        } finally {
+            buffer.endBatch();
+        }
+    }
+
+    private void emit(PoseStack.Pose pose, MultiBufferSource buffer) {
         Matrix4f matrix = pose.pose();
         for (Map.Entry<RenderType, int[]> entry : layers.entrySet()) {
             // like falling blocks: translucent goes through the "moving block" type (sorted, Fabulous-aware)
