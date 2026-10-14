@@ -2,10 +2,10 @@
 
 > This is the **1.20.1 Forge, Shadered 1.3** branch: for **Shadered 1.3.7 to 1.4.2** (built against 1.3.7). It has
 > the OIIA Cat, the Big OIIA Cat and the Sky Islands (scanner, pedestal, painting with frames and plaques, travel),
-> but **not the six Shadered+ skies** and **no Shadered sky blocks as painting backgrounds**: those need Shadered's sky
-> types, which arrived in 1.4.3 (use the `1.20.1` branch for Shadered 1.4.3+). Shadered sky blocks that are part of an
-> island show on pedestals and in the scanner preview, but not inside paintings (Shadered 1.3 keeps each sky's
-> picture private). The sky sections below don't apply to this version.
+> but **not the six Shadered+ skies**: those need Shadered's sky types, which arrived in 1.4.3 (use the `1.20.1`
+> branch for Shadered 1.4.3+). Shadered's Space, Stormy, Ocean, Eclipse, Iridia, Forest and Light blocks work as
+> painting backgrounds and inside paintings' islands; End, End Sky and Mimic blocks aren't shown inside paintings.
+> The sky sections below don't apply to this version.
 
 Adds six new skies to **Shadered** by Noodlegamer76: Jupiter, Cat, Twilight, Hell, Nebula and Golden Hour.
 They are added as real Shadered sky types, so everything in Shadered that works with sky types works with them:
