@@ -67,8 +67,13 @@ public class SkyIslandBlock extends BaseEntityBlock {
     public void setPlacedBy(net.minecraft.world.level.Level level, BlockPos pos, BlockState state,
                             @Nullable net.minecraft.world.entity.LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
-        if (stack.hasCustomHoverName() && level.getBlockEntity(pos) instanceof SkyIslandBlockEntity island) {
-            island.setName(stack.getHoverName());
+        if (level.getBlockEntity(pos) instanceof SkyIslandBlockEntity island) {
+            if (stack.hasCustomHoverName()) {
+                island.setName(stack.getHoverName());
+            }
+            if (!level.isClientSide) {
+                level.sendBlockUpdated(pos, state, state, 3); // send the island (from the item) to everyone nearby
+            }
         }
     }
 

@@ -59,7 +59,7 @@ jobs:
           echo "::notice::refmap: $(unzip -p $J skyblocks.refmap.json | tr -d '\n ' | head -c 600)"
           mkdir -p chk && cd chk && unzip -q -o ../$J 'com/example/skyblocks/client/island/IslandMesh*.class'
           echo "::notice::srg names in IslandMesh: $(strings com/example/skyblocks/client/island/IslandMesh.class | grep -cE '^m_[0-9]+_$'), mojang names: $(strings com/example/skyblocks/client/island/IslandMesh.class | grep -cE '^(renderBatched|getBlockModel|renderLiquid)$')"
-          cd .. && grep -ciE "warning.*mixin|mixin.*warn" build.log | sed 's/^/::notice::mixin warnings: /'
+          cd .. && grep -iE "warning" build.log | grep -v "deprecat" | head -8 | sed 's/^/::notice::/'
 
       - name: Upload jar
         uses: actions/upload-artifact@v4
