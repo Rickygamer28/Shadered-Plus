@@ -1,16 +1,16 @@
 plugins {
     id 'java-library'
-    id 'net.neoforged.moddev' version '2.0.78'
+    id 'net.neoforged.moddev.legacyforge' version '2.0.78'
 }
 
 version = mod_version
 group = 'com.example.skyblocks'
-base { archivesName = 'shadered-plus' }
+base { archivesName = "shadered-plus-${minecraft_version}" }
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
-neoForge {
-    version = project.neo_version
+legacyForge {
+    version = "${minecraft_version}-${forge_version}"
     runs {
         client { client() }
         server { server(); programArguments.add '--nogui' }
@@ -18,6 +18,11 @@ neoForge {
     mods {
         "${mod_id}" { sourceSet sourceSets.main }
     }
+}
+
+mixin {
+    add sourceSets.main, "${mod_id}.refmap.json"
+    config "${mod_id}.mixins.json"
 }
 
 repositories {
@@ -31,19 +36,26 @@ repositories {
     maven {
         name = 'GeckoLib'
         url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
-        content { includeGroup 'software.bernie.geckolib' }
+        content { includeGroupByRegex 'software\\.bernie.*'; includeGroup 'com.eliotlash.mclib' }
     }
 }
 
 dependencies {
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
     // Shadered+ is an addon: it compiles against Shadered and needs Shadered (and Shadered's own
-    // dependencies, e.g. GeckoLib and Sodium) installed in the game. Not bundled into our jar.
-    compileOnly "maven.modrinth:shadered:${shadered_version}"
-    compileOnly "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
+    // dependencies, e.g. GeckoLib) installed in the game. Not bundled into our jar.
+    modCompileOnly "maven.modrinth:shadered:${shadered_version}"
+    modCompileOnly "software.bernie.geckolib:geckolib-forge-${minecraft_version}:${geckolib_version}"
+}
+
+jar {
+    manifest.attributes(['MixinConfigs': "${mod_id}.mixins.json"])
 }
 
 tasks.withType(ProcessResources).configureEach {
     var replaceProperties = [mod_id: mod_id, mod_version: mod_version]
     inputs.properties replaceProperties
-    filesMatching(['META-INF/neoforge.mods.toml']) { expand replaceProperties }
+    filesMatching(['META-INF/mods.toml']) { expand replaceProperties }
 }
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }

@@ -1,5 +1,5 @@
 modLoader="javafml"
-loaderVersion="[1,)"
+loaderVersion="[47,)"
 license="MIT"
 
 [[mods]]
@@ -11,26 +11,23 @@ description='''An addon for Shadered: six new Shadered sky types (Jupiter, Cat, 
 Requires Shadered by Noodlegamer76 (https://github.com/Noodlegamer76/Shadered, CC BY-NC 4.0); made with the author's permission.
 Shadered+ is an unofficial addon, not made by the Shadered author.'''
 
-[[mixins]]
-config="skyblocks.mixins.json"
-
 [[dependencies.${mod_id}]]
-modId="neoforge"
-type="required"
-versionRange="[21.1.0,)"
+modId="forge"
+mandatory=true
+versionRange="[47,)"
 ordering="NONE"
 side="BOTH"
 
 [[dependencies.${mod_id}]]
 modId="minecraft"
-type="required"
-versionRange="[1.21.1]"
+mandatory=true
+versionRange="[1.20.1,1.21)"
 ordering="NONE"
 side="BOTH"
 
 [[dependencies.${mod_id}]]
 modId="shadered"
-type="required"
+mandatory=true
 versionRange="*"
 ordering="AFTER"
 side="BOTH"

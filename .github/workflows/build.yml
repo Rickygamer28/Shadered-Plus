@@ -14,11 +14,22 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: |
+            21
+            17
 
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.10.2
+
+      # Which Shadered / GeckoLib versions exist for Forge 1.20.1 (shown as notices on the run).
+      - name: List dependency versions
+        continue-on-error: true
+        run: |
+          curl -s 'https://api.modrinth.com/v2/project/shadered/version?loaders=%5B%22forge%22%5D&game_versions=%5B%221.20.1%22%5D' \
+            | python3 -c "import json,sys; print('::notice::shadered forge 1.20.1: ' + ', '.join(v['version_number'] for v in json.load(sys.stdin)[:12]))"
+          curl -s 'https://api.modrinth.com/v2/project/geckolib/version?loaders=%5B%22forge%22%5D&game_versions=%5B%221.20.1%22%5D' \
+            | python3 -c "import json,sys; print('::notice::geckolib forge 1.20.1: ' + ', '.join(v['version_number'] for v in json.load(sys.stdin)[:6]))"
 
       - name: Build
         run: |
