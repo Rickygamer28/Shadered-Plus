@@ -95,11 +95,13 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
             return;
         }
         poseStack.pushPose();
-        float scale = be.displayWidth() / (float) view.size;
+        // Fit by the blocks actually there, so a small or tall island stays about a block wide and tall.
+        int wide = Math.max(view.contentWidth(), view.contentDepth());
+        float scale = Math.min(be.displayWidth() / (float) wide, 1.2F * be.displayWidth() / view.contentHeight());
         float bob = Mth.sin(((time % 24000L) + partialTick) * 0.05F) * 0.04F;
         poseStack.translate(0.5F, FLOAT + bob, 0.5F);
         poseStack.scale(scale, scale, scale);
-        poseStack.translate(-view.size / 2.0F, 0.0F, -view.size / 2.0F);
+        poseStack.translate(-view.contentCenterX(), -view.lowestLayer(), -view.contentCenterZ());
         mesh.render(poseStack.last(), buffer);
         view.renderBlockEntities(poseStack, buffer, partialTick);
         view.renderFigures(poseStack, buffer, partialTick);
