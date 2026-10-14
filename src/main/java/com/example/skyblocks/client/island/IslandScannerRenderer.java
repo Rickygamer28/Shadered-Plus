@@ -1,5 +1,6 @@
 package com.example.skyblocks.client.island;
 
+import com.example.skyblocks.island.IslandScan;
 import com.example.skyblocks.island.IslandScannerBlockEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -53,7 +54,6 @@ public class IslandScannerRenderer implements BlockEntityRenderer<IslandScannerB
     private static final int PREVIEW_REFRESH = 40;
     /** The preview is this many blocks wide, floating above the lens. */
     private static final float PREVIEW_WIDTH = 0.9F;
-    private static final float PREVIEW_HEIGHT = 0.9F;
 
     /** The live preview of the island floating above the scanner's lens, slowly turning. */
     private static void renderPreview(IslandScannerBlockEntity be, float partialTick, PoseStack poseStack,
@@ -83,9 +83,8 @@ public class IslandScannerRenderer implements BlockEntityRenderer<IslandScannerB
         } catch (RuntimeException e) {
             return;
         }
-        // Fit by the blocks actually there, so a small or tall area never grows past about a block.
-        int wide = Math.max(view.contentWidth(), view.contentDepth());
-        float scale = Math.min(PREVIEW_WIDTH / wide, PREVIEW_HEIGHT / view.contentHeight());
+        // Same block size for every area (like the painting): the largest area (25 wide) fills the preview width.
+        float scale = PREVIEW_WIDTH / IslandScan.MAX_SIZE;
         float spin = ((time % 3600L) + partialTick) * 0.5F;
         float bob = Mth.sin(((time % 24000L) + partialTick) * 0.06F) * 0.03F;
         poseStack.pushPose();

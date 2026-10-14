@@ -3,4 +3,3 @@ build/
 run/
 .idea/
 *.iml
-__pycache__/
