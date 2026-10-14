@@ -48,6 +48,19 @@ jobs:
             echo "::error::$(sed ':a;N;$!ba;s/\n/%0A/g' $f)"
           done
 
+      # Quick look inside the finished jar (shown as notices on the run).
+      - name: Check jar
+        if: success()
+        run: |
+          ls build/libs build/devlibs 2>/dev/null | tr '\n' ' ' | sed 's/^/::notice::files: /'; echo
+          J=$(ls build/libs/*.jar | grep -v sources | head -1)
+          echo "::notice::jar $J: $(unzip -l $J | grep -cE '\.class$') classes; refmap: $(unzip -l $J | grep -c refmap); mods.toml: $(unzip -l $J | grep -c META-INF/mods.toml)"
+          echo "::notice::manifest: $(unzip -p $J META-INF/MANIFEST.MF | tr -d '\r' | grep -i mixin | tr '\n' ' ')"
+          echo "::notice::refmap: $(unzip -p $J skyblocks.refmap.json | tr -d '\n ' | head -c 600)"
+          mkdir -p chk && cd chk && unzip -q -o ../$J 'com/example/skyblocks/client/island/IslandMesh*.class'
+          echo "::notice::srg names in IslandMesh: $(strings com/example/skyblocks/client/island/IslandMesh.class | grep -cE '^m_[0-9]+_$'), mojang names: $(strings com/example/skyblocks/client/island/IslandMesh.class | grep -cE '^(renderBatched|getBlockModel|renderLiquid)$')"
+          cd .. && grep -ciE "warning.*mixin|mixin.*warn" build.log | sed 's/^/::notice::mixin warnings: /'
+
       - name: Upload jar
         uses: actions/upload-artifact@v4
         with:
