@@ -14,6 +14,8 @@ legacyForge {
     runs {
         client { client() }
         server { server(); programArguments.add '--nogui' }
+        // Starts a dedicated server, runs no tests and stops: CI uses it to check the mod loads with Shadered.
+        gameTestServer { type = "gameTestServer" }
     }
     mods {
         "${mod_id}" { sourceSet sourceSets.main }
@@ -48,6 +50,9 @@ dependencies {
     // dependencies, e.g. GeckoLib) installed in the game. Not bundled into our jar.
     modCompileOnly "maven.modrinth:shadered:${shadered_version}"
     modCompileOnly "software.bernie.geckolib:geckolib-forge-${minecraft_version}:${geckolib_version}"
+    // only for running the game from Gradle (and the CI load test), not part of our jar
+    modRuntimeOnly "maven.modrinth:shadered:${shadered_version}"
+    modRuntimeOnly "software.bernie.geckolib:geckolib-forge-${minecraft_version}:${geckolib_version}"
 }
 
 jar {

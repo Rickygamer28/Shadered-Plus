@@ -61,6 +61,20 @@ jobs:
           echo "::notice::srg names in IslandMesh: $(strings com/example/skyblocks/client/island/IslandMesh.class | grep -cE '^m_[0-9]+_$'), mojang names: $(strings com/example/skyblocks/client/island/IslandMesh.class | grep -cE '^(renderBatched|getBlockModel|renderLiquid)$')"
           cd .. && grep -iE "warning" build.log | grep -v "deprecat" | head -8 | sed 's/^/::notice::/'
 
+      # Start a 1.20.1 Forge server with Shadered and this mod, and report how loading went.
+      - name: Server load test
+        if: success()
+        continue-on-error: true
+        run: |
+          set +e
+          timeout 900 gradle runGameTestServer --no-daemon > server.log 2>&1
+          echo "exit: $?"
+          echo "::notice::server load test exit code: $(grep -c . server.log) log lines"
+          grep -E "Mixin|mixin|skyblocks|Exception|ERROR|FATAL|tests? (passed|failed)|GameTest|Stopping server|Done \(" server.log \
+            | grep -vE "DEBUG|Mixin subsystem|Successfully loaded Mixin|mixin\.env|SpongePowered MIXIN" | head -40 > summary.txt
+          split -l 20 summary.txt srv_
+          for f in $(ls srv_* 2>/dev/null | head -4); do echo "::notice::$(sed ':a;N;$!ba;s/\n/%0A/g' $f | cut -c1-6000)"; done
+
       - name: Upload jar
         uses: actions/upload-artifact@v4
         with:
