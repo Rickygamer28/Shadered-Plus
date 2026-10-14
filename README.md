@@ -91,7 +91,8 @@ blockstate/models/loot/lang and adjust the scale. Models with a skeleton can use
   painting, the island and the background. (The window uses the stencil buffer; with some shader packs it may show over things
   standing right in front of the painting, and with Fabulous graphics see-through blocks inside it may not show.)
 - **Names:** rename a Sky Island in an anvil and the name goes with it: on a small brass plaque on the bottom edge of
-  the painting's frame (centred under a joined painting, shrunk to fit long names), and floating above the pedestal
+  the painting's frame, styled to match it (brass on oak, polished gold, dark wood with gilded letters, prismarine,
+  white marble, blackstone with gold inlay), centred under a joined painting and shrunk to fit long names; and floating above the pedestal
   while you look at it. Taking the island out or breaking the block gives it back with its name.
 - **Frame styles:** right-click an Island Painting with a gold ingot, dark oak planks, a prismarine shard, quartz or
   blackstone to change its frame (the item is used up); a stick puts the normal oak frame back. A joined painting

@@ -96,7 +96,7 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         if (painting) {
             IslandWindow.render(view, mesh, be.background(), be.rotation(), state.getValue(IslandPaintingBlock.FACING), width, height, poseStack, partialTick, packedLight);
             if (be.name() != null) {
-                IslandPlaque.renderOnPainting(be.name(), state.getValue(IslandPaintingBlock.FACING), width, poseStack, buffer, packedLight);
+                IslandPlaque.renderOnPainting(be.name(), state.getValue(IslandPaintingBlock.FRAME), state.getValue(IslandPaintingBlock.FACING), width, poseStack, buffer, packedLight);
             }
             return;
         }

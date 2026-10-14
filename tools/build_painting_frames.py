@@ -1,5 +1,5 @@
 """Builds the Island Painting's frame styles: recoloured frame textures, the part models for each style, the multipart
-blockstate (with a "frame" condition on every part) and the name-plaque texture.
+blockstate (with a "frame" condition on every part) and a name-plaque texture per style.
 
 Run from the project root: python3 tools/build_painting_frames.py
 The oak frame is the original texture and models; the others are made from them.
@@ -54,19 +54,75 @@ def build_texture(src, wood, trim):
     return out
 
 
-def build_plaque():
-    """A brass plate: soft vertical gradient, a light top edge and a dark bottom edge (stretched sideways in game)."""
-    img = Image.new("RGBA", (16, 16))
-    for y in range(16):
-        t = y / 15
-        base = (int(214 - 40 * t), int(172 - 38 * t), int(84 - 24 * t))
-        if y == 0:
-            base = (246, 214, 128)
-        elif y == 15:
-            base = (120, 88, 40)
-        for x in range(16):
-            n = ((x * 7 + y * 13) % 5 - 2) * 2  # faint brushed look
-            img.putpixel((x, y), tuple(max(0, min(255, c + n)) for c in base) + (255,))
+def clamp(c):
+    return tuple(max(0, min(255, int(round(v)))) for v in c)
+
+
+def mix(a, b, t):
+    return tuple(a[i] + (b[i] - a[i]) * t for i in range(3))
+
+
+def build_plaque(style):
+    """One plate per frame style, 32x16 (stretched sideways in game, so the designs are mostly horizontal bands)."""
+    import random
+    rnd = random.Random("plaque-" + style)
+    w, h = 32, 16
+    img = Image.new("RGBA", (w, h))
+    for y in range(h):
+        t = y / (h - 1)
+        for x in range(w):
+            n = rnd.uniform(-1, 1)
+            if style == "oak":  # brushed brass
+                c = mix((222, 180, 90), (170, 130, 58), t)
+                c = mix(c, c, 0)
+                c = tuple(v + ((x * 7 + y * 13) % 5 - 2) * 2 for v in c)
+                if y == 0: c = (248, 218, 132)
+                if y == h - 1: c = (116, 84, 38)
+            elif style == "gold":  # polished gold with engraved border lines
+                c = mix((255, 226, 92), (214, 160, 30), t)
+                c = tuple(v + n * 4 for v in c)
+                if y <= 1: c = (255, 248, 196)
+                if y in (3, h - 4): c = (176, 122, 18)
+                if y == h - 1: c = (140, 94, 10)
+            elif style == "dark_oak":  # dark wood with grain streaks
+                c = mix((74, 50, 28), (52, 34, 18), t)
+                grain = (y * 5 + (x // 6) * 3) % 7
+                if grain == 0: c = tuple(v * 0.78 for v in c)
+                if grain == 3: c = tuple(v * 1.12 for v in c)
+                c = tuple(v + n * 3 for v in c)
+                if y == 0: c = (104, 74, 44)
+                if y == h - 1: c = (30, 19, 9)
+            elif style == "prismarine":  # mottled sea-green stone
+                c = mix((112, 186, 168), (70, 138, 122), t)
+                if rnd.random() < 0.18: c = mix(c, (176, 236, 220), 0.5)
+                if rnd.random() < 0.10: c = tuple(v * 0.85 for v in c)
+                if y == 0: c = (186, 240, 226)
+                if y == h - 1: c = (40, 96, 84)
+            elif style == "quartz":  # white marble with faint grey veins
+                c = mix((246, 242, 236), (220, 212, 204), t)
+                vein = abs(((x * 0.35 + y * 1.7) % 6) - 3) < 0.35 or abs(((x * 0.22 - y * 2.3) % 9) - 4.5) < 0.3
+                if vein: c = mix(c, (170, 164, 160), 0.45)
+                c = tuple(v + n * 2 for v in c)
+                if y == 0: c = (255, 255, 252)
+                if y == h - 1: c = (178, 170, 162)
+            else:  # blackstone: dark speckled stone with gold inlay lines
+                c = mix((54, 48, 58), (34, 30, 38), t)
+                if rnd.random() < 0.15: c = tuple(v * 1.35 for v in c)
+                if rnd.random() < 0.08: c = tuple(v * 0.6 for v in c)
+                if y in (2, h - 3): c = (214, 170, 64)
+                if y == 0: c = (84, 76, 88)
+                if y == h - 1: c = (18, 15, 20)
+            img.putpixel((x, y), clamp(c) + (255,))
+    return img
+
+
+def build_rim():
+    """White, tinted per style in game (the plaque's rim and its rivets)."""
+    img = Image.new("RGBA", (4, 4))
+    for y in range(4):
+        for x in range(4):
+            v = 255 - ((x + y) % 2) * 14
+            img.putpixel((x, y), (v, v, v, 255))
     return img
 
 
@@ -89,7 +145,12 @@ def main():
     src = Image.open(os.path.join(TEX, "island_painting_frame.png")).convert("RGBA")
     for style, (wood, trim) in STYLES.items():
         build_texture(src, wood, trim).save(os.path.join(TEX, "island_painting_frame_" + style + ".png"))
-    build_plaque().save(os.path.join(TEX, "island_painting_plaque.png"))
+    for style in ["oak"] + list(STYLES):
+        build_plaque(style).save(os.path.join(TEX, "island_painting_plaque_" + style + ".png"))
+    build_rim().save(os.path.join(TEX, "island_painting_plaque_rim.png"))
+    old_plaque = os.path.join(TEX, "island_painting_plaque.png")
+    if os.path.exists(old_plaque):
+        os.remove(old_plaque)
 
     for style in STYLES:
         texture = "skyblocks:block/island_painting_frame_" + style
