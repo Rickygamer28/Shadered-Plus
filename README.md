@@ -57,8 +57,8 @@ blockstate/models/loot/lang and adjust the scale. Models with a skeleton can use
 - How it works: `client/SpaceLiquidSky` finds the liquid blocks near the camera every few ticks (6 chunks around,
   at most 20,000 blocks; only chunk sections whose palette can hold it are searched) and every frame puts a sky cube
   for each one into Shadered's Space queue (`SkyblockRenderer.getData(SPACE)`), scaled to the liquid's height. The
-  liquid's own surface is a faint, mostly see-through violet so the sky shows through. Inside Sky Islands it shows
-  only that faint surface (no sky).
+  liquid's own surface is invisible (fully see-through, cut out), so only the sky shows. Inside Sky Islands it isn't
+  shown.
 
 ## Sky Islands (miniature copies of an area)
 - **Island Scanner** (`skyblocks:island_scanner`, in Shadered's creative tab). Recipe: Glass x3 on top, Amethyst Shard /

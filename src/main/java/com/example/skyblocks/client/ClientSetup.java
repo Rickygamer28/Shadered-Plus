@@ -25,12 +25,13 @@ public final class ClientSetup {
         event.enqueueWork(ShaderedSkies::register);
         // The Island Painting's window needs a stencil buffer (client/island/IslandWindow).
         event.enqueueWork(() -> net.minecraft.client.Minecraft.getInstance().getMainRenderTarget().enableStencil());
-        // Space Liquid is see-through like water (its sky is drawn by client/SpaceLiquidSky)
+        // Space Liquid's own surface is fully see-through and cut out (nothing drawn, nothing hidden): all you see is
+        // Shadered's Space sky, drawn by client/SpaceLiquidSky
         event.enqueueWork(() -> {
             net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(com.example.skyblocks.ModFluids.SPACE.get(),
-                    net.minecraft.client.renderer.RenderType.translucent());
+                    net.minecraft.client.renderer.RenderType.cutout());
             net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(com.example.skyblocks.ModFluids.FLOWING_SPACE.get(),
-                    net.minecraft.client.renderer.RenderType.translucent());
+                    net.minecraft.client.renderer.RenderType.cutout());
         });
     }
 
