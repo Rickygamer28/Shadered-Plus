@@ -52,13 +52,13 @@ blockstate/models/loot/lang and adjust the scale. Models with a skeleton can use
 - **Space Liquid Bucket** (`skyblocks:space_liquid_bucket`): craft a Bucket with Shadered's **Space sky block**
   (shapeless). It behaves like water: it flows (7 blocks, down slopes), two sources make a new one, you can swim in
   it, boats float on it, it puts out fire, and you pick it up with an empty bucket.
-- Its surface is a window into Shadered's Space sky, like a Space sky block, cut to the liquid's height (flowing liquid
-  goes down in steps, not slopes). Under the surface the fog is dark purple and short.
+- Its surface is a window into Shadered's Space sky, like a Space sky block, with smooth slopes where it flows (like
+  water). Under the surface the fog is dark purple and short.
 - How it works: `client/SpaceLiquidSky` finds the liquid blocks near the camera every few ticks (6 chunks around,
-  at most 20,000 blocks; only chunk sections whose palette can hold it are searched) and every frame puts a sky cube
-  for each one into Shadered's Space queue (`SkyblockRenderer.getData(SPACE)`), scaled to the liquid's height. The
-  liquid's own surface is invisible (fully see-through, cut out), so only the sky shows. Inside Sky Islands it isn't
-  shown.
+  at most 20,000 blocks; only chunk sections whose palette can hold it are searched) and every frame draws their
+  surface (corner heights averaged between blocks, like water) and open sides with Shadered's Space sky render type
+  (`ModRenderTypes.getSkyblockRenderType(SPACE, NORMAL)`), which shows Shadered's Space sky picture at each screen
+  pixel. The liquid's own block surface is invisible (fully see-through, cut out). Inside Sky Islands it isn't shown.
 
 ## Sky Islands (miniature copies of an area)
 - **Island Scanner** (`skyblocks:island_scanner`, in Shadered's creative tab). Recipe: Glass x3 on top, Amethyst Shard /

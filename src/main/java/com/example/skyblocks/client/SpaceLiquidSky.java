@@ -2,10 +2,16 @@ package com.example.skyblocks.client;
 
 import com.example.skyblocks.ModFluids;
 import com.example.skyblocks.SkyBlocksMod;
-import com.noodlegamer76.shadered.client.renderer.SkyblockRenderer;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.noodlegamer76.shadered.client.util.ModRenderTypes;
 import com.noodlegamer76.shadered.client.util.SkyblockType;
-import com.noodlegamer76.shadered.client.util.skyblock.SkyblockBatchData;
 import com.noodlegamer76.shadered.client.util.skyblock.SkyblockPass;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.core.Direction;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -20,13 +26,12 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import org.joml.Matrix4f;
 
 /**
- * Draws Shadered's Space sky in Space Liquid: every frame, a sky cube for each liquid block near the camera goes into
- * Shadered's Space queue (like a Space sky block does), cut to the liquid's height, so the liquid is a window into space
- * that flows down in steps. The liquid blocks near the camera are looked up again every few ticks (only chunk sections
- * whose palette can hold the liquid are searched).
+ * Draws Space Liquid: its surface (smooth slopes like water: corner heights averaged between blocks), and its sides
+ * where it is open, with Shadered's Space sky render type, which shows Shadered's Space sky picture (drawn every frame)
+ * at each screen pixel: the liquid is a window into space, exactly like a Space sky block. The liquid blocks near the
+ * camera are looked up again every few ticks (only chunk sections whose palette can hold the liquid are searched).
  */
 @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class SpaceLiquidSky {
@@ -43,7 +48,7 @@ public final class SpaceLiquidSky {
 
     @SubscribeEvent
     public static void onStage(RenderLevelStageEvent event) {
-        // before Shadered draws its sky cubes (after the block entities)
+        // after the solid world (so it is hidden behind blocks) and before see-through things like water and glass
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) {
             return;
         }
@@ -66,25 +71,104 @@ public final class SpaceLiquidSky {
         if (FOUND.isEmpty()) {
             return;
         }
-        SkyblockBatchData space = SkyblockRenderer.getData(SkyblockType.SPACE);
-        if (space == null) {
+        RenderType sky = ModRenderTypes.getSkyblockRenderType(SkyblockType.SPACE, SkyblockPass.NORMAL);
+        if (sky == null) {
             return;
         }
+        if (memory == null) {
+            memory = new ByteBufferBuilder(1 << 18);
+        }
+        MultiBufferSource.BufferSource buffers = MultiBufferSource.immediate(memory);
+        VertexConsumer c = buffers.getBuffer(sky);
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         for (BlockPos pos : FOUND) {
             FluidState fluid = level.getFluidState(pos);
-            if (fluid.getFluidType() != ModFluids.SPACE_TYPE.get()) {
+            if (!ours(fluid)) {
                 continue; // gone since the last search
             }
-            float height = fluid.getHeight(level, pos);
-            if (height <= 0.0F) {
-                continue;
+            float x = (float) (pos.getX() - camera.x), y = (float) (pos.getY() - camera.y), z = (float) (pos.getZ() - camera.z);
+            boolean covered = ours(level.getFluidState(p.setWithOffset(pos, Direction.UP)));
+            // the surface's height at each corner, worked out like Minecraft's water (smooth slopes between blocks)
+            float hNW = covered ? 1 : corner(level, pos, -1, -1);
+            float hNE = covered ? 1 : corner(level, pos, 1, -1);
+            float hSE = covered ? 1 : corner(level, pos, 1, 1);
+            float hSW = covered ? 1 : corner(level, pos, -1, 1);
+            if (!covered) {
+                face(c, x, y + hNW, z, x + 1, y + hNE, z, x + 1, y + hSE, z + 1, x, y + hSW, z + 1);
             }
-            // the same camera-relative placement Shadered's sky block renderer gets, squashed to the liquid's height
-            Matrix4f pose = new Matrix4f()
-                    .translation((float) (pos.getX() - camera.x), (float) (pos.getY() - camera.y), (float) (pos.getZ() - camera.z))
-                    .scale(1.0F, height, 1.0F);
-            space.add(SkyblockPass.NORMAL, pos, pose, false, 1.0F);
+            for (Direction d : Direction.Plane.HORIZONTAL) {
+                p.setWithOffset(pos, d);
+                if (ours(level.getFluidState(p)) || level.getBlockState(p).isSolidRender(level, p)) {
+                    continue;
+                }
+                switch (d) {
+                    case NORTH -> face(c, x, y, z, x + 1, y, z, x + 1, y + hNE, z, x, y + hNW, z);
+                    case SOUTH -> face(c, x + 1, y, z + 1, x, y, z + 1, x, y + hSW, z + 1, x + 1, y + hSE, z + 1);
+                    case WEST -> face(c, x, y, z + 1, x, y, z, x, y + hNW, z, x, y + hSW, z + 1);
+                    default -> face(c, x + 1, y, z, x + 1, y, z + 1, x + 1, y + hSE, z + 1, x + 1, y + hNE, z);
+                }
+            }
+            p.setWithOffset(pos, Direction.DOWN);
+            if (!ours(level.getFluidState(p)) && !level.getBlockState(p).isSolidRender(level, p)) {
+                face(c, x, y, z, x, y, z + 1, x + 1, y, z + 1, x + 1, y, z);
+            }
         }
+        buffers.endBatch();
+    }
+
+    private static ByteBufferBuilder memory;
+
+    private static boolean ours(FluidState fluid) {
+        return fluid.getFluidType() == ModFluids.SPACE_TYPE.get();
+    }
+
+    /**
+     * The surface height at one corner of a liquid block (dx, dz = which corner, -1 or 1): the average of the (up to)
+     * four blocks around that corner, like Minecraft's water: full sources weigh more, open air next to it pulls the
+     * corner down, liquid on top of any of them makes it full height.
+     */
+    private static float corner(ClientLevel level, BlockPos pos, int dx, int dz) {
+        float total = 0;
+        int weight = 0;
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int i = 0; i < 4; i++) {
+            p.set(pos.getX() + ((i & 1) != 0 ? dx : 0), pos.getY(), pos.getZ() + ((i & 2) != 0 ? dz : 0));
+            if (ours(level.getFluidState(p.above()))) {
+                return 1.0F;
+            }
+            FluidState fluid = level.getFluidState(p);
+            if (ours(fluid)) {
+                float h = fluid.getHeight(level, p);
+                if (h >= 0.8F) {
+                    total += h * 10.0F;
+                    weight += 10;
+                } else {
+                    total += h;
+                    weight++;
+                }
+            } else if (!level.getBlockState(p).isSolid()) {
+                weight++; // air or the like next to it: the corner dips
+            }
+        }
+        return weight == 0 ? 0.0F : total / weight;
+    }
+
+    /** One face, drawn from both sides (so it shows from inside the liquid too). */
+    private static void face(VertexConsumer c, float x0, float y0, float z0, float x1, float y1, float z1,
+                             float x2, float y2, float z2, float x3, float y3, float z3) {
+        vertex(c, x0, y0, z0, 0, 0);
+        vertex(c, x1, y1, z1, 1, 0);
+        vertex(c, x2, y2, z2, 1, 1);
+        vertex(c, x3, y3, z3, 0, 1);
+        vertex(c, x3, y3, z3, 0, 1);
+        vertex(c, x2, y2, z2, 1, 1);
+        vertex(c, x1, y1, z1, 1, 0);
+        vertex(c, x0, y0, z0, 0, 0);
+    }
+
+    private static void vertex(VertexConsumer c, float x, float y, float z, float u, float v) {
+        c.addVertex(x, y, z).setColor(255, 255, 255, 255).setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY)
+                .setLight(LightTexture.FULL_BRIGHT).setNormal(0.0F, 1.0F, 0.0F);
     }
 
     private static void scan(ClientLevel level, int centerX, int centerZ, int radius) {
