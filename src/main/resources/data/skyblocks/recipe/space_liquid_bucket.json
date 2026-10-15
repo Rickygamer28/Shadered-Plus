@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:bucket"
+    },
+    {
+      "item": "shadered:space_block"
+    }
+  ],
+  "result": {
+    "id": "skyblocks:space_liquid_bucket",
+    "count": 1
+  }
+}

@@ -25,6 +25,13 @@ public final class ClientSetup {
         event.enqueueWork(ShaderedSkies::register);
         // The Island Painting's window needs a stencil buffer (client/island/IslandWindow).
         event.enqueueWork(() -> net.minecraft.client.Minecraft.getInstance().getMainRenderTarget().enableStencil());
+        // Space Liquid is see-through like water (its sky is drawn by client/SpaceLiquidSky)
+        event.enqueueWork(() -> {
+            net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(com.example.skyblocks.ModFluids.SPACE.get(),
+                    net.minecraft.client.renderer.RenderType.translucent());
+            net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(com.example.skyblocks.ModFluids.FLOWING_SPACE.get(),
+                    net.minecraft.client.renderer.RenderType.translucent());
+        });
     }
 
     @SubscribeEvent
@@ -38,6 +45,38 @@ public final class ClientSetup {
 
     @SubscribeEvent
     public static void registerClientExtensions(RegisterClientExtensionsEvent event) {
+        event.registerFluidType(new net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions() {
+            private final net.minecraft.resources.ResourceLocation still =
+                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "block/space_liquid_still");
+            private final net.minecraft.resources.ResourceLocation flowing =
+                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "block/space_liquid_flow");
+
+            @Override
+            public net.minecraft.resources.ResourceLocation getStillTexture() {
+                return still;
+            }
+
+            @Override
+            public net.minecraft.resources.ResourceLocation getFlowingTexture() {
+                return flowing;
+            }
+
+            /** Under the surface: deep space purple, and you can't see far. */
+            @Override
+            public org.joml.Vector3f modifyFogColor(net.minecraft.client.Camera camera, float partialTick,
+                                                     net.minecraft.client.multiplayer.ClientLevel level, int renderDistance,
+                                                     float darkenWorldAmount, org.joml.Vector3f fluidFogColor) {
+                return new org.joml.Vector3f(0.06F, 0.02F, 0.12F);
+            }
+
+            @Override
+            public void modifyFogRender(net.minecraft.client.Camera camera, net.minecraft.client.renderer.FogRenderer.FogMode mode,
+                                        float renderDistance, float partialTick, float nearDistance, float farDistance,
+                                        com.mojang.blaze3d.shaders.FogShape shape) {
+                com.mojang.blaze3d.systems.RenderSystem.setShaderFogStart(-4.0F);
+                com.mojang.blaze3d.systems.RenderSystem.setShaderFogEnd(24.0F);
+            }
+        }, com.example.skyblocks.ModFluids.SPACE_TYPE.get());
         event.registerItem(new IClientItemExtensions() {
             private OiiaCatItemRenderer renderer;
 

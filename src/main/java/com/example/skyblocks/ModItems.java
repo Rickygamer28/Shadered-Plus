@@ -39,5 +39,10 @@ public final class ModItems {
 
     public static final DeferredItem<BlockItem> ISLAND_PAINTING = ITEMS.registerSimpleBlockItem("island_painting", ModBlocks.ISLAND_PAINTING);
 
+    /** A bucket of Space Liquid (bucket + Shadered's Space sky block). */
+    public static final DeferredItem<net.minecraft.world.item.BucketItem> SPACE_LIQUID_BUCKET = ITEMS.register("space_liquid_bucket",
+            () -> new net.minecraft.world.item.BucketItem(ModFluids.SPACE.get(),
+                    new Item.Properties().craftRemainder(net.minecraft.world.item.Items.BUCKET).stacksTo(1)));
+
     private ModItems() {}
 }

@@ -48,6 +48,18 @@ like Shadered's `MaxwellRenderer`. Shadered's animator only animates skeletons, 
 To add another model: put the .glb in `models/complex/`, then copy the OIIA Cat block, block entity, renderers,
 blockstate/models/loot/lang and adjust the scale. Models with a skeleton can use Shadered's `Animator` instead.
 
+## Space Liquid
+- **Space Liquid Bucket** (`skyblocks:space_liquid_bucket`): craft a Bucket with Shadered's **Space sky block**
+  (shapeless). It behaves like water: it flows (7 blocks, down slopes), two sources make a new one, you can swim in
+  it, boats float on it, it puts out fire, and you pick it up with an empty bucket.
+- Its surface is a window into Shadered's Space sky, like a Space sky block, cut to the liquid's height (flowing liquid
+  goes down in steps, not slopes). Under the surface the fog is dark purple and short.
+- How it works: `client/SpaceLiquidSky` finds the liquid blocks near the camera every few ticks (6 chunks around,
+  at most 20,000 blocks; only chunk sections whose palette can hold it are searched) and every frame puts a sky cube
+  for each one into Shadered's Space queue (`SkyblockRenderer.getData(SPACE)`), scaled to the liquid's height. The
+  liquid's own surface is a faint, mostly see-through violet so the sky shows through. Inside Sky Islands it shows
+  only that faint surface (no sky).
+
 ## Sky Islands (miniature copies of an area)
 - **Island Scanner** (`skyblocks:island_scanner`, in Shadered's creative tab). Recipe: Glass x3 on top, Amethyst Shard /
   Spyglass / Amethyst Shard in the middle, Iron Ingot x3 at the bottom.
