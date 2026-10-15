@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -60,3 +62,14 @@ jobs:
         with:
           name: shadered-plus-jar
           path: build/libs/*.jar
+
+      # Personal branch: the jar (code only, no Zinogre model) also goes to the personal-build branch for fetching.
+      - name: Publish jar to build branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/personal'
+        run: |
+          mkdir out && cp build/libs/*.jar out/
+          cd out
+          git init -q -b personal-build
+          git add .
+          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "Build of ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}" personal-build

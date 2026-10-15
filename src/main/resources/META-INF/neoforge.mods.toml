@@ -34,3 +34,31 @@ type="required"
 versionRange="*"
 ordering="AFTER"
 side="BOTH"
+
+# ---- personal build only: the Zinogre (its model is a fan conversion of a Capcom asset and is never published) ----
+[[mods]]
+modId="zinogre"
+version="${mod_version}"
+displayName="Zinogre (personal)"
+description='''A Zinogre mob drawn with Shadered's model renderer, bundled with Shadered+ in this personal build. The model is a fan conversion of a Monster Hunter World asset (Capcom) and must not be redistributed.'''
+
+[[dependencies.zinogre]]
+modId="neoforge"
+type="required"
+versionRange="[21.1.0,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.zinogre]]
+modId="minecraft"
+type="required"
+versionRange="[1.21.1]"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.zinogre]]
+modId="shadered"
+type="required"
+versionRange="*"
+ordering="AFTER"
+side="BOTH"

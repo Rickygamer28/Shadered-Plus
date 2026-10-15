@@ -4,3 +4,8 @@ run/
 .idea/
 *.iml
 __pycache__/
+
+# Zinogre model, mesh and icons: converted Capcom assets, never committed (added to the jar locally)
+src/main/resources/assets/zinogre/models/complex/
+src/main/resources/assets/zinogre/models/*.bin
+src/main/resources/assets/zinogre/textures/

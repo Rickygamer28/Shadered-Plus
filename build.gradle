@@ -5,7 +5,7 @@ plugins {
 
 version = mod_version
 group = 'com.example.skyblocks'
-base { archivesName = 'shadered-plus' }
+base { archivesName = 'shadered-plus-personal' }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
@@ -17,6 +17,7 @@ neoForge {
     }
     mods {
         "${mod_id}" { sourceSet sourceSets.main }
+        zinogre { sourceSet sourceSets.main }
     }
 }
 
