@@ -39,12 +39,14 @@ import java.util.List;
  */
 public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlockEntity> {
     private static final ResourceLocation FILE = ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "models/zinogre_head.bin");
+    /** The same head with its mouth closed (same vertices and placement), for wearing. */
+    private static final ResourceLocation CLOSED_FILE = ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "models/zinogre_head_closed.bin");
 
     /** The head mesh (shared by all heads): vertex arrays and triangles per material. */
     record Mesh(float[] pos, float[] uv, float[] normal, List<int[]> triangles, int[] materials) {}
     @Nullable
-    private static Mesh mesh;
-    private static boolean failed;
+    private static Mesh mesh, closedMesh;
+    private static boolean failed, closedFailed;
 
     public ZinogreHeadRenderer(BlockEntityRendererProvider.Context context) {}
 
@@ -85,8 +87,17 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
      * look. Returns false when the model isn't loaded (yet).
      */
     static boolean drawHead(PoseStack poseStack, MultiBufferSource buffer, int packedLight, boolean stygian) {
+        return drawHead(poseStack, buffer, packedLight, stygian, mesh());
+    }
+
+    /** The same with the mouth closed (falls back to the open one if that file is missing). */
+    static boolean drawClosedHead(PoseStack poseStack, MultiBufferSource buffer, int packedLight, boolean stygian) {
+        Mesh closed = closedMesh();
+        return drawHead(poseStack, buffer, packedLight, stygian, closed != null ? closed : mesh());
+    }
+
+    private static boolean drawHead(PoseStack poseStack, MultiBufferSource buffer, int packedLight, boolean stygian, @Nullable Mesh head) {
         McModel textures = AssimpModels.getModel(stygian ? ZinogreRenderer.STYGIAN_MODEL : ZinogreRenderer.MODEL);
-        Mesh head = mesh();
         if (textures == null || head == null) {
             Debug.once("head-missing", "Zinogre head not drawn: textures loaded {}, mesh loaded {}", textures != null, head != null);
             return false;
@@ -173,33 +184,48 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
     @Nullable
     static Mesh mesh() {
         if (mesh == null && !failed) {
-            try {
-                ByteBuffer b = ZinogreData.readResource(FILE);
-                if (b.getInt() != 0x3144485A) { // "ZHD1"
-                    throw new IOException("not a Zinogre head file");
-                }
-                int n = b.getInt();
-                float[] pos = ZinogreData.floats(b, n * 3);
-                float[] uv = ZinogreData.floats(b, n * 2);
-                float[] normal = ZinogreData.floats(b, n * 3);
-                ZinogreData.floats(b, n); // baked shade: not needed, Minecraft lights it
-                int count = b.getInt();
-                List<int[]> triangles = new ArrayList<>();
-                int[] materials = new int[count];
-                for (int p = 0; p < count; p++) {
-                    materials[p] = b.get() & 0xFF;
-                    int[] indices = new int[b.getInt()];
-                    b.asIntBuffer().get(indices);
-                    b.position(b.position() + indices.length * 4);
-                    triangles.add(indices);
-                }
-                mesh = new Mesh(pos, uv, normal, triangles, materials);
-            } catch (IOException | RuntimeException e) {
-                ZinogreMod.LOGGER.error("Couldn't load the Zinogre head {}", FILE, e);
-                failed = true;
-            }
+            mesh = load(FILE);
+            failed = mesh == null;
         }
         return mesh;
+    }
+
+    @Nullable
+    static Mesh closedMesh() {
+        if (closedMesh == null && !closedFailed) {
+            closedMesh = load(CLOSED_FILE);
+            closedFailed = closedMesh == null;
+        }
+        return closedMesh;
+    }
+
+    @Nullable
+    private static Mesh load(ResourceLocation file) {
+        try {
+            ByteBuffer b = ZinogreData.readResource(file);
+            if (b.getInt() != 0x3144485A) { // "ZHD1"
+                throw new IOException("not a Zinogre head file");
+            }
+            int n = b.getInt();
+            float[] pos = ZinogreData.floats(b, n * 3);
+            float[] uv = ZinogreData.floats(b, n * 2);
+            float[] normal = ZinogreData.floats(b, n * 3);
+            ZinogreData.floats(b, n); // baked shade: not needed, Minecraft lights it
+            int count = b.getInt();
+            List<int[]> triangles = new ArrayList<>();
+            int[] materials = new int[count];
+            for (int p = 0; p < count; p++) {
+                materials[p] = b.get() & 0xFF;
+                int[] indices = new int[b.getInt()];
+                b.asIntBuffer().get(indices);
+                b.position(b.position() + indices.length * 4);
+                triangles.add(indices);
+            }
+            return new Mesh(pos, uv, normal, triangles, materials);
+        } catch (IOException | RuntimeException e) {
+            ZinogreMod.LOGGER.error("Couldn't load the Zinogre head {}", file, e);
+            return null;
+        }
     }
 
     @Override

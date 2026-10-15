@@ -67,6 +67,7 @@ public final class ZinogreClient {
                 done = true;
                 ZinogreData.get();
                 ZinogreHeadRenderer.mesh();
+                ZinogreHeadRenderer.closedMesh();
             }
         }
 

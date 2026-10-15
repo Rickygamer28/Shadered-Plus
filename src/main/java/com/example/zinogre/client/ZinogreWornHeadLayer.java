@@ -19,8 +19,8 @@ import net.minecraft.world.item.ItemStack;
 public class ZinogreWornHeadLayer<T extends LivingEntity, M extends EntityModel<T> & HeadedModel> extends RenderLayer<T, M> {
     /** Mesh units -> blocks: about 0.8 blocks tall and 0.8 long, a bit bigger than a normal head. */
     private static final float WORN_SCALE = 0.018F;
-    /** The point of the head mesh that goes where the middle of the wearer's head was (so its jaw rests on the neck). */
-    private static final float WORN_CENTRE_Y = 13.5F, WORN_CENTRE_Z = -4.0F;
+    /** The point of the (closed-mouth) head mesh that goes where the middle of the wearer's head was (so its jaw rests on the neck). */
+    private static final float WORN_CENTRE_Y = 19.0F, WORN_CENTRE_Z = -4.0F;
 
     public ZinogreWornHeadLayer(RenderLayerParent<T, M> parent) {
         super(parent);
@@ -47,7 +47,7 @@ public class ZinogreWornHeadLayer<T extends LivingEntity, M extends EntityModel<
         poseStack.mulPose(Axis.XP.rotationDegrees(180.0F));
         poseStack.scale(WORN_SCALE, WORN_SCALE, WORN_SCALE);
         poseStack.translate(0.0F, -WORN_CENTRE_Y, -WORN_CENTRE_Z);
-        if (!ZinogreHeadRenderer.drawHead(poseStack, buffer, packedLight, !normal)) {
+        if (!ZinogreHeadRenderer.drawClosedHead(poseStack, buffer, packedLight, !normal)) {
             Debug.once("worn-missing", "Worn Zinogre head not drawn: model not loaded");
         }
         Debug.once("worn-drawn", "Worn Zinogre head drawn on {}", entity.getType().getDescriptionId());
