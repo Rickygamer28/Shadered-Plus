@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -60,3 +62,14 @@ jobs:
         with:
           name: zinogre-personal-jar
           path: build/libs/*.jar
+
+      # The jar (code only, no model) also goes to the zinogre-personal-build branch, where git can fetch it.
+      - name: Publish jar to build branch
+        if: github.event_name == 'push'
+        run: |
+          mkdir out && cp build/libs/*.jar out/
+          cd out
+          git init -q -b zinogre-personal-build
+          git add .
+          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "Build of ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}" zinogre-personal-build
