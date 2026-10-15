@@ -132,6 +132,11 @@ final class IslandWindow {
                     IslandRendering.inWindow = false;
                     takeQueued(before, skies);
                 }
+                try {
+                    com.example.skyblocks.client.IslandCatBatch.flush(partialTick); // the painting's cats, in one batch
+                } finally {
+                    com.example.skyblocks.client.IslandCatBatch.discard();
+                }
                 view.renderFigures(poseStack, scene, partialTick);
             }
             scene.endBatch();

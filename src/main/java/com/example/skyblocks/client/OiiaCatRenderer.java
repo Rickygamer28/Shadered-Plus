@@ -28,6 +28,9 @@ import org.joml.Matrix4f;
  */
 public class OiiaCatRenderer implements BlockEntityRenderer<OiiaCatBlockEntity> {
 
+    /** Cats inside Sky Islands farther than this (blocks) aren't drawn. */
+    private static final float ISLAND_CAT_DISTANCE = 40.0F;
+
     public OiiaCatRenderer(BlockEntityRendererProvider.Context context) {}
 
     @Override
@@ -81,14 +84,17 @@ public class OiiaCatRenderer implements BlockEntityRenderer<OiiaCatBlockEntity> 
         float offsetY = OiiaCatModel.animate(pose, seconds); // 0 = the first frame = standing still
 
         Matrix4f relative = new Matrix4f(pose.last().pose());
+        // a cat in a Sky Island far away is a few pixels: not worth drawing the full model
+        if (IslandRendering.inIsland && relative.getTranslation(new org.joml.Vector3f()).lengthSquared() > ISLAND_CAT_DISTANCE * ISLAND_CAT_DISTANCE) {
+            return;
+        }
+        // Shadered's model renderer works in world coordinates (like MaxwellRenderer)
+        Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        model.modelMatrix = new Matrix4f().translation((float) camera.x, (float) camera.y, (float) camera.z).mul(relative);
         if (IslandRendering.inWindow) {
-            // inside an Island Painting: draw now, while the window is open (a queued model is drawn later, outside it)
-            model.modelMatrix = relative;
-            AssimpRenderer.getInstance().renderDirect(model, null, false);
+            // inside an Island Painting: drawn while the window is open, all of the painting's cats in one batch
+            IslandCatBatch.add(model);
         } else {
-            // Shadered's queued model renderer works in world coordinates (like MaxwellRenderer)
-            Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-            model.modelMatrix = new Matrix4f().translation((float) camera.x, (float) camera.y, (float) camera.z).mul(relative);
             AssimpRenderer.getInstance().addModel(model);
         }
 
