@@ -100,6 +100,17 @@ public final class ClientSetup {
                 return renderer;
             }
         }, ModItems.SKY_ISLAND.get());
+        event.registerItem(new IClientItemExtensions() {
+            private SpaceBucketRenderer renderer;
+
+            @Override
+            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (renderer == null) {
+                    renderer = new SpaceBucketRenderer();
+                }
+                return renderer;
+            }
+        }, ModItems.SPACE_LIQUID_BUCKET.get());
     }
 
     private ClientSetup() {}
