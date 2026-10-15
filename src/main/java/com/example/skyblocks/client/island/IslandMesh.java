@@ -26,6 +26,9 @@ import org.joml.Matrix4f;
  */
 final class IslandMesh implements AutoCloseable {
     private final Map<RenderType, int[]> layers = new LinkedHashMap<>();
+    /** Space Liquid's surface, drawn with Shadered's Space sky (com.example.skyblocks.client.SpaceLiquidSky). */
+    @org.jetbrains.annotations.Nullable
+    private int[] sky;
 
     static IslandMesh build(IslandView island) {
         BlockRenderDispatcher blocks = Minecraft.getInstance().getBlockRenderer();
@@ -34,6 +37,7 @@ final class IslandMesh implements AutoCloseable {
         for (RenderType type : RenderType.chunkBufferLayers()) {
             collectors.put(type, new QuadCollector());
         }
+        QuadCollector skyCollector = new QuadCollector();
         PoseStack pose = new PoseStack();
         for (int y = 0; y < island.height; y++) {
             for (int z = 0; z < island.size; z++) {
@@ -45,19 +49,29 @@ final class IslandMesh implements AutoCloseable {
                     for (QuadCollector collector : collectors.values()) {
                         collector.mark();
                     }
+                    skyCollector.mark();
                     try {
-                        renderBlock(blocks, island, collectors, pose, random, state, new BlockPos(x, y, z));
+                        BlockPos at = new BlockPos(x, y, z);
+                        if (com.example.skyblocks.client.SpaceLiquidSky.ours(state.getFluidState())) {
+                            com.example.skyblocks.client.SpaceLiquidSky.drawBlock(island, at, x, y, z, skyCollector);
+                            continue;
+                        }
+                        renderBlock(blocks, island, collectors, pose, random, state, at);
                     } catch (RuntimeException e) {
                         // a (modded) block whose renderer needs a real world: left out of the miniature,
                         // including anything it wrote before failing
                         for (QuadCollector collector : collectors.values()) {
                             collector.rollback();
                         }
+                        skyCollector.rollback();
                     }
                 }
             }
         }
         IslandMesh mesh = new IslandMesh();
+        if (skyCollector.vertexCount() > 0) {
+            mesh.sky = skyCollector.toArray();
+        }
         collectors.forEach((type, collector) -> {
             if (collector.vertexCount() > 0) {
                 mesh.layers.put(type, collector.toArray());
@@ -117,11 +131,25 @@ final class IslandMesh implements AutoCloseable {
                         .setNormal(pose, (byte) normal / 127.0F, (byte) (normal >> 8) / 127.0F, (byte) (normal >> 16) / 127.0F);
             }
         }
+        RenderType skyType = sky == null ? null : com.example.skyblocks.client.SpaceLiquidSky.skyType();
+        if (skyType != null) {
+            VertexConsumer consumer = buffer.getBuffer(skyType);
+            int[] d = sky;
+            for (int i = 0; i < d.length; i += QuadCollector.INTS) {
+                consumer.addVertex(matrix, Float.intBitsToFloat(d[i]), Float.intBitsToFloat(d[i + 1]), Float.intBitsToFloat(d[i + 2]))
+                        .setColor(255, 255, 255, 255)
+                        .setUv(Float.intBitsToFloat(d[i + 4]), Float.intBitsToFloat(d[i + 5]))
+                        .setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY)
+                        .setLight(net.minecraft.client.renderer.LightTexture.FULL_BRIGHT)
+                        .setNormal(pose, 0.0F, 1.0F, 0.0F);
+            }
+        }
     }
 
     @Override
     public void close() {
         layers.clear();
+        sky = null;
     }
 
     /** Records vertices (position, colour, texture, light, normal) as they are produced by the block renderers. */

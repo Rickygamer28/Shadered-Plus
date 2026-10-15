@@ -58,7 +58,8 @@ blockstate/models/loot/lang and adjust the scale. Models with a skeleton can use
   at most 20,000 blocks; only chunk sections whose palette can hold it are searched) and every frame draws their
   surface (corner heights averaged between blocks, like water) and open sides with Shadered's Space sky render type
   (`ModRenderTypes.getSkyblockRenderType(SPACE, NORMAL)`), which shows Shadered's Space sky picture at each screen
-  pixel. The liquid's own block surface is invisible (fully see-through, cut out). Inside Sky Islands it isn't shown.
+  pixel. The liquid's own block surface is invisible (fully see-through, cut out). Sky Islands show it the same
+  way (IslandMesh keeps its surface apart and draws it with the sky render type).
 
 ## Sky Islands (miniature copies of an area)
 - **Island Scanner** (`skyblocks:island_scanner`, in Shadered's creative tab). Recipe: Glass x3 on top, Amethyst Shard /

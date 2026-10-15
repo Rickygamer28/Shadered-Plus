@@ -12,6 +12,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.BlockGetter;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -71,7 +72,7 @@ public final class SpaceLiquidSky {
         if (FOUND.isEmpty()) {
             return;
         }
-        RenderType sky = ModRenderTypes.getSkyblockRenderType(SkyblockType.SPACE, SkyblockPass.NORMAL);
+        RenderType sky = skyType();
         if (sky == null) {
             return;
         }
@@ -80,45 +81,63 @@ public final class SpaceLiquidSky {
         }
         MultiBufferSource.BufferSource buffers = MultiBufferSource.immediate(memory);
         VertexConsumer c = buffers.getBuffer(sky);
-        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         for (BlockPos pos : FOUND) {
             FluidState fluid = level.getFluidState(pos);
             if (!ours(fluid)) {
                 continue; // gone since the last search
             }
-            float x = (float) (pos.getX() - camera.x), y = (float) (pos.getY() - camera.y), z = (float) (pos.getZ() - camera.z);
-            boolean covered = ours(level.getFluidState(p.setWithOffset(pos, Direction.UP)));
-            // the surface's height at each corner, worked out like Minecraft's water (smooth slopes between blocks)
-            float hNW = covered ? 1 : corner(level, pos, -1, -1);
-            float hNE = covered ? 1 : corner(level, pos, 1, -1);
-            float hSE = covered ? 1 : corner(level, pos, 1, 1);
-            float hSW = covered ? 1 : corner(level, pos, -1, 1);
-            if (!covered) {
-                face(c, x, y + hNW, z, x + 1, y + hNE, z, x + 1, y + hSE, z + 1, x, y + hSW, z + 1);
-            }
-            for (Direction d : Direction.Plane.HORIZONTAL) {
-                p.setWithOffset(pos, d);
-                if (ours(level.getFluidState(p)) || level.getBlockState(p).isSolidRender(level, p)) {
-                    continue;
-                }
-                switch (d) {
-                    case NORTH -> face(c, x, y, z, x + 1, y, z, x + 1, y + hNE, z, x, y + hNW, z);
-                    case SOUTH -> face(c, x + 1, y, z + 1, x, y, z + 1, x, y + hSW, z + 1, x + 1, y + hSE, z + 1);
-                    case WEST -> face(c, x, y, z + 1, x, y, z, x, y + hNW, z, x, y + hSW, z + 1);
-                    default -> face(c, x + 1, y, z, x + 1, y, z + 1, x + 1, y + hSE, z + 1, x + 1, y + hNE, z);
-                }
-            }
-            p.setWithOffset(pos, Direction.DOWN);
-            if (!ours(level.getFluidState(p)) && !level.getBlockState(p).isSolidRender(level, p)) {
-                face(c, x, y, z, x, y, z + 1, x + 1, y, z + 1, x + 1, y, z);
-            }
+            drawBlock(level, pos, (float) (pos.getX() - camera.x), (float) (pos.getY() - camera.y),
+                    (float) (pos.getZ() - camera.z), c);
         }
         buffers.endBatch();
     }
 
     private static ByteBufferBuilder memory;
 
-    private static boolean ours(FluidState fluid) {
+    /**
+     * One Space Liquid block's faces at (x, y, z): the sloped top (unless more liquid is on top) and the sides and
+     * bottom that aren't against more liquid or a solid block. Also used for Sky Islands (client/island/IslandMesh).
+     */
+    public static void drawBlock(BlockGetter level, BlockPos pos, float x, float y, float z, VertexConsumer c) {
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        boolean covered = ours(level.getFluidState(p.setWithOffset(pos, Direction.UP)));
+        // the surface's height at each corner, worked out like Minecraft's water (smooth slopes between blocks)
+        float hNW = covered ? 1 : corner(level, pos, -1, -1);
+        float hNE = covered ? 1 : corner(level, pos, 1, -1);
+        float hSE = covered ? 1 : corner(level, pos, 1, 1);
+        float hSW = covered ? 1 : corner(level, pos, -1, 1);
+        if (!covered) {
+            face(c, x, y + hNW, z, x + 1, y + hNE, z, x + 1, y + hSE, z + 1, x, y + hSW, z + 1);
+        }
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            p.setWithOffset(pos, d);
+            if (ours(level.getFluidState(p)) || level.getBlockState(p).isSolidRender(level, p)) {
+                continue;
+            }
+            switch (d) {
+                case NORTH -> face(c, x, y, z, x + 1, y, z, x + 1, y + hNE, z, x, y + hNW, z);
+                case SOUTH -> face(c, x + 1, y, z + 1, x, y, z + 1, x, y + hSW, z + 1, x + 1, y + hSE, z + 1);
+                case WEST -> face(c, x, y, z + 1, x, y, z, x, y + hNW, z, x, y + hSW, z + 1);
+                default -> face(c, x + 1, y, z, x + 1, y, z + 1, x + 1, y + hSE, z + 1, x + 1, y + hNE, z);
+            }
+        }
+        p.setWithOffset(pos, Direction.DOWN);
+        if (!ours(level.getFluidState(p)) && !level.getBlockState(p).isSolidRender(level, p)) {
+            face(c, x, y, z, x, y, z + 1, x + 1, y, z + 1, x + 1, y, z);
+        }
+    }
+
+    /** Shadered's Space sky render type (null if Shadered doesn't have it). */
+    @org.jetbrains.annotations.Nullable
+    public static RenderType skyType() {
+        try {
+            return ModRenderTypes.getSkyblockRenderType(SkyblockType.SPACE, SkyblockPass.NORMAL);
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    public static boolean ours(FluidState fluid) {
         return fluid.getFluidType() == ModFluids.SPACE_TYPE.get();
     }
 
@@ -127,7 +146,7 @@ public final class SpaceLiquidSky {
      * four blocks around that corner, like Minecraft's water: full sources weigh more, open air next to it pulls the
      * corner down, liquid on top of any of them makes it full height.
      */
-    private static float corner(ClientLevel level, BlockPos pos, int dx, int dz) {
+    private static float corner(BlockGetter level, BlockPos pos, int dx, int dz) {
         float total = 0;
         int weight = 0;
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
