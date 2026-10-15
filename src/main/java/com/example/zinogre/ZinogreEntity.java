@@ -192,7 +192,7 @@ public class ZinogreEntity extends TamableAnimal {
     /** Hurts everything in a box in front of the head, where the lunge reaches (not friends, see {@link #isFriend}). */
     private void hitInFront() {
         Vec3 forward = Vec3.directionFromRotation(0.0F, getYRot());
-        Vec3 center = position().add(forward.scale(2.6)).add(0.0, 1.2, 0.0);
+        Vec3 center = position().add(forward.scale(3.0)).add(0.0, 1.2, 0.0);
         AABB box = new AABB(center, center).inflate(1.8, 1.4, 1.8);
         boolean hit = false;
         for (LivingEntity target : level().getEntitiesOfClass(LivingEntity.class, box,

@@ -69,7 +69,7 @@ class ZinogreAttackGoal extends Goal {
         }
         double dx = target.getX() - mob.getX();
         double dz = target.getZ() - mob.getZ();
-        double reach = mob.getBbWidth() * 0.5 + 2.6 + target.getBbWidth() * 0.5;
+        double reach = mob.getBbWidth() * 0.5 + 3.0 + target.getBbWidth() * 0.5;
         boolean inReach = dx * dx + dz * dz <= reach * reach && Math.abs(target.getY() - mob.getY()) < 3.0;
         if (inReach && cooldown <= 0 && mob.hasLineOfSight(target)) {
             mob.getNavigation().stop();

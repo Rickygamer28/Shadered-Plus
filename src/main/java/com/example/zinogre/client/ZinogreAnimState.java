@@ -136,8 +136,7 @@ final class ZinogreAnimState {
 
         float sinceAttack = (entity.tickCount - entity.attackStartTick + partialTick) / 20.0F;
         boolean attacking = sinceAttack >= 0 && sinceAttack < attack.seconds() - ATTACK_FADE && entity.deathTime <= 0;
-        attackWeight = first ? (attacking ? 1.0F : 0.0F)
-                : Mth.clamp(attackWeight + (attacking ? dt : -dt) / ATTACK_FADE, 0.0F, 1.0F);
+        attackWeight = first ? (attacking ? 1.0F : 0.0F) : approach(attackWeight, attacking ? 1.0F : 0.0F, dt / ATTACK_FADE);
         float other = 1.0F - attackWeight;
 
         // lying down (tamed and told to sit): lie_down, then the rest loop; get_up when told to stand again
@@ -152,7 +151,7 @@ final class ZinogreAnimState {
         float sinceSit = now - sitChangedAt;
         boolean gettingUp = !sitting && sinceSit < getUp.seconds();
         float sitTarget = sitting || gettingUp ? 1.0F : 0.0F;
-        sitWeight = first ? sitTarget : Mth.clamp(sitWeight + (sitTarget > sitWeight ? dt : -dt) / SIT_FADE, 0.0F, 1.0F);
+        sitWeight = first ? sitTarget : approach(sitWeight, sitTarget, dt / SIT_FADE);
         float lying = other * sitWeight;
         float standing = other * (1.0F - sitWeight);
 
@@ -250,6 +249,11 @@ final class ZinogreAnimState {
         for (AssimpMaterial material : materials) {
             material.setColor(r, g, b, 1.0F);
         }
+    }
+
+    /** Moves value towards target by at most step, without overshooting (so it settles instead of flickering). */
+    private static float approach(float value, float target, float step) {
+        return value < target ? Math.min(value + step, target) : Math.max(value - step, target);
     }
 
     private static float smooth(float from, float to, float x) {
