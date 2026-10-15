@@ -9,6 +9,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.FlyingMob;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.animal.WaterAnimal;
 import net.minecraft.tags.FluidTags;
 import com.example.skyblocks.mixin.EntityAccessor;
@@ -16,7 +17,7 @@ import com.example.skyblocks.mixin.EntityAccessor;
 /**
  * A mini copy of a scanned mob: a client-only entity (never added to the world: no AI, no drops, can't be hit) that
  * is drawn with its normal renderer. Mobs that stood on the ground wander around the island now and then and look
- * around while they rest; the others (flying, swimming) stay where they were and look around.
+ * around while they rest; the others (flying, swimming, or pets told to sit) stay where they were and look around.
  */
 final class IslandFigure {
     private static final double SPEED = 0.06; // blocks per tick, in island blocks
@@ -41,7 +42,9 @@ final class IslandFigure {
         this.targetX = x;
         this.targetZ = z;
         this.body = entity instanceof LivingEntity living ? living.yBodyRot : entity.getYRot();
-        this.walker = entity instanceof Mob && !(entity instanceof FlyingMob) && entity.onGround();
+        // pets that were sitting (told to stay) when scanned stay where they are
+        boolean sitting = entity instanceof TamableAnimal pet && (pet.isInSittingPose() || pet.isOrderedToSit());
+        this.walker = entity instanceof Mob && !(entity instanceof FlyingMob) && entity.onGround() && !sitting;
         this.idle = 20 + random.nextInt(120);
         this.firstRest = true;
         this.phase = random.nextFloat() * 100.0F;
