@@ -38,5 +38,18 @@ public final class SkyUsage {
         return last != 0 && System.nanoTime() - last < KEEP_NANOS;
     }
 
+    /** Logs whether the tracking mixins are in place (once, at client setup). */
+    public static void report() {
+        boolean batch = new SkyblockBatchData() instanceof Tracked;
+        boolean passes = false;
+        for (java.lang.reflect.Method m : com.noodlegamer76.shadered.client.renderer.complexpasses.SkyboxRenderPass.class.getDeclaredMethods()) {
+            if (m.getName().contains("skyblocks$skipUnused")) {
+                passes = true;
+            }
+        }
+        com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+: sky usage tracking: batches {}, sky passes {}",
+                batch ? "tracked" : "NOT tracked", passes ? "skipped while unused" : "NOT skipped");
+    }
+
     private SkyUsage() {}
 }

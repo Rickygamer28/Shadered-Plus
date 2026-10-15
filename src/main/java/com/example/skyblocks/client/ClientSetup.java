@@ -23,6 +23,7 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void clientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(ShaderedSkies::register);
+        event.enqueueWork(SkyUsage::report);
         // The Island Painting's window needs a stencil buffer (client/island/IslandWindow).
         event.enqueueWork(() -> net.minecraft.client.Minecraft.getInstance().getMainRenderTarget().enableStencil());
         // Sky Liquids' own surface is fully see-through and cut out (nothing drawn, nothing hidden): all you see is
