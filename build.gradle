@@ -1,0 +1,52 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.78'
+}
+
+version = mod_version
+group = 'com.example.zinogre'
+base { archivesName = 'zinogre-personal' }
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = project.neo_version
+    runs {
+        client { client() }
+        server { server(); programArguments.add '--nogui' }
+    }
+    mods {
+        "${mod_id}" { sourceSet sourceSets.main }
+    }
+}
+
+repositories {
+    // Shadered is downloaded from Modrinth's maven at build time.
+    maven {
+        name = 'Modrinth'
+        url = 'https://api.modrinth.com/maven'
+        content { includeGroup 'maven.modrinth' }
+    }
+    // GeckoLib (Shadered's skyblock items are GeckoLib items, so the compiler needs it too)
+    maven {
+        name = 'GeckoLib'
+        url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+        content { includeGroup 'software.bernie.geckolib' }
+    }
+}
+
+dependencies {
+    // Shadered+ is an addon: it compiles against Shadered and needs Shadered (and Shadered's own
+    // dependencies, e.g. GeckoLib and Sodium) installed in the game. Not bundled into our jar.
+    compileOnly "maven.modrinth:shadered:${shadered_version}"
+    compileOnly "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
+    // only for running the game from Gradle (and the CI load test), not part of our jar
+    runtimeOnly "maven.modrinth:shadered:${shadered_version}"
+    runtimeOnly "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
+}
+
+tasks.withType(ProcessResources).configureEach {
+    var replaceProperties = [mod_id: mod_id, mod_version: mod_version]
+    inputs.properties replaceProperties
+    filesMatching(['META-INF/neoforge.mods.toml']) { expand replaceProperties }
+}

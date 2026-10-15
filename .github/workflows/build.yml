@@ -1,0 +1,62 @@
+name: Build mod
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.10.2
+
+      - name: Build
+        run: |
+          set -o pipefail
+          gradle build --no-daemon 2>&1 | tee build.log
+
+      # Show Java compile errors as annotations on the run (readable without opening the log).
+      - name: Report compile errors
+        if: failure()
+        run: |
+          grep -E "\.java:[0-9]+: error:" -A2 build.log | head -60 | while IFS= read -r line; do
+            echo "::error::$line"
+          done
+
+      # Start the 1.21.1 NeoForge client (virtual screen, software graphics) with Shadered and this mod, wait until
+      # the game has loaded its resources (title screen), then report what happened.
+      - name: Client load test
+        if: success()
+        continue-on-error: true
+        run: |
+          set +e
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb mesa-utils libgl1-mesa-dri > /dev/null
+          export LIBGL_ALWAYS_SOFTWARE=1 MESA_GL_VERSION_OVERRIDE=4.5
+          (xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient --no-daemon > client.log 2>&1 &)
+          for i in $(seq 1 120); do
+            sleep 5
+            if grep -qE "textures/atlas/blocks.png-atlas|Crash report saved|Failed to start|BUILD FAILED" client.log; then sleep 25; break; fi
+          done
+          pkill -f "runClient|DevLaunch|minecraft" ; sleep 3
+          echo "::notice::client loaded resources: $(grep -c 'blocks.png-atlas' client.log), crash reports: $(grep -c 'Crash report saved' client.log), log lines: $(wc -l < client.log)"
+          grep -E "zinogre|Zinogre|assimp|Assimp|Mixin apply|mixin.*(fail|error)|Exception|ERROR|FATAL|Caused by" client.log \
+            | grep -vE "DEBUG|Mixin subsystem|SpongePowered MIXIN|sodium|embeddium|Narrator|narrator|OpenAL|ALSA|Failed to load library|realms|Realms|telemetry" \
+            | awk '!seen[$0]++' | head -60 > summary.txt
+          split -l 15 summary.txt cli_
+          for f in $(ls cli_* 2>/dev/null | head -6); do echo "::notice::$(sed ':a;N;$!ba;s/\n/%0A/g' $f | cut -c1-7000)"; done
+
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: zinogre-personal-jar
+          path: build/libs/*.jar
