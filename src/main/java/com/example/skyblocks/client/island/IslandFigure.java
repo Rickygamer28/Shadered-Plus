@@ -9,6 +9,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.FlyingMob;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.animal.WaterAnimal;
 import net.minecraft.tags.FluidTags;
@@ -33,6 +34,12 @@ final class IslandFigure {
     private final float phase;
     /** The first target is picked on the first tick (the island isn't known in the constructor's caller order). */
     private boolean firstRest;
+    /** Slimes (and magma cubes) get around by jumping: height above the floor and ticks into the jump (-1: landed). */
+    private final boolean slime;
+    private double hop, hopO;
+    private int hopTick = -1;
+    private static final int HOP_TICKS = 10;
+    private static final double HOP_HEIGHT = 0.7, HOP_SPEED = 0.18;
 
     IslandFigure(Entity entity, double x, double y, double z, RandomSource random, IslandView island) {
         this.entity = entity;
@@ -45,6 +52,7 @@ final class IslandFigure {
         // pets that were sitting (told to stay) when scanned stay where they are
         boolean sitting = entity instanceof TamableAnimal pet && (pet.isInSittingPose() || pet.isOrderedToSit());
         this.walker = entity instanceof Mob && !(entity instanceof FlyingMob) && entity.onGround() && !sitting;
+        this.slime = entity instanceof Slime;
         this.idle = 20 + random.nextInt(120);
         this.firstRest = true;
         this.phase = random.nextFloat() * 100.0F;
@@ -78,6 +86,11 @@ final class IslandFigure {
         if (walker && firstRest) {
             firstRest = false;
             rest(island, random, idle);
+        }
+        hopO = hop;
+        if (slime && entity instanceof Slime s) {
+            slimeTick(island, random, s);
+            return;
         }
         float moved = 0;
         if (walker && idle <= 0) {
@@ -117,6 +130,54 @@ final class IslandFigure {
             living.setXRot(resting ? 12.0F * Mth.sin(t * 0.031F) : 0.0F);
             living.walkAnimation.update(Math.min(moved * 4.0F, 1.0F), 0.4F);
         }
+    }
+
+    /**
+     * A slime hops towards its next spot: it squishes, jumps (an arc, moving forward), lands with a squash, waits a
+     * moment and jumps again; once there it rests like the others. Its squish is driven like the real slime's.
+     */
+    private void slimeTick(IslandView island, RandomSource random, Slime s) {
+        s.oSquish = s.squish;
+        s.squish += (s.targetSquish - s.squish) * 0.5F;
+        s.targetSquish *= 0.6F;
+        if (walker && hopTick >= 0) {
+            hopTick++;
+            hop = Math.sin(Math.PI * hopTick / HOP_TICKS) * HOP_HEIGHT;
+            double dx = targetX - x, dz = targetZ - z;
+            double dist = Math.sqrt(dx * dx + dz * dz);
+            if (dist > 0.05) {
+                double step = Math.min(HOP_SPEED, dist);
+                double nx = x + dx / dist * step, nz = z + dz / dist * step;
+                double floor = standable(island, nx, nz, y);
+                if (!Double.isNaN(floor)) {
+                    x = nx;
+                    z = nz;
+                    y = floor;
+                }
+            }
+            if (hopTick >= HOP_TICKS) {
+                hopTick = -1;
+                hop = 0;
+                s.targetSquish = -0.5F; // landing squash
+                if (dist < 0.6) {
+                    rest(island, random, 30 + random.nextInt(100)); // there: sit for a while
+                } else {
+                    idle = 6 + random.nextInt(18);
+                }
+            }
+        } else if (walker && idle-- <= 0) {
+            double dx = targetX - x, dz = targetZ - z;
+            if (dx * dx + dz * dz < 0.25) {
+                rest(island, random, 30 + random.nextInt(100));
+            } else {
+                body = (float) (Mth.atan2(dz, dx) * Mth.RAD_TO_DEG) - 90.0F;
+                s.targetSquish = 1.0F; // stretches as it jumps
+                hopTick = 0;
+            }
+        }
+        s.yBodyRot = body;
+        s.setYRot(body);
+        s.yHeadRot = body;
     }
 
     /**
@@ -177,7 +238,7 @@ final class IslandFigure {
      */
     boolean render(IslandView island, EntityRenderDispatcher dispatcher, PoseStack poseStack, MultiBufferSource buffer, float partialTick) {
         double rx = Mth.lerp(partialTick, xo, x);
-        double ry = Mth.lerp(partialTick, yo, y);
+        double ry = Mth.lerp(partialTick, yo, y) + Mth.lerp(partialTick, hopO, hop);
         double rz = Mth.lerp(partialTick, zo, z);
         float yaw = Mth.rotLerp(partialTick, entity.yRotO, entity.getYRot());
         int light = island.lightAt(rx, ry + 0.5, rz);
