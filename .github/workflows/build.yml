@@ -33,27 +33,21 @@ jobs:
             echo "::error::$line"
           done
 
-      # Start the 1.21.1 NeoForge client (virtual screen, software graphics) with Shadered and this mod, wait until
-      # the game has loaded its resources (title screen), then report what happened.
-      - name: Client load test
-        if: success()
-        continue-on-error: true
+      - name: Probe bucket textures
         run: |
-          set +e
-          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb mesa-utils libgl1-mesa-dri > /dev/null
-          export LIBGL_ALWAYS_SOFTWARE=1 MESA_GL_VERSION_OVERRIDE=4.5
-          (xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient --no-daemon > client.log 2>&1 &)
-          for i in $(seq 1 120); do
-            sleep 5
-            if grep -qE "textures/atlas/blocks.png-atlas|Crash report saved|Failed to start|BUILD FAILED" client.log; then sleep 25; break; fi
-          done
-          pkill -f "runClient|DevLaunch|minecraft" ; sleep 3
-          echo "::notice::client loaded resources: $(grep -c 'blocks.png-atlas' client.log), crash reports: $(grep -c 'Crash report saved' client.log), log lines: $(wc -l < client.log)"
-          grep -E "skyblocks|Shadered\+|Mixin apply|mixin.*(fail|error)|Exception|ERROR|FATAL|Caused by" client.log \
-            | grep -vE "DEBUG|Mixin subsystem|SpongePowered MIXIN|sodium|embeddium|Narrator|narrator|OpenAL|ALSA|Failed to load library|realms|Realms|telemetry" \
-            | awk '!seen[$0]++' | head -60 > summary.txt
-          split -l 15 summary.txt cli_
-          for f in $(ls cli_* 2>/dev/null | head -6); do echo "::notice::$(sed ':a;N;$!ba;s/\n/%0A/g' $f | cut -c1-7000)"; done
+          J=$(find ~/.gradle build -name "*.jar" 2>/dev/null | while read f; do unzip -l "$f" 2>/dev/null | grep -q "assets/minecraft/textures/item/water_bucket.png" && echo "$f" && break; done | head -1)
+          echo "jar: $J"
+          mkdir -p probe && cd probe && unzip -q -o "$J" assets/minecraft/textures/item/water_bucket.png assets/minecraft/textures/item/bucket.png
+          python3 - <<'PY'
+          from PIL import Image
+          for n in ['bucket','water_bucket']:
+              im=Image.open('assets/minecraft/textures/item/%s.png'%n).convert('RGBA')
+              rows=[]
+              for y in range(im.size[1]):
+                  rows.append(' '.join('%02x%02x%02x%02x'%im.getpixel((x,y)) for x in range(im.size[0])))
+              for i in range(0,16,8):
+                  print('::notice::%s %d: %s' % (n, i, ' | '.join(rows[i:i+8])))
+          PY
 
       - name: Upload jar
         uses: actions/upload-artifact@v4
