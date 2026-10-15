@@ -22,8 +22,8 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
  * Zinogre (personal build): one mob, drawn with Shadered's model renderer from assets/zinogre/models/complex/zinogre.glb.
- * Spawned with its spawn egg only (no natural spawning). Tamable with meat. Its broken-off parts drop as items and
- * its head drops (as a placeable trophy) when a charged creeper kills it.
+ * Spawned with its spawn egg only (no natural spawning). Tamable with meat. Its head drops
+ * (as a placeable trophy) when a charged creeper kills it.
  */
 @Mod(ZinogreMod.MOD_ID)
 public class ZinogreMod {
@@ -53,16 +53,6 @@ public class ZinogreMod {
             () -> new DeferredSpawnEggItem(ZINOGRE, 0x2E3B4E, 0x8FE3FF, new Item.Properties()));
     public static final DeferredItem<DeferredSpawnEggItem> STYGIAN_SPAWN_EGG = ITEMS.register("stygian_zinogre_spawn_egg",
             () -> new DeferredSpawnEggItem(STYGIAN_ZINOGRE, 0x16161C, 0xD6283A, new Item.Properties()));
-
-    /** Parts that drop when they break off (index: 0 normal, 1 Stygian). */
-    public static final DeferredItem<Item> HORN = part("zinogre_horn"), STYGIAN_HORN = part("stygian_zinogre_horn");
-    public static final DeferredItem<Item> TAIL = part("zinogre_tail"), STYGIAN_TAIL = part("stygian_zinogre_tail");
-    public static final DeferredItem<Item> CLAW = part("zinogre_claw"), STYGIAN_CLAW = part("stygian_zinogre_claw");
-    public static final DeferredItem<Item> SHELL = part("zinogre_shell"), STYGIAN_SHELL = part("stygian_zinogre_shell");
-
-    private static DeferredItem<Item> part(String name) {
-        return ITEMS.registerSimpleItem(name, new Item.Properties().rarity(Rarity.UNCOMMON));
-    }
 
     /** The trophy heads (dropped like mob heads: when a charged creeper's explosion kills it). */
     public static final DeferredHolder<Block, ZinogreHeadBlock> HEAD = BLOCKS.register("zinogre_head", () -> new ZinogreHeadBlock(false, headProperties()));
@@ -95,11 +85,6 @@ public class ZinogreMod {
         if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
             event.accept(SPAWN_EGG.get());
             event.accept(STYGIAN_SPAWN_EGG.get());
-        }
-        if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
-            for (DeferredItem<Item> item : java.util.List.of(HORN, TAIL, CLAW, SHELL, STYGIAN_HORN, STYGIAN_TAIL, STYGIAN_CLAW, STYGIAN_SHELL)) {
-                event.accept(item.get());
-            }
         }
         if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
             event.accept(HEAD_ITEM.get());

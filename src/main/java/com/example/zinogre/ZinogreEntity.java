@@ -7,7 +7,6 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LightningBolt;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -62,8 +61,8 @@ import org.jetbrains.annotations.Nullable;
  * Breakable parts, like in Monster Hunter: damage goes to the part facing the attacker (head: a horn, depending on the
  * side; flanks: the shoulders; behind: the tail; the front legs take a share of hits from the front and sides). When a
  * part has taken enough it breaks (horn snapped, tail cut, spikes broken off) and shows a fresh wound; on a tamed one
- * the wounds heal into stumps once it is back at full health. Broken parts never grow back. A part that breaks off
- * drops as an item (horn, tail, claw, shell). Like mob heads, its head drops when a charged creeper kills it.
+ * the wounds heal into stumps once it is back at full health. Broken parts never grow back. Like mob heads, its head
+ * drops when a charged creeper kills it.
  *
  * Charge-up, its signature move: in a fight it crouches and howls (the model's charge clip, 4.3 s), and halfway
  * through it becomes charged for 30 s: its shell glows (blue; red for the Stygian), sparks fly off it, it moves
@@ -339,27 +338,12 @@ public class ZinogreEntity extends TamableAnimal {
             default -> forward.scale(0.9).add(0, 1.8, 0);
         };
         at = at.add(position());
-        // the part that broke off drops where it was (both horns: one horn each)
-        ItemEntity drop = new ItemEntity(level(), at.x, at.y, at.z, new ItemStack(partItem(group)));
-        drop.setDeltaMovement((random.nextDouble() - 0.5) * 0.3, 0.3, (random.nextDouble() - 0.5) * 0.3);
-        drop.setDefaultPickUpDelay();
-        level().addFreshEntity(drop);
         if (level() instanceof ServerLevel server) {
             server.sendParticles(ParticleTypes.CRIT, at.x, at.y, at.z, 30, 0.4, 0.4, 0.4, 0.3);
             server.sendParticles(ParticleTypes.DAMAGE_INDICATOR, at.x, at.y, at.z, 8, 0.3, 0.3, 0.3, 0.1);
         }
         level().playSound(null, at.x, at.y, at.z, SoundEvents.SHIELD_BREAK, getSoundSource(), 2.0F, 0.6F);
         playSound(SoundEvents.RAVAGER_STUNNED, 1.8F, 0.7F);
-    }
-
-    private net.minecraft.world.item.Item partItem(int group) {
-        boolean s = isStygian();
-        return (switch (group) {
-            case HORN_L, HORN_R -> s ? ZinogreMod.STYGIAN_HORN : ZinogreMod.HORN;
-            case TAIL -> s ? ZinogreMod.STYGIAN_TAIL : ZinogreMod.TAIL;
-            case ARMS -> s ? ZinogreMod.STYGIAN_CLAW : ZinogreMod.CLAW;
-            default -> s ? ZinogreMod.STYGIAN_SHELL : ZinogreMod.SHELL;
-        }).get();
     }
 
     /** Like mob heads: killed by a charged creeper's explosion, it drops its head (one head per creeper). */
