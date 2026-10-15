@@ -37,7 +37,7 @@ public final class ZinogreClient {
     @SuppressWarnings({"unchecked", "rawtypes"})
     public static void addLayers(EntityRenderersEvent.AddLayers event) {
         int added = 0;
-        for (net.minecraft.world.entity.player.PlayerSkin.Model skin : event.getSkins()) {
+        for (net.minecraft.client.resources.PlayerSkin.Model skin : event.getSkins()) {
             if (event.getSkin(skin) instanceof net.minecraft.client.renderer.entity.LivingEntityRenderer living
                     && living.getModel() instanceof net.minecraft.client.model.HeadedModel) {
                 living.addLayer(new ZinogreWornHeadLayer(living));
