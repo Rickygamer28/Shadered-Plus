@@ -69,7 +69,7 @@ final class IslandWindow {
      */
     static void render(@org.jetbrains.annotations.Nullable IslandView view, @org.jetbrains.annotations.Nullable IslandMesh mesh,
                        net.minecraft.world.item.ItemStack background, int rotation, Direction facing, int width, int height,
-                       PoseStack poseStack, float partialTick, int light) {
+                       PoseStack poseStack, float partialTick, int light, double distance, double figureReach, boolean details) {
         Box box = new Box(width, height);
         poseStack.pushPose();
         // work in a north-facing painting's space: the wall behind is at z = 1..2, the room goes from z = 1 to 1 + DEPTH
@@ -127,7 +127,9 @@ final class IslandWindow {
                 Map<SkyblockBatchData, Map<SkyblockPass, Integer>> before = queuedSizes();
                 IslandRendering.inWindow = true;
                 try {
-                    view.renderBlockEntities(poseStack, scene, partialTick);
+                    if (details) {
+                        view.renderBlockEntities(poseStack, scene, partialTick);
+                    }
                 } finally {
                     IslandRendering.inWindow = false;
                     takeQueued(before, skies);
@@ -137,7 +139,7 @@ final class IslandWindow {
                 } finally {
                     com.example.skyblocks.client.IslandCatBatch.discard();
                 }
-                view.renderFigures(poseStack, scene, partialTick);
+                view.renderFigures(poseStack, scene, partialTick, distance, figureReach);
             }
             scene.endBatch();
             drawSkyBlocks(skies);

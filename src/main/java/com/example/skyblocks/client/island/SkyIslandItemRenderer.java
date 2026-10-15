@@ -57,7 +57,9 @@ public class SkyIslandItemRenderer extends BlockEntityWithoutLevelRenderer {
         if (view != null) {
             try {
                 IslandMesh mesh = view.mesh();
-                view.tickTo(level.getGameTime());
+                if (context != ItemDisplayContext.GUI) {
+                    view.tickTo(level.getGameTime()); // (no mobs are drawn in the inventory)
+                }
                 int wide = Math.max(view.contentWidth(), view.contentDepth());
                 float scale = Math.min(0.9F / wide, 1.1F / view.contentHeight());
                 poseStack.translate(0.5F, 0.25F, 0.5F);

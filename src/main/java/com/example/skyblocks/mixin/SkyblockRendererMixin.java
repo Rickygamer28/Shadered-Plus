@@ -18,7 +18,15 @@ public abstract class SkyblockRendererMixin {
     private static void skyblocks$ourData(SkyblockType type, CallbackInfoReturnable<SkyblockBatchData> cir) {
         int index = SkyTypes.index(type);
         if (index >= 0) {
-            cir.setReturnValue(ShaderedSkies.data(index));
+            SkyblockBatchData data = ShaderedSkies.data(index);
+            com.example.skyblocks.client.SkyUsage.mark(data);
+            cir.setReturnValue(data);
         }
+    }
+
+    /** Looking up a sky's batch (to queue blocks or draw it) counts as using that sky (see SkyUsage). */
+    @Inject(method = "getData", at = @At("RETURN"), require = 0)
+    private static void skyblocks$used(SkyblockType type, CallbackInfoReturnable<SkyblockBatchData> cir) {
+        com.example.skyblocks.client.SkyUsage.mark(cir.getReturnValue());
     }
 }

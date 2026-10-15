@@ -35,7 +35,8 @@ import org.jetbrains.annotations.Nullable;
  * Draws the Sky Liquids (ModFluids): their surface (smooth slopes like water: corner heights averaged between blocks)
  * and their sides where they are open, with Shadered's render type for their sky, which shows that sky's picture
  * (drawn by Shadered every frame) at each screen pixel: the liquid is a window into its sky, like a sky block. The
- * liquid blocks near the camera are looked up again every few ticks (only chunk sections whose palette can hold one).
+ * liquid blocks near the camera are looked up again every few ticks (only chunk sections whose palette can hold one),
+ * and their faces worked out then; each frame only places those faces.
  */
 @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class SkyLiquidRenderer {
@@ -69,33 +70,105 @@ public final class SkyLiquidRenderer {
         if (level != lastLevel || time - lastScan >= RESCAN_TICKS || time < lastScan
                 || chunkX != lastChunkX || chunkZ != lastChunkZ) {
             scan(level, chunkX, chunkZ, Math.min(RADIUS, mc.options.getEffectiveRenderDistance()));
+            buildGeometry(level, chunkX, chunkZ, camera.y);
             lastLevel = level;
             lastScan = time;
             lastChunkX = chunkX;
             lastChunkZ = chunkZ;
         }
-        if (FOUND.isEmpty()) {
+        if (GEOMETRY.isEmpty()) {
             return;
         }
         if (memory == null) {
             memory = new ByteBufferBuilder(1 << 18);
         }
+        // the faces were worked out when the blocks were looked up (every few ticks): just place them
+        float ox = (float) (originX - camera.x), oy = (float) (originY - camera.y), oz = (float) (originZ - camera.z);
         MultiBufferSource.BufferSource buffers = MultiBufferSource.immediate(memory);
-        for (Map.Entry<ModFluids.SkyLiquid, List<BlockPos>> entry : FOUND.entrySet()) {
+        for (Map.Entry<ModFluids.SkyLiquid, float[]> entry : GEOMETRY.entrySet()) {
             RenderType sky = skyType(entry.getKey().sky);
             if (sky == null) {
                 continue;
             }
             VertexConsumer c = buffers.getBuffer(sky);
-            for (BlockPos pos : entry.getValue()) {
-                if (ModFluids.of(level.getFluidState(pos).getFluidType()) != entry.getKey()) {
-                    continue; // gone since the last search
-                }
-                drawBlock(level, pos, (float) (pos.getX() - camera.x), (float) (pos.getY() - camera.y),
-                        (float) (pos.getZ() - camera.z), c);
+            float[] d = entry.getValue();
+            for (int i = 0; i < d.length; i += 5) {
+                vertex(c, d[i] + ox, d[i + 1] + oy, d[i + 2] + oz, d[i + 3], d[i + 4]);
             }
         }
         buffers.endBatch();
+    }
+
+    /** The liquid faces found by the last search, per liquid (x, y, z relative to the origin, u, v per vertex). */
+    private static final Map<ModFluids.SkyLiquid, float[]> GEOMETRY = new LinkedHashMap<>();
+    private static int originX, originY, originZ;
+
+    /** Works out the faces of the blocks just found, relative to the camera's chunk. */
+    private static void buildGeometry(ClientLevel level, int chunkX, int chunkZ, double cameraY) {
+        GEOMETRY.clear();
+        originX = chunkX << 4;
+        originZ = chunkZ << 4;
+        originY = (int) Math.floor(cameraY);
+        FloatCollector collector = new FloatCollector();
+        for (Map.Entry<ModFluids.SkyLiquid, List<BlockPos>> entry : FOUND.entrySet()) {
+            collector.size = 0;
+            for (BlockPos pos : entry.getValue()) {
+                drawBlock(level, pos, pos.getX() - originX, pos.getY() - originY, pos.getZ() - originZ, collector);
+            }
+            if (collector.size > 0) {
+                GEOMETRY.put(entry.getKey(), java.util.Arrays.copyOf(collector.data, collector.size));
+            }
+        }
+    }
+
+    /** Keeps only position and texture of the vertices drawBlock makes. */
+    private static final class FloatCollector implements VertexConsumer {
+        float[] data = new float[5 * 1024];
+        int size;
+        private int current = -1;
+
+        @Override
+        public VertexConsumer addVertex(float x, float y, float z) {
+            if (size + 5 > data.length) {
+                data = java.util.Arrays.copyOf(data, data.length * 2);
+            }
+            current = size;
+            data[size++] = x;
+            data[size++] = y;
+            data[size++] = z;
+            data[size++] = 0;
+            data[size++] = 0;
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv(float u, float v) {
+            if (current >= 0) {
+                data[current + 3] = u;
+                data[current + 4] = v;
+            }
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setColor(int r, int g, int b, int a) {
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv1(int u, int v) {
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv2(int u, int v) {
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setNormal(float x, float y, float z) {
+            return this;
+        }
     }
 
     /** Shadered's render type for a sky (null if Shadered doesn't have one for it). */

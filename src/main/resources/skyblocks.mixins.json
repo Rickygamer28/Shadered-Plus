@@ -13,8 +13,10 @@
   "client": [
     "EntityAccessor",
     "ModRenderTypesMixin",
+    "SkyblockBatchDataMixin",
     "SkyblockEntityRendererMixin",
-    "SkyblockRendererMixin"
+    "SkyblockRendererMixin",
+    "SkyPassMixin"
   ],
   "injectors": {
     "defaultRequire": 1
