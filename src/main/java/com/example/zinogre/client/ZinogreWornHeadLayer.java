@@ -17,10 +17,10 @@ import net.minecraft.world.item.ItemStack;
  * "head" display is scaled to nothing, so this is the only place it's drawn when worn.
  */
 public class ZinogreWornHeadLayer<T extends LivingEntity, M extends EntityModel<T> & HeadedModel> extends RenderLayer<T, M> {
-    /** Mesh units -> head cubes: the wearer's head (0.8 of the cube) fits inside the skull, with room to spare. */
-    private static final float WORN_SCALE = 0.05F;
-    /** The point of the mesh that sits at the centre of the wearer's head: in the skull, behind the eyes. */
-    private static final float WORN_CENTRE_Y = 26.0F, WORN_CENTRE_Z = -2.0F;
+    /** Mesh units -> blocks: about 0.8 blocks tall and 0.8 long, a bit bigger than a normal head. */
+    private static final float WORN_SCALE = 0.018F;
+    /** The point of the head mesh that goes where the middle of the wearer's head was (so its jaw rests on the neck). */
+    private static final float WORN_CENTRE_Y = 13.5F, WORN_CENTRE_Z = -4.0F;
 
     public ZinogreWornHeadLayer(RenderLayerParent<T, M> parent) {
         super(parent);
@@ -41,13 +41,10 @@ public class ZinogreWornHeadLayer<T extends LivingEntity, M extends EntityModel<
             poseStack.translate(0.0F, 1.0F, 0.0F);
         }
         getParentModel().getHead().translateAndRotate(poseStack);
-        // the same placement vanilla uses for a worn block (a carved pumpkin): a block-sized cube around the head
+        // model space is y down with the face towards -Z: turn it to y up, face +Z (like the head mesh), centred on
+        // the middle of the wearer's (hidden) head, then place the head mesh so it sits on the neck in its place
         poseStack.translate(0.0F, -0.25F, 0.0F);
-        poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
-        poseStack.scale(0.625F, -0.625F, -0.625F);
-        // now a block-sized cube centred on the wearer's head, y up: the head mesh much bigger than an item, so it
-        // goes over the wearer's head like a helmet (its skull is narrow: about 20 units wide, 45 long, 44 tall)
-        poseStack.mulPose(Axis.YP.rotationDegrees(180.0F)); // the mesh faces +Z; worn things face -Z here
+        poseStack.mulPose(Axis.XP.rotationDegrees(180.0F));
         poseStack.scale(WORN_SCALE, WORN_SCALE, WORN_SCALE);
         poseStack.translate(0.0F, -WORN_CENTRE_Y, -WORN_CENTRE_Z);
         if (!ZinogreHeadRenderer.drawHead(poseStack, buffer, packedLight, !normal)) {
