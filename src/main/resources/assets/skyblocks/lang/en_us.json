@@ -35,6 +35,6 @@
   "tooltip.skyblocks.island_origin": "Scanned at %s, %s, %s (%s)",
   "tooltip.skyblocks.island_day": "On day %s",
   "tooltip.skyblocks.island_travel": "Right-click its pedestal or painting with an ender pearl to go there",
-  "block.skyblocks.space_liquid": "Space Liquid",
-  "item.skyblocks.space_liquid_bucket": "Space Liquid Bucket"
+  "block.skyblocks.sky_liquid": "%s Liquid",
+  "item.skyblocks.sky_liquid_bucket": "%s Liquid Bucket"
 }

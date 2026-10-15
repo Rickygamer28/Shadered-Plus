@@ -2,9 +2,7 @@ package com.example.skyblocks.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.noodlegamer76.shadered.client.util.ModRenderTypes;
 import com.noodlegamer76.shadered.client.util.SkyblockType;
-import com.noodlegamer76.shadered.client.util.skyblock.SkyblockPass;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -18,17 +16,20 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 /**
- * The Space Liquid Bucket: Minecraft's own bucket, with the pixels where a water bucket shows its water drawn with
- * Shadered's Space sky (the same live sky Shadered's Space sky block item shows).
+ * A Sky Liquid Bucket: Minecraft's own bucket, with the pixels where a water bucket shows its water drawn with the
+ * liquid's Shadered sky (the same live sky that sky's block item shows).
  */
-public class SpaceBucketRenderer extends BlockEntityWithoutLevelRenderer {
+public class SkyLiquidBucketRenderer extends BlockEntityWithoutLevelRenderer {
     /** The water's pixels in Minecraft's water bucket: {row, first column, last column}. */
     private static final int[][] WATER = {{3, 4, 11}, {4, 3, 12}, {5, 5, 10}};
     /** The item's 1 pixel thick slab: front and back faces (item/generated models are 7.5 - 8.5 pixels deep). */
     private static final float FRONT = 8.5F / 16.0F + 0.001F, BACK = 7.5F / 16.0F - 0.001F;
 
-    public SpaceBucketRenderer() {
+    private final SkyblockType sky;
+
+    public SkyLiquidBucketRenderer(SkyblockType sky) {
         super(Minecraft.getInstance().getBlockEntityRenderDispatcher(), Minecraft.getInstance().getEntityModels());
+        this.sky = sky;
     }
 
     @Override
@@ -40,11 +41,11 @@ public class SpaceBucketRenderer extends BlockEntityWithoutLevelRenderer {
         BakedModel model = items.getModel(bucket, mc.level, null, 0);
         items.renderModelLists(model, bucket, light, overlay, poseStack, buffer.getBuffer(Sheets.translucentItemSheet()));
 
-        RenderType sky = ModRenderTypes.getSkyblockRenderType(SkyblockType.SPACE, SkyblockPass.NORMAL);
-        if (sky == null) {
+        RenderType skyType = SkyLiquidRenderer.skyType(this.sky);
+        if (skyType == null) {
             return;
         }
-        VertexConsumer c = buffer.getBuffer(sky);
+        VertexConsumer c = buffer.getBuffer(skyType);
         PoseStack.Pose pose = poseStack.last();
         for (int[] row : WATER) {
             float y1 = 1.0F - row[0] / 16.0F, y0 = y1 - 1.0F / 16.0F;

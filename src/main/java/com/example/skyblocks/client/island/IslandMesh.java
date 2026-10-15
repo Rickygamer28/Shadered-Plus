@@ -26,9 +26,8 @@ import org.joml.Matrix4f;
  */
 final class IslandMesh implements AutoCloseable {
     private final Map<RenderType, int[]> layers = new LinkedHashMap<>();
-    /** Space Liquid's surface, drawn with Shadered's Space sky (com.example.skyblocks.client.SpaceLiquidSky). */
-    @org.jetbrains.annotations.Nullable
-    private int[] sky;
+    /** Sky Liquids' surfaces, per sky, drawn with that sky (com.example.skyblocks.client.SkyLiquidRenderer). */
+    private final Map<com.noodlegamer76.shadered.client.util.SkyblockType, int[]> skies = new LinkedHashMap<>();
 
     static IslandMesh build(IslandView island) {
         BlockRenderDispatcher blocks = Minecraft.getInstance().getBlockRenderer();
@@ -37,7 +36,7 @@ final class IslandMesh implements AutoCloseable {
         for (RenderType type : RenderType.chunkBufferLayers()) {
             collectors.put(type, new QuadCollector());
         }
-        QuadCollector skyCollector = new QuadCollector();
+        Map<com.noodlegamer76.shadered.client.util.SkyblockType, QuadCollector> skyCollectors = new LinkedHashMap<>();
         PoseStack pose = new PoseStack();
         for (int y = 0; y < island.height; y++) {
             for (int z = 0; z < island.size; z++) {
@@ -49,11 +48,15 @@ final class IslandMesh implements AutoCloseable {
                     for (QuadCollector collector : collectors.values()) {
                         collector.mark();
                     }
-                    skyCollector.mark();
+                    skyCollectors.values().forEach(QuadCollector::mark);
                     try {
                         BlockPos at = new BlockPos(x, y, z);
-                        if (com.example.skyblocks.client.SpaceLiquidSky.ours(state.getFluidState())) {
-                            com.example.skyblocks.client.SpaceLiquidSky.drawBlock(island, at, x, y, z, skyCollector);
+                        com.example.skyblocks.ModFluids.SkyLiquid liquid =
+                                com.example.skyblocks.client.SkyLiquidRenderer.liquid(state.getFluidState());
+                        if (liquid != null) {
+                            QuadCollector collector = skyCollectors.computeIfAbsent(liquid.sky, k -> new QuadCollector());
+                            collector.mark();
+                            com.example.skyblocks.client.SkyLiquidRenderer.drawBlock(island, at, x, y, z, collector);
                             continue;
                         }
                         renderBlock(blocks, island, collectors, pose, random, state, at);
@@ -63,15 +66,17 @@ final class IslandMesh implements AutoCloseable {
                         for (QuadCollector collector : collectors.values()) {
                             collector.rollback();
                         }
-                        skyCollector.rollback();
+                        skyCollectors.values().forEach(QuadCollector::rollback);
                     }
                 }
             }
         }
         IslandMesh mesh = new IslandMesh();
-        if (skyCollector.vertexCount() > 0) {
-            mesh.sky = skyCollector.toArray();
-        }
+        skyCollectors.forEach((sky, collector) -> {
+            if (collector.vertexCount() > 0) {
+                mesh.skies.put(sky, collector.toArray());
+            }
+        });
         collectors.forEach((type, collector) -> {
             if (collector.vertexCount() > 0) {
                 mesh.layers.put(type, collector.toArray());
@@ -214,10 +219,13 @@ final class IslandMesh implements AutoCloseable {
                         .setNormal(pose, (byte) normal / 127.0F, (byte) (normal >> 8) / 127.0F, (byte) (normal >> 16) / 127.0F);
             }
         }
-        RenderType skyType = sky == null ? null : com.example.skyblocks.client.SpaceLiquidSky.skyType();
-        if (skyType != null) {
+        for (Map.Entry<com.noodlegamer76.shadered.client.util.SkyblockType, int[]> skyEntry : skies.entrySet()) {
+            RenderType skyType = com.example.skyblocks.client.SkyLiquidRenderer.skyType(skyEntry.getKey());
+            if (skyType == null) {
+                continue;
+            }
             VertexConsumer consumer = buffer.getBuffer(skyType);
-            int[] d = sky;
+            int[] d = skyEntry.getValue();
             for (int i = 0; i < d.length; i += QuadCollector.INTS) {
                 consumer.addVertex(matrix, Float.intBitsToFloat(d[i]), Float.intBitsToFloat(d[i + 1]), Float.intBitsToFloat(d[i + 2]))
                         .setColor(255, 255, 255, 255)
@@ -232,7 +240,7 @@ final class IslandMesh implements AutoCloseable {
     @Override
     public void close() {
         layers.clear();
-        sky = null;
+        skies.clear();
         if (!uploaded.isEmpty()) {
             java.util.List<com.mojang.blaze3d.vertex.VertexBuffer> buffers = new java.util.ArrayList<>(uploaded.values());
             uploaded.clear();

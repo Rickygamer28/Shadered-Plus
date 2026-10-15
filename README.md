@@ -48,18 +48,23 @@ like Shadered's `MaxwellRenderer`. Shadered's animator only animates skeletons, 
 To add another model: put the .glb in `models/complex/`, then copy the OIIA Cat block, block entity, renderers,
 blockstate/models/loot/lang and adjust the scale. Models with a skeleton can use Shadered's `Animator` instead.
 
-## Space Liquid
-- **Space Liquid Bucket** (`skyblocks:space_liquid_bucket`): craft a Bucket with Shadered's **Space sky block**
-  (shapeless). It behaves like water: it flows (7 blocks, down slopes), two sources make a new one, you can swim in
-  it, boats float on it, it puts out fire, and you pick it up with an empty bucket.
-- Its surface is a window into Shadered's Space sky, like a Space sky block, with smooth slopes where it flows (like
-  water). Under the surface the fog is dark purple and short.
-- How it works: `client/SpaceLiquidSky` finds the liquid blocks near the camera every few ticks (6 chunks around,
-  at most 20,000 blocks; only chunk sections whose palette can hold it are searched) and every frame draws their
-  surface (corner heights averaged between blocks, like water) and open sides with Shadered's Space sky render type
-  (`ModRenderTypes.getSkyblockRenderType(SPACE, NORMAL)`), which shows Shadered's Space sky picture at each screen
-  pixel. The liquid's own block surface is invisible (fully see-through, cut out). Sky Islands show it the same
-  way (IslandMesh keeps its surface apart and draws it with the sky render type).
+## Sky Liquids
+- One liquid for **every Shadered sky type**, made automatically from Shadered's sky list like Shadered's Illusorite
+  ores: Space, Eclipse, The End, Forest, Stormy, Light, Mimic, Ocean, Iridia, End Sky, and ours (Jupiter, Cat,
+  Twilight, Hell, Nebula, Golden Hour); a sky another mod adds gets one too. Ids: `skyblocks:<sky>_liquid` and
+  `skyblocks:<sky>_liquid_bucket` (e.g. `space_liquid`, `nebula_liquid_bucket`); names "Nebula Liquid (Bucket)".
+- **Recipe:** a Bucket + any Shadered sky block, in any layout (filters included) = that sky's liquid bucket
+  (`skyblocks:sky_liquid_bucket`, a special recipe, so it works for every sky). All buckets are in Shadered's tab.
+- They behave like water: flow (7 blocks, down slopes), two sources make a new one, swim in them, boats float, they
+  put out fire, pick them up with an empty bucket. Different skies' liquids don't mix into each other.
+- Their surface is a window into their sky, like that sky's block, with smooth slopes where they flow. Under the
+  surface the fog is dark purple and short. The bucket is Minecraft's bucket with the water's pixels showing the sky.
+- How it works: `client/SkyLiquidRenderer` finds the liquid blocks near the camera every few ticks (6 chunks around,
+  at most 20,000 blocks; only chunk sections whose palette can hold one are searched) and every frame draws their
+  surface (corner heights averaged between blocks, like water) and open sides with Shadered's render type for their
+  sky (`ModRenderTypes.getSkyblockRenderType(sky, NORMAL)`), which shows that sky's picture at each screen pixel. The
+  liquids' own block surface is invisible. Sky Islands show them the same way. Models: every bucket and liquid uses
+  `item/sky_liquid_bucket` / `block/sky_liquid` (files for the 16 known skies, and a fallback in ClientSetup for others).
 
 ## Sky Islands (miniature copies of an area)
 - **Island Scanner** (`skyblocks:island_scanner`, in Shadered's creative tab). Recipe: Glass x3 on top, Amethyst Shard /

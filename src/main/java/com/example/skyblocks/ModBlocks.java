@@ -35,10 +35,5 @@ public final class ModBlocks {
             IslandPaintingBlock::new, BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.WOOD).noOcclusion()
                     .pushReaction(PushReaction.DESTROY));
 
-    /** The Space Liquid in the world (ModFluids). */
-    public static final DeferredBlock<net.minecraft.world.level.block.LiquidBlock> SPACE_LIQUID = BLOCKS.register("space_liquid",
-            () -> new net.minecraft.world.level.block.LiquidBlock(ModFluids.SPACE.get(),
-                    BlockBehaviour.Properties.ofFullCopy(Blocks.WATER).mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK)));
-
     private ModBlocks() {}
 }

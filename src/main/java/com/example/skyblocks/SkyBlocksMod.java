@@ -33,6 +33,7 @@ public class SkyBlocksMod {
         ModComponents.COMPONENTS.register(modEventBus);
         ModFluids.TYPES.register(modEventBus);
         ModFluids.FLUIDS.register(modEventBus);
+        ModFluids.RECIPES.register(modEventBus);
         modEventBus.addListener(SkyBlocksMod::addToShaderedTab);
         modEventBus.addListener(SkyBlocksMod::registerPayloads);
     }
@@ -48,7 +49,9 @@ public class SkyBlocksMod {
         event.accept(ModItems.OIIA_CAT.get());
         event.accept(ModItems.ISLAND_SCANNER.get());
         event.accept(ModItems.ISLAND_PAINTING.get());
-        event.accept(ModItems.SPACE_LIQUID_BUCKET.get());
+        for (ModFluids.SkyLiquid liquid : ModFluids.ALL) {
+            event.accept(liquid.bucket.get());
+        }
     }
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
