@@ -356,12 +356,20 @@ public class ZinogreEntity extends TamableAnimal {
         }
     }
 
-    /** A tamed one's wounds heal into stumps once it is back at full health. */
+    /** A tamed one grows its broken parts back once it is back at full health (heal it with meat). */
     private void healWounds() {
+        boolean regrown = false;
         for (int group : BREAKABLE) {
-            if (partState(parts(), group) == BROKEN) {
-                setPartState(group, HEALED);
+            partDamage[group] = 0.0F;
+            if (partState(parts(), group) != INTACT) {
+                setPartState(group, INTACT);
+                regrown = true;
             }
+        }
+        if (regrown && level() instanceof ServerLevel server) {
+            server.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER,
+                    getX(), getY() + getBbHeight() * 0.6, getZ(), 30, getBbWidth() * 0.6, getBbHeight() * 0.4, getBbWidth() * 0.6, 0.0);
+            playSound(SoundEvents.PLAYER_LEVELUP, 1.0F, 0.6F);
         }
     }
 
