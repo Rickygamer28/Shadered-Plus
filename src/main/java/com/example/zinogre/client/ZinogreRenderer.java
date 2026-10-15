@@ -28,6 +28,8 @@ public class ZinogreRenderer extends EntityRenderer<ZinogreEntity> {
     static final ResourceLocation STYGIAN_CHARGED_MODEL = ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "models/complex/stygian_zinogre_charged.glb");
     /** Model units -> blocks: about 2.5 blocks to the top of the head, about 7 blocks from nose to tail tip. */
     static final float SCALE = 0.018F;
+    /** Beyond this many blocks from the camera it is drawn with the low-detail mesh. */
+    private static final double LOW_DETAIL_DISTANCE = 24.0;
     private static final ResourceLocation NO_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
 
     public ZinogreRenderer(EntityRendererProvider.Context context) {
@@ -73,7 +75,11 @@ public class ZinogreRenderer extends EntityRenderer<ZinogreEntity> {
         McModel charged = AssimpModels.getModel(entity.isStygian() ? STYGIAN_CHARGED_MODEL : CHARGED_MODEL);
         ResourceLocation chargedBody = charged != null && !charged.getModels().isEmpty()
                 ? charged.getModels().get(0).getMaterial().getDiffuseTexture() : null;
-        state.update(entity, partialTick, packedLight, chargedBody);
+        // the low-detail mesh when far away (beyond LOW_DETAIL_DISTANCE blocks) or drawn small inside a Sky Island
+        boolean small = poseStack.last().pose().getScale(new org.joml.Vector3f()).x < 0.5F;
+        double distance = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition().distanceToSqr(entity.position());
+        boolean lowDetail = small || distance > LOW_DETAIL_DISTANCE * LOW_DETAIL_DISTANCE;
+        state.update(entity, partialTick, packedLight, chargedBody, lowDetail);
 
         // Start from the pose we were given (camera-relative, at the entity), on our own copy
         PoseStack pose = new PoseStack();

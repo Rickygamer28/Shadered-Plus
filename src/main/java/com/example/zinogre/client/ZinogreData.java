@@ -53,13 +53,16 @@ final class ZinogreData {
     /** The mesh pieces, uploaded: the body (group 0) and every state of every breakable part. */
     final List<Piece> pieces;
     final Map<String, Clip> clips;
+    /** Whether the file has low-detail pieces. */
+    final boolean hasLowDetail;
 
     /**
      * A piece of the mesh: group 0 is always drawn; groups 1-6 are the breakable parts (left horn, right horn, tail,
      * tail-end fur, front legs, shoulders) and 7 the eyelids; state 0 intact, 1 broken (wound), 2 healed stump.
      * material = index into the textures GLB's materials (body, fur, translucent fur, eyes, damage layer).
+     * lowDetail: a copy with far fewer triangles, for when it is far away or drawn small (0x80 on the group byte).
      */
-    record Piece(int group, int state, int material, VertexBuffer buffer) {}
+    record Piece(int group, int state, int material, boolean lowDetail, VertexBuffer buffer) {}
 
     /** An animation clip: per frame and joint the local translation and rotation (tx ty tz qx qy qz qw). */
     record Clip(float fps, int frames, float[] data) {
@@ -73,6 +76,7 @@ final class ZinogreData {
         this.inverseBind = inverseBind;
         this.pieces = pieces;
         this.clips = clips;
+        this.hasLowDetail = pieces.stream().anyMatch(Piece::lowDetail);
     }
 
     int joints() {
@@ -131,14 +135,15 @@ final class ZinogreData {
         int pieceCount = b.getInt();
         List<Piece> pieces = new ArrayList<>();
         for (int p = 0; p < pieceCount; p++) {
-            int group = b.get() & 0xFF;
+            int groupByte = b.get() & 0xFF;
+            int group = groupByte & 0x7F;
             int state = b.get() & 0xFF;
             int material = b.get() & 0xFF;
             int[] indices = new int[b.getInt()];
             b.asIntBuffer().get(indices);
             b.position(b.position() + indices.length * 4);
             VertexBuffer buffer = upload(pos, uv, normal, shade, joints, weights, indices);
-            pieces.add(new Piece(group, state, material, buffer));
+            pieces.add(new Piece(group, state, material, (groupByte & 0x80) != 0, buffer));
         }
 
         int clipCount = b.getInt();

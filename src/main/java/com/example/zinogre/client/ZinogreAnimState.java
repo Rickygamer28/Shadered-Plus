@@ -143,7 +143,8 @@ final class ZinogreAnimState {
     }
 
     /** Poses the bones and sets the light tint for this frame. */
-    void update(ZinogreEntity entity, float partialTick, int packedLight, @Nullable ResourceLocation chargedBody) {
+    /** lowDetail: far away or drawn small (Sky Islands): the low-detail mesh, without the translucent fur layer. */
+    void update(ZinogreEntity entity, float partialTick, int packedLight, @Nullable ResourceLocation chargedBody, boolean lowDetail) {
         float now = (entity.tickCount + partialTick) / 20.0F;
         boolean first = lastTime < 0;
         float dt = first ? 0.0F : Mth.clamp(now - lastTime, 0.0F, 0.25F);
@@ -200,7 +201,7 @@ final class ZinogreAnimState {
         }
         finish();
 
-        showPieces(entity.parts(), eyesClosed);
+        showPieces(entity.parts(), eyesClosed, lowDetail && data.hasLowDetail);
         ResourceLocation body = entity.isCharged() && chargedBody != null ? chargedBody : bodyTexture;
         if (body != shownBody) {
             shownBody = body;
@@ -273,8 +274,8 @@ final class ZinogreAnimState {
      * Shows the body plus each breakable part in its current state (2 bits per group 1-6 in parts): the tail-end fur
      * only on an intact tail, the eyelids only while dozing.
      */
-    private void showPieces(int parts, boolean closedEyes) {
-        int key = parts | (closedEyes ? 1 << 20 : 0);
+    private void showPieces(int parts, boolean closedEyes, boolean lowDetail) {
+        int key = parts | (closedEyes ? 1 << 20 : 0) | (lowDetail ? 1 << 21 : 0);
         if (key == shownKey) {
             return;
         }
@@ -286,7 +287,9 @@ final class ZinogreAnimState {
             ZinogreData.Piece piece = data.pieces.get(i);
             int g = piece.group();
             boolean visible;
-            if (g == 0) {
+            if (piece.lowDetail() != lowDetail) {
+                visible = false;
+            } else if (g == 0) {
                 visible = true;
             } else if (g == ZinogreEntity.TAIL_FUR) {
                 visible = tail == 0;
