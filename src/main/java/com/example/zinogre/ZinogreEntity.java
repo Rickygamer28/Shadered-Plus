@@ -43,7 +43,7 @@ import org.jetbrains.annotations.Nullable;
  * A big tamable monster, like a giant wolf.
  *
  * Untamed it wanders and only fights back when hurt. Feed it raw or cooked meat to tame it (1 in 4 chance per
- * piece; hearts when it works, smoke when it doesn't). Tamed it follows its owner, fights what the owner fights or
+ * piece; hearts when it works, smoke when it doesn't); it stays standing and starts following its new owner. Tamed it follows its owner, fights what the owner fights or
  * what hurts the owner, heals 10 health per piece of meat, and lies down / gets up when the owner right-clicks it.
  *
  * Its one melee attack is a lunging bite that ends in a two-paw slam (the model's attack clip, 1.7 s); the hit lands
@@ -266,7 +266,6 @@ public class ZinogreEntity extends TamableAnimal {
                     tame(player);
                     navigation.stop();
                     setTarget(null);
-                    setOrderedToSit(true);
                     level().broadcastEntityEvent(this, (byte) 7); // hearts
                 } else {
                     level().broadcastEntityEvent(this, (byte) 6); // smoke
