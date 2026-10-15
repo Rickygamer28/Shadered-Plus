@@ -20,7 +20,7 @@ public class ZinogreWornHeadLayer<T extends LivingEntity, M extends EntityModel<
     /** Mesh units -> blocks: about 1.6 blocks tall and long, a big trophy-sized head. */
     private static final float WORN_SCALE = 0.036F;
     /** The point of the (closed-mouth) head mesh that goes where the middle of the wearer's head was (so its jaw rests on the neck). */
-    private static final float WORN_CENTRE_Y = 19.0F, WORN_CENTRE_Z = -4.0F;
+    private static final float WORN_CENTRE_Y = 21.5F, WORN_CENTRE_Z = -4.0F;
 
     public ZinogreWornHeadLayer(RenderLayerParent<T, M> parent) {
         super(parent);
