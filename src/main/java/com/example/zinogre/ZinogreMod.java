@@ -16,7 +16,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
  * Zinogre (personal build): one mob, drawn with Shadered's model renderer from assets/zinogre/models/complex/zinogre.glb.
- * Spawned with its spawn egg only (no natural spawning).
+ * Spawned with its spawn egg only (no natural spawning). Tamable with meat.
  */
 @Mod(ZinogreMod.MOD_ID)
 public class ZinogreMod {
@@ -28,7 +28,7 @@ public class ZinogreMod {
 
     /** About 2.6 blocks wide and 2.4 tall (the body; the tail reaches further back). */
     public static final DeferredHolder<EntityType<?>, EntityType<ZinogreEntity>> ZINOGRE = ENTITIES.register("zinogre",
-            () -> EntityType.Builder.of(ZinogreEntity::new, MobCategory.MONSTER)
+            () -> EntityType.Builder.of(ZinogreEntity::new, MobCategory.CREATURE)
                     .sized(2.6F, 2.4F)
                     .clientTrackingRange(10)
                     .build("zinogre"));

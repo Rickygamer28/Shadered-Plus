@@ -27,7 +27,7 @@ class ZinogreAttackGoal extends Goal {
     @Override
     public boolean canUse() {
         LivingEntity target = mob.getTarget();
-        return target != null && target.isAlive();
+        return target != null && target.isAlive() && !mob.isOrderedToSit();
     }
 
     @Override

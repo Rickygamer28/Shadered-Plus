@@ -35,14 +35,20 @@ final class ZinogreAnimState {
     private static final float RUN_CLIP_SPEED = 2.8F;
     /** Seconds to fade the attack in and out. */
     private static final float ATTACK_FADE = 0.15F;
+    /** Seconds to fade between standing and the lying-down clips. */
+    private static final float SIT_FADE = 0.3F;
 
     final RenderableModel model;
     private final McModel source;
     private final ZinogreData data;
     private final Matrix4f[] bones;
     private final List<AssimpMaterial> materials = new ArrayList<>();
-    private final ZinogreData.Clip idle, walk, run, attack;
+    private final ZinogreData.Clip idle, walk, run, attack, lieDown, rest, getUp;
     private float attackWeight;
+    /** Sitting (lying down): when it last changed, and how much of the pose is the lying layer. */
+    private boolean lastSitting;
+    private float sitChangedAt;
+    private float sitWeight;
     private float lastTime = -1;
 
     // scratch space for posing
@@ -60,6 +66,9 @@ final class ZinogreAnimState {
         this.walk = data.clips.get("walk");
         this.run = data.clips.get("run");
         this.attack = data.clips.get("attack");
+        this.lieDown = data.clips.get("lie_down");
+        this.rest = data.clips.get("rest");
+        this.getUp = data.clips.get("get_up");
         int n = data.joints();
         tx = new float[n]; ty = new float[n]; tz = new float[n];
         qx = new float[n]; qy = new float[n]; qz = new float[n]; qw = new float[n]; wsum = new float[n];
@@ -84,7 +93,7 @@ final class ZinogreAnimState {
         if (data == null || data.parts.size() != loadedParts.size()) {
             return null;
         }
-        for (String name : new String[] {"idle", "walk", "run", "attack"}) {
+        for (String name : new String[] {"idle", "walk", "run", "attack", "lie_down", "rest", "get_up"}) {
             if (!data.clips.containsKey(name)) {
                 return null;
             }
@@ -129,12 +138,36 @@ final class ZinogreAnimState {
         boolean attacking = sinceAttack >= 0 && sinceAttack < attack.seconds() - ATTACK_FADE && entity.deathTime <= 0;
         attackWeight = first ? (attacking ? 1.0F : 0.0F)
                 : Mth.clamp(attackWeight + (attacking ? dt : -dt) / ATTACK_FADE, 0.0F, 1.0F);
-        float rest = 1.0F - attackWeight;
+        float other = 1.0F - attackWeight;
+
+        // lying down (tamed and told to sit): lie_down, then the rest loop; get_up when told to stand again
+        boolean sitting = entity.isInSittingPose();
+        if (first) {
+            lastSitting = sitting;
+            sitChangedAt = -1000.0F; // already lying (or standing) when first seen: no transition
+        } else if (sitting != lastSitting) {
+            lastSitting = sitting;
+            sitChangedAt = now;
+        }
+        float sinceSit = now - sitChangedAt;
+        boolean gettingUp = !sitting && sinceSit < getUp.seconds();
+        float sitTarget = sitting || gettingUp ? 1.0F : 0.0F;
+        sitWeight = first ? sitTarget : Mth.clamp(sitWeight + (sitTarget > sitWeight ? dt : -dt) / SIT_FADE, 0.0F, 1.0F);
+        float lying = other * sitWeight;
+        float standing = other * (1.0F - sitWeight);
 
         clear();
-        add(idle, now + entity.getId() * 1.37F, true, rest * (1.0F - moving));
-        add(walk, distance / WALK_CLIP_SPEED, true, rest * moving * (1.0F - running));
-        add(run, distance / RUN_CLIP_SPEED, true, rest * moving * running);
+        add(idle, now + entity.getId() * 1.37F, true, standing * (1.0F - moving));
+        add(walk, distance / WALK_CLIP_SPEED, true, standing * moving * (1.0F - running));
+        add(run, distance / RUN_CLIP_SPEED, true, standing * moving * running);
+        if (sitting) {
+            float lieLength = lieDown.seconds();
+            float intoRest = smooth(lieLength - SIT_FADE, lieLength, sinceSit);
+            add(lieDown, sinceSit, false, lying * (1.0F - intoRest));
+            add(rest, sinceSit - lieLength + SIT_FADE, true, lying * intoRest);
+        } else {
+            add(getUp, sinceSit, false, lying);
+        }
         add(attack, Mth.clamp(sinceAttack, 0.0F, attack.seconds()), false, attackWeight);
         if (wsum[0] <= 0) {
             add(idle, now, true, 1.0F);
