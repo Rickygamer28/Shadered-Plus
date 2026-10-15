@@ -221,8 +221,14 @@ public final class SkyUsage {
                 passes = true;
             }
         }
-        com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+: sky usage tracking: batches {}, sky passes {}, {} skies known",
-                batch ? "tracked" : "NOT tracked", passes ? "skipped while unused" : "NOT skipped", PASSES.size());
+        boolean onDemand = false;
+        for (java.lang.reflect.Method m : com.noodlegamer76.shadered.client.renderer.complexpasses.SkyblockRenderPass.class.getDeclaredMethods()) {
+            if (m.getName().contains("skyblocks$freshSkies")) {
+                onDemand = true;
+            }
+        }
+        com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+: sky usage tracking: batches {}, sky passes {}, {} skies known, on-demand drawing {}",
+                batch ? "tracked" : "NOT tracked", passes ? "skipped while unused" : "NOT skipped", PASSES.size(), onDemand ? "on" : "OFF");
     }
 
     private SkyUsage() {}
