@@ -4,24 +4,21 @@ import com.example.zinogre.ZinogreHeadBlock;
 import com.example.zinogre.ZinogreHeadBlockEntity;
 import com.example.zinogre.ZinogreMod;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexBuffer;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
-import com.noodlegamer76.shadered.client.assimp.AssimpMaterial;
 import com.noodlegamer76.shadered.client.assimp.AssimpModel;
 import com.noodlegamer76.shadered.client.assimp.McModel;
 import com.noodlegamer76.shadered.client.assimp.load.AssimpModels;
-import com.noodlegamer76.shadered.client.renderer.assimp.RenderableModel;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.RotationSegment;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix4f;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -29,22 +26,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Draws a placed Zinogre head with Shadered's model renderer: the head of the model (a static mesh from
- * assets/zinogre/models/zinogre_head.bin, cut from the model by the converter) with the textures of its look.
+ * Draws a placed Zinogre head: the head of the model (a static mesh from assets/zinogre/models/zinogre_head.bin, cut
+ * from the model by the converter) with the textures of its look.
+ *
+ * Unlike the mob it is drawn the vanilla way (triangles into the normal entity render types, with the textures
+ * Shadered loaded from the GLB): that gets Minecraft's own lighting and works wherever block entities are drawn,
+ * Sky Islands included.
  */
 public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlockEntity> {
     private static final ResourceLocation FILE = ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "models/zinogre_head.bin");
     /** Model units -> blocks: the head is about 45 units long, so about 0.85 blocks. */
     private static final float SCALE = 0.019F;
 
-    /** The head mesh: one buffer per material (shared by all heads). */
-    private record Part(int material, VertexBuffer buffer) {}
+    /** The head mesh (shared by all heads): vertex arrays and triangles per material. */
+    record Mesh(float[] pos, float[] uv, float[] normal, List<int[]> triangles, int[] materials) {}
     @Nullable
-    private static List<Part> parts;
+    private static Mesh mesh;
     private static boolean failed;
-
-    /** One placed head's model copy (own materials for its light). */
-    private record HeadModel(McModel source, RenderableModel model, List<AssimpMaterial> materials) {}
 
     public ZinogreHeadRenderer(BlockEntityRendererProvider.Context context) {}
 
@@ -56,69 +54,51 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
             return;
         }
         McModel textures = AssimpModels.getModel(block.stygian ? ZinogreRenderer.STYGIAN_MODEL : ZinogreRenderer.MODEL);
-        List<Part> mesh = parts();
-        if (textures == null || mesh == null) {
-            Debug.once("head-missing", "Zinogre head not drawn: textures loaded {}, mesh loaded {}", textures != null, mesh != null);
+        Mesh head = mesh();
+        if (textures == null || head == null) {
+            Debug.once("head-missing", "Zinogre head not drawn: textures loaded {}, mesh loaded {}", textures != null, head != null);
             return;
         }
-        HeadModel head = be.clientState instanceof HeadModel h && h.source() == textures ? h : null;
-        if (head == null) {
-            head = create(textures, mesh);
-            be.clientState = head;
-            if (head == null) {
-                return;
-            }
-        }
-        // light where it stands (Shadered's model shader has no world lighting)
-        float blockLight = LightTexture.block(packedLight) / 15.0F;
-        float skyLight = LightTexture.sky(packedLight) / 15.0F;
-        float daylight = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getSkyDarken(partialTick) : 1.0F;
-        float v = 0.18F + 0.82F * Math.max(blockLight, skyLight * daylight);
-        for (AssimpMaterial material : head.materials()) {
-            material.setColor(v, v, v, 1.0F);
-        }
+        List<AssimpModel> parts = textures.getModels();
 
-        PoseStack pose = new PoseStack();
-        pose.last().pose().set(poseStack.last().pose());
-        pose.translate(0.5F, 0.0F, 0.5F);
+        poseStack.pushPose();
+        poseStack.translate(0.5F, 0.0F, 0.5F);
         float yaw = RotationSegment.convertToDegrees(state.getValue(ZinogreHeadBlock.ROTATION));
-        pose.mulPose(Axis.YP.rotationDegrees(-yaw)); // the head faces +Z, like a mob with that yaw
-        pose.scale(SCALE, SCALE, SCALE);
-        Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-        head.model().modelMatrix = new Matrix4f().translation((float) camera.x, (float) camera.y, (float) camera.z).mul(pose.last().pose());
-        IslandCompat.draw(head.model());
-        Debug.few("head", "Zinogre head drawn at {} with {} parts", head.model().modelMatrix.getTranslation(new org.joml.Vector3f()), head.model().getModel().size());
-    }
-
-    @Nullable
-    private static HeadModel create(McModel textures, List<Part> mesh) {
-        List<AssimpModel> loaded = textures.getModels();
-        List<AssimpMaterial> materials = new ArrayList<>();
-        for (AssimpModel part : loaded) {
-            AssimpMaterial m = part.getMaterial(), copy = new AssimpMaterial();
-            copy.setDiffuseTexture(m.getDiffuseTexture());
-            copy.setNormalTexture(m.getNormalTexture());
-            copy.setSpecularTexture(m.getSpecularTexture());
-            copy.setEmissiveTexture(m.getEmissiveTexture());
-            copy.setTransparent(m.useAlpha());
-            copy.setBlendMode(m.getBlendMode());
-            materials.add(copy);
-        }
-        RenderableModel model = new RenderableModel();
-        for (Part part : mesh) {
-            if (part.material() >= materials.size()) {
-                return null;
+        poseStack.mulPose(Axis.YP.rotationDegrees(-yaw)); // the head faces +Z, like a mob with that yaw
+        poseStack.scale(SCALE, SCALE, SCALE);
+        PoseStack.Pose last = poseStack.last();
+        for (int p = 0; p < head.triangles().size(); p++) {
+            int material = head.materials()[p];
+            if (material >= parts.size()) {
+                continue;
             }
-            AssimpModel piece = new AssimpModel(part.buffer(), materials.get(part.material()));
-            piece.instances.add(new AssimpModel.MeshInstanceTransform(new Matrix4f(), new Matrix4f()));
-            model.add(piece);
+            ResourceLocation texture = parts.get(material).getMaterial().getDiffuseTexture();
+            VertexConsumer out = buffer.getBuffer(RenderType.entityCutoutNoCull(texture));
+            int[] tris = head.triangles().get(p);
+            for (int i = 0; i < tris.length; i += 3) {
+                // a triangle as a quad with its last corner twice (the entity render types draw quads)
+                vertex(out, last, head, tris[i], packedLight);
+                vertex(out, last, head, tris[i + 1], packedLight);
+                vertex(out, last, head, tris[i + 2], packedLight);
+                vertex(out, last, head, tris[i + 2], packedLight);
+            }
         }
-        return new HeadModel(textures, model, materials);
+        poseStack.popPose();
+        Debug.once("head", "Zinogre head drawn (vanilla way) with {} parts", head.triangles().size());
+    }
+
+    private static void vertex(VertexConsumer out, PoseStack.Pose pose, Mesh m, int v, int light) {
+        out.addVertex(pose, m.pos()[v * 3], m.pos()[v * 3 + 1], m.pos()[v * 3 + 2])
+                .setColor(255, 255, 255, 255)
+                .setUv(m.uv()[v * 2], m.uv()[v * 2 + 1])
+                .setOverlay(OverlayTexture.NO_OVERLAY)
+                .setLight(light)
+                .setNormal(pose, m.normal()[v * 3], m.normal()[v * 3 + 1], m.normal()[v * 3 + 2]);
     }
 
     @Nullable
-    static List<Part> parts() {
-        if (parts == null && !failed) {
+    static Mesh mesh() {
+        if (mesh == null && !failed) {
             try {
                 ByteBuffer b = ZinogreData.readResource(FILE);
                 if (b.getInt() != 0x3144485A) { // "ZHD1"
@@ -128,23 +108,24 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
                 float[] pos = ZinogreData.floats(b, n * 3);
                 float[] uv = ZinogreData.floats(b, n * 2);
                 float[] normal = ZinogreData.floats(b, n * 3);
-                float[] shade = ZinogreData.floats(b, n);
+                ZinogreData.floats(b, n); // baked shade: not needed, Minecraft lights it
                 int count = b.getInt();
-                List<Part> list = new ArrayList<>();
+                List<int[]> triangles = new ArrayList<>();
+                int[] materials = new int[count];
                 for (int p = 0; p < count; p++) {
-                    int material = b.get() & 0xFF;
+                    materials[p] = b.get() & 0xFF;
                     int[] indices = new int[b.getInt()];
                     b.asIntBuffer().get(indices);
                     b.position(b.position() + indices.length * 4);
-                    list.add(new Part(material, ZinogreData.upload(pos, uv, normal, shade, null, null, indices)));
+                    triangles.add(indices);
                 }
-                parts = list;
+                mesh = new Mesh(pos, uv, normal, triangles, materials);
             } catch (IOException | RuntimeException e) {
                 ZinogreMod.LOGGER.error("Couldn't load the Zinogre head {}", FILE, e);
                 failed = true;
             }
         }
-        return parts;
+        return mesh;
     }
 
     @Override
@@ -153,7 +134,7 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
     }
 
     @Override
-    public net.minecraft.world.phys.AABB getRenderBoundingBox(ZinogreHeadBlockEntity be) {
-        return new net.minecraft.world.phys.AABB(be.getBlockPos()).inflate(0.5);
+    public AABB getRenderBoundingBox(ZinogreHeadBlockEntity be) {
+        return new AABB(be.getBlockPos()).inflate(0.5);
     }
 }

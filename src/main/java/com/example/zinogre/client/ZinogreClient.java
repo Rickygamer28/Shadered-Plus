@@ -27,7 +27,7 @@ public final class ZinogreClient {
             if (!done && net.minecraft.client.Minecraft.getInstance().level != null) {
                 done = true;
                 ZinogreData.get();
-                ZinogreHeadRenderer.parts();
+                ZinogreHeadRenderer.mesh();
             }
         }
 

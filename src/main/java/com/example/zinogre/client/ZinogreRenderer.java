@@ -39,8 +39,26 @@ public class ZinogreRenderer extends EntityRenderer<ZinogreEntity> {
     @Override
     public void render(ZinogreEntity entity, float entityYaw, float partialTick, PoseStack poseStack,
                        MultiBufferSource buffer, int packedLight) {
+        boolean small = poseStack.last().pose().getScale(new org.joml.Vector3f()).x < 0.5F; // inside a Sky Island
+        if (small) {
+            Debug.few("island-call", "Zinogre renderer called inside an island (scale {})", poseStack.last().pose().getScale(new org.joml.Vector3f()).x);
+        }
+        try {
+            draw(entity, entityYaw, partialTick, poseStack, buffer, packedLight);
+        } catch (RuntimeException e) {
+            Debug.once("render-error-" + small, "Zinogre renderer failed" + (small ? " inside an island" : "") + ": {}", e.toString());
+            if (Debug.firstTime("render-trace-" + small)) {
+                ZinogreMod.LOGGER.error("Zinogre renderer failed", e);
+            }
+            throw e;
+        }
+    }
+
+    private void draw(ZinogreEntity entity, float entityYaw, float partialTick, PoseStack poseStack,
+                      MultiBufferSource buffer, int packedLight) {
         McModel loaded = AssimpModels.getModel(entity.isStygian() ? STYGIAN_MODEL : MODEL);
         if (loaded == null) {
+            Debug.once("no-model", "Zinogre not drawn: Shadered has no textures model loaded");
             return; // Shadered hasn't loaded the model (yet), or the file is missing from the jar
         }
         ZinogreAnimState state = entity.clientState instanceof ZinogreAnimState s && s.isFor(loaded) ? s : null;
@@ -48,6 +66,7 @@ public class ZinogreRenderer extends EntityRenderer<ZinogreEntity> {
             state = ZinogreAnimState.create(loaded);
             entity.clientState = state;
             if (state == null) {
+                Debug.once("no-state", "Zinogre not drawn: model data incomplete");
                 return; // a model without the expected clips
             }
         }

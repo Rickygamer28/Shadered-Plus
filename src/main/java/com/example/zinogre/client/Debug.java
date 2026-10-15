@@ -19,6 +19,10 @@ final class Debug {
         log(key, 3, message, args);
     }
 
+    static boolean firstTime(String key) {
+        return COUNTS.merge(key, 1, Integer::sum) == 1;
+    }
+
     private static void log(String key, int max, String message, Object... args) {
         int n = COUNTS.merge(key, 1, Integer::sum);
         if (n <= max) {
