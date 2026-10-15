@@ -1,6 +1,7 @@
 package com.example.zinogre.client;
 
 import com.example.zinogre.ZinogreEntity;
+import com.mojang.blaze3d.vertex.VertexBuffer;
 import com.noodlegamer76.shadered.client.assimp.AssimpMaterial;
 import com.noodlegamer76.shadered.client.assimp.AssimpModel;
 import com.noodlegamer76.shadered.client.assimp.McModel;
@@ -23,7 +24,7 @@ import java.util.List;
  * set here every frame instead: idle / walk / run blend by how fast the mob moves (walk and run are driven by the
  * distance walked, so the feet keep pace with the ground), and the attack fades in over everything while it plays.
  *
- * The model parts are copies too (same mesh on the graphics card, own material), so each Zinogre can be tinted by
+ * The model parts are copies too (the mesh from ZinogreMesh, shared by all Zinogres, with an own material), so each Zinogre can be tinted by
  * the light where it stands (Shadered's model shader has no world lighting) and flash red when hurt.
  */
 final class ZinogreAnimState {
@@ -100,9 +101,16 @@ final class ZinogreAnimState {
         }
         List<Animator.ActiveAnimation> active = animator.getActiveAnimations();
 
+        // our own uploads of the mesh (see ZinogreMesh), with Shadered's materials (textures) and placements
+        List<VertexBuffer> meshes = ZinogreMesh.parts(source);
+        List<AssimpModel> loadedParts = source.getModels();
+        if (meshes == null || meshes.size() != loadedParts.size()) {
+            return null;
+        }
         RenderableModel model = new RenderableModel();
-        for (AssimpModel part : source.getModels()) {
-            AssimpModel copy = new AssimpModel(part.getVertexBuffer(), copyOf(part.getMaterial()));
+        for (int i = 0; i < meshes.size(); i++) {
+            AssimpModel part = loadedParts.get(i);
+            AssimpModel copy = new AssimpModel(meshes.get(i), copyOf(part.getMaterial()));
             copy.instances.addAll(part.instances);
             model.add(copy);
         }

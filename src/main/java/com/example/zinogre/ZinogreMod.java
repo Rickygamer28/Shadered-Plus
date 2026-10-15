@@ -21,6 +21,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 @Mod(ZinogreMod.MOD_ID)
 public class ZinogreMod {
     public static final String MOD_ID = "zinogre";
+    public static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
 
     public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(Registries.ENTITY_TYPE, MOD_ID);
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MOD_ID);
