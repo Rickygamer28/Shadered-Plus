@@ -5,6 +5,12 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Rarity;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.material.PushReaction;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.DeferredSpawnEggItem;
@@ -16,7 +22,8 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
  * Zinogre (personal build): one mob, drawn with Shadered's model renderer from assets/zinogre/models/complex/zinogre.glb.
- * Spawned with its spawn egg only (no natural spawning). Tamable with meat.
+ * Spawned with its spawn egg only (no natural spawning). Tamable with meat. Its broken-off parts drop as items and
+ * its head drops (as a placeable trophy) when a charged creeper kills it.
  */
 @Mod(ZinogreMod.MOD_ID)
 public class ZinogreMod {
@@ -25,6 +32,8 @@ public class ZinogreMod {
 
     public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(Registries.ENTITY_TYPE, MOD_ID);
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MOD_ID);
+    public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MOD_ID);
+    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES = DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MOD_ID);
 
     /** About 2.6 blocks wide and 2.4 tall (the body; the tail reaches further back). */
     public static final DeferredHolder<EntityType<?>, EntityType<ZinogreEntity>> ZINOGRE = ENTITIES.register("zinogre",
@@ -45,9 +54,34 @@ public class ZinogreMod {
     public static final DeferredItem<DeferredSpawnEggItem> STYGIAN_SPAWN_EGG = ITEMS.register("stygian_zinogre_spawn_egg",
             () -> new DeferredSpawnEggItem(STYGIAN_ZINOGRE, 0x16161C, 0xD6283A, new Item.Properties()));
 
+    /** Parts that drop when they break off (index: 0 normal, 1 Stygian). */
+    public static final DeferredItem<Item> HORN = part("zinogre_horn"), STYGIAN_HORN = part("stygian_zinogre_horn");
+    public static final DeferredItem<Item> TAIL = part("zinogre_tail"), STYGIAN_TAIL = part("stygian_zinogre_tail");
+    public static final DeferredItem<Item> CLAW = part("zinogre_claw"), STYGIAN_CLAW = part("stygian_zinogre_claw");
+    public static final DeferredItem<Item> SHELL = part("zinogre_shell"), STYGIAN_SHELL = part("stygian_zinogre_shell");
+
+    private static DeferredItem<Item> part(String name) {
+        return ITEMS.registerSimpleItem(name, new Item.Properties().rarity(Rarity.UNCOMMON));
+    }
+
+    /** The trophy heads (dropped like mob heads: when a charged creeper's explosion kills it). */
+    public static final DeferredHolder<Block, ZinogreHeadBlock> HEAD = BLOCKS.register("zinogre_head", () -> new ZinogreHeadBlock(false, headProperties()));
+    public static final DeferredHolder<Block, ZinogreHeadBlock> STYGIAN_HEAD = BLOCKS.register("stygian_zinogre_head", () -> new ZinogreHeadBlock(true, headProperties()));
+    public static final DeferredItem<?> HEAD_ITEM = ITEMS.registerSimpleBlockItem(HEAD, new Item.Properties().rarity(Rarity.EPIC));
+    public static final DeferredItem<?> STYGIAN_HEAD_ITEM = ITEMS.registerSimpleBlockItem(STYGIAN_HEAD, new Item.Properties().rarity(Rarity.EPIC));
+    @SuppressWarnings("DataFlowIssue")
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ZinogreHeadBlockEntity>> HEAD_BLOCK_ENTITY = BLOCK_ENTITIES.register("zinogre_head",
+            () -> BlockEntityType.Builder.of(ZinogreHeadBlockEntity::new, HEAD.get(), STYGIAN_HEAD.get()).build(null));
+
+    private static BlockBehaviour.Properties headProperties() {
+        return BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.BONE_BLOCK).noOcclusion().pushReaction(PushReaction.DESTROY);
+    }
+
     public ZinogreMod(IEventBus modEventBus) {
         ENTITIES.register(modEventBus);
         ITEMS.register(modEventBus);
+        BLOCKS.register(modEventBus);
+        BLOCK_ENTITIES.register(modEventBus);
         modEventBus.addListener(ZinogreMod::attributes);
         modEventBus.addListener(ZinogreMod::creativeTab);
     }
@@ -61,6 +95,15 @@ public class ZinogreMod {
         if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
             event.accept(SPAWN_EGG.get());
             event.accept(STYGIAN_SPAWN_EGG.get());
+        }
+        if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
+            for (DeferredItem<Item> item : java.util.List.of(HORN, TAIL, CLAW, SHELL, STYGIAN_HORN, STYGIAN_TAIL, STYGIAN_CLAW, STYGIAN_SHELL)) {
+                event.accept(item.get());
+            }
+        }
+        if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
+            event.accept(HEAD_ITEM.get());
+            event.accept(STYGIAN_HEAD_ITEM.get());
         }
     }
 }

@@ -134,24 +134,10 @@ final class ZinogreData {
             int group = b.get() & 0xFF;
             int state = b.get() & 0xFF;
             int material = b.get() & 0xFF;
-            int indexCount = b.getInt();
-            BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.TRIANGLES, format);
-            for (int k = 0; k < indexCount; k++) {
-                int v = b.getInt();
-                float s = shade[v];
-                builder.addVertex(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2])
-                        .setUv(uv[v * 2], uv[v * 2 + 1])
-                        .setColor(s, s, s, 1.0F)
-                        .setNormal(normal[v * 3], normal[v * 3 + 1], normal[v * 3 + 2]);
-                put(builder, tangent, 1.0F, 0.0F, 0.0F, 1.0F);
-                put(builder, boneIds, joints[v * 4], joints[v * 4 + 1], joints[v * 4 + 2], joints[v * 4 + 3]);
-                put(builder, boneWeights, weights[v * 4], weights[v * 4 + 1], weights[v * 4 + 2], weights[v * 4 + 3]);
-            }
-            MeshData mesh = builder.build();
-            VertexBuffer buffer = new VertexBuffer(VertexBuffer.Usage.STATIC);
-            buffer.bind();
-            buffer.upload(mesh);
-            VertexBuffer.unbind();
+            int[] indices = new int[b.getInt()];
+            b.asIntBuffer().get(indices);
+            b.position(b.position() + indices.length * 4);
+            VertexBuffer buffer = upload(pos, uv, normal, shade, joints, weights, indices);
             pieces.add(new Piece(group, state, material, buffer));
         }
 
@@ -166,13 +152,54 @@ final class ZinogreData {
         return new ZinogreData(parents, inverseBind, pieces, clips);
     }
 
-    private static String string(ByteBuffer b) {
+    /**
+     * Uploads triangles (indices into the vertex arrays) in Shadered's model vertex layout. joints / weights may be
+     * null for a mesh that is not skinned (drawn as it is).
+     */
+    static VertexBuffer upload(float[] pos, float[] uv, float[] normal, float[] shade, @Nullable int[] joints,
+                               @Nullable float[] weights, int[] indices) {
+        setupFormat();
+        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.TRIANGLES, format);
+        for (int v : indices) {
+            float s = shade[v];
+            builder.addVertex(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2])
+                    .setUv(uv[v * 2], uv[v * 2 + 1])
+                    .setColor(s, s, s, 1.0F)
+                    .setNormal(normal[v * 3], normal[v * 3 + 1], normal[v * 3 + 2]);
+            put(builder, tangent, 1.0F, 0.0F, 0.0F, 1.0F);
+            if (joints != null && weights != null) {
+                put(builder, boneIds, joints[v * 4], joints[v * 4 + 1], joints[v * 4 + 2], joints[v * 4 + 3]);
+                put(builder, boneWeights, weights[v * 4], weights[v * 4 + 1], weights[v * 4 + 2], weights[v * 4 + 3]);
+            } else {
+                put(builder, boneIds, 0, 0, 0, 0);
+                put(builder, boneWeights, 0, 0, 0, 0); // no weights: the shader leaves it as it is
+            }
+        }
+        MeshData mesh = builder.build();
+        VertexBuffer buffer = new VertexBuffer(VertexBuffer.Usage.STATIC);
+        buffer.bind();
+        buffer.upload(mesh);
+        VertexBuffer.unbind();
+        return buffer;
+    }
+
+    static ByteBuffer readResource(ResourceLocation file) throws IOException {
+        Optional<Resource> resource = Minecraft.getInstance().getResourceManager().getResource(file);
+        if (resource.isEmpty()) {
+            throw new IOException("missing " + file);
+        }
+        try (InputStream in = resource.get().open()) {
+            return ByteBuffer.wrap(in.readAllBytes()).order(ByteOrder.LITTLE_ENDIAN);
+        }
+    }
+
+    static String string(ByteBuffer b) {
         byte[] bytes = new byte[b.getShort() & 0xFFFF];
         b.get(bytes);
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
-    private static float[] floats(ByteBuffer b, int count) {
+    static float[] floats(ByteBuffer b, int count) {
         float[] out = new float[count];
         b.asFloatBuffer().get(out);
         b.position(b.position() + count * 4);
