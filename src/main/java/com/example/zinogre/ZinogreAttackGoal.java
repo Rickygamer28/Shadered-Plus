@@ -7,7 +7,8 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import java.util.EnumSet;
 
 /**
- * Chases the target and, once it is in reach, stops and does the lunge attack (see {@link ZinogreEntity}). It stands
+ * Charges up when a fight starts (see {@link ZinogreEntity}), then chases the target and, once it is in reach, stops
+ * and does the lunge attack. It stands
  * still while attacking and only turns towards the target during the wind-up, so the target can dodge the lunge.
  */
 class ZinogreAttackGoal extends Goal {
@@ -32,7 +33,7 @@ class ZinogreAttackGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        return canUse() || mob.isAttacking();
+        return canUse() || mob.isAttacking() || mob.isCharging();
     }
 
     @Override
@@ -53,6 +54,13 @@ class ZinogreAttackGoal extends Goal {
     @Override
     public void tick() {
         LivingEntity target = mob.getTarget();
+        if (mob.isCharging()) {
+            mob.getNavigation().stop();
+            if (target != null) {
+                face(target, 10.0F);
+            }
+            return;
+        }
         if (mob.isAttacking()) {
             mob.getNavigation().stop();
             if (target != null && mob.attackTick < AIM_TICKS) {
@@ -69,6 +77,12 @@ class ZinogreAttackGoal extends Goal {
         }
         double dx = target.getX() - mob.getX();
         double dz = target.getZ() - mob.getZ();
+        // charges up at the start of a fight (and again once the last charge has worn off and cooled down)
+        if (mob.canCharge() && dx * dx + dz * dz < 20.0 * 20.0 && mob.hasLineOfSight(target)) {
+            face(target, 180.0F);
+            mob.startCharge();
+            return;
+        }
         double reach = mob.getBbWidth() * 0.5 + 3.0 + target.getBbWidth() * 0.5;
         boolean inReach = dx * dx + dz * dz <= reach * reach && Math.abs(target.getY() - mob.getY()) < 3.0;
         if (inReach && cooldown <= 0 && mob.hasLineOfSight(target)) {

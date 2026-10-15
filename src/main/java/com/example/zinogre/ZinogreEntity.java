@@ -1,7 +1,15 @@
 package com.example.zinogre;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LightningBolt;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import org.joml.Vector3f;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -54,6 +62,12 @@ import org.jetbrains.annotations.Nullable;
  * part has taken enough it breaks (horn snapped, tail cut, spikes broken off) and shows a fresh wound; on a tamed one
  * the wounds heal into stumps once it is back at full health. Broken parts never grow back.
  *
+ * Charge-up, its signature move: in a fight it crouches and howls (the model's charge clip, 4.3 s), and halfway
+ * through it becomes charged for 30 s: its shell glows (blue; red for the Stygian), sparks fly off it, it moves
+ * faster and hits half again as hard, and its hits sometimes call down lightning (just for show: no fire, no extra
+ * damage). Breaking a part while it charges interrupts the charge. After the charge wears off it can charge again
+ * 10 s later.
+ *
  * The Stygian Zinogre is the same mob with its own entity type: tougher, darker.
  */
 public class ZinogreEntity extends TamableAnimal {
@@ -65,6 +79,27 @@ public class ZinogreEntity extends TamableAnimal {
     static final byte ATTACK_EVENT = 4;
     /** 1 in this many pieces of meat tames it. */
     private static final int TAME_CHANCE = 4;
+
+    /** Length of the charge-up (the model's "charge" clip: 4.3 s) and when the howl makes it charged. */
+    public static final int CHARGE_TICKS = 87;
+    private static final int CHARGED_AT = 44;
+    /** How long a charge lasts, and the wait before the next one. */
+    private static final int CHARGE_DURATION = 600;
+    private static final int CHARGE_COOLDOWN = 200;
+    /** Entity events: start the charge-up animation / stop it (interrupted). */
+    static final byte CHARGE_EVENT = 72, CHARGE_CANCEL_EVENT = 73;
+    private static final EntityDataAccessor<Boolean> CHARGED = SynchedEntityData.defineId(ZinogreEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final ResourceLocation CHARGED_DAMAGE = ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "charged_damage");
+    private static final ResourceLocation CHARGED_SPEED = ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "charged_speed");
+    private static final DustParticleOptions RED_SPARK = new DustParticleOptions(new Vector3f(1.0F, 0.15F, 0.2F), 0.8F);
+
+    /** Ticks since the charge-up started, or -1 (server and client). */
+    public int chargeTick = -1;
+    /** Client: tickCount when the last charge-up started (for the animation); moved far back when interrupted. */
+    public int chargeStartTick = Integer.MIN_VALUE / 2;
+    /** Server: charged ticks left, and the wait before it may charge again. */
+    private int chargedLeft;
+    int chargeCooldown;
 
     /** Breakable part groups (the same numbers as the model's mesh pieces). */
     public static final int HORN_L = 1, HORN_R = 2, TAIL = 3, TAIL_FUR = 4, ARMS = 5, SHOULDERS = 6, EYELIDS = 7;
@@ -126,6 +161,113 @@ public class ZinogreEntity extends TamableAnimal {
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(PARTS, 0);
+        builder.define(CHARGED, false);
+    }
+
+    // ---------------------------------------------------------------- charge-up
+
+    public boolean isCharged() {
+        return entityData.get(CHARGED);
+    }
+
+    public boolean isCharging() {
+        return chargeTick >= 0;
+    }
+
+    /** Whether it would start a charge-up now (in a fight, not charged, not busy, cooldown over). */
+    boolean canCharge() {
+        return !isCharged() && !isCharging() && !isAttacking() && chargeCooldown <= 0 && !isOrderedToSit();
+    }
+
+    /** Server: starts the charge-up and tells clients to play it. */
+    void startCharge() {
+        chargeTick = 0;
+        navigation.stop();
+        level().broadcastEntityEvent(this, CHARGE_EVENT);
+        playSound(SoundEvents.WOLF_GROWL, 2.0F, 0.5F);
+    }
+
+    private void cancelCharge() {
+        if (chargeTick >= 0) {
+            chargeTick = -1;
+            chargeCooldown = CHARGE_COOLDOWN / 2;
+            level().broadcastEntityEvent(this, CHARGE_CANCEL_EVENT);
+        }
+    }
+
+    private void becomeCharged() {
+        entityData.set(CHARGED, true);
+        chargedLeft = CHARGE_DURATION;
+        modifier(Attributes.ATTACK_DAMAGE, CHARGED_DAMAGE, 0.5);
+        modifier(Attributes.MOVEMENT_SPEED, CHARGED_SPEED, 0.15);
+        playSound(SoundEvents.WOLF_HOWL, 3.0F, 0.45F);
+        playSound(SoundEvents.LIGHTNING_BOLT_THUNDER, 1.2F, 1.6F);
+        if (level() instanceof ServerLevel server) {
+            server.sendParticles(sparkParticle(), getX(), getY() + 1.4, getZ(), 120, 1.4, 0.9, 1.4, 0.2);
+        }
+    }
+
+    private void endCharge() {
+        entityData.set(CHARGED, false);
+        chargedLeft = 0;
+        chargeCooldown = CHARGE_COOLDOWN;
+        removeModifier(Attributes.ATTACK_DAMAGE, CHARGED_DAMAGE);
+        removeModifier(Attributes.MOVEMENT_SPEED, CHARGED_SPEED);
+        playSound(SoundEvents.BEACON_DEACTIVATE, 1.0F, 1.4F);
+    }
+
+    private void modifier(net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attribute, ResourceLocation id, double amount) {
+        AttributeInstance instance = getAttribute(attribute);
+        if (instance != null && !instance.hasModifier(id)) {
+            instance.addTransientModifier(new AttributeModifier(id, amount, AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+        }
+    }
+
+    private void removeModifier(net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attribute, ResourceLocation id) {
+        AttributeInstance instance = getAttribute(attribute);
+        if (instance != null) {
+            instance.removeModifier(id);
+        }
+    }
+
+    private ParticleOptions sparkParticle() {
+        return isStygian() ? RED_SPARK : ParticleTypes.ELECTRIC_SPARK;
+    }
+
+    /** While charged: sparks crackle off its back (client) and the charge runs down (server). */
+    private void chargedTick() {
+        if (level().isClientSide) {
+            if (isCharged() && random.nextInt(2) == 0) {
+                Vec3 forward = Vec3.directionFromRotation(0.0F, yBodyRot);
+                double along = (random.nextDouble() - 0.4) * 4.0;
+                level().addParticle(sparkParticle(), getX() + forward.x * along + (random.nextDouble() - 0.5) * 1.6,
+                        getY() + 1.2 + random.nextDouble() * 1.2, getZ() + forward.z * along + (random.nextDouble() - 0.5) * 1.6,
+                        (random.nextDouble() - 0.5) * 0.2, 0.1, (random.nextDouble() - 0.5) * 0.2);
+            }
+            return;
+        }
+        if (chargeCooldown > 0) {
+            chargeCooldown--;
+        }
+        if (isCharged()) {
+            if (--chargedLeft <= 0 || isOrderedToSit()) {
+                endCharge();
+            } else if (random.nextInt(80) == 0) {
+                playSound(SoundEvents.BEEHIVE_WORK, 1.0F, 1.8F); // crackle
+            }
+        }
+    }
+
+    /** Charged hits sometimes call down lightning on the target (visual only). */
+    private void chargedHit(Entity target) {
+        if (isCharged() && random.nextInt(3) == 0 && level() instanceof ServerLevel server) {
+            LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(server);
+            if (bolt != null) {
+                bolt.moveTo(target.getX(), target.getY(), target.getZ());
+                bolt.setVisualOnly(true);
+                server.addFreshEntity(bolt);
+            }
+        }
     }
 
     /** All part states, packed (see {@link #partState}). */
@@ -183,6 +325,7 @@ public class ZinogreEntity extends TamableAnimal {
     private void breakPart(int group) {
         setPartState(group, BROKEN);
         attackTick = -1; // flinches out of its attack
+        cancelCharge(); // and out of a charge-up
         Vec3 forward = Vec3.directionFromRotation(0.0F, yBodyRot);
         Vec3 side = new Vec3(-forward.z, 0, forward.x);
         Vec3 at = switch (group) {
@@ -305,6 +448,12 @@ public class ZinogreEntity extends TamableAnimal {
         if (id == ATTACK_EVENT) {
             attackTick = 0;
             attackStartTick = tickCount;
+        } else if (id == CHARGE_EVENT) {
+            chargeTick = 0;
+            chargeStartTick = tickCount;
+        } else if (id == CHARGE_CANCEL_EVENT) {
+            chargeTick = -1;
+            chargeStartTick = Integer.MIN_VALUE / 2;
         } else {
             super.handleEntityEvent(id);
         }
@@ -313,6 +462,16 @@ public class ZinogreEntity extends TamableAnimal {
     @Override
     public void aiStep() {
         super.aiStep();
+        chargedTick();
+        if (chargeTick >= 0) {
+            chargeTick++;
+            if (chargeTick == CHARGED_AT && !level().isClientSide && isAlive()) {
+                becomeCharged();
+            }
+            if (chargeTick >= CHARGE_TICKS) {
+                chargeTick = -1;
+            }
+        }
         if (!level().isClientSide && isTame() && tickCount % 20 == 0 && getHealth() >= getMaxHealth()) {
             healWounds();
         }
@@ -335,7 +494,10 @@ public class ZinogreEntity extends TamableAnimal {
         boolean hit = false;
         for (LivingEntity target : level().getEntitiesOfClass(LivingEntity.class, box,
                 e -> e != this && e.isAlive() && !isFriend(e))) {
-            hit |= doHurtTarget(target);
+            if (doHurtTarget(target)) {
+                hit = true;
+                chargedHit(target);
+            }
         }
         playSound(hit ? SoundEvents.RAVAGER_ATTACK : SoundEvents.RAVAGER_STEP, 1.5F, 0.8F);
     }

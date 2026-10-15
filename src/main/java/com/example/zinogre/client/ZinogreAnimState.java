@@ -9,6 +9,7 @@ import com.noodlegamer76.shadered.client.renderer.assimp.RenderableModel;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.util.Mth;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -37,6 +38,8 @@ final class ZinogreAnimState {
     private static final float ATTACK_FADE = 0.15F;
     /** Seconds to fade between standing and the lying-down clips. */
     private static final float SIT_FADE = 0.3F;
+    /** Seconds to fade the charge-up in and out. */
+    private static final float CHARGE_FADE = 0.3F;
 
     final RenderableModel model;
     private final McModel source;
@@ -47,8 +50,11 @@ final class ZinogreAnimState {
     private final List<AssimpModel> pieceModels = new ArrayList<>();
     private int shownKey = -1;
     private boolean eyesClosed;
-    private final ZinogreData.Clip idle, walk, run, attack, lieDown, rest, getUp;
-    private float attackWeight;
+    private final ZinogreData.Clip idle, walk, run, attack, lieDown, rest, getUp, charge;
+    private float attackWeight, chargeWeight;
+    /** The body texture, and whether the charged one is on now. */
+    private final ResourceLocation bodyTexture;
+    private ResourceLocation shownBody;
     /** Sitting (lying down): when it last changed, and how much of the pose is the lying layer. */
     private boolean lastSitting;
     private float sitChangedAt;
@@ -79,6 +85,9 @@ final class ZinogreAnimState {
         this.lieDown = data.clips.get("lie_down");
         this.rest = data.clips.get("rest");
         this.getUp = data.clips.get("get_up");
+        this.charge = data.clips.get("charge");
+        this.bodyTexture = materials.get(0).getDiffuseTexture();
+        this.shownBody = bodyTexture;
         int n = data.joints();
         tx = new float[n]; ty = new float[n]; tz = new float[n];
         qx = new float[n]; qy = new float[n]; qz = new float[n]; qw = new float[n]; wsum = new float[n];
@@ -110,7 +119,7 @@ final class ZinogreAnimState {
                 return null;
             }
         }
-        for (String name : new String[] {"idle", "walk", "run", "attack", "lie_down", "rest", "get_up"}) {
+        for (String name : new String[] {"idle", "walk", "run", "attack", "lie_down", "rest", "get_up", "charge"}) {
             if (!data.clips.containsKey(name)) {
                 return null;
             }
@@ -134,7 +143,7 @@ final class ZinogreAnimState {
     }
 
     /** Poses the bones and sets the light tint for this frame. */
-    void update(ZinogreEntity entity, float partialTick, int packedLight) {
+    void update(ZinogreEntity entity, float partialTick, int packedLight, @Nullable ResourceLocation chargedBody) {
         float now = (entity.tickCount + partialTick) / 20.0F;
         boolean first = lastTime < 0;
         float dt = first ? 0.0F : Mth.clamp(now - lastTime, 0.0F, 0.25F);
@@ -149,7 +158,10 @@ final class ZinogreAnimState {
         float sinceAttack = (entity.tickCount - entity.attackStartTick + partialTick) / 20.0F;
         boolean attacking = sinceAttack >= 0 && sinceAttack < attack.seconds() - ATTACK_FADE && entity.deathTime <= 0;
         attackWeight = first ? (attacking ? 1.0F : 0.0F) : approach(attackWeight, attacking ? 1.0F : 0.0F, dt / ATTACK_FADE);
-        float other = 1.0F - attackWeight;
+        float sinceCharge = (entity.tickCount - entity.chargeStartTick + partialTick) / 20.0F;
+        boolean charging = sinceCharge >= 0 && sinceCharge < charge.seconds() - CHARGE_FADE && entity.deathTime <= 0;
+        chargeWeight = first ? (charging ? 1.0F : 0.0F) : approach(chargeWeight, charging ? 1.0F : 0.0F, dt / CHARGE_FADE);
+        float other = Math.max(0.0F, 1.0F - attackWeight - chargeWeight);
 
         // lying down (tamed and told to sit): lie_down, then the rest loop; get_up when told to stand again
         boolean sitting = entity.isInSittingPose();
@@ -182,12 +194,18 @@ final class ZinogreAnimState {
             eyesClosed = false;
         }
         add(attack, Mth.clamp(sinceAttack, 0.0F, attack.seconds()), false, attackWeight);
+        add(charge, Mth.clamp(sinceCharge, 0.0F, charge.seconds()), false, chargeWeight);
         if (wsum[0] <= 0) {
             add(idle, now, true, 1.0F);
         }
         finish();
 
         showPieces(entity.parts(), eyesClosed);
+        ResourceLocation body = entity.isCharged() && chargedBody != null ? chargedBody : bodyTexture;
+        if (body != shownBody) {
+            shownBody = body;
+            materials.get(0).setDiffuseTexture(body); // the glowing shell while charged
+        }
         tint(entity, partialTick, packedLight);
     }
 
@@ -291,6 +309,9 @@ final class ZinogreAnimState {
         float daylight = mc.level != null ? mc.level.getSkyDarken(partialTick) : 1.0F;
         float light = Math.max(block, sky * daylight);
         float v = 0.18F + 0.82F * light;
+        if (entity.isCharged()) {
+            v = Math.max(v, 0.6F); // glowing: never quite dark
+        }
         boolean hurt = entity.hurtTime > 0 || entity.deathTime > 0;
         float r = v, g = hurt ? v * 0.55F : v, b = hurt ? v * 0.55F : v;
         for (AssimpMaterial material : materials) {

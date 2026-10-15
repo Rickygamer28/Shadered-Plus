@@ -24,6 +24,9 @@ public class ZinogreRenderer extends EntityRenderer<ZinogreEntity> {
     /** The textures (one GLB per look; the mesh, skeleton and clips are shared, see ZinogreData). */
     static final ResourceLocation MODEL = ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "models/complex/zinogre.glb");
     static final ResourceLocation STYGIAN_MODEL = ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "models/complex/stygian_zinogre.glb");
+    /** The glowing body textures for while it is charged. */
+    static final ResourceLocation CHARGED_MODEL = ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "models/complex/zinogre_charged.glb");
+    static final ResourceLocation STYGIAN_CHARGED_MODEL = ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "models/complex/stygian_zinogre_charged.glb");
     /** Model units -> blocks: about 2.5 blocks to the top of the head, about 7 blocks from nose to tail tip. */
     static final float SCALE = 0.018F;
     private static final ResourceLocation NO_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
@@ -49,7 +52,10 @@ public class ZinogreRenderer extends EntityRenderer<ZinogreEntity> {
                 return; // a model without the expected clips
             }
         }
-        state.update(entity, partialTick, packedLight);
+        McModel charged = AssimpModels.getModel(entity.isStygian() ? STYGIAN_CHARGED_MODEL : CHARGED_MODEL);
+        ResourceLocation chargedBody = charged != null && !charged.getModels().isEmpty()
+                ? charged.getModels().get(0).getMaterial().getDiffuseTexture() : null;
+        state.update(entity, partialTick, packedLight, chargedBody);
 
         // Start from the pose we were given (camera-relative, at the entity), on our own copy
         PoseStack pose = new PoseStack();
