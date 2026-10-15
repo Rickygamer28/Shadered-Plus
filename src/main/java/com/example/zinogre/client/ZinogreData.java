@@ -50,9 +50,16 @@ final class ZinogreData {
     final int[] parents;
     /** Inverse bind matrix per joint. */
     final Matrix4f[] inverseBind;
-    /** The mesh parts (body, fur, translucent fur, eyes), uploaded. */
-    final List<VertexBuffer> parts;
+    /** The mesh pieces, uploaded: the body (group 0) and every state of every breakable part. */
+    final List<Piece> pieces;
     final Map<String, Clip> clips;
+
+    /**
+     * A piece of the mesh: group 0 is always drawn; groups 1-6 are the breakable parts (left horn, right horn, tail,
+     * tail-end fur, front legs, shoulders) and 7 the eyelids; state 0 intact, 1 broken (wound), 2 healed stump.
+     * material = index into the textures GLB's materials (body, fur, translucent fur, eyes, damage layer).
+     */
+    record Piece(int group, int state, int material, VertexBuffer buffer) {}
 
     /** An animation clip: per frame and joint the local translation and rotation (tx ty tz qx qy qz qw). */
     record Clip(float fps, int frames, float[] data) {
@@ -61,10 +68,10 @@ final class ZinogreData {
         }
     }
 
-    private ZinogreData(int[] parents, Matrix4f[] inverseBind, List<VertexBuffer> parts, Map<String, Clip> clips) {
+    private ZinogreData(int[] parents, Matrix4f[] inverseBind, List<Piece> pieces, Map<String, Clip> clips) {
         this.parents = parents;
         this.inverseBind = inverseBind;
-        this.parts = parts;
+        this.pieces = pieces;
         this.clips = clips;
     }
 
@@ -98,7 +105,7 @@ final class ZinogreData {
 
     private static ZinogreData load(ByteBuffer b) {
         setupFormat();
-        if (b.getInt() != 0x32534D5A) { // "ZMS2"
+        if (b.getInt() != 0x33534D5A) { // "ZMS3"
             throw new IllegalStateException("not a Zinogre model file");
         }
         int jointCount = b.getInt();
@@ -121,9 +128,12 @@ final class ZinogreData {
         }
         float[] weights = floats(b, n * 4);
 
-        int partCount = b.getInt();
-        List<VertexBuffer> parts = new ArrayList<>();
-        for (int p = 0; p < partCount; p++) {
+        int pieceCount = b.getInt();
+        List<Piece> pieces = new ArrayList<>();
+        for (int p = 0; p < pieceCount; p++) {
+            int group = b.get() & 0xFF;
+            int state = b.get() & 0xFF;
+            int material = b.get() & 0xFF;
             int indexCount = b.getInt();
             BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.TRIANGLES, format);
             for (int k = 0; k < indexCount; k++) {
@@ -142,7 +152,7 @@ final class ZinogreData {
             buffer.bind();
             buffer.upload(mesh);
             VertexBuffer.unbind();
-            parts.add(buffer);
+            pieces.add(new Piece(group, state, material, buffer));
         }
 
         int clipCount = b.getInt();
@@ -153,7 +163,7 @@ final class ZinogreData {
             int frames = b.getInt();
             clips.put(name, new Clip(fps, frames, floats(b, frames * jointCount * 7)));
         }
-        return new ZinogreData(parents, inverseBind, parts, clips);
+        return new ZinogreData(parents, inverseBind, pieces, clips);
     }
 
     private static String string(ByteBuffer b) {

@@ -1,6 +1,11 @@
 package com.example.zinogre;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
@@ -43,6 +48,13 @@ import org.jetbrains.annotations.Nullable;
  *
  * Its one melee attack is a lunging bite that ends in a two-paw slam (the model's attack clip, 1.7 s); the hit lands
  * at the lunge, on everything in a box in front of it (but never its owner or the owner's other pets).
+ *
+ * Breakable parts, like in Monster Hunter: damage goes to the part facing the attacker (head: a horn, depending on the
+ * side; flanks: the shoulders; behind: the tail; the front legs take a share of hits from the front and sides). When a
+ * part has taken enough it breaks (horn snapped, tail cut, spikes broken off) and shows a fresh wound; on a tamed one
+ * the wounds heal into stumps once it is back at full health. Broken parts never grow back.
+ *
+ * The Stygian Zinogre is the same mob with its own entity type: tougher, darker.
  */
 public class ZinogreEntity extends TamableAnimal {
     /** Length of the attack (the model's "attack" clip: 1.7 s). */
@@ -53,6 +65,18 @@ public class ZinogreEntity extends TamableAnimal {
     static final byte ATTACK_EVENT = 4;
     /** 1 in this many pieces of meat tames it. */
     private static final int TAME_CHANCE = 4;
+
+    /** Breakable part groups (the same numbers as the model's mesh pieces). */
+    public static final int HORN_L = 1, HORN_R = 2, TAIL = 3, TAIL_FUR = 4, ARMS = 5, SHOULDERS = 6, EYELIDS = 7;
+    /** Part states. */
+    public static final int INTACT = 0, BROKEN = 1, HEALED = 2;
+    private static final int[] BREAKABLE = {HORN_L, HORN_R, TAIL, ARMS, SHOULDERS};
+    /** Damage a part takes before it breaks, for a 200-health Zinogre (scaled with max health). */
+    private static final float[] BREAK_AT = {0, 35, 35, 55, 0, 45, 45};
+    /** Each part's state, 2 bits per group (group g at bits 2(g-1)). */
+    private static final EntityDataAccessor<Integer> PARTS = SynchedEntityData.defineId(ZinogreEntity.class, EntityDataSerializers.INT);
+    /** Damage each part has taken so far (server). */
+    private final float[] partDamage = new float[7];
 
     /** Ticks since the current attack started, or -1 when not attacking (server and client). */
     public int attackTick = -1;
@@ -66,15 +90,15 @@ public class ZinogreEntity extends TamableAnimal {
         this.xpReward = 40;
     }
 
-    public static AttributeSupplier.Builder createAttributes() {
+    public static AttributeSupplier.Builder createAttributes(boolean stygian) {
         return Mob.createMobAttributes()
-                .add(Attributes.MAX_HEALTH, 200.0)
+                .add(Attributes.MAX_HEALTH, stygian ? 260.0 : 200.0)
                 .add(Attributes.MOVEMENT_SPEED, 0.28)
-                .add(Attributes.ATTACK_DAMAGE, 14.0)
+                .add(Attributes.ATTACK_DAMAGE, stygian ? 18.0 : 14.0)
                 .add(Attributes.ATTACK_KNOCKBACK, 1.5)
                 .add(Attributes.FOLLOW_RANGE, 32.0)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.8)
-                .add(Attributes.ARMOR, 6.0)
+                .add(Attributes.ARMOR, stygian ? 9.0 : 6.0)
                 .add(Attributes.STEP_HEIGHT, 1.5);
     }
 
@@ -90,6 +114,118 @@ public class ZinogreEntity extends TamableAnimal {
         targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
         targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
         targetSelector.addGoal(3, new HurtByTargetGoal(this).setAlertOthers());
+    }
+
+    public boolean isStygian() {
+        return getType() == ZinogreMod.STYGIAN_ZINOGRE.get();
+    }
+
+    // ---------------------------------------------------------------- breakable parts
+
+    @Override
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(PARTS, 0);
+    }
+
+    /** All part states, packed (see {@link #partState}). */
+    public int parts() {
+        return entityData.get(PARTS);
+    }
+
+    public static int partState(int parts, int group) {
+        return (parts >> (2 * (group - 1))) & 3;
+    }
+
+    private void setPartState(int group, int state) {
+        int shift = 2 * (group - 1);
+        entityData.set(PARTS, (parts() & ~(3 << shift)) | (state << shift));
+    }
+
+    @Override
+    public boolean hurt(DamageSource source, float amount) {
+        boolean hurt = super.hurt(source, amount);
+        if (hurt && !level().isClientSide && isAlive() && source.getSourcePosition() != null) {
+            damageParts(source.getSourcePosition(), amount);
+        }
+        return hurt;
+    }
+
+    /** Sends the damage to the part(s) facing where it came from. */
+    private void damageParts(Vec3 from, float amount) {
+        double dx = from.x - getX(), dz = from.z - getZ();
+        float yaw = yBodyRot * ((float) Math.PI / 180.0F);
+        double forward = -dx * Math.sin(yaw) + dz * Math.cos(yaw);
+        double right = -dx * Math.cos(yaw) - dz * Math.sin(yaw);
+        double angle = Math.toDegrees(Math.atan2(right, forward)); // 0 = straight ahead, +-180 = behind
+        double abs = Math.abs(angle);
+        if (abs <= 50) {
+            damagePart(angle > 0 ? HORN_R : HORN_L, amount);
+            damagePart(ARMS, amount * 0.4F);
+        } else if (abs <= 120) {
+            damagePart(SHOULDERS, amount);
+            damagePart(ARMS, amount * 0.6F);
+        } else {
+            damagePart(TAIL, amount);
+        }
+    }
+
+    private void damagePart(int group, float amount) {
+        if (partState(parts(), group) != INTACT) {
+            return;
+        }
+        partDamage[group] += amount;
+        if (partDamage[group] >= BREAK_AT[group] * getMaxHealth() / 200.0F) {
+            breakPart(group);
+        }
+    }
+
+    private void breakPart(int group) {
+        setPartState(group, BROKEN);
+        attackTick = -1; // flinches out of its attack
+        Vec3 forward = Vec3.directionFromRotation(0.0F, yBodyRot);
+        Vec3 side = new Vec3(-forward.z, 0, forward.x);
+        Vec3 at = switch (group) {
+            case HORN_L -> forward.scale(2.3).add(side.scale(-0.15)).add(0, 1.2, 0);
+            case HORN_R -> forward.scale(2.3).add(side.scale(0.15)).add(0, 1.2, 0);
+            case TAIL -> forward.scale(-3.0).add(0, 0.8, 0);
+            case ARMS -> forward.scale(1.3).add(0, 0.4, 0);
+            default -> forward.scale(0.9).add(0, 1.8, 0);
+        };
+        at = at.add(position());
+        if (level() instanceof ServerLevel server) {
+            server.sendParticles(ParticleTypes.CRIT, at.x, at.y, at.z, 30, 0.4, 0.4, 0.4, 0.3);
+            server.sendParticles(ParticleTypes.DAMAGE_INDICATOR, at.x, at.y, at.z, 8, 0.3, 0.3, 0.3, 0.1);
+        }
+        level().playSound(null, at.x, at.y, at.z, SoundEvents.SHIELD_BREAK, getSoundSource(), 2.0F, 0.6F);
+        playSound(SoundEvents.RAVAGER_STUNNED, 1.8F, 0.7F);
+    }
+
+    /** A tamed one's wounds heal into stumps once it is back at full health. */
+    private void healWounds() {
+        for (int group : BREAKABLE) {
+            if (partState(parts(), group) == BROKEN) {
+                setPartState(group, HEALED);
+            }
+        }
+    }
+
+    @Override
+    public void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        tag.putInt("Parts", parts());
+        for (int group : BREAKABLE) {
+            tag.putFloat("PartDamage" + group, partDamage[group]);
+        }
+    }
+
+    @Override
+    public void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        entityData.set(PARTS, tag.getInt("Parts"));
+        for (int group : BREAKABLE) {
+            partDamage[group] = tag.getFloat("PartDamage" + group);
+        }
     }
 
     // ---------------------------------------------------------------- taming and sitting
@@ -178,6 +314,9 @@ public class ZinogreEntity extends TamableAnimal {
     @Override
     public void aiStep() {
         super.aiStep();
+        if (!level().isClientSide && isTame() && tickCount % 20 == 0 && getHealth() >= getMaxHealth()) {
+            healWounds();
+        }
         if (attackTick >= 0) {
             attackTick++;
             if (attackTick == HIT_TICK && !level().isClientSide && isAlive()) {

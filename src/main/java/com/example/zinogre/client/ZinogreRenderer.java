@@ -21,7 +21,9 @@ import org.joml.Matrix4f;
  * assets/zinogre/models/complex/zinogre.glb, posed by {@link ZinogreAnimState}, handed over with its world matrix.
  */
 public class ZinogreRenderer extends EntityRenderer<ZinogreEntity> {
+    /** The textures (one GLB per look; the mesh, skeleton and clips are shared, see ZinogreData). */
     static final ResourceLocation MODEL = ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "models/complex/zinogre.glb");
+    static final ResourceLocation STYGIAN_MODEL = ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "models/complex/stygian_zinogre.glb");
     /** Model units -> blocks: about 2.5 blocks to the top of the head, about 7 blocks from nose to tail tip. */
     static final float SCALE = 0.018F;
     private static final ResourceLocation NO_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
@@ -35,7 +37,7 @@ public class ZinogreRenderer extends EntityRenderer<ZinogreEntity> {
     @Override
     public void render(ZinogreEntity entity, float entityYaw, float partialTick, PoseStack poseStack,
                        MultiBufferSource buffer, int packedLight) {
-        McModel loaded = AssimpModels.getModel(MODEL);
+        McModel loaded = AssimpModels.getModel(entity.isStygian() ? STYGIAN_MODEL : MODEL);
         if (loaded == null) {
             return; // Shadered hasn't loaded the model (yet), or the file is missing from the jar
         }

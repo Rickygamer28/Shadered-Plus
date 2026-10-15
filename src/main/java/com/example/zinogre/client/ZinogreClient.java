@@ -11,6 +11,7 @@ public final class ZinogreClient {
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ZinogreMod.ZINOGRE.get(), ZinogreRenderer::new);
+        event.registerEntityRenderer(ZinogreMod.STYGIAN_ZINOGRE.get(), ZinogreRenderer::new);
     }
 
     private ZinogreClient() {}

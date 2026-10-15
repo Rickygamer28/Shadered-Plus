@@ -1,4 +1,6 @@
 {
   "entity.zinogre.zinogre": "Zinogre",
-  "item.zinogre.zinogre_spawn_egg": "Zinogre Spawn Egg"
+  "entity.zinogre.stygian_zinogre": "Stygian Zinogre",
+  "item.zinogre.zinogre_spawn_egg": "Zinogre Spawn Egg",
+  "item.zinogre.stygian_zinogre_spawn_egg": "Stygian Zinogre Spawn Egg"
 }

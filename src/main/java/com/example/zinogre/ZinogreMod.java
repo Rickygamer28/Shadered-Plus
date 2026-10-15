@@ -33,8 +33,17 @@ public class ZinogreMod {
                     .clientTrackingRange(10)
                     .build("zinogre"));
 
+    /** The Stygian Zinogre: the same mob (same class) with its own type, textures and tougher attributes. */
+    public static final DeferredHolder<EntityType<?>, EntityType<ZinogreEntity>> STYGIAN_ZINOGRE = ENTITIES.register("stygian_zinogre",
+            () -> EntityType.Builder.of(ZinogreEntity::new, MobCategory.CREATURE)
+                    .sized(2.6F, 2.4F)
+                    .clientTrackingRange(10)
+                    .build("stygian_zinogre"));
+
     public static final DeferredItem<DeferredSpawnEggItem> SPAWN_EGG = ITEMS.register("zinogre_spawn_egg",
             () -> new DeferredSpawnEggItem(ZINOGRE, 0x2E3B4E, 0x8FE3FF, new Item.Properties()));
+    public static final DeferredItem<DeferredSpawnEggItem> STYGIAN_SPAWN_EGG = ITEMS.register("stygian_zinogre_spawn_egg",
+            () -> new DeferredSpawnEggItem(STYGIAN_ZINOGRE, 0x16161C, 0xD6283A, new Item.Properties()));
 
     public ZinogreMod(IEventBus modEventBus) {
         ENTITIES.register(modEventBus);
@@ -44,12 +53,14 @@ public class ZinogreMod {
     }
 
     private static void attributes(EntityAttributeCreationEvent event) {
-        event.put(ZINOGRE.get(), ZinogreEntity.createAttributes().build());
+        event.put(ZINOGRE.get(), ZinogreEntity.createAttributes(false).build());
+        event.put(STYGIAN_ZINOGRE.get(), ZinogreEntity.createAttributes(true).build());
     }
 
     private static void creativeTab(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
             event.accept(SPAWN_EGG.get());
+            event.accept(STYGIAN_SPAWN_EGG.get());
         }
     }
 }

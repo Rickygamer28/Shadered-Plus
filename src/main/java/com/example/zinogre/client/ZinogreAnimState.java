@@ -42,7 +42,11 @@ final class ZinogreAnimState {
     private final McModel source;
     private final ZinogreData data;
     private final Matrix4f[] bones;
-    private final List<AssimpMaterial> materials = new ArrayList<>();
+    private final List<AssimpMaterial> materials;
+    /** One model part per mesh piece (sharing the materials); the visible ones are in model.getModel(). */
+    private final List<AssimpModel> pieceModels = new ArrayList<>();
+    private int shownKey = -1;
+    private boolean eyesClosed;
     private final ZinogreData.Clip idle, walk, run, attack, lieDown, rest, getUp;
     private float attackWeight;
     /** Sitting (lying down): when it last changed, and how much of the pose is the lying layer. */
@@ -57,10 +61,16 @@ final class ZinogreAnimState {
     private final Quaternionf q = new Quaternionf();
     private final Matrix4f local = new Matrix4f();
 
-    private ZinogreAnimState(McModel source, ZinogreData data, RenderableModel model) {
+    private ZinogreAnimState(McModel source, ZinogreData data, RenderableModel model, List<AssimpMaterial> materials) {
         this.source = source;
         this.data = data;
         this.model = model;
+        this.materials = materials;
+        for (ZinogreData.Piece piece : data.pieces) {
+            AssimpModel part = new AssimpModel(piece.buffer(), materials.get(piece.material()));
+            part.instances.add(new AssimpModel.MeshInstanceTransform(new Matrix4f(), new Matrix4f()));
+            pieceModels.add(part);
+        }
         this.bones = model.animator.getFinalMatrices();
         this.idle = data.clips.get("idle");
         this.walk = data.clips.get("walk");
@@ -76,9 +86,6 @@ final class ZinogreAnimState {
         for (int i = 0; i < n; i++) {
             global[i] = new Matrix4f();
         }
-        for (AssimpModel part : model.getModel()) {
-            materials.add(part.getMaterial());
-        }
     }
 
     /** Whether this copy was made with the textures Shadered has loaded now (resource reloads replace them). */
@@ -90,8 +97,18 @@ final class ZinogreAnimState {
     static ZinogreAnimState create(McModel source) {
         ZinogreData data = ZinogreData.get();
         List<AssimpModel> loadedParts = source.getModels();
-        if (data == null || data.parts.size() != loadedParts.size()) {
+        if (data == null) {
             return null;
+        }
+        // own copies of the textures GLB's materials (body, fur, translucent fur, eyes, damage layer)
+        List<AssimpMaterial> materials = new ArrayList<>();
+        for (AssimpModel part : loadedParts) {
+            materials.add(copyOf(part.getMaterial()));
+        }
+        for (ZinogreData.Piece piece : data.pieces) {
+            if (piece.material() >= materials.size()) {
+                return null;
+            }
         }
         for (String name : new String[] {"idle", "walk", "run", "attack", "lie_down", "rest", "get_up"}) {
             if (!data.clips.containsKey(name)) {
@@ -99,14 +116,9 @@ final class ZinogreAnimState {
             }
         }
         RenderableModel model = new RenderableModel();
-        for (int i = 0; i < loadedParts.size(); i++) {
-            AssimpModel copy = new AssimpModel(data.parts.get(i), copyOf(loadedParts.get(i).getMaterial()));
-            copy.instances.add(new AssimpModel.MeshInstanceTransform(new Matrix4f(), new Matrix4f()));
-            model.add(copy);
-        }
         // no skeleton and no clips: Shadered's update does nothing and just uploads the matrices we put in
         model.animator = new Animator(null, Map.of(), new Matrix4f[0], data.joints());
-        return new ZinogreAnimState(source, data, model);
+        return new ZinogreAnimState(source, data, model, materials);
     }
 
     private static AssimpMaterial copyOf(AssimpMaterial m) {
@@ -164,8 +176,10 @@ final class ZinogreAnimState {
             float intoRest = smooth(lieLength - SIT_FADE, lieLength, sinceSit);
             add(lieDown, sinceSit, false, lying * (1.0F - intoRest));
             add(rest, sinceSit - lieLength + SIT_FADE, true, lying * intoRest);
+            eyesClosed = sitWeight > 0.99F && intoRest > 0.99F; // dozing: eyes shut
         } else {
             add(getUp, sinceSit, false, lying);
+            eyesClosed = false;
         }
         add(attack, Mth.clamp(sinceAttack, 0.0F, attack.seconds()), false, attackWeight);
         if (wsum[0] <= 0) {
@@ -173,6 +187,7 @@ final class ZinogreAnimState {
         }
         finish();
 
+        showPieces(entity.parts(), eyesClosed);
         tint(entity, partialTick, packedLight);
     }
 
@@ -232,6 +247,38 @@ final class ZinogreAnimState {
             }
             if (j < bones.length) {
                 global[j].mul(data.inverseBind[j], bones[j]);
+            }
+        }
+    }
+
+    /**
+     * Shows the body plus each breakable part in its current state (2 bits per group 1-6 in parts): the tail-end fur
+     * only on an intact tail, the eyelids only while dozing.
+     */
+    private void showPieces(int parts, boolean closedEyes) {
+        int key = parts | (closedEyes ? 1 << 20 : 0);
+        if (key == shownKey) {
+            return;
+        }
+        shownKey = key;
+        List<AssimpModel> shown = model.getModel();
+        shown.clear();
+        int tail = ZinogreEntity.partState(parts, ZinogreEntity.TAIL);
+        for (int i = 0; i < pieceModels.size(); i++) {
+            ZinogreData.Piece piece = data.pieces.get(i);
+            int g = piece.group();
+            boolean visible;
+            if (g == 0) {
+                visible = true;
+            } else if (g == ZinogreEntity.TAIL_FUR) {
+                visible = tail == 0;
+            } else if (g == ZinogreEntity.EYELIDS) {
+                visible = closedEyes && piece.state() == 1;
+            } else {
+                visible = piece.state() == ZinogreEntity.partState(parts, g);
+            }
+            if (visible) {
+                shown.add(pieceModels.get(i));
             }
         }
     }
