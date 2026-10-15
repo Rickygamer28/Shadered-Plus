@@ -40,6 +40,9 @@ dependencies {
     // dependencies, e.g. GeckoLib and Sodium) installed in the game. Not bundled into our jar.
     compileOnly "maven.modrinth:shadered:${shadered_version}"
     compileOnly "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
+    // only for running the game from Gradle (and the CI load test), not part of our jar
+    runtimeOnly "maven.modrinth:shadered:${shadered_version}"
+    runtimeOnly "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
 }
 
 tasks.withType(ProcessResources).configureEach {
