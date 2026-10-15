@@ -7,12 +7,12 @@ import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexBuffer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormatElement;
-import com.noodlegamer76.shadered.client.assimp.McModel;
 import com.noodlegamer76.shadered.mixin.BufferBuilderMixin;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryUtil;
 
 import java.io.IOException;
@@ -21,56 +21,69 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 /**
- * The Zinogre's mesh on the graphics card, in Shadered's model vertex layout, with working bone weights.
+ * The Zinogre's skeleton, animation clips and mesh, from our own file (assets/zinogre/models/zinogre_mesh.bin, made by
+ * the same converter as the GLB). The GLB only provides the textures, through Shadered's loader.
  *
- * Shadered's own mesh upload never writes the bone ids and weights: its extra vertex elements (tangent, bone ids,
- * bone weights) all use element id 0 (the position's), so Minecraft's BufferBuilder skips them and skinned models
- * come out wrong. So the mesh is read from our own file (assets/zinogre/models/zinogre_mesh.bin, made by the same
- * converter as the GLB) and uploaded here with a copy of that layout whose elements have ids of their own. The GLB
- * still provides the skeleton, the animations and the textures (through Shadered's loader).
+ * Two things in Shadered's model path don't work for this model, so they are done here instead:
+ * - its mesh upload never writes bone ids and weights (its extra vertex elements all use element id 0, the
+ *   position's, which Minecraft's BufferBuilder then skips), so the mesh is uploaded here with a copy of that vertex
+ *   layout whose elements have ids of their own;
+ * - the skeleton it loads poses the model tilted, so the bones are posed here (see {@link ZinogreAnimState}) and only
+ *   the final bone matrices are handed to Shadered's renderer.
  */
-final class ZinogreMesh {
+final class ZinogreData {
     private static final ResourceLocation FILE = ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "models/zinogre_mesh.bin");
 
     private static VertexFormatElement tangent, boneIds, boneWeights;
     private static VertexFormat format;
-
-    /** The uploaded parts (body, fur, translucent fur, eyes), for the model Shadered loaded last. */
-    private static List<VertexBuffer> parts;
-    private static McModel partsFor;
+    @Nullable
+    private static ZinogreData loaded;
     private static boolean failed;
 
-    private ZinogreMesh() {}
+    /** Joint parents (-1 for the root; a parent always comes before its children). */
+    final int[] parents;
+    /** Inverse bind matrix per joint. */
+    final Matrix4f[] inverseBind;
+    /** The mesh parts (body, fur, translucent fur, eyes), uploaded. */
+    final List<VertexBuffer> parts;
+    final Map<String, Clip> clips;
 
-    /** The mesh parts for this loaded model (uploaded on first use, again after a resource reload), or null. */
+    /** An animation clip: per frame and joint the local translation and rotation (tx ty tz qx qy qz qw). */
+    record Clip(float fps, int frames, float[] data) {
+        float seconds() {
+            return (frames - 1) / fps;
+        }
+    }
+
+    private ZinogreData(int[] parents, Matrix4f[] inverseBind, List<VertexBuffer> parts, Map<String, Clip> clips) {
+        this.parents = parents;
+        this.inverseBind = inverseBind;
+        this.parts = parts;
+        this.clips = clips;
+    }
+
+    int joints() {
+        return parents.length;
+    }
+
+    /** The data (loaded and uploaded on first use), or null if the file is missing or broken. */
     @Nullable
-    static List<VertexBuffer> parts(McModel model) {
-        if (model == partsFor) {
-            return parts;
-        }
-        if (parts != null) {
-            parts.forEach(VertexBuffer::close);
-        }
-        parts = null;
-        partsFor = model;
-        if (model.getRig() == null || model.getRig().boneMap == null) {
-            return null;
-        }
-        try {
-            parts = upload(read(), model.getRig().boneMap);
-            failed = false;
-        } catch (IOException | RuntimeException e) {
-            if (!failed) {
-                ZinogreMod.LOGGER.error("Couldn't load the Zinogre mesh {}", FILE, e);
+    static ZinogreData get() {
+        if (loaded == null && !failed) {
+            try {
+                loaded = load(read());
+            } catch (IOException | RuntimeException e) {
+                ZinogreMod.LOGGER.error("Couldn't load the Zinogre model data {}", FILE, e);
+                failed = true;
             }
-            failed = true;
         }
-        return parts;
+        return loaded;
     }
 
     private static ByteBuffer read() throws IOException {
@@ -83,18 +96,19 @@ final class ZinogreMesh {
         }
     }
 
-    private static List<VertexBuffer> upload(ByteBuffer b, Map<String, Integer> boneMap) {
+    private static ZinogreData load(ByteBuffer b) {
         setupFormat();
-        if (b.getInt() != 0x31534D5A) { // "ZMS1"
-            throw new IllegalStateException("not a Zinogre mesh file");
+        if (b.getInt() != 0x32534D5A) { // "ZMS2"
+            throw new IllegalStateException("not a Zinogre model file");
         }
         int jointCount = b.getInt();
-        int[] jointToBone = new int[jointCount];
+        int[] parents = new int[jointCount];
+        Matrix4f[] inverseBind = new Matrix4f[jointCount];
         for (int j = 0; j < jointCount; j++) {
-            byte[] name = new byte[b.getShort() & 0xFFFF];
-            b.get(name);
-            Integer bone = boneMap.get(new String(name, StandardCharsets.UTF_8));
-            jointToBone[j] = bone != null ? bone : 0;
+            string(b);
+            parents[j] = b.getInt();
+            float[] m = floats(b, 16);
+            inverseBind[j] = new Matrix4f().set(m); // column-major
         }
         int n = b.getInt();
         float[] pos = floats(b, n * 3);
@@ -108,7 +122,7 @@ final class ZinogreMesh {
         float[] weights = floats(b, n * 4);
 
         int partCount = b.getInt();
-        List<VertexBuffer> result = new ArrayList<>();
+        List<VertexBuffer> parts = new ArrayList<>();
         for (int p = 0; p < partCount; p++) {
             int indexCount = b.getInt();
             BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.TRIANGLES, format);
@@ -120,8 +134,7 @@ final class ZinogreMesh {
                         .setColor(s, s, s, 1.0F)
                         .setNormal(normal[v * 3], normal[v * 3 + 1], normal[v * 3 + 2]);
                 put(builder, tangent, 1.0F, 0.0F, 0.0F, 1.0F);
-                put(builder, boneIds, jointToBone[joints[v * 4]], jointToBone[joints[v * 4 + 1]],
-                        jointToBone[joints[v * 4 + 2]], jointToBone[joints[v * 4 + 3]]);
+                put(builder, boneIds, joints[v * 4], joints[v * 4 + 1], joints[v * 4 + 2], joints[v * 4 + 3]);
                 put(builder, boneWeights, weights[v * 4], weights[v * 4 + 1], weights[v * 4 + 2], weights[v * 4 + 3]);
             }
             MeshData mesh = builder.build();
@@ -129,9 +142,24 @@ final class ZinogreMesh {
             buffer.bind();
             buffer.upload(mesh);
             VertexBuffer.unbind();
-            result.add(buffer);
+            parts.add(buffer);
         }
-        return result;
+
+        int clipCount = b.getInt();
+        Map<String, Clip> clips = new HashMap<>();
+        for (int c = 0; c < clipCount; c++) {
+            String name = string(b);
+            float fps = b.getFloat();
+            int frames = b.getInt();
+            clips.put(name, new Clip(fps, frames, floats(b, frames * jointCount * 7)));
+        }
+        return new ZinogreData(parents, inverseBind, parts, clips);
+    }
+
+    private static String string(ByteBuffer b) {
+        byte[] bytes = new byte[b.getShort() & 0xFFFF];
+        b.get(bytes);
+        return new String(bytes, StandardCharsets.UTF_8);
     }
 
     private static float[] floats(ByteBuffer b, int count) {

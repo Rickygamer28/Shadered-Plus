@@ -1,31 +1,33 @@
 package com.example.zinogre.client;
 
 import com.example.zinogre.ZinogreEntity;
-import com.mojang.blaze3d.vertex.VertexBuffer;
 import com.noodlegamer76.shadered.client.assimp.AssimpMaterial;
 import com.noodlegamer76.shadered.client.assimp.AssimpModel;
 import com.noodlegamer76.shadered.client.assimp.McModel;
-import com.noodlegamer76.shadered.client.assimp.anim.Animation;
 import com.noodlegamer76.shadered.client.assimp.anim.Animator;
 import com.noodlegamer76.shadered.client.renderer.assimp.RenderableModel;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
- * One Zinogre's copy of the model and its animation player.
+ * One Zinogre's model copy and pose.
  *
- * Shadered's Animator advances every playing clip by (game time in seconds x clip speed) each time it draws, which
- * makes the clip time jump around. So the clips are played as copies whose speed is 0, and their times and weights are
- * set here every frame instead: idle / walk / run blend by how fast the mob moves (walk and run are driven by the
- * distance walked, so the feet keep pace with the ground), and the attack fades in over everything while it plays.
+ * The bones are posed here from our own clips (see {@link ZinogreData}): idle / walk / run blend by how fast the mob
+ * moves (walk and run are driven by the distance walked, so the feet keep pace with the ground), and the attack fades
+ * in over everything while it plays. The finished bone matrices go into an Animator without a skeleton of its own, so
+ * Shadered's renderer just uploads them.
  *
- * The model parts are copies too (the mesh from ZinogreMesh, shared by all Zinogres, with an own material), so each Zinogre can be tinted by
- * the light where it stands (Shadered's model shader has no world lighting) and flash red when hurt.
+ * The model parts share the uploaded mesh but each Zinogre has its own materials (Shadered's, i.e. its textures), so
+ * it can be tinted by the light where it stands (Shadered's model shader has no world lighting) and flash red when hurt.
  */
 final class ZinogreAnimState {
     /** Ground speed of the walk and run clips at the model's scale, in blocks per second. */
@@ -36,88 +38,66 @@ final class ZinogreAnimState {
 
     final RenderableModel model;
     private final McModel source;
+    private final ZinogreData data;
+    private final Matrix4f[] bones;
     private final List<AssimpMaterial> materials = new ArrayList<>();
-    private final Clip idle, walk, run, attack;
+    private final ZinogreData.Clip idle, walk, run, attack;
     private float attackWeight;
     private float lastTime = -1;
 
-    private record Clip(Animator.ActiveAnimation active, float ticksPerSecond, float duration) {
-        float seconds() {
-            return duration / ticksPerSecond;
-        }
+    // scratch space for posing
+    private final float[] tx, ty, tz, qx, qy, qz, qw, wsum;
+    private final Matrix4f[] global;
+    private final Quaternionf q = new Quaternionf();
+    private final Matrix4f local = new Matrix4f();
 
-        void set(float seconds, float weight) {
-            float t = seconds * ticksPerSecond;
-            active.setTime(Math.max(0.0F, Math.min(t, duration)));
-            active.setWeight(weight);
-        }
-
-        void loop(float seconds, float weight) {
-            float length = seconds();
-            set(((seconds % length) + length) % length, weight);
-        }
-    }
-
-    private ZinogreAnimState(McModel source, RenderableModel model, Clip idle, Clip walk, Clip run, Clip attack) {
+    private ZinogreAnimState(McModel source, ZinogreData data, RenderableModel model) {
         this.source = source;
+        this.data = data;
         this.model = model;
-        this.idle = idle;
-        this.walk = walk;
-        this.run = run;
-        this.attack = attack;
+        this.bones = model.animator.getFinalMatrices();
+        this.idle = data.clips.get("idle");
+        this.walk = data.clips.get("walk");
+        this.run = data.clips.get("run");
+        this.attack = data.clips.get("attack");
+        int n = data.joints();
+        tx = new float[n]; ty = new float[n]; tz = new float[n];
+        qx = new float[n]; qy = new float[n]; qz = new float[n]; qw = new float[n]; wsum = new float[n];
+        global = new Matrix4f[n];
+        for (int i = 0; i < n; i++) {
+            global[i] = new Matrix4f();
+        }
         for (AssimpModel part : model.getModel()) {
             materials.add(part.getMaterial());
         }
     }
 
-    /** Whether this copy was made from the model Shadered has loaded now (resource reloads replace it). */
+    /** Whether this copy was made with the textures Shadered has loaded now (resource reloads replace them). */
     boolean isFor(McModel loaded) {
         return loaded == source;
     }
 
     @Nullable
     static ZinogreAnimState create(McModel source) {
-        if (source.getRig() == null) {
+        ZinogreData data = ZinogreData.get();
+        List<AssimpModel> loadedParts = source.getModels();
+        if (data == null || data.parts.size() != loadedParts.size()) {
             return null;
         }
-        Animator animator = new Animator(source);
-        String[] names = {"idle", "walk", "run", "attack"};
-        float[] tps = new float[names.length];
-        float[] durations = new float[names.length];
-        for (int i = 0; i < names.length; i++) {
-            Animation original = source.getAnimations().get(names[i]);
-            if (original == null || original.duration <= 0) {
+        for (String name : new String[] {"idle", "walk", "run", "attack"}) {
+            if (!data.clips.containsKey(name)) {
                 return null;
             }
-            Animation copy = new Animation();
-            copy.name = original.name;
-            copy.duration = original.duration;
-            copy.ticksPerSecond = 0.0F; // never advanced by Shadered: the time is set every frame
-            copy.looping = original.looping;
-            copy.tracks.putAll(original.tracks);
-            tps[i] = original.ticksPerSecond > 0 ? original.ticksPerSecond : 25.0F;
-            durations[i] = original.duration;
-            animator.play(copy, 0.0F);
-        }
-        List<Animator.ActiveAnimation> active = animator.getActiveAnimations();
-
-        // our own uploads of the mesh (see ZinogreMesh), with Shadered's materials (textures) and placements
-        List<VertexBuffer> meshes = ZinogreMesh.parts(source);
-        List<AssimpModel> loadedParts = source.getModels();
-        if (meshes == null || meshes.size() != loadedParts.size()) {
-            return null;
         }
         RenderableModel model = new RenderableModel();
-        for (int i = 0; i < meshes.size(); i++) {
-            AssimpModel part = loadedParts.get(i);
-            AssimpModel copy = new AssimpModel(meshes.get(i), copyOf(part.getMaterial()));
-            copy.instances.addAll(part.instances);
+        for (int i = 0; i < loadedParts.size(); i++) {
+            AssimpModel copy = new AssimpModel(data.parts.get(i), copyOf(loadedParts.get(i).getMaterial()));
+            copy.instances.add(new AssimpModel.MeshInstanceTransform(new Matrix4f(), new Matrix4f()));
             model.add(copy);
         }
-        model.animator = animator;
-        return new ZinogreAnimState(source, model,
-                new Clip(active.get(0), tps[0], durations[0]), new Clip(active.get(1), tps[1], durations[1]),
-                new Clip(active.get(2), tps[2], durations[2]), new Clip(active.get(3), tps[3], durations[3]));
+        // no skeleton and no clips: Shadered's update does nothing and just uploads the matrices we put in
+        model.animator = new Animator(null, Map.of(), new Matrix4f[0], data.joints());
+        return new ZinogreAnimState(source, data, model);
     }
 
     private static AssimpMaterial copyOf(AssimpMaterial m) {
@@ -132,7 +112,7 @@ final class ZinogreAnimState {
         return copy;
     }
 
-    /** Sets the clip times and weights and the light tint for this frame. */
+    /** Poses the bones and sets the light tint for this frame. */
     void update(ZinogreEntity entity, float partialTick, int packedLight) {
         float now = (entity.tickCount + partialTick) / 20.0F;
         boolean first = lastTime < 0;
@@ -140,11 +120,8 @@ final class ZinogreAnimState {
         lastTime = now;
 
         // Minecraft's walk animation: speed ~ blocks per second / 5 (up to 1), position ~ 4 x distance walked
-        float speed = entity.walkAnimation.speed(partialTick) * 5.0F;
+        float speed = entity.deathTime > 0 ? 0.0F : entity.walkAnimation.speed(partialTick) * 5.0F;
         float distance = entity.walkAnimation.position(partialTick) / 4.0F;
-        if (entity.deathTime > 0) {
-            speed = 0.0F;
-        }
         float moving = smooth(0.12F, 0.5F, speed);
         float running = smooth(1.3F, 2.3F, speed);
 
@@ -154,12 +131,77 @@ final class ZinogreAnimState {
                 : Mth.clamp(attackWeight + (attacking ? dt : -dt) / ATTACK_FADE, 0.0F, 1.0F);
         float rest = 1.0F - attackWeight;
 
-        idle.loop(now + entity.getId() * 1.37F, rest * (1.0F - moving) + 1.0e-4F);
-        walk.loop(distance / WALK_CLIP_SPEED, rest * moving * (1.0F - running));
-        run.loop(distance / RUN_CLIP_SPEED, rest * moving * running);
-        attack.set(Mth.clamp(sinceAttack, 0.0F, attack.seconds()), attackWeight);
+        clear();
+        add(idle, now + entity.getId() * 1.37F, true, rest * (1.0F - moving));
+        add(walk, distance / WALK_CLIP_SPEED, true, rest * moving * (1.0F - running));
+        add(run, distance / RUN_CLIP_SPEED, true, rest * moving * running);
+        add(attack, Mth.clamp(sinceAttack, 0.0F, attack.seconds()), false, attackWeight);
+        if (wsum[0] <= 0) {
+            add(idle, now, true, 1.0F);
+        }
+        finish();
 
         tint(entity, partialTick, packedLight);
+    }
+
+    private void clear() {
+        Arrays.fill(tx, 0); Arrays.fill(ty, 0); Arrays.fill(tz, 0);
+        Arrays.fill(qx, 0); Arrays.fill(qy, 0); Arrays.fill(qz, 0); Arrays.fill(qw, 0);
+        Arrays.fill(wsum, 0);
+    }
+
+    /** Adds a clip's pose at the given time with the given weight (quaternions summed in the same hemisphere). */
+    private void add(ZinogreData.Clip clip, float seconds, boolean loop, float weight) {
+        if (weight <= 1.0e-4F) {
+            return;
+        }
+        float length = clip.seconds();
+        float t = loop ? ((seconds % length) + length) % length : Mth.clamp(seconds, 0.0F, length);
+        float f = t * clip.fps();
+        int i0 = Math.min((int) f, clip.frames() - 1);
+        int i1 = Math.min(i0 + 1, clip.frames() - 1);
+        float a = f - i0;
+        int n = data.joints();
+        float[] d = clip.data();
+        for (int j = 0; j < n; j++) {
+            int p = (i0 * n + j) * 7;
+            int r = (i1 * n + j) * 7;
+            float x0 = d[p + 3], y0 = d[p + 4], z0 = d[p + 5], w0 = d[p + 6];
+            float x1 = d[r + 3], y1 = d[r + 4], z1 = d[r + 5], w1 = d[r + 6];
+            if (x0 * x1 + y0 * y1 + z0 * z1 + w0 * w1 < 0) {
+                x1 = -x1; y1 = -y1; z1 = -z1; w1 = -w1;
+            }
+            float x = x0 + (x1 - x0) * a, y = y0 + (y1 - y0) * a, z = z0 + (z1 - z0) * a, w = w0 + (w1 - w0) * a;
+            float len = (float) Math.sqrt(x * x + y * y + z * z + w * w);
+            x /= len; y /= len; z /= len; w /= len;
+            if (wsum[j] > 0 && qx[j] * x + qy[j] * y + qz[j] * z + qw[j] * w < 0) {
+                x = -x; y = -y; z = -z; w = -w;
+            }
+            qx[j] += x * weight; qy[j] += y * weight; qz[j] += z * weight; qw[j] += w * weight;
+            tx[j] += (d[p] + (d[r] - d[p]) * a) * weight;
+            ty[j] += (d[p + 1] + (d[r + 1] - d[p + 1]) * a) * weight;
+            tz[j] += (d[p + 2] + (d[r + 2] - d[p + 2]) * a) * weight;
+            wsum[j] += weight;
+        }
+    }
+
+    /** Local poses -> model space -> final skinning matrices (model space x inverse bind). */
+    private void finish() {
+        int n = data.joints();
+        for (int j = 0; j < n; j++) {
+            float s = wsum[j];
+            q.set(qx[j], qy[j], qz[j], qw[j]).normalize();
+            local.translationRotate(tx[j] / s, ty[j] / s, tz[j] / s, q);
+            int parent = data.parents[j];
+            if (parent < 0) {
+                global[j].set(local);
+            } else {
+                global[parent].mul(local, global[j]);
+            }
+            if (j < bones.length) {
+                global[j].mul(data.inverseBind[j], bones[j]);
+            }
+        }
     }
 
     /** Darker in the dark (block or sky light where it stands), red while hurt. */
