@@ -21,16 +21,34 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * and count asking for the picture as using it (see SkyUsage).
  */
 @Mixin({SkyboxRenderPass.class, EndSkySkyboxRenderPass.class, EndBoxRenderPass.class, MimicSkyboxRenderPass.class})
-public abstract class SkyPassMixin {
+public abstract class SkyPassMixin implements SkyUsage.Pass {
     @Shadow(remap = false)
     @Final
     private SkyblockBatchData batchData;
 
+    @org.spongepowered.asm.mixin.Unique
+    private long skyblocks$drawnFrame = -1;
+
+    @Override
+    public long skyblocks$drawnFrame() {
+        return skyblocks$drawnFrame;
+    }
+
+    @Override
+    public void skyblocks$setDrawnFrame(long frame) {
+        skyblocks$drawnFrame = frame;
+    }
+
     @Inject(method = "render", at = @At("HEAD"), cancellable = true, require = 0, remap = false)
     private void skyblocks$skipUnused(RenderStage stage, PoseStack poseStack, int renderTick, float partialTick, CallbackInfo ci) {
+        if (stage == RenderStage.AFTER_SKY) {
+            SkyUsage.skyStage(renderTick, partialTick);
+        }
         if (!SkyUsage.recentlyUsed(batchData)) {
             ci.cancel();
+            return;
         }
+        skyblocks$drawnFrame = SkyUsage.frame(); // drawn this frame (at the sky stage or on demand)
     }
 
     @org.spongepowered.asm.mixin.Unique
@@ -38,6 +56,7 @@ public abstract class SkyPassMixin {
 
     @Inject(method = "<init>*", at = @At("TAIL"), require = 0, remap = false)
     private void skyblocks$announce(CallbackInfo ci) {
+        SkyUsage.register(batchData, this);
         if (!skyblocks$announced) {
             skyblocks$announced = true;
             com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+: unused sky pictures are skipped (sky pass tracking active)");

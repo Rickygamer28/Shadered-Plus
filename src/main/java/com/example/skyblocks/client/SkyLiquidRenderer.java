@@ -82,6 +82,10 @@ public final class SkyLiquidRenderer {
         if (memory == null) {
             memory = new ByteBufferBuilder(1 << 18);
         }
+        // a liquid's sky that was resting gets its picture drawn first (see SkyUsage)
+        for (ModFluids.SkyLiquid liquid : GEOMETRY.keySet()) {
+            SkyUsage.ensureFresh(com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(liquid.sky));
+        }
         // the faces were worked out when the blocks were looked up (every few ticks): just place them
         float ox = (float) (originX - camera.x), oy = (float) (originY - camera.y), oz = (float) (originZ - camera.z);
         MultiBufferSource.BufferSource buffers = MultiBufferSource.immediate(memory);

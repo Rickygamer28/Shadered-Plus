@@ -16,6 +16,7 @@
     "SkyblockBatchDataMixin",
     "SkyblockEntityRendererMixin",
     "SkyblockRendererMixin",
+    "SkyblockRenderPassMixin",
     "SkyPassMixin"
   ],
   "injectors": {

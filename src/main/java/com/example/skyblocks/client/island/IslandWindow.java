@@ -218,6 +218,9 @@ final class IslandWindow {
         if (skies.isEmpty()) {
             return;
         }
+        for (SkyblockBatchData data : skies.keySet()) {
+            com.example.skyblocks.client.SkyUsage.ensureFresh(data); // a resting sky: draw its picture first
+        }
         int passDepth = ComplexPassRenderer.getInstance().getRenderBuffer().getDepthTextureId();
         for (Map.Entry<SkyblockBatchData, SkyblockBatchData> entry : skies.entrySet()) {
             Integer sky = SkyblockRenderer.DATA_LIST.get(entry.getKey());
@@ -281,7 +284,9 @@ final class IslandWindow {
         if (data == null) {
             return false;
         }
-        Integer sky = SkyblockRenderer.DATA_LIST.get(SkyblockRenderer.getData(data.type()));
+        SkyblockBatchData batch = SkyblockRenderer.getData(data.type());
+        com.example.skyblocks.client.SkyUsage.ensureFresh(batch); // a resting sky: draw its picture first
+        Integer sky = SkyblockRenderer.DATA_LIST.get(batch);
         SkyblockPass pass = data.pass();
         ShaderInstance shader = RegisterShaders.get(pass.getShaderName());
         if (sky == null || shader == null) {
