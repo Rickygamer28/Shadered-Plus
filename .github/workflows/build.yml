@@ -36,7 +36,8 @@ jobs:
       - name: Probe bucket textures
         run: |
           J=$(find ~/.gradle build -name "*.jar" 2>/dev/null | while read f; do unzip -l "$f" 2>/dev/null | grep -q "assets/minecraft/textures/item/water_bucket.png" && echo "$f" && break; done | head -1)
-          echo "jar: $J"
+          echo "::notice::jar: $J"
+          pip install -q pillow || python3 -m pip install -q --user pillow
           mkdir -p probe && cd probe && unzip -q -o "$J" assets/minecraft/textures/item/water_bucket.png assets/minecraft/textures/item/bucket.png
           python3 - <<'PY'
           from PIL import Image
