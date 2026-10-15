@@ -21,6 +21,7 @@ public class ZinogreHeadItemRenderer extends BlockEntityWithoutLevelRenderer {
     public void renderByItem(ItemStack stack, ItemDisplayContext context, PoseStack poseStack, MultiBufferSource buffer,
                              int packedLight, int packedOverlay) {
         boolean stygian = stack.is(ZinogreMod.STYGIAN_HEAD_ITEM.get());
-        ZinogreHeadRenderer.drawHeadInCube(poseStack, buffer, packedLight, stygian);
+        boolean small = context == ItemDisplayContext.GUI || context == ItemDisplayContext.GROUND || context == ItemDisplayContext.FIXED;
+        ZinogreHeadRenderer.drawHeadInCube(poseStack, buffer, packedLight, stygian, small);
     }
 }

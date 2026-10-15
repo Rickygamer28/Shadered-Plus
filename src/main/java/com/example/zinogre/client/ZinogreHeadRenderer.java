@@ -41,12 +41,14 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
     private static final ResourceLocation FILE = ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "models/zinogre_head.bin");
     /** The same head with its mouth closed (same vertices and placement), for wearing. */
     private static final ResourceLocation CLOSED_FILE = ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "models/zinogre_head_closed.bin");
+    /** A lighter copy (far fewer triangles) for item icons, dropped items and item frames, where it is small. */
+    private static final ResourceLocation ICON_FILE = ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "models/zinogre_head_icon.bin");
 
     /** The head mesh (shared by all heads): vertex arrays and triangles per material. */
     record Mesh(float[] pos, float[] uv, float[] normal, List<int[]> triangles, int[] materials) {}
     @Nullable
-    private static Mesh mesh, closedMesh;
-    private static boolean failed, closedFailed;
+    private static Mesh mesh, closedMesh, iconMesh;
+    private static boolean failed, closedFailed, iconFailed;
 
     public ZinogreHeadRenderer(BlockEntityRendererProvider.Context context) {}
 
@@ -125,13 +127,19 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
 
     /** Draws the head inside a unit cube (centred, about one block big, facing -Z): for the item and when worn. */
     static boolean drawHeadInCube(PoseStack poseStack, MultiBufferSource buffer, int packedLight, boolean stygian) {
+        return drawHeadInCube(poseStack, buffer, packedLight, stygian, false);
+    }
+
+    /** icon: the lighter mesh (for small views: inventory, dropped, item frames). */
+    static boolean drawHeadInCube(PoseStack poseStack, MultiBufferSource buffer, int packedLight, boolean stygian, boolean icon) {
         float scale = 0.95F / (2 * HEAD_HALF_LENGTH);
         poseStack.pushPose();
         poseStack.translate(0.5F, 0.5F, 0.5F);
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F)); // items and worn heads face -Z
         poseStack.scale(scale, scale, scale);
         poseStack.translate(0.0F, -HEAD_HALF_HEIGHT, 0.0F);
-        boolean drawn = drawHead(poseStack, buffer, packedLight, stygian);
+        Mesh light = icon ? iconMesh() : null;
+        boolean drawn = drawHead(poseStack, buffer, packedLight, stygian, light != null ? light : mesh());
         poseStack.popPose();
         return drawn;
     }
@@ -200,6 +208,15 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
     }
 
     @Nullable
+    static Mesh iconMesh() {
+        if (iconMesh == null && !iconFailed) {
+            iconMesh = load(ICON_FILE);
+            iconFailed = iconMesh == null;
+        }
+        return iconMesh;
+    }
+
+    @Nullable
     private static Mesh load(ResourceLocation file) {
         try {
             ByteBuffer b = ZinogreData.readResource(file);
@@ -230,7 +247,7 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
 
     @Override
     public int getViewDistance() {
-        return 96;
+        return 64;
     }
 
     @Override

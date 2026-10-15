@@ -41,12 +41,10 @@ public class ZinogreRenderer extends EntityRenderer<ZinogreEntity> {
     @Override
     public void render(ZinogreEntity entity, float entityYaw, float partialTick, PoseStack poseStack,
                        MultiBufferSource buffer, int packedLight) {
-        boolean small = poseStack.last().pose().getScale(new org.joml.Vector3f()).x < 0.5F; // inside a Sky Island
-        if (small) {
-            Debug.few("island-call", "Zinogre renderer called inside an island (scale {})", poseStack.last().pose().getScale(new org.joml.Vector3f()).x);
-        }
+        // drawn small: inside a Sky Island (Shadered+)
+        boolean small = poseStack.last().pose().getScale(SCRATCH).x < 0.5F;
         try {
-            draw(entity, entityYaw, partialTick, poseStack, buffer, packedLight);
+            draw(entity, entityYaw, partialTick, poseStack, buffer, packedLight, small);
         } catch (RuntimeException e) {
             Debug.once("render-error-" + small, "Zinogre renderer failed" + (small ? " inside an island" : "") + ": {}", e.toString());
             if (Debug.firstTime("render-trace-" + small)) {
@@ -56,8 +54,10 @@ public class ZinogreRenderer extends EntityRenderer<ZinogreEntity> {
         }
     }
 
+    private static final org.joml.Vector3f SCRATCH = new org.joml.Vector3f();
+
     private void draw(ZinogreEntity entity, float entityYaw, float partialTick, PoseStack poseStack,
-                      MultiBufferSource buffer, int packedLight) {
+                      MultiBufferSource buffer, int packedLight, boolean small) {
         McModel loaded = AssimpModels.getModel(entity.isStygian() ? STYGIAN_MODEL : MODEL);
         if (loaded == null) {
             Debug.once("no-model", "Zinogre not drawn: Shadered has no textures model loaded");
@@ -76,7 +76,6 @@ public class ZinogreRenderer extends EntityRenderer<ZinogreEntity> {
         ResourceLocation chargedBody = charged != null && !charged.getModels().isEmpty()
                 ? charged.getModels().get(0).getMaterial().getDiffuseTexture() : null;
         // the low-detail mesh when far away (beyond LOW_DETAIL_DISTANCE blocks) or drawn small inside a Sky Island
-        boolean small = poseStack.last().pose().getScale(new org.joml.Vector3f()).x < 0.5F;
         double distance = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition().distanceToSqr(entity.position());
         boolean lowDetail = small || distance > LOW_DETAIL_DISTANCE * LOW_DETAIL_DISTANCE;
         state.update(entity, partialTick, packedLight, chargedBody, lowDetail);
@@ -100,9 +99,6 @@ public class ZinogreRenderer extends EntityRenderer<ZinogreEntity> {
                 .translation((float) camera.x, (float) camera.y, (float) camera.z)
                 .mul(pose.last().pose());
         IslandCompat.draw(state.model);
-        if (poseStack.last().pose().getScale(new org.joml.Vector3f()).x < 0.5F) { // drawn small: inside a Sky Island
-            Debug.few("island", "Zinogre drawn in an island at {}", state.model.modelMatrix.getTranslation(new org.joml.Vector3f()));
-        }
 
         super.render(entity, entityYaw, partialTick, poseStack, buffer, packedLight); // name tag
     }

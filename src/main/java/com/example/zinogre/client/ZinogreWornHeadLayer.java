@@ -50,7 +50,6 @@ public class ZinogreWornHeadLayer<T extends LivingEntity, M extends EntityModel<
         if (!ZinogreHeadRenderer.drawClosedHead(poseStack, buffer, packedLight, !normal)) {
             Debug.once("worn-missing", "Worn Zinogre head not drawn: model not loaded");
         }
-        Debug.once("worn-drawn", "Worn Zinogre head drawn on {}", entity.getType().getDescriptionId());
         poseStack.popPose();
     }
 }
