@@ -15,6 +15,23 @@ public final class ZinogreClient {
         event.registerBlockEntityRenderer(ZinogreMod.HEAD_BLOCK_ENTITY.get(), ZinogreHeadRenderer::new);
     }
 
+    /** The head items are drawn as the 3D head (inventory, hand, worn). */
+    @SubscribeEvent
+    public static void clientExtensions(net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent event) {
+        net.neoforged.neoforge.client.extensions.common.IClientItemExtensions head = new net.neoforged.neoforge.client.extensions.common.IClientItemExtensions() {
+            private ZinogreHeadItemRenderer renderer;
+
+            @Override
+            public net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (renderer == null) {
+                    renderer = new ZinogreHeadItemRenderer();
+                }
+                return renderer;
+            }
+        };
+        event.registerItem(head, ZinogreMod.HEAD_ITEM.get(), ZinogreMod.STYGIAN_HEAD_ITEM.get());
+    }
+
     private ZinogreClient() {}
 
     /** Uploads the meshes between frames (not halfway through drawing something else) as soon as a world is open. */

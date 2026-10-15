@@ -4,5 +4,7 @@
   "item.zinogre.zinogre_spawn_egg": "Zinogre Spawn Egg",
   "item.zinogre.stygian_zinogre_spawn_egg": "Stygian Zinogre Spawn Egg",
   "block.zinogre.zinogre_head": "Zinogre Head",
-  "block.zinogre.stygian_zinogre_head": "Stygian Zinogre Head"
+  "block.zinogre.stygian_zinogre_head": "Stygian Zinogre Head",
+  "block.zinogre.zinogre_wall_head": "Zinogre Head",
+  "block.zinogre.stygian_zinogre_wall_head": "Stygian Zinogre Head"
 }

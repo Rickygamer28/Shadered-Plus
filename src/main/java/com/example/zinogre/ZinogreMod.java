@@ -6,6 +6,8 @@ import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
+import net.minecraft.world.item.StandingAndWallBlockItem;
+import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -57,11 +59,16 @@ public class ZinogreMod {
     /** The trophy heads (dropped like mob heads: when a charged creeper's explosion kills it). */
     public static final DeferredHolder<Block, ZinogreHeadBlock> HEAD = BLOCKS.register("zinogre_head", () -> new ZinogreHeadBlock(false, headProperties()));
     public static final DeferredHolder<Block, ZinogreHeadBlock> STYGIAN_HEAD = BLOCKS.register("stygian_zinogre_head", () -> new ZinogreHeadBlock(true, headProperties()));
-    public static final DeferredItem<?> HEAD_ITEM = ITEMS.registerSimpleBlockItem(HEAD, new Item.Properties().rarity(Rarity.EPIC));
-    public static final DeferredItem<?> STYGIAN_HEAD_ITEM = ITEMS.registerSimpleBlockItem(STYGIAN_HEAD, new Item.Properties().rarity(Rarity.EPIC));
+    public static final DeferredHolder<Block, ZinogreWallHeadBlock> WALL_HEAD = BLOCKS.register("zinogre_wall_head", () -> new ZinogreWallHeadBlock(false, headProperties()));
+    public static final DeferredHolder<Block, ZinogreWallHeadBlock> STYGIAN_WALL_HEAD = BLOCKS.register("stygian_zinogre_wall_head", () -> new ZinogreWallHeadBlock(true, headProperties()));
+    /** One item per look: placed on the floor (on a stand) or on a wall (on a plaque), like mob heads; wearable. */
+    public static final DeferredItem<StandingAndWallBlockItem> HEAD_ITEM = ITEMS.register("zinogre_head",
+            () -> new StandingAndWallBlockItem(HEAD.get(), WALL_HEAD.get(), new Item.Properties().rarity(Rarity.EPIC), Direction.DOWN));
+    public static final DeferredItem<StandingAndWallBlockItem> STYGIAN_HEAD_ITEM = ITEMS.register("stygian_zinogre_head",
+            () -> new StandingAndWallBlockItem(STYGIAN_HEAD.get(), STYGIAN_WALL_HEAD.get(), new Item.Properties().rarity(Rarity.EPIC), Direction.DOWN));
     @SuppressWarnings("DataFlowIssue")
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ZinogreHeadBlockEntity>> HEAD_BLOCK_ENTITY = BLOCK_ENTITIES.register("zinogre_head",
-            () -> BlockEntityType.Builder.of(ZinogreHeadBlockEntity::new, HEAD.get(), STYGIAN_HEAD.get()).build(null));
+            () -> BlockEntityType.Builder.of(ZinogreHeadBlockEntity::new, HEAD.get(), STYGIAN_HEAD.get(), WALL_HEAD.get(), STYGIAN_WALL_HEAD.get()).build(null));
 
     private static BlockBehaviour.Properties headProperties() {
         return BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.BONE_BLOCK).noOcclusion().pushReaction(PushReaction.DESTROY);

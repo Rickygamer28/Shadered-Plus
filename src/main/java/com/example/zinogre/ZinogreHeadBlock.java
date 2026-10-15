@@ -1,6 +1,8 @@
 package com.example.zinogre;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.Equipable;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Block;
@@ -19,12 +21,13 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A Zinogre's head as a trophy, like a mob head: dropped when a charged creeper's explosion kills it; placed on the
- * floor facing the player (16 directions, like skulls). Drawn by its block entity renderer with the head of the model.
+ * A Zinogre's head as a trophy, like a mob head: dropped when a charged creeper's explosion kills it. On the floor it
+ * stands on a small wooden stand facing the player (16 directions, like skulls); on a wall it hangs on a wooden plaque
+ * ({@link ZinogreWallHeadBlock}). It can be worn like a mob head. Drawn by its block entity renderer.
  */
-public class ZinogreHeadBlock extends Block implements EntityBlock {
+public class ZinogreHeadBlock extends Block implements EntityBlock, Equipable {
     public static final IntegerProperty ROTATION = BlockStateProperties.ROTATION_16;
-    private static final VoxelShape SHAPE = Block.box(2.0, 0.0, 2.0, 14.0, 14.0, 14.0);
+    private static final VoxelShape SHAPE = Block.box(1.0, 0.0, 1.0, 15.0, 15.0, 15.0);
 
     public final boolean stygian;
 
@@ -63,6 +66,12 @@ public class ZinogreHeadBlock extends Block implements EntityBlock {
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.ENTITYBLOCK_ANIMATED;
+    }
+
+    /** Wearable in the head slot, like mob heads. */
+    @Override
+    public EquipmentSlot getEquipmentSlot() {
+        return EquipmentSlot.HEAD;
     }
 
     @Nullable

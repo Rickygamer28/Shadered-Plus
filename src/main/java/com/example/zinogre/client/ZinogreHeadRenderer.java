@@ -3,13 +3,17 @@ package com.example.zinogre.client;
 import com.example.zinogre.ZinogreHeadBlock;
 import com.example.zinogre.ZinogreHeadBlockEntity;
 import com.example.zinogre.ZinogreMod;
+import com.example.zinogre.ZinogreWallHeadBlock;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import com.noodlegamer76.shadered.client.assimp.AssimpModel;
 import com.noodlegamer76.shadered.client.assimp.McModel;
 import com.noodlegamer76.shadered.client.assimp.load.AssimpModels;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
@@ -35,8 +39,6 @@ import java.util.List;
  */
 public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlockEntity> {
     private static final ResourceLocation FILE = ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "models/zinogre_head.bin");
-    /** Model units -> blocks: the head is about 45 units long, so about 0.85 blocks. */
-    private static final float SCALE = 0.019F;
 
     /** The head mesh (shared by all heads): vertex arrays and triangles per material. */
     record Mesh(float[] pos, float[] uv, float[] normal, List<int[]> triangles, int[] materials) {}
@@ -46,26 +48,51 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
 
     public ZinogreHeadRenderer(BlockEntityRendererProvider.Context context) {}
 
+    /** Head size on the stand / on the plaque (model units -> blocks). */
+    private static final float STAND_SCALE = 0.016F, WALL_SCALE = 0.017F;
+    /** The head mesh: about 45 units long and 44 tall, centred in x and z, standing on y = 0, facing +Z. */
+    private static final float HEAD_HALF_LENGTH = 22.5F, HEAD_HALF_HEIGHT = 22.0F;
+    private static final ResourceLocation WOOD = ResourceLocation.withDefaultNamespace("block/dark_oak_planks");
+
     @Override
     public void render(ZinogreHeadBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffer,
                        int packedLight, int packedOverlay) {
         BlockState state = be.getBlockState();
-        if (!(state.getBlock() instanceof ZinogreHeadBlock block)) {
-            return;
+        poseStack.pushPose();
+        poseStack.translate(0.5F, 0.0F, 0.5F);
+        if (state.getBlock() instanceof ZinogreHeadBlock block) {
+            // on the floor: a small wooden stand (base and upright board), the head mounted on the board
+            float yaw = RotationSegment.convertToDegrees(state.getValue(ZinogreHeadBlock.ROTATION));
+            poseStack.mulPose(Axis.YP.rotationDegrees(-yaw)); // looks the way it was placed, like skulls
+            box(poseStack, buffer, packedLight, -7, 0, -7, 7, 2, 1);
+            box(poseStack, buffer, packedLight, -6, 2, -7, 6, 15, -5);
+            poseStack.translate(0.0F, 8.5F / 16.0F - HEAD_HALF_HEIGHT * STAND_SCALE, -5.0F / 16.0F + HEAD_HALF_LENGTH * STAND_SCALE);
+            poseStack.scale(STAND_SCALE, STAND_SCALE, STAND_SCALE);
+            drawHead(poseStack, buffer, packedLight, block.stygian);
+        } else if (state.getBlock() instanceof ZinogreWallHeadBlock block) {
+            // on a wall: a wooden plaque against the wall, the head sticking out of it
+            poseStack.mulPose(Axis.YP.rotationDegrees(-state.getValue(ZinogreWallHeadBlock.FACING).toYRot()));
+            box(poseStack, buffer, packedLight, -7, 1, -8, 7, 15, -6);
+            box(poseStack, buffer, packedLight, -6, 2, -6, 6, 14, -5.5F); // a raised panel
+            poseStack.translate(0.0F, 0.5F - HEAD_HALF_HEIGHT * WALL_SCALE, -5.5F / 16.0F + HEAD_HALF_LENGTH * WALL_SCALE);
+            poseStack.scale(WALL_SCALE, WALL_SCALE, WALL_SCALE);
+            drawHead(poseStack, buffer, packedLight, block.stygian);
         }
-        McModel textures = AssimpModels.getModel(block.stygian ? ZinogreRenderer.STYGIAN_MODEL : ZinogreRenderer.MODEL);
+        poseStack.popPose();
+    }
+
+    /**
+     * Draws the head mesh with the current pose (model units, facing +Z, standing on y = 0) and the textures of its
+     * look. Returns false when the model isn't loaded (yet).
+     */
+    static boolean drawHead(PoseStack poseStack, MultiBufferSource buffer, int packedLight, boolean stygian) {
+        McModel textures = AssimpModels.getModel(stygian ? ZinogreRenderer.STYGIAN_MODEL : ZinogreRenderer.MODEL);
         Mesh head = mesh();
         if (textures == null || head == null) {
             Debug.once("head-missing", "Zinogre head not drawn: textures loaded {}, mesh loaded {}", textures != null, head != null);
-            return;
+            return false;
         }
         List<AssimpModel> parts = textures.getModels();
-
-        poseStack.pushPose();
-        poseStack.translate(0.5F, 0.0F, 0.5F);
-        float yaw = RotationSegment.convertToDegrees(state.getValue(ZinogreHeadBlock.ROTATION));
-        poseStack.mulPose(Axis.YP.rotationDegrees(-yaw)); // the head faces +Z, like a mob with that yaw
-        poseStack.scale(SCALE, SCALE, SCALE);
         PoseStack.Pose last = poseStack.last();
         for (int p = 0; p < head.triangles().size(); p++) {
             int material = head.materials()[p];
@@ -83,8 +110,55 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
                 vertex(out, last, head, tris[i + 2], packedLight);
             }
         }
+        return true;
+    }
+
+    /** Draws the head inside a unit cube (centred, about one block big, facing -Z): for the item and when worn. */
+    static void drawHeadInCube(PoseStack poseStack, MultiBufferSource buffer, int packedLight, boolean stygian) {
+        float scale = 0.95F / (2 * HEAD_HALF_LENGTH);
+        poseStack.pushPose();
+        poseStack.translate(0.5F, 0.5F, 0.5F);
+        poseStack.mulPose(Axis.YP.rotationDegrees(180.0F)); // items and worn heads face -Z
+        poseStack.scale(scale, scale, scale);
+        poseStack.translate(0.0F, -HEAD_HALF_HEIGHT, 0.0F);
+        drawHead(poseStack, buffer, packedLight, stygian);
         poseStack.popPose();
-        Debug.once("head", "Zinogre head drawn (vanilla way) with {} parts", head.triangles().size());
+    }
+
+    /** A dark oak box, in pixels (1/16 block) of the current pose. */
+    private static void box(PoseStack poseStack, MultiBufferSource buffer, int light, float x0, float y0, float z0, float x1, float y1, float z1) {
+        TextureAtlasSprite wood = Minecraft.getInstance().getTextureAtlas(TextureAtlas.LOCATION_BLOCKS).apply(WOOD);
+        VertexConsumer out = buffer.getBuffer(RenderType.entitySolid(TextureAtlas.LOCATION_BLOCKS));
+        PoseStack.Pose pose = poseStack.last();
+        float a = x0 / 16, b = y0 / 16, c = z0 / 16, d = x1 / 16, e = y1 / 16, f = z1 / 16;
+        // each face: 4 corners (counter-clockwise from outside), normal, and the face size for the texture
+        face(out, pose, wood, light, a, b, f, d, b, f, d, e, f, a, e, f, 0, 0, 1, x1 - x0, y1 - y0);   // +Z
+        face(out, pose, wood, light, d, b, c, a, b, c, a, e, c, d, e, c, 0, 0, -1, x1 - x0, y1 - y0);  // -Z
+        face(out, pose, wood, light, d, b, f, d, b, c, d, e, c, d, e, f, 1, 0, 0, z1 - z0, y1 - y0);   // +X
+        face(out, pose, wood, light, a, b, c, a, b, f, a, e, f, a, e, c, -1, 0, 0, z1 - z0, y1 - y0);  // -X
+        face(out, pose, wood, light, a, e, f, d, e, f, d, e, c, a, e, c, 0, 1, 0, x1 - x0, z1 - z0);   // top
+        face(out, pose, wood, light, a, b, c, d, b, c, d, b, f, a, b, f, 0, -1, 0, x1 - x0, z1 - z0);  // bottom
+    }
+
+    private static void face(VertexConsumer out, PoseStack.Pose pose, TextureAtlasSprite sprite, int light,
+                             float x0, float y0, float z0, float x1, float y1, float z1,
+                             float x2, float y2, float z2, float x3, float y3, float z3,
+                             float nx, float ny, float nz, float width, float height) {
+        float u1 = Math.min(width, 16) / 16, v1 = Math.min(height, 16) / 16;
+        corner(out, pose, sprite, light, x0, y0, z0, 0, v1, nx, ny, nz);
+        corner(out, pose, sprite, light, x1, y1, z1, u1, v1, nx, ny, nz);
+        corner(out, pose, sprite, light, x2, y2, z2, u1, 0, nx, ny, nz);
+        corner(out, pose, sprite, light, x3, y3, z3, 0, 0, nx, ny, nz);
+    }
+
+    private static void corner(VertexConsumer out, PoseStack.Pose pose, TextureAtlasSprite sprite, int light,
+                               float x, float y, float z, float u, float v, float nx, float ny, float nz) {
+        out.addVertex(pose, x, y, z)
+                .setColor(255, 255, 255, 255)
+                .setUv(sprite.getU(u), sprite.getV(v))
+                .setOverlay(OverlayTexture.NO_OVERLAY)
+                .setLight(light)
+                .setNormal(pose, nx, ny, nz);
     }
 
     private static void vertex(VertexConsumer out, PoseStack.Pose pose, Mesh m, int v, int light) {
@@ -135,6 +209,6 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
 
     @Override
     public AABB getRenderBoundingBox(ZinogreHeadBlockEntity be) {
-        return new AABB(be.getBlockPos()).inflate(0.5);
+        return new AABB(be.getBlockPos()).inflate(1.0);
     }
 }
