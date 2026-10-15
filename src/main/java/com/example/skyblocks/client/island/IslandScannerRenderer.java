@@ -73,6 +73,9 @@ public class IslandScannerRenderer implements BlockEntityRenderer<IslandScannerB
             } catch (RuntimeException e) {
                 return; // keep the old one, if any, until the next try
             }
+            if (be.clientPreview instanceof IslandView old) {
+                old.close(); // frees its blocks on the graphics card
+            }
             be.clientPreview = view;
             be.previewKey = key;
             be.previewTime = time;

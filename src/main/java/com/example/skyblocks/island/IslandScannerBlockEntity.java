@@ -92,6 +92,19 @@ public class IslandScannerBlockEntity extends BlockEntity {
         return tag;
     }
 
+    /** Client: free the preview (its blocks on the graphics card) when the scanner goes away or unloads. */
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        if (level != null && level.isClientSide && clientPreview instanceof AutoCloseable closeable) {
+            try {
+                closeable.close();
+            } catch (Exception ignored) {
+            }
+            clientPreview = null;
+        }
+    }
+
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);

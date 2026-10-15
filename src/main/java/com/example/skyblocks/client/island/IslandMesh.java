@@ -115,9 +115,92 @@ final class IslandMesh implements AutoCloseable {
     }
 
     /** Hands the quads to the render buffers; pose = island coordinates -> the block entity's camera-relative pose. */
+    /**
+     * Solid / cutout layers on the graphics card (uploaded on first use, then only drawn: no per-frame work for the
+     * CPU); translucent blocks are still sent each frame so they sort with the rest of the world.
+     */
+    private final Map<RenderType, com.mojang.blaze3d.vertex.VertexBuffer> uploaded = new LinkedHashMap<>();
+    private boolean uploadTried;
+
+    private static boolean opaque(RenderType type) {
+        return type != RenderType.translucent() && type != RenderType.tripwire();
+    }
+
+    private void upload() {
+        uploadTried = true;
+        for (Map.Entry<RenderType, int[]> entry : layers.entrySet()) {
+            RenderType type = entry.getKey();
+            if (!opaque(type)) {
+                continue;
+            }
+            int[] d = entry.getValue();
+            try (com.mojang.blaze3d.vertex.ByteBufferBuilder bytes =
+                         new com.mojang.blaze3d.vertex.ByteBufferBuilder(d.length / QuadCollector.INTS * type.format().getVertexSize() + 64)) {
+                com.mojang.blaze3d.vertex.BufferBuilder builder =
+                        new com.mojang.blaze3d.vertex.BufferBuilder(bytes, type.mode(), type.format());
+                PoseStack.Pose identity = new PoseStack().last();
+                emit(d, identity, builder);
+                com.mojang.blaze3d.vertex.MeshData data = builder.build();
+                if (data == null) {
+                    continue;
+                }
+                com.mojang.blaze3d.vertex.VertexBuffer vb =
+                        new com.mojang.blaze3d.vertex.VertexBuffer(com.mojang.blaze3d.vertex.VertexBuffer.Usage.STATIC);
+                vb.bind();
+                vb.upload(data);
+                com.mojang.blaze3d.vertex.VertexBuffer.unbind();
+                uploaded.put(type, vb);
+            } catch (RuntimeException e) {
+                // keep sending this layer each frame instead
+            }
+        }
+    }
+
+    private static void emit(int[] d, PoseStack.Pose pose, VertexConsumer consumer) {
+        Matrix4f matrix = pose.pose();
+        for (int i = 0; i < d.length; i += QuadCollector.INTS) {
+            int normal = d[i + 7];
+            consumer.addVertex(matrix, Float.intBitsToFloat(d[i]), Float.intBitsToFloat(d[i + 1]), Float.intBitsToFloat(d[i + 2]))
+                    .setColor(d[i + 3])
+                    .setUv(Float.intBitsToFloat(d[i + 4]), Float.intBitsToFloat(d[i + 5]))
+                    .setLight(d[i + 6])
+                    .setNormal(pose, (byte) normal / 127.0F, (byte) (normal >> 8) / 127.0F, (byte) (normal >> 16) / 127.0F);
+        }
+    }
+
+    /** Draws the uploaded layers now, with the given pose (on top of the current model-view). */
+    private void drawUploaded(PoseStack.Pose pose) {
+        if (uploaded.isEmpty()) {
+            return;
+        }
+        Matrix4f modelView = new Matrix4f(com.mojang.blaze3d.systems.RenderSystem.getModelViewMatrix()).mul(pose.pose());
+        Matrix4f projection = com.mojang.blaze3d.systems.RenderSystem.getProjectionMatrix();
+        for (Map.Entry<RenderType, com.mojang.blaze3d.vertex.VertexBuffer> entry : uploaded.entrySet()) {
+            RenderType type = entry.getKey();
+            type.setupRenderState();
+            try {
+                net.minecraft.client.renderer.ShaderInstance shader = com.mojang.blaze3d.systems.RenderSystem.getShader();
+                if (shader != null) {
+                    entry.getValue().bind();
+                    entry.getValue().drawWithShader(modelView, projection, shader);
+                    com.mojang.blaze3d.vertex.VertexBuffer.unbind();
+                }
+            } finally {
+                type.clearRenderState();
+            }
+        }
+    }
+
     void render(PoseStack.Pose pose, MultiBufferSource buffer) {
+        if (!uploadTried) {
+            upload();
+        }
+        drawUploaded(pose);
         Matrix4f matrix = pose.pose();
         for (Map.Entry<RenderType, int[]> entry : layers.entrySet()) {
+            if (uploaded.containsKey(entry.getKey())) {
+                continue; // on the graphics card, drawn above
+            }
             // like falling blocks: translucent goes through the "moving block" type (sorted, Fabulous-aware)
             RenderType type = entry.getKey() == RenderType.translucent() ? RenderType.translucentMovingBlock() : entry.getKey();
             VertexConsumer consumer = buffer.getBuffer(type);
@@ -150,6 +233,12 @@ final class IslandMesh implements AutoCloseable {
     public void close() {
         layers.clear();
         sky = null;
+        if (!uploaded.isEmpty()) {
+            java.util.List<com.mojang.blaze3d.vertex.VertexBuffer> buffers = new java.util.ArrayList<>(uploaded.values());
+            uploaded.clear();
+            // graphics card memory can only be freed on the render thread
+            com.mojang.blaze3d.systems.RenderSystem.recordRenderCall(() -> buffers.forEach(com.mojang.blaze3d.vertex.VertexBuffer::close));
+        }
     }
 
     /** Records vertices (position, colour, texture, light, normal) as they are produced by the block renderers. */

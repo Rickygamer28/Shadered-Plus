@@ -115,6 +115,7 @@ final class IslandWindow {
             MultiBufferSource.BufferSource scene = MultiBufferSource.immediate(memory());
             if (!drawSkyRoom(poseStack, background, box)) {
                 drawRoom(poseStack, scene, light, box);
+                scene.endBatch(); // the room first (the island's solid blocks are drawn right away)
             }
             Map<SkyblockBatchData, SkyblockBatchData> skies = new HashMap<>();
             if (view != null && mesh != null) {

@@ -246,6 +246,7 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
                 }
             }
         }
+        LIVE.add(view);
         return view;
     }
 

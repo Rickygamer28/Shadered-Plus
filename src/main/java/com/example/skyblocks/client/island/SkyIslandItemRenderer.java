@@ -68,7 +68,10 @@ public class SkyIslandItemRenderer extends BlockEntityWithoutLevelRenderer {
                     view.renderFigures(poseStack, buffer, mc.getTimer().getGameTimeDeltaPartialTick(false));
                 }
             } catch (RuntimeException e) {
-                VIEWS.remove(data); // try again later
+                IslandView broken = VIEWS.remove(data); // try again later
+                if (broken != null) {
+                    broken.close();
+                }
             }
         }
         poseStack.popPose();
