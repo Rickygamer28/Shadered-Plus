@@ -22,18 +22,29 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  */
 @Mixin({SkyboxRenderPass.class, EndSkySkyboxRenderPass.class, EndBoxRenderPass.class, MimicSkyboxRenderPass.class})
 public abstract class SkyPassMixin {
-    @Shadow
+    @Shadow(remap = false)
     @Final
     private SkyblockBatchData batchData;
 
-    @Inject(method = "render", at = @At("HEAD"), cancellable = true, require = 0)
+    @Inject(method = "render", at = @At("HEAD"), cancellable = true, require = 0, remap = false)
     private void skyblocks$skipUnused(RenderStage stage, PoseStack poseStack, int renderTick, float partialTick, CallbackInfo ci) {
         if (!SkyUsage.recentlyUsed(batchData)) {
             ci.cancel();
         }
     }
 
-    @Inject(method = "getSkyboxTarget", at = @At("HEAD"), require = 0)
+    @org.spongepowered.asm.mixin.Unique
+    private static boolean skyblocks$announced;
+
+    @Inject(method = "<init>*", at = @At("TAIL"), require = 0, remap = false)
+    private void skyblocks$announce(CallbackInfo ci) {
+        if (!skyblocks$announced) {
+            skyblocks$announced = true;
+            com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+: unused sky pictures are skipped (sky pass tracking active)");
+        }
+    }
+
+    @Inject(method = "getSkyboxTarget", at = @At("HEAD"), require = 0, remap = false)
     private void skyblocks$targetWanted(CallbackInfoReturnable<?> cir) {
         SkyUsage.mark(batchData);
     }
