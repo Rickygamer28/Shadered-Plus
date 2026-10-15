@@ -29,7 +29,7 @@ public class ZinogreWallHeadBlock extends Block implements EntityBlock {
 
     static {
         // facing north (looking out to -Z, wall at the south side): plaque against the wall, head sticking out
-        double[][] boxes = {{1, 1, 14, 15, 15, 16}, {3, 2, 1, 13, 14, 14}};
+        double[][] boxes = {{4, 4, 15, 12, 12, 16}, {2, 1, 0, 14, 15, 15}};
         for (Direction facing : Direction.Plane.HORIZONTAL) {
             VoxelShape shape = Shapes.empty();
             for (double[] b : boxes) {

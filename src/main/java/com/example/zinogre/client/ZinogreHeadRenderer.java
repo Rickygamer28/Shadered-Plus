@@ -49,7 +49,7 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
     public ZinogreHeadRenderer(BlockEntityRendererProvider.Context context) {}
 
     /** Head size on the stand / on the plaque (model units -> blocks). */
-    private static final float STAND_SCALE = 0.016F, WALL_SCALE = 0.017F;
+    private static final float STAND_SCALE = 0.02F, WALL_SCALE = 0.022F;
     /** The head mesh: about 45 units long and 44 tall, centred in x and z, standing on y = 0, facing +Z. */
     private static final float HEAD_HALF_LENGTH = 22.5F, HEAD_HALF_HEIGHT = 22.0F;
     private static final ResourceLocation WOOD = ResourceLocation.withDefaultNamespace("block/dark_oak_planks");
@@ -70,11 +70,10 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
             poseStack.scale(STAND_SCALE, STAND_SCALE, STAND_SCALE);
             drawHead(poseStack, buffer, packedLight, block.stygian);
         } else if (state.getBlock() instanceof ZinogreWallHeadBlock block) {
-            // on a wall: a wooden plaque against the wall, the head sticking out of it
+            // on a wall: a small wooden mount against the wall, the head sticking out of it
             poseStack.mulPose(Axis.YP.rotationDegrees(-state.getValue(ZinogreWallHeadBlock.FACING).toYRot()));
-            box(poseStack, buffer, packedLight, -7, 1, -8, 7, 15, -6);
-            box(poseStack, buffer, packedLight, -6, 2, -6, 6, 14, -5.5F); // a raised panel
-            poseStack.translate(0.0F, 0.5F - HEAD_HALF_HEIGHT * WALL_SCALE, -5.5F / 16.0F + HEAD_HALF_LENGTH * WALL_SCALE);
+            box(poseStack, buffer, packedLight, -4, 4, -8, 4, 12, -7); // a small mount, mostly hidden behind the head
+            poseStack.translate(0.0F, 0.5F - HEAD_HALF_HEIGHT * WALL_SCALE, -7.0F / 16.0F + HEAD_HALF_LENGTH * WALL_SCALE);
             poseStack.scale(WALL_SCALE, WALL_SCALE, WALL_SCALE);
             drawHead(poseStack, buffer, packedLight, block.stygian);
         }
@@ -114,15 +113,16 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
     }
 
     /** Draws the head inside a unit cube (centred, about one block big, facing -Z): for the item and when worn. */
-    static void drawHeadInCube(PoseStack poseStack, MultiBufferSource buffer, int packedLight, boolean stygian) {
+    static boolean drawHeadInCube(PoseStack poseStack, MultiBufferSource buffer, int packedLight, boolean stygian) {
         float scale = 0.95F / (2 * HEAD_HALF_LENGTH);
         poseStack.pushPose();
         poseStack.translate(0.5F, 0.5F, 0.5F);
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F)); // items and worn heads face -Z
         poseStack.scale(scale, scale, scale);
         poseStack.translate(0.0F, -HEAD_HALF_HEIGHT, 0.0F);
-        drawHead(poseStack, buffer, packedLight, stygian);
+        boolean drawn = drawHead(poseStack, buffer, packedLight, stygian);
         poseStack.popPose();
+        return drawn;
     }
 
     /** A dark oak box, in pixels (1/16 block) of the current pose. */
@@ -209,6 +209,6 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
 
     @Override
     public AABB getRenderBoundingBox(ZinogreHeadBlockEntity be) {
-        return new AABB(be.getBlockPos()).inflate(1.0);
+        return new AABB(be.getBlockPos()).inflate(1.5);
     }
 }

@@ -32,6 +32,28 @@ public final class ZinogreClient {
         event.registerItem(head, ZinogreMod.HEAD_ITEM.get(), ZinogreMod.STYGIAN_HEAD_ITEM.get());
     }
 
+    /** Worn heads: a layer on every living entity renderer whose model has a head (players included). */
+    @SubscribeEvent
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static void addLayers(EntityRenderersEvent.AddLayers event) {
+        int added = 0;
+        for (net.minecraft.world.entity.player.PlayerSkin.Model skin : event.getSkins()) {
+            if (event.getSkin(skin) instanceof net.minecraft.client.renderer.entity.LivingEntityRenderer living
+                    && living.getModel() instanceof net.minecraft.client.model.HeadedModel) {
+                living.addLayer(new ZinogreWornHeadLayer(living));
+                added++;
+            }
+        }
+        for (net.minecraft.world.entity.EntityType<?> type : event.getEntityTypes()) {
+            if (event.getRenderer((net.minecraft.world.entity.EntityType) type) instanceof net.minecraft.client.renderer.entity.LivingEntityRenderer living
+                    && living.getModel() instanceof net.minecraft.client.model.HeadedModel) {
+                living.addLayer(new ZinogreWornHeadLayer(living));
+                added++;
+            }
+        }
+        ZinogreMod.LOGGER.info("Zinogre: worn head layer added to {} renderers", added);
+    }
+
     private ZinogreClient() {}
 
     /** Uploads the meshes between frames (not halfway through drawing something else) as soon as a world is open. */
