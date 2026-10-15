@@ -16,4 +16,21 @@ public final class ZinogreClient {
     }
 
     private ZinogreClient() {}
+
+    /** Uploads the meshes between frames (not halfway through drawing something else) as soon as a world is open. */
+    @EventBusSubscriber(modid = ZinogreMod.MOD_ID, value = Dist.CLIENT)
+    public static final class Preload {
+        private static boolean done;
+
+        @SubscribeEvent
+        public static void onClientTick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
+            if (!done && net.minecraft.client.Minecraft.getInstance().level != null) {
+                done = true;
+                ZinogreData.get();
+                ZinogreHeadRenderer.parts();
+            }
+        }
+
+        private Preload() {}
+    }
 }

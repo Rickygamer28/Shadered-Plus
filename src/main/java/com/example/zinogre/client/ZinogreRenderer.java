@@ -6,7 +6,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.noodlegamer76.shadered.client.assimp.McModel;
 import com.noodlegamer76.shadered.client.assimp.load.AssimpModels;
-import com.noodlegamer76.shadered.client.renderer.assimp.AssimpRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -75,7 +74,10 @@ public class ZinogreRenderer extends EntityRenderer<ZinogreEntity> {
         state.model.modelMatrix = new Matrix4f()
                 .translation((float) camera.x, (float) camera.y, (float) camera.z)
                 .mul(pose.last().pose());
-        AssimpRenderer.getInstance().addModel(state.model);
+        IslandCompat.draw(state.model);
+        if (poseStack.last().pose().getScale(new org.joml.Vector3f()).x < 0.5F) { // drawn small: inside a Sky Island
+            Debug.few("island", "Zinogre drawn in an island at {}", state.model.modelMatrix.getTranslation(new org.joml.Vector3f()));
+        }
 
         super.render(entity, entityYaw, partialTick, poseStack, buffer, packedLight); // name tag
     }

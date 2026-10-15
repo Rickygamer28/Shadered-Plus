@@ -10,7 +10,6 @@ import com.noodlegamer76.shadered.client.assimp.AssimpMaterial;
 import com.noodlegamer76.shadered.client.assimp.AssimpModel;
 import com.noodlegamer76.shadered.client.assimp.McModel;
 import com.noodlegamer76.shadered.client.assimp.load.AssimpModels;
-import com.noodlegamer76.shadered.client.renderer.assimp.AssimpRenderer;
 import com.noodlegamer76.shadered.client.renderer.assimp.RenderableModel;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
@@ -59,6 +58,7 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
         McModel textures = AssimpModels.getModel(block.stygian ? ZinogreRenderer.STYGIAN_MODEL : ZinogreRenderer.MODEL);
         List<Part> mesh = parts();
         if (textures == null || mesh == null) {
+            Debug.once("head-missing", "Zinogre head not drawn: textures loaded {}, mesh loaded {}", textures != null, mesh != null);
             return;
         }
         HeadModel head = be.clientState instanceof HeadModel h && h.source() == textures ? h : null;
@@ -86,7 +86,8 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
         pose.scale(SCALE, SCALE, SCALE);
         Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         head.model().modelMatrix = new Matrix4f().translation((float) camera.x, (float) camera.y, (float) camera.z).mul(pose.last().pose());
-        AssimpRenderer.getInstance().addModel(head.model());
+        IslandCompat.draw(head.model());
+        Debug.few("head", "Zinogre head drawn at {} with {} parts", head.model().modelMatrix.getTranslation(new org.joml.Vector3f()), head.model().getModel().size());
     }
 
     @Nullable
@@ -116,7 +117,7 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
     }
 
     @Nullable
-    private static List<Part> parts() {
+    static List<Part> parts() {
         if (parts == null && !failed) {
             try {
                 ByteBuffer b = ZinogreData.readResource(FILE);
@@ -149,5 +150,10 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
     @Override
     public int getViewDistance() {
         return 96;
+    }
+
+    @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox(ZinogreHeadBlockEntity be) {
+        return new net.minecraft.world.phys.AABB(be.getBlockPos()).inflate(0.5);
     }
 }

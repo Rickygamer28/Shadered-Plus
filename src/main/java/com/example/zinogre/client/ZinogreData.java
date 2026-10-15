@@ -2,8 +2,8 @@ package com.example.zinogre.client;
 
 import com.example.zinogre.ZinogreMod;
 import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
-import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexBuffer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormatElement;
@@ -159,7 +159,9 @@ final class ZinogreData {
     static VertexBuffer upload(float[] pos, float[] uv, float[] normal, float[] shade, @Nullable int[] joints,
                                @Nullable float[] weights, int[] indices) {
         setupFormat();
-        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.TRIANGLES, format);
+        // our own buffer: the shared Tesselator may be in use by whatever is being drawn when this runs
+        ByteBufferBuilder bytes = new ByteBufferBuilder(indices.length * format.getVertexSize() + 1024);
+        BufferBuilder builder = new BufferBuilder(bytes, VertexFormat.Mode.TRIANGLES, format);
         for (int v : indices) {
             float s = shade[v];
             builder.addVertex(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2])
@@ -175,11 +177,17 @@ final class ZinogreData {
                 put(builder, boneWeights, 0, 0, 0, 0); // no weights: the shader leaves it as it is
             }
         }
-        MeshData mesh = builder.build();
         VertexBuffer buffer = new VertexBuffer(VertexBuffer.Usage.STATIC);
-        buffer.bind();
-        buffer.upload(mesh);
-        VertexBuffer.unbind();
+        try {
+            MeshData mesh = builder.build();
+            buffer.bind();
+            if (mesh != null) {
+                buffer.upload(mesh);
+            }
+            VertexBuffer.unbind();
+        } finally {
+            bytes.close();
+        }
         return buffer;
     }
 
