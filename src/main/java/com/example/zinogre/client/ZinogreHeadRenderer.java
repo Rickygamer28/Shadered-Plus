@@ -70,10 +70,10 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
             }
         }
         // light where it stands (Shadered's model shader has no world lighting)
-        float block = LightTexture.block(packedLight) / 15.0F;
-        float sky = LightTexture.sky(packedLight) / 15.0F;
+        float blockLight = LightTexture.block(packedLight) / 15.0F;
+        float skyLight = LightTexture.sky(packedLight) / 15.0F;
         float daylight = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getSkyDarken(partialTick) : 1.0F;
-        float v = 0.18F + 0.82F * Math.max(block, sky * daylight);
+        float v = 0.18F + 0.82F * Math.max(blockLight, skyLight * daylight);
         for (AssimpMaterial material : head.materials()) {
             material.setColor(v, v, v, 1.0F);
         }
