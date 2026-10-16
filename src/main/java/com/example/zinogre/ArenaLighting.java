@@ -13,7 +13,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * Lights an arena evenly with hidden light blocks. It works out how the block light spreads through the cavern (from
  * the lanterns, candles and lights already there, the same way the game spreads it: one level less per block, blocked
  * by solid blocks), then adds a light wherever a surface you can see (any air next to a block: floor, walls, roof,
- * stakes, the pen) is still darker than the target, a few blocks out from that surface, until none is.
+ * stakes, the pen) is still darker than the target, two blocks out from that surface, until none is.
  */
 final class ArenaLighting {
     /** The space around the core that's looked at: the whole cavern with its pen and tunnels. */
@@ -136,7 +136,7 @@ final class ArenaLighting {
         return false;
     }
 
-    /** Where to put the light for a dark surface: up to three blocks out from it into the open, so it's an even glow. */
+    /** Where to put the light for a dark surface: up to two blocks out from it into the open, so it's an even glow. */
     private static int awayFromSurface(byte[] cost, boolean[] air, boolean[] cavern, int x, int y, int z) {
         int bx = 0, by = 0, bz = 0;
         for (int[] d : DIRS) {
@@ -151,7 +151,7 @@ final class ArenaLighting {
                 : Math.abs(bx) >= Math.abs(bz) && bx != 0 ? new int[] {Integer.signum(bx), 0, 0}
                 : bz != 0 ? new int[] {0, 0, Integer.signum(bz)} : new int[] {0, 0, 0};
         int best = index(x, y, z);
-        for (int k = 1; k <= 3; k++) {
+        for (int k = 1; k <= 2; k++) {
             int nx = x + step[0] * k, ny = y + step[1] * k, nz = z + step[2] * k;
             if (nx < 0 || ny < 0 || nz < 0 || nx >= SX || ny >= SY || nz >= SZ) break;
             int j = index(nx, ny, nz);

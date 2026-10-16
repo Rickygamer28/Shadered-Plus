@@ -11,6 +11,9 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -26,7 +29,7 @@ public class ZinogreArenaCoreBlockEntity extends BlockEntity {
     /** How far from the middle the boss's pen is. */
     private static final int PEN_DISTANCE = 28;
     /** Bumped when the lighting gets better, so arenas lit by an older version are lit again. */
-    private static final int LIGHTING_VERSION = 2;
+    private static final int LIGHTING_VERSION = 3;
 
     private boolean bossOut;
     private int litVersion;
@@ -80,16 +83,43 @@ public class ZinogreArenaCoreBlockEntity extends BlockEntity {
         if (level.getGameTime() % 20 != Math.floorMod(pos.asLong(), 20) || !ArenaLighting.loaded(level, pos)) {
             return;
         }
+        if (litVersion < 3) {
+            removeChainNet(level, pos, state);
+        }
         litVersion = LIGHTING_VERSION;
         setChanged();
         boolean stygian = state.getBlock() instanceof ZinogreArenaCoreBlock core && core.stygian;
-        int[] result = ArenaLighting.light(level, pos, stygian ? 10 : 12);
+        int[] result = ArenaLighting.light(level, pos, stygian ? 9 : 11);
         int r = ArenaLighting.RADIUS;
         AABB cavern = new AABB(pos).inflate(r, 0, r).expandTowards(0, ArenaLighting.ABOVE, 0).expandTowards(0, -ArenaLighting.BELOW, 0);
         for (Monster monster : level.getEntitiesOfClass(Monster.class, cavern, m -> !m.isPersistenceRequired() && !m.hasCustomName())) {
             monster.discard();
         }
         ZinogreMod.LOGGER.info("Lit the arena at {}: {} lights added, darkest surface now {}", pos, result[0], result[1]);
+    }
+
+    /**
+     * The first arenas had a ring of short chains around the hanging boulder that didn't hang from anything: takes
+     * them out (where they are depends on which way the arena was turned, which the core's facing tells).
+     */
+    private static void removeChainNet(ServerLevel level, BlockPos pos, BlockState state) {
+        Direction facing = state.getValue(ZinogreArenaCoreBlock.FACING);
+        Rotation rotation = Rotation.NONE;
+        for (Rotation r : Rotation.values()) {
+            if (r.rotate(Direction.NORTH) == facing) {
+                rotation = r;
+            }
+        }
+        // in the arena template: the core at (35, 4, 35), the boulder's middle at (42.5, 25, 39.5)
+        for (int k = 0; k < 360; k += 30) {
+            int x = (int) (42.5 + Math.cos(Math.toRadians(k)) * 4.6), z = (int) (39.5 + Math.sin(Math.toRadians(k)) * 4.6);
+            for (int y = 23; y <= 27; y++) {
+                BlockPos at = pos.offset(new BlockPos(x - 35, y - 4, z - 35).rotate(rotation));
+                if (level.getBlockState(at).is(Blocks.CHAIN)) {
+                    level.setBlock(at, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+                }
+            }
+        }
     }
 
     @Override
