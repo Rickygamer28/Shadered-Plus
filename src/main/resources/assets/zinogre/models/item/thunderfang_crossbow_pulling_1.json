@@ -1,0 +1,6 @@
+{
+  "parent": "zinogre:item/thunderfang_crossbow",
+  "textures": {
+    "layer0": "zinogre:item/thunderfang_crossbow_pulling_1"
+  }
+}

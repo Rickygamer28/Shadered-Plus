@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:smithing_transform",
+  "template": {
+    "item": "zinogre:stormhide_upgrade_smithing_template"
+  },
+  "base": {
+    "item": "minecraft:bow"
+  },
+  "addition": {
+    "item": "zinogre:zinogre_tail"
+  },
+  "result": {
+    "id": "zinogre:thunderfang_bow",
+    "count": 1
+  }
+}

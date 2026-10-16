@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:smithing_transform",
+  "template": {
+    "item": "zinogre:stormhide_upgrade_smithing_template"
+  },
+  "base": {
+    "item": "minecraft:crossbow"
+  },
+  "addition": {
+    "item": "zinogre:zinogre_claw"
+  },
+  "result": {
+    "id": "zinogre:thunderfang_crossbow",
+    "count": 1
+  }
+}

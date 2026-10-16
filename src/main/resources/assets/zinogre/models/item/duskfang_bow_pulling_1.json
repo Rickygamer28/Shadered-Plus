@@ -1,0 +1,6 @@
+{
+  "parent": "zinogre:item/duskfang_bow",
+  "textures": {
+    "layer0": "zinogre:item/duskfang_bow_pulling_1"
+  }
+}

@@ -116,7 +116,8 @@ public final class ZinogreItems {
                 Component.translatable("item.zinogre." + key + ".base"),
                 Component.translatable("item.zinogre." + key + ".additions"),
                 List.of(ResourceLocation.withDefaultNamespace("item/empty_armor_slot_helmet"), ResourceLocation.withDefaultNamespace("item/empty_armor_slot_chestplate"),
-                        ResourceLocation.withDefaultNamespace("item/empty_armor_slot_leggings"), ResourceLocation.withDefaultNamespace("item/empty_armor_slot_boots")),
+                        ResourceLocation.withDefaultNamespace("item/empty_armor_slot_leggings"), ResourceLocation.withDefaultNamespace("item/empty_armor_slot_boots"),
+                        ResourceLocation.withDefaultNamespace("item/empty_slot_sword")),
                 List.of(ResourceLocation.withDefaultNamespace("item/empty_slot_ingot"))));
     }
 

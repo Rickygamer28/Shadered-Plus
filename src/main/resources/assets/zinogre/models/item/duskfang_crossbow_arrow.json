@@ -1,0 +1,6 @@
+{
+  "parent": "zinogre:item/duskfang_crossbow",
+  "textures": {
+    "layer0": "zinogre:item/duskfang_crossbow_arrow"
+  }
+}

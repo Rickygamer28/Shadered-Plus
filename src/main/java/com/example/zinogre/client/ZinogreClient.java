@@ -63,6 +63,38 @@ public final class ZinogreClient {
                 com.example.zinogre.ZinogreItems.DUSK_LEGGINGS.get(), com.example.zinogre.ZinogreItems.DUSK_BOOTS.get());
     }
 
+    /** The Zinogre bows bend as they're drawn, like the vanilla bow. */
+    @SubscribeEvent
+    public static void clientSetup(net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) {
+        event.enqueueWork(() -> {
+            for (net.minecraft.world.item.Item bow : new net.minecraft.world.item.Item[] {
+                    com.example.zinogre.ZinogreWeapons.THUNDERFANG_BOW.get(), com.example.zinogre.ZinogreWeapons.DUSKFANG_BOW.get()}) {
+                net.minecraft.client.renderer.item.ItemProperties.register(bow, net.minecraft.resources.ResourceLocation.withDefaultNamespace("pull"),
+                        (stack, level, entity, seed) -> entity == null || entity.getUseItem() != stack ? 0.0F
+                                : (stack.getUseDuration(entity) - entity.getUseItemRemainingTicks()) / 20.0F);
+                net.minecraft.client.renderer.item.ItemProperties.register(bow, net.minecraft.resources.ResourceLocation.withDefaultNamespace("pulling"),
+                        (stack, level, entity, seed) -> entity != null && entity.isUsingItem() && entity.getUseItem() == stack ? 1.0F : 0.0F);
+            }
+            for (net.minecraft.world.item.Item crossbow : new net.minecraft.world.item.Item[] {
+                    com.example.zinogre.ZinogreWeapons.THUNDERFANG_CROSSBOW.get(), com.example.zinogre.ZinogreWeapons.DUSKFANG_CROSSBOW.get()}) {
+                net.minecraft.client.renderer.item.ItemProperties.register(crossbow, net.minecraft.resources.ResourceLocation.withDefaultNamespace("pull"),
+                        (stack, level, entity, seed) -> entity == null || net.minecraft.world.item.CrossbowItem.isCharged(stack) ? 0.0F
+                                : (float) (stack.getUseDuration(entity) - entity.getUseItemRemainingTicks())
+                                / net.minecraft.world.item.CrossbowItem.getChargeDuration(stack, entity));
+                net.minecraft.client.renderer.item.ItemProperties.register(crossbow, net.minecraft.resources.ResourceLocation.withDefaultNamespace("pulling"),
+                        (stack, level, entity, seed) -> entity != null && entity.isUsingItem() && entity.getUseItem() == stack
+                                && !net.minecraft.world.item.CrossbowItem.isCharged(stack) ? 1.0F : 0.0F);
+                net.minecraft.client.renderer.item.ItemProperties.register(crossbow, net.minecraft.resources.ResourceLocation.withDefaultNamespace("charged"),
+                        (stack, level, entity, seed) -> net.minecraft.world.item.CrossbowItem.isCharged(stack) ? 1.0F : 0.0F);
+                net.minecraft.client.renderer.item.ItemProperties.register(crossbow, net.minecraft.resources.ResourceLocation.withDefaultNamespace("firework"),
+                        (stack, level, entity, seed) -> {
+                            net.minecraft.world.item.component.ChargedProjectiles loaded = stack.get(net.minecraft.core.component.DataComponents.CHARGED_PROJECTILES);
+                            return loaded != null && loaded.contains(net.minecraft.world.item.Items.FIREWORK_ROCKET) ? 1.0F : 0.0F;
+                        });
+            }
+        });
+    }
+
     @SubscribeEvent
     public static void layerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
         event.registerLayerDefinition(ZinogreArmorModels.STORMHIDE_OUTER, ZinogreArmorModels::createStormhideOuter);

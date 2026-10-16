@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "zinogre:item/thunderfang_longsword"
+  }
+}

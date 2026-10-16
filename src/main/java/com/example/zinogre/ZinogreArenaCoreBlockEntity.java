@@ -33,6 +33,8 @@ public class ZinogreArenaCoreBlockEntity extends BlockEntity {
 
     private boolean bossOut;
     private int litVersion;
+    /** Whether the hunters' camp and the stairway down have been built (see ArenaCamp). */
+    private boolean campBuilt;
 
     public ZinogreArenaCoreBlockEntity(BlockPos pos, BlockState state) {
         super(ZinogreMod.ARENA_CORE_BLOCK_ENTITY.get(), pos, state);
@@ -44,6 +46,14 @@ public class ZinogreArenaCoreBlockEntity extends BlockEntity {
         }
         if (litVersion < LIGHTING_VERSION) {
             light(server, pos, state);
+        }
+        if (!campBuilt && litVersion >= LIGHTING_VERSION && level.getGameTime() % 20 == Math.floorMod(pos.asLong() + 10, 20)) {
+            boolean stygianCore = state.getBlock() instanceof ZinogreArenaCoreBlock core && core.stygian;
+            if (ArenaCamp.build(server, pos, state.getValue(ZinogreArenaCoreBlock.FACING), stygianCore)) {
+                campBuilt = true;
+                setChanged();
+                ZinogreMod.LOGGER.info("Built the hunters' camp over the arena at {}", pos);
+            }
         }
         if (bossOut || level.getGameTime() % 20 != Math.floorMod(pos.asLong(), 20)) {
             return;
@@ -127,6 +137,7 @@ public class ZinogreArenaCoreBlockEntity extends BlockEntity {
         super.saveAdditional(tag, registries);
         tag.putBoolean("BossOut", bossOut);
         tag.putInt("LitVersion", litVersion);
+        tag.putBoolean("CampBuilt", campBuilt);
     }
 
     @Override
@@ -134,5 +145,6 @@ public class ZinogreArenaCoreBlockEntity extends BlockEntity {
         super.loadAdditional(tag, registries);
         bossOut = tag.getBoolean("BossOut");
         litVersion = tag.getInt("LitVersion");
+        campBuilt = tag.getBoolean("CampBuilt");
     }
 }
