@@ -11,11 +11,17 @@ jobs:
         with: {distribution: temurin, java-version: 21}
       - uses: gradle/actions/setup-gradle@v4
         with: {gradle-version: 8.10.2}
-      - run: gradle createMinecraftArtifacts --no-daemon || gradle compileJava --no-daemon
-      - run: |
-          J=$(find build ~/.gradle -name "*sources*.jar" | grep -i -E "neoforge|minecraft" | head -1); echo "$J"
-          mkdir src_out && cd src_out && unzip -q "$J" 'net/minecraft/client/renderer/ItemInHandRenderer.java' 'net/minecraft/client/renderer/entity/layers/ItemInHandLayer.java' 'net/minecraft/client/renderer/entity/player/PlayerRenderer.java' 'net/minecraft/client/model/HumanoidModel.java' 'net/minecraft/client/model/AnimationUtils.java' 'net/minecraft/client/renderer/block/model/ItemTransform.java' 'net/minecraft/client/renderer/entity/ItemRenderer.java' 'net/minecraft/client/renderer/entity/LivingEntityRenderer.java' 'net/minecraft/client/model/geom/ModelPart.java' 'net/minecraft/client/model/PlayerModel.java' 'net/minecraft/client/renderer/GameRenderer.java' 'net/minecraft/client/Camera.java'
-      - run: |
-          mkdir -p src_out/assets; for J in $(find build ~/.gradle -name "*.jar" | grep -iE "client-extra|minecraft.*client|neoforge.*(merged|client)" ); do echo $J; unzip -q -o "$J" 'assets/minecraft/textures/item/bow*.png' 'assets/minecraft/textures/item/crossbow*.png' 'assets/minecraft/textures/item/diamond_sword.png' 'assets/minecraft/models/item/bow*.json' 'assets/minecraft/models/item/crossbow*.json' 'assets/minecraft/models/item/handheld.json' 'assets/minecraft/models/item/generated.json' 'assets/minecraft/models/item/diamond_sword.json' -d src_out/ 2>/dev/null; done; find src_out -type f | head -50
-      - uses: actions/upload-artifact@v4
+      - run: gradle createMinecraftArtifacts --no-daemon || gradle compileJava --no-daemon || true
+      - if: always()
+        run: |
+          set +e
+          mkdir -p src_out
+          find build ~/.gradle . -name "*.jar" > src_out/jars.txt 2>/dev/null
+          for J in $(grep -iE "sources|client|neoforge|minecraft" src_out/jars.txt); do
+            unzip -l "$J" 2>/dev/null | grep -qE "ItemInHandRenderer.java|textures/item/crossbow_standby.png" && echo "$J" >> src_out/used.txt && unzip -q -o "$J" 'net/minecraft/client/renderer/ItemInHandRenderer.java' 'net/minecraft/client/renderer/entity/layers/ItemInHandLayer.java' 'net/minecraft/client/renderer/entity/player/PlayerRenderer.java' 'net/minecraft/client/model/HumanoidModel.java' 'net/minecraft/client/model/AnimationUtils.java' 'net/minecraft/client/renderer/block/model/ItemTransform.java' 'net/minecraft/client/renderer/entity/ItemRenderer.java' 'net/minecraft/client/renderer/entity/LivingEntityRenderer.java' 'net/minecraft/client/model/geom/ModelPart.java' 'net/minecraft/client/model/PlayerModel.java' 'net/minecraft/client/renderer/GameRenderer.java' 'net/neoforged/neoforge/client/extensions/common/IClientItemExtensions.java' 'assets/minecraft/textures/item/bow*.png' 'assets/minecraft/textures/item/crossbow*.png' 'assets/minecraft/textures/item/diamond_sword.png' 'assets/minecraft/models/item/bow*.json' 'assets/minecraft/models/item/crossbow*.json' 'assets/minecraft/models/item/handheld.json' 'assets/minecraft/models/item/generated.json' -d src_out/
+          done
+          find src_out -type f > src_out/files.txt
+          exit 0
+      - if: always()
+        uses: actions/upload-artifact@v4
         with: {name: mcsrc, path: src_out}
