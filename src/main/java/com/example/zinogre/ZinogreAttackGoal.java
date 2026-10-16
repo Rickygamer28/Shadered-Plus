@@ -19,6 +19,10 @@ class ZinogreAttackGoal extends Goal {
     private final ZinogreEntity mob;
     private int cooldown;
     private int repath;
+    /** Alpha: above 0 walks straight at the target; below 0 counts up the ticks it uses a path after getting stuck. */
+    private int direct = 1;
+    @org.jetbrains.annotations.Nullable
+    private net.minecraft.world.phys.Vec3 lastPos;
 
     ZinogreAttackGoal(ZinogreEntity mob) {
         this.mob = mob;
@@ -118,6 +122,23 @@ class ZinogreAttackGoal extends Goal {
             face(target, 180.0F);
             mob.startMove(ZinogreEntity.MOVE_LEAP, target);
             return;
+        }
+        // an Alpha walks straight at a target it can see (paths are made of steps far too small for it to follow
+        // smoothly), unless it's got stuck that way; then it finds a path for a while
+        if (mob.isAlpha() && !inReach && direct > 0 && mob.hasLineOfSight(target) && Math.abs(target.getY() - mob.getY()) < 4.0) {
+            mob.getNavigation().stop();
+            mob.getMoveControl().setWantedPosition(target.getX(), target.getY(), target.getZ(), CHASE_SPEED);
+            if (mob.tickCount % 20 == 0) {
+                boolean stuck = lastPos != null && mob.position().distanceToSqr(lastPos) < 0.5 * 0.5;
+                lastPos = mob.position();
+                if (stuck) {
+                    direct = -60; // pathfinding for the next 3 seconds
+                }
+            }
+            return;
+        }
+        if (direct <= 0 && ++direct == 0) {
+            direct = 1;
         }
         if (--repath <= 0 || mob.getNavigation().isDone()) {
             repath = 8 + mob.getRandom().nextInt(6);

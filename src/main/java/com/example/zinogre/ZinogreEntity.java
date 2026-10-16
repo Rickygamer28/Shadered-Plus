@@ -167,6 +167,7 @@ public class ZinogreEntity extends TamableAnimal {
 
     public ZinogreEntity(EntityType<? extends TamableAnimal> type, Level level) {
         super(type, level);
+        this.moveControl = new ZinogreMoveControl(this);
         this.xpReward = type == ZinogreMod.ALPHA_ZINOGRE.get() || type == ZinogreMod.ALPHA_STYGIAN_ZINOGRE.get() ? 500 : 40;
     }
 
