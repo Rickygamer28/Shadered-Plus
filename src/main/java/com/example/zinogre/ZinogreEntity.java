@@ -550,13 +550,13 @@ public class ZinogreEntity extends TamableAnimal {
     }
 
     /**
-     * A pet Zinogre is a strong companion, not a walking boss: half the wild one's health, attack and armor (Zinogre
-     * 100 health / 7 attack, Stygian 130 / 9; an iron golem has 100 health and hits for 7-21).
+     * A pet Zinogre is a strong companion, not a walking boss: half the wild one's health and armor and 65% of its attack
+     * (Zinogre 100 health / 9.1 attack, Stygian 130 / 11.7; an iron golem has 100 health and hits for 7-21).
      */
     private void petBalance() {
         double k = isTame() ? -0.5 : 0.0;
         petModifier(Attributes.MAX_HEALTH, PET_HEALTH, k);
-        petModifier(Attributes.ATTACK_DAMAGE, PET_DAMAGE, k);
+        petModifier(Attributes.ATTACK_DAMAGE, PET_DAMAGE, isTame() ? -0.35 : 0.0);
         petModifier(Attributes.ARMOR, PET_ARMOR, k);
         if (getHealth() > getMaxHealth()) {
             setHealth(getMaxHealth());
