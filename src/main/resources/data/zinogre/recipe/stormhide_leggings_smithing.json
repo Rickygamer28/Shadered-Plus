@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:smithing_transform",
+  "template": {
+    "item": "zinogre:stormhide_upgrade_smithing_template"
+  },
+  "base": {
+    "item": "minecraft:netherite_leggings"
+  },
+  "addition": {
+    "item": "zinogre:zinogre_shell"
+  },
+  "result": {
+    "id": "zinogre:stormhide_leggings",
+    "count": 1
+  }
+}

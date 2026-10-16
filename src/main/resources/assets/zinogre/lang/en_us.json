@@ -51,5 +51,11 @@
   "item.zinogre.stormhide.set": "Full set:",
   "item.zinogre.stormhide.set.shock": " Sometimes shocks whatever hits you",
   "item.zinogre.stormhide.set.lightning": " Lightning charges you up instead of hurting",
-  "item.zinogre.stormhide.set.storm": " Faster out in a thunderstorm"
+  "item.zinogre.stormhide.set.storm": " Faster out in a thunderstorm",
+  "item.zinogre.stormhide_upgrade_smithing_template": "Smithing Template",
+  "item.zinogre.stormhide_upgrade.title": "Stormhide Upgrade",
+  "item.zinogre.stormhide_upgrade.applies_to": "Netherite Equipment",
+  "item.zinogre.stormhide_upgrade.ingredients": "Zinogre Materials",
+  "item.zinogre.stormhide_upgrade.base": "Add netherite armor",
+  "item.zinogre.stormhide_upgrade.additions": "Add a Zinogre material (horn, tail, shell or claw)"
 }

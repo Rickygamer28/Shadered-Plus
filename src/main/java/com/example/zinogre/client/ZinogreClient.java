@@ -32,6 +32,38 @@ public final class ZinogreClient {
             }
         };
         event.registerItem(head, ZinogreMod.HEAD_ITEM.get(), ZinogreMod.STYGIAN_HEAD_ITEM.get());
+        // the Stormhide armor is worn as its 3D model (see StormhideArmorModel)
+        net.neoforged.neoforge.client.extensions.common.IClientItemExtensions stormhide = new net.neoforged.neoforge.client.extensions.common.IClientItemExtensions() {
+            @Override
+            public net.minecraft.client.model.HumanoidModel<?> getHumanoidArmorModel(net.minecraft.world.entity.LivingEntity entity,
+                    net.minecraft.world.item.ItemStack stack, net.minecraft.world.entity.EquipmentSlot slot, net.minecraft.client.model.HumanoidModel<?> original) {
+                return StormhideModels.get(slot == net.minecraft.world.entity.EquipmentSlot.LEGS);
+            }
+        };
+        event.registerItem(stormhide, com.example.zinogre.ZinogreItems.HELMET.get(), com.example.zinogre.ZinogreItems.CHESTPLATE.get(),
+                com.example.zinogre.ZinogreItems.LEGGINGS.get(), com.example.zinogre.ZinogreItems.BOOTS.get());
+    }
+
+    @SubscribeEvent
+    public static void layerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
+        event.registerLayerDefinition(StormhideArmorModel.OUTER, StormhideArmorModel::createOuter);
+        event.registerLayerDefinition(StormhideArmorModel.INNER, StormhideArmorModel::createInner);
+    }
+
+    /** The baked Stormhide armor models (baked when first worn, again after a resource reload). */
+    static final class StormhideModels {
+        private static net.minecraft.client.model.HumanoidModel<net.minecraft.world.entity.LivingEntity> outer, inner;
+        private static Object bakedFrom;
+
+        static net.minecraft.client.model.HumanoidModel<?> get(boolean leggings) {
+            net.minecraft.client.model.geom.EntityModelSet set = net.minecraft.client.Minecraft.getInstance().getEntityModels();
+            if (bakedFrom != set || outer == null) {
+                outer = new net.minecraft.client.model.HumanoidModel<>(set.bakeLayer(StormhideArmorModel.OUTER));
+                inner = new net.minecraft.client.model.HumanoidModel<>(set.bakeLayer(StormhideArmorModel.INNER));
+                bakedFrom = set;
+            }
+            return leggings ? inner : outer;
+        }
     }
 
     /** Worn heads: a layer on every living entity renderer whose model has a head (players included). */

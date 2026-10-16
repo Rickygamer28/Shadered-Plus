@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "DTD",
+    "DSD",
+    "DDD"
+  ],
+  "key": {
+    "D": {
+      "item": "minecraft:diamond"
+    },
+    "T": {
+      "item": "zinogre:stormhide_upgrade_smithing_template"
+    },
+    "S": {
+      "item": "zinogre:zinogre_shell"
+    }
+  },
+  "result": {
+    "id": "zinogre:stormhide_upgrade_smithing_template",
+    "count": 2
+  }
+}

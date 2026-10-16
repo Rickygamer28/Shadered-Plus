@@ -33,8 +33,9 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 /**
  * Zinogre materials (dropped when its parts break and when it dies) and the Stormhide armor made from them.
  *
- * Stormhide (an original design: gunmetal plates over indigo cloth, fur trim, electric-blue lines) is a little
- * tougher than diamond. Wearing the whole set: whatever hits you is sometimes shocked back, lightning doesn't hurt you
+ * Stormhide (an original design: gunmetal plates over indigo cloth, fur trim, electric-blue lines, worn in 3D) is the
+ * step after netherite: netherite armor upgraded in a smithing table (see UPGRADE_TEMPLATE), tougher still and also
+ * fireproof. Wearing the whole set: whatever hits you is sometimes shocked back, lightning doesn't hurt you
  * but charges you up (Speed II and Strength I for 30 s), and you're quicker out in a thunderstorm.
  */
 @EventBusSubscriber(modid = ZinogreMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
@@ -57,13 +58,13 @@ public final class ZinogreItems {
     // ---- armor
     public static final DeferredHolder<ArmorMaterial, ArmorMaterial> STORMHIDE = ARMOR_MATERIALS.register("stormhide", () -> {
         EnumMap<ArmorItem.Type, Integer> defense = new EnumMap<>(ArmorItem.Type.class);
-        defense.put(ArmorItem.Type.HELMET, 3);
-        defense.put(ArmorItem.Type.CHESTPLATE, 8);
-        defense.put(ArmorItem.Type.LEGGINGS, 6);
-        defense.put(ArmorItem.Type.BOOTS, 3);
-        defense.put(ArmorItem.Type.BODY, 11);
-        return new ArmorMaterial(defense, 15, SoundEvents.ARMOR_EQUIP_NETHERITE, () -> Ingredient.of(SHELL.get()),
-                List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "stormhide"))), 2.5F, 0.05F);
+        defense.put(ArmorItem.Type.HELMET, 4);       // netherite: 3 8 6 3, toughness 3, knockback resistance 0.1
+        defense.put(ArmorItem.Type.CHESTPLATE, 9);
+        defense.put(ArmorItem.Type.LEGGINGS, 7);
+        defense.put(ArmorItem.Type.BOOTS, 4);
+        defense.put(ArmorItem.Type.BODY, 13);
+        return new ArmorMaterial(defense, 18, SoundEvents.ARMOR_EQUIP_NETHERITE, () -> Ingredient.of(SHELL.get()),
+                List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "stormhide"))), 3.5F, 0.12F);
     });
     public static final DeferredItem<ArmorItem> HELMET = armor("stormhide_helmet", ArmorItem.Type.HELMET);
     public static final DeferredItem<ArmorItem> CHESTPLATE = armor("stormhide_chestplate", ArmorItem.Type.CHESTPLATE);
@@ -71,12 +72,26 @@ public final class ZinogreItems {
     public static final DeferredItem<ArmorItem> BOOTS = armor("stormhide_boots", ArmorItem.Type.BOOTS);
 
     private static DeferredItem<ArmorItem> armor(String name, ArmorItem.Type type) {
-        return ITEMS.register(name, () -> new StormhideArmor(type, new Item.Properties().rarity(Rarity.RARE).durability(type.getDurability(35))));
+        return ITEMS.register(name, () -> new StormhideArmor(type, new Item.Properties().rarity(Rarity.EPIC).fireResistant().durability(type.getDurability(42))));
     }
+
+    /**
+     * Netherite armor becomes Stormhide in a smithing table with this template and a material (helmet: Thunder Horn,
+     * chestplate: Zinogre Tail, leggings: Zinogre Shell, boots: Zinogre Claw). Crafted from Zinogre materials.
+     */
+    public static final DeferredItem<Item> UPGRADE_TEMPLATE = ITEMS.register("stormhide_upgrade_smithing_template", () -> new net.minecraft.world.item.SmithingTemplateItem(
+            Component.translatable("item.zinogre.stormhide_upgrade.applies_to").withStyle(ChatFormatting.BLUE),
+            Component.translatable("item.zinogre.stormhide_upgrade.ingredients").withStyle(ChatFormatting.BLUE),
+            Component.translatable("item.zinogre.stormhide_upgrade.title").withStyle(ChatFormatting.GRAY),
+            Component.translatable("item.zinogre.stormhide_upgrade.base"),
+            Component.translatable("item.zinogre.stormhide_upgrade.additions"),
+            List.of(ResourceLocation.withDefaultNamespace("item/empty_armor_slot_helmet"), ResourceLocation.withDefaultNamespace("item/empty_armor_slot_chestplate"),
+                    ResourceLocation.withDefaultNamespace("item/empty_armor_slot_leggings"), ResourceLocation.withDefaultNamespace("item/empty_armor_slot_boots")),
+            List.of(ResourceLocation.withDefaultNamespace("item/empty_slot_ingot"))));
 
     /** All the Zinogre materials and the armor, for the creative tab. */
     static List<DeferredItem<? extends Item>> all() {
-        return List.of(THUNDER_HORN, CLAW, SHELL, TAIL, FUR, HELMET, CHESTPLATE, LEGGINGS, BOOTS);
+        return List.of(THUNDER_HORN, CLAW, SHELL, TAIL, FUR, UPGRADE_TEMPLATE, HELMET, CHESTPLATE, LEGGINGS, BOOTS);
     }
 
     /** Called from the mod's constructor so the registers exist before registration starts. */

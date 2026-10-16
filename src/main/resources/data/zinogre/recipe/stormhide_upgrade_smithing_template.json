@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "FSF",
+    "SDS",
+    "FSF"
+  ],
+  "key": {
+    "F": {
+      "item": "zinogre:electro_fur"
+    },
+    "S": {
+      "item": "zinogre:zinogre_shell"
+    },
+    "D": {
+      "item": "minecraft:diamond"
+    }
+  },
+  "result": {
+    "id": "zinogre:stormhide_upgrade_smithing_template",
+    "count": 1
+  }
+}
