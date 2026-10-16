@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "DTD",
+    "DSD",
+    "DDD"
+  ],
+  "key": {
+    "D": {
+      "item": "minecraft:diamond"
+    },
+    "T": {
+      "item": "zinogre:duskhide_upgrade_smithing_template"
+    },
+    "S": {
+      "item": "zinogre:stygian_shell"
+    }
+  },
+  "result": {
+    "id": "zinogre:duskhide_upgrade_smithing_template",
+    "count": 2
+  }
+}

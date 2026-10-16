@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:smithing_transform",
+  "template": {
+    "item": "zinogre:duskhide_upgrade_smithing_template"
+  },
+  "base": {
+    "item": "zinogre:stormhide_boots"
+  },
+  "addition": {
+    "item": "zinogre:stygian_claw"
+  },
+  "result": {
+    "id": "zinogre:duskhide_boots",
+    "count": 1
+  }
+}

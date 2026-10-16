@@ -37,32 +37,39 @@ public final class ZinogreClient {
             @Override
             public net.minecraft.client.model.HumanoidModel<?> getHumanoidArmorModel(net.minecraft.world.entity.LivingEntity entity,
                     net.minecraft.world.item.ItemStack stack, net.minecraft.world.entity.EquipmentSlot slot, net.minecraft.client.model.HumanoidModel<?> original) {
-                return StormhideModels.get(slot == net.minecraft.world.entity.EquipmentSlot.LEGS);
+                boolean dusk = stack.getItem() instanceof com.example.zinogre.ZinogreItems.ZinogreArmor armor && armor.dusk;
+                return ArmorModels.get(dusk, slot == net.minecraft.world.entity.EquipmentSlot.LEGS);
             }
         };
         event.registerItem(stormhide, com.example.zinogre.ZinogreItems.HELMET.get(), com.example.zinogre.ZinogreItems.CHESTPLATE.get(),
-                com.example.zinogre.ZinogreItems.LEGGINGS.get(), com.example.zinogre.ZinogreItems.BOOTS.get());
+                com.example.zinogre.ZinogreItems.LEGGINGS.get(), com.example.zinogre.ZinogreItems.BOOTS.get(),
+                com.example.zinogre.ZinogreItems.DUSK_HELMET.get(), com.example.zinogre.ZinogreItems.DUSK_CHESTPLATE.get(),
+                com.example.zinogre.ZinogreItems.DUSK_LEGGINGS.get(), com.example.zinogre.ZinogreItems.DUSK_BOOTS.get());
     }
 
     @SubscribeEvent
     public static void layerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
-        event.registerLayerDefinition(StormhideArmorModel.OUTER, StormhideArmorModel::createOuter);
-        event.registerLayerDefinition(StormhideArmorModel.INNER, StormhideArmorModel::createInner);
+        event.registerLayerDefinition(ZinogreArmorModels.STORMHIDE_OUTER, ZinogreArmorModels::createStormhideOuter);
+        event.registerLayerDefinition(ZinogreArmorModels.STORMHIDE_INNER, ZinogreArmorModels::createStormhideInner);
+        event.registerLayerDefinition(ZinogreArmorModels.DUSKHIDE_OUTER, ZinogreArmorModels::createDuskhideOuter);
+        event.registerLayerDefinition(ZinogreArmorModels.DUSKHIDE_INNER, ZinogreArmorModels::createDuskhideInner);
     }
 
-    /** The baked Stormhide armor models (baked when first worn, again after a resource reload). */
-    static final class StormhideModels {
-        private static net.minecraft.client.model.HumanoidModel<net.minecraft.world.entity.LivingEntity> outer, inner;
+    /** The baked armor models of both sets (baked when first worn, again after a resource reload). */
+    static final class ArmorModels {
+        private static final net.minecraft.client.model.HumanoidModel<?>[] MODELS = new net.minecraft.client.model.HumanoidModel<?>[4];
         private static Object bakedFrom;
 
-        static net.minecraft.client.model.HumanoidModel<?> get(boolean leggings) {
+        static net.minecraft.client.model.HumanoidModel<?> get(boolean dusk, boolean leggings) {
             net.minecraft.client.model.geom.EntityModelSet set = net.minecraft.client.Minecraft.getInstance().getEntityModels();
-            if (bakedFrom != set || outer == null) {
-                outer = new net.minecraft.client.model.HumanoidModel<>(set.bakeLayer(StormhideArmorModel.OUTER));
-                inner = new net.minecraft.client.model.HumanoidModel<>(set.bakeLayer(StormhideArmorModel.INNER));
+            if (bakedFrom != set || MODELS[0] == null) {
+                MODELS[0] = new net.minecraft.client.model.HumanoidModel<>(set.bakeLayer(ZinogreArmorModels.STORMHIDE_OUTER));
+                MODELS[1] = new net.minecraft.client.model.HumanoidModel<>(set.bakeLayer(ZinogreArmorModels.STORMHIDE_INNER));
+                MODELS[2] = new net.minecraft.client.model.HumanoidModel<>(set.bakeLayer(ZinogreArmorModels.DUSKHIDE_OUTER));
+                MODELS[3] = new net.minecraft.client.model.HumanoidModel<>(set.bakeLayer(ZinogreArmorModels.DUSKHIDE_INNER));
                 bakedFrom = set;
             }
-            return leggings ? inner : outer;
+            return MODELS[(dusk ? 2 : 0) + (leggings ? 1 : 0)];
         }
     }
 

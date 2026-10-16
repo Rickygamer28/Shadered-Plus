@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "FSF",
+    "SNS",
+    "FSF"
+  ],
+  "key": {
+    "F": {
+      "item": "zinogre:stygian_fur"
+    },
+    "S": {
+      "item": "zinogre:stygian_shell"
+    },
+    "N": {
+      "item": "minecraft:netherite_ingot"
+    }
+  },
+  "result": {
+    "id": "zinogre:duskhide_upgrade_smithing_template",
+    "count": 1
+  }
+}

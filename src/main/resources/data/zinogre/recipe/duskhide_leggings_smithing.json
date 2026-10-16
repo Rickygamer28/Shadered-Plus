@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:smithing_transform",
+  "template": {
+    "item": "zinogre:duskhide_upgrade_smithing_template"
+  },
+  "base": {
+    "item": "zinogre:stormhide_leggings"
+  },
+  "addition": {
+    "item": "zinogre:stygian_shell"
+  },
+  "result": {
+    "id": "zinogre:duskhide_leggings",
+    "count": 1
+  }
+}

@@ -560,21 +560,18 @@ public class ZinogreEntity extends TamableAnimal {
     }
 
     /**
-     * A broken part drops its material where it broke (twice as much from an Alpha): horn -> Thunder Horn, front legs
-     * -> claws, shoulders -> shell, tail -> the tail. Not from pets (no farming your own).
+     * A broken part drops its material where it broke (twice as much from an Alpha; Stygian ones drop the Stygian
+     * materials): horn -> horn, front legs -> claws, shoulders -> shell, tail -> the tail. Not from pets (no farming
+     * your own).
      */
     private void dropPartMaterial(int group, Vec3 at) {
         if (isTame() || level().isClientSide) {
             return;
         }
         int more = isAlpha() ? 2 : 1;
-        ItemStack drop = switch (group) {
-            case HORN_L, HORN_R -> new ItemStack(ZinogreItems.THUNDER_HORN.get(), more);
-            case ARMS -> new ItemStack(ZinogreItems.CLAW.get(), 2 * more);
-            case SHOULDERS -> new ItemStack(ZinogreItems.SHELL.get(), 2 * more);
-            case TAIL -> new ItemStack(ZinogreItems.TAIL.get(), more);
-            default -> ItemStack.EMPTY;
-        };
+        net.minecraft.world.item.Item material = ZinogreItems.partMaterial(isStygian(), group);
+        ItemStack drop = material == null ? ItemStack.EMPTY
+                : new ItemStack(material, (group == ARMS || group == SHOULDERS ? 2 : 1) * more);
         if (!drop.isEmpty()) {
             net.minecraft.world.entity.item.ItemEntity item = new net.minecraft.world.entity.item.ItemEntity(level(), at.x, at.y, at.z, drop);
             item.setDefaultPickUpDelay();

@@ -6,35 +6,7 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "zinogre:electro_fur",
-          "functions": [
-            {
-              "function": "minecraft:set_count",
-              "count": {
-                "type": "minecraft:uniform",
-                "min": 7,
-                "max": 12
-              }
-            },
-            {
-              "function": "minecraft:enchanted_count_increase",
-              "enchantment": "minecraft:looting",
-              "count": {
-                "type": "minecraft:uniform",
-                "min": 0,
-                "max": 1
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "rolls": 1,
-      "entries": [
-        {
-          "type": "minecraft:item",
-          "name": "zinogre:zinogre_shell",
+          "name": "zinogre:stygian_fur",
           "functions": [
             {
               "function": "minecraft:set_count",
@@ -62,14 +34,14 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "zinogre:zinogre_claw",
+          "name": "zinogre:stygian_shell",
           "functions": [
             {
               "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
-                "min": 3,
-                "max": 5
+                "min": 5,
+                "max": 8
               }
             },
             {
@@ -90,13 +62,41 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "zinogre:thunder_horn",
+          "name": "zinogre:stygian_claw",
           "functions": [
             {
               "function": "minecraft:set_count",
               "count": {
                 "type": "minecraft:uniform",
                 "min": 2,
+                "max": 4
+              }
+            },
+            {
+              "function": "minecraft:enchanted_count_increase",
+              "enchantment": "minecraft:looting",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 0,
+                "max": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "zinogre:stygian_horn",
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 1,
                 "max": 2
               }
             },
@@ -118,7 +118,7 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "zinogre:zinogre_tail",
+          "name": "zinogre:stygian_tail",
           "functions": [
             {
               "function": "minecraft:set_count",

@@ -3,6 +3,7 @@ package com.example.zinogre;
 import java.util.EnumMap;
 import java.util.List;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -20,6 +21,7 @@ import net.minecraft.world.item.ArmorMaterial;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
+import net.minecraft.world.item.SmithingTemplateItem;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -29,21 +31,24 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * Zinogre materials (dropped when its parts break and when it dies) and the Stormhide armor made from them.
+ * Zinogre and Stygian Zinogre materials (dropped when their parts break and when they die) and the two armor sets made
+ * from them (the mod's own 3D designs, coloured like each Zinogre, see client/ZinogreArmorModels):
  *
- * Stormhide (an original design: gunmetal plates over indigo cloth, fur trim, electric-blue lines, worn in 3D) is the
- * step after netherite: netherite armor upgraded in a smithing table (see UPGRADE_TEMPLATE), tougher still and also
- * fireproof. Wearing the whole set: whatever hits you is sometimes shocked back, lightning doesn't hurt you
- * but charges you up (Speed II and Strength I for 30 s), and you're quicker out in a thunderstorm.
+ * Stormhide (Zinogre): netherite armor upgraded in a smithing table with the Stormhide template and a Zinogre material.
+ * Duskhide (Stygian Zinogre): Stormhide upgraded again with the Duskhide template and a Stygian material.
+ *
+ * Wearing a whole set: whatever hits you up close is sometimes shocked back (Duskhide: more often, harder, and it
+ * withers), lightning doesn't hurt you but charges you up, and you're quicker out in a thunderstorm.
  */
 @EventBusSubscriber(modid = ZinogreMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
 public final class ZinogreItems {
     public static final DeferredRegister.Items ITEMS = ZinogreMod.ITEMS;
     public static final DeferredRegister<ArmorMaterial> ARMOR_MATERIALS = DeferredRegister.create(Registries.ARMOR_MATERIAL, ZinogreMod.MOD_ID);
 
-    // ---- materials
+    // ---- Zinogre materials
     /** From a broken horn. */
     public static final DeferredItem<Item> THUNDER_HORN = ITEMS.registerSimpleItem("thunder_horn", new Item.Properties().rarity(Rarity.UNCOMMON));
     /** From broken front legs. */
@@ -55,95 +60,139 @@ public final class ZinogreItems {
     /** When it dies. */
     public static final DeferredItem<Item> FUR = ITEMS.registerSimpleItem("electro_fur", new Item.Properties());
 
-    // ---- armor
-    public static final DeferredHolder<ArmorMaterial, ArmorMaterial> STORMHIDE = ARMOR_MATERIALS.register("stormhide", () -> {
-        EnumMap<ArmorItem.Type, Integer> defense = new EnumMap<>(ArmorItem.Type.class);
-        defense.put(ArmorItem.Type.HELMET, 4);       // netherite: 3 8 6 3, toughness 3, knockback resistance 0.1
-        defense.put(ArmorItem.Type.CHESTPLATE, 9);
-        defense.put(ArmorItem.Type.LEGGINGS, 7);
-        defense.put(ArmorItem.Type.BOOTS, 4);
-        defense.put(ArmorItem.Type.BODY, 13);
-        return new ArmorMaterial(defense, 18, SoundEvents.ARMOR_EQUIP_NETHERITE, () -> Ingredient.of(SHELL.get()),
-                List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "stormhide"))), 3.5F, 0.12F);
-    });
-    public static final DeferredItem<ArmorItem> HELMET = armor("stormhide_helmet", ArmorItem.Type.HELMET);
-    public static final DeferredItem<ArmorItem> CHESTPLATE = armor("stormhide_chestplate", ArmorItem.Type.CHESTPLATE);
-    public static final DeferredItem<ArmorItem> LEGGINGS = armor("stormhide_leggings", ArmorItem.Type.LEGGINGS);
-    public static final DeferredItem<ArmorItem> BOOTS = armor("stormhide_boots", ArmorItem.Type.BOOTS);
+    // ---- Stygian Zinogre materials (the same parts)
+    public static final DeferredItem<Item> STYGIAN_HORN = ITEMS.registerSimpleItem("stygian_horn", new Item.Properties().rarity(Rarity.RARE));
+    public static final DeferredItem<Item> STYGIAN_CLAW = ITEMS.registerSimpleItem("stygian_claw", new Item.Properties().rarity(Rarity.UNCOMMON));
+    public static final DeferredItem<Item> STYGIAN_SHELL = ITEMS.registerSimpleItem("stygian_shell", new Item.Properties().rarity(Rarity.UNCOMMON));
+    public static final DeferredItem<Item> STYGIAN_TAIL = ITEMS.registerSimpleItem("stygian_tail", new Item.Properties().rarity(Rarity.RARE));
+    public static final DeferredItem<Item> STYGIAN_FUR = ITEMS.registerSimpleItem("stygian_fur", new Item.Properties().rarity(Rarity.UNCOMMON));
 
-    private static DeferredItem<ArmorItem> armor(String name, ArmorItem.Type type) {
-        return ITEMS.register(name, () -> new StormhideArmor(type, new Item.Properties().rarity(Rarity.EPIC).fireResistant().durability(type.getDurability(42))));
-    }
+    // ---- armor
+    /** netherite: 3 8 6 3, toughness 3, knockback resistance 0.1 */
+    public static final DeferredHolder<ArmorMaterial, ArmorMaterial> STORMHIDE = material("stormhide", 4, 9, 7, 4, 18, 3.5F, 0.12F, SHELL);
+    public static final DeferredHolder<ArmorMaterial, ArmorMaterial> DUSKHIDE = material("duskhide", 5, 10, 8, 5, 20, 4.5F, 0.15F, STYGIAN_SHELL);
+
+    public static final DeferredItem<ArmorItem> HELMET = armor("stormhide_helmet", STORMHIDE, ArmorItem.Type.HELMET, 42, false);
+    public static final DeferredItem<ArmorItem> CHESTPLATE = armor("stormhide_chestplate", STORMHIDE, ArmorItem.Type.CHESTPLATE, 42, false);
+    public static final DeferredItem<ArmorItem> LEGGINGS = armor("stormhide_leggings", STORMHIDE, ArmorItem.Type.LEGGINGS, 42, false);
+    public static final DeferredItem<ArmorItem> BOOTS = armor("stormhide_boots", STORMHIDE, ArmorItem.Type.BOOTS, 42, false);
+    public static final DeferredItem<ArmorItem> DUSK_HELMET = armor("duskhide_helmet", DUSKHIDE, ArmorItem.Type.HELMET, 50, true);
+    public static final DeferredItem<ArmorItem> DUSK_CHESTPLATE = armor("duskhide_chestplate", DUSKHIDE, ArmorItem.Type.CHESTPLATE, 50, true);
+    public static final DeferredItem<ArmorItem> DUSK_LEGGINGS = armor("duskhide_leggings", DUSKHIDE, ArmorItem.Type.LEGGINGS, 50, true);
+    public static final DeferredItem<ArmorItem> DUSK_BOOTS = armor("duskhide_boots", DUSKHIDE, ArmorItem.Type.BOOTS, 50, true);
 
     /**
-     * Netherite armor becomes Stormhide in a smithing table with this template and a material (helmet: Thunder Horn,
-     * chestplate: Zinogre Tail, leggings: Zinogre Shell, boots: Zinogre Claw). Crafted from Zinogre materials.
+     * Smithing templates: netherite armor + the Stormhide template + a Zinogre material (helmet: Thunder Horn,
+     * chestplate: Zinogre Tail, leggings: Zinogre Shell, boots: Zinogre Claw) = Stormhide; Stormhide + the Duskhide
+     * template + the Stygian material for that piece = Duskhide.
      */
-    public static final DeferredItem<Item> UPGRADE_TEMPLATE = ITEMS.register("stormhide_upgrade_smithing_template", () -> new net.minecraft.world.item.SmithingTemplateItem(
-            Component.translatable("item.zinogre.stormhide_upgrade.applies_to").withStyle(ChatFormatting.BLUE),
-            Component.translatable("item.zinogre.stormhide_upgrade.ingredients").withStyle(ChatFormatting.BLUE),
-            Component.translatable("item.zinogre.stormhide_upgrade.title").withStyle(ChatFormatting.GRAY),
-            Component.translatable("item.zinogre.stormhide_upgrade.base"),
-            Component.translatable("item.zinogre.stormhide_upgrade.additions"),
-            List.of(ResourceLocation.withDefaultNamespace("item/empty_armor_slot_helmet"), ResourceLocation.withDefaultNamespace("item/empty_armor_slot_chestplate"),
-                    ResourceLocation.withDefaultNamespace("item/empty_armor_slot_leggings"), ResourceLocation.withDefaultNamespace("item/empty_armor_slot_boots")),
-            List.of(ResourceLocation.withDefaultNamespace("item/empty_slot_ingot"))));
+    public static final DeferredItem<Item> UPGRADE_TEMPLATE = template("stormhide_upgrade_smithing_template", "stormhide_upgrade");
+    public static final DeferredItem<Item> DUSK_UPGRADE_TEMPLATE = template("duskhide_upgrade_smithing_template", "duskhide_upgrade");
 
-    /** All the Zinogre materials and the armor, for the creative tab. */
+    private static DeferredHolder<ArmorMaterial, ArmorMaterial> material(String name, int helmet, int chest, int legs, int boots,
+            int enchantability, float toughness, float knockback, DeferredItem<Item> repair) {
+        return ARMOR_MATERIALS.register(name, () -> {
+            EnumMap<ArmorItem.Type, Integer> defense = new EnumMap<>(ArmorItem.Type.class);
+            defense.put(ArmorItem.Type.HELMET, helmet);
+            defense.put(ArmorItem.Type.CHESTPLATE, chest);
+            defense.put(ArmorItem.Type.LEGGINGS, legs);
+            defense.put(ArmorItem.Type.BOOTS, boots);
+            defense.put(ArmorItem.Type.BODY, chest + 4);
+            return new ArmorMaterial(defense, enchantability, SoundEvents.ARMOR_EQUIP_NETHERITE, () -> Ingredient.of(repair.get()),
+                    List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, name))), toughness, knockback);
+        });
+    }
+
+    private static DeferredItem<ArmorItem> armor(String name, Holder<ArmorMaterial> material, ArmorItem.Type type, int durability, boolean dusk) {
+        return ITEMS.register(name, () -> new ZinogreArmor(material, type, dusk,
+                new Item.Properties().rarity(Rarity.EPIC).fireResistant().durability(type.getDurability(durability))));
+    }
+
+    private static DeferredItem<Item> template(String name, String key) {
+        return ITEMS.register(name, () -> new SmithingTemplateItem(
+                Component.translatable("item.zinogre." + key + ".applies_to").withStyle(ChatFormatting.BLUE),
+                Component.translatable("item.zinogre." + key + ".ingredients").withStyle(ChatFormatting.BLUE),
+                Component.translatable("item.zinogre." + key + ".title").withStyle(ChatFormatting.GRAY),
+                Component.translatable("item.zinogre." + key + ".base"),
+                Component.translatable("item.zinogre." + key + ".additions"),
+                List.of(ResourceLocation.withDefaultNamespace("item/empty_armor_slot_helmet"), ResourceLocation.withDefaultNamespace("item/empty_armor_slot_chestplate"),
+                        ResourceLocation.withDefaultNamespace("item/empty_armor_slot_leggings"), ResourceLocation.withDefaultNamespace("item/empty_armor_slot_boots")),
+                List.of(ResourceLocation.withDefaultNamespace("item/empty_slot_ingot"))));
+    }
+
+    /** All the materials, templates and armor, for the creative tab. */
     static List<DeferredItem<? extends Item>> all() {
-        return List.of(THUNDER_HORN, CLAW, SHELL, TAIL, FUR, UPGRADE_TEMPLATE, HELMET, CHESTPLATE, LEGGINGS, BOOTS);
+        return List.of(THUNDER_HORN, CLAW, SHELL, TAIL, FUR, STYGIAN_HORN, STYGIAN_CLAW, STYGIAN_SHELL, STYGIAN_TAIL, STYGIAN_FUR,
+                UPGRADE_TEMPLATE, DUSK_UPGRADE_TEMPLATE, HELMET, CHESTPLATE, LEGGINGS, BOOTS, DUSK_HELMET, DUSK_CHESTPLATE, DUSK_LEGGINGS, DUSK_BOOTS);
     }
 
     /** Called from the mod's constructor so the registers exist before registration starts. */
     static void init() {}
 
-    /** Stormhide armor with the set bonus in its tooltip. */
-    private static final class StormhideArmor extends ArmorItem {
-        StormhideArmor(Type type, Properties properties) {
-            super(STORMHIDE, type, properties);
+    /** A piece of either set, with its set bonus in the tooltip. */
+    public static final class ZinogreArmor extends ArmorItem {
+        public final boolean dusk;
+
+        ZinogreArmor(Holder<ArmorMaterial> material, Type type, boolean dusk, Properties properties) {
+            super(material, type, properties);
+            this.dusk = dusk;
         }
 
         @Override
         public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-            tooltip.add(Component.translatable("item.zinogre.stormhide.set").withStyle(ChatFormatting.AQUA));
-            tooltip.add(Component.translatable("item.zinogre.stormhide.set.shock").withStyle(ChatFormatting.GRAY));
-            tooltip.add(Component.translatable("item.zinogre.stormhide.set.lightning").withStyle(ChatFormatting.GRAY));
-            tooltip.add(Component.translatable("item.zinogre.stormhide.set.storm").withStyle(ChatFormatting.GRAY));
+            String set = dusk ? "duskhide" : "stormhide";
+            tooltip.add(Component.translatable("item.zinogre.armor.set").withStyle(dusk ? ChatFormatting.RED : ChatFormatting.AQUA));
+            tooltip.add(Component.translatable("item.zinogre." + set + ".set.shock").withStyle(ChatFormatting.GRAY));
+            tooltip.add(Component.translatable("item.zinogre." + set + ".set.lightning").withStyle(ChatFormatting.GRAY));
+            tooltip.add(Component.translatable("item.zinogre.armor.set.storm").withStyle(ChatFormatting.GRAY));
         }
     }
 
     // ---- the set bonus
 
-    /** Whether it's wearing all four Stormhide pieces. */
-    public static boolean fullSet(LivingEntity entity) {
-        return entity.getItemBySlot(EquipmentSlot.HEAD).is(HELMET.get()) && entity.getItemBySlot(EquipmentSlot.CHEST).is(CHESTPLATE.get())
-                && entity.getItemBySlot(EquipmentSlot.LEGS).is(LEGGINGS.get()) && entity.getItemBySlot(EquipmentSlot.FEET).is(BOOTS.get());
+    /** Which whole set it's wearing: 1 Stormhide, 2 Duskhide, 0 neither (pieces of both don't count). */
+    public static int fullSet(LivingEntity entity) {
+        ItemStack head = entity.getItemBySlot(EquipmentSlot.HEAD), chest = entity.getItemBySlot(EquipmentSlot.CHEST);
+        ItemStack legs = entity.getItemBySlot(EquipmentSlot.LEGS), feet = entity.getItemBySlot(EquipmentSlot.FEET);
+        if (head.is(HELMET.get()) && chest.is(CHESTPLATE.get()) && legs.is(LEGGINGS.get()) && feet.is(BOOTS.get())) {
+            return 1;
+        }
+        if (head.is(DUSK_HELMET.get()) && chest.is(DUSK_CHESTPLATE.get()) && legs.is(DUSK_LEGGINGS.get()) && feet.is(DUSK_BOOTS.get())) {
+            return 2;
+        }
+        return 0;
     }
 
     @SubscribeEvent
     public static void onHurt(LivingIncomingDamageEvent event) {
         LivingEntity wearer = event.getEntity();
-        if (wearer.level().isClientSide || !fullSet(wearer)) {
+        int set = wearer.level().isClientSide ? 0 : fullSet(wearer);
+        if (set == 0) {
             return;
         }
         ServerLevel level = (ServerLevel) wearer.level();
-        // lightning: no harm, it charges you up
+        // lightning: no harm, it charges you up (Duskhide: stronger)
         if (event.getSource().is(DamageTypeTags.IS_LIGHTNING)) {
             event.setCanceled(true);
-            if (!wearer.hasEffect(MobEffects.MOVEMENT_SPEED) || wearer.getEffect(MobEffects.MOVEMENT_SPEED).getAmplifier() < 1) {
-                level.playSound(null, wearer.blockPosition(), ZinogreSounds.CHARGE_UP.get(), wearer.getSoundSource(), 1.0F, 1.2F);
+            MobEffectInstance speed = wearer.getEffect(MobEffects.MOVEMENT_SPEED);
+            if (speed == null || speed.getAmplifier() < 1) {
+                level.playSound(null, wearer.blockPosition(), ZinogreSounds.CHARGE_UP.get(), wearer.getSoundSource(), 1.0F, set == 2 ? 0.9F : 1.2F);
             }
             wearer.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 600, 1));
-            wearer.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 600, 0));
+            wearer.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 600, set == 2 ? 1 : 0));
             return;
         }
-        // something hit you up close: one time in four it gets a shock back
+        // something hit you up close: now and then it gets a shock back
         if (event.getSource().getDirectEntity() instanceof LivingEntity attacker && attacker != wearer && attacker.isAlive()
-                && wearer.getRandom().nextFloat() < 0.25F) {
-            if (attacker.hurt(level.damageSources().thorns(wearer), 3.0F)) {
-                level.sendParticles(ParticleTypes.ELECTRIC_SPARK, attacker.getX(), attacker.getY() + attacker.getBbHeight() * 0.5, attacker.getZ(),
+                && wearer.getRandom().nextFloat() < (set == 2 ? 0.35F : 0.25F)) {
+            if (attacker.hurt(level.damageSources().thorns(wearer), set == 2 ? 4.0F : 3.0F)) {
+                level.sendParticles(set == 2 ? net.minecraft.core.particles.DustParticleOptions.REDSTONE : ParticleTypes.ELECTRIC_SPARK,
+                        attacker.getX(), attacker.getY() + attacker.getBbHeight() * 0.5, attacker.getZ(),
                         20, attacker.getBbWidth() * 0.4, attacker.getBbHeight() * 0.3, attacker.getBbWidth() * 0.4, 0.4);
-                level.playSound(null, attacker.blockPosition(), ZinogreSounds.ZAP.get(), wearer.getSoundSource(), 0.8F, 1.3F);
+                level.playSound(null, attacker.blockPosition(), ZinogreSounds.ZAP.get(), wearer.getSoundSource(), 0.8F, set == 2 ? 0.9F : 1.3F);
+                if (set == 2) {
+                    attacker.addEffect(new MobEffectInstance(MobEffects.WITHER, 60, 0), wearer);
+                }
             }
         }
     }
@@ -155,9 +204,21 @@ public final class ZinogreItems {
             return;
         }
         // out in a thunderstorm: quicker on your feet
-        if (player.level().isThundering() && player.level().canSeeSky(player.blockPosition()) && fullSet(player)) {
+        if (player.level().isThundering() && player.level().canSeeSky(player.blockPosition()) && fullSet(player) != 0) {
             player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 40, 0, true, false, true));
         }
+    }
+
+    /** The material a broken part drops (null: none): Zinogre or Stygian, by the part. */
+    @Nullable
+    static Item partMaterial(boolean stygian, int group) {
+        return switch (group) {
+            case ZinogreEntity.HORN_L, ZinogreEntity.HORN_R -> (stygian ? STYGIAN_HORN : THUNDER_HORN).get();
+            case ZinogreEntity.ARMS -> (stygian ? STYGIAN_CLAW : CLAW).get();
+            case ZinogreEntity.SHOULDERS -> (stygian ? STYGIAN_SHELL : SHELL).get();
+            case ZinogreEntity.TAIL -> (stygian ? STYGIAN_TAIL : TAIL).get();
+            default -> null;
+        };
     }
 
     private ZinogreItems() {}
