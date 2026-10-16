@@ -48,6 +48,21 @@ public final class ZinogreClient {
                 }
             }, net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, p[0])));
         }
+        // the weapons are drawn as their 3D meshes
+        for (String set : new String[] {"thunderfang", "duskfang"}) {
+            for (String kind : new String[] {"longsword", "bow", "crossbow"}) {
+                net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer[] renderer = new net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer[1];
+                event.registerItem(new net.neoforged.neoforge.client.extensions.common.IClientItemExtensions() {
+                    @Override
+                    public net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                        if (renderer[0] == null) {
+                            renderer[0] = new ZinogreWeaponRenderer(set, kind);
+                        }
+                        return renderer[0];
+                    }
+                }, net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, set + "_" + kind)));
+            }
+        }
         // the armor is worn as its 3D model (see ZinogreArmorModels)
         net.neoforged.neoforge.client.extensions.common.IClientItemExtensions stormhide = new net.neoforged.neoforge.client.extensions.common.IClientItemExtensions() {
             @Override

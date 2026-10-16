@@ -131,6 +131,22 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
         return true;
     }
 
+    /** Draws a ZHD1 mesh with one texture; material 1 pieces glow (drawn at full brightness). */
+    static void drawWithTexture(PoseStack poseStack, MultiBufferSource buffer, int packedLight, Mesh mesh, ResourceLocation texture) {
+        VertexConsumer out = buffer.getBuffer(RenderType.entityCutoutNoCull(texture));
+        PoseStack.Pose last = poseStack.last();
+        for (int p = 0; p < mesh.triangles().size(); p++) {
+            int light = mesh.materials()[p] == 1 ? net.minecraft.client.renderer.LightTexture.FULL_BRIGHT : packedLight;
+            int[] tris = mesh.triangles().get(p);
+            for (int i = 0; i < tris.length; i += 3) {
+                vertex(out, last, mesh, tris[i], light);
+                vertex(out, last, mesh, tris[i + 1], light);
+                vertex(out, last, mesh, tris[i + 2], light);
+                vertex(out, last, mesh, tris[i + 2], light);
+            }
+        }
+    }
+
     /** Draws the head inside a unit cube (centred, about one block big, facing -Z): for the item and when worn. */
     static boolean drawHeadInCube(PoseStack poseStack, MultiBufferSource buffer, int packedLight, boolean stygian) {
         return drawHeadInCube(poseStack, buffer, packedLight, stygian, false);
