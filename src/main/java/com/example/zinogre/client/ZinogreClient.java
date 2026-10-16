@@ -32,7 +32,23 @@ public final class ZinogreClient {
             }
         };
         event.registerItem(head, ZinogreMod.HEAD_ITEM.get(), ZinogreMod.STYGIAN_HEAD_ITEM.get());
-        // the Stormhide armor is worn as its 3D model (see StormhideArmorModel)
+        // the materials are drawn as the real 3D parts they came from
+        String[][] parts = {{"thunder_horn", "horn", "0"}, {"zinogre_claw", "claw", "0"}, {"zinogre_shell", "shell", "0"}, {"zinogre_tail", "tail", "0"},
+                {"electro_fur", "fur", "0"}, {"stygian_horn", "horn", "1"}, {"stygian_claw", "claw", "1"}, {"stygian_shell", "shell", "1"},
+                {"stygian_tail", "tail", "1"}, {"stygian_fur", "fur", "1"}};
+        for (String[] p : parts) {
+            net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer[] renderer = new net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer[1];
+            event.registerItem(new net.neoforged.neoforge.client.extensions.common.IClientItemExtensions() {
+                @Override
+                public net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                    if (renderer[0] == null) {
+                        renderer[0] = new ZinogrePartItemRenderer(p[1], p[2].equals("1"));
+                    }
+                    return renderer[0];
+                }
+            }, net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, p[0])));
+        }
+        // the armor is worn as its 3D model (see ZinogreArmorModels)
         net.neoforged.neoforge.client.extensions.common.IClientItemExtensions stormhide = new net.neoforged.neoforge.client.extensions.common.IClientItemExtensions() {
             @Override
             public net.minecraft.client.model.HumanoidModel<?> getHumanoidArmorModel(net.minecraft.world.entity.LivingEntity entity,

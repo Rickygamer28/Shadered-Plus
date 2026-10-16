@@ -103,7 +103,8 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
         return drawHead(poseStack, buffer, packedLight, stygian, closed != null ? closed : mesh());
     }
 
-    private static boolean drawHead(PoseStack poseStack, MultiBufferSource buffer, int packedLight, boolean stygian, @Nullable Mesh head) {
+    /** Draws a ZHD1 mesh (the head, or a part) with the Zinogre's (or the Stygian's) textures. */
+    static boolean drawHead(PoseStack poseStack, MultiBufferSource buffer, int packedLight, boolean stygian, @Nullable Mesh head) {
         McModel textures = AssimpModels.getModel(stygian ? ZinogreRenderer.STYGIAN_MODEL : ZinogreRenderer.MODEL);
         if (textures == null || head == null) {
             Debug.once("head-missing", "Zinogre head not drawn: textures loaded {}, mesh loaded {}", textures != null, head != null);
@@ -222,7 +223,7 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
     }
 
     @Nullable
-    private static Mesh load(ResourceLocation file) {
+    static Mesh load(ResourceLocation file) {
         try {
             ByteBuffer b = ZinogreData.readResource(file);
             if (b.getInt() != 0x3144485A) { // "ZHD1"
