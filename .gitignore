@@ -5,3 +5,5 @@ run/
 *.bin
 # boss music: supplied locally, only packed into the personal jar
 src/main/resources/assets/zinogre/sounds/music/
+# the weapon meshes are the mod's own (made by tools/make_weapon_meshes.py)
+!src/main/resources/assets/zinogre/models/weapons/*.bin
