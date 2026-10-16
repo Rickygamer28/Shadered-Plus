@@ -971,11 +971,6 @@ public class ZinogreEntity extends TamableAnimal {
     }
 
     @Override
-    public float getVoicePitch() {
-        return (isAlpha() ? 0.4F : 0.55F) + random.nextFloat() * 0.1F;
-    }
-
-    @Override
     protected float getSoundVolume() {
         return 1.6F;
     }
