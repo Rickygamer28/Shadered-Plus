@@ -80,7 +80,7 @@ jobs:
           exec 3>&-
           sleep 20; pkill -f "runServer|DevLaunch|minecraft"
           echo "::notice::server started: $(grep -c 'Done (' server.log), crash reports: $(grep -c 'Crash report saved' server.log)"
-          grep -E "zinogre|Zinogre|located|nearest|placed|Placed|template|structure|Could not|Failed|ERROR|Exception|Caused by" server.log \
+          grep -E "zinogre|Zinogre|Lit the arena|located|nearest|placed|Placed|template|structure|Could not|Failed|ERROR|Exception|Caused by" server.log \
             | grep -vE "DEBUG|flite|Narrator|realms" | awk '!seen[$0]++' | head -45 > srv.txt
           split -l 15 srv.txt srv_
           for f in $(ls srv_* 2>/dev/null | head -4); do echo "::notice::$(sed ':a;N;$!ba;s/\n/%0A/g' $f | cut -c1-7000)"; done
