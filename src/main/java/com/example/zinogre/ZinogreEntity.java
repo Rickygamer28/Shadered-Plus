@@ -538,6 +538,26 @@ public class ZinogreEntity extends TamableAnimal {
         level().broadcastEntityEvent(this, (byte) (MOVE_EVENT_BASE + which - 1));
     }
 
+    /**
+     * Server: does a move right now, whatever it is doing (the /zinogre play command): roar, bite, leap (forward, at
+     * its target if it has one), flip, charge or death (it dies).
+     */
+    public void playMove(String which) {
+        attackTick = -1;
+        moveTick = -1;
+        move = MOVE_NONE;
+        chargeTick = -1;
+        switch (which) {
+            case "roar" -> startMove(MOVE_ROAR, getTarget());
+            case "leap" -> startMove(MOVE_LEAP, getTarget());
+            case "flip" -> startMove(MOVE_FLIP, getTarget());
+            case "bite" -> startAttack();
+            case "charge" -> startCharge();
+            case "death" -> kill();
+            default -> { }
+        }
+    }
+
     /** Roars when it picks a fight (not again for a while). */
     @Override
     public void setTarget(@Nullable LivingEntity target) {
