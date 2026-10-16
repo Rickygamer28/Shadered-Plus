@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
@@ -136,8 +137,12 @@ public class ZinogreEntity extends TamableAnimal {
     /** Roar: when the roar comes out (slowing whatever is close). */
     private static final int ROAR_SHOUT = 14;
     private static final double ROAR_RADIUS = 10.0;
-    /** Leap: when it leaves the ground, and the latest tick it counts as landed (it lands when it touches down). */
-    private static final int LEAP_TAKEOFF = 5, LEAP_LAND = 26;
+    /**
+     * Leap: when its paws leave the ground and come down in the clip (the jump is timed to land then), and for how many
+     * ticks after take-off it can still bend its path toward a target that dodges.
+     */
+    private static final int LEAP_TAKEOFF = 5, LEAP_LAND = 22, LEAP_STEER = 6;
+    private static final int LEAP_AIR = LEAP_LAND - LEAP_TAKEOFF;
     /** Backflip: when the tail comes down. */
     private static final int FLIP_SLAM = 27;
     /** How long the death lasts (the model's death clip: 3.9 s, then it lies still for a moment). */
@@ -154,6 +159,8 @@ public class ZinogreEntity extends TamableAnimal {
     @Nullable
     private Vec3 leapAt;
     private boolean leapLanded;
+    /** Server: how far up or down from take-off the leap is meant to land. */
+    private double leapRise;
 
     /** Client only: the renderer's per-mob state (model copy and animation player). */
     public Object clientState;
@@ -278,7 +285,7 @@ public class ZinogreEntity extends TamableAnimal {
     /** Alphas don't take fall damage (they leap a long way). */
     @Override
     public boolean causeFallDamage(float distance, float multiplier, DamageSource source) {
-        return !isAlpha() && super.causeFallDamage(distance, multiplier, source);
+        return !isAlpha() && move != MOVE_LEAP && super.causeFallDamage(distance, multiplier, source);
     }
 
     /**
@@ -746,9 +753,19 @@ public class ZinogreEntity extends TamableAnimal {
         if (server && move == MOVE_LEAP && moveTick == LEAP_TAKEOFF) {
             takeOff();
         }
-        if (server && move == MOVE_LEAP && !leapLanded && moveTick > LEAP_TAKEOFF + 3 && (onGround() || moveTick >= LEAP_LAND)) {
+        if (server && move == MOVE_LEAP && moveTick > LEAP_TAKEOFF && moveTick <= LEAP_TAKEOFF + LEAP_STEER) {
+            steerLeap();
+        }
+        if (server && move == MOVE_LEAP && !leapLanded && moveTick > LEAP_TAKEOFF + 3 && (onGround() || moveTick >= LEAP_LAND + 6)) {
             leapLanded = true;
-            slam(2.5, 2.4, 1.0F, 0.2); // lands on whatever it leapt at
+            land();
+        }
+        if (level().isClientSide && move == MOVE_LEAP && isCharged() && moveTick > LEAP_TAKEOFF && !onGround()) {
+            float k = sizeScale(); // a trail of sparks while a charged Zinogre is in the air
+            for (int i = 0; i < 4 * k; i++) {
+                level().addParticle(ParticleTypes.ELECTRIC_SPARK, getRandomX(0.8), getRandomY(), getRandomZ(0.8),
+                        random.nextGaussian() * 0.1, random.nextGaussian() * 0.1, random.nextGaussian() * 0.1);
+            }
         }
         if (server && move == MOVE_FLIP && moveTick == FLIP_SLAM) {
             slam(1.0, 3.6, 1.25F, 0.55);
@@ -781,24 +798,161 @@ public class ZinogreEntity extends TamableAnimal {
         }
     }
 
-    /** Springs at the leap's target: far enough to land just in front of it. */
+    /**
+     * Springs at the leap's target: where it will be when the leap comes down (a running target is led a little), so
+     * it lands with its front paws on it. The jump is worked out from the game's own physics (gravity, air drag) to come
+     * down exactly when the clip lands, at the target's height.
+     */
     private void takeOff() {
-        Vec3 forward = Vec3.directionFromRotation(0.0F, getYRot());
-        double distance = 8.0;
-        if (leapAt != null) {
-            distance = Math.sqrt(Math.pow(leapAt.x - getX(), 2) + Math.pow(leapAt.z - getZ(), 2));
+        LivingEntity target = getTarget();
+        Vec3 aim = leapAt;
+        if (target != null && target.isAlive()) {
+            Vec3 v = target.getDeltaMovement();
+            aim = target.position().add(v.x * LEAP_AIR * 0.6, 0.0, v.z * LEAP_AIR * 0.6);
         }
-        // up at 0.6 it is in the air ~15 ticks, slowing by 9% a tick: it covers about 8.3 x its starting speed
-        double speed = Mth.clamp((distance - 3.0 * sizeScale()) / 8.3, 0.3, isAlpha() ? 3.0 : 1.7);
-        setDeltaMovement(forward.x * speed, isAlpha() ? 0.8 : 0.6, forward.z * speed);
+        Vec3 forward = Vec3.directionFromRotation(0.0F, getYRot());
+        double run = 8.0 * sizeScale();
+        leapRise = 0.0;
+        if (aim != null) {
+            Vec3 flat = new Vec3(aim.x - getX(), 0.0, aim.z - getZ());
+            if (flat.lengthSqr() > 0.01) {
+                forward = flat.normalize();
+            }
+            run = Mth.clamp(flat.length() - landingStop(), 1.5, isAlpha() ? 32.0 : 18.0);
+            leapRise = Mth.clamp(aim.y - getY(), -6.0, 5.0);
+        }
+        float yaw = (float) (Mth.atan2(forward.z, forward.x) * Mth.RAD_TO_DEG) - 90.0F;
+        setYRot(yaw);
+        yBodyRot = yaw;
+        yHeadRot = yaw;
+        double h = run / airDragSum(LEAP_AIR);
+        setDeltaMovement(forward.x * h, jumpSpeed(leapRise, LEAP_AIR), forward.z * h);
         hasImpulse = true;
         playSound(ZinogreSounds.LEAP.get(), 2.0F, isAlpha() ? 0.75F : 1.0F);
+        if (level() instanceof ServerLevel server) {
+            groundBurst(server, position(), 0.6 * sizeScale(), 14, 0.15); // kicks up the ground it springs from
+        }
+    }
+
+    /** How far short of its target the leap stops: the target ends up under its front paws, in the landing's reach. */
+    private double landingStop() {
+        return getBbWidth() * 0.5 + 0.3 * sizeScale();
+    }
+
+    /** Early in the jump it can still bend its path a little toward where its target has gone (late dodges work). */
+    private void steerLeap() {
+        LivingEntity target = getTarget();
+        if (target == null || !target.isAlive()) {
+            return;
+        }
+        int left = Math.max(1, LEAP_TAKEOFF + LEAP_AIR - moveTick);
+        Vec3 flat = new Vec3(target.getX() - getX(), 0.0, target.getZ() - getZ());
+        double run = Math.max(0.0, flat.length() - landingStop());
+        Vec3 want = flat.lengthSqr() > 0.01 ? flat.normalize().scale(run / airDragSum(left)) : Vec3.ZERO;
+        Vec3 v = getDeltaMovement();
+        double cap = (isAlpha() ? 0.25 : 0.12); // most it bends per tick (blocks per tick)
+        Vec3 change = new Vec3(want.x - v.x, 0.0, want.z - v.z).scale(0.3);
+        if (change.length() > cap) {
+            change = change.normalize().scale(cap);
+        }
+        setDeltaMovement(v.add(change));
+        hurtMarked = true;
+    }
+
+    /** Sum of 0.91^i over the ticks in the air: horizontal distance covered per unit of starting speed (air drag 0.91). */
+    private static double airDragSum(int ticks) {
+        double sum = 0.0, f = 1.0;
+        for (int i = 0; i < ticks; i++) {
+            sum += f;
+            f *= 0.91;
+        }
+        return sum;
+    }
+
+    /** The upward speed that brings it down {@code rise} blocks higher after {@code ticks} ticks (gravity 0.08, drag 0.98). */
+    private static double jumpSpeed(double rise, int ticks) {
+        // height after n ticks = v0 * A - B (each tick: moves, then v = (v - 0.08) * 0.98)
+        double a = 0.0, b = 0.0, decay = 1.0, fall = 0.0;
+        for (int i = 0; i < ticks; i++) {
+            a += decay;
+            b += fall;
+            decay *= 0.98;
+            fall = (fall + 0.08) * 0.98;
+        }
+        return (rise + b) / a;
     }
 
     /**
-     * Hurts everything (except friends) around a point {@code ahead} blocks in front, within {@code radius}, with the
-     * given share of its attack damage and an upward knock.
+     * The landing: a shockwave around its front paws, hardest in the middle, throwing everything back and up a little;
+     * a ring of dust, and for a charged Zinogre sparks and lightning striking around it. An Alpha that missed often leaps
+     * again straight away.
      */
+    private void land() {
+        float k = sizeScale();
+        Vec3 forward = Vec3.directionFromRotation(0.0F, getYRot());
+        Vec3 center = position().add(forward.scale(getBbWidth() * 0.35));
+        double radius = getBbWidth() * 0.5 + 2.0 * k;
+        Vec3 v = getDeltaMovement();
+        setDeltaMovement(v.x * 0.15, v.y, v.z * 0.15); // digs in rather than sliding on
+        float damage = (float) getAttributeValue(Attributes.ATTACK_DAMAGE) * 1.1F;
+        boolean hit = false;
+        AABB box = new AABB(center, center).inflate(radius, 1.5 * k, radius).move(0, 0.5 * k, 0);
+        for (LivingEntity target : level().getEntitiesOfClass(LivingEntity.class, box, e -> e != this && e.isAlive() && !isFriend(e))) {
+            double d = Math.sqrt(target.distanceToSqr(center.x, target.getY(), center.z));
+            if (d > radius + target.getBbWidth() * 0.5) {
+                continue;
+            }
+            float share = (float) (1.0 - 0.45 * Mth.clamp(d / radius, 0.0, 1.0));
+            if (target.hurt(damageSources().mobAttack(this), damage * share)) {
+                hit = true;
+                Vec3 away = new Vec3(target.getX() - getX(), 0.0, target.getZ() - getZ());
+                away = away.lengthSqr() > 0.01 ? away.normalize() : forward;
+                double push = (0.6 + 0.6 * share) * Math.sqrt(k);
+                target.push(away.x * push, 0.35 + 0.15 * share, away.z * push);
+                target.hurtMarked = true;
+                chargedHit(target);
+            }
+        }
+        playSound(ZinogreSounds.SLAM.get(), isAlpha() ? 3.5F : 2.0F, isAlpha() ? 0.75F : 1.0F);
+        if (hit) {
+            playSound(ZinogreSounds.BITE.get(), 1.5F, getVoicePitch());
+        }
+        if (level() instanceof ServerLevel server) {
+            groundBurst(server, center, radius * 0.35, 40, 0.35 * Math.sqrt(k));
+            server.sendParticles(ParticleTypes.EXPLOSION, center.x, center.y + 0.3, center.z, (int) (2 * k), radius * 0.3, 0.1, radius * 0.3, 0.0);
+            if (isCharged()) {
+                server.sendParticles(ParticleTypes.ELECTRIC_SPARK, center.x, center.y + 0.5, center.z, (int) (60 * k), radius * 0.5, 0.4, radius * 0.5, 0.6);
+                playSound(ZinogreSounds.ZAP.get(), 2.5F, isAlpha() ? 0.7F : 0.9F);
+                for (int i = 0; i < 3; i++) { // lightning around the landing (for show, the shockwave did the damage)
+                    double a = getYRot() * Mth.DEG_TO_RAD + i * Mth.TWO_PI / 3 + random.nextDouble() * 0.6;
+                    LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(server);
+                    if (bolt != null) {
+                        bolt.moveTo(center.x + Math.cos(a) * radius, center.y, center.z + Math.sin(a) * radius);
+                        bolt.setVisualOnly(true);
+                        server.addFreshEntity(bolt);
+                    }
+                }
+            }
+        }
+        LivingEntity target = getTarget();
+        if (isAlpha() && !hit && target != null && target.isAlive() && distanceTo(target) > 10.0 && random.nextBoolean()) {
+            leapCooldown = 12; // chases with another leap
+        }
+    }
+
+    /** A ring of the ground's own dust blown outwards, plus a puff of cloud (server: sent to everyone near). */
+    private void groundBurst(ServerLevel server, Vec3 at, double ring, int count, double speed) {
+        BlockState ground = level().getBlockState(BlockPos.containing(at.x, at.y - 0.2, at.z));
+        ParticleOptions dust = ground.isAir() ? ParticleTypes.POOF : new BlockParticleOption(ParticleTypes.BLOCK, ground);
+        for (int i = 0; i < count; i++) {
+            double a = i * Mth.TWO_PI / count + random.nextDouble() * 0.2;
+            double dx = Math.cos(a), dz = Math.sin(a);
+            // count 0: the offsets are the direction the particle flies, scaled by speed
+            server.sendParticles(dust, at.x + dx * ring, at.y + 0.1, at.z + dz * ring, 0, dx, 0.25, dz, speed * (0.8 + random.nextDouble() * 0.4));
+        }
+        server.sendParticles(ParticleTypes.CLOUD, at.x, at.y + 0.2, at.z, count / 3, ring, 0.05, ring, 0.04);
+    }
+
     private void slam(double ahead, double radius, float damageShare, double knockUp) {
         Vec3 forward = Vec3.directionFromRotation(0.0F, getYRot());
         float k = sizeScale();

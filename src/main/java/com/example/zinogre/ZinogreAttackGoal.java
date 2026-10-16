@@ -72,8 +72,8 @@ class ZinogreAttackGoal extends Goal {
             mob.getNavigation().stop();
             // roaring: keeps facing the target; leap: aims during the crouch; flip: committed
             if (target != null && (mob.move == ZinogreEntity.MOVE_ROAR
-                    || (mob.move == ZinogreEntity.MOVE_LEAP && mob.moveTick < 4))) {
-                face(target, 15.0F);
+                    || (mob.move == ZinogreEntity.MOVE_LEAP && mob.moveTick < 5))) {
+                face(target, mob.move == ZinogreEntity.MOVE_LEAP ? 30.0F : 15.0F);
             }
             return;
         }
