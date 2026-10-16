@@ -967,7 +967,7 @@ public class ZinogreEntity extends TamableAnimal {
 
     @Override
     protected void playStepSound(BlockPos pos, BlockState state) {
-        playSound(ZinogreSounds.STEP.get(), isAlpha() ? 1.5F : 0.7F, isAlpha() ? 0.7F : 0.9F + random.nextFloat() * 0.2F);
+        // no footstep sounds
     }
 
     @Override

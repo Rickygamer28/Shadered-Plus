@@ -3,3 +3,5 @@ build/
 run/
 *.glb
 *.bin
+# boss music: supplied locally, only packed into the personal jar
+src/main/resources/assets/zinogre/sounds/music/
