@@ -7,9 +7,9 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import java.util.EnumSet;
 
 /**
- * Charges up when a fight starts (see {@link ZinogreEntity}), then chases the target and, once it is in reach, stops
- * and does the lunge attack. It stands
- * still while attacking and only turns towards the target during the wind-up, so the target can dodge the lunge.
+ * Roars when a fight starts and charges up (see {@link ZinogreEntity}), then chases the target: leaps at it from a
+ * distance, and once it is in reach stops and bites, or now and then does the backflip tail slam. It stands still while
+ * attacking and only turns towards the target during the wind-up, so the target can dodge.
  */
 class ZinogreAttackGoal extends Goal {
     private static final double CHASE_SPEED = 1.0;
@@ -33,7 +33,7 @@ class ZinogreAttackGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        return canUse() || mob.isAttacking() || mob.isCharging();
+        return canUse() || mob.isBusy();
     }
 
     @Override
@@ -68,6 +68,15 @@ class ZinogreAttackGoal extends Goal {
             }
             return;
         }
+        if (mob.isDoingMove()) {
+            mob.getNavigation().stop();
+            // roaring: keeps facing the target; leap: aims during the crouch; flip: committed
+            if (target != null && (mob.move == ZinogreEntity.MOVE_ROAR
+                    || (mob.move == ZinogreEntity.MOVE_LEAP && mob.moveTick < 4))) {
+                face(target, 15.0F);
+            }
+            return;
+        }
         if (target == null) {
             return;
         }
@@ -87,9 +96,26 @@ class ZinogreAttackGoal extends Goal {
         boolean inReach = dx * dx + dz * dz <= reach * reach && Math.abs(target.getY() - mob.getY()) < 3.0;
         if (inReach && cooldown <= 0 && mob.hasLineOfSight(target)) {
             mob.getNavigation().stop();
+            // now and then the backflip tail slam instead of the bite (more often when the target is beside or
+            // behind it, where the bite can't reach)
+            float off = Math.abs(Mth.degreesDifference(mob.getYRot(),
+                    (float) (Mth.atan2(dz, dx) * Mth.RAD_TO_DEG) - 90.0F));
+            if (mob.canFlip() && mob.getRandom().nextFloat() < (off > 70.0F ? 0.7F : 0.3F)) {
+                mob.startMove(ZinogreEntity.MOVE_FLIP, target);
+                cooldown = 25 + mob.getRandom().nextInt(20);
+                return;
+            }
             face(target, 180.0F);
             mob.startAttack();
             cooldown = 15 + mob.getRandom().nextInt(20);
+            return;
+        }
+        // far away (but not too far) and on the same level: leaps at it
+        double distSq = dx * dx + dz * dz;
+        if (!inReach && distSq > 7.0 * 7.0 && distSq < 17.0 * 17.0 && Math.abs(target.getY() - mob.getY()) < 4.0
+                && mob.canLeap() && mob.hasLineOfSight(target) && mob.getRandom().nextInt(10) == 0) {
+            face(target, 180.0F);
+            mob.startMove(ZinogreEntity.MOVE_LEAP, target);
             return;
         }
         if (--repath <= 0 || mob.getNavigation().isDone()) {

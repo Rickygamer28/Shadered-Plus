@@ -1,6 +1,9 @@
 package com.example.zinogre;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
@@ -119,6 +122,36 @@ public class ZinogreEntity extends TamableAnimal {
     public int attackTick = -1;
     /** Client: tickCount when the last attack started (for the animation). */
     public int attackStartTick = Integer.MIN_VALUE / 2;
+    /** The big moves (besides the bite): roar when a fight starts, leap at a target farther away, backflip tail slam. */
+    public static final int MOVE_NONE = 0, MOVE_ROAR = 1, MOVE_LEAP = 2, MOVE_FLIP = 3;
+    /** Entity events starting each move (74 + move - 1). */
+    static final byte MOVE_EVENT_BASE = 74;
+    /** Entity event: the move was cut short (flinched when a part broke). */
+    static final byte MOVE_CANCEL_EVENT = 77;
+    /** Length of each move in ticks (the model's clips: roar 2.8 s, leap 1.7 s, flip 1.8 s). */
+    private static final int[] MOVE_TICKS = {0, 57, 34, 37};
+    /** Roar: when the roar comes out (slowing whatever is close). */
+    private static final int ROAR_SHOUT = 14;
+    private static final double ROAR_RADIUS = 10.0;
+    /** Leap: when it leaves the ground, and the latest tick it counts as landed (it lands when it touches down). */
+    private static final int LEAP_TAKEOFF = 5, LEAP_LAND = 26;
+    /** Backflip: when the tail comes down. */
+    private static final int FLIP_SLAM = 27;
+    /** How long the death lasts (the model's death clip: 3.9 s, then it lies still for a moment). */
+    public static final int DEATH_TICKS = 100;
+
+    /** The move being done (MOVE_*), ticks into it (-1: none), server and client. */
+    public int move = MOVE_NONE;
+    public int moveTick = -1;
+    /** Client: tickCount when the current move started (for the animation). */
+    public int moveStartTick = Integer.MIN_VALUE / 2;
+    /** Server: waits before the next roar / leap / flip. */
+    private int roarCooldown, leapCooldown, flipCooldown;
+    /** Server: where the leap is aimed. */
+    @Nullable
+    private Vec3 leapAt;
+    private boolean leapLanded;
+
     /** Client only: the renderer's per-mob state (model copy and animation player). */
     public Object clientState;
 
@@ -178,7 +211,7 @@ public class ZinogreEntity extends TamableAnimal {
 
     /** Whether it would start a charge-up now (in a fight, not charged, not busy, cooldown over). */
     boolean canCharge() {
-        return !isCharged() && !isCharging() && !isAttacking() && chargeCooldown <= 0 && !isOrderedToSit();
+        return !isCharged() && !isCharging() && !isAttacking() && !isDoingMove() && chargeCooldown <= 0 && !isOrderedToSit();
     }
 
     /** Server: starts the charge-up and tells clients to play it. */
@@ -327,6 +360,11 @@ public class ZinogreEntity extends TamableAnimal {
     private void breakPart(int group) {
         setPartState(group, BROKEN);
         attackTick = -1; // flinches out of its attack
+        if (moveTick >= 0 && move != MOVE_LEAP) {
+            moveTick = -1; // and out of a roar or flip (a leap can't stop in mid-air)
+            move = MOVE_NONE;
+            level().broadcastEntityEvent(this, MOVE_CANCEL_EVENT);
+        }
         cancelCharge(); // and out of a charge-up
         Vec3 forward = Vec3.directionFromRotation(0.0F, yBodyRot);
         Vec3 side = new Vec3(-forward.z, 0, forward.x);
@@ -463,9 +501,153 @@ public class ZinogreEntity extends TamableAnimal {
         level().broadcastEntityEvent(this, ATTACK_EVENT);
     }
 
+    // ---------------------------------------------------------------- roar, leap, backflip
+
+    public boolean isDoingMove() {
+        return moveTick >= 0;
+    }
+
+    /** Busy with something it shouldn't be interrupted in (attack, charge-up, a move). */
+    public boolean isBusy() {
+        return isAttacking() || isCharging() || isDoingMove();
+    }
+
+    boolean canLeap() {
+        return leapCooldown <= 0 && onGround() && !isBusy();
+    }
+
+    boolean canFlip() {
+        return flipCooldown <= 0 && onGround() && !isBusy();
+    }
+
+    /** Server: starts a move and tells clients to play it. */
+    void startMove(int which, @Nullable LivingEntity target) {
+        move = which;
+        moveTick = 0;
+        navigation.stop();
+        if (which == MOVE_LEAP) {
+            leapAt = target != null ? target.position() : null;
+            leapLanded = false;
+            leapCooldown = 100 + random.nextInt(80);
+            playSound(SoundEvents.WOLF_GROWL, 2.0F, 0.6F);
+        } else if (which == MOVE_FLIP) {
+            flipCooldown = 140 + random.nextInt(80);
+        } else if (which == MOVE_ROAR) {
+            roarCooldown = 600;
+        }
+        level().broadcastEntityEvent(this, (byte) (MOVE_EVENT_BASE + which - 1));
+    }
+
+    /** Roars when it picks a fight (not again for a while). */
+    @Override
+    public void setTarget(@Nullable LivingEntity target) {
+        LivingEntity old = getTarget();
+        super.setTarget(target);
+        if (!level().isClientSide && target != null && old == null && roarCooldown <= 0 && !isBusy()
+                && isAlive() && !isOrderedToSit() && onGround()) {
+            startMove(MOVE_ROAR, target);
+        }
+    }
+
+    private void moveTick() {
+        if (moveTick < 0) {
+            return;
+        }
+        moveTick++;
+        boolean server = !level().isClientSide && isAlive();
+        if (server && move == MOVE_ROAR && moveTick == ROAR_SHOUT) {
+            roar();
+        }
+        if (server && move == MOVE_LEAP && moveTick == LEAP_TAKEOFF) {
+            takeOff();
+        }
+        if (server && move == MOVE_LEAP && !leapLanded && moveTick > LEAP_TAKEOFF + 3 && (onGround() || moveTick >= LEAP_LAND)) {
+            leapLanded = true;
+            slam(2.5, 2.4, 1.0F, 0.2); // lands on whatever it leapt at
+        }
+        if (server && move == MOVE_FLIP && moveTick == FLIP_SLAM) {
+            slam(1.0, 3.6, 1.25F, 0.55);
+        }
+        if (move == MOVE_FLIP && level().isClientSide && moveTick == FLIP_SLAM) {
+            Vec3 at = position().add(Vec3.directionFromRotation(0.0F, getYRot()).scale(1.5));
+            for (int i = 0; i < 20; i++) {
+                level().addParticle(ParticleTypes.CLOUD, at.x + random.nextGaussian(), at.y + 0.2, at.z + random.nextGaussian(), 0, 0.05, 0);
+            }
+        }
+        if (moveTick >= MOVE_TICKS[move]) {
+            moveTick = -1;
+            move = MOVE_NONE;
+        }
+    }
+
+    /** The roar: a loud cry that makes everything close by (except friends) cower for a moment. */
+    private void roar() {
+        playSound(SoundEvents.RAVAGER_ROAR, 3.0F, 0.75F);
+        AABB around = getBoundingBox().inflate(ROAR_RADIUS);
+        for (LivingEntity e : level().getEntitiesOfClass(LivingEntity.class, around,
+                e -> e != this && e.isAlive() && !isFriend(e) && distanceToSqr(e) < ROAR_RADIUS * ROAR_RADIUS)) {
+            e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 50, 2), this);
+        }
+    }
+
+    /** Springs at the leap's target: far enough to land just in front of it. */
+    private void takeOff() {
+        Vec3 forward = Vec3.directionFromRotation(0.0F, getYRot());
+        double distance = 8.0;
+        if (leapAt != null) {
+            distance = Math.sqrt(Math.pow(leapAt.x - getX(), 2) + Math.pow(leapAt.z - getZ(), 2));
+        }
+        // up at 0.6 it is in the air ~15 ticks, slowing by 9% a tick: it covers about 8.3 x its starting speed
+        double speed = Mth.clamp((distance - 3.0) / 8.3, 0.3, 1.7);
+        setDeltaMovement(forward.x * speed, 0.6, forward.z * speed);
+        hasImpulse = true;
+        playSound(SoundEvents.RAVAGER_STEP, 2.0F, 0.6F);
+    }
+
+    /**
+     * Hurts everything (except friends) around a point {@code ahead} blocks in front, within {@code radius}, with the
+     * given share of its attack damage and an upward knock.
+     */
+    private void slam(double ahead, double radius, float damageShare, double knockUp) {
+        Vec3 forward = Vec3.directionFromRotation(0.0F, getYRot());
+        Vec3 center = position().add(forward.scale(ahead));
+        AABB box = new AABB(center, center).inflate(radius, 2.0, radius).move(0, 1.0, 0);
+        float damage = (float) getAttributeValue(Attributes.ATTACK_DAMAGE) * damageShare;
+        boolean hit = false;
+        for (LivingEntity target : level().getEntitiesOfClass(LivingEntity.class, box,
+                e -> e != this && e.isAlive() && !isFriend(e))) {
+            if (target.hurt(damageSources().mobAttack(this), damage)) {
+                hit = true;
+                Vec3 away = target.position().subtract(position()).multiply(1, 0, 1).normalize().scale(0.8);
+                target.push(away.x, knockUp, away.z);
+                target.hurtMarked = true;
+                chargedHit(target);
+            }
+        }
+        playSound(hit ? SoundEvents.RAVAGER_ATTACK : SoundEvents.GENERIC_EXPLODE.value(), 1.5F, hit ? 0.7F : 1.4F);
+    }
+
+    /** Stays for its death animation (falling on its side) before it disappears. */
+    @Override
+    protected void tickDeath() {
+        deathTime++;
+        if (deathTime >= DEATH_TICKS && !level().isClientSide() && !isRemoved()) {
+            level().broadcastEntityEvent(this, (byte) 60); // the death puff
+            remove(RemovalReason.KILLED);
+        }
+    }
+
     @Override
     public void handleEntityEvent(byte id) {
-        if (id == ATTACK_EVENT) {
+        if (id >= MOVE_EVENT_BASE && id < MOVE_EVENT_BASE + 3) {
+            move = id - MOVE_EVENT_BASE + 1;
+            moveTick = 0;
+            moveStartTick = tickCount;
+        } else if (id == MOVE_CANCEL_EVENT) {
+            move = MOVE_NONE;
+            moveTick = -1;
+            moveStartTick = Integer.MIN_VALUE / 2;
+        } else if (id == ATTACK_EVENT) {
             attackTick = 0;
             attackStartTick = tickCount;
         } else if (id == CHARGE_EVENT) {
@@ -483,6 +665,10 @@ public class ZinogreEntity extends TamableAnimal {
     public void aiStep() {
         super.aiStep();
         chargedTick();
+        moveTick();
+        if (roarCooldown > 0) roarCooldown--;
+        if (leapCooldown > 0) leapCooldown--;
+        if (flipCooldown > 0) flipCooldown--;
         if (chargeTick >= 0) {
             chargeTick++;
             if (chargeTick == CHARGED_AT && !level().isClientSide && isAlive()) {

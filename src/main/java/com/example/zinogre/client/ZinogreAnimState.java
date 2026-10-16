@@ -40,6 +40,9 @@ final class ZinogreAnimState {
     private static final float SIT_FADE = 0.3F;
     /** Seconds to fade the charge-up in and out. */
     private static final float CHARGE_FADE = 0.3F;
+    /** Seconds to fade the roar / leap / backflip in and out, and into the death. */
+    private static final float MOVE_FADE = 0.2F;
+    private static final float DEATH_FADE = 0.15F;
 
     final RenderableModel model;
     private final McModel source;
@@ -51,7 +54,12 @@ final class ZinogreAnimState {
     private int shownKey = -1;
     private boolean eyesClosed;
     private final ZinogreData.Clip idle, walk, run, attack, lieDown, rest, getUp, charge;
-    private float attackWeight, chargeWeight;
+    /** The big moves and the death (null in an older model file without them). */
+    @Nullable
+    private final ZinogreData.Clip roar, leap, flip, death;
+    private float attackWeight, chargeWeight, moveWeight, deathWeight;
+    /** The move being faded (stays set while it fades out). */
+    private int shownMove;
     /** The body texture, and whether the charged one is on now. */
     private final ResourceLocation bodyTexture;
     private ResourceLocation shownBody;
@@ -86,6 +94,10 @@ final class ZinogreAnimState {
         this.rest = data.clips.get("rest");
         this.getUp = data.clips.get("get_up");
         this.charge = data.clips.get("charge");
+        this.roar = data.clips.get("roar");
+        this.leap = data.clips.get("leap");
+        this.flip = data.clips.get("flip");
+        this.death = data.clips.get("death");
         this.bodyTexture = materials.get(0).getDiffuseTexture();
         this.shownBody = bodyTexture;
         int n = data.joints();
@@ -162,7 +174,24 @@ final class ZinogreAnimState {
         float sinceCharge = (entity.tickCount - entity.chargeStartTick + partialTick) / 20.0F;
         boolean charging = sinceCharge >= 0 && sinceCharge < charge.seconds() - CHARGE_FADE && entity.deathTime <= 0;
         chargeWeight = first ? (charging ? 1.0F : 0.0F) : approach(chargeWeight, charging ? 1.0F : 0.0F, dt / CHARGE_FADE);
-        float other = Math.max(0.0F, 1.0F - attackWeight - chargeWeight);
+        // the roar, leap or backflip
+        if (entity.move != ZinogreEntity.MOVE_NONE && entity.moveTick >= 0) {
+            shownMove = entity.move;
+        }
+        ZinogreData.Clip moveClip = moveClip(shownMove);
+        float sinceMove = (entity.tickCount - entity.moveStartTick + partialTick) / 20.0F;
+        boolean moving2 = moveClip != null && entity.moveTick >= 0 && sinceMove >= 0
+                && sinceMove < moveClip.seconds() - MOVE_FADE && entity.deathTime <= 0;
+        moveWeight = first ? (moving2 ? 1.0F : 0.0F) : approach(moveWeight, moving2 ? 1.0F : 0.0F, dt / MOVE_FADE);
+        // dying: the death clip takes over (falls on its side and stays there)
+        boolean dying = death != null && entity.deathTime > 0;
+        deathWeight = first ? (dying ? 1.0F : 0.0F) : approach(deathWeight, dying ? 1.0F : 0.0F, dt / DEATH_FADE);
+        float others = attackWeight + chargeWeight + moveWeight;
+        if (others > 1.0F - deathWeight && others > 0) { // the death fades the rest out
+            float k = (1.0F - deathWeight) / others;
+            attackWeight *= k; chargeWeight *= k; moveWeight *= k;
+        }
+        float other = Math.max(0.0F, 1.0F - attackWeight - chargeWeight - moveWeight - deathWeight);
 
         // lying down (tamed and told to sit): lie_down, then the rest loop; get_up when told to stand again
         boolean sitting = entity.isInSittingPose();
@@ -196,6 +225,12 @@ final class ZinogreAnimState {
         }
         add(attack, Mth.clamp(sinceAttack, 0.0F, attack.seconds()), false, attackWeight);
         add(charge, Mth.clamp(sinceCharge, 0.0F, charge.seconds()), false, chargeWeight);
+        if (moveClip != null) {
+            add(moveClip, Mth.clamp(sinceMove, 0.0F, moveClip.seconds()), false, moveWeight);
+        }
+        if (death != null) {
+            add(death, Mth.clamp((entity.deathTime + partialTick) / 20.0F, 0.0F, death.seconds()), false, deathWeight);
+        }
         if (wsum[0] <= 0) {
             add(idle, now, true, 1.0F);
         }
@@ -208,6 +243,21 @@ final class ZinogreAnimState {
             materials.get(0).setDiffuseTexture(body); // the glowing shell while charged
         }
         tint(entity, partialTick, packedLight);
+    }
+
+    @Nullable
+    private ZinogreData.Clip moveClip(int move) {
+        return switch (move) {
+            case ZinogreEntity.MOVE_ROAR -> roar;
+            case ZinogreEntity.MOVE_LEAP -> leap;
+            case ZinogreEntity.MOVE_FLIP -> flip;
+            default -> null;
+        };
+    }
+
+    /** Whether the model file has the death animation (otherwise the renderer tips it over, like vanilla mobs). */
+    boolean hasDeath() {
+        return death != null;
     }
 
     private void clear() {

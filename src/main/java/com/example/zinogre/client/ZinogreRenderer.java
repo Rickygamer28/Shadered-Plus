@@ -86,7 +86,7 @@ public class ZinogreRenderer extends EntityRenderer<ZinogreEntity> {
         pose.last().normal().set(poseStack.last().normal());
         float bodyYaw = Mth.rotLerp(partialTick, entity.yBodyRotO, entity.yBodyRot);
         pose.mulPose(Axis.YP.rotationDegrees(-bodyYaw)); // the model faces +Z (south), like yaw 0
-        if (entity.deathTime > 0) {
+        if (entity.deathTime > 0 && !state.hasDeath()) {
             // falls over onto its side, like vanilla mobs
             float f = Mth.sqrt(((float) entity.deathTime + partialTick - 1.0F) / 20.0F * 1.6F);
             pose.mulPose(Axis.ZP.rotationDegrees(Math.min(f, 1.0F) * 90.0F));
