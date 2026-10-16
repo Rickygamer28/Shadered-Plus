@@ -51,6 +51,7 @@ jobs:
           done
           pkill -f "runClient|DevLaunch|minecraft" ; sleep 3
           echo "::notice::client loaded resources: $(grep -c 'blocks.png-atlas' client.log), crash reports: $(grep -c 'Crash report saved' client.log), log lines: $(wc -l < client.log)"
+          echo "::notice::zinogre model/texture problems: $(grep -iE 'zinogre:(item|models/armor|textures)' client.log | grep -iE 'missing|unable|failed|not found|exception' | head -8 | sed ':a;N;$!ba;s/\n/%0A/g' | cut -c1-3000) (end)"
           echo "::notice::zinogre sound problems: $(grep -iE 'sound' client.log | grep -iE 'zinogre' | grep -ivE 'Registering|music/boss' | head -10 | sed ':a;N;$!ba;s/\n/%0A/g' | cut -c1-3000) (end)"
           grep -E "zinogre|Zinogre|assimp|Assimp|Mixin apply|mixin.*(fail|error)|Exception|ERROR|FATAL|Caused by" client.log \
             | grep -vE "DEBUG|Mixin subsystem|SpongePowered MIXIN|sodium|embeddium|Narrator|narrator|OpenAL|ALSA|Failed to load library|realms|Realms|telemetry" \
@@ -75,7 +76,7 @@ jobs:
           for c in "locate structure zinogre:zinogre_arena" "locate structure zinogre:stygian_zinogre_arena" \
                    "forceload add 0 0 80 80" "place template zinogre:zinogre_arena 0 -40 0" \
                    "forceload add 200 0 280 80" "place template zinogre:stygian_zinogre_arena 200 -40 0" \
-                   "setblock 36 -20 36 minecraft:stone" "stop"; do
+                   "setblock 36 -20 36 minecraft:stone" "recipe give @a *" "loot spawn 0 -50 0 loot zinogre:entities/alpha_zinogre" "stop"; do
             echo "$c" >&3; sleep 25
           done
           exec 3>&-

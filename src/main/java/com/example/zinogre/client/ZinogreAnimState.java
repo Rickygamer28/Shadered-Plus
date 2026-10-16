@@ -221,8 +221,11 @@ final class ZinogreAnimState {
         }
         ZinogreData.Clip moveClip = moveClip(shownMove);
         float sinceMove = (entity.tickCount - entity.moveStartTick + partialTick) / 20.0F;
+        boolean leaping = shownMove == ZinogreEntity.MOVE_LEAP; // the leap has its warning in front of the clip
+        float moveLength = moveClip == null ? 0.0F : leaping ? ZinogreEntity.leapSeconds(moveClip.seconds()) : moveClip.seconds();
+        float moveClipTime = leaping ? ZinogreEntity.leapClipSeconds(sinceMove) : sinceMove;
         boolean moving2 = moveClip != null && entity.moveTick >= 0 && sinceMove >= 0
-                && sinceMove < moveClip.seconds() - MOVE_FADE && entity.deathTime <= 0;
+                && sinceMove < moveLength - MOVE_FADE && entity.deathTime <= 0;
         moveWeight = first ? (moving2 ? 1.0F : 0.0F) : approach(moveWeight, moving2 ? 1.0F : 0.0F, dt / MOVE_FADE);
         // dying: the death clip takes over (falls on its side and stays there)
         boolean dying = death != null && entity.deathTime > 0;
@@ -267,7 +270,7 @@ final class ZinogreAnimState {
         add(attack, Mth.clamp(sinceAttack, 0.0F, attack.seconds()), false, attackWeight);
         add(charge, Mth.clamp(sinceCharge, 0.0F, charge.seconds()), false, chargeWeight);
         if (moveClip != null) {
-            add(moveClip, Mth.clamp(sinceMove, 0.0F, moveClip.seconds()), false, moveWeight);
+            add(moveClip, Mth.clamp(moveClipTime, 0.0F, moveClip.seconds()), false, moveWeight);
         }
         if (death != null) {
             add(death, Mth.clamp((entity.deathTime + partialTick) / 20.0F, 0.0F, death.seconds()), false, deathWeight);

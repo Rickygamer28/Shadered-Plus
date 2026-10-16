@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "HSH",
+    "S S"
+  ],
+  "key": {
+    "H": {
+      "item": "zinogre:thunder_horn"
+    },
+    "S": {
+      "item": "zinogre:zinogre_shell"
+    }
+  },
+  "result": {
+    "id": "zinogre:stormhide_helmet",
+    "count": 1
+  }
+}

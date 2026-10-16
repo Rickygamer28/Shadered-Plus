@@ -513,5 +513,13 @@
     "stream": true
    }
   ]
+ },
+ "leap_tell": {
+  "subtitle": "subtitles.zinogre.leap_tell",
+  "sounds": [
+   {
+    "name": "zinogre:leap_tell"
+   }
+  ]
  }
 }

@@ -130,6 +130,7 @@ public class ZinogreMod {
                         output.accept(STYGIAN_EGG_ITEM.get());
                         output.accept(HEAD_ITEM.get());
                         output.accept(STYGIAN_HEAD_ITEM.get());
+                        ZinogreItems.all().forEach(item -> output.accept(item.get()));
                     })
                     .build());
 
@@ -138,6 +139,8 @@ public class ZinogreMod {
     }
 
     public ZinogreMod(IEventBus modEventBus) {
+        ZinogreItems.init(); // its items join ITEMS before it's registered
+        ZinogreItems.ARMOR_MATERIALS.register(modEventBus);
         ENTITIES.register(modEventBus);
         ITEMS.register(modEventBus);
         BLOCKS.register(modEventBus);

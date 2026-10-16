@@ -133,7 +133,7 @@ public class ZinogreEntity extends TamableAnimal {
     /** Entity event: the move was cut short (flinched when a part broke). */
     static final byte MOVE_CANCEL_EVENT = 77;
     /** Length of each move in ticks (the model's clips: roar 2.8 s, leap 1.7 s, flip 1.8 s). */
-    private static final int[] MOVE_TICKS = {0, 57, 34, 37};
+    private static final int[] MOVE_TICKS = {0, 57, 12 + 31, 37}; // the leap: its warning (LEAP_WINDUP) + the clip
     /** Roar: when the roar comes out (slowing whatever is close). */
     private static final int ROAR_SHOUT = 14;
     private static final double ROAR_RADIUS = 10.0;
@@ -141,7 +141,13 @@ public class ZinogreEntity extends TamableAnimal {
      * Leap: when its paws leave the ground and come down in the clip (the jump is timed to land then), and for how many
      * ticks after take-off it can still bend its path toward a target that dodges.
      */
-    private static final int LEAP_TAKEOFF = 5, LEAP_LAND = 22, LEAP_STEER = 3;
+    /**
+     * The leap's warning: for LEAP_WINDUP ticks it crouches lower and lower (the clip's first CLIP_CROUCH seconds,
+     * slowed down) while sparks build on its legs, then it locks its aim with a flash (LEAP_LOCK) and springs.
+     */
+    public static final int LEAP_WINDUP = 12, LEAP_LOCK = LEAP_WINDUP + 1;
+    private static final float CLIP_CROUCH = 0.12F;
+    private static final int LEAP_TAKEOFF = LEAP_WINDUP + 3, LEAP_LAND = LEAP_WINDUP + 20, LEAP_STEER = 3;
     private static final int LEAP_AIR = LEAP_LAND - LEAP_TAKEOFF;
     /** Backflip: when the tail comes down. */
     private static final int FLIP_SLAM = 27;
@@ -550,6 +556,31 @@ public class ZinogreEntity extends TamableAnimal {
         }
         level().playSound(null, at.x, at.y, at.z, SoundEvents.SHIELD_BREAK, getSoundSource(), 2.0F, 0.6F);
         playSound(ZinogreSounds.PART_BREAK.get(), 1.8F, getVoicePitch());
+        dropPartMaterial(group, at);
+    }
+
+    /**
+     * A broken part drops its material where it broke (twice as much from an Alpha): horn -> Thunder Horn, front legs
+     * -> claws, shoulders -> shell, tail -> the tail. Not from pets (no farming your own).
+     */
+    private void dropPartMaterial(int group, Vec3 at) {
+        if (isTame() || level().isClientSide) {
+            return;
+        }
+        int more = isAlpha() ? 2 : 1;
+        ItemStack drop = switch (group) {
+            case HORN_L, HORN_R -> new ItemStack(ZinogreItems.THUNDER_HORN.get(), more);
+            case ARMS -> new ItemStack(ZinogreItems.CLAW.get(), 2 * more);
+            case SHOULDERS -> new ItemStack(ZinogreItems.SHELL.get(), 2 * more);
+            case TAIL -> new ItemStack(ZinogreItems.TAIL.get(), more);
+            default -> ItemStack.EMPTY;
+        };
+        if (!drop.isEmpty()) {
+            net.minecraft.world.entity.item.ItemEntity item = new net.minecraft.world.entity.item.ItemEntity(level(), at.x, at.y, at.z, drop);
+            item.setDefaultPickUpDelay();
+            item.setDeltaMovement(random.nextGaussian() * 0.1, 0.3, random.nextGaussian() * 0.1);
+            level().addFreshEntity(item);
+        }
     }
 
     /** Like mob heads: killed by a charged creeper's explosion, it drops its head (one head per creeper). */
@@ -795,6 +826,9 @@ public class ZinogreEntity extends TamableAnimal {
         if (server && move == MOVE_ROAR && moveTick == ROAR_SHOUT) {
             roar();
         }
+        if (move == MOVE_LEAP && moveTick <= LEAP_LOCK) {
+            leapWarning(server);
+        }
         if (server && move == MOVE_LEAP && moveTick == LEAP_TAKEOFF) {
             takeOff();
         }
@@ -844,17 +878,65 @@ public class ZinogreEntity extends TamableAnimal {
     }
 
     /**
+     * The leap's warning, so it can be dodged: sparks crackle up its legs, more and more as it crouches, then a bright
+     * flash and a crack when it locks its aim (dodge then: it springs at where you were, barely bending its path).
+     */
+    private void leapWarning(boolean server) {
+        float k = sizeScale();
+        if (level().isClientSide) {
+            int sparks = (int) ((2 + moveTick / 2) * k);
+            double half = getBbWidth() * 0.35;
+            for (int i = 0; i < sparks; i++) {
+                // around its four legs, up to knee height
+                double sx = (random.nextBoolean() ? half : -half) + random.nextGaussian() * 0.15 * k;
+                double sz = (random.nextBoolean() ? half : -half) + random.nextGaussian() * 0.15 * k;
+                Vec3 at = position().add(new Vec3(sx, 0, sz).yRot(-getYRot() * Mth.DEG_TO_RAD));
+                level().addParticle(ParticleTypes.ELECTRIC_SPARK, at.x, getY() + random.nextDouble() * 0.9 * k, at.z,
+                        random.nextGaussian() * 0.05, 0.08 + random.nextDouble() * 0.1, random.nextGaussian() * 0.05);
+            }
+            if (moveTick == LEAP_LOCK) {
+                level().addParticle(ParticleTypes.FLASH, getX(), getY() + getBbHeight() * 0.5, getZ(), 0, 0, 0);
+                for (int i = 0; i < 30 * k; i++) {
+                    level().addParticle(ParticleTypes.ELECTRIC_SPARK, getRandomX(0.7), getRandomY(), getRandomZ(0.7),
+                            random.nextGaussian() * 0.4, random.nextGaussian() * 0.4, random.nextGaussian() * 0.4);
+                }
+            }
+            return;
+        }
+        if (moveTick == 1) {
+            playSound(ZinogreSounds.LEAP_TELL.get(), isAlpha() ? 3.0F : 2.0F, isAlpha() ? 0.85F : 1.0F);
+        }
+        if (moveTick == LEAP_LOCK) {
+            LivingEntity target = getTarget();
+            if (target != null && target.isAlive()) {
+                Vec3 v = target.getDeltaMovement();
+                leapAt = target.position().add(v.x * LEAP_AIR * 0.2, 0.0, v.z * LEAP_AIR * 0.2);
+            }
+        }
+    }
+
+    /** The leap clip's time this far into the leap: its first moment slowed down over the warning, then as it is. */
+    public static float leapClipSeconds(float sinceMove) {
+        float windup = LEAP_WINDUP / 20.0F;
+        if (sinceMove < windup) {
+            float t = sinceMove / windup;
+            return CLIP_CROUCH * t * t * (3.0F - 2.0F * t);
+        }
+        return CLIP_CROUCH + sinceMove - windup;
+    }
+
+    /** How long the leap lasts in all (seconds), given its clip's length. */
+    public static float leapSeconds(float clipSeconds) {
+        return LEAP_WINDUP / 20.0F + clipSeconds - CLIP_CROUCH;
+    }
+
+    /**
      * Springs at the leap's target: where its target is (only led a touch if it's running), so
      * it lands with its front paws on it. The jump is worked out from the game's own physics (gravity, air drag) to come
      * down exactly when the clip lands, at the target's height.
      */
     private void takeOff() {
-        LivingEntity target = getTarget();
-        Vec3 aim = leapAt;
-        if (target != null && target.isAlive()) {
-            Vec3 v = target.getDeltaMovement();
-            aim = target.position().add(v.x * LEAP_AIR * 0.2, 0.0, v.z * LEAP_AIR * 0.2);
-        }
+        Vec3 aim = leapAt; // where it was aimed when it flashed (LEAP_LOCK)
         Vec3 forward = Vec3.directionFromRotation(0.0F, getYRot());
         double run = 8.0 * sizeScale();
         leapRise = 0.0;

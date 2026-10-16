@@ -23,6 +23,8 @@ public final class ZinogreSounds {
     public static final DeferredHolder<SoundEvent, SoundEvent> SWING = sound("swing");
     public static final DeferredHolder<SoundEvent, SoundEvent> SLAM = sound("slam");
     public static final DeferredHolder<SoundEvent, SoundEvent> LEAP = sound("leap");
+    /** The leap's warning: a rising crackle that ends in a crack as it locks its aim. */
+    public static final DeferredHolder<SoundEvent, SoundEvent> LEAP_TELL = sound("leap_tell");
     public static final DeferredHolder<SoundEvent, SoundEvent> PART_BREAK = sound("part_break");
     public static final DeferredHolder<SoundEvent, SoundEvent> CRACKLE = sound("crackle");
     public static final DeferredHolder<SoundEvent, SoundEvent> CHARGE_UP = sound("charge_up");
