@@ -22,5 +22,21 @@
   "block.zinogre.arena_core": "Arena Core",
   "block.zinogre.stygian_arena_core": "Stygian Arena Core",
   "message.zinogre.arena": "An Alpha Zinogre storms out of its pen!",
-  "message.zinogre.arena_stygian": "An Alpha Stygian Zinogre storms out of its pen!"
+  "message.zinogre.arena_stygian": "An Alpha Stygian Zinogre storms out of its pen!",
+  "subtitles.zinogre.ambient": "Zinogre growls",
+  "subtitles.zinogre.growl": "Zinogre snarls",
+  "subtitles.zinogre.roar": "Zinogre roars",
+  "subtitles.zinogre.howl": "Zinogre howls",
+  "subtitles.zinogre.hurt": "Zinogre hurts",
+  "subtitles.zinogre.death": "Zinogre dies",
+  "subtitles.zinogre.bite": "Zinogre strikes",
+  "subtitles.zinogre.swing": "Zinogre swipes",
+  "subtitles.zinogre.slam": "Zinogre slams",
+  "subtitles.zinogre.step": "Zinogre steps",
+  "subtitles.zinogre.leap": "Zinogre leaps",
+  "subtitles.zinogre.part_break": "Zinogre part breaks",
+  "subtitles.zinogre.crackle": "Electricity crackles",
+  "subtitles.zinogre.charge_up": "Zinogre charges up",
+  "subtitles.zinogre.zap": "Electricity zaps",
+  "subtitles.zinogre.discharge": "Zinogre powers down"
 }

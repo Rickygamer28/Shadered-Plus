@@ -1,0 +1,564 @@
+{
+ "ambient": {
+  "subtitle": "subtitles.zinogre.ambient",
+  "sounds": [
+   {
+    "name": "minecraft:mob/wolf/growl1",
+    "pitch": 0.62,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/wolf/growl2",
+    "pitch": 0.62,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/wolf/growl3",
+    "pitch": 0.62,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/polarbear/idle1",
+    "pitch": 0.72,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/polarbear/idle2",
+    "pitch": 0.72,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/polarbear/idle3",
+    "pitch": 0.72,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/polarbear/idle4",
+    "pitch": 0.72,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/hoglin/idle1",
+    "pitch": 0.68,
+    "volume": 0.8
+   },
+   {
+    "name": "minecraft:mob/hoglin/idle2",
+    "pitch": 0.68,
+    "volume": 0.8
+   },
+   {
+    "name": "minecraft:mob/hoglin/idle5",
+    "pitch": 0.68,
+    "volume": 0.8
+   },
+   {
+    "name": "minecraft:mob/hoglin/idle7",
+    "pitch": 0.68,
+    "volume": 0.8
+   }
+  ]
+ },
+ "growl": {
+  "subtitle": "subtitles.zinogre.growl",
+  "sounds": [
+   {
+    "name": "minecraft:mob/wolf/growl1",
+    "pitch": 0.55,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/wolf/growl2",
+    "pitch": 0.55,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/wolf/growl3",
+    "pitch": 0.55,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/polarbear/warning1",
+    "pitch": 0.72,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/polarbear/warning2",
+    "pitch": 0.72,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/polarbear/warning3",
+    "pitch": 0.72,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/hoglin/angry1",
+    "pitch": 0.62,
+    "volume": 0.9
+   },
+   {
+    "name": "minecraft:mob/hoglin/angry2",
+    "pitch": 0.62,
+    "volume": 0.9
+   },
+   {
+    "name": "minecraft:mob/hoglin/angry3",
+    "pitch": 0.62,
+    "volume": 0.9
+   },
+   {
+    "name": "minecraft:mob/hoglin/angry4",
+    "pitch": 0.62,
+    "volume": 0.9
+   }
+  ]
+ },
+ "roar": {
+  "subtitle": "subtitles.zinogre.roar",
+  "sounds": [
+   {
+    "name": "minecraft:mob/ravager/roar1",
+    "pitch": 0.78,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/ravager/roar2",
+    "pitch": 0.78,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/ravager/roar3",
+    "pitch": 0.78,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/ravager/roar4",
+    "pitch": 0.78,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/polarbear/warning1",
+    "pitch": 0.52,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/polarbear/warning2",
+    "pitch": 0.52,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/polarbear/warning3",
+    "pitch": 0.52,
+    "volume": 1.0
+   }
+  ]
+ },
+ "howl": {
+  "subtitle": "subtitles.zinogre.howl",
+  "sounds": [
+   {
+    "name": "minecraft:mob/wolf/howl1",
+    "pitch": 0.6,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/wolf/howl2",
+    "pitch": 0.6,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/wolf/howl1",
+    "pitch": 0.7,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/wolf/howl2",
+    "pitch": 0.7,
+    "volume": 1.0
+   }
+  ]
+ },
+ "hurt": {
+  "subtitle": "subtitles.zinogre.hurt",
+  "sounds": [
+   {
+    "name": "minecraft:mob/polarbear/hurt1",
+    "pitch": 0.7,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/polarbear/hurt2",
+    "pitch": 0.7,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/polarbear/hurt3",
+    "pitch": 0.7,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/polarbear/hurt4",
+    "pitch": 0.7,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/hoglin/hurt1",
+    "pitch": 0.62,
+    "volume": 0.9
+   },
+   {
+    "name": "minecraft:mob/hoglin/hurt2",
+    "pitch": 0.62,
+    "volume": 0.9
+   },
+   {
+    "name": "minecraft:mob/hoglin/hurt3",
+    "pitch": 0.62,
+    "volume": 0.9
+   },
+   {
+    "name": "minecraft:mob/hoglin/hurt4",
+    "pitch": 0.62,
+    "volume": 0.9
+   }
+  ]
+ },
+ "death": {
+  "subtitle": "subtitles.zinogre.death",
+  "sounds": [
+   {
+    "name": "minecraft:mob/polarbear/death1",
+    "pitch": 0.58,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/polarbear/death2",
+    "pitch": 0.58,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/polarbear/death3",
+    "pitch": 0.58,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/ravager/death1",
+    "pitch": 0.72,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/ravager/death2",
+    "pitch": 0.72,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/ravager/death3",
+    "pitch": 0.72,
+    "volume": 1.0
+   }
+  ]
+ },
+ "bite": {
+  "subtitle": "subtitles.zinogre.bite",
+  "sounds": [
+   {
+    "name": "minecraft:mob/hoglin/attack1",
+    "pitch": 0.7,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/hoglin/attack2",
+    "pitch": 0.7,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/ravager/bite1",
+    "pitch": 0.82,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/ravager/bite2",
+    "pitch": 0.82,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/ravager/bite3",
+    "pitch": 0.82,
+    "volume": 1.0
+   }
+  ]
+ },
+ "swing": {
+  "subtitle": "subtitles.zinogre.swing",
+  "sounds": [
+   {
+    "name": "minecraft:entity/player/attack/sweep1",
+    "pitch": 0.55,
+    "volume": 0.9
+   },
+   {
+    "name": "minecraft:entity/player/attack/sweep2",
+    "pitch": 0.55,
+    "volume": 0.9
+   },
+   {
+    "name": "minecraft:entity/player/attack/sweep3",
+    "pitch": 0.55,
+    "volume": 0.9
+   },
+   {
+    "name": "minecraft:entity/player/attack/sweep4",
+    "pitch": 0.55,
+    "volume": 0.9
+   },
+   {
+    "name": "minecraft:entity/player/attack/sweep5",
+    "pitch": 0.55,
+    "volume": 0.9
+   },
+   {
+    "name": "minecraft:entity/player/attack/sweep6",
+    "pitch": 0.55,
+    "volume": 0.9
+   },
+   {
+    "name": "minecraft:entity/player/attack/sweep7",
+    "pitch": 0.55,
+    "volume": 0.9
+   }
+  ]
+ },
+ "slam": {
+  "subtitle": "subtitles.zinogre.slam",
+  "sounds": [
+   {
+    "name": "minecraft:item/mace/smash_ground_heavy",
+    "pitch": 0.7
+   },
+   {
+    "name": "minecraft:item/mace/smash_ground_heavy",
+    "pitch": 0.8
+   },
+   {
+    "name": "minecraft:mob/goat/impact1",
+    "pitch": 0.5,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/goat/impact2",
+    "pitch": 0.5,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:random/explode1",
+    "pitch": 1.5,
+    "volume": 0.5
+   },
+   {
+    "name": "minecraft:random/explode2",
+    "pitch": 1.5,
+    "volume": 0.5
+   },
+   {
+    "name": "minecraft:random/explode3",
+    "pitch": 1.5,
+    "volume": 0.5
+   },
+   {
+    "name": "minecraft:random/explode4",
+    "pitch": 1.5,
+    "volume": 0.5
+   }
+  ]
+ },
+ "step": {
+  "subtitle": "subtitles.zinogre.step",
+  "sounds": [
+   {
+    "name": "minecraft:mob/polarbear/step1",
+    "pitch": 0.8,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/polarbear/step2",
+    "pitch": 0.8,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/polarbear/step3",
+    "pitch": 0.8,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/polarbear/step4",
+    "pitch": 0.8,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/sniffer/step1",
+    "pitch": 0.95,
+    "volume": 0.8
+   },
+   {
+    "name": "minecraft:mob/sniffer/step2",
+    "pitch": 0.95,
+    "volume": 0.8
+   },
+   {
+    "name": "minecraft:mob/sniffer/step3",
+    "pitch": 0.95,
+    "volume": 0.8
+   },
+   {
+    "name": "minecraft:mob/sniffer/step4",
+    "pitch": 0.95,
+    "volume": 0.8
+   },
+   {
+    "name": "minecraft:mob/sniffer/step5",
+    "pitch": 0.95,
+    "volume": 0.8
+   },
+   {
+    "name": "minecraft:mob/sniffer/step6",
+    "pitch": 0.95,
+    "volume": 0.8
+   }
+  ]
+ },
+ "leap": {
+  "subtitle": "subtitles.zinogre.leap",
+  "sounds": [
+   {
+    "name": "minecraft:mob/camel/dash1",
+    "pitch": 0.7,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/camel/dash2",
+    "pitch": 0.7,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/camel/dash3",
+    "pitch": 0.7,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/camel/dash4",
+    "pitch": 0.7,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/camel/dash5",
+    "pitch": 0.7,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/camel/dash6",
+    "pitch": 0.7,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/breeze/wind_burst1",
+    "pitch": 0.65,
+    "volume": 0.8
+   },
+   {
+    "name": "minecraft:mob/breeze/wind_burst2",
+    "pitch": 0.65,
+    "volume": 0.8
+   },
+   {
+    "name": "minecraft:mob/breeze/wind_burst3",
+    "pitch": 0.65,
+    "volume": 0.8
+   }
+  ]
+ },
+ "part_break": {
+  "subtitle": "subtitles.zinogre.part_break",
+  "sounds": [
+   {
+    "name": "minecraft:mob/ravager/stun1",
+    "pitch": 0.8,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/ravager/stun2",
+    "pitch": 0.8,
+    "volume": 1.0
+   },
+   {
+    "name": "minecraft:mob/ravager/stun3",
+    "pitch": 0.8,
+    "volume": 1.0
+   }
+  ]
+ },
+ "crackle": {
+  "subtitle": "subtitles.zinogre.crackle",
+  "sounds": [
+   {
+    "name": "zinogre:crackle1",
+    "volume": 0.7
+   },
+   {
+    "name": "zinogre:crackle2",
+    "volume": 0.7
+   },
+   {
+    "name": "zinogre:crackle3",
+    "volume": 0.7
+   },
+   {
+    "name": "zinogre:crackle4",
+    "volume": 0.7
+   }
+  ]
+ },
+ "charge_up": {
+  "subtitle": "subtitles.zinogre.charge_up",
+  "sounds": [
+   {
+    "name": "zinogre:charge1",
+    "volume": 1.0
+   },
+   {
+    "name": "zinogre:charge2",
+    "volume": 1.0
+   }
+  ]
+ },
+ "zap": {
+  "subtitle": "subtitles.zinogre.zap",
+  "sounds": [
+   {
+    "name": "zinogre:zap1",
+    "volume": 1.0
+   },
+   {
+    "name": "zinogre:zap2",
+    "volume": 1.0
+   },
+   {
+    "name": "zinogre:zap3",
+    "volume": 1.0
+   }
+  ]
+ },
+ "discharge": {
+  "subtitle": "subtitles.zinogre.discharge",
+  "sounds": [
+   {
+    "name": "zinogre:discharge1",
+    "volume": 0.8
+   },
+   {
+    "name": "zinogre:discharge2",
+    "volume": 0.8
+   }
+  ]
+ }
+}

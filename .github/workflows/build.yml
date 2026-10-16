@@ -51,6 +51,7 @@ jobs:
           done
           pkill -f "runClient|DevLaunch|minecraft" ; sleep 3
           echo "::notice::client loaded resources: $(grep -c 'blocks.png-atlas' client.log), crash reports: $(grep -c 'Crash report saved' client.log), log lines: $(wc -l < client.log)"
+          echo "::notice::zinogre sound problems: $(grep -iE 'sound' client.log | grep -iE 'zinogre' | grep -ivE 'Registering' | head -10 | sed ':a;N;$!ba;s/\n/%0A/g' | cut -c1-3000) (end)"
           grep -E "zinogre|Zinogre|assimp|Assimp|Mixin apply|mixin.*(fail|error)|Exception|ERROR|FATAL|Caused by" client.log \
             | grep -vE "DEBUG|Mixin subsystem|SpongePowered MIXIN|sodium|embeddium|Narrator|narrator|OpenAL|ALSA|Failed to load library|realms|Realms|telemetry" \
             | awk '!seen[$0]++' | head -60 > summary.txt

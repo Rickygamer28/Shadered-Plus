@@ -70,7 +70,7 @@ public class ZinogreArenaCoreBlockEntity extends BlockEntity {
         boss.yBodyRot = yaw;
         boss.setPersistenceRequired();
         server.addFreshEntity(boss);
-        server.playSound(null, at, SoundEvents.RAVAGER_ROAR, SoundSource.HOSTILE, 6.0F, 0.5F);
+        server.playSound(null, at, ZinogreSounds.ZAP.get(), SoundSource.HOSTILE, 6.0F, 0.6F);
         server.playSound(null, at, SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.HOSTILE, 3.0F, 0.6F);
         Component message = Component.translatable(stygian ? "message.zinogre.arena_stygian" : "message.zinogre.arena");
         for (Player p : level.getEntitiesOfClass(Player.class, pit.inflate(16))) {

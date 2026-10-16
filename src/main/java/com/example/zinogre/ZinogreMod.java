@@ -141,6 +141,7 @@ public class ZinogreMod {
         ENTITIES.register(modEventBus);
         ITEMS.register(modEventBus);
         BLOCKS.register(modEventBus);
+        ZinogreSounds.SOUNDS.register(modEventBus);
         BLOCK_ENTITIES.register(modEventBus);
         TABS.register(modEventBus);
         modEventBus.addListener(ZinogreMod::attributes);

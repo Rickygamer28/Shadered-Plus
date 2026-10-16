@@ -325,7 +325,8 @@ public class ZinogreEntity extends TamableAnimal {
         chargeTick = 0;
         navigation.stop();
         level().broadcastEntityEvent(this, CHARGE_EVENT);
-        playSound(SoundEvents.WOLF_GROWL, 2.0F, 0.5F);
+        playSound(ZinogreSounds.GROWL.get(), 2.0F, getVoicePitch());
+        playSound(ZinogreSounds.CHARGE_UP.get(), 2.0F, isAlpha() ? 0.8F : 1.0F);
     }
 
     private void cancelCharge() {
@@ -341,8 +342,9 @@ public class ZinogreEntity extends TamableAnimal {
         chargedLeft = CHARGE_DURATION;
         modifier(Attributes.ATTACK_DAMAGE, CHARGED_DAMAGE, isTame() ? 0.25 : 0.5); // pets: +25%
         modifier(Attributes.MOVEMENT_SPEED, CHARGED_SPEED, 0.15);
-        playSound(SoundEvents.WOLF_HOWL, 3.0F, 0.45F);
-        playSound(SoundEvents.LIGHTNING_BOLT_THUNDER, 1.2F, 1.6F);
+        playSound(ZinogreSounds.HOWL.get(), 3.0F, getVoicePitch());
+        playSound(ZinogreSounds.ZAP.get(), 2.5F, isAlpha() ? 0.75F : 1.0F);
+        playSound(SoundEvents.LIGHTNING_BOLT_THUNDER, 0.8F, 1.6F);
         if (level() instanceof ServerLevel server) {
             float k = sizeScale();
             server.sendParticles(sparkParticle(), getX(), getY() + 1.4 * k, getZ(), (int) (120 * k), 1.4 * k, 0.9 * k, 1.4 * k, 0.2);
@@ -355,7 +357,7 @@ public class ZinogreEntity extends TamableAnimal {
         chargeCooldown = CHARGE_COOLDOWN;
         removeModifier(Attributes.ATTACK_DAMAGE, CHARGED_DAMAGE);
         removeModifier(Attributes.MOVEMENT_SPEED, CHARGED_SPEED);
-        playSound(SoundEvents.BEACON_DEACTIVATE, 1.0F, 1.4F);
+        playSound(ZinogreSounds.DISCHARGE.get(), 1.5F, isAlpha() ? 0.8F : 1.0F);
     }
 
     private void modifier(net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attribute, ResourceLocation id, double amount) {
@@ -397,14 +399,18 @@ public class ZinogreEntity extends TamableAnimal {
         if (isCharged()) {
             if (--chargedLeft <= 0 || isOrderedToSit()) {
                 endCharge();
-            } else if (random.nextInt(80) == 0) {
-                playSound(SoundEvents.BEEHIVE_WORK, 1.0F, 1.8F); // crackle
+            } else if (random.nextInt(50) == 0) {
+                playSound(ZinogreSounds.CRACKLE.get(), 1.2F, 0.85F + random.nextFloat() * 0.3F);
             }
         }
     }
 
     /** Charged hits sometimes call down lightning on the target (visual only). */
     private void chargedHit(Entity target) {
+        if (isCharged()) {
+            level().playSound(null, target.getX(), target.getY() + target.getBbHeight() * 0.5, target.getZ(), ZinogreSounds.ZAP.get(),
+                    getSoundSource(), 1.5F, 0.9F + random.nextFloat() * 0.2F);
+        }
         if (isCharged() && random.nextInt(3) == 0 && level() instanceof ServerLevel server) {
             LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(server);
             if (bolt != null) {
@@ -491,7 +497,7 @@ public class ZinogreEntity extends TamableAnimal {
             server.sendParticles(ParticleTypes.DAMAGE_INDICATOR, at.x, at.y, at.z, 8, 0.3, 0.3, 0.3, 0.1);
         }
         level().playSound(null, at.x, at.y, at.z, SoundEvents.SHIELD_BREAK, getSoundSource(), 2.0F, 0.6F);
-        playSound(SoundEvents.RAVAGER_STUNNED, 1.8F, 0.7F);
+        playSound(ZinogreSounds.PART_BREAK.get(), 1.8F, getVoicePitch());
     }
 
     /** Like mob heads: killed by a charged creeper's explosion, it drops its head (one head per creeper). */
@@ -688,7 +694,7 @@ public class ZinogreEntity extends TamableAnimal {
             leapAt = target != null ? target.position() : null;
             leapLanded = false;
             leapCooldown = 100 + random.nextInt(80);
-            playSound(SoundEvents.WOLF_GROWL, 2.0F, 0.6F);
+            playSound(ZinogreSounds.GROWL.get(), 2.0F, getVoicePitch());
         } else if (which == MOVE_FLIP) {
             flipCooldown = 140 + random.nextInt(80);
         } else if (which == MOVE_ROAR) {
@@ -762,7 +768,10 @@ public class ZinogreEntity extends TamableAnimal {
 
     /** The roar: a loud cry that makes everything close by (except friends) cower for a moment. */
     private void roar() {
-        playSound(SoundEvents.RAVAGER_ROAR, isAlpha() ? 6.0F : 3.0F, isAlpha() ? 0.5F : 0.75F);
+        playSound(ZinogreSounds.ROAR.get(), isAlpha() ? 6.0F : 3.0F, isAlpha() ? 0.75F : 1.0F);
+        if (isCharged()) {
+            playSound(ZinogreSounds.CRACKLE.get(), 2.0F, 0.8F);
+        }
         double radius = ROAR_RADIUS * (isAlpha() ? 2.0 : 1.0);
         AABB around = getBoundingBox().inflate(radius);
         for (LivingEntity e : level().getEntitiesOfClass(LivingEntity.class, around,
@@ -783,7 +792,7 @@ public class ZinogreEntity extends TamableAnimal {
         double speed = Mth.clamp((distance - 3.0 * sizeScale()) / 8.3, 0.3, isAlpha() ? 3.0 : 1.7);
         setDeltaMovement(forward.x * speed, isAlpha() ? 0.8 : 0.6, forward.z * speed);
         hasImpulse = true;
-        playSound(SoundEvents.RAVAGER_STEP, 2.0F, 0.6F);
+        playSound(ZinogreSounds.LEAP.get(), 2.0F, isAlpha() ? 0.75F : 1.0F);
     }
 
     /**
@@ -807,7 +816,10 @@ public class ZinogreEntity extends TamableAnimal {
                 chargedHit(target);
             }
         }
-        playSound(hit ? SoundEvents.RAVAGER_ATTACK : SoundEvents.GENERIC_EXPLODE.value(), 1.5F, hit ? 0.7F : 1.4F);
+        playSound(ZinogreSounds.SLAM.get(), isAlpha() ? 3.0F : 1.8F, isAlpha() ? 0.75F : 1.0F);
+        if (hit) {
+            playSound(ZinogreSounds.BITE.get(), 1.5F, getVoicePitch());
+        }
     }
 
     /** Stays for its death animation (falling on its side) before it disappears. */
@@ -889,7 +901,7 @@ public class ZinogreEntity extends TamableAnimal {
                 chargedHit(target);
             }
         }
-        playSound(hit ? SoundEvents.RAVAGER_ATTACK : SoundEvents.RAVAGER_STEP, 1.5F, 0.8F);
+        playSound(hit ? ZinogreSounds.BITE.get() : ZinogreSounds.SWING.get(), 1.5F, isAlpha() ? 0.75F : 0.9F + random.nextFloat() * 0.2F);
     }
 
     /** Other Zinogres, and when tamed its owner and the owner's other pets, unless that's what it is fighting. */
@@ -924,24 +936,38 @@ public class ZinogreEntity extends TamableAnimal {
         return getBoundingBox().inflate(3.0 * sizeScale(), 0.5 * sizeScale(), 3.0 * sizeScale());
     }
 
+    /** An Alpha's voice is deeper. */
+    @Override
+    public float getVoicePitch() {
+        return super.getVoicePitch() * (isAlpha() ? 0.75F : 1.0F);
+    }
+
+    @Override
+    public void playAmbientSound() {
+        super.playAmbientSound();
+        if (isCharged() && !isInSittingPose()) {
+            playSound(ZinogreSounds.CRACKLE.get(), 1.0F, 0.9F + random.nextFloat() * 0.2F);
+        }
+    }
+
     @Override
     protected SoundEvent getAmbientSound() {
-        return isInSittingPose() ? null : SoundEvents.WOLF_GROWL;
+        return isInSittingPose() ? null : ZinogreSounds.AMBIENT.get();
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return SoundEvents.RAVAGER_HURT;
+        return ZinogreSounds.HURT.get();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.RAVAGER_DEATH;
+        return ZinogreSounds.DEATH.get();
     }
 
     @Override
     protected void playStepSound(BlockPos pos, BlockState state) {
-        playSound(SoundEvents.RAVAGER_STEP, 0.6F, 0.9F);
+        playSound(ZinogreSounds.STEP.get(), isAlpha() ? 1.5F : 0.7F, isAlpha() ? 0.7F : 0.9F + random.nextFloat() * 0.2F);
     }
 
     @Override
