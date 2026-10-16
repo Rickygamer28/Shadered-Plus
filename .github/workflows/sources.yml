@@ -5,6 +5,8 @@ on:
 jobs:
   dump:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -23,5 +25,22 @@ jobs:
           find src_out -type f > src_out/files.txt
           exit 0
       - if: always()
-        uses: actions/upload-artifact@v4
-        with: {name: mcsrc, path: src_out}
+        run: |
+          cat > pub.pem <<'KEY'
+          -----BEGIN PUBLIC KEY-----
+          MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv24sj1rv5P+hel89q16/
+          ECWbRn4UVwIYSa6N89FyPs/LIKWdl2kDDFv4lQo7kH7vJxkdD/EF3fgP/oab3D2g
+          NU3HSPgHEglFWW5rp2JHeiv0Hn7H8FlpPwLuBukVITwCDqHxyHjjj7YhA0a/hN8D
+          Qi58s9LMkzEdzTABGiq0qx6D4Zbz/Vimq8WZIRfsONlkCK8kItsE2yvrBcQ0lD8J
+          Ut0iv3Vv/w5DQTrHjZwrdLJ47T1E7V/4msSiZwXCNVw3wgAslrdL1mJZ87iJhRD0
+          FN1GE00TBhaw/cgd/ltd/8gnJDVZnEsYCW3oUe+DIB64ieucDi9ITp9x3v3BU07y
+          5wIDAQAB
+          -----END PUBLIC KEY-----
+          KEY
+          sed -i 's/^ *//' pub.pem
+          tar czf out.tgz src_out
+          openssl rand -hex 32 > k.txt
+          openssl enc -aes-256-cbc -pbkdf2 -in out.tgz -out out.enc -pass file:k.txt
+          openssl pkeyutl -encrypt -pubin -inkey pub.pem -in k.txt -out k.enc
+          git config user.name ci; git config user.email ci@example.com
+          git checkout --orphan src-dump-out; git rm -rfq --cached .; git add -f out.enc k.enc; git commit -qm out; git push -f origin src-dump-out
