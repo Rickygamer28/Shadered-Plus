@@ -73,7 +73,7 @@ jobs:
           (gradle runServer --no-daemon < cmd > server.log 2>&1 &)
           exec 3>cmd
           for i in $(seq 1 120); do sleep 5; if grep -qE "Done \(|Crash report saved|BUILD FAILED|Failed to start" server.log; then break; fi; done
-          for c in "locate structure zinogre:zinogre_arena" "locate structure zinogre:stygian_zinogre_arena" \
+          for c in "locate structure zinogre:zinogre_arena" "locate structure zinogre:stygian_zinogre_arena" "locate structure minecraft:trial_chambers" \
                    "forceload add 0 0 80 80" "place template zinogre:zinogre_arena 0 -40 0" \
                    "forceload add 200 0 280 80" "place template zinogre:stygian_zinogre_arena 200 -40 0" \
                    "setblock 36 -20 36 minecraft:stone" "recipe give @a *" "loot spawn 0 -50 0 loot zinogre:entities/alpha_zinogre" "stop"; do

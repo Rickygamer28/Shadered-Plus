@@ -38,6 +38,12 @@ public class ZinogreMod {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MOD_ID);
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES = DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MOD_ID);
     public static final DeferredRegister<net.minecraft.world.item.CreativeModeTab> TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MOD_ID);
+    public static final DeferredRegister<net.minecraft.world.level.levelgen.structure.placement.StructurePlacementType<?>> PLACEMENTS =
+            DeferredRegister.create(Registries.STRUCTURE_PLACEMENT, MOD_ID);
+    /** The arenas' placement: random spread that keeps clear of every other underground structure. */
+    public static final DeferredHolder<net.minecraft.world.level.levelgen.structure.placement.StructurePlacementType<?>,
+            net.minecraft.world.level.levelgen.structure.placement.StructurePlacementType<IsolatedSpreadPlacement>> ISOLATED_SPREAD =
+            PLACEMENTS.register("isolated_spread", () -> () -> IsolatedSpreadPlacement.CODEC);
 
     /** About 2.6 blocks wide and 2.4 tall (the body; the tail reaches further back). */
     public static final DeferredHolder<EntityType<?>, EntityType<ZinogreEntity>> ZINOGRE = ENTITIES.register("zinogre",
@@ -147,6 +153,7 @@ public class ZinogreMod {
         ZinogreSounds.SOUNDS.register(modEventBus);
         BLOCK_ENTITIES.register(modEventBus);
         TABS.register(modEventBus);
+        PLACEMENTS.register(modEventBus);
         modEventBus.addListener(ZinogreMod::attributes);
         modEventBus.addListener(ZinogreMod::creativeTab);
     }

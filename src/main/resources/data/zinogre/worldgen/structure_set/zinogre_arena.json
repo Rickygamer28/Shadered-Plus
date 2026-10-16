@@ -6,13 +6,10 @@
   }
  ],
  "placement": {
-  "type": "minecraft:random_spread",
-  "spacing": 40,
-  "separation": 16,
+  "type": "zinogre:isolated_spread",
+  "spacing": 34,
+  "separation": 14,
   "salt": 739146211,
-  "exclusion_zone": {
-   "other_set": "minecraft:trial_chambers",
-   "chunk_count": 10
-  }
+  "keep_away_chunks": 8
  }
 }
