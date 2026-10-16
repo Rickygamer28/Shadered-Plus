@@ -11,9 +11,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.LightBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -28,11 +25,11 @@ public class ZinogreArenaCoreBlockEntity extends BlockEntity {
     private static final double TRIGGER_RADIUS = 33.0;
     /** How far from the middle the boss's pen is. */
     private static final int PEN_DISTANCE = 28;
-    /** The cavern's size around the core, for the lights. */
-    private static final int CAVERN_RADIUS = 34, CAVERN_TOP = 34, LIGHT_SPACING = 6;
+    /** Bumped when the lighting gets better, so arenas lit by an older version are lit again. */
+    private static final int LIGHTING_VERSION = 2;
 
     private boolean bossOut;
-    private boolean lit;
+    private int litVersion;
 
     public ZinogreArenaCoreBlockEntity(BlockPos pos, BlockState state) {
         super(ZinogreMod.ARENA_CORE_BLOCK_ENTITY.get(), pos, state);
@@ -42,7 +39,7 @@ public class ZinogreArenaCoreBlockEntity extends BlockEntity {
         if (!(level instanceof ServerLevel server)) {
             return;
         }
-        if (!lit) {
+        if (litVersion < LIGHTING_VERSION) {
             light(server, pos, state);
         }
         if (bossOut || level.getGameTime() % 20 != Math.floorMod(pos.asLong(), 20)) {
@@ -78,47 +75,34 @@ public class ZinogreArenaCoreBlockEntity extends BlockEntity {
         }
     }
 
-    /** Hidden light blocks in a grid through the cavern's air (bright, and no monsters spawn), and out with the ones there. */
+    /** Lights the arena evenly (see ArenaLighting) once its chunks are all loaded, and out with the monsters in it. */
     private void light(ServerLevel level, BlockPos pos, BlockState state) {
-        lit = true;
+        if (level.getGameTime() % 20 != Math.floorMod(pos.asLong(), 20) || !ArenaLighting.loaded(level, pos)) {
+            return;
+        }
+        litVersion = LIGHTING_VERSION;
         setChanged();
         boolean stygian = state.getBlock() instanceof ZinogreArenaCoreBlock core && core.stygian;
-        BlockState light = Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, stygian ? 13 : 15);
-        BlockPos.MutableBlockPos at = new BlockPos.MutableBlockPos();
-        int placed = 0;
-        for (int dy : new int[] {6, 10, 17, 25}) {
-            int offset = (dy / 2) % 2 * (LIGHT_SPACING / 2); // staggered from one layer to the next
-            for (int dx = -CAVERN_RADIUS + offset; dx <= CAVERN_RADIUS; dx += LIGHT_SPACING) {
-                for (int dz = -CAVERN_RADIUS + offset; dz <= CAVERN_RADIUS; dz += LIGHT_SPACING) {
-                    if (dx * dx + dz * dz > CAVERN_RADIUS * CAVERN_RADIUS || dy > CAVERN_TOP) {
-                        continue;
-                    }
-                    at.setWithOffset(pos, dx, dy, dz);
-                    if (level.isLoaded(at) && level.getBlockState(at).isAir()) {
-                        level.setBlock(at, light, Block.UPDATE_CLIENTS);
-                        placed++;
-                    }
-                }
-            }
-        }
-        AABB cavern = new AABB(pos).inflate(CAVERN_RADIUS, 0, CAVERN_RADIUS).expandTowards(0, CAVERN_TOP, 0).expandTowards(0, -2, 0);
+        int[] result = ArenaLighting.light(level, pos, stygian ? 10 : 12);
+        int r = ArenaLighting.RADIUS;
+        AABB cavern = new AABB(pos).inflate(r, 0, r).expandTowards(0, ArenaLighting.ABOVE, 0).expandTowards(0, -ArenaLighting.BELOW, 0);
         for (Monster monster : level.getEntitiesOfClass(Monster.class, cavern, m -> !m.isPersistenceRequired() && !m.hasCustomName())) {
             monster.discard();
         }
-        ZinogreMod.LOGGER.info("Lit the arena at {} ({} lights)", pos, placed);
+        ZinogreMod.LOGGER.info("Lit the arena at {}: {} lights added, darkest surface now {}", pos, result[0], result[1]);
     }
 
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.putBoolean("BossOut", bossOut);
-        tag.putBoolean("Lit", lit);
+        tag.putInt("LitVersion", litVersion);
     }
 
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         bossOut = tag.getBoolean("BossOut");
-        lit = tag.getBoolean("Lit");
+        litVersion = tag.getInt("LitVersion");
     }
 }
