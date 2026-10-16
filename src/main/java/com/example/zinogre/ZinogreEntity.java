@@ -141,7 +141,7 @@ public class ZinogreEntity extends TamableAnimal {
      * Leap: when its paws leave the ground and come down in the clip (the jump is timed to land then), and for how many
      * ticks after take-off it can still bend its path toward a target that dodges.
      */
-    private static final int LEAP_TAKEOFF = 5, LEAP_LAND = 22, LEAP_STEER = 6;
+    private static final int LEAP_TAKEOFF = 5, LEAP_LAND = 22, LEAP_STEER = 3;
     private static final int LEAP_AIR = LEAP_LAND - LEAP_TAKEOFF;
     /** Backflip: when the tail comes down. */
     private static final int FLIP_SLAM = 27;
@@ -839,12 +839,12 @@ public class ZinogreEntity extends TamableAnimal {
         for (LivingEntity e : level().getEntitiesOfClass(LivingEntity.class, around,
                 e -> e != this && e.isAlive() && !isFriend(e) && distanceToSqr(e) < radius * radius
                         && !(isTame() && e instanceof Player))) { // a pet's roar only frightens mobs
-            e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, isAlpha() ? 80 : 50, 2), this);
+            e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, isAlpha() ? 80 : 50, 0), this); // Slowness I
         }
     }
 
     /**
-     * Springs at the leap's target: where it will be when the leap comes down (a running target is led a little), so
+     * Springs at the leap's target: where its target is (only led a touch if it's running), so
      * it lands with its front paws on it. The jump is worked out from the game's own physics (gravity, air drag) to come
      * down exactly when the clip lands, at the target's height.
      */
@@ -853,7 +853,7 @@ public class ZinogreEntity extends TamableAnimal {
         Vec3 aim = leapAt;
         if (target != null && target.isAlive()) {
             Vec3 v = target.getDeltaMovement();
-            aim = target.position().add(v.x * LEAP_AIR * 0.6, 0.0, v.z * LEAP_AIR * 0.6);
+            aim = target.position().add(v.x * LEAP_AIR * 0.2, 0.0, v.z * LEAP_AIR * 0.2);
         }
         Vec3 forward = Vec3.directionFromRotation(0.0F, getYRot());
         double run = 8.0 * sizeScale();
@@ -895,7 +895,7 @@ public class ZinogreEntity extends TamableAnimal {
         double run = Math.max(0.0, flat.length() - landingStop());
         Vec3 want = flat.lengthSqr() > 0.01 ? flat.normalize().scale(run / airDragSum(left)) : Vec3.ZERO;
         Vec3 v = getDeltaMovement();
-        double cap = (isAlpha() ? 0.25 : 0.12); // most it bends per tick (blocks per tick)
+        double cap = (isAlpha() ? 0.1 : 0.05); // most it bends per tick (blocks per tick)
         Vec3 change = new Vec3(want.x - v.x, 0.0, want.z - v.z).scale(0.3);
         if (change.length() > cap) {
             change = change.normalize().scale(cap);
@@ -936,10 +936,10 @@ public class ZinogreEntity extends TamableAnimal {
         float k = sizeScale();
         Vec3 forward = Vec3.directionFromRotation(0.0F, getYRot());
         Vec3 center = position().add(forward.scale(getBbWidth() * 0.35));
-        double radius = getBbWidth() * 0.5 + 2.0 * k;
+        double radius = getBbWidth() * 0.5 + 1.2 * k;
         Vec3 v = getDeltaMovement();
         setDeltaMovement(v.x * 0.15, v.y, v.z * 0.15); // digs in rather than sliding on
-        float damage = (float) getAttributeValue(Attributes.ATTACK_DAMAGE) * 1.1F;
+        float damage = (float) getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.9F;
         boolean hit = false;
         AABB box = new AABB(center, center).inflate(radius, 1.5 * k, radius).move(0, 0.5 * k, 0);
         for (LivingEntity target : level().getEntitiesOfClass(LivingEntity.class, box, e -> e != this && e.isAlive() && !isFriend(e))) {
@@ -947,7 +947,7 @@ public class ZinogreEntity extends TamableAnimal {
             if (d > radius + target.getBbWidth() * 0.5) {
                 continue;
             }
-            float share = (float) (1.0 - 0.45 * Mth.clamp(d / radius, 0.0, 1.0));
+            float share = (float) (1.0 - 0.6 * Mth.clamp(d / radius, 0.0, 1.0));
             if (target.hurt(damageSources().mobAttack(this), damage * share)) {
                 hit = true;
                 Vec3 away = new Vec3(target.getX() - getX(), 0.0, target.getZ() - getZ());
@@ -980,7 +980,7 @@ public class ZinogreEntity extends TamableAnimal {
             }
         }
         LivingEntity target = getTarget();
-        if (isAlpha() && !hit && target != null && target.isAlive() && distanceTo(target) > 10.0 && random.nextBoolean()) {
+        if (isAlpha() && !hit && target != null && target.isAlive() && distanceTo(target) > 10.0 && random.nextFloat() < 0.3F) {
             leapCooldown = 12; // chases with another leap
         }
     }
