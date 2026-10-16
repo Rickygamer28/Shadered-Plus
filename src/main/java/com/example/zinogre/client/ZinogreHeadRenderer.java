@@ -56,6 +56,11 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
     private static final float STAND_SCALE = 0.02F, WALL_SCALE = 0.022F;
     /** The head mesh: about 45 units long and 44 tall, centred in x and z, standing on y = 0, facing +Z. */
     private static final float HEAD_HALF_LENGTH = 22.5F, HEAD_HALF_HEIGHT = 22.0F;
+    /**
+     * How far back from the middle the neck's cut is (model units): the head is mounted by that, flush against its
+     * board. The horns sweep further back (to HEAD_HALF_LENGTH) and go into the board and wall a little.
+     */
+    private static final float NECK_BACK = 14.0F;
     private static final ResourceLocation WOOD = ResourceLocation.withDefaultNamespace("block/dark_oak_planks");
 
     @Override
@@ -70,14 +75,14 @@ public class ZinogreHeadRenderer implements BlockEntityRenderer<ZinogreHeadBlock
             poseStack.mulPose(Axis.YP.rotationDegrees(-yaw)); // looks the way it was placed, like skulls
             box(poseStack, buffer, packedLight, -7, 0, -7, 7, 2, 1);
             box(poseStack, buffer, packedLight, -6, 2, -7, 6, 15, -5);
-            poseStack.translate(0.0F, 8.5F / 16.0F - HEAD_HALF_HEIGHT * STAND_SCALE, -5.0F / 16.0F + HEAD_HALF_LENGTH * STAND_SCALE);
+            poseStack.translate(0.0F, 8.5F / 16.0F - HEAD_HALF_HEIGHT * STAND_SCALE, -5.0F / 16.0F + NECK_BACK * STAND_SCALE);
             poseStack.scale(STAND_SCALE, STAND_SCALE, STAND_SCALE);
             drawHead(poseStack, buffer, packedLight, block.stygian);
         } else if (state.getBlock() instanceof ZinogreWallHeadBlock block) {
             // on a wall: a small wooden mount against the wall, the head sticking out of it
             poseStack.mulPose(Axis.YP.rotationDegrees(-state.getValue(ZinogreWallHeadBlock.FACING).toYRot()));
             box(poseStack, buffer, packedLight, -4, 4, -8, 4, 12, -7); // a small mount, mostly hidden behind the head
-            poseStack.translate(0.0F, 0.5F - HEAD_HALF_HEIGHT * WALL_SCALE, -7.0F / 16.0F + HEAD_HALF_LENGTH * WALL_SCALE);
+            poseStack.translate(0.0F, 0.5F - HEAD_HALF_HEIGHT * WALL_SCALE, -7.0F / 16.0F + NECK_BACK * WALL_SCALE);
             poseStack.scale(WALL_SCALE, WALL_SCALE, WALL_SCALE);
             drawHead(poseStack, buffer, packedLight, block.stygian);
         }
