@@ -1,0 +1,19 @@
+name: Dump MC sources
+on:
+  push:
+    branches: [src-dump]
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: 21}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: 8.10.2}
+      - run: gradle createMinecraftArtifacts --no-daemon || gradle compileJava --no-daemon
+      - run: |
+          J=$(find build ~/.gradle -name "*sources*.jar" | grep -i -E "neoforge|minecraft" | head -1); echo "$J"
+          mkdir src_out && cd src_out && unzip -q "$J" 'net/minecraft/client/renderer/ItemInHandRenderer.java' 'net/minecraft/client/renderer/entity/layers/ItemInHandLayer.java' 'net/minecraft/client/renderer/entity/player/PlayerRenderer.java' 'net/minecraft/client/model/HumanoidModel.java' 'net/minecraft/client/model/AnimationUtils.java' 'net/minecraft/client/renderer/block/model/ItemTransform.java' 'net/minecraft/client/renderer/entity/ItemRenderer.java' 'net/minecraft/client/renderer/entity/LivingEntityRenderer.java' 'net/minecraft/client/model/geom/ModelPart.java' 'net/minecraft/client/model/PlayerModel.java' 'net/minecraft/client/renderer/GameRenderer.java' 'net/minecraft/client/Camera.java'
+      - uses: actions/upload-artifact@v4
+        with: {name: mcsrc, path: src_out}
