@@ -12,7 +12,7 @@ import java.util.EnumSet;
  * attacking and only turns towards the target during the wind-up, so the target can dodge.
  */
 class ZinogreAttackGoal extends Goal {
-    private static final double CHASE_SPEED = 1.0;
+    private static final double CHASE_SPEED = 1.2;
     /** Wind-up ticks during which it keeps turning towards the target. */
     private static final int AIM_TICKS = 9;
 
