@@ -223,11 +223,16 @@ public class ZinogreEntity extends TamableAnimal {
     @Nullable
     private net.minecraft.server.level.ServerBossEvent bossEvent() {
         if (bossEvent == null && isAlpha() && !level().isClientSide) {
-            bossEvent = new net.minecraft.server.level.ServerBossEvent(getDisplayName(),
+            bossEvent = new net.minecraft.server.level.ServerBossEvent(bossName(),
                     isStygian() ? net.minecraft.world.BossEvent.BossBarColor.RED : net.minecraft.world.BossEvent.BossBarColor.BLUE,
                     net.minecraft.world.BossEvent.BossBarOverlay.NOTCHED_10);
         }
         return bossEvent;
+    }
+
+    /** The boss bar's title: its name, wrapped in a key the client recognises to draw our own bar (ZinogreBossBar). */
+    private net.minecraft.network.chat.Component bossName() {
+        return net.minecraft.network.chat.Component.translatable(isStygian() ? "boss.zinogre.alpha_stygian" : "boss.zinogre.alpha", getDisplayName());
     }
 
     @Override
@@ -250,7 +255,7 @@ public class ZinogreEntity extends TamableAnimal {
     public void setCustomName(@Nullable net.minecraft.network.chat.Component name) {
         super.setCustomName(name);
         if (bossEvent() != null) {
-            bossEvent().setName(getDisplayName());
+            bossEvent().setName(bossName());
         }
     }
 

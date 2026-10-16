@@ -16,5 +16,7 @@
   "block.zinogre.zinogre_egg.hint": "Place it on the ground and strike it with lightning to hatch it",
   "message.zinogre.hatched": "A Zinogre hatched!",
   "message.zinogre.hatched_stygian": "A Stygian Zinogre hatched!",
-  "itemGroup.zinogre": "Zinogre"
+  "itemGroup.zinogre": "Zinogre",
+  "boss.zinogre.alpha": "%s",
+  "boss.zinogre.alpha_stygian": "%s"
 }
