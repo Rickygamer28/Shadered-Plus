@@ -69,6 +69,19 @@ final class ZinogreAnimState {
     private float sitWeight;
     private float lastTime = -1;
 
+    /** Turning: the body's yaw last frame, how fast it turns (degrees a second, smoothed), the ground its feet cover. */
+    private float lastBodyYaw = Float.NaN;
+    private float turnRate;
+    private float turnSteps;
+    /** How far out the feet are from the middle (blocks, at the model's scale): turning on the spot walks them round. */
+    private static final float TURN_FOOT_RADIUS = 0.7F;
+    /** Bends added on top of the clips, degrees of yaw per joint (model space, through the joint). */
+    private final float[] bend;
+    /** The neck chain (spine to head) with each joint's share of a look, and the tail chain. */
+    private final int[] neckJoints, tailJoints;
+    private static final float[] NECK_SHARES = {0.12F, 0.2F, 0.38F, 0.3F};
+    private final Matrix4f pivot = new Matrix4f();
+
     // scratch space for posing
     private final float[] tx, ty, tz, qx, qy, qz, qw, wsum;
     private final Matrix4f[] global;
@@ -107,6 +120,21 @@ final class ZinogreAnimState {
         for (int i = 0; i < n; i++) {
             global[i] = new Matrix4f();
         }
+        bend = new float[n];
+        neckJoints = joints(data, "bip_spine_3", "bip_spine_4", "bip_neck", "bip_head");
+        tailJoints = joints(data, "Tail_0", "Tail_1", "Tail_2", "Tail_3", "Tail_4", "Tail_5");
+    }
+
+    /** These joints' indices (empty if any is missing, so a different skeleton just gets no bends). */
+    private static int[] joints(ZinogreData data, String... names) {
+        int[] out = new int[names.length];
+        for (int i = 0; i < names.length; i++) {
+            out[i] = data.joint(names[i]);
+            if (out[i] < 0) {
+                return new int[0];
+            }
+        }
+        return out;
     }
 
     /** Whether this copy was made with the textures Shadered has loaded now (resource reloads replace them). */
@@ -165,8 +193,21 @@ final class ZinogreAnimState {
         // Minecraft's walk animation: speed ~ blocks per second / 5 (up to 1), position ~ 4 x distance walked
         float speed = entity.deathTime > 0 ? 0.0F : entity.walkAnimation.speed(partialTick) * 5.0F;
         float distance = entity.walkAnimation.position(partialTick) / 4.0F;
-        float moving = smooth(0.12F, 0.5F, speed);
         float running = smooth(1.3F, 2.3F, speed);
+        // turning: how fast the body swings round (smoothed); on the spot its feet step round as it turns
+        float bodyYaw = Mth.rotLerp(partialTick, entity.yBodyRotO, entity.yBodyRot);
+        float turned = Float.isNaN(lastBodyYaw) || first ? 0.0F : Mth.wrapDegrees(bodyYaw - lastBodyYaw);
+        lastBodyYaw = bodyYaw;
+        if (dt > 0) {
+            turnRate += (turned / dt - turnRate) * Math.min(1.0F, dt / 0.12F);
+        }
+        if (entity.deathTime > 0 || entity.isInSittingPose()) {
+            turnRate = 0.0F;
+        }
+        turnSteps += Math.abs(turned) * Mth.DEG_TO_RAD * TURN_FOOT_RADIUS;
+        float turnWalk = Math.abs(turnRate) * Mth.DEG_TO_RAD * TURN_FOOT_RADIUS; // blocks a second the feet go round
+        float moving = Math.max(smooth(0.12F, 0.5F, speed), smooth(0.25F, 0.9F, turnWalk));
+        distance += turnSteps;
 
         float sinceAttack = (entity.tickCount - entity.attackStartTick + partialTick) / 20.0F;
         boolean attacking = sinceAttack >= 0 && sinceAttack < attack.seconds() - ATTACK_FADE && entity.deathTime <= 0;
@@ -233,6 +274,22 @@ final class ZinogreAnimState {
         }
         if (wsum[0] <= 0) {
             add(idle, now, true, 1.0F);
+        }
+        // the head looks where it's looking (Minecraft's head yaw) and leads into a turn; the tail swings out behind
+        Arrays.fill(bend, 0.0F);
+        float free = standing; // not while attacking, doing a move, charging, lying down or dying
+        if (free > 0.001F) {
+            float headYaw = Mth.rotLerp(partialTick, entity.yHeadRotO, entity.yHeadRot);
+            float look = Mth.clamp(Mth.wrapDegrees(headYaw - bodyYaw), -70.0F, 70.0F) * 0.8F;
+            float lead = Mth.clamp(turnRate * 0.12F, -35.0F, 35.0F);
+            float neck = Mth.clamp(look + lead, -80.0F, 80.0F) * free;
+            for (int i = 0; i < neckJoints.length; i++) {
+                bend[neckJoints[i]] = neck * NECK_SHARES[i];
+            }
+            float tail = Mth.clamp(-turnRate * 0.16F, -50.0F, 50.0F) * free;
+            for (int joint : tailJoints) {
+                bend[joint] = tail / tailJoints.length;
+            }
         }
         finish();
 
@@ -313,6 +370,13 @@ final class ZinogreAnimState {
                 global[j].set(local);
             } else {
                 global[parent].mul(local, global[j]);
+            }
+            if (bend[j] != 0.0F) {
+                // swing this joint (and so everything after it) round the model's up axis, about the joint itself;
+                // Minecraft yaw turns the other way round the model's Y
+                float px = global[j].m30(), py = global[j].m31(), pz = global[j].m32();
+                pivot.translation(px, py, pz).rotateY(-bend[j] * Mth.DEG_TO_RAD).translate(-px, -py, -pz);
+                pivot.mul(global[j], global[j]);
             }
             if (j < bones.length) {
                 global[j].mul(data.inverseBind[j], bones[j]);

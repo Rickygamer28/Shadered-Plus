@@ -21,6 +21,8 @@ class ZinogreAttackGoal extends Goal {
     private int repath;
     /** Alpha: above 0 walks straight at the target; below 0 counts up the ticks it uses a path after getting stuck. */
     private int direct = 1;
+    /** Decided to leap, turning to face the target first. */
+    private boolean leapReady;
     @org.jetbrains.annotations.Nullable
     private net.minecraft.world.phys.Vec3 lastPos;
 
@@ -92,8 +94,9 @@ class ZinogreAttackGoal extends Goal {
         double dz = target.getZ() - mob.getZ();
         // charges up at the start of a fight (and again once the last charge has worn off and cooled down)
         if (mob.canCharge() && dx * dx + dz * dz < 20.0 * 20.0 && mob.hasLineOfSight(target)) {
-            face(target, 180.0F);
-            mob.startCharge();
+            if (turnedTo(target)) {
+                mob.startCharge();
+            }
             return;
         }
         double reach = mob.getBbWidth() * 0.5 + 3.0 * mob.sizeScale() + target.getBbWidth() * 0.5;
@@ -109,20 +112,25 @@ class ZinogreAttackGoal extends Goal {
                 cooldown = 25 + mob.getRandom().nextInt(20);
                 return;
             }
-            face(target, 180.0F);
-            mob.startAttack();
-            cooldown = 15 + mob.getRandom().nextInt(20);
+            if (turnedTo(target)) {
+                mob.startAttack();
+                cooldown = 15 + mob.getRandom().nextInt(20);
+            }
             return;
         }
         // far away (but not too far) and on the same level: leaps at it
         double distSq = dx * dx + dz * dz;
         double far = mob.isAlpha() ? 1.8 : 1.0; // an Alpha leaps from farther away
         if (!inReach && distSq > 49.0 * far * far && distSq < 289.0 * far * far && Math.abs(target.getY() - mob.getY()) < 4.0 * far
-                && mob.canLeap() && mob.hasLineOfSight(target) && mob.getRandom().nextInt(10) == 0) {
-            face(target, 180.0F);
-            mob.startMove(ZinogreEntity.MOVE_LEAP, target);
+                && mob.canLeap() && mob.hasLineOfSight(target) && (leapReady || mob.getRandom().nextInt(10) == 0)) {
+            leapReady = true; // decided: turns to face it first if it has to
+            if (turnedTo(target)) {
+                leapReady = false;
+                mob.startMove(ZinogreEntity.MOVE_LEAP, target);
+            }
             return;
         }
+        leapReady = false;
         // an Alpha walks straight at a target it can see (paths are made of steps far too small for it to follow
         // smoothly), unless it's got stuck that way; then it finds a path for a while
         if (mob.isAlpha() && !inReach && direct > 0 && mob.hasLineOfSight(target) && Math.abs(target.getY() - mob.getY()) < 4.0) {
@@ -150,11 +158,27 @@ class ZinogreAttackGoal extends Goal {
         }
     }
 
+    /** Turns toward the target (smoothly, see ZinogreEntity#turnTowards), looking at it. */
     private void face(LivingEntity target, float maxTurn) {
-        float want = (float) (Mth.atan2(target.getZ() - mob.getZ(), target.getX() - mob.getX()) * Mth.RAD_TO_DEG) - 90.0F;
-        float yaw = Mth.approachDegrees(mob.getYRot(), want, maxTurn);
-        mob.setYRot(yaw);
-        mob.yBodyRot = yaw;
-        mob.yHeadRot = yaw;
+        mob.turnTowards(yawTo(target), maxTurn);
+        mob.yBodyRot = mob.getYRot();
+        mob.getLookControl().setLookAt(target, 30.0F, 30.0F);
+    }
+
+    private float yawTo(LivingEntity target) {
+        return (float) (Mth.atan2(target.getZ() - mob.getZ(), target.getX() - mob.getX()) * Mth.RAD_TO_DEG) - 90.0F;
+    }
+
+    /**
+     * Whether it's facing the target closely enough to start a move at it; if not it turns toward it this tick (and
+     * stops walking) instead of snapping round.
+     */
+    private boolean turnedTo(LivingEntity target) {
+        if (Math.abs(Mth.wrapDegrees(yawTo(target) - mob.getYRot())) <= 25.0F) {
+            return true;
+        }
+        mob.getNavigation().stop();
+        face(target, mob.isAlpha() ? 12.0F : 25.0F);
+        return false;
     }
 }

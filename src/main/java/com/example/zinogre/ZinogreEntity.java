@@ -204,6 +204,49 @@ public class ZinogreEntity extends TamableAnimal {
         }
     }
 
+    /** Server: how fast it's turning now (degrees a tick), for turns that speed up and ease out like a heavy animal. */
+    private float turnSpeed;
+    private boolean turnedThisTick;
+
+    /**
+     * Server: turns toward a yaw at up to {@code maxRate} degrees a tick, speeding up into the turn and easing out at
+     * the end (an Alpha swings round more slowly, it's heavier).
+     */
+    public void turnTowards(float want, float maxRate) {
+        float left = Mth.wrapDegrees(want - getYRot());
+        float accel = isAlpha() ? 1.6F : 4.0F;
+        float easeOut = (float) Math.sqrt(2.0F * accel * Math.abs(left));
+        float target = Math.signum(left) * Math.min(maxRate, easeOut);
+        turnSpeed = turnSpeed < target ? Math.min(turnSpeed + accel, target) : Math.max(turnSpeed - accel, target);
+        if (Math.signum(turnSpeed) == Math.signum(left) && Math.abs(turnSpeed) > Math.abs(left)) {
+            turnSpeed = left;
+        }
+        setYRot(getYRot() + turnSpeed);
+        turnedThisTick = true;
+    }
+
+    /** Server: the turn speed dies away when nothing is turning it. */
+    private void settleTurn() {
+        if (!turnedThisTick) {
+            float accel = isAlpha() ? 1.6F : 4.0F;
+            turnSpeed = Math.abs(turnSpeed) <= accel ? 0.0F : turnSpeed - Math.signum(turnSpeed) * accel;
+        }
+        turnedThisTick = false;
+    }
+
+    /** Its body always faces the way it's facing (it turns its whole self, smoothly); the head looks around freely. */
+    @Override
+    protected net.minecraft.world.entity.ai.control.BodyRotationControl createBodyControl() {
+        return new net.minecraft.world.entity.ai.control.BodyRotationControl(this) {
+            @Override
+            public void clientTick() {
+                ZinogreEntity self = ZinogreEntity.this;
+                self.yBodyRot = self.getYRot();
+                self.yHeadRot = Mth.rotateIfNecessary(self.yHeadRot, self.yBodyRot, 75.0F);
+            }
+        };
+    }
+
     public boolean isStygian() {
         return getType() == ZinogreMod.STYGIAN_ZINOGRE.get() || getType() == ZinogreMod.ALPHA_STYGIAN_ZINOGRE.get();
     }
@@ -277,6 +320,7 @@ public class ZinogreEntity extends TamableAnimal {
 
     @Override
     protected void customServerAiStep() {
+        settleTurn();
         super.customServerAiStep();
         if (bossEvent() != null) {
             bossEvent().setProgress(getHealth() / getMaxHealth());

@@ -48,6 +48,8 @@ final class ZinogreData {
 
     /** Joint parents (-1 for the root; a parent always comes before its children). */
     final int[] parents;
+    /** Joint names (from the source skeleton). */
+    final String[] names;
     /** Inverse bind matrix per joint. */
     final Matrix4f[] inverseBind;
     /** The mesh pieces, uploaded: the body (group 0) and every state of every breakable part. */
@@ -71,8 +73,9 @@ final class ZinogreData {
         }
     }
 
-    private ZinogreData(int[] parents, Matrix4f[] inverseBind, List<Piece> pieces, Map<String, Clip> clips) {
+    private ZinogreData(int[] parents, String[] names, Matrix4f[] inverseBind, List<Piece> pieces, Map<String, Clip> clips) {
         this.parents = parents;
+        this.names = names;
         this.inverseBind = inverseBind;
         this.pieces = pieces;
         this.clips = clips;
@@ -81,6 +84,16 @@ final class ZinogreData {
 
     int joints() {
         return parents.length;
+    }
+
+    /** The joint with this name, or -1. */
+    int joint(String name) {
+        for (int j = 0; j < names.length; j++) {
+            if (names[j].equals(name)) {
+                return j;
+            }
+        }
+        return -1;
     }
 
     /** The data (loaded and uploaded on first use), or null if the file is missing or broken. */
@@ -114,9 +127,10 @@ final class ZinogreData {
         }
         int jointCount = b.getInt();
         int[] parents = new int[jointCount];
+        String[] names = new String[jointCount];
         Matrix4f[] inverseBind = new Matrix4f[jointCount];
         for (int j = 0; j < jointCount; j++) {
-            string(b);
+            names[j] = string(b);
             parents[j] = b.getInt();
             float[] m = floats(b, 16);
             inverseBind[j] = new Matrix4f().set(m); // column-major
@@ -154,7 +168,7 @@ final class ZinogreData {
             int frames = b.getInt();
             clips.put(name, new Clip(fps, frames, floats(b, frames * jointCount * 7)));
         }
-        return new ZinogreData(parents, inverseBind, pieces, clips);
+        return new ZinogreData(parents, names, inverseBind, pieces, clips);
     }
 
     /**

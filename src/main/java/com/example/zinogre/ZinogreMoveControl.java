@@ -9,7 +9,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
- * Walking for a big beast: it turns at a limited rate (an Alpha slower still) and, when what it wants is well off to
+ * Walking for a big beast: it turns at a limited rate, speeding up into a turn and easing out of it (an Alpha slower
+ * still, see ZinogreEntity#turnTowards) and, when what it wants is well off to
  * the side or behind, slows right down to turn on the spot. Vanilla turns up to 90 degrees a tick while walking on at
  * full speed, which makes a mob this size overshoot each step of its path and swing round in circles.
  */
@@ -34,7 +35,7 @@ public class ZinogreMoveControl extends MoveControl {
             return;
         }
         float want = (float) (Mth.atan2(dz, dx) * Mth.RAD_TO_DEG) - 90.0F;
-        mob.setYRot(rotlerp(mob.getYRot(), want, zinogre.isAlpha() ? 12.0F : 25.0F));
+        zinogre.turnTowards(want, zinogre.isAlpha() ? 12.0F : 25.0F);
         float off = Math.abs(Mth.wrapDegrees(want - mob.getYRot()));
         float speed = (float) (speedModifier * mob.getAttributeValue(Attributes.MOVEMENT_SPEED));
         if (off > 45.0F) {
