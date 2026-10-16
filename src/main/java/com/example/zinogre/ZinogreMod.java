@@ -37,6 +37,7 @@ public class ZinogreMod {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MOD_ID);
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MOD_ID);
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES = DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MOD_ID);
+    public static final DeferredRegister<net.minecraft.world.item.CreativeModeTab> TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MOD_ID);
 
     /** About 2.6 blocks wide and 2.4 tall (the body; the tail reaches further back). */
     public static final DeferredHolder<EntityType<?>, EntityType<ZinogreEntity>> ZINOGRE = ENTITIES.register("zinogre",
@@ -103,6 +104,24 @@ public class ZinogreMod {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ZinogreHeadBlockEntity>> HEAD_BLOCK_ENTITY = BLOCK_ENTITIES.register("zinogre_head",
             () -> BlockEntityType.Builder.of(ZinogreHeadBlockEntity::new, HEAD.get(), STYGIAN_HEAD.get(), WALL_HEAD.get(), STYGIAN_WALL_HEAD.get()).build(null));
 
+    /** The mod's own creative tab: everything Zinogre in one place (they are also in the vanilla tabs). */
+    public static final DeferredHolder<net.minecraft.world.item.CreativeModeTab, net.minecraft.world.item.CreativeModeTab> TAB = TABS.register("zinogre",
+            () -> net.minecraft.world.item.CreativeModeTab.builder()
+                    .title(net.minecraft.network.chat.Component.translatable("itemGroup.zinogre"))
+                    .icon(() -> new net.minecraft.world.item.ItemStack(HEAD_ITEM.get()))
+                    .withTabsBefore(CreativeModeTabs.SPAWN_EGGS)
+                    .displayItems((parameters, output) -> {
+                        output.accept(SPAWN_EGG.get());
+                        output.accept(STYGIAN_SPAWN_EGG.get());
+                        output.accept(ALPHA_SPAWN_EGG.get());
+                        output.accept(ALPHA_STYGIAN_SPAWN_EGG.get());
+                        output.accept(EGG_ITEM.get());
+                        output.accept(STYGIAN_EGG_ITEM.get());
+                        output.accept(HEAD_ITEM.get());
+                        output.accept(STYGIAN_HEAD_ITEM.get());
+                    })
+                    .build());
+
     private static BlockBehaviour.Properties headProperties() {
         return BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.BONE_BLOCK).noOcclusion().pushReaction(PushReaction.DESTROY);
     }
@@ -112,6 +131,7 @@ public class ZinogreMod {
         ITEMS.register(modEventBus);
         BLOCKS.register(modEventBus);
         BLOCK_ENTITIES.register(modEventBus);
+        TABS.register(modEventBus);
         modEventBus.addListener(ZinogreMod::attributes);
         modEventBus.addListener(ZinogreMod::creativeTab);
     }
