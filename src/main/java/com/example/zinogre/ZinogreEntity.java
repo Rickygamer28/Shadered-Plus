@@ -163,10 +163,13 @@ public class ZinogreEntity extends TamableAnimal {
         this.xpReward = type == ZinogreMod.ALPHA_ZINOGRE.get() || type == ZinogreMod.ALPHA_STYGIAN_ZINOGRE.get() ? 500 : 40;
     }
 
+    /** Walking speed (an Alpha's a little faster, on top of its longer stride). */
+    private static final double SPEED = 0.35, ALPHA_SPEED = 0.38;
+
     public static AttributeSupplier.Builder createAttributes(boolean stygian) {
         return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, stygian ? 260.0 : 200.0)
-                .add(Attributes.MOVEMENT_SPEED, 0.35)
+                .add(Attributes.MOVEMENT_SPEED, SPEED)
                 .add(Attributes.ATTACK_DAMAGE, stygian ? 18.0 : 14.0)
                 .add(Attributes.ATTACK_KNOCKBACK, 1.5)
                 .add(Attributes.FOLLOW_RANGE, 32.0)
@@ -210,7 +213,7 @@ public class ZinogreEntity extends TamableAnimal {
     public static AttributeSupplier.Builder createAlphaAttributes(boolean stygian) {
         return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, stygian ? 1300.0 : 1000.0)
-                .add(Attributes.MOVEMENT_SPEED, 0.38)
+                .add(Attributes.MOVEMENT_SPEED, ALPHA_SPEED)
                 .add(Attributes.ATTACK_DAMAGE, stygian ? 40.0 : 31.0)
                 .add(Attributes.ATTACK_KNOCKBACK, 3.0)
                 .add(Attributes.FOLLOW_RANGE, 64.0)
@@ -536,7 +539,7 @@ public class ZinogreEntity extends TamableAnimal {
         // Zinogres saved before a speed change keep up with the new speed (the saved base value would win otherwise)
         net.minecraft.world.entity.ai.attributes.AttributeInstance speed = getAttribute(Attributes.MOVEMENT_SPEED);
         if (speed != null) {
-            speed.setBaseValue(net.minecraft.world.entity.ai.attributes.DefaultAttributes.getSupplier(getType()).getBaseValue(Attributes.MOVEMENT_SPEED));
+            speed.setBaseValue(isAlpha() ? ALPHA_SPEED : SPEED);
         }
         entityData.set(PARTS, tag.getInt("Parts"));
         for (int group : BREAKABLE) {
