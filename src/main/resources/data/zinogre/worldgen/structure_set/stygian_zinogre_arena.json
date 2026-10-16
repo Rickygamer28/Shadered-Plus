@@ -9,6 +9,10 @@
   "type": "minecraft:random_spread",
   "spacing": 64,
   "separation": 26,
-  "salt": 528814673
+  "salt": 528814673,
+  "exclusion_zone": {
+   "other_set": "minecraft:trial_chambers",
+   "chunk_count": 10
+  }
  }
 }

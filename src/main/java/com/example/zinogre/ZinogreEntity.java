@@ -35,7 +35,6 @@ import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
-import net.minecraft.world.entity.ai.goal.FollowOwnerGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.SitWhenOrderedToGoal;
@@ -177,6 +176,11 @@ public class ZinogreEntity extends TamableAnimal {
         this.xpReward = type == ZinogreMod.ALPHA_ZINOGRE.get() || type == ZinogreMod.ALPHA_STYGIAN_ZINOGRE.get() ? 500 : 40;
     }
 
+    /** An Alpha's attack (bite; the tail slam and leap are shares of it): Alpha 15.5, Alpha Stygian 20. */
+    private static double alphaDamage(boolean stygian) {
+        return stygian ? 20.0 : 15.5;
+    }
+
     /** Walking speed (an Alpha's a little faster, on top of its longer stride). */
     private static final double SPEED = 0.35, ALPHA_SPEED = 0.38;
 
@@ -197,7 +201,7 @@ public class ZinogreEntity extends TamableAnimal {
         goalSelector.addGoal(0, new FloatGoal(this));
         goalSelector.addGoal(1, new SitWhenOrderedToGoal(this));
         goalSelector.addGoal(2, new ZinogreAttackGoal(this));
-        goalSelector.addGoal(4, new FollowOwnerGoal(this, 1.0, 12.0F, 4.0F));
+        goalSelector.addGoal(4, new ZinogreFollowOwnerGoal(this));
         goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.45));
         goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 12.0F));
         goalSelector.addGoal(7, new RandomLookAroundGoal(this));
@@ -271,7 +275,7 @@ public class ZinogreEntity extends TamableAnimal {
         return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, stygian ? 1300.0 : 1000.0)
                 .add(Attributes.MOVEMENT_SPEED, ALPHA_SPEED)
-                .add(Attributes.ATTACK_DAMAGE, stygian ? 40.0 : 31.0)
+                .add(Attributes.ATTACK_DAMAGE, alphaDamage(stygian))
                 .add(Attributes.ATTACK_KNOCKBACK, 3.0)
                 .add(Attributes.FOLLOW_RANGE, 64.0)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0)
@@ -622,10 +626,14 @@ public class ZinogreEntity extends TamableAnimal {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        // Zinogres saved before a speed change keep up with the new speed (the saved base value would win otherwise)
+        // Zinogres saved before a speed or damage change get the new values (the saved base values would win otherwise)
         net.minecraft.world.entity.ai.attributes.AttributeInstance speed = getAttribute(Attributes.MOVEMENT_SPEED);
         if (speed != null) {
             speed.setBaseValue(isAlpha() ? ALPHA_SPEED : SPEED);
+        }
+        net.minecraft.world.entity.ai.attributes.AttributeInstance damage = getAttribute(Attributes.ATTACK_DAMAGE);
+        if (damage != null && isAlpha()) {
+            damage.setBaseValue(alphaDamage(isStygian()));
         }
         entityData.set(PARTS, tag.getInt("Parts"));
         for (int group : BREAKABLE) {
