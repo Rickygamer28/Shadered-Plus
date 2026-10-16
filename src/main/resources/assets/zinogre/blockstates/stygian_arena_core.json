@@ -1,0 +1,16 @@
+{
+ "variants": {
+  "facing=north": {
+   "model": "zinogre:block/arena_core"
+  },
+  "facing=south": {
+   "model": "zinogre:block/arena_core"
+  },
+  "facing=east": {
+   "model": "zinogre:block/arena_core"
+  },
+  "facing=west": {
+   "model": "zinogre:block/arena_core"
+  }
+ }
+}

@@ -18,5 +18,9 @@
   "message.zinogre.hatched_stygian": "A Stygian Zinogre hatched!",
   "itemGroup.zinogre": "Zinogre",
   "boss.zinogre.alpha": "%s",
-  "boss.zinogre.alpha_stygian": "%s"
+  "boss.zinogre.alpha_stygian": "%s",
+  "block.zinogre.arena_core": "Arena Core",
+  "block.zinogre.stygian_arena_core": "Stygian Arena Core",
+  "message.zinogre.arena": "An Alpha Zinogre storms out of its pen!",
+  "message.zinogre.arena_stygian": "An Alpha Stygian Zinogre storms out of its pen!"
 }

@@ -57,6 +57,34 @@ jobs:
           split -l 15 summary.txt cli_
           for f in $(ls cli_* 2>/dev/null | head -6); do echo "::notice::$(sed ':a;N;$!ba;s/\n/%0A/g' $f | cut -c1-7000)"; done
 
+      # Start a dedicated server with this mod: checks the world generation files load, finds the arenas with /locate
+      # and places both arena templates (so a broken structure file shows up here).
+      - name: Server worldgen test
+        if: success()
+        continue-on-error: true
+        timeout-minutes: 20
+        run: |
+          set +e
+          mkdir -p run && echo "eula=true" > run/eula.txt
+          printf "level-seed=4242\nonline-mode=false\nspawn-protection=0\nview-distance=4\n" > run/server.properties
+          mkfifo cmd
+          (gradle runServer --no-daemon < cmd > server.log 2>&1 &)
+          exec 3>cmd
+          for i in $(seq 1 120); do sleep 5; if grep -qE "Done \(|Crash report saved|BUILD FAILED|Failed to start" server.log; then break; fi; done
+          for c in "locate structure zinogre:zinogre_arena" "locate structure zinogre:stygian_zinogre_arena" \
+                   "forceload add 0 0 80 80" "place template zinogre:zinogre_arena 0 -40 0" \
+                   "forceload add 200 0 280 80" "place template zinogre:stygian_zinogre_arena 200 -40 0" \
+                   "setblock 36 -20 36 minecraft:stone" "stop"; do
+            echo "$c" >&3; sleep 25
+          done
+          exec 3>&-
+          sleep 20; pkill -f "runServer|DevLaunch|minecraft"
+          echo "::notice::server started: $(grep -c 'Done (' server.log), crash reports: $(grep -c 'Crash report saved' server.log)"
+          grep -E "zinogre|Zinogre|located|nearest|placed|Placed|template|structure|Could not|Failed|ERROR|Exception|Caused by" server.log \
+            | grep -vE "DEBUG|flite|Narrator|realms" | awk '!seen[$0]++' | head -45 > srv.txt
+          split -l 15 srv.txt srv_
+          for f in $(ls srv_* 2>/dev/null | head -4); do echo "::notice::$(sed ':a;N;$!ba;s/\n/%0A/g' $f | cut -c1-7000)"; done
+
       - name: Upload jar
         uses: actions/upload-artifact@v4
         with:

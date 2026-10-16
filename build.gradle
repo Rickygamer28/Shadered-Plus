@@ -50,3 +50,6 @@ tasks.withType(ProcessResources).configureEach {
     inputs.properties replaceProperties
     filesMatching(['META-INF/neoforge.mods.toml']) { expand replaceProperties }
 }
+
+// the server run reads commands from stdin (CI's world generation test)
+tasks.matching { it.name == 'runServer' }.configureEach { standardInput = System.in }

@@ -331,7 +331,7 @@ public class ZinogreEntity extends TamableAnimal {
     private void becomeCharged() {
         entityData.set(CHARGED, true);
         chargedLeft = CHARGE_DURATION;
-        modifier(Attributes.ATTACK_DAMAGE, CHARGED_DAMAGE, 0.5);
+        modifier(Attributes.ATTACK_DAMAGE, CHARGED_DAMAGE, isTame() ? 0.25 : 0.5); // pets: +25%
         modifier(Attributes.MOVEMENT_SPEED, CHARGED_SPEED, 0.15);
         playSound(SoundEvents.WOLF_HOWL, 3.0F, 0.45F);
         playSound(SoundEvents.LIGHTNING_BOLT_THUNDER, 1.2F, 1.6F);
@@ -532,9 +532,47 @@ public class ZinogreEntity extends TamableAnimal {
         for (int group : BREAKABLE) {
             partDamage[group] = tag.getFloat("PartDamage" + group);
         }
+        if (isTame()) {
+            petBalance(); // (pets tamed before the balance came in get it now)
+        }
     }
 
     // ---------------------------------------------------------------- taming and sitting
+
+    private static final ResourceLocation PET_HEALTH = ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "pet_health");
+    private static final ResourceLocation PET_DAMAGE = ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "pet_damage");
+    private static final ResourceLocation PET_ARMOR = ResourceLocation.fromNamespaceAndPath(ZinogreMod.MOD_ID, "pet_armor");
+
+    @Override
+    protected void applyTamingSideEffects() {
+        super.applyTamingSideEffects();
+        petBalance();
+    }
+
+    /**
+     * A pet Zinogre is a strong companion, not a walking boss: half the wild one's health, attack and armor (Zinogre
+     * 100 health / 7 attack, Stygian 130 / 9; an iron golem has 100 health and hits for 7-21).
+     */
+    private void petBalance() {
+        double k = isTame() ? -0.5 : 0.0;
+        petModifier(Attributes.MAX_HEALTH, PET_HEALTH, k);
+        petModifier(Attributes.ATTACK_DAMAGE, PET_DAMAGE, k);
+        petModifier(Attributes.ARMOR, PET_ARMOR, k);
+        if (getHealth() > getMaxHealth()) {
+            setHealth(getMaxHealth());
+        }
+    }
+
+    private void petModifier(net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attribute, ResourceLocation id, double amount) {
+        AttributeInstance instance = getAttribute(attribute);
+        if (instance == null) {
+            return;
+        }
+        instance.removeModifier(id);
+        if (amount != 0) {
+            instance.addPermanentModifier(new AttributeModifier(id, amount, AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+        }
+    }
 
     /** Raw or cooked meat tames it and heals it. */
     @Override
@@ -715,7 +753,8 @@ public class ZinogreEntity extends TamableAnimal {
         double radius = ROAR_RADIUS * (isAlpha() ? 2.0 : 1.0);
         AABB around = getBoundingBox().inflate(radius);
         for (LivingEntity e : level().getEntitiesOfClass(LivingEntity.class, around,
-                e -> e != this && e.isAlive() && !isFriend(e) && distanceToSqr(e) < radius * radius)) {
+                e -> e != this && e.isAlive() && !isFriend(e) && distanceToSqr(e) < radius * radius
+                        && !(isTame() && e instanceof Player))) { // a pet's roar only frightens mobs
             e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, isAlpha() ? 80 : 50, 2), this);
         }
     }

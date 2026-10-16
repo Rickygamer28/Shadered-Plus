@@ -1,0 +1,14 @@
+{
+ "structures": [
+  {
+   "structure": "zinogre:zinogre_arena",
+   "weight": 1
+  }
+ ],
+ "placement": {
+  "type": "minecraft:random_spread",
+  "spacing": 40,
+  "separation": 16,
+  "salt": 739146211
+ }
+}

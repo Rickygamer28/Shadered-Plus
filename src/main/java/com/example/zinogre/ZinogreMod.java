@@ -86,6 +86,17 @@ public class ZinogreMod {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ZinogreEggBlockEntity>> EGG_BLOCK_ENTITY = BLOCK_ENTITIES.register("zinogre_egg",
             () -> BlockEntityType.Builder.of(ZinogreEggBlockEntity::new, EGG.get(), STYGIAN_EGG.get()).build(null));
 
+    /** The hidden blocks in the arenas that bring out their Alpha (see ZinogreArenaCoreBlock). */
+    public static final DeferredHolder<Block, ZinogreArenaCoreBlock> ARENA_CORE = BLOCKS.register("arena_core", () -> new ZinogreArenaCoreBlock(false, coreProperties()));
+    public static final DeferredHolder<Block, ZinogreArenaCoreBlock> STYGIAN_ARENA_CORE = BLOCKS.register("stygian_arena_core", () -> new ZinogreArenaCoreBlock(true, coreProperties()));
+    @SuppressWarnings("DataFlowIssue")
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ZinogreArenaCoreBlockEntity>> ARENA_CORE_BLOCK_ENTITY = BLOCK_ENTITIES.register("arena_core",
+            () -> BlockEntityType.Builder.of(ZinogreArenaCoreBlockEntity::new, ARENA_CORE.get(), STYGIAN_ARENA_CORE.get()).build(null));
+
+    private static BlockBehaviour.Properties coreProperties() {
+        return BlockBehaviour.Properties.of().strength(-1.0F, 3600000.0F).noLootTable().noOcclusion().pushReaction(PushReaction.BLOCK);
+    }
+
     private static BlockBehaviour.Properties eggProperties() {
         return BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion().pushReaction(PushReaction.DESTROY);
     }
