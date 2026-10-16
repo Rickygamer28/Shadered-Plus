@@ -12,6 +12,8 @@ public final class ZinogreClient {
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ZinogreMod.ZINOGRE.get(), ZinogreRenderer::new);
         event.registerEntityRenderer(ZinogreMod.STYGIAN_ZINOGRE.get(), ZinogreRenderer::new);
+        event.registerEntityRenderer(ZinogreMod.ALPHA_ZINOGRE.get(), c -> new ZinogreRenderer(c, com.example.zinogre.ZinogreEntity.ALPHA_SIZE));
+        event.registerEntityRenderer(ZinogreMod.ALPHA_STYGIAN_ZINOGRE.get(), c -> new ZinogreRenderer(c, com.example.zinogre.ZinogreEntity.ALPHA_SIZE));
         event.registerBlockEntityRenderer(ZinogreMod.HEAD_BLOCK_ENTITY.get(), ZinogreHeadRenderer::new);
     }
 

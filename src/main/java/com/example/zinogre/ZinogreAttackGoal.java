@@ -92,7 +92,7 @@ class ZinogreAttackGoal extends Goal {
             mob.startCharge();
             return;
         }
-        double reach = mob.getBbWidth() * 0.5 + 3.0 + target.getBbWidth() * 0.5;
+        double reach = mob.getBbWidth() * 0.5 + 3.0 * mob.sizeScale() + target.getBbWidth() * 0.5;
         boolean inReach = dx * dx + dz * dz <= reach * reach && Math.abs(target.getY() - mob.getY()) < 3.0;
         if (inReach && cooldown <= 0 && mob.hasLineOfSight(target)) {
             mob.getNavigation().stop();
@@ -112,7 +112,8 @@ class ZinogreAttackGoal extends Goal {
         }
         // far away (but not too far) and on the same level: leaps at it
         double distSq = dx * dx + dz * dz;
-        if (!inReach && distSq > 7.0 * 7.0 && distSq < 17.0 * 17.0 && Math.abs(target.getY() - mob.getY()) < 4.0
+        double far = mob.isAlpha() ? 1.8 : 1.0; // an Alpha leaps from farther away
+        if (!inReach && distSq > 49.0 * far * far && distSq < 289.0 * far * far && Math.abs(target.getY() - mob.getY()) < 4.0 * far
                 && mob.canLeap() && mob.hasLineOfSight(target) && mob.getRandom().nextInt(10) == 0) {
             face(target, 180.0F);
             mob.startMove(ZinogreEntity.MOVE_LEAP, target);

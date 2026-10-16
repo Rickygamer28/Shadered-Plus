@@ -25,7 +25,8 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 /**
  * Zinogre (personal build): one mob, drawn with Shadered's model renderer from assets/zinogre/models/complex/zinogre.glb.
  * Spawned with its spawn egg only (no natural spawning). Tamable with meat. Its head drops
- * (as a placeable trophy) when a charged creeper kills it.
+ * (as a placeable trophy) when a charged creeper kills it. The Alpha bosses (three times as big) drop an egg that
+ * hatches a Zinogre when lightning strikes it.
  */
 @Mod(ZinogreMod.MOD_ID)
 public class ZinogreMod {
@@ -51,10 +52,42 @@ public class ZinogreMod {
                     .clientTrackingRange(10)
                     .build("stygian_zinogre"));
 
+    /** The bosses: Alpha Zinogre and Alpha Stygian Zinogre, three times as big (same class: see ZinogreEntity#isAlpha). */
+    public static final DeferredHolder<EntityType<?>, EntityType<ZinogreEntity>> ALPHA_ZINOGRE = ENTITIES.register("alpha_zinogre",
+            () -> EntityType.Builder.of(ZinogreEntity::new, MobCategory.CREATURE)
+                    .sized(2.6F * ZinogreEntity.ALPHA_SIZE, 2.4F * ZinogreEntity.ALPHA_SIZE)
+                    .clientTrackingRange(16)
+                    .fireImmune()
+                    .build("alpha_zinogre"));
+    public static final DeferredHolder<EntityType<?>, EntityType<ZinogreEntity>> ALPHA_STYGIAN_ZINOGRE = ENTITIES.register("alpha_stygian_zinogre",
+            () -> EntityType.Builder.of(ZinogreEntity::new, MobCategory.CREATURE)
+                    .sized(2.6F * ZinogreEntity.ALPHA_SIZE, 2.4F * ZinogreEntity.ALPHA_SIZE)
+                    .clientTrackingRange(16)
+                    .fireImmune()
+                    .build("alpha_stygian_zinogre"));
+
     public static final DeferredItem<DeferredSpawnEggItem> SPAWN_EGG = ITEMS.register("zinogre_spawn_egg",
             () -> new DeferredSpawnEggItem(ZINOGRE, 0x2E3B4E, 0x8FE3FF, new Item.Properties()));
     public static final DeferredItem<DeferredSpawnEggItem> STYGIAN_SPAWN_EGG = ITEMS.register("stygian_zinogre_spawn_egg",
             () -> new DeferredSpawnEggItem(STYGIAN_ZINOGRE, 0x16161C, 0xD6283A, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> ALPHA_SPAWN_EGG = ITEMS.register("alpha_zinogre_spawn_egg",
+            () -> new DeferredSpawnEggItem(ALPHA_ZINOGRE, 0x1B2533, 0xFFE45C, new Item.Properties()));
+    public static final DeferredItem<DeferredSpawnEggItem> ALPHA_STYGIAN_SPAWN_EGG = ITEMS.register("alpha_stygian_zinogre_spawn_egg",
+            () -> new DeferredSpawnEggItem(ALPHA_STYGIAN_ZINOGRE, 0x0B0B0F, 0xFF5A1F, new Item.Properties()));
+
+    /** The eggs the Alphas drop: placed on the ground, they hatch into a (tamed) Zinogre when lightning strikes them. */
+    public static final DeferredHolder<Block, ZinogreEggBlock> EGG = BLOCKS.register("zinogre_egg", () -> new ZinogreEggBlock(false, eggProperties()));
+    public static final DeferredHolder<Block, ZinogreEggBlock> STYGIAN_EGG = BLOCKS.register("stygian_zinogre_egg", () -> new ZinogreEggBlock(true, eggProperties()));
+    public static final DeferredItem<net.minecraft.world.item.BlockItem> EGG_ITEM = ITEMS.registerSimpleBlockItem("zinogre_egg", EGG, new Item.Properties().rarity(Rarity.EPIC).stacksTo(16));
+    public static final DeferredItem<net.minecraft.world.item.BlockItem> STYGIAN_EGG_ITEM = ITEMS.registerSimpleBlockItem("stygian_zinogre_egg", STYGIAN_EGG, new Item.Properties().rarity(Rarity.EPIC).stacksTo(16));
+    @SuppressWarnings("DataFlowIssue")
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ZinogreEggBlockEntity>> EGG_BLOCK_ENTITY = BLOCK_ENTITIES.register("zinogre_egg",
+            () -> BlockEntityType.Builder.of(ZinogreEggBlockEntity::new, EGG.get(), STYGIAN_EGG.get()).build(null));
+
+    private static BlockBehaviour.Properties eggProperties() {
+        return BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion().pushReaction(PushReaction.DESTROY);
+    }
 
     /** The trophy heads (dropped like mob heads: when a charged creeper's explosion kills it). */
     public static final DeferredHolder<Block, ZinogreHeadBlock> HEAD = BLOCKS.register("zinogre_head", () -> new ZinogreHeadBlock(false, headProperties()));
@@ -86,16 +119,22 @@ public class ZinogreMod {
     private static void attributes(EntityAttributeCreationEvent event) {
         event.put(ZINOGRE.get(), ZinogreEntity.createAttributes(false).build());
         event.put(STYGIAN_ZINOGRE.get(), ZinogreEntity.createAttributes(true).build());
+        event.put(ALPHA_ZINOGRE.get(), ZinogreEntity.createAlphaAttributes(false).build());
+        event.put(ALPHA_STYGIAN_ZINOGRE.get(), ZinogreEntity.createAlphaAttributes(true).build());
     }
 
     private static void creativeTab(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
             event.accept(SPAWN_EGG.get());
             event.accept(STYGIAN_SPAWN_EGG.get());
+            event.accept(ALPHA_SPAWN_EGG.get());
+            event.accept(ALPHA_STYGIAN_SPAWN_EGG.get());
         }
         if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
             event.accept(HEAD_ITEM.get());
             event.accept(STYGIAN_HEAD_ITEM.get());
+            event.accept(EGG_ITEM.get());
+            event.accept(STYGIAN_EGG_ITEM.get());
         }
     }
 }

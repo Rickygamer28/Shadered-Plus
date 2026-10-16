@@ -76,6 +76,8 @@ import org.jetbrains.annotations.Nullable;
  * The Stygian Zinogre is the same mob with its own entity type: tougher, darker.
  */
 public class ZinogreEntity extends TamableAnimal {
+    /** How much bigger the Alpha bosses are. */
+    public static final float ALPHA_SIZE = 3.0F;
     /** Length of the attack (the model's "attack" clip: 1.7 s). */
     public static final int ATTACK_TICKS = 34;
     /** When the lunge reaches forward (0.65 s into the clip). */
@@ -157,7 +159,7 @@ public class ZinogreEntity extends TamableAnimal {
 
     public ZinogreEntity(EntityType<? extends TamableAnimal> type, Level level) {
         super(type, level);
-        this.xpReward = 40;
+        this.xpReward = type == ZinogreMod.ALPHA_ZINOGRE.get() || type == ZinogreMod.ALPHA_STYGIAN_ZINOGRE.get() ? 500 : 40;
     }
 
     public static AttributeSupplier.Builder createAttributes(boolean stygian) {
@@ -187,7 +189,98 @@ public class ZinogreEntity extends TamableAnimal {
     }
 
     public boolean isStygian() {
-        return getType() == ZinogreMod.STYGIAN_ZINOGRE.get();
+        return getType() == ZinogreMod.STYGIAN_ZINOGRE.get() || getType() == ZinogreMod.ALPHA_STYGIAN_ZINOGRE.get();
+    }
+
+    /** An Alpha (boss): three times as big, much tougher, can't be tamed, has a boss bar and drops an egg. */
+    public boolean isAlpha() {
+        return getType() == ZinogreMod.ALPHA_ZINOGRE.get() || getType() == ZinogreMod.ALPHA_STYGIAN_ZINOGRE.get();
+    }
+
+    /** How big it is compared to a normal Zinogre (for its reach, hit areas and so on). */
+    public float sizeScale() {
+        return isAlpha() ? ALPHA_SIZE : 1.0F;
+    }
+
+    public static AttributeSupplier.Builder createAlphaAttributes(boolean stygian) {
+        return Mob.createMobAttributes()
+                .add(Attributes.MAX_HEALTH, stygian ? 1300.0 : 1000.0)
+                .add(Attributes.MOVEMENT_SPEED, 0.3)
+                .add(Attributes.ATTACK_DAMAGE, stygian ? 40.0 : 31.0)
+                .add(Attributes.ATTACK_KNOCKBACK, 3.0)
+                .add(Attributes.FOLLOW_RANGE, 64.0)
+                .add(Attributes.KNOCKBACK_RESISTANCE, 1.0)
+                .add(Attributes.ARMOR, stygian ? 18.0 : 14.0)
+                .add(Attributes.ARMOR_TOUGHNESS, 8.0)
+                .add(Attributes.STEP_HEIGHT, 3.0);
+    }
+
+    // ---------------------------------------------------------------- boss bar (Alphas)
+
+    @Nullable
+    private net.minecraft.server.level.ServerBossEvent bossEvent;
+
+    @Nullable
+    private net.minecraft.server.level.ServerBossEvent bossEvent() {
+        if (bossEvent == null && isAlpha() && !level().isClientSide) {
+            bossEvent = new net.minecraft.server.level.ServerBossEvent(getDisplayName(),
+                    isStygian() ? net.minecraft.world.BossEvent.BossBarColor.RED : net.minecraft.world.BossEvent.BossBarColor.BLUE,
+                    net.minecraft.world.BossEvent.BossBarOverlay.NOTCHED_10);
+        }
+        return bossEvent;
+    }
+
+    @Override
+    public void startSeenByPlayer(net.minecraft.server.level.ServerPlayer player) {
+        super.startSeenByPlayer(player);
+        if (bossEvent() != null) {
+            bossEvent().addPlayer(player);
+        }
+    }
+
+    @Override
+    public void stopSeenByPlayer(net.minecraft.server.level.ServerPlayer player) {
+        super.stopSeenByPlayer(player);
+        if (bossEvent() != null) {
+            bossEvent().removePlayer(player);
+        }
+    }
+
+    @Override
+    public void setCustomName(@Nullable net.minecraft.network.chat.Component name) {
+        super.setCustomName(name);
+        if (bossEvent() != null) {
+            bossEvent().setName(getDisplayName());
+        }
+    }
+
+    @Override
+    protected void customServerAiStep() {
+        super.customServerAiStep();
+        if (bossEvent() != null) {
+            bossEvent().setProgress(getHealth() / getMaxHealth());
+        }
+    }
+
+    /** Alphas don't take fall damage (they leap a long way). */
+    @Override
+    public boolean causeFallDamage(float distance, float multiplier, DamageSource source) {
+        return !isAlpha() && super.causeFallDamage(distance, multiplier, source);
+    }
+
+    /**
+     * A thunder wolf: lightning doesn't hurt it, it charges it up (the one that hatches it from its egg, too).
+     */
+    @Override
+    public void thunderHit(ServerLevel level, LightningBolt lightning) {
+        if (!isCharged() && isAlive()) {
+            becomeCharged();
+        }
+    }
+
+    /** Server: just hatched from its egg. */
+    void hatched() {
+        chargeCooldown = 100;
     }
 
     // ---------------------------------------------------------------- breakable parts
@@ -238,7 +331,8 @@ public class ZinogreEntity extends TamableAnimal {
         playSound(SoundEvents.WOLF_HOWL, 3.0F, 0.45F);
         playSound(SoundEvents.LIGHTNING_BOLT_THUNDER, 1.2F, 1.6F);
         if (level() instanceof ServerLevel server) {
-            server.sendParticles(sparkParticle(), getX(), getY() + 1.4, getZ(), 120, 1.4, 0.9, 1.4, 0.2);
+            float k = sizeScale();
+            server.sendParticles(sparkParticle(), getX(), getY() + 1.4 * k, getZ(), (int) (120 * k), 1.4 * k, 0.9 * k, 1.4 * k, 0.2);
         }
     }
 
@@ -272,12 +366,15 @@ public class ZinogreEntity extends TamableAnimal {
     /** While charged: sparks crackle off its back (client) and the charge runs down (server). */
     private void chargedTick() {
         if (level().isClientSide) {
-            if (isCharged() && random.nextInt(2) == 0) {
-                Vec3 forward = Vec3.directionFromRotation(0.0F, yBodyRot);
-                double along = (random.nextDouble() - 0.4) * 4.0;
-                level().addParticle(sparkParticle(), getX() + forward.x * along + (random.nextDouble() - 0.5) * 1.6,
-                        getY() + 1.2 + random.nextDouble() * 1.2, getZ() + forward.z * along + (random.nextDouble() - 0.5) * 1.6,
-                        (random.nextDouble() - 0.5) * 0.2, 0.1, (random.nextDouble() - 0.5) * 0.2);
+            float k = sizeScale();
+            for (int n = 0; n < (isAlpha() ? 4 : 1); n++) {
+                if (isCharged() && random.nextInt(2) == 0) {
+                    Vec3 forward = Vec3.directionFromRotation(0.0F, yBodyRot);
+                    double along = (random.nextDouble() - 0.4) * 4.0 * k;
+                    level().addParticle(sparkParticle(), getX() + forward.x * along + (random.nextDouble() - 0.5) * 1.6 * k,
+                            getY() + (1.2 + random.nextDouble() * 1.2) * k, getZ() + forward.z * along + (random.nextDouble() - 0.5) * 1.6 * k,
+                            (random.nextDouble() - 0.5) * 0.2, 0.1, (random.nextDouble() - 0.5) * 0.2);
+                }
             }
             return;
         }
@@ -375,7 +472,7 @@ public class ZinogreEntity extends TamableAnimal {
             case ARMS -> forward.scale(1.3).add(0, 0.4, 0);
             default -> forward.scale(0.9).add(0, 1.8, 0);
         };
-        at = at.add(position());
+        at = at.scale(sizeScale()).add(position());
         if (level() instanceof ServerLevel server) {
             server.sendParticles(ParticleTypes.CRIT, at.x, at.y, at.z, 30, 0.4, 0.4, 0.4, 0.3);
             server.sendParticles(ParticleTypes.DAMAGE_INDICATOR, at.x, at.y, at.z, 8, 0.3, 0.3, 0.3, 0.1);
@@ -388,6 +485,9 @@ public class ZinogreEntity extends TamableAnimal {
     @Override
     protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean recentlyHit) {
         super.dropCustomDeathLoot(level, source, recentlyHit);
+        if (isAlpha()) {
+            spawnAtLocation(new ItemStack(isStygian() ? ZinogreMod.STYGIAN_EGG_ITEM.get() : ZinogreMod.EGG_ITEM.get()));
+        }
         if (source.getEntity() instanceof Creeper creeper && creeper.canDropMobsSkull()) {
             creeper.increaseDroppedSkulls();
             spawnAtLocation(new ItemStack(isStygian() ? ZinogreMod.STYGIAN_HEAD_ITEM.get() : ZinogreMod.HEAD_ITEM.get()));
@@ -434,12 +534,15 @@ public class ZinogreEntity extends TamableAnimal {
     /** Raw or cooked meat tames it and heals it. */
     @Override
     public boolean isFood(ItemStack stack) {
-        return stack.is(ItemTags.MEAT);
+        return !isAlpha() && stack.is(ItemTags.MEAT);
     }
 
     @Override
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
+        if (isAlpha()) {
+            return InteractionResult.PASS; // a boss: can't be fed or tamed
+        }
         if (isTame()) {
             if (isOwnedBy(player) && isFood(stack) && getHealth() < getMaxHealth()) {
                 if (!level().isClientSide) {
@@ -589,9 +692,10 @@ public class ZinogreEntity extends TamableAnimal {
             slam(1.0, 3.6, 1.25F, 0.55);
         }
         if (move == MOVE_FLIP && level().isClientSide && moveTick == FLIP_SLAM) {
-            Vec3 at = position().add(Vec3.directionFromRotation(0.0F, getYRot()).scale(1.5));
-            for (int i = 0; i < 20; i++) {
-                level().addParticle(ParticleTypes.CLOUD, at.x + random.nextGaussian(), at.y + 0.2, at.z + random.nextGaussian(), 0, 0.05, 0);
+            float k = sizeScale();
+            Vec3 at = position().add(Vec3.directionFromRotation(0.0F, getYRot()).scale(1.5 * k));
+            for (int i = 0; i < 20 * k; i++) {
+                level().addParticle(ParticleTypes.CLOUD, at.x + random.nextGaussian() * k, at.y + 0.2, at.z + random.nextGaussian() * k, 0, 0.05, 0);
             }
         }
         if (moveTick >= MOVE_TICKS[move]) {
@@ -602,11 +706,12 @@ public class ZinogreEntity extends TamableAnimal {
 
     /** The roar: a loud cry that makes everything close by (except friends) cower for a moment. */
     private void roar() {
-        playSound(SoundEvents.RAVAGER_ROAR, 3.0F, 0.75F);
-        AABB around = getBoundingBox().inflate(ROAR_RADIUS);
+        playSound(SoundEvents.RAVAGER_ROAR, isAlpha() ? 6.0F : 3.0F, isAlpha() ? 0.5F : 0.75F);
+        double radius = ROAR_RADIUS * (isAlpha() ? 2.0 : 1.0);
+        AABB around = getBoundingBox().inflate(radius);
         for (LivingEntity e : level().getEntitiesOfClass(LivingEntity.class, around,
-                e -> e != this && e.isAlive() && !isFriend(e) && distanceToSqr(e) < ROAR_RADIUS * ROAR_RADIUS)) {
-            e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 50, 2), this);
+                e -> e != this && e.isAlive() && !isFriend(e) && distanceToSqr(e) < radius * radius)) {
+            e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, isAlpha() ? 80 : 50, 2), this);
         }
     }
 
@@ -618,8 +723,8 @@ public class ZinogreEntity extends TamableAnimal {
             distance = Math.sqrt(Math.pow(leapAt.x - getX(), 2) + Math.pow(leapAt.z - getZ(), 2));
         }
         // up at 0.6 it is in the air ~15 ticks, slowing by 9% a tick: it covers about 8.3 x its starting speed
-        double speed = Mth.clamp((distance - 3.0) / 8.3, 0.3, 1.7);
-        setDeltaMovement(forward.x * speed, 0.6, forward.z * speed);
+        double speed = Mth.clamp((distance - 3.0 * sizeScale()) / 8.3, 0.3, isAlpha() ? 3.0 : 1.7);
+        setDeltaMovement(forward.x * speed, isAlpha() ? 0.8 : 0.6, forward.z * speed);
         hasImpulse = true;
         playSound(SoundEvents.RAVAGER_STEP, 2.0F, 0.6F);
     }
@@ -630,8 +735,9 @@ public class ZinogreEntity extends TamableAnimal {
      */
     private void slam(double ahead, double radius, float damageShare, double knockUp) {
         Vec3 forward = Vec3.directionFromRotation(0.0F, getYRot());
-        Vec3 center = position().add(forward.scale(ahead));
-        AABB box = new AABB(center, center).inflate(radius, 2.0, radius).move(0, 1.0, 0);
+        float k = sizeScale();
+        Vec3 center = position().add(forward.scale(ahead * k));
+        AABB box = new AABB(center, center).inflate(radius * k, 2.0 * k, radius * k).move(0, k, 0);
         float damage = (float) getAttributeValue(Attributes.ATTACK_DAMAGE) * damageShare;
         boolean hit = false;
         for (LivingEntity target : level().getEntitiesOfClass(LivingEntity.class, box,
@@ -715,8 +821,9 @@ public class ZinogreEntity extends TamableAnimal {
     /** Hurts everything in a box in front of the head, where the lunge reaches (not friends, see {@link #isFriend}). */
     private void hitInFront() {
         Vec3 forward = Vec3.directionFromRotation(0.0F, getYRot());
-        Vec3 center = position().add(forward.scale(3.0)).add(0.0, 1.2, 0.0);
-        AABB box = new AABB(center, center).inflate(1.8, 1.4, 1.8);
+        float k = sizeScale();
+        Vec3 center = position().add(forward.scale(3.0 * k)).add(0.0, 1.2 * k, 0.0);
+        AABB box = new AABB(center, center).inflate(1.8 * k, 1.4 * k, 1.8 * k);
         boolean hit = false;
         for (LivingEntity target : level().getEntitiesOfClass(LivingEntity.class, box,
                 e -> e != this && e.isAlive() && !isFriend(e))) {
@@ -757,7 +864,7 @@ public class ZinogreEntity extends TamableAnimal {
     /** The model is longer than the hitbox (head in front, tail far behind): keep drawing it while any of it shows. */
     @Override
     public AABB getBoundingBoxForCulling() {
-        return getBoundingBox().inflate(3.0, 0.5, 3.0);
+        return getBoundingBox().inflate(3.0 * sizeScale(), 0.5 * sizeScale(), 3.0 * sizeScale());
     }
 
     @Override
@@ -782,7 +889,7 @@ public class ZinogreEntity extends TamableAnimal {
 
     @Override
     public float getVoicePitch() {
-        return 0.55F + random.nextFloat() * 0.1F;
+        return (isAlpha() ? 0.4F : 0.55F) + random.nextFloat() * 0.1F;
     }
 
     @Override

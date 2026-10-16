@@ -32,9 +32,17 @@ public class ZinogreRenderer extends EntityRenderer<ZinogreEntity> {
     private static final double LOW_DETAIL_DISTANCE = 24.0;
     private static final ResourceLocation NO_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
 
+    /** 1 for Zinogres, 3 for the Alphas. */
+    private final float size;
+
     public ZinogreRenderer(EntityRendererProvider.Context context) {
+        this(context, 1.0F);
+    }
+
+    public ZinogreRenderer(EntityRendererProvider.Context context, float size) {
         super(context);
-        this.shadowRadius = 1.8F;
+        this.size = size;
+        this.shadowRadius = 1.8F * size;
         this.shadowStrength = 0.8F;
     }
 
@@ -77,7 +85,7 @@ public class ZinogreRenderer extends EntityRenderer<ZinogreEntity> {
                 ? charged.getModels().get(0).getMaterial().getDiffuseTexture() : null;
         // the low-detail mesh when far away (beyond LOW_DETAIL_DISTANCE blocks) or drawn small inside a Sky Island
         double distance = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition().distanceToSqr(entity.position());
-        boolean lowDetail = small || distance > LOW_DETAIL_DISTANCE * LOW_DETAIL_DISTANCE;
+        boolean lowDetail = small || distance > LOW_DETAIL_DISTANCE * LOW_DETAIL_DISTANCE * size * size;
         state.update(entity, partialTick, packedLight, chargedBody, lowDetail);
 
         // Start from the pose we were given (camera-relative, at the entity), on our own copy
@@ -91,7 +99,7 @@ public class ZinogreRenderer extends EntityRenderer<ZinogreEntity> {
             float f = Mth.sqrt(((float) entity.deathTime + partialTick - 1.0F) / 20.0F * 1.6F);
             pose.mulPose(Axis.ZP.rotationDegrees(Math.min(f, 1.0F) * 90.0F));
         }
-        pose.scale(SCALE, SCALE, SCALE);
+        pose.scale(SCALE * size, SCALE * size, SCALE * size);
 
         // Shadered's model renderer works in world coordinates
         Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
