@@ -22,11 +22,11 @@ public class ZinogreFollowOwnerGoal extends Goal {
         setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
     }
 
-    private double start() {
+    private double startDistance() {
         return mob.getBbWidth() * 0.5 + 5.0;
     }
 
-    private double stop() {
+    private double stopDistance() {
         return mob.getBbWidth() * 0.5 + 2.0;
     }
 
@@ -35,14 +35,14 @@ public class ZinogreFollowOwnerGoal extends Goal {
         LivingEntity owner = mob.getOwner();
         return mob.isTame() && owner != null && owner.isAlive() && !owner.isSpectator() && !mob.isOrderedToSit()
                 && !mob.isLeashed() && !mob.isPassenger() && mob.getTarget() == null && !mob.isBusy()
-                && mob.distanceToSqr(owner) > start() * start() && owner.level() == mob.level();
+                && mob.distanceToSqr(owner) > startDistance() * startDistance() && owner.level() == mob.level();
     }
 
     @Override
     public boolean canContinueToUse() {
         LivingEntity owner = mob.getOwner();
         return owner != null && owner.isAlive() && !owner.isSpectator() && !mob.isOrderedToSit() && mob.getTarget() == null
-                && owner.level() == mob.level() && mob.distanceToSqr(owner) > stop() * stop();
+                && owner.level() == mob.level() && mob.distanceToSqr(owner) > stopDistance() * stopDistance();
     }
 
     @Override
