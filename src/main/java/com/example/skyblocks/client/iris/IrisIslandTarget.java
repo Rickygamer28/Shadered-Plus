@@ -128,6 +128,9 @@ public final class IrisIslandTarget {
         GL11.glFrontFace(GL11.GL_CCW);
         GL11.glCullFace(GL11.GL_BACK);
         GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_FILL);
+        GL11.glDisable(org.lwjgl.opengl.GL32.GL_DEPTH_CLAMP);
+        GL11.glDisable(GL30.GL_RASTERIZER_DISCARD);
+        RenderSystem.disableColorLogicOp();
         RenderSystem.disableDepthTest();
         RenderSystem.enableDepthTest();
         RenderSystem.disableCull();
