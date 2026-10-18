@@ -86,6 +86,9 @@ public final class IrisIslandTarget {
     private static final Matrix4f levelProjection = new Matrix4f();
     private static boolean levelViewSet, levelProjectionSet;
 
+    /** True while drawAll draws into the target (outside renderers may bind another framebuffer meanwhile). */
+    private static boolean drawing;
+
     private static boolean warnedNoShader;
     private static boolean warnedNoComposite;
     private static boolean warnedError;
@@ -110,6 +113,13 @@ public final class IrisIslandTarget {
     public static void levelProjection(Matrix4f projection) {
         levelProjection.set(projection);
         levelProjectionSet = true;
+    }
+
+    /** While the paintings are being drawn into the target: binds it again (after a renderer bound another one). */
+    public static void rebindIfDrawing() {
+        if (drawing && target != null) {
+            target.bindWrite(true);
+        }
     }
 
     /** Notes down a painting to draw at the end of the frame: {@code draw} gets a copy of the pose it has now. */
@@ -245,17 +255,25 @@ public final class IrisIslandTarget {
             Lighting.setupLevel();
         }
 
-        for (Runnable painting : PAINTINGS) {
-            try {
-                painting.run();
-            } catch (RuntimeException e) {
-                warnOnce("Couldn't draw an Island Painting over the shader pack", e);
+        drawing = true;
+        try {
+            for (Runnable painting : PAINTINGS) {
+                try {
+                    target.bindWrite(true); // (in case the last one ended with another framebuffer bound)
+                    painting.run();
+                } catch (RuntimeException e) {
+                    warnOnce("Couldn't draw an Island Painting over the shader pack", e);
+                }
             }
+            if (!CATS.isEmpty()) {
+                target.bindWrite(true);
+                IslandCatBatch.addAll(CATS);
+                IslandCatBatch.flush(catPartialTick);
+            }
+        } finally {
+            drawing = false;
         }
-        if (!CATS.isEmpty()) {
-            IslandCatBatch.addAll(CATS);
-            IslandCatBatch.flush(catPartialTick);
-        }
+        target.bindWrite(true);
         return true;
     }
 

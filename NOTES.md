@@ -50,3 +50,7 @@
   User then: inside slides while walking + flicker. Iris moves the view bob from the projection into the camera matrix
   passed to LevelRenderer.renderLevel; paintings now use exactly those two matrices (captured by @ModifyArg index 5/6 in
   GameRendererIrisMixin, like Compat Fix's ViewBob) instead of RenderSystem's at block entity time.
+  User: same problems; screenshot showed farther paintings drawn over a nearer one = the window's depth restore (step 4)
+  not landing in our target. Shadered's renderers (sky pictures via SkyUsage.ensureFresh, AssimpRenderer for cats) can
+  bind another framebuffer / change the stencil mid-painting: IslandWindow.backInside() now rebinds the target
+  (IrisIslandTarget.rebindIfDrawing) and re-asserts the stencil/depth state after each of them.

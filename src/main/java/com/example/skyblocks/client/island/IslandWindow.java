@@ -153,6 +153,7 @@ final class IslandWindow {
                 }
                 try {
                     com.example.skyblocks.client.IslandCatBatch.flush(partialTick); // the painting's cats, in one batch
+                    backInside(); // Shadered's model renderer may have bound another framebuffer or changed the stencil
                 } finally {
                     com.example.skyblocks.client.IslandCatBatch.discard();
                 }
@@ -160,6 +161,7 @@ final class IslandWindow {
             }
             scene.endBatch();
             drawSkyBlocks(skies);
+            backInside();
 
             // 4. Put the picture's own depth back (so later effects treat it as the wall) and clear the mark.
             RenderSystem.disableCull();
@@ -182,6 +184,32 @@ final class IslandWindow {
             RenderSystem.enableCull();
             poseStack.popPose();
         }
+    }
+
+    /**
+     * After Shadered's renderers ran (sky pictures, cats), which can bind their own framebuffer and leave a different
+     * one bound, or change the stencil test: back to the framebuffer the painting is drawn into (with a shader pack,
+     * Shadered+'s own target) and to drawing only inside the window's mark. Each setting is set twice (the other way
+     * first), so it reaches OpenGL even if GlStateManager's memory of it is out of date.
+     */
+    private static void backInside() {
+        com.example.skyblocks.client.iris.IrisIslandTarget.rebindIfDrawing();
+        GL11.glEnable(GL11.GL_STENCIL_TEST);
+        GL11.glDepthRange(0.0, 1.0);
+        RenderSystem.stencilMask(0xFF);
+        RenderSystem.stencilMask(0x00);
+        RenderSystem.stencilFunc(GL11.GL_ALWAYS, 0, 0x00);
+        RenderSystem.stencilFunc(GL11.GL_EQUAL, 1, 0xFF);
+        RenderSystem.stencilOp(GL11.GL_ZERO, GL11.GL_ZERO, GL11.GL_ZERO);
+        RenderSystem.stencilOp(GL11.GL_KEEP, GL11.GL_KEEP, GL11.GL_KEEP);
+        RenderSystem.disableDepthTest();
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthFunc(GL11.GL_ALWAYS);
+        RenderSystem.depthFunc(GL11.GL_LEQUAL);
+        RenderSystem.depthMask(false);
+        RenderSystem.depthMask(true);
+        RenderSystem.colorMask(false, false, false, false);
+        RenderSystem.colorMask(true, true, true, true);
     }
 
     /** How many sky cubes each of Shadered's skies has queued so far this frame, per pass. */
@@ -238,6 +266,7 @@ final class IslandWindow {
         for (SkyblockBatchData data : skies.keySet()) {
             com.example.skyblocks.client.SkyUsage.ensureFresh(data); // a resting sky: draw its picture first
         }
+        backInside(); // drawing a sky picture binds Shadered's own framebuffer
         int passDepth = ComplexPassRenderer.getInstance().getRenderBuffer().getDepthTextureId();
         for (Map.Entry<SkyblockBatchData, SkyblockBatchData> entry : skies.entrySet()) {
             Integer sky = SkyblockRenderer.DATA_LIST.get(entry.getKey());
@@ -303,6 +332,7 @@ final class IslandWindow {
         }
         SkyblockBatchData batch = SkyblockRenderer.getData(data.type());
         com.example.skyblocks.client.SkyUsage.ensureFresh(batch); // a resting sky: draw its picture first
+        backInside(); // drawing a sky picture binds Shadered's own framebuffer
         Integer sky = SkyblockRenderer.DATA_LIST.get(batch);
         SkyblockPass pass = data.pass();
         ShaderInstance shader = RegisterShaders.get(pass.getShaderName());
