@@ -47,3 +47,6 @@
   depth-tested) handles occlusion and the island is drawn inside the mark; cats depth-tested directly; the overlay just
   blends the target where it has content (no depth discard). No glGet state queries (state set twice, texture cache
   forgotten); only FBO + SSBO bindings read, once a frame. Compat Fix v16 adds Iris's view bob to AssimpRenderer's ViewMat.
+  User then: inside slides while walking + flicker. Iris moves the view bob from the projection into the camera matrix
+  passed to LevelRenderer.renderLevel; paintings now use exactly those two matrices (captured by @ModifyArg index 5/6 in
+  GameRendererIrisMixin, like Compat Fix's ViewBob) instead of RenderSystem's at block entity time.

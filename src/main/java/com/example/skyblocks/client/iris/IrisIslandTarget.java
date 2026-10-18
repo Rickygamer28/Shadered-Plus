@@ -76,6 +76,16 @@ public final class IrisIslandTarget {
     private static final float[] fogColor = new float[4];
     private static FogShape fogShape = FogShape.SPHERE;
 
+    /**
+     * This frame's camera matrix and projection exactly as the level gets them (GameRendererIrisMixin). With a shader
+     * pack, Iris moves the view bob from the projection into the camera matrix and draws the world with these, so the
+     * paintings use them too (otherwise their insides slide against the frame while walking, and the window's depth
+     * test against the world flickers).
+     */
+    private static final Matrix4f levelView = new Matrix4f();
+    private static final Matrix4f levelProjection = new Matrix4f();
+    private static boolean levelViewSet, levelProjectionSet;
+
     private static boolean warnedNoShader;
     private static boolean warnedNoComposite;
     private static boolean warnedError;
@@ -90,6 +100,16 @@ public final class IrisIslandTarget {
     /** True during Iris's shadow pass (the world seen from the sun): paintings' insides and island cats are skipped. */
     public static boolean shadowPass() {
         return IrisCompat.renderingShadowPass();
+    }
+
+    public static void levelView(Matrix4f frustumMatrix) {
+        levelView.set(frustumMatrix);
+        levelViewSet = true;
+    }
+
+    public static void levelProjection(Matrix4f projection) {
+        levelProjection.set(projection);
+        levelProjectionSet = true;
     }
 
     /** Notes down a painting to draw at the end of the frame: {@code draw} gets a copy of the pose it has now. */
@@ -212,9 +232,9 @@ public final class IrisIslandTarget {
             RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT | GL11.GL_STENCIL_BUFFER_BIT, Minecraft.ON_OSX);
         }
 
-        // the view block entities were drawn with
-        RenderSystem.setProjectionMatrix(projection, sorting);
-        RenderSystem.getModelViewMatrix().set(modelView);
+        // the view the level was drawn with (block entities' poses are camera-relative, the camera's turn is in here)
+        RenderSystem.setProjectionMatrix(levelProjectionSet ? levelProjection : projection, sorting);
+        RenderSystem.getModelViewMatrix().set(levelViewSet ? levelView : modelView);
         RenderSystem.setShaderFogStart(fogStart);
         RenderSystem.setShaderFogEnd(fogEnd);
         RenderSystem.setShaderFogColor(fogColor[0], fogColor[1], fogColor[2], fogColor[3]);
