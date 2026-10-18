@@ -85,3 +85,15 @@
   IslandWindow -> IrisIslandTarget.recordPictureDepth before step 4) for the overlay's hand test. Pedestal cats: depth
   test only (no writes into the pack's depth), no own depth -> always shown by the overlay.
   User: all OK now (paintings right, FPS fine). Painting timings logging now off unless -Dskyblocks.paintingTimings=true.
+
+## 1.20.1 catch-up (18 Oct 2026)
+- Squash-merged main (up to 7de82f2) into 1.20.1 and ported: Sky Liquids (Forge FluidType / ForgeFlowingFluid, client
+  looks via initializeClient; bucket item's initializeClient runs in Item's constructor, so the sky is looked up lazily),
+  GPU island mesh (1.20.1 BufferBuilder.end + VertexBuffer.Usage.STATIC, one shared upload builder), sky usage tracking,
+  Oculus support (IrisCompat checks mod id "oculus" too; Iris API v0 is the same), IslandMobsPayload on the SimpleChannel
+  (id 1, PLAY_TO_CLIENT, PacketDistributor.TRACKING_CHUNK), RenderFrameEvent -> TickEvent.RenderTickEvent (START).
+- GlCacheSync: field names are SRG in production; fields found by shape (TextureState[] array, its int, the non-final
+  static int). Only forgetTextures is kept.
+- Shadered 1.20.1's AssimpRenderer.renderDirect sets ViewMat = identity (1.21.1 uses the camera turn): island-item cats
+  and IslandCatBatch's one-by-one fallback pass full view-space matrices.
+- CI: compiles, client reaches the title screen (sky tracking mixins log as active). Not tested in a world.
