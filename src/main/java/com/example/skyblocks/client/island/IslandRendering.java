@@ -8,6 +8,11 @@ package com.example.skyblocks.client.island;
 public final class IslandRendering {
     public static boolean inIsland;
     public static boolean inWindow;
+    /**
+     * Collect cats for IslandCatBatch instead of queueing them for Shadered (a Sky Island on a pedestal while a shader
+     * pack is active: they are drawn through client/iris/IrisIslandTarget).
+     */
+    public static boolean collectCats;
 
     private IslandRendering() {}
 }

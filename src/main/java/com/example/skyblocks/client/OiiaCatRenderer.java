@@ -91,8 +91,9 @@ public class OiiaCatRenderer implements BlockEntityRenderer<OiiaCatBlockEntity> 
         // Shadered's model renderer works in world coordinates (like MaxwellRenderer)
         Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         model.modelMatrix = new Matrix4f().translation((float) camera.x, (float) camera.y, (float) camera.z).mul(relative);
-        if (IslandRendering.inWindow) {
+        if (IslandRendering.inWindow || IslandRendering.collectCats) {
             // inside an Island Painting: drawn while the window is open, all of the painting's cats in one batch
+            // (a Sky Island with a shader pack: drawn through client/iris/IrisIslandTarget when the island is done)
             IslandCatBatch.add(model);
         } else {
             AssimpRenderer.getInstance().addModel(model);

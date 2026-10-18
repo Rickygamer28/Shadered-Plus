@@ -63,6 +63,11 @@ public final class IslandCatBatch {
         }
     }
 
+    /** True if cats have been collected and not drawn yet. */
+    public static boolean hasPending() {
+        return !PENDING.isEmpty();
+    }
+
     /** Throws away cats collected but not drawn (e.g. a painting that failed half-way). */
     public static void discard() {
         PENDING.clear();

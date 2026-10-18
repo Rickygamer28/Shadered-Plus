@@ -70,6 +70,24 @@ final class IslandWindow {
     static void render(@org.jetbrains.annotations.Nullable IslandView view, @org.jetbrains.annotations.Nullable IslandMesh mesh,
                        net.minecraft.world.item.ItemStack background, int rotation, Direction facing, int width, int height,
                        PoseStack poseStack, float partialTick, int light, double distance, double figureReach, boolean details) {
+        // With an Iris shader pack: nothing in Iris's shadow pass (the window doesn't cast shadows), and otherwise
+        // drawn into our own target (Iris's buffers have no stencil, and the pack would paint over the inside), which
+        // is put over the pack's final image at the end of the frame (client/iris/IrisIslandTarget).
+        if (com.example.skyblocks.client.iris.IrisIslandTarget.shadowPass()) {
+            return;
+        }
+        com.example.skyblocks.client.iris.IrisIslandTarget.Scope iris = com.example.skyblocks.client.iris.IrisIslandTarget.active()
+                ? com.example.skyblocks.client.iris.IrisIslandTarget.begin() : null;
+        try {
+            renderWindow(view, mesh, background, rotation, facing, width, height, poseStack, partialTick, light, distance, figureReach, details);
+        } finally {
+            com.example.skyblocks.client.iris.IrisIslandTarget.end(iris);
+        }
+    }
+
+    private static void renderWindow(@org.jetbrains.annotations.Nullable IslandView view, @org.jetbrains.annotations.Nullable IslandMesh mesh,
+                       net.minecraft.world.item.ItemStack background, int rotation, Direction facing, int width, int height,
+                       PoseStack poseStack, float partialTick, int light, double distance, double figureReach, boolean details) {
         Box box = new Box(width, height);
         poseStack.pushPose();
         // work in a north-facing painting's space: the wall behind is at z = 1..2, the room goes from z = 1 to 1 + DEPTH

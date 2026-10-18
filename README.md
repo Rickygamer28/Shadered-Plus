@@ -173,7 +173,10 @@ with a mixin error, and the mixins need updating.
 
 ## Limitations
 - Framed Blocks can't use skyblocks as camo (Shadered 1.21.1 draws them with block entities).
-- Shader packs, Sodium and so on: whatever Shadered supports.
+- Shader packs, Sodium and so on: whatever Shadered supports. With an Iris shader pack, Island Paintings and the cats
+  inside Sky Islands are drawn into Shadered+'s own buffer and put over the pack's image at the end of the frame, so
+  their insides show without the pack's lighting (like Shadered's own blocks). For Shadered's own effects and skies with
+  shader packs, use Shadered Compat Fix (github.com/Rickygamer28/shadered-compat-fix).
 
 ## Credits
 Requires and builds on **Shadered** by Noodlegamer76 (https://github.com/Noodlegamer76/Shadered), licensed CC BY-NC 4.0
@@ -181,6 +184,10 @@ Requires and builds on **Shadered** by Noodlegamer76 (https://github.com/Noodleg
 permission. Shadered+ is an unofficial addon. It patches Shadered's classes at runtime (mixins) and contains no copied
 Shadered code or assets. If Shadered code or assets are copied in later: credit Noodlegamer76, link the license,
 say what was changed, no commercial use, and keep the original artists' credits for any skybox images.
+
+The shader pack overlay (client/iris: IrisIslandTarget, the iris_island_overlay shader, and the adapted GlCacheSync,
+GlStateSnapshot, RawGlState and IrisCompat) comes from **Shadered Compat Fix** (github.com/Rickygamer28/shadered-compat-fix,
+version 13), MIT License.
 
 ## Model credit
 OIIA Cat: the "Oiiaioooooiai" cat model (file `OiiaioooooiaiFin.fbx`, texture `Muchkin2_BaseColor.png`) was supplied

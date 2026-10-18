@@ -12,6 +12,7 @@
   ],
   "client": [
     "EntityAccessor",
+    "GameRendererIrisMixin",
     "ModRenderTypesMixin",
     "SkyblockBatchDataMixin",
     "SkyblockEntityRendererMixin",
