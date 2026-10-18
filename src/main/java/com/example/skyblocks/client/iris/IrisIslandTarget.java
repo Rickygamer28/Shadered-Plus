@@ -54,6 +54,14 @@ import org.lwjgl.opengl.GL43;
 @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, value = Dist.CLIENT)
 public final class IrisIslandTarget {
     private static TextureTarget target;
+    /**
+     * The cats of Sky Islands on pedestals: drawn into their own colors and depth (not tested against the world when
+     * drawn: entities and other things are only drawn into the world's depth later in the frame), then shown where
+     * nothing in the frame's final depth is in front of them.
+     */
+    private static TextureTarget catTarget;
+    private static boolean catsUsedThisFrame, drawingCats;
+    private static final java.util.List<com.noodlegamer76.shadered.client.renderer.assimp.RenderableModel> PEDESTAL_CATS = new java.util.ArrayList<>();
     /** Something was drawn into the target this frame (it is cleared, and the depth copied, on the first use). */
     private static boolean usedThisFrame;
     private static final Matrix4f worldProjection = new Matrix4f();
@@ -84,7 +92,9 @@ public final class IrisIslandTarget {
 
     /** Inside begin()/end(): binds the target again (after one of Shadered's renderers bound another framebuffer). */
     public static void rebindIfDrawing() {
-        if (inScope && target != null) {
+        if (drawingCats && catTarget != null) {
+            catTarget.bindWrite(true);
+        } else if (inScope && target != null) {
             target.bindWrite(true);
         }
     }
@@ -274,36 +284,74 @@ public final class IrisIslandTarget {
     }
 
     /**
-     * Draws the cats collected in IslandCatBatch (a Sky Island on a pedestal) through the target; in the shadow pass
-     * they are just thrown away.
+     * Takes the cats collected in IslandCatBatch for a Sky Island on a pedestal, to draw with all the others once the
+     * block entities are done (one batch a frame); in the shadow pass they are just thrown away.
      */
-    public static void drawCats(float partialTick) {
+    public static void queueCats() {
+        if (active()) {
+            IslandCatBatch.drainTo(PEDESTAL_CATS);
+        } else {
+            IslandCatBatch.discard();
+        }
+    }
+
+    /** Draws the queued pedestal cats (once the world's block entities are done, while the world's view is set up). */
+    @SubscribeEvent
+    public static void onRenderStage(net.neoforged.neoforge.client.event.RenderLevelStageEvent event) {
+        if (event.getStage() != net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES
+                || PEDESTAL_CATS.isEmpty()) {
+            return;
+        }
         try {
-            if (!IslandCatBatch.hasPending() || !active()) {
-                return;
-            }
-            Scope scope = begin();
-            try {
-                com.example.skyblocks.client.island.PaintingTimings.mark(com.example.skyblocks.client.island.PaintingTimings.Phase.PEDESTAL_CATS);
-                // tested against the world's depth but not written into it (the shader pack would see cats it never drew)
-                RenderSystem.depthMask(false);
-                IslandCatBatch.flush(partialTick);
-                RenderSystem.depthMask(true);
-            } finally {
-                end(scope);
+            if (active()) {
+                drawCats(event.getPartialTick().getGameTimeDeltaPartialTick(false));
             }
         } finally {
+            PEDESTAL_CATS.clear();
             IslandCatBatch.discard();
+        }
+    }
+
+    private static void drawCats(float partialTick) {
+        com.example.skyblocks.client.island.PaintingTimings.mark(com.example.skyblocks.client.island.PaintingTimings.Phase.PEDESTAL_CATS);
+        RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
+        boolean ssbo = GL.getCapabilities().OpenGL43;
+        Scope scope = new Scope(GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING), GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING),
+                ssbo ? GL11.glGetInteger(GL43.GL_SHADER_STORAGE_BUFFER_BINDING) : -1,
+                ssbo ? GL30.glGetIntegeri(GL43.GL_SHADER_STORAGE_BUFFER_BINDING, 0) : -1);
+        try {
+            if (catTarget == null) {
+                catTarget = new TextureTarget(main.width, main.height, true, Minecraft.ON_OSX);
+            } else if (catTarget.width != main.width || catTarget.height != main.height) {
+                catTarget.resize(main.width, main.height, Minecraft.ON_OSX);
+            }
+            resetState();
+            catTarget.bindWrite(true);
+            drawingCats = true;
+            if (!catsUsedThisFrame) {
+                catsUsedThisFrame = true;
+                RenderSystem.clearColor(0.0F, 0.0F, 0.0F, 0.0F);
+                RenderSystem.clearDepth(1.0);
+                RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
+                worldProjection.set(RenderSystem.getProjectionMatrix());
+            }
+            IslandCatBatch.addAll(PEDESTAL_CATS);
+            IslandCatBatch.flush(partialTick);
+        } catch (RuntimeException e) {
+            warnOnce("Couldn't draw the cats of Sky Islands with the shader pack", e);
+        } finally {
+            drawingCats = false;
+            end(scope);
         }
     }
 
     /** Called right after the level (and Iris's final pass) has rendered: draws the target over the screen. */
     public static void composite() {
-        if (!usedThisFrame) {
-            return;
-        }
+        boolean paintings = usedThisFrame && target != null, cats = catsUsedThisFrame && catTarget != null;
         usedThisFrame = false;
-        if (target == null || !IrisCompat.shaderPackInUse()) {
+        catsUsedThisFrame = false;
+        PEDESTAL_CATS.clear();
+        if (!(paintings || cats) || !IrisCompat.shaderPackInUse()) {
             return;
         }
         ShaderInstance shader = IrisShaders.overlay;
@@ -336,9 +384,13 @@ public final class IrisIslandTarget {
                     GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
                     GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
 
-            shader.setSampler("OverlaySampler", target.getColorTextureId());
-            shader.setSampler("DepthSampler", pictureDepth);
+            // (a part not drawn this frame is switched off with Used, its texture just has to be a valid one)
+            shader.setSampler("OverlaySampler", paintings ? target.getColorTextureId() : catTarget.getColorTextureId());
+            shader.setSampler("DepthSampler", paintings ? pictureDepth : catTarget.getDepthTextureId());
+            shader.setSampler("CatSampler", cats ? catTarget.getColorTextureId() : target.getColorTextureId());
+            shader.setSampler("CatDepthSampler", cats ? catTarget.getDepthTextureId() : pictureDepth);
             shader.setSampler("MainDepthSampler", main.getDepthTextureId());
+            shader.safeGetUniform("Used").set(paintings ? 1.0F : 0.0F, cats ? 1.0F : 0.0F);
             shader.safeGetUniform("WorldProjMat").set(worldProjection);
             RenderSystem.setShader(() -> shader);
 
@@ -380,8 +432,10 @@ public final class IrisIslandTarget {
     /** If the end-of-frame hook didn't run, start the next frame clean anyway (and say so once). */
     @SubscribeEvent
     public static void onFrameStart(RenderFrameEvent.Pre event) {
-        if (usedThisFrame) {
+        PEDESTAL_CATS.clear();
+        if (usedThisFrame || catsUsedThisFrame) {
             usedThisFrame = false;
+            catsUsedThisFrame = false;
             if (!warnedNoComposite) {
                 warnedNoComposite = true;
                 SkyBlocksMod.LOGGER.warn("Island Paintings aren't being drawn on top of the shader pack (end-of-frame hook not running)");

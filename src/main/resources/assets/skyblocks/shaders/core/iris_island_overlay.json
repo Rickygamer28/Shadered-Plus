@@ -4,11 +4,14 @@
     "samplers": [
         { "name": "OverlaySampler" },
         { "name": "DepthSampler" },
-        { "name": "MainDepthSampler" }
+        { "name": "MainDepthSampler" },
+        { "name": "CatSampler" },
+        { "name": "CatDepthSampler" }
     ],
     "uniforms": [
         { "name": "ModelViewMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
         { "name": "ProjMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+        { "name": "Used", "type": "float", "count": 2, "values": [ 1.0, 0.0 ] },
         { "name": "WorldProjMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] }
     ]
 }

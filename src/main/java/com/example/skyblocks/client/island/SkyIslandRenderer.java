@@ -142,7 +142,7 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
                 IslandRendering.collectCats = false;
             }
             if (irisCats) {
-                com.example.skyblocks.client.iris.IrisIslandTarget.drawCats(partialTick);
+                com.example.skyblocks.client.iris.IrisIslandTarget.queueCats(); // drawn with all the others later
             }
         }
         view.renderPedestal(mobs, poseStack, buffer, partialTick, distance, figureReach);
