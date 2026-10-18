@@ -89,6 +89,7 @@ public final class IrisIslandTarget {
     /** True while drawAll draws into the target (outside renderers may bind another framebuffer meanwhile). */
     private static boolean drawing;
 
+    private static boolean warnedOtherPass;
     private static boolean warnedNoShader;
     private static boolean warnedNoComposite;
     private static boolean warnedError;
@@ -122,8 +123,32 @@ public final class IrisIslandTarget {
         }
     }
 
+    /**
+     * True if a block entity's pose is the main view's: only the block's position relative to the camera, no turn
+     * (the camera's turn is in the camera matrix). Iris's shadow pass hands block entities a pose with the sun's view
+     * turned into it; a painting noted down from there was drawn at a wrong spot that slid around as you moved (and
+     * its depth hid the real paintings at some angles). Checked here as well as through Iris's API.
+     */
+    public static boolean mainViewPose(PoseStack poseStack) {
+        Matrix4f m = poseStack.last().pose();
+        float e = 1.0E-3F;
+        boolean plain = Math.abs(m.m00() - 1) < e && Math.abs(m.m11() - 1) < e && Math.abs(m.m22() - 1) < e
+                && Math.abs(m.m01()) < e && Math.abs(m.m02()) < e && Math.abs(m.m10()) < e
+                && Math.abs(m.m12()) < e && Math.abs(m.m20()) < e && Math.abs(m.m21()) < e
+                && Math.abs(m.m03()) < e && Math.abs(m.m13()) < e && Math.abs(m.m23()) < e && Math.abs(m.m33() - 1) < e;
+        if (!plain && !warnedOtherPass) {
+            warnedOtherPass = true;
+            SkyBlocksMod.LOGGER.info("Shadered+: skipping Island Paintings drawn from another view than the camera's (Iris shadow pass reported: {})",
+                    IrisCompat.renderingShadowPass());
+        }
+        return plain;
+    }
+
     /** Notes down a painting to draw at the end of the frame: {@code draw} gets a copy of the pose it has now. */
     public static void deferPainting(PoseStack poseStack, Consumer<PoseStack> draw) {
+        if (!mainViewPose(poseStack)) {
+            return;
+        }
         rememberView();
         PoseStack copy = new PoseStack();
         copy.last().pose().set(poseStack.last().pose());
@@ -132,11 +157,11 @@ public final class IrisIslandTarget {
     }
 
     /** Takes the cats collected in IslandCatBatch (a Sky Island on a pedestal) to draw at the end of the frame. */
-    public static void deferCats(float partialTick) {
+    public static void deferCats(boolean mainView, float partialTick) {
         if (!IslandCatBatch.hasPending()) {
             return;
         }
-        if (!active()) {
+        if (!active() || !mainView) {
             IslandCatBatch.discard(); // shadow pass: cats don't cast shadows
             return;
         }

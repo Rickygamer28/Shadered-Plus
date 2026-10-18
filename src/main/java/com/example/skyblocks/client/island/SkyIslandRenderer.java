@@ -114,6 +114,9 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
             }
             return;
         }
+        // (with a shader pack, island cats are only drawn from the camera's view, not Iris's shadow pass)
+        boolean mainView = !com.example.skyblocks.client.iris.IrisIslandTarget.active()
+                || com.example.skyblocks.client.iris.IrisIslandTarget.mainViewPose(poseStack);
         poseStack.pushPose();
         // Same block size for every island (like the painting): a 25-wide island fills the pedestal.
         float scale = be.displayWidth() / (float) com.example.skyblocks.island.IslandScan.MAX_SIZE;
@@ -135,7 +138,7 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
                 IslandRendering.collectCats = false;
             }
             if (irisCats) {
-                com.example.skyblocks.client.iris.IrisIslandTarget.deferCats(partialTick);
+                com.example.skyblocks.client.iris.IrisIslandTarget.deferCats(mainView, partialTick);
             }
         }
         view.renderFigures(poseStack, buffer, partialTick, distance, figureReach);

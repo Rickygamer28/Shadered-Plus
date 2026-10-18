@@ -54,3 +54,7 @@
   not landing in our target. Shadered's renderers (sky pictures via SkyUsage.ensureFresh, AssimpRenderer for cats) can
   bind another framebuffer / change the stencil mid-painting: IslandWindow.backInside() now rebinds the target
   (IrisIslandTarget.rebindIfDrawing) and re-asserts the stencil/depth state after each of them.
+  User: small paintings drawn at a wrong spot, sliding; the big one vanishing at some angles. Likely copies noted down from
+  Iris's shadow pass (its BER poses have the sun's view turned in; drawn with the main camera matrix they land elsewhere,
+  and their restored depth hides real paintings). Now only poses with no rotation (main view: camera-relative
+  translation only) are noted down (IrisIslandTarget.mainViewPose), besides Iris's isRenderingShadowPass; logs once.
