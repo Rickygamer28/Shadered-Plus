@@ -28,14 +28,14 @@ public class SkyLiquidBucketRenderer extends BlockEntityWithoutLevelRenderer {
     private final SkyblockType sky;
 
     /** The client extensions of a Sky Liquid bucket item: this renderer (made when first needed). */
-    public static net.minecraftforge.client.extensions.common.IClientItemExtensions extensions(SkyblockType sky) {
+    public static net.minecraftforge.client.extensions.common.IClientItemExtensions extensions(java.util.function.Supplier<SkyblockType> sky) {
         return new net.minecraftforge.client.extensions.common.IClientItemExtensions() {
             private SkyLiquidBucketRenderer renderer;
 
             @Override
             public BlockEntityWithoutLevelRenderer getCustomRenderer() {
                 if (renderer == null) {
-                    renderer = new SkyLiquidBucketRenderer(sky);
+                    renderer = new SkyLiquidBucketRenderer(sky.get());
                 }
                 return renderer;
             }

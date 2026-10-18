@@ -181,10 +181,13 @@ public final class ModFluids {
             this.liquid = liquid;
         }
 
-        /** The bucket's fill shows the sky (client/SkyLiquidBucketRenderer). */
+        /**
+         * The bucket's fill shows the sky (client/SkyLiquidBucketRenderer). Called from Item's constructor, before
+         * {@link #liquid} is set: the sky is looked up when the renderer is first needed.
+         */
         @Override
         public void initializeClient(java.util.function.Consumer<net.minecraftforge.client.extensions.common.IClientItemExtensions> consumer) {
-            consumer.accept(com.example.skyblocks.client.SkyLiquidBucketRenderer.extensions(liquid.sky));
+            consumer.accept(com.example.skyblocks.client.SkyLiquidBucketRenderer.extensions(() -> liquid.sky));
         }
 
         @Override
