@@ -5,21 +5,14 @@ import com.example.skyblocks.client.IslandCatBatch;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.GlStateManager;
-import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.shaders.FogShape;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
-import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexSorting;
-import com.noodlegamer76.shadered.client.renderer.assimp.RenderableModel;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.neoforged.api.distmarker.Dist;
@@ -27,7 +20,11 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
 import org.joml.Matrix4f;
+import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL15;
+import org.lwjgl.opengl.GL30;
+import org.lwjgl.opengl.GL43;
 
 /**
  * Island Paintings and the cats inside Sky Islands while an Iris shader pack is active.
@@ -38,39 +35,37 @@ import org.lwjgl.opengl.GL11;
  * and custom-shader draws (the sky room, the cats' PBR shader) only reach colortex0 and get lit or overwritten by the
  * pack, so the cats vanish.
  * <p>
- * So in Iris mode, while block entities render, the paintings and island cats are only noted down. Once the level
- * (and Iris's final pass) is done, all of them are drawn in one go into our own offscreen target (same size as the
- * screen, with depth and stencil, holding a copy of the frame's final depth), exactly as without a shader pack, and
- * the target is drawn over the screen. One target bind, one depth copy, one state save/restore and one batch for all
- * the cats per frame, however many paintings are in view; it also stays out of Iris's way mid-frame. Binding a target
- * that isn't Minecraft's main one tells Iris not to swap vanilla shaders for the pack's while we draw. The insides
- * then look un-shaded (no shader pack lighting), like Shadered's own blocks do.
+ * So in Iris mode they are drawn into our own offscreen target instead (same size as the screen, with depth and
+ * stencil, holding a copy of the world's depth), exactly as without a shader pack. Binding a target that isn't
+ * Minecraft's main one also tells Iris not to swap vanilla shaders for the pack's while we draw. Once Iris has
+ * finished its final image, the target is drawn over the screen, except where something ended up in front of it
+ * later in the frame (the held item, water, island blocks in front of a cat). The insides then look un-shaded (no
+ * shader pack lighting), like Shadered's own blocks do.
+ * <p>
+ * Speed: asking OpenGL for its state (glGet...) makes the driver wait for the GPU, which costs a lot of frame time, so
+ * this avoids it. GlStateManager's remembered state may be out of date under Sodium/Iris (calls it thinks are already
+ * in effect get skipped), so instead of reading the real state, every setting the painting relies on is set twice
+ * (once the other way), which always reaches OpenGL and leaves GlStateManager right. The world's depth is copied once
+ * a frame, and only the framebuffer bindings (and Shadered's storage buffer) are read back per painting.
  * <p>
  * Approach and overlay shader from Shadered Compat Fix (github.com/Rickygamer28/shadered-compat-fix, MIT License).
  */
 @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, value = Dist.CLIENT)
 public final class IrisIslandTarget {
     private static TextureTarget target;
-    /** The paintings to draw at the end of the frame (each with the pose it had). */
-    private static final List<Runnable> PAINTINGS = new ArrayList<>();
-    /** Cats of Sky Islands on pedestals, to draw at the end of the frame in one batch. */
-    private static final List<RenderableModel> CATS = new ArrayList<>();
-    private static float catPartialTick;
-    /** The view block entities were drawn with (the end of the frame may have other matrices and fog set). */
-    private static final Matrix4f projection = new Matrix4f();
-    private static final Matrix4f modelView = new Matrix4f();
-    private static VertexSorting sorting = VertexSorting.DISTANCE_TO_ORIGIN;
-    private static float fogStart, fogEnd;
-    private static final float[] fogColor = new float[4];
-    private static FogShape fogShape = FogShape.SPHERE;
-
+    /** Something was drawn into the target this frame (it is cleared, and the depth copied, on the first use). */
+    private static boolean usedThisFrame;
+    private static final Matrix4f worldProjection = new Matrix4f();
     private static boolean warnedNoShader;
     private static boolean warnedNoComposite;
     private static boolean warnedError;
 
     private IrisIslandTarget() {}
 
-    /** True while a shader pack is active and this isn't Iris's shadow pass: paintings go through here. */
+    /** What to put back after drawing into the target. */
+    public record Scope(int drawFramebuffer, int readFramebuffer, int ssboGeneric, int ssboIndexed0) {}
+
+    /** True while a shader pack is active and this isn't Iris's shadow pass: draw through this target. */
     public static boolean active() {
         return IrisCompat.shaderPackInUse() && !IrisCompat.renderingShadowPass();
     }
@@ -80,145 +75,136 @@ public final class IrisIslandTarget {
         return IrisCompat.renderingShadowPass();
     }
 
-    /**
-     * Notes down a painting to draw at the end of the frame: {@code draw} gets a copy of the pose it has now.
-     */
-    public static void deferPainting(PoseStack poseStack, Consumer<PoseStack> draw) {
-        rememberView();
-        PoseStack copy = new PoseStack();
-        copy.last().pose().set(poseStack.last().pose());
-        copy.last().normal().set(poseStack.last().normal());
-        PAINTINGS.add(() -> draw.accept(copy));
-    }
-
-    /** Takes the cats collected in IslandCatBatch (a Sky Island on a pedestal) to draw at the end of the frame. */
-    public static void deferCats(float partialTick) {
-        if (!IslandCatBatch.hasPending()) {
-            return;
-        }
-        if (!active()) {
-            IslandCatBatch.discard(); // shadow pass: cats don't cast shadows
-            return;
-        }
-        rememberView();
-        IslandCatBatch.drainTo(CATS);
-        catPartialTick = partialTick;
-    }
-
-    private static void rememberView() {
-        if (!PAINTINGS.isEmpty() || !CATS.isEmpty()) {
-            return;
-        }
-        projection.set(RenderSystem.getProjectionMatrix());
-        sorting = RenderSystem.getVertexSorting();
-        modelView.set(RenderSystem.getModelViewMatrix());
-        fogStart = RenderSystem.getShaderFogStart();
-        fogEnd = RenderSystem.getShaderFogEnd();
-        System.arraycopy(RenderSystem.getShaderFogColor(), 0, fogColor, 0, 4);
-        fogShape = RenderSystem.getShaderFogShape();
-    }
-
-    /** Called right after the level (and Iris's final pass) has rendered: draws everything noted down and shows it. */
-    public static void composite() {
-        if (PAINTINGS.isEmpty() && CATS.isEmpty()) {
-            return;
-        }
-        try {
-            if (IrisCompat.shaderPackInUse() && drawAll()) {
-                overlay();
-            }
-        } finally {
-            PAINTINGS.clear();
-            CATS.clear();
-            IslandCatBatch.discard();
-        }
-    }
-
-    /** Draws the noted paintings and cats into the target; false if nothing could be drawn. */
-    private static boolean drawAll() {
+    /** Binds the offscreen target for drawing: draw as usual, then call {@link #end}. Null if it couldn't be set up. */
+    public static Scope begin() {
         Minecraft mc = Minecraft.getInstance();
         RenderTarget main = mc.getMainRenderTarget();
-        GlStateSnapshot snapshot = GlStateSnapshot.capture();
-        RawGlState raw = RawGlState.capture();
-        float savedFogStart = RenderSystem.getShaderFogStart(), savedFogEnd = RenderSystem.getShaderFogEnd();
-        float[] savedFogColor = RenderSystem.getShaderFogColor().clone();
-        FogShape savedFogShape = RenderSystem.getShaderFogShape();
+        boolean ssbo = GL.getCapabilities().OpenGL43;
+        Scope scope = new Scope(GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING), GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING),
+                ssbo ? GL11.glGetInteger(GL43.GL_SHADER_STORAGE_BUFFER_BINDING) : -1,
+                ssbo ? GL30.glGetIntegeri(GL43.GL_SHADER_STORAGE_BUFFER_BINDING, 0) : -1);
         try {
-            RawGlState.applyVanillaDefaults();
-            GlCacheSync.syncAll();
             if (target == null) {
                 target = new TextureTarget(main.width, main.height, true, Minecraft.ON_OSX);
                 target.enableStencil(); // the painting's window needs it
             } else if (target.width != main.width || target.height != main.height) {
                 target.resize(main.width, main.height, Minecraft.ON_OSX);
             }
-            RenderSystem.colorMask(true, true, true, true);
-            RenderSystem.depthMask(true);
-            RenderSystem.stencilMask(0xFF);
+            resetState();
             target.bindWrite(true);
-            RenderSystem.clearColor(0.0F, 0.0F, 0.0F, 0.0F);
-            RenderSystem.clearStencil(0);
-            // The frame's final depth (Iris draws into Minecraft's own depth texture, its depthtex0), so the paintings
-            // are hidden by whatever is in front, water included. Depth can only be copied between buffers of the
-            // same format (the main target has stencil: ClientSetup turns it on); otherwise start from "far" and let
-            // the overlay hide whatever is in front.
-            if (main.isStencilEnabled() == target.isStencilEnabled()) {
-                RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_STENCIL_BUFFER_BIT, Minecraft.ON_OSX);
-                target.copyDepthFrom(main);
-                target.bindWrite(true);
-            } else {
-                RenderSystem.clearDepth(1.0);
-                RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT | GL11.GL_STENCIL_BUFFER_BIT, Minecraft.ON_OSX);
-            }
-
-            // the view block entities were drawn with
-            RenderSystem.setProjectionMatrix(projection, sorting);
-            RenderSystem.getModelViewMatrix().set(modelView);
-            RenderSystem.setShaderFogStart(fogStart);
-            RenderSystem.setShaderFogEnd(fogEnd);
-            RenderSystem.setShaderFogColor(fogColor[0], fogColor[1], fogColor[2], fogColor[3]);
-            RenderSystem.setShaderFogShape(fogShape);
-            if (mc.level != null && mc.level.effects().constantAmbientLight()) {
-                Lighting.setupNetherLevel();
-            } else {
-                Lighting.setupLevel();
-            }
-            RenderSystem.enableDepthTest();
-            RenderSystem.depthFunc(GL11.GL_LEQUAL);
-            RenderSystem.enableCull();
-            RenderSystem.defaultBlendFunc();
-            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-
-            for (Runnable painting : PAINTINGS) {
-                try {
-                    painting.run();
-                } catch (RuntimeException e) {
-                    warnOnce("Couldn't draw an Island Painting over the shader pack", e);
+            if (!usedThisFrame) {
+                usedThisFrame = true;
+                RenderSystem.clearColor(0.0F, 0.0F, 0.0F, 0.0F);
+                RenderSystem.clearStencil(0);
+                // Iris draws into Minecraft's own depth texture (its depthtex0), so the main target holds the world's
+                // depth. Depth can only be copied between buffers of the same format (the main target has stencil:
+                // ClientSetup turns it on); otherwise start from "far" and let the overlay hide whatever is in front.
+                if (main.isStencilEnabled() == target.isStencilEnabled()) {
+                    RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_STENCIL_BUFFER_BIT, Minecraft.ON_OSX);
+                    target.copyDepthFrom(main);
+                    target.bindWrite(true);
+                } else {
+                    RenderSystem.clearDepth(1.0);
+                    RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT | GL11.GL_STENCIL_BUFFER_BIT, Minecraft.ON_OSX);
                 }
+                worldProjection.set(RenderSystem.getProjectionMatrix());
             }
-            if (!CATS.isEmpty()) {
-                IslandCatBatch.addAll(CATS);
-                IslandCatBatch.flush(catPartialTick);
-            }
-            return true;
+            return scope;
         } catch (RuntimeException e) {
-            warnOnce("Couldn't draw Island Paintings over the shader pack", e);
-            return false;
-        } finally {
-            RenderSystem.setShaderFogStart(savedFogStart);
-            RenderSystem.setShaderFogEnd(savedFogEnd);
-            RenderSystem.setShaderFogColor(savedFogColor[0], savedFogColor[1], savedFogColor[2], savedFogColor[3]);
-            RenderSystem.setShaderFogShape(savedFogShape);
-            // Tells Iris the main target is bound again; the snapshot then rebinds what was really bound.
-            main.bindWrite(false);
-            raw.restore();
-            GlCacheSync.syncAll();
-            snapshot.restore();
+            warnOnce("Couldn't set up the shader pack target for Island Paintings", e);
+            end(scope);
+            return null;
         }
     }
 
-    /** Draws the target over the screen, except where something ended up in front (the hand, water...). */
-    private static void overlay() {
+    /**
+     * Sets everything the painting (or a full-screen draw) relies on to vanilla's defaults, each one set the other way
+     * first so the call reaches OpenGL even if GlStateManager's memory of it is wrong.
+     */
+    private static void resetState() {
+        GL11.glDepthRange(0.0, 1.0);
+        GL11.glDisable(GL11.GL_STENCIL_TEST);
+        GL11.glDisable(GL11.GL_SCISSOR_TEST);
+        GL11.glFrontFace(GL11.GL_CCW);
+        GL11.glCullFace(GL11.GL_BACK);
+        GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_FILL);
+        RenderSystem.disableDepthTest();
+        RenderSystem.enableDepthTest();
+        RenderSystem.disableCull();
+        RenderSystem.enableCull();
+        RenderSystem.enableBlend();
+        RenderSystem.disableBlend();
+        RenderSystem.enablePolygonOffset();
+        RenderSystem.disablePolygonOffset();
+        RenderSystem.depthFunc(GL11.GL_ALWAYS);
+        RenderSystem.depthFunc(GL11.GL_LEQUAL);
+        RenderSystem.depthMask(false);
+        RenderSystem.depthMask(true);
+        RenderSystem.colorMask(false, false, false, false);
+        RenderSystem.colorMask(true, true, true, true);
+        RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO,
+                GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.stencilMask(0x00);
+        RenderSystem.stencilMask(0xFF);
+        RenderSystem.stencilFunc(GL11.GL_NEVER, 0, 0x00);
+        RenderSystem.stencilFunc(GL11.GL_ALWAYS, 0, 0xFF);
+        RenderSystem.stencilOp(GL11.GL_ZERO, GL11.GL_ZERO, GL11.GL_ZERO);
+        RenderSystem.stencilOp(GL11.GL_KEEP, GL11.GL_KEEP, GL11.GL_KEEP);
+        GlCacheSync.forgetTextures();
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        BufferUploader.invalidate();
+    }
+
+    /** Puts back the framebuffer from before {@link #begin}. */
+    public static void end(Scope scope) {
+        if (scope == null) {
+            return;
+        }
+        // Tells Iris the main target is bound again (it swaps vanilla shaders for the pack's as before), then rebinds
+        // what was really bound (Iris's gbuffers).
+        RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
+        main.bindWrite(false);
+        GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, scope.readFramebuffer());
+        GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, scope.drawFramebuffer());
+        RenderSystem.viewport(0, 0, main.width, main.height);
+        if (scope.ssboGeneric() >= 0) {
+            // Shadered's cat renderer uses storage buffers; a shader pack may keep its own bound
+            GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, 0, scope.ssboIndexed0());
+            GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, scope.ssboGeneric());
+        }
+        BufferUploader.invalidate();
+    }
+
+    /**
+     * Draws the cats collected in IslandCatBatch (a Sky Island on a pedestal) through the target; in the shadow pass
+     * they are just thrown away.
+     */
+    public static void drawCats(float partialTick) {
+        try {
+            if (!IslandCatBatch.hasPending() || !active()) {
+                return;
+            }
+            Scope scope = begin();
+            try {
+                IslandCatBatch.flush(partialTick);
+            } finally {
+                end(scope);
+            }
+        } finally {
+            IslandCatBatch.discard();
+        }
+    }
+
+    /** Called right after the level (and Iris's final pass) has rendered: draws the target over the screen. */
+    public static void composite() {
+        if (!usedThisFrame) {
+            return;
+        }
+        usedThisFrame = false;
+        if (target == null || !IrisCompat.shaderPackInUse()) {
+            return;
+        }
         ShaderInstance shader = IrisShaders.overlay;
         if (shader == null) {
             if (!warnedNoShader) {
@@ -227,17 +213,18 @@ public final class IrisIslandTarget {
             }
             return;
         }
-        GlStateSnapshot snapshot = GlStateSnapshot.capture();
-        RawGlState raw = RawGlState.capture();
+        RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
+        Matrix4f savedProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
+        VertexSorting savedSorting = RenderSystem.getVertexSorting();
+        Matrix4f savedModelView = new Matrix4f(RenderSystem.getModelViewMatrix());
+        ShaderInstance savedShader = RenderSystem.getShader();
+        int drawFramebuffer = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+        int readFramebuffer = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
         try {
-            RawGlState.applyVanillaDefaults();
-            GlCacheSync.syncAll();
-            RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
+            resetState();
             main.bindWrite(true);
-
             RenderSystem.setProjectionMatrix(new Matrix4f().ortho(0, 1, 0, 1, -1, 1), VertexSorting.ORTHOGRAPHIC_Z);
             RenderSystem.getModelViewMatrix().identity();
-            RenderSystem.colorMask(true, true, true, true);
             RenderSystem.disableDepthTest();
             RenderSystem.depthMask(false);
             RenderSystem.disableCull();
@@ -246,12 +233,11 @@ public final class IrisIslandTarget {
             RenderSystem.blendFuncSeparate(
                     GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
                     GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-            RenderSystem.setShaderColor(1, 1, 1, 1);
 
             shader.setSampler("OverlaySampler", target.getColorTextureId());
             shader.setSampler("DepthSampler", target.getDepthTextureId());
             shader.setSampler("MainDepthSampler", main.getDepthTextureId());
-            shader.safeGetUniform("WorldProjMat").set(projection);
+            shader.safeGetUniform("WorldProjMat").set(worldProjection);
             RenderSystem.setShader(() -> shader);
 
             BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
@@ -266,9 +252,18 @@ public final class IrisIslandTarget {
         } catch (RuntimeException e) {
             warnOnce("Couldn't draw Island Paintings on top of the shader pack", e);
         } finally {
-            raw.restore();
-            GlCacheSync.syncAll();
-            snapshot.restore();
+            // back to vanilla's defaults (what the hand and GUI drawn next expect) and the previous view
+            RenderSystem.defaultBlendFunc();
+            RenderSystem.disableBlend();
+            RenderSystem.enableCull();
+            RenderSystem.depthMask(true);
+            RenderSystem.enableDepthTest();
+            RenderSystem.setProjectionMatrix(savedProjection, savedSorting);
+            RenderSystem.getModelViewMatrix().set(savedModelView);
+            RenderSystem.setShader(() -> savedShader);
+            GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, readFramebuffer);
+            GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, drawFramebuffer);
+            BufferUploader.invalidate();
         }
     }
 
@@ -279,12 +274,11 @@ public final class IrisIslandTarget {
         }
     }
 
-    /** If the end-of-frame hook didn't run, don't let the notes pile up (and say so once). */
+    /** If the end-of-frame hook didn't run, start the next frame clean anyway (and say so once). */
     @SubscribeEvent
     public static void onFrameStart(RenderFrameEvent.Pre event) {
-        if (!PAINTINGS.isEmpty() || !CATS.isEmpty()) {
-            PAINTINGS.clear();
-            CATS.clear();
+        if (usedThisFrame) {
+            usedThisFrame = false;
             if (!warnedNoComposite) {
                 warnedNoComposite = true;
                 SkyBlocksMod.LOGGER.warn("Island Paintings aren't being drawn on top of the shader pack (end-of-frame hook not running)");

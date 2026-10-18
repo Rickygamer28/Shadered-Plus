@@ -40,7 +40,8 @@
   shaders overwritten). Composited after LevelRenderer.renderLevel (GameRendererIrisMixin), premultiplied, discarding
   where the final main depth is in front. Skipped in Iris's shadow pass. Code adapted from the compat addon (MIT).
   Not tested in game yet; compat addon still handles ComplexPassRenderer output and skyboxes.
-  User: it works. Then (FPS a bit low) batched: paintings and pedestal cats are only noted during block entity rendering
-  and all drawn at the end of the frame (GameRendererIrisMixin) in one target bind / one depth copy (the frame's final
-  depth, so water etc. hide them too) / one GL state save-restore / one cat batch, with the view (projection,
-  model-view, fog, level lighting) remembered from block entity time.
+  User: it works, FPS a bit low. Tried batching every painting into one end-of-frame pass (f184939): paintings showed
+  nothing in game (cause unknown, maybe the end-of-frame depth or state), reverted. Now: drawn per painting as before but
+  without glGet state queries (they stall the driver): GlStateManager's possibly stale cache is handled by setting
+  each needed state twice (opposite first) and forgetting cached texture bindings; only FBO + SSBO bindings are read
+  (4 queries per painting); clear + depth copy once a frame; no GlStateSnapshot/RawGlState.

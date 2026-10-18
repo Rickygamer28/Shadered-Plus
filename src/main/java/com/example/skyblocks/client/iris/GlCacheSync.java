@@ -112,6 +112,27 @@ public final class GlCacheSync {
         booleanStates.add(state);
     }
 
+    /**
+     * Makes GlStateManager forget which textures it thinks are bound (without asking OpenGL, which stalls the driver),
+     * so the next binds really happen; leaves texture unit 0 active.
+     */
+    public static void forgetTextures() {
+        init();
+        if (textures == null) {
+            GL13.glActiveTexture(GL13.GL_TEXTURE0);
+            return;
+        }
+        try {
+            for (Object unit : textures) {
+                bindingField.setInt(unit, -1);
+            }
+            activeTextureField.setInt(null, -1);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            textures = null;
+        }
+        GlStateManager._activeTexture(GL13.GL_TEXTURE0);
+    }
+
     /** Makes GlStateManager's per-unit texture bindings and active unit match OpenGL's actual state. */
     public static void syncTextures() {
         init();

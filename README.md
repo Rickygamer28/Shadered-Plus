@@ -185,8 +185,8 @@ permission. Shadered+ is an unofficial addon. It patches Shadered's classes at r
 Shadered code or assets. If Shadered code or assets are copied in later: credit Noodlegamer76, link the license,
 say what was changed, no commercial use, and keep the original artists' credits for any skybox images.
 
-The shader pack overlay (client/iris: IrisIslandTarget, the iris_island_overlay shader, and the adapted GlCacheSync,
-GlStateSnapshot, RawGlState and IrisCompat) comes from **Shadered Compat Fix** (github.com/Rickygamer28/shadered-compat-fix,
+The shader pack overlay (client/iris: IrisIslandTarget, the iris_island_overlay shader, and the adapted GlCacheSync and
+IrisCompat) comes from **Shadered Compat Fix** (github.com/Rickygamer28/shadered-compat-fix,
 version 13), MIT License.
 
 ## Model credit
