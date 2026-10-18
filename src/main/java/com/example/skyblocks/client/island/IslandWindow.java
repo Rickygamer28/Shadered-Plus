@@ -71,18 +71,17 @@ final class IslandWindow {
                        net.minecraft.world.item.ItemStack background, int rotation, Direction facing, int width, int height,
                        PoseStack poseStack, float partialTick, int light, double distance, double figureReach, boolean details) {
         // With an Iris shader pack: nothing in Iris's shadow pass (the window doesn't cast shadows), and otherwise
-        // drawn into our own target (Iris's buffers have no stencil, and the pack would paint over the inside), which
-        // is put over the pack's final image at the end of the frame (client/iris/IrisIslandTarget).
+        // drawn at the end of the frame into our own target, with every other painting in view (Iris's buffers have no
+        // stencil, and the pack would paint over the inside), then put over the pack's image (client/iris/IrisIslandTarget).
         if (com.example.skyblocks.client.iris.IrisIslandTarget.shadowPass()) {
             return;
         }
-        com.example.skyblocks.client.iris.IrisIslandTarget.Scope iris = com.example.skyblocks.client.iris.IrisIslandTarget.active()
-                ? com.example.skyblocks.client.iris.IrisIslandTarget.begin() : null;
-        try {
-            renderWindow(view, mesh, background, rotation, facing, width, height, poseStack, partialTick, light, distance, figureReach, details);
-        } finally {
-            com.example.skyblocks.client.iris.IrisIslandTarget.end(iris);
+        if (com.example.skyblocks.client.iris.IrisIslandTarget.active()) {
+            com.example.skyblocks.client.iris.IrisIslandTarget.deferPainting(poseStack, pose ->
+                    renderWindow(view, mesh, background, rotation, facing, width, height, pose, partialTick, light, distance, figureReach, details));
+            return;
         }
+        renderWindow(view, mesh, background, rotation, facing, width, height, poseStack, partialTick, light, distance, figureReach, details);
     }
 
     private static void renderWindow(@org.jetbrains.annotations.Nullable IslandView view, @org.jetbrains.annotations.Nullable IslandMesh mesh,

@@ -40,8 +40,10 @@
   shaders overwritten). Composited after LevelRenderer.renderLevel (GameRendererIrisMixin), premultiplied, discarding
   where the final main depth is in front. Skipped in Iris's shadow pass. Code adapted from the compat addon (MIT).
   Not tested in game yet; compat addon still handles ComplexPassRenderer output and skyboxes.
-  User: it works, FPS a bit low. Tried batching every painting into one end-of-frame pass (f184939): paintings showed
-  nothing in game (cause unknown, maybe the end-of-frame depth or state), reverted. Now: drawn per painting as before but
-  without glGet state queries (they stall the driver): GlStateManager's possibly stale cache is handled by setting
-  each needed state twice (opposite first) and forgetting cached texture bindings; only FBO + SSBO bindings are read
-  (4 queries per painting); clear + depth copy once a frame; no GlStateSnapshot/RawGlState.
+  User: it works, FPS a bit low. Batched every painting into one end-of-frame pass (f184939): paintings invisible.
+  Cause (found by the user/compat session): the overlay's main-depth discard; the island is behind the painting surface,
+  so the wall was always "closer". Briefly reverted to per-painting drawing (19387ba/955d1de). Now (user's suggested fix):
+  end-of-frame batch again, target gets the frame's FINAL depth once, the window's stencil mark (IslandWindow step 1,
+  depth-tested) handles occlusion and the island is drawn inside the mark; cats depth-tested directly; the overlay just
+  blends the target where it has content (no depth discard). No glGet state queries (state set twice, texture cache
+  forgotten); only FBO + SSBO bindings read, once a frame. Compat Fix v16 adds Iris's view bob to AssimpRenderer's ViewMat.
