@@ -58,3 +58,9 @@
   Iris's shadow pass (its BER poses have the sun's view turned in; drawn with the main camera matrix they land elsewhere,
   and their restored depth hides real paintings). Now only poses with no rotation (main view: camera-relative
   translation only) are noted down (IrisIslandTarget.mainViewPose), besides Iris's isRenderingShadowPass; logs once.
+  18 Oct (later): the end-of-frame batch kept misbehaving under Iris (other paintings' insides drawn at wrong spots /
+  over nearer ones, the big one vanishing at angles; no shadow-pass poses were seen, so not that). Likely the frame's
+  final depth isn't the world's at that point (Iris may clear it for the hand), and replaying block-entity draws late is
+  fragile. Back to drawing each painting in place at block-entity time (the version the user confirmed working,
+  ac03984) with the lean GL state handling (955d1de) and IslandWindow.backInside() (rebind target + stencil after
+  Shadered's renderers). End-of-frame batching code removed; GameRendererIrisMixin only composites.
