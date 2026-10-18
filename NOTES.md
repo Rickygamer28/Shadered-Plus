@@ -64,3 +64,8 @@
   fragile. Back to drawing each painting in place at block-entity time (the version the user confirmed working,
   ac03984) with the lean GL state handling (955d1de) and IslandWindow.backInside() (rebind target + stencil after
   Shadered's renderers). End-of-frame batching code removed; GameRendererIrisMixin only composites.
+  Timings (user log, 10 paintings/frame, shaders on): cats gpu ~5-6 ms cpu 3.3 ms, iris_setup gpu ~4 ms; shaders off cats
+  gpu 1.7 ms cpu 3.3 ms. Cause of cats: Shadered's AssimpRenderer.render uploads its whole bone SSBO (16384 matrices =
+  1 MB, rebuilt on CPU) + glMemoryBarrier on every batch; IslandCatBatch makes one batch per painting. Fixed with
+  AssimpRendererBonesMixin (upload only used matrices, nothing + no barrier when no animated model). iris_setup now
+  split (IRIS_DEPTH_COPY) to see whether the depth blit or the framebuffer switches cost.

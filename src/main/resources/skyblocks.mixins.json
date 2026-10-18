@@ -11,6 +11,7 @@
     "SkyblockTypeMixin"
   ],
   "client": [
+    "AssimpRendererBonesMixin",
     "EntityAccessor",
     "GameRendererIrisMixin",
     "ModRenderTypesMixin",

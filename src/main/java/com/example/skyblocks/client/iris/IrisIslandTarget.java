@@ -104,6 +104,7 @@ public final class IrisIslandTarget {
             target.bindWrite(true);
             if (!usedThisFrame) {
                 usedThisFrame = true;
+                com.example.skyblocks.client.island.PaintingTimings.mark(com.example.skyblocks.client.island.PaintingTimings.Phase.IRIS_DEPTH_COPY);
                 RenderSystem.clearColor(0.0F, 0.0F, 0.0F, 0.0F);
                 RenderSystem.clearStencil(0);
                 // Iris draws into Minecraft's own depth texture (its depthtex0), so the main target holds the world's
@@ -118,6 +119,7 @@ public final class IrisIslandTarget {
                     RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT | GL11.GL_STENCIL_BUFFER_BIT, Minecraft.ON_OSX);
                 }
                 worldProjection.set(RenderSystem.getProjectionMatrix());
+                com.example.skyblocks.client.island.PaintingTimings.mark(com.example.skyblocks.client.island.PaintingTimings.Phase.IRIS_SETUP);
             }
             inScope = true;
             return scope;

@@ -20,7 +20,7 @@ import org.lwjgl.opengl.GL33;
  */
 @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, value = Dist.CLIENT)
 public final class PaintingTimings {
-    public enum Phase { IRIS_SETUP, WINDOW_MASK, ROOM, ISLAND, BLOCK_ENTITIES, CATS, BATCH_DRAW, SKY_BLOCKS, IRIS_RESTORE, COMPOSITE, PEDESTAL_CATS }
+    public enum Phase { IRIS_SETUP, IRIS_DEPTH_COPY, WINDOW_MASK, ROOM, ISLAND, BLOCK_ENTITIES, CATS, BATCH_DRAW, SKY_BLOCKS, IRIS_RESTORE, COMPOSITE, PEDESTAL_CATS }
 
     private record Mark(Phase phase, int query, long cpu) {}
 
