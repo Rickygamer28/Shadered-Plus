@@ -21,6 +21,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
 import org.joml.Matrix4f;
+import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.Camera;
+import net.minecraft.util.Mth;
 
 /**
  * Same approach as Shadered's MaxwellRenderer: hands the model, with its world matrix, to Shadered's model renderer.
@@ -86,6 +89,16 @@ public class OiiaCatRenderer implements BlockEntityRenderer<OiiaCatBlockEntity> 
         Matrix4f relative = new Matrix4f(pose.last().pose());
         // a cat in a Sky Island far away is a few pixels: not worth drawing the full model
         if (IslandRendering.inIsland && relative.getTranslation(new org.joml.Vector3f()).lengthSquared() > ISLAND_CAT_DISTANCE * ISLAND_CAT_DISTANCE) {
+            return;
+        }
+        if (IslandRendering.directCats) {
+            // An island item: drawn now. Shadered's shader puts its camera turn (ViewMat) after the model matrix, so
+            // take that turn back out of the full pose (the view's own matrix, if any, times this pose).
+            Camera cam = Minecraft.getInstance().gameRenderer.getMainCamera();
+            Matrix4f viewTurn = new Matrix4f().rotationX(cam.getXRot() * Mth.DEG_TO_RAD).rotateY((cam.getYRot() + 180.0F) * Mth.DEG_TO_RAD);
+            model.modelMatrix = viewTurn.invert().mul(new Matrix4f(RenderSystem.getModelViewMatrix()).mul(relative));
+            AssimpRenderer.getInstance().renderDirect(model, null, false);
+            renderShadow(be, poseStack, buffer, powered ? Math.max(0, (OiiaCatModel.SPIN_BOTTOM + offsetY) * scale) : 0, size, (float) center);
             return;
         }
         // Shadered's model renderer works in world coordinates (like MaxwellRenderer)

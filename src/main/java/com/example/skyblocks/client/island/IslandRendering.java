@@ -13,6 +13,11 @@ public final class IslandRendering {
      * pack is active: they are drawn through client/iris/IrisIslandTarget).
      */
     public static boolean collectCats;
+    /**
+     * Draw cats right away, with the pose they are given (a Sky Island item: drawn in hand, in item frames... not in
+     * the world's own pass).
+     */
+    public static boolean directCats;
 
     private IslandRendering() {}
 }

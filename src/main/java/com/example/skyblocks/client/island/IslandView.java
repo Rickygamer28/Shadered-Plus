@@ -394,6 +394,12 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
     }
 
     void renderBlockEntities(PoseStack poseStack, MultiBufferSource buffer, float partialTick) {
+        renderBlockEntities(poseStack, buffer, partialTick, null);
+    }
+
+    /** Draws the copied block entities ({@code only}: just those it accepts; null: all). */
+    void renderBlockEntities(PoseStack poseStack, MultiBufferSource buffer, float partialTick,
+                             @Nullable java.util.function.Predicate<BlockEntity> only) {
         if (blockEntities.isEmpty()) {
             return;
         }
@@ -403,7 +409,8 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
         boolean wasInIsland = IslandRendering.inIsland;
         IslandRendering.inIsland = true;
         try {
-            blockEntities.removeIf(be -> !be.render(this, dispatcher, poseStack, buffer, partialTick));
+            blockEntities.removeIf(be -> (only == null || only.test(be.blockEntity()))
+                    && !be.render(this, dispatcher, poseStack, buffer, partialTick));
         } finally {
             IslandRendering.inIsland = wasInIsland;
             entities.setRenderShadow(true);

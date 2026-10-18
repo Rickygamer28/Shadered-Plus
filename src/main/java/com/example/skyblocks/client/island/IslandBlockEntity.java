@@ -24,6 +24,10 @@ final class IslandBlockEntity {
         this.turn = turn;
     }
 
+    BlockEntity blockEntity() {
+        return blockEntity;
+    }
+
     /** Draws it on its own copy of the pose (a failing renderer can't unbalance the shared one); false if it failed. */
     boolean render(IslandView island, BlockEntityRenderDispatcher dispatcher, PoseStack poseStack, MultiBufferSource buffer,
                    float partialTick) {
