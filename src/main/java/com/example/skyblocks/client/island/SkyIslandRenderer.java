@@ -21,6 +21,10 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
     /** Marks an island that couldn't be decoded or baked (retried only if the island changes). */
     private record Broken(IslandData source) {}
 
+    /** Mobs inside are drawn up to this many blocks away per block of their size (per block the island is shown wide). */
+    private static final double FIGURE_REACH = 24.0;
+    /** Block entities inside (chests, signs, sky blocks...) are drawn up to this far (per block the island is shown wide). */
+    private static final double DETAIL_REACH = 48.0;
     /** How high above the bottom of the block the island's lowest point floats. */
     private static final float FLOAT = 0.35F;
 
@@ -53,14 +57,14 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
             }
             if (painting && level != null) {
                 // an empty painting still shows its room
-                IslandWindow.render(null, null, be.background(), be.rotation(), state.getValue(IslandPaintingBlock.FACING), width, height, poseStack, partialTick, packedLight);
+                IslandWindow.render(null, null, be.background(), be.rotation(), state.getValue(IslandPaintingBlock.FACING), width, height, poseStack, partialTick, packedLight, 0, 0, false);
             }
             return;
         }
         if (be.clientView instanceof Broken broken) {
             if (broken.source.equals(data)) {
                 if (painting) {
-                    IslandWindow.render(null, null, be.background(), be.rotation(), state.getValue(IslandPaintingBlock.FACING), width, height, poseStack, partialTick, packedLight);
+                    IslandWindow.render(null, null, be.background(), be.rotation(), state.getValue(IslandPaintingBlock.FACING), width, height, poseStack, partialTick, packedLight, 0, 0, false);
                 }
                 return; // same island that failed before: don't retry every frame
             }
@@ -91,10 +95,28 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         }
 
         long time = level.getGameTime();
-        view.tickTo(time);
+        // Far away the mobs and block entities inside are a pixel or two: not worth ticking or drawing them.
+        // (Distances scale with how big the island is shown: a joined painting or a wide pedestal shows it bigger.)
+        double distance = Math.sqrt(Minecraft.getInstance().gameRenderer.getMainCamera().getPosition()
+                .distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(be.getBlockPos())));
+        double shown = painting ? Math.min(width, height) : Math.max(1.0, be.displayWidth());
+        double figureReach = FIGURE_REACH * shown;
+        boolean details = distance < DETAIL_REACH * shown;
+        // A pedestal's mobs live in its block entity (they can walk over to Sky Islands next to it); a painting's
+        // figures are the scanned ones.
+        java.util.List<com.example.skyblocks.island.IslandMob> mobs = painting ? null : be.mobs();
+        if (painting ? distance < figureReach * view.biggestFigure()
+                : distance < figureReach * view.biggestPedestalFigure(mobs)) {
+            if (painting) {
+                view.tickTo(time);
+            } else {
+                view.tickPedestal(time, mobs);
+            }
+        }
 
         if (painting) {
-            IslandWindow.render(view, mesh, be.background(), be.rotation(), state.getValue(IslandPaintingBlock.FACING), width, height, poseStack, partialTick, packedLight);
+            IslandWindow.render(view, mesh, be.background(), be.rotation(), state.getValue(IslandPaintingBlock.FACING), width, height, poseStack, partialTick, packedLight,
+                    distance, figureReach, details);
             if (be.name() != null) {
                 IslandPlaque.renderOnPainting(be.name(), state.getValue(IslandPaintingBlock.FRAME), state.getValue(IslandPaintingBlock.FACING), width, poseStack, buffer, packedLight);
             }
@@ -108,8 +130,22 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         poseStack.scale(scale, scale, scale);
         poseStack.translate(-view.contentCenterX(), -view.lowestLayer(), -view.contentCenterZ());
         mesh.render(poseStack.last(), buffer);
-        view.renderBlockEntities(poseStack, buffer, partialTick);
-        view.renderFigures(poseStack, buffer, partialTick);
+        // With a shader pack, cats drawn with Shadered's own shader into Iris's buffers don't show: collect them and
+        // draw them through our own target (client/iris/IrisIslandTarget); in Iris's shadow pass they are skipped.
+        boolean irisCats = details && (com.example.skyblocks.client.iris.IrisIslandTarget.active()
+                || com.example.skyblocks.client.iris.IrisIslandTarget.shadowPass());
+        if (details) {
+            IslandRendering.collectCats = irisCats;
+            try {
+                view.renderBlockEntities(poseStack, buffer, partialTick);
+            } finally {
+                IslandRendering.collectCats = false;
+            }
+            if (irisCats) {
+                com.example.skyblocks.client.iris.IrisIslandTarget.queueCats(); // drawn with all the others later
+            }
+        }
+        view.renderPedestal(mobs, poseStack, buffer, partialTick, distance, figureReach);
         poseStack.popPose();
         // its name floats above it while you look at it
         if (be.name() != null && Minecraft.getInstance().hitResult instanceof BlockHitResult hit

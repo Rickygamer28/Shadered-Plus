@@ -15,8 +15,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * The Sky Island item in 3D: its pedestal with the island floating above it (in hand, in the inventory, in item frames
- * and on the ground). Mobs are shown too, except in inventories; chests, sky blocks and cats are left out here (they
- * are drawn by renderers meant for the world).
+ * and on the ground). Mobs, cats and vanilla block entities are shown too, except in inventories; other mods' block
+ * entities (sky blocks...) are left out here (they may be drawn by renderers meant only for the world).
  */
 public class SkyIslandItemRenderer extends BlockEntityWithoutLevelRenderer {
     /** Decoded islands, most recently used last (a few are kept so items don't re-decode every frame). */
@@ -56,7 +56,9 @@ public class SkyIslandItemRenderer extends BlockEntityWithoutLevelRenderer {
         if (view != null) {
             try {
                 IslandMesh mesh = view.mesh();
-                view.tickTo(level.getGameTime());
+                if (context != ItemDisplayContext.GUI) {
+                    view.tickTo(level.getGameTime()); // (no mobs are drawn in the inventory)
+                }
                 int wide = Math.max(view.contentWidth(), view.contentDepth());
                 float scale = Math.min(0.9F / wide, 1.1F / view.contentHeight());
                 poseStack.translate(0.5F, 0.25F, 0.5F);
@@ -64,13 +66,31 @@ public class SkyIslandItemRenderer extends BlockEntityWithoutLevelRenderer {
                 poseStack.translate(-view.contentCenterX(), -view.lowestLayer(), -view.contentCenterZ());
                 mesh.render(poseStack.last(), buffer);
                 if (context != ItemDisplayContext.GUI) {
-                    view.renderFigures(poseStack, buffer, mc.getFrameTime());
+                    float partialTick = mc.getFrameTime();
+                    // cats (drawn right away) and vanilla block entities (chests, beds, signs...); other mods' ones
+                    // may be drawn by renderers meant only for the world
+                    boolean wasDirect = IslandRendering.directCats;
+                    IslandRendering.directCats = true;
+                    try {
+                        view.renderBlockEntities(poseStack, buffer, partialTick, SkyIslandItemRenderer::shownInItem);
+                    } finally {
+                        IslandRendering.directCats = wasDirect;
+                    }
+                    view.renderFigures(poseStack, buffer, partialTick);
                 }
             } catch (RuntimeException e) {
-                VIEWS.remove(data); // try again later
+                IslandView broken = VIEWS.remove(data); // try again later
+                if (broken != null) {
+                    broken.close();
+                }
             }
         }
         poseStack.popPose();
+    }
+
+    private static boolean shownInItem(net.minecraft.world.level.block.entity.BlockEntity be) {
+        String name = be.getClass().getName();
+        return be instanceof com.example.skyblocks.OiiaCatBlockEntity || name.startsWith("net.minecraft.");
     }
 
     @Nullable

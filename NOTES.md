@@ -42,3 +42,46 @@
 - 1.20.1 BER poses include the camera rotation: OiiaCatRenderer undoes it for AssimpRenderer.addModel (world space).
 - CI starts the client under Xvfb with Shadered + GeckoLib (title screen) to check loading; Shadered 1.4.7 can't start
   a dedicated dev server (LWJGL natives), so no server test.
+- Iris / shader packs (18 Oct 2026, from the Shadered Compat Fix conversation; setup NeoForge 1.21.1, Shadered 1.5.8, Iris 1.8.12 +
+  Sodium 0.8.13, Complementary Reimagined r5.9.3): Island Paintings (IslandWindow) and pedestal-island cats render into
+  client/iris/IrisIslandTarget (offscreen TextureTarget with depth + stencil, cleared once a frame, world depth copied
+  from the main target before each use) instead of Iris's gbuffers (no stencil, depth 1.0 treated as sky, custom
+  shaders overwritten). Composited after LevelRenderer.renderLevel (GameRendererIrisMixin), premultiplied, discarding
+  where the final main depth is in front. Skipped in Iris's shadow pass. Code adapted from the compat addon (MIT).
+  Not tested in game yet; compat addon still handles ComplexPassRenderer output and skyboxes.
+  User: it works, FPS a bit low. Batched every painting into one end-of-frame pass (f184939): paintings invisible.
+  Cause (found by the user/compat session): the overlay's main-depth discard; the island is behind the painting surface,
+  so the wall was always "closer". Briefly reverted to per-painting drawing (19387ba/955d1de). Now (user's suggested fix):
+  end-of-frame batch again, target gets the frame's FINAL depth once, the window's stencil mark (IslandWindow step 1,
+  depth-tested) handles occlusion and the island is drawn inside the mark; cats depth-tested directly; the overlay just
+  blends the target where it has content (no depth discard). No glGet state queries (state set twice, texture cache
+  forgotten); only FBO + SSBO bindings read, once a frame. Compat Fix v16 adds Iris's view bob to AssimpRenderer's ViewMat.
+  User then: inside slides while walking + flicker. Iris moves the view bob from the projection into the camera matrix
+  passed to LevelRenderer.renderLevel; paintings now use exactly those two matrices (captured by @ModifyArg index 5/6 in
+  GameRendererIrisMixin, like Compat Fix's ViewBob) instead of RenderSystem's at block entity time.
+  User: same problems; screenshot showed farther paintings drawn over a nearer one = the window's depth restore (step 4)
+  not landing in our target. Shadered's renderers (sky pictures via SkyUsage.ensureFresh, AssimpRenderer for cats) can
+  bind another framebuffer / change the stencil mid-painting: IslandWindow.backInside() now rebinds the target
+  (IrisIslandTarget.rebindIfDrawing) and re-asserts the stencil/depth state after each of them.
+  User: small paintings drawn at a wrong spot, sliding; the big one vanishing at some angles. Likely copies noted down from
+  Iris's shadow pass (its BER poses have the sun's view turned in; drawn with the main camera matrix they land elsewhere,
+  and their restored depth hides real paintings). Now only poses with no rotation (main view: camera-relative
+  translation only) are noted down (IrisIslandTarget.mainViewPose), besides Iris's isRenderingShadowPass; logs once.
+  18 Oct (later): the end-of-frame batch kept misbehaving under Iris (other paintings' insides drawn at wrong spots /
+  over nearer ones, the big one vanishing at angles; no shadow-pass poses were seen, so not that). Likely the frame's
+  final depth isn't the world's at that point (Iris may clear it for the hand), and replaying block-entity draws late is
+  fragile. Back to drawing each painting in place at block-entity time (the version the user confirmed working,
+  ac03984) with the lean GL state handling (955d1de) and IslandWindow.backInside() (rebind target + stencil after
+  Shadered's renderers). End-of-frame batching code removed; GameRendererIrisMixin only composites.
+  Timings (user log, 10 paintings/frame, shaders on): cats gpu ~5-6 ms cpu 3.3 ms, iris_setup gpu ~4 ms; shaders off cats
+  gpu 1.7 ms cpu 3.3 ms. Cause of cats: Shadered's AssimpRenderer.render uploads its whole bone SSBO (16384 matrices =
+  1 MB, rebuilt on CPU) + glMemoryBarrier on every batch; IslandCatBatch makes one batch per painting. Fixed with
+  AssimpRendererBonesMixin (upload only used matrices, nothing + no barrier when no animated model). iris_setup now
+  split (IRIS_DEPTH_COPY) to see whether the depth blit or the framebuffer switches cost.
+  Next log: cats fixed (gpu 0.5 ms, cpu 0.3 ms). iris_depth_copy (the once-a-frame clear + depth blit of the main
+  target) was 4.5-7.5 ms gpu. Now no copy: the target's depth/stencil attachment IS Minecraft's main depth texture
+  (Iris's depthtex0), its stencil cleared once a frame; the painting leaves the depth as found (step 4). A second
+  colour attachment (R32F, cleared to 1.0) gets each painting's visible picture depth (iris_picture_depth shader,
+  IslandWindow -> IrisIslandTarget.recordPictureDepth before step 4) for the overlay's hand test. Pedestal cats: depth
+  test only (no writes into the pack's depth), no own depth -> always shown by the overlay.
+  User: all OK now (paintings right, FPS fine). Painting timings logging now off unless -Dskyblocks.paintingTimings=true.

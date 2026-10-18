@@ -1,6 +1,12 @@
 package com.example.skyblocks.client.island;
 
 import com.example.skyblocks.island.IslandData;
+import com.example.skyblocks.island.IslandMob;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import com.example.skyblocks.island.IslandScan;
 import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.ArrayDeque;
@@ -192,6 +198,8 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
                 // an entity that can't be recreated on the client is left out
             }
         }
+        view.figureLevel = level;
+        view.figureAt = at;
         LIVE.add(view);
         return view;
     }
@@ -245,7 +253,31 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
                 }
             }
         }
+        LIVE.add(view);
         return view;
+    }
+
+    /**
+     * A cheap fingerprint of the blocks a preview of this area would show (just reads them): the preview is only
+     * rebuilt (light, block models, upload) when this changes.
+     */
+    public static long previewHash(Level level, BlockPos scanner, int size, int above, int depth) {
+        size = IslandScan.clampSize(size);
+        above = IslandScan.clampAbove(above);
+        depth = IslandScan.clampDepth(depth);
+        int height = IslandScan.height(above, depth);
+        BlockPos origin = IslandScan.origin(scanner, size, depth);
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        long hash = 1125899906842597L;
+        for (int y = 0; y < height; y++) {
+            for (int z = 0; z < size; z++) {
+                for (int x = 0; x < size; x++) {
+                    p.set(origin.getX() + x, origin.getY() + y, origin.getZ() + z);
+                    hash = 31 * hash + System.identityHashCode(level.getBlockState(p));
+                }
+            }
+        }
+        return hash;
     }
 
     // ---- island access ----
@@ -361,6 +393,12 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
     }
 
     void renderBlockEntities(PoseStack poseStack, MultiBufferSource buffer, float partialTick) {
+        renderBlockEntities(poseStack, buffer, partialTick, null);
+    }
+
+    /** Draws the copied block entities ({@code only}: just those it accepts; null: all). */
+    void renderBlockEntities(PoseStack poseStack, MultiBufferSource buffer, float partialTick,
+                             @Nullable java.util.function.Predicate<BlockEntity> only) {
         if (blockEntities.isEmpty()) {
             return;
         }
@@ -370,7 +408,8 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
         boolean wasInIsland = IslandRendering.inIsland;
         IslandRendering.inIsland = true;
         try {
-            blockEntities.removeIf(be -> !be.render(this, dispatcher, poseStack, buffer, partialTick));
+            blockEntities.removeIf(be -> (only == null || only.test(be.blockEntity()))
+                    && !be.render(this, dispatcher, poseStack, buffer, partialTick));
         } finally {
             IslandRendering.inIsland = wasInIsland;
             entities.setRenderShadow(true);
@@ -378,16 +417,150 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
     }
 
     void renderFigures(PoseStack poseStack, MultiBufferSource buffer, float partialTick) {
+        renderFigures(poseStack, buffer, partialTick, 0.0, Double.POSITIVE_INFINITY);
+    }
+
+    /**
+     * Draws the mob figures; with a finite {@code reach}, only those that would still be more than a couple of pixels
+     * big: a mob is skipped when it is farther from the camera than reach x its size (blocks).
+     */
+    void renderFigures(PoseStack poseStack, MultiBufferSource buffer, float partialTick, double distance, double reach) {
         if (figures.isEmpty()) {
             return;
         }
         EntityRenderDispatcher dispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
         dispatcher.setRenderShadow(false); // their shadows would be cast on the real world around the block
         try {
-            figures.removeIf(figure -> !figure.render(this, dispatcher, poseStack, buffer, partialTick));
+            figures.removeIf(figure -> distance <= reach * figureSize(figure.entity)
+                    && !figure.render(this, dispatcher, poseStack, buffer, partialTick));
         } finally {
             dispatcher.setRenderShadow(true);
         }
+    }
+
+    private static double figureSize(net.minecraft.world.entity.Entity entity) {
+        return Math.max(0.5, Math.max(entity.getBbWidth(), entity.getBbHeight()));
+    }
+
+    private double biggestFigure = -1;
+
+    // ---- the mobs living on a placed Sky Island (pedestal): the block entity moves them, these figures show them ----
+
+    private Level figureLevel;
+    private BlockPos figureAt;
+    private final Map<UUID, IslandFigure> pedestal = new LinkedHashMap<>();
+    private final Set<UUID> brokenFigures = new HashSet<>();
+    private long pedestalTick = -1;
+
+    /** Makes figures for mobs that arrived on the island and drops those of mobs that left. */
+    private void syncPedestal(List<IslandMob> mobs) {
+        if (pedestal.size() == mobs.size()) {
+            boolean same = true;
+            for (IslandMob mob : mobs) {
+                if (!pedestal.containsKey(mob.id)) {
+                    same = false;
+                    break;
+                }
+            }
+            if (same) {
+                return;
+            }
+        }
+        Map<UUID, IslandFigure> old = new LinkedHashMap<>(pedestal);
+        pedestal.clear();
+        for (IslandMob mob : mobs) {
+            IslandFigure figure = old.get(mob.id);
+            if (figure == null && !brokenFigures.contains(mob.id)) {
+                figure = newFigure(mob);
+            }
+            if (figure != null) {
+                pedestal.put(mob.id, figure);
+            }
+        }
+    }
+
+    @Nullable
+    private IslandFigure newFigure(IslandMob mob) {
+        try {
+            CompoundTag saved = mob.entity.copy();
+            saved.putShort("Fire", (short) -1); // not burning forever
+            var entity = EntityType.create(saved, figureLevel).orElse(null);
+            if (entity == null) {
+                brokenFigures.add(mob.id);
+                return null;
+            }
+            entity.setPos(figureAt.getX() + 0.5, figureAt.getY() + 0.5, figureAt.getZ() + 0.5);
+            entity.setOldPosAndRot();
+            entity.setYRot(mob.body);
+            IslandFigure figure = new IslandFigure(entity, mob.x, mob.y, mob.z, random, this);
+            figure.jumpTo(mob);
+            return figure;
+        } catch (RuntimeException e) {
+            brokenFigures.add(mob.id); // an entity that can't be recreated on the client is left out
+            return null;
+        }
+    }
+
+    /** Animates the figures of a pedestal's mobs up to the given game time (where they are comes from the mobs). */
+    void tickPedestal(long time, List<IslandMob> mobs) {
+        syncPedestal(mobs);
+        int ticks = pedestalTick < 0 || time < pedestalTick ? 1 : (int) Math.min(5, time - pedestalTick);
+        pedestalTick = time;
+        if (ticks <= 0) {
+            return;
+        }
+        for (IslandMob mob : mobs) {
+            IslandFigure figure = pedestal.get(mob.id);
+            if (figure != null) {
+                for (int t = 0; t < ticks; t++) {
+                    figure.follow(mob);
+                }
+            }
+        }
+    }
+
+    /** Draws a pedestal's mob figures (same culling as {@link #renderFigures}). */
+    void renderPedestal(List<IslandMob> mobs, PoseStack poseStack, MultiBufferSource buffer, float partialTick, double distance, double reach) {
+        syncPedestal(mobs);
+        if (pedestal.isEmpty()) {
+            return;
+        }
+        EntityRenderDispatcher dispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
+        dispatcher.setRenderShadow(false);
+        try {
+            pedestal.entrySet().removeIf(e -> {
+                if (distance <= reach * figureSize(e.getValue().entity)
+                        && !e.getValue().render(this, dispatcher, poseStack, buffer, partialTick)) {
+                    brokenFigures.add(e.getKey());
+                    return true;
+                }
+                return false;
+            });
+        } finally {
+            dispatcher.setRenderShadow(true);
+        }
+    }
+
+    /** Size (blocks) of the biggest of a pedestal's mob figures, 0 without any. */
+    double biggestPedestalFigure(List<IslandMob> mobs) {
+        syncPedestal(mobs);
+        double max = 0;
+        for (IslandFigure figure : pedestal.values()) {
+            max = Math.max(max, figureSize(figure.entity));
+        }
+        return max;
+    }
+
+    /** Size (blocks) of the biggest mob figure, 0 without figures. */
+    double biggestFigure() {
+        if (biggestFigure < 0) {
+            double max = 0;
+            for (IslandFigure figure : figures) {
+                max = Math.max(max, figureSize(figure.entity));
+            }
+            biggestFigure = max;
+        }
+        return biggestFigure;
     }
 
     // ---- light ----

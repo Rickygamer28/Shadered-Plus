@@ -20,6 +20,8 @@ public class IslandScannerBlockEntity extends BlockEntity {
     public Object clientPreview;
     public long previewTime = -1;
     public int previewKey;
+    /** Client only: a fingerprint of the area's blocks when the preview was made (rebuilt only when it changes). */
+    public long previewHash;
 
     /** Game time of the last scan (not saved; -1 = none yet): scans are limited to one per second. */
     private long lastScan = -1;
@@ -95,6 +97,19 @@ public class IslandScannerBlockEntity extends BlockEntity {
     @Override
     public net.minecraft.world.phys.AABB getRenderBoundingBox() {
         return new net.minecraft.world.phys.AABB(getBlockPos()).inflate(13, 26, 13);
+    }
+
+    /** Client: free the preview (its blocks on the graphics card) when the scanner goes away or unloads. */
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        if (level != null && level.isClientSide && clientPreview instanceof AutoCloseable closeable) {
+            try {
+                closeable.close();
+            } catch (Exception ignored) {
+            }
+            clientPreview = null;
+        }
     }
 
     @Override

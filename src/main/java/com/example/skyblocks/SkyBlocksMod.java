@@ -1,5 +1,6 @@
 package com.example.skyblocks;
 
+import com.example.skyblocks.island.IslandMobsPayload;
 import com.example.skyblocks.island.ScanIslandPayload;
 import com.noodlegamer76.shadered.client.util.skyblock.SkyblockPass;
 import com.noodlegamer76.shadered.item.SkyblockHolderBlockItem;
@@ -39,6 +40,9 @@ public class SkyBlocksMod {
         ModBlocks.BLOCKS.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
         ModBlockEntities.TYPES.register(modEventBus);
+        ModFluids.TYPES.register(modEventBus);
+        ModFluids.FLUIDS.register(modEventBus);
+        ModFluids.RECIPES.register(modEventBus);
         modEventBus.addListener(SkyBlocksMod::addToShaderedTab);
         modEventBus.addListener(SkyBlocksMod::commonSetup);
     }
@@ -54,6 +58,9 @@ public class SkyBlocksMod {
         event.accept(ModItems.OIIA_CAT.get());
         event.accept(ModItems.ISLAND_SCANNER.get());
         event.accept(ModItems.ISLAND_PAINTING.get());
+        for (ModFluids.SkyLiquid liquid : ModFluids.ALL) {
+            event.accept(liquid.bucket.get());
+        }
     }
 
     private static void commonSetup(FMLCommonSetupEvent event) {
@@ -61,6 +68,11 @@ public class SkyBlocksMod {
                 .encoder(ScanIslandPayload::encode)
                 .decoder(ScanIslandPayload::decode)
                 .consumerMainThread(ScanIslandPayload::handle)
+                .add();
+        NETWORK.messageBuilder(com.example.skyblocks.island.IslandMobsPayload.class, 1, net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.example.skyblocks.island.IslandMobsPayload::encode)
+                .decoder(com.example.skyblocks.island.IslandMobsPayload::decode)
+                .consumerMainThread(com.example.skyblocks.island.IslandMobsPayload::handle)
                 .add();
     }
 }

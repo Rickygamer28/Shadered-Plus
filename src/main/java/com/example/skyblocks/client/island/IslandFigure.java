@@ -9,14 +9,25 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.FlyingMob;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.Slime;
+import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.animal.WaterAnimal;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.world.phys.Vec3;
 import com.example.skyblocks.mixin.EntityAccessor;
+import com.example.skyblocks.island.IslandMob;
 
 /**
  * A mini copy of a scanned mob: a client-only entity (never added to the world: no AI, no drops, can't be hit) that
  * is drawn with its normal renderer. Mobs that stood on the ground wander around the island now and then and look
- * around while they rest; the others (flying, swimming) stay where they were and look around.
+ * around while they rest; the others (flying, swimming, or pets told to sit) stay where they were and look around.
+ *
+ * The island only decides where a mob goes. Its animations are the mob's own: every island tick the copy is moved and
+ * then ticked like a mob seen from a client (no AI, no physics), so its own code works out how it animates from that
+ * movement - legs, wings, slime squish, GeckoLib and other modded animations alike. While ticking, the copy sits high
+ * above the build limit (moving along with its island position), so nothing it does touches the world: no blocks
+ * there, its particles are out of sight and client copies make no sounds. For drawing it is put back at the island.
+ * A mob whose tick fails falls back to the island's simple walk animation.
  */
 final class IslandFigure {
     private static final double SPEED = 0.06; // blocks per tick, in island blocks
@@ -32,6 +43,18 @@ final class IslandFigure {
     private final float phase;
     /** The first target is picked on the first tick (the island isn't known in the constructor's caller order). */
     private boolean firstRest;
+    /** Slimes (and magma cubes) get around by jumping: height above the floor and ticks into the jump (-1: landed). */
+    private final boolean slime;
+    private double hop, hopO;
+    private int hopTick = -1;
+    private static final int HOP_TICKS = 10;
+    private static final double HOP_HEIGHT = 0.7, HOP_SPEED = 0.18;
+    /** Where the copy is drawn from (the island's block), and the height it is ticked at. */
+    private final Vec3 display;
+    private final double tickHeight;
+    /** Whether the mob's own tick drives its animation (false once it failed). */
+    private boolean ownTick = true;
+    private final boolean grounded, inWater;
 
     IslandFigure(Entity entity, double x, double y, double z, RandomSource random, IslandView island) {
         this.entity = entity;
@@ -41,7 +64,10 @@ final class IslandFigure {
         this.targetX = x;
         this.targetZ = z;
         this.body = entity instanceof LivingEntity living ? living.yBodyRot : entity.getYRot();
-        this.walker = entity instanceof Mob && !(entity instanceof FlyingMob) && entity.onGround();
+        // pets that were sitting (told to stay) when scanned stay where they are
+        boolean sitting = entity instanceof TamableAnimal pet && (pet.isInSittingPose() || pet.isOrderedToSit());
+        this.walker = entity instanceof Mob && !(entity instanceof FlyingMob) && entity.onGround() && !sitting;
+        this.slime = entity instanceof Slime;
         this.idle = 20 + random.nextInt(120);
         this.firstRest = true;
         this.phase = random.nextFloat() * 100.0F;
@@ -51,31 +77,138 @@ final class IslandFigure {
             living.yBodyRot = living.yBodyRotO = body;
             living.yHeadRot = living.yHeadRotO = body;
         }
-        // Copies never tick, so they don't know they're in water: fish would be drawn flopping on their side.
-        boolean inWater = entity instanceof WaterAnimal || island.stateAt((int) Math.floor(x), (int) Math.floor(y + 0.2),
+        // The copy isn't really in the island's water: fish would be drawn flopping on their side.
+        this.inWater = entity instanceof WaterAnimal || island.stateAt((int) Math.floor(x), (int) Math.floor(y + 0.2),
                 (int) Math.floor(z)).getFluidState().is(FluidTags.WATER);
         if (inWater) {
             ((EntityAccessor) entity).skyblocks$setWasTouchingWater(true);
         }
+        this.grounded = entity.onGround();
+        this.display = entity.position();
+        this.tickHeight = entity.level().getMaxBuildHeight() + 64.0;
+        entity.setPos(tickPos(x, y, z));
+        entity.setOldPosAndRot();
+    }
+
+    /** Where the copy is while it ticks: above the build limit, moving with its island position. */
+    private Vec3 tickPos(double ix, double iy, double iz) {
+        return new Vec3(display.x + ix, tickHeight + iy, display.z + iz);
     }
 
     void tick(IslandView island, RandomSource random) {
         xo = x;
         yo = y;
         zo = z;
+        hopO = hop;
         entity.tickCount++;
         if (!(entity instanceof LivingEntity living)) {
             return;
+        }
+        if (walker && firstRest) {
+            firstRest = false;
+            rest(island, random, idle);
+        }
+        float moved = 0;
+        if (slime && entity instanceof Slime s) {
+            moved = slimeMove(island, random, s);
+        } else {
+            moved = walk(island, random);
+        }
+
+        animate(living, moved);
+    }
+
+    /**
+     * One tick of a figure on a placed Sky Island: the server-side mob (already moved this tick) says where it is; the
+     * figure only animates.
+     */
+    void follow(IslandMob mob) {
+        entity.tickCount++;
+        int hopBefore = hopTick;
+        xo = mob.xo;
+        yo = mob.yo;
+        zo = mob.zo;
+        x = mob.x;
+        y = mob.y;
+        z = mob.z;
+        hopO = mob.hopO;
+        hop = mob.hop;
+        hopTick = mob.hopTick;
+        body = mob.body;
+        if (!(entity instanceof LivingEntity living)) {
+            return;
+        }
+        if (!ownTick && entity instanceof Slime s) {
+            if (hopBefore < 0 && hopTick >= 0) {
+                s.targetSquish = 1.0F; // stretches as it jumps
+            } else if (hopBefore >= 0 && hopTick < 0) {
+                s.targetSquish = -0.5F; // landing squash
+            }
+        }
+        animate(living, mob.moved);
+    }
+
+    /** Puts a figure that changed islands at its new spot without it gliding there. */
+    void jumpTo(IslandMob mob) {
+        x = xo = mob.x;
+        y = yo = mob.y;
+        z = zo = mob.z;
+    }
+
+    private void animate(LivingEntity living, float moved) {
+        float t = entity.tickCount + phase;
+        boolean resting = moved == 0;
+        float headYaw = body + (resting && entity instanceof Mob ? 40.0F * Mth.sin(t * 0.045F) : 0.0F);
+        float pitch = resting && entity instanceof Mob ? 12.0F * Mth.sin(t * 0.031F) : 0.0F;
+        if (ownTick) {
+            try {
+                tickOwn(living, headYaw, pitch);
+                return;
+            } catch (Throwable e) {
+                ownTick = false; // its own tick doesn't work outside the world: animate it the simple way
+            }
         }
         living.yBodyRotO = living.yBodyRot;
         living.yHeadRotO = living.yHeadRot;
         living.yRotO = living.getYRot();
         living.xRotO = living.getXRot();
-
-        if (walker && firstRest) {
-            firstRest = false;
-            rest(island, random, idle);
+        if (entity instanceof Slime s) {
+            s.oSquish = s.squish;
+            s.squish += (s.targetSquish - s.squish) * 0.5F;
+            s.targetSquish *= 0.6F;
         }
+        if (entity instanceof Mob) {
+            living.yBodyRot = body;
+            living.setYRot(body);
+            living.yHeadRot = headYaw;
+            living.setXRot(pitch);
+            living.walkAnimation.update(Math.min(moved * 4.0F, 1.0F), 0.4F);
+        }
+    }
+
+    /**
+     * Moves the copy to its new spot (above the build limit) and runs its own tick, the way a client ticks a mob it
+     * only sees: the mob's code turns the movement into its animation (walking, body turning, slime squish...).
+     */
+    private void tickOwn(LivingEntity living, float headYaw, float pitch) {
+        living.setOldPosAndRot();
+        Vec3 to = tickPos(x, y + hop, z);
+        living.setDeltaMovement(to.subtract(living.position()));
+        living.setPos(to);
+        living.setOnGround(slime ? hopTick < 0 : grounded);
+        if (living instanceof Mob) {
+            living.setYRot(body);
+            living.setXRot(pitch);
+            living.yHeadRot = headYaw;
+        }
+        living.tick();
+        if (inWater) {
+            ((EntityAccessor) living).skyblocks$setWasTouchingWater(true);
+        }
+    }
+
+    /** Walks towards the current target (turning first); returns how far it moved this tick. */
+    private float walk(IslandView island, RandomSource random) {
         float moved = 0;
         if (walker && idle <= 0) {
             double dx = targetX - x, dz = targetZ - z;
@@ -104,16 +237,57 @@ final class IslandFigure {
         } else if (walker) {
             idle--;
         }
+        return moved;
+    }
 
-        if (entity instanceof Mob) {
-            float t = entity.tickCount + phase;
-            boolean resting = moved == 0;
-            living.yBodyRot = body;
-            living.setYRot(body);
-            living.yHeadRot = body + (resting ? 40.0F * Mth.sin(t * 0.045F) : 0.0F);
-            living.setXRot(resting ? 12.0F * Mth.sin(t * 0.031F) : 0.0F);
-            living.walkAnimation.update(Math.min(moved * 4.0F, 1.0F), 0.4F);
+    /**
+     * A slime hops towards its next spot: it jumps (an arc, moving forward), lands, waits a moment and jumps again;
+     * once there it rests like the others. (Its squish comes from its own tick, which sees it leave and hit the
+     * ground; the simple fallback sets the squish itself.) Returns how far it moved.
+     */
+    private float slimeMove(IslandView island, RandomSource random, Slime s) {
+        float moved = 0;
+        if (walker && hopTick >= 0) {
+            hopTick++;
+            hop = Math.sin(Math.PI * hopTick / HOP_TICKS) * HOP_HEIGHT;
+            double dx = targetX - x, dz = targetZ - z;
+            double dist = Math.sqrt(dx * dx + dz * dz);
+            if (dist > 0.05) {
+                double step = Math.min(HOP_SPEED, dist);
+                double nx = x + dx / dist * step, nz = z + dz / dist * step;
+                double floor = standable(island, nx, nz, y);
+                if (!Double.isNaN(floor)) {
+                    x = nx;
+                    z = nz;
+                    y = floor;
+                    moved = (float) step;
+                }
+            }
+            if (hopTick >= HOP_TICKS) {
+                hopTick = -1;
+                hop = 0;
+                if (!ownTick) {
+                    s.targetSquish = -0.5F; // landing squash
+                }
+                if (dist < 0.6) {
+                    rest(island, random, 30 + random.nextInt(100)); // there: sit for a while
+                } else {
+                    idle = 6 + random.nextInt(18);
+                }
+            }
+        } else if (walker && idle-- <= 0) {
+            double dx = targetX - x, dz = targetZ - z;
+            if (dx * dx + dz * dz < 0.25) {
+                rest(island, random, 30 + random.nextInt(100));
+            } else {
+                body = (float) (Mth.atan2(dz, dx) * Mth.RAD_TO_DEG) - 90.0F;
+                if (!ownTick) {
+                    s.targetSquish = 1.0F; // stretches as it jumps
+                }
+                hopTick = 0;
+            }
         }
+        return moved;
     }
 
     /**
@@ -174,18 +348,34 @@ final class IslandFigure {
      */
     boolean render(IslandView island, EntityRenderDispatcher dispatcher, PoseStack poseStack, MultiBufferSource buffer, float partialTick) {
         double rx = Mth.lerp(partialTick, xo, x);
-        double ry = Mth.lerp(partialTick, yo, y);
+        double ry = Mth.lerp(partialTick, yo, y) + Mth.lerp(partialTick, hopO, hop);
         double rz = Mth.lerp(partialTick, zo, z);
         float yaw = Mth.rotLerp(partialTick, entity.yRotO, entity.getYRot());
         int light = island.lightAt(rx, ry + 0.5, rz);
         PoseStack own = new PoseStack();
         own.last().pose().set(poseStack.last().pose());
         own.last().normal().set(poseStack.last().normal());
+        // drawn from the island's block (for name tags and anything else that looks at where it is), not from where
+        // it ticks; put back afterwards
+        Vec3 ticking = entity.position();
+        double oldX = entity.xo, oldY = entity.yo, oldZ = entity.zo, lastX = entity.xOld, lastY = entity.yOld, lastZ = entity.zOld;
+        entity.setPos(display);
+        entity.xo = entity.xOld = display.x;
+        entity.yo = entity.yOld = display.y;
+        entity.zo = entity.zOld = display.z;
         try {
             dispatcher.render(entity, rx, ry, rz, yaw, partialTick, own, buffer, light);
             return true;
         } catch (RuntimeException e) {
             return false; // a mob whose renderer needs it to be in the world
+        } finally {
+            entity.setPos(ticking);
+            entity.xo = oldX;
+            entity.yo = oldY;
+            entity.zo = oldZ;
+            entity.xOld = lastX;
+            entity.yOld = lastY;
+            entity.zOld = lastZ;
         }
     }
 }

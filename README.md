@@ -54,6 +54,24 @@ like Shadered's `MaxwellRenderer`. Shadered's animator only animates skeletons, 
 To add another model: put the .glb in `models/complex/`, then copy the OIIA Cat block, block entity, renderers,
 blockstate/models/loot/lang and adjust the scale. Models with a skeleton can use Shadered's `Animator` instead.
 
+## Sky Liquids
+- One liquid for **every Shadered sky type**, made automatically from Shadered's sky list like Shadered's Illusorite
+  ores: Space, Eclipse, The End, Forest, Stormy, Light, Mimic, Ocean, Iridia, End Sky, and ours (Jupiter, Cat,
+  Twilight, Hell, Nebula, Golden Hour); a sky another mod adds gets one too. Ids: `skyblocks:<sky>_liquid` and
+  `skyblocks:<sky>_liquid_bucket` (e.g. `space_liquid`, `nebula_liquid_bucket`); names "Nebula Liquid (Bucket)".
+- **Recipe:** a Bucket + any Shadered sky block, in any layout (filters included) = that sky's liquid bucket
+  (`skyblocks:sky_liquid_bucket`, a special recipe, so it works for every sky). All buckets are in Shadered's tab.
+- They behave like water: flow (7 blocks, down slopes), two sources make a new one, swim in them, boats float, they
+  put out fire, pick them up with an empty bucket. Different skies' liquids don't mix into each other.
+- Their surface is a window into their sky, like that sky's block, with smooth slopes where they flow. Under the
+  surface the fog is dark purple and short. The bucket is Minecraft's bucket with the water's pixels showing the sky.
+- How it works: `client/SkyLiquidRenderer` finds the liquid blocks near the camera every few ticks (6 chunks around,
+  at most 20,000 blocks; only chunk sections whose palette can hold one are searched) and every frame draws their
+  surface (corner heights averaged between blocks, like water) and open sides with Shadered's render type for their
+  sky (`ModRenderTypes.getSkyblockRenderType(sky, NORMAL)`), which shows that sky's picture at each screen pixel. The
+  liquids' own block surface is invisible. Sky Islands show them the same way. Models: every bucket and liquid uses
+  `item/sky_liquid_bucket` / `block/sky_liquid` (files for the 16 known skies, and a fallback in ClientSetup for others).
+
 ## Sky Islands (miniature copies of an area)
 - **Island Scanner** (`skyblocks:island_scanner`, in Shadered's creative tab). Recipe: Glass x3 on top, Amethyst Shard /
   Spyglass / Amethyst Shard in the middle, Iron Ingot x3 at the bottom.
@@ -161,7 +179,10 @@ with a mixin error, and the mixins need updating.
 
 ## Limitations
 - Framed Blocks can't use skyblocks as camo (Shadered 1.21.1 draws them with block entities).
-- Shader packs, Sodium and so on: whatever Shadered supports.
+- Shader packs, Sodium and so on: whatever Shadered supports. With an Iris shader pack, Island Paintings and the cats
+  inside Sky Islands are drawn into Shadered+'s own buffer and put over the pack's image at the end of the frame, so
+  their insides show without the pack's lighting (like Shadered's own blocks). For Shadered's own effects and skies with
+  shader packs, use Shadered Compat Fix (github.com/Rickygamer28/shadered-compat-fix).
 
 ## Credits
 Requires and builds on **Shadered** by Noodlegamer76 (https://github.com/Noodlegamer76/Shadered), licensed CC BY-NC 4.0
@@ -169,6 +190,10 @@ Requires and builds on **Shadered** by Noodlegamer76 (https://github.com/Noodleg
 permission. Shadered+ is an unofficial addon. It patches Shadered's classes at runtime (mixins) and contains no copied
 Shadered code or assets. If Shadered code or assets are copied in later: credit Noodlegamer76, link the license,
 say what was changed, no commercial use, and keep the original artists' credits for any skybox images.
+
+The shader pack overlay (client/iris: IrisIslandTarget, the iris_island_overlay shader, and the adapted GlCacheSync and
+IrisCompat) comes from **Shadered Compat Fix** (github.com/Rickygamer28/shadered-compat-fix,
+version 13), MIT License.
 
 ## Model credit
 OIIA Cat: the "Oiiaioooooiai" cat model (file `OiiaioooooiaiFin.fbx`, texture `Muchkin2_BaseColor.png`) was supplied

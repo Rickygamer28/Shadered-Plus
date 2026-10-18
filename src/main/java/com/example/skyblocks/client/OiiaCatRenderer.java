@@ -20,12 +20,16 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import org.joml.Matrix4f;
+import com.mojang.blaze3d.systems.RenderSystem;
 
 /**
  * Same approach as Shadered's MaxwellRenderer: hands the model, with its world matrix, to Shadered's model renderer.
  * Draws the small cat and the big cat (from the big cat's bottom-centre block, at the cube's size).
  */
 public class OiiaCatRenderer implements BlockEntityRenderer<OiiaCatBlockEntity> {
+
+    /** Cats inside Sky Islands farther than this (blocks) aren't drawn. */
+    private static final float ISLAND_CAT_DISTANCE = 40.0F;
 
     public OiiaCatRenderer(BlockEntityRendererProvider.Context context) {}
 
@@ -80,19 +84,31 @@ public class OiiaCatRenderer implements BlockEntityRenderer<OiiaCatBlockEntity> 
         float offsetY = OiiaCatModel.animate(pose, seconds); // 0 = the first frame = standing still
 
         Matrix4f relative = new Matrix4f(pose.last().pose());
-        if (IslandRendering.inWindow) {
-            // inside an Island Painting: draw now, while the window is open (a queued model is drawn later, outside it)
-            model.modelMatrix = relative;
+        // a cat in a Sky Island far away is a few pixels: not worth drawing the full model
+        if (IslandRendering.inIsland && relative.getTranslation(new org.joml.Vector3f()).lengthSquared() > ISLAND_CAT_DISTANCE * ISLAND_CAT_DISTANCE) {
+            return;
+        }
+        if (IslandRendering.directCats) {
+            // An island item: drawn now, with the full view-space pose (Shadered 1.20.1's renderDirect uses no camera
+            // turn of its own: ViewMat is identity there).
+            model.modelMatrix = new Matrix4f(RenderSystem.getModelViewMatrix()).mul(relative);
             AssimpRenderer.getInstance().renderDirect(model, null, false);
+            renderShadow(be, poseStack, buffer, powered ? Math.max(0, (OiiaCatModel.SPIN_BOTTOM + offsetY) * scale) : 0, size, (float) center);
+            return;
+        }
+        // Shadered's queued model renderer works in world coordinates (like MaxwellRenderer). On 1.20.1 the pose we
+        // get starts with the camera's rotation: undo it, then move from camera-relative to world coordinates.
+        net.minecraft.client.Camera cam = Minecraft.getInstance().gameRenderer.getMainCamera();
+        Vec3 camera = cam.getPosition();
+        Matrix4f view = new Matrix4f().rotationX((float) Math.toRadians(cam.getXRot()))
+                .rotateY((float) Math.toRadians(cam.getYRot() + 180.0F));
+        model.modelMatrix = new Matrix4f().translation((float) camera.x, (float) camera.y, (float) camera.z)
+                .mul(view.invert()).mul(relative);
+        if (IslandRendering.inWindow || IslandRendering.collectCats) {
+            // inside an Island Painting: drawn while the window is open, all of the painting's cats in one batch
+            // (a Sky Island with a shader pack: drawn through client/iris/IrisIslandTarget when the island is done)
+            IslandCatBatch.add(model);
         } else {
-            // Shadered's queued model renderer works in world coordinates (like MaxwellRenderer). On 1.20.1 the pose we
-            // get starts with the camera's rotation: undo it, then move from camera-relative to world coordinates.
-            net.minecraft.client.Camera cam = Minecraft.getInstance().gameRenderer.getMainCamera();
-            Vec3 camera = cam.getPosition();
-            Matrix4f view = new Matrix4f().rotationX((float) Math.toRadians(cam.getXRot()))
-                    .rotateY((float) Math.toRadians(cam.getYRot() + 180.0F));
-            model.modelMatrix = new Matrix4f().translation((float) camera.x, (float) camera.y, (float) camera.z)
-                    .mul(view.invert()).mul(relative);
             AssimpRenderer.getInstance().addModel(model);
         }
 

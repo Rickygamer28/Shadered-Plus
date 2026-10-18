@@ -12,9 +12,14 @@
     "SkyblockTypeMixin"
   ],
   "client": [
+    "AssimpRendererBonesMixin",
     "EntityAccessor",
+    "GameRendererIrisMixin",
     "ModRenderTypesMixin",
-    "SkyblockRendererMixin"
+    "SkyblockBatchDataMixin",
+    "SkyblockRendererMixin",
+    "SkyblockRenderPassMixin",
+    "SkyPassMixin"
   ],
   "injectors": {
     "defaultRequire": 1

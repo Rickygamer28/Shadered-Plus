@@ -50,8 +50,8 @@ public class IslandScannerRenderer implements BlockEntityRenderer<IslandScannerB
         LevelRenderer.renderLineBox(poseStack, lines, -r, -1, -r, r + 1, 0, r + 1, 0.4F, 1.0F, 0.5F, 1.0F);
     }
 
-    /** How often the preview is re-read from the world (ticks), so it follows changes to the area. */
-    private static final int PREVIEW_REFRESH = 40;
+    /** How often the area is checked for changes (ticks); the preview is rebuilt only when something changed. */
+    private static final int PREVIEW_REFRESH = 20;
     /** The preview is this many blocks wide, floating above the lens. */
     private static final float PREVIEW_WIDTH = 0.9F;
 
@@ -67,11 +67,24 @@ public class IslandScannerRenderer implements BlockEntityRenderer<IslandScannerB
         long time = level.getGameTime();
         int key = (size * 31 + above) * 31 + depth;
         IslandView view = be.clientPreview instanceof IslandView v ? v : null;
-        if (view == null || key != be.previewKey || time - be.previewTime >= PREVIEW_REFRESH || time < be.previewTime) {
+        boolean due = time - be.previewTime >= PREVIEW_REFRESH || time < be.previewTime;
+        if (view != null && key == be.previewKey && due) {
+            // time to look again: only rebuild if a block in the area actually changed
+            long hash = IslandView.previewHash(level, be.getBlockPos(), size, above, depth);
+            if (hash == be.previewHash) {
+                be.previewTime = time;
+                due = false;
+            }
+        }
+        if (view == null || key != be.previewKey || due) {
             try {
+                be.previewHash = IslandView.previewHash(level, be.getBlockPos(), size, above, depth);
                 view = IslandView.preview(level, be.getBlockPos(), size, above, depth);
             } catch (RuntimeException e) {
                 return; // keep the old one, if any, until the next try
+            }
+            if (be.clientPreview instanceof IslandView old) {
+                old.close(); // frees its blocks on the graphics card
             }
             be.clientPreview = view;
             be.previewKey = key;

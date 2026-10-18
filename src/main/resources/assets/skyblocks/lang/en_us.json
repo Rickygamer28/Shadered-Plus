@@ -34,5 +34,7 @@
   "message.skyblocks.island_no_dimension": "The place this island was scanned in doesn't exist here",
   "tooltip.skyblocks.island_origin": "Scanned at %s, %s, %s (%s)",
   "tooltip.skyblocks.island_day": "On day %s",
-  "tooltip.skyblocks.island_travel": "Right-click its pedestal or painting with an ender pearl to go there"
+  "tooltip.skyblocks.island_travel": "Right-click its pedestal or painting with an ender pearl to go there",
+  "block.skyblocks.sky_liquid": "%s Liquid",
+  "item.skyblocks.sky_liquid_bucket": "%s Liquid Bucket"
 }

@@ -80,6 +80,7 @@ jobs:
           grep -E "skyblocks|Shadered\+|Mixin apply|mixin.*(fail|error)|Exception|ERROR|FATAL|Caused by" client.log \
             | grep -vE "DEBUG|Mixin subsystem|SpongePowered MIXIN|sodium|embeddium|Narrator|narrator|OpenAL|ALSA|Failed to load library|realms|Realms|telemetry" \
             | awk '!seen[$0]++' | head -60 > summary.txt
+          echo "::notice::our log lines: $(grep -E 'SkyBlocksMod|sky usage|Shadered\+' client.log | head -8 | sed ':a;N;$!ba;s/\n/%0A/g' | cut -c1-3000)"
           split -l 15 summary.txt cli_
           for f in $(ls cli_* 2>/dev/null | head -6); do echo "::notice::$(sed ':a;N;$!ba;s/\n/%0A/g' $f | cut -c1-7000)"; done
 

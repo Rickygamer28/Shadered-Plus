@@ -67,7 +67,25 @@ final class IslandWindow {
      */
     static void render(@org.jetbrains.annotations.Nullable IslandView view, @org.jetbrains.annotations.Nullable IslandMesh mesh,
                        net.minecraft.world.item.ItemStack background, int rotation, Direction facing, int width, int height,
-                       PoseStack poseStack, float partialTick, int light) {
+                       PoseStack poseStack, float partialTick, int light, double distance, double figureReach, boolean details) {
+        // With an Iris shader pack: nothing in Iris's shadow pass (the window doesn't cast shadows), and otherwise
+        // drawn into our own target (Iris's buffers have no stencil, and the pack would paint over the inside), which
+        // is put over the pack's final image at the end of the frame (client/iris/IrisIslandTarget).
+        if (com.example.skyblocks.client.iris.IrisIslandTarget.shadowPass()) {
+            return;
+        }
+        com.example.skyblocks.client.iris.IrisIslandTarget.Scope iris = com.example.skyblocks.client.iris.IrisIslandTarget.active()
+                ? com.example.skyblocks.client.iris.IrisIslandTarget.begin() : null;
+        try {
+            renderWindow(view, mesh, background, rotation, facing, width, height, poseStack, partialTick, light, distance, figureReach, details);
+        } finally {
+            com.example.skyblocks.client.iris.IrisIslandTarget.end(iris);
+        }
+    }
+
+    private static void renderWindow(@org.jetbrains.annotations.Nullable IslandView view, @org.jetbrains.annotations.Nullable IslandMesh mesh,
+                       net.minecraft.world.item.ItemStack background, int rotation, Direction facing, int width, int height,
+                       PoseStack poseStack, float partialTick, int light, double distance, double figureReach, boolean details) {
         Box box = new Box(width, height);
         poseStack.pushPose();
         // work in a north-facing painting's space: the wall behind is at z = 1..2, the room goes from z = 1 to 1 + DEPTH
@@ -82,6 +100,8 @@ final class IslandWindow {
         poseStack.translate(-0.5F, 0.0F, -0.5F);
         Matrix4f picture = new Matrix4f(poseStack.last().pose());
 
+        PaintingTimings.painting();
+        PaintingTimings.mark(PaintingTimings.Phase.WINDOW_MASK);
         GL11.glEnable(GL11.GL_STENCIL_TEST);
         try {
             RenderSystem.disableCull();
@@ -111,11 +131,14 @@ final class IslandWindow {
 
             // 3. The room and the island, only inside the mark.
             MultiBufferSource.BufferSource scene = MultiBufferSource.immediate(memory());
+            PaintingTimings.mark(PaintingTimings.Phase.ROOM);
             if (!drawSkyRoom(poseStack, background, box)) {
                 drawRoom(poseStack, scene, light, box);
+                scene.endBatch(); // the room first (the island's solid blocks are drawn right away)
             }
             Map<SkyblockBatchData, SkyblockBatchData> skies = new HashMap<>();
             if (view != null && mesh != null) {
+                PaintingTimings.mark(PaintingTimings.Phase.ISLAND);
                 placeIsland(poseStack, view, rotation, box);
                 mesh.render(poseStack.last(), scene);
                 // Shadered's renderers (sky blocks, Illusorite ores...) only queue their sky cubes for Shadered's own
@@ -123,16 +146,33 @@ final class IslandWindow {
                 // draw it now, inside the window.
                 Map<SkyblockBatchData, Map<SkyblockPass, Integer>> before = queuedSizes();
                 IslandRendering.inWindow = true;
+                PaintingTimings.mark(PaintingTimings.Phase.BLOCK_ENTITIES);
                 try {
-                    view.renderBlockEntities(poseStack, scene, partialTick);
+                    if (details) {
+                        view.renderBlockEntities(poseStack, scene, partialTick);
+                    }
                 } finally {
                     IslandRendering.inWindow = false;
                     takeQueued(before, skies);
                 }
-                view.renderFigures(poseStack, scene, partialTick);
+                PaintingTimings.mark(PaintingTimings.Phase.CATS);
+                try {
+                    com.example.skyblocks.client.IslandCatBatch.flush(partialTick); // the painting's cats, in one batch
+                    backInside(); // Shadered's model renderer may have bound another framebuffer or changed the stencil
+                } finally {
+                    com.example.skyblocks.client.IslandCatBatch.discard();
+                }
+                PaintingTimings.mark(PaintingTimings.Phase.BATCH_DRAW); // (figures queued, then everything queued drawn at endBatch)
+                view.renderFigures(poseStack, scene, partialTick, distance, figureReach);
             }
             scene.endBatch();
+            PaintingTimings.mark(PaintingTimings.Phase.SKY_BLOCKS);
             drawSkyBlocks(skies);
+            backInside();
+            PaintingTimings.mark(PaintingTimings.Phase.WINDOW_MASK);
+
+            // (with a shader pack: note the picture's depth where it is visible, so the hand can cover the painting)
+            com.example.skyblocks.client.iris.IrisIslandTarget.recordPictureDepth(() -> drawPicture(picture, box));
 
             // 4. Put the picture's own depth back (so later effects treat it as the wall) and clear the mark.
             RenderSystem.disableCull();
@@ -154,7 +194,34 @@ final class IslandWindow {
             GL11.glDisable(GL11.GL_STENCIL_TEST);
             RenderSystem.enableCull();
             poseStack.popPose();
+            PaintingTimings.stop();
         }
+    }
+
+    /**
+     * After Shadered's renderers ran (sky pictures, cats), which can bind their own framebuffer and leave a different
+     * one bound, or change the stencil test: back to the framebuffer the painting is drawn into (with a shader pack,
+     * Shadered+'s own target) and to drawing only inside the window's mark. Each setting is set twice (the other way
+     * first), so it reaches OpenGL even if GlStateManager's memory of it is out of date.
+     */
+    private static void backInside() {
+        com.example.skyblocks.client.iris.IrisIslandTarget.rebindIfDrawing();
+        GL11.glEnable(GL11.GL_STENCIL_TEST);
+        GL11.glDepthRange(0.0, 1.0);
+        RenderSystem.stencilMask(0xFF);
+        RenderSystem.stencilMask(0x00);
+        RenderSystem.stencilFunc(GL11.GL_ALWAYS, 0, 0x00);
+        RenderSystem.stencilFunc(GL11.GL_EQUAL, 1, 0xFF);
+        RenderSystem.stencilOp(GL11.GL_ZERO, GL11.GL_ZERO, GL11.GL_ZERO);
+        RenderSystem.stencilOp(GL11.GL_KEEP, GL11.GL_KEEP, GL11.GL_KEEP);
+        RenderSystem.disableDepthTest();
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthFunc(GL11.GL_ALWAYS);
+        RenderSystem.depthFunc(GL11.GL_LEQUAL);
+        RenderSystem.depthMask(false);
+        RenderSystem.depthMask(true);
+        RenderSystem.colorMask(false, false, false, false);
+        RenderSystem.colorMask(true, true, true, true);
     }
 
     /** How many sky cubes each of Shadered's skies has queued so far this frame, per pass. */
@@ -208,6 +275,10 @@ final class IslandWindow {
         if (skies.isEmpty()) {
             return;
         }
+        for (SkyblockBatchData data : skies.keySet()) {
+            com.example.skyblocks.client.SkyUsage.ensureFresh(data); // a resting sky: draw its picture first
+        }
+        backInside(); // drawing a sky picture binds Shadered's own framebuffer
         int passDepth = ComplexPassRenderer.getInstance().getRenderBuffer().getDepthTextureId();
         for (Map.Entry<SkyblockBatchData, SkyblockBatchData> entry : skies.entrySet()) {
             Integer sky = SkyblockRenderer.DATA_LIST.get(entry.getKey());
@@ -256,7 +327,12 @@ final class IslandWindow {
         builder.vertex(m, b.x1(), b.y0(), PICTURE_Z).endVertex();
         builder.vertex(m, b.x1(), b.y1(), PICTURE_Z).endVertex();
         builder.vertex(m, b.x0(), b.y1(), PICTURE_Z).endVertex();
-        RenderSystem.setShader(GameRenderer::getPositionShader);
+        ShaderInstance recording = com.example.skyblocks.client.iris.IrisIslandTarget.pictureShader();
+        if (recording != null) {
+            RenderSystem.setShader(() -> recording);
+        } else {
+            RenderSystem.setShader(GameRenderer::getPositionShader);
+        }
         BufferUploader.drawWithShader(builder.end());
     }
 
@@ -272,7 +348,10 @@ final class IslandWindow {
         if (data == null) {
             return false;
         }
-        Integer sky = SkyblockRenderer.DATA_LIST.get(SkyblockRenderer.getData(data.type()));
+        SkyblockBatchData batch = SkyblockRenderer.getData(data.type());
+        com.example.skyblocks.client.SkyUsage.ensureFresh(batch); // a resting sky: draw its picture first
+        backInside(); // drawing a sky picture binds Shadered's own framebuffer
+        Integer sky = SkyblockRenderer.DATA_LIST.get(batch);
         SkyblockPass pass = data.pass();
         ShaderInstance shader = pass.getShader();
         if (sky == null || shader == null) {

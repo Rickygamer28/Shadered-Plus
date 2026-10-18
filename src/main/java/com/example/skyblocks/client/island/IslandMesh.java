@@ -26,6 +26,8 @@ import org.joml.Matrix4f;
  */
 final class IslandMesh implements AutoCloseable {
     private final Map<RenderType, int[]> layers = new LinkedHashMap<>();
+    /** Sky Liquids' surfaces, per sky, drawn with that sky (com.example.skyblocks.client.SkyLiquidRenderer). */
+    private final Map<com.noodlegamer76.shadered.client.util.SkyblockType, int[]> skies = new LinkedHashMap<>();
 
     static IslandMesh build(IslandView island) {
         BlockRenderDispatcher blocks = Minecraft.getInstance().getBlockRenderer();
@@ -34,6 +36,7 @@ final class IslandMesh implements AutoCloseable {
         for (RenderType type : RenderType.chunkBufferLayers()) {
             collectors.put(type, new QuadCollector());
         }
+        Map<com.noodlegamer76.shadered.client.util.SkyblockType, QuadCollector> skyCollectors = new LinkedHashMap<>();
         PoseStack pose = new PoseStack();
         for (int y = 0; y < island.height; y++) {
             for (int z = 0; z < island.size; z++) {
@@ -45,19 +48,35 @@ final class IslandMesh implements AutoCloseable {
                     for (QuadCollector collector : collectors.values()) {
                         collector.mark();
                     }
+                    skyCollectors.values().forEach(QuadCollector::mark);
                     try {
-                        renderBlock(blocks, island, collectors, pose, random, state, new BlockPos(x, y, z));
+                        BlockPos at = new BlockPos(x, y, z);
+                        com.example.skyblocks.ModFluids.SkyLiquid liquid =
+                                com.example.skyblocks.client.SkyLiquidRenderer.liquid(state.getFluidState());
+                        if (liquid != null) {
+                            QuadCollector collector = skyCollectors.computeIfAbsent(liquid.sky, k -> new QuadCollector());
+                            collector.mark();
+                            com.example.skyblocks.client.SkyLiquidRenderer.drawBlock(island, at, x, y, z, collector);
+                            continue;
+                        }
+                        renderBlock(blocks, island, collectors, pose, random, state, at);
                     } catch (RuntimeException e) {
                         // a (modded) block whose renderer needs a real world: left out of the miniature,
                         // including anything it wrote before failing
                         for (QuadCollector collector : collectors.values()) {
                             collector.rollback();
                         }
+                        skyCollectors.values().forEach(QuadCollector::rollback);
                     }
                 }
             }
         }
         IslandMesh mesh = new IslandMesh();
+        skyCollectors.forEach((sky, collector) -> {
+            if (collector.vertexCount() > 0) {
+                mesh.skies.put(sky, collector.toArray());
+            }
+        });
         collectors.forEach((type, collector) -> {
             if (collector.vertexCount() > 0) {
                 mesh.layers.put(type, collector.toArray());
@@ -101,9 +120,101 @@ final class IslandMesh implements AutoCloseable {
     }
 
     /** Hands the quads to the render buffers; pose = island coordinates -> the block entity's camera-relative pose. */
+    /**
+     * Solid / cutout layers on the graphics card (uploaded on first use, then only drawn: no per-frame work for the
+     * CPU); translucent blocks are still sent each frame so they sort with the rest of the world.
+     */
+    private final Map<RenderType, com.mojang.blaze3d.vertex.VertexBuffer> uploaded = new LinkedHashMap<>();
+    private boolean uploadTried;
+
+    private static boolean opaque(RenderType type) {
+        return type != RenderType.translucent() && type != RenderType.tripwire();
+    }
+
+    private void upload() {
+        uploadTried = true;
+        for (Map.Entry<RenderType, int[]> entry : layers.entrySet()) {
+            RenderType type = entry.getKey();
+            if (!opaque(type)) {
+                continue;
+            }
+            int[] d = entry.getValue();
+            try {
+                com.mojang.blaze3d.vertex.BufferBuilder builder = uploadBuilder();
+                builder.begin(type.mode(), type.format());
+                PoseStack.Pose identity = new PoseStack().last();
+                emit(d, identity, builder);
+                com.mojang.blaze3d.vertex.BufferBuilder.RenderedBuffer data = builder.end();
+                com.mojang.blaze3d.vertex.VertexBuffer vb =
+                        new com.mojang.blaze3d.vertex.VertexBuffer(com.mojang.blaze3d.vertex.VertexBuffer.Usage.STATIC);
+                vb.bind();
+                vb.upload(data);
+                com.mojang.blaze3d.vertex.VertexBuffer.unbind();
+                uploaded.put(type, vb);
+            } catch (RuntimeException e) {
+                // keep sending this layer each frame instead
+            }
+        }
+    }
+
+    /** One builder for all uploads (1.20.1's BufferBuilder memory isn't freed): grows as needed. */
+    private static com.mojang.blaze3d.vertex.BufferBuilder uploadBuilder;
+
+    private static com.mojang.blaze3d.vertex.BufferBuilder uploadBuilder() {
+        if (uploadBuilder == null) {
+            uploadBuilder = new com.mojang.blaze3d.vertex.BufferBuilder(1 << 16);
+        }
+        return uploadBuilder;
+    }
+
+    private static void emit(int[] d, PoseStack.Pose pose, VertexConsumer consumer) {
+        Matrix4f matrix = pose.pose();
+        for (int i = 0; i < d.length; i += QuadCollector.INTS) {
+            int normal = d[i + 7];
+            int color = d[i + 3];
+            int light = d[i + 6];
+            consumer.vertex(matrix, Float.intBitsToFloat(d[i]), Float.intBitsToFloat(d[i + 1]), Float.intBitsToFloat(d[i + 2]))
+                    .color(color >> 16 & 0xFF, color >> 8 & 0xFF, color & 0xFF, color >>> 24)
+                    .uv(Float.intBitsToFloat(d[i + 4]), Float.intBitsToFloat(d[i + 5]))
+                    .uv2(light & 0xFFFF, light >>> 16)
+                    .normal(pose.normal(), (byte) normal / 127.0F, (byte) (normal >> 8) / 127.0F, (byte) (normal >> 16) / 127.0F)
+                    .endVertex();
+        }
+    }
+
+    /** Draws the uploaded layers now, with the given pose (on top of the current model-view). */
+    private void drawUploaded(PoseStack.Pose pose) {
+        if (uploaded.isEmpty()) {
+            return;
+        }
+        Matrix4f modelView = new Matrix4f(com.mojang.blaze3d.systems.RenderSystem.getModelViewMatrix()).mul(pose.pose());
+        Matrix4f projection = com.mojang.blaze3d.systems.RenderSystem.getProjectionMatrix();
+        for (Map.Entry<RenderType, com.mojang.blaze3d.vertex.VertexBuffer> entry : uploaded.entrySet()) {
+            RenderType type = entry.getKey();
+            type.setupRenderState();
+            try {
+                net.minecraft.client.renderer.ShaderInstance shader = com.mojang.blaze3d.systems.RenderSystem.getShader();
+                if (shader != null) {
+                    entry.getValue().bind();
+                    entry.getValue().drawWithShader(modelView, projection, shader);
+                    com.mojang.blaze3d.vertex.VertexBuffer.unbind();
+                }
+            } finally {
+                type.clearRenderState();
+            }
+        }
+    }
+
     void render(PoseStack.Pose pose, MultiBufferSource buffer) {
+        if (!uploadTried) {
+            upload();
+        }
+        drawUploaded(pose);
         Matrix4f matrix = pose.pose();
         for (Map.Entry<RenderType, int[]> entry : layers.entrySet()) {
+            if (uploaded.containsKey(entry.getKey())) {
+                continue; // on the graphics card, drawn above
+            }
             // like falling blocks: translucent goes through the "moving block" type (sorted, Fabulous-aware)
             RenderType type = entry.getKey() == RenderType.translucent() ? RenderType.translucentMovingBlock() : entry.getKey();
             VertexConsumer consumer = buffer.getBuffer(type);
@@ -120,11 +231,35 @@ final class IslandMesh implements AutoCloseable {
                         .endVertex();
             }
         }
+        for (Map.Entry<com.noodlegamer76.shadered.client.util.SkyblockType, int[]> skyEntry : skies.entrySet()) {
+            RenderType skyType = com.example.skyblocks.client.SkyLiquidRenderer.skyType(skyEntry.getKey());
+            if (skyType == null) {
+                continue;
+            }
+            VertexConsumer consumer = buffer.getBuffer(skyType);
+            int[] d = skyEntry.getValue();
+            for (int i = 0; i < d.length; i += QuadCollector.INTS) {
+                consumer.vertex(matrix, Float.intBitsToFloat(d[i]), Float.intBitsToFloat(d[i + 1]), Float.intBitsToFloat(d[i + 2]))
+                        .color(255, 255, 255, 255)
+                        .uv(Float.intBitsToFloat(d[i + 4]), Float.intBitsToFloat(d[i + 5]))
+                        .overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY)
+                        .uv2(net.minecraft.client.renderer.LightTexture.FULL_BRIGHT)
+                        .normal(pose.normal(), 0.0F, 1.0F, 0.0F)
+                        .endVertex();
+            }
+        }
     }
 
     @Override
     public void close() {
         layers.clear();
+        skies.clear();
+        if (!uploaded.isEmpty()) {
+            java.util.List<com.mojang.blaze3d.vertex.VertexBuffer> buffers = new java.util.ArrayList<>(uploaded.values());
+            uploaded.clear();
+            // graphics card memory can only be freed on the render thread
+            com.mojang.blaze3d.systems.RenderSystem.recordRenderCall(() -> buffers.forEach(com.mojang.blaze3d.vertex.VertexBuffer::close));
+        }
     }
 
     /** Records vertices (position, colour, texture, light, normal) as they are produced by the block renderers. */
