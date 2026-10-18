@@ -86,6 +86,7 @@ public final class IrisIslandTarget {
 
     /** Binds the offscreen target for drawing: draw as usual, then call {@link #end}. Null if it couldn't be set up. */
     public static Scope begin() {
+        com.example.skyblocks.client.island.PaintingTimings.mark(com.example.skyblocks.client.island.PaintingTimings.Phase.IRIS_SETUP);
         Minecraft mc = Minecraft.getInstance();
         RenderTarget main = mc.getMainRenderTarget();
         boolean ssbo = GL.getCapabilities().OpenGL43;
@@ -175,6 +176,7 @@ public final class IrisIslandTarget {
         if (scope == null) {
             return;
         }
+        com.example.skyblocks.client.island.PaintingTimings.mark(com.example.skyblocks.client.island.PaintingTimings.Phase.IRIS_RESTORE);
         // Tells Iris the main target is bound again (it swaps vanilla shaders for the pack's as before), then rebinds
         // what was really bound (Iris's gbuffers).
         RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
@@ -188,6 +190,7 @@ public final class IrisIslandTarget {
             GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, scope.ssboGeneric());
         }
         BufferUploader.invalidate();
+        com.example.skyblocks.client.island.PaintingTimings.stop();
     }
 
     /**
@@ -201,6 +204,7 @@ public final class IrisIslandTarget {
             }
             Scope scope = begin();
             try {
+                com.example.skyblocks.client.island.PaintingTimings.mark(com.example.skyblocks.client.island.PaintingTimings.Phase.PEDESTAL_CATS);
                 IslandCatBatch.flush(partialTick);
             } finally {
                 end(scope);
@@ -227,6 +231,7 @@ public final class IrisIslandTarget {
             }
             return;
         }
+        com.example.skyblocks.client.island.PaintingTimings.mark(com.example.skyblocks.client.island.PaintingTimings.Phase.COMPOSITE);
         RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
         Matrix4f savedProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
         VertexSorting savedSorting = RenderSystem.getVertexSorting();
@@ -278,6 +283,7 @@ public final class IrisIslandTarget {
             GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, readFramebuffer);
             GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, drawFramebuffer);
             BufferUploader.invalidate();
+            com.example.skyblocks.client.island.PaintingTimings.stop();
         }
     }
 

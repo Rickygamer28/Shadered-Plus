@@ -102,6 +102,8 @@ final class IslandWindow {
         poseStack.translate(-0.5F, 0.0F, -0.5F);
         Matrix4f picture = new Matrix4f(poseStack.last().pose());
 
+        PaintingTimings.painting();
+        PaintingTimings.mark(PaintingTimings.Phase.WINDOW_MASK);
         GL11.glEnable(GL11.GL_STENCIL_TEST);
         try {
             RenderSystem.disableCull();
@@ -131,12 +133,14 @@ final class IslandWindow {
 
             // 3. The room and the island, only inside the mark.
             MultiBufferSource.BufferSource scene = MultiBufferSource.immediate(memory());
+            PaintingTimings.mark(PaintingTimings.Phase.ROOM);
             if (!drawSkyRoom(poseStack, background, box)) {
                 drawRoom(poseStack, scene, light, box);
                 scene.endBatch(); // the room first (the island's solid blocks are drawn right away)
             }
             Map<SkyblockBatchData, SkyblockBatchData> skies = new HashMap<>();
             if (view != null && mesh != null) {
+                PaintingTimings.mark(PaintingTimings.Phase.ISLAND);
                 placeIsland(poseStack, view, rotation, box);
                 mesh.render(poseStack.last(), scene);
                 // Shadered's renderers (sky blocks, Illusorite ores...) only queue their sky cubes for Shadered's own
@@ -144,6 +148,7 @@ final class IslandWindow {
                 // draw it now, inside the window.
                 Map<SkyblockBatchData, Map<SkyblockPass, Integer>> before = queuedSizes();
                 IslandRendering.inWindow = true;
+                PaintingTimings.mark(PaintingTimings.Phase.BLOCK_ENTITIES);
                 try {
                     if (details) {
                         view.renderBlockEntities(poseStack, scene, partialTick);
@@ -152,17 +157,21 @@ final class IslandWindow {
                     IslandRendering.inWindow = false;
                     takeQueued(before, skies);
                 }
+                PaintingTimings.mark(PaintingTimings.Phase.CATS);
                 try {
                     com.example.skyblocks.client.IslandCatBatch.flush(partialTick); // the painting's cats, in one batch
                     backInside(); // Shadered's model renderer may have bound another framebuffer or changed the stencil
                 } finally {
                     com.example.skyblocks.client.IslandCatBatch.discard();
                 }
+                PaintingTimings.mark(PaintingTimings.Phase.BATCH_DRAW); // (figures queued, then everything queued drawn at endBatch)
                 view.renderFigures(poseStack, scene, partialTick, distance, figureReach);
             }
             scene.endBatch();
+            PaintingTimings.mark(PaintingTimings.Phase.SKY_BLOCKS);
             drawSkyBlocks(skies);
             backInside();
+            PaintingTimings.mark(PaintingTimings.Phase.WINDOW_MASK);
 
             // 4. Put the picture's own depth back (so later effects treat it as the wall) and clear the mark.
             RenderSystem.disableCull();
@@ -184,6 +193,7 @@ final class IslandWindow {
             GL11.glDisable(GL11.GL_STENCIL_TEST);
             RenderSystem.enableCull();
             poseStack.popPose();
+            PaintingTimings.stop();
         }
     }
 
