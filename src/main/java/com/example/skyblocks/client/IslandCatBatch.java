@@ -68,6 +68,17 @@ public final class IslandCatBatch {
         return !PENDING.isEmpty();
     }
 
+    /** Moves the collected cats into {@code out} (to draw later). */
+    public static void drainTo(List<RenderableModel> out) {
+        out.addAll(PENDING);
+        PENDING.clear();
+    }
+
+    /** Adds cats taken earlier with {@link #drainTo}, to draw at the next flush. */
+    public static void addAll(List<RenderableModel> cats) {
+        PENDING.addAll(cats);
+    }
+
     /** Throws away cats collected but not drawn (e.g. a painting that failed half-way). */
     public static void discard() {
         PENDING.clear();

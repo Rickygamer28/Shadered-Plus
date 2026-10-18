@@ -123,7 +123,8 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         poseStack.translate(-view.contentCenterX(), -view.lowestLayer(), -view.contentCenterZ());
         mesh.render(poseStack.last(), buffer);
         // With a shader pack, cats drawn with Shadered's own shader into Iris's buffers don't show: collect them and
-        // draw them through our own target (client/iris/IrisIslandTarget); in Iris's shadow pass they are skipped.
+        // draw them at the end of the frame through our own target, all islands' cats in one batch
+        // (client/iris/IrisIslandTarget); in Iris's shadow pass they are skipped.
         boolean irisCats = details && (com.example.skyblocks.client.iris.IrisIslandTarget.active()
                 || com.example.skyblocks.client.iris.IrisIslandTarget.shadowPass());
         if (details) {
@@ -134,7 +135,7 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
                 IslandRendering.collectCats = false;
             }
             if (irisCats) {
-                com.example.skyblocks.client.iris.IrisIslandTarget.drawCats(partialTick);
+                com.example.skyblocks.client.iris.IrisIslandTarget.deferCats(partialTick);
             }
         }
         view.renderFigures(poseStack, buffer, partialTick, distance, figureReach);
