@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** Remembers when a block of this sky was last queued (see SkyUsage). */
-@Mixin(SkyblockBatchData.class)
+@Mixin(value = SkyblockBatchData.class, remap = false)
 public abstract class SkyblockBatchDataMixin implements SkyUsage.Tracked {
     @Unique
     private long skyblocks$lastUsed;

@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * Just before Shadered draws the queued sky blocks: a sky that was resting (not drawn at the start of this frame) and
  * now has blocks in view gets its picture drawn first, so it never shows an out-of-date one (see SkyUsage).
  */
-@Mixin(SkyblockRenderPass.class)
+@Mixin(value = SkyblockRenderPass.class, remap = false)
 public abstract class SkyblockRenderPassMixin {
     @Inject(method = "render", at = @At("HEAD"), require = 0, remap = false)
     private void skyblocks$freshSkies(RenderStage stage, PoseStack poseStack, int renderTick, float partialTick, CallbackInfo ci) {

@@ -20,7 +20,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * Shadered's sky passes (its skies and ours): skip drawing a sky's screen-sized picture while nothing uses that sky,
  * and count asking for the picture as using it (see SkyUsage).
  */
-@Mixin({SkyboxRenderPass.class, EndSkySkyboxRenderPass.class, EndBoxRenderPass.class, MimicSkyboxRenderPass.class})
+@Mixin(value = {SkyboxRenderPass.class, EndSkySkyboxRenderPass.class, EndBoxRenderPass.class, MimicSkyboxRenderPass.class}, remap = false)
 public abstract class SkyPassMixin implements SkyUsage.Pass {
     @Shadow(remap = false)
     @Final
