@@ -23,6 +23,7 @@ import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL15;
+import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL30;
 import org.lwjgl.opengl.GL43;
 
@@ -58,6 +59,10 @@ public final class IrisIslandTarget {
     private static final Matrix4f worldProjection = new Matrix4f();
     /** Between begin() and end(): the target is what should be bound. */
     private static boolean inScope;
+    private static int pictureDepth, pictureDepthWidth, pictureDepthHeight;
+    private static int attachedFramebuffer = -1, attachedDepth = -1;
+    private static ShaderInstance pictureShader;
+    private static boolean warnedIncomplete;
     private static boolean warnedNoShader;
     private static boolean warnedNoComposite;
     private static boolean warnedError;
@@ -84,6 +89,87 @@ public final class IrisIslandTarget {
         }
     }
 
+    /**
+     * Makes the target: our own colors (what gets laid over the screen), a "painting depth" layer (the depth of each
+     * painting's picture where it is visible, so the overlay can let the hand cover it), and as its depth and stencil
+     * Minecraft's own depth buffer, which Iris draws the world into. So no copy of the world's depth is needed (that
+     * copy cost several ms a frame): the window is tested against the world directly, and as without a shader pack
+     * the painting leaves that depth as it found it (the picture's depth put back, the stencil mark cleared).
+     */
+    private static void prepare(RenderTarget main) {
+        if (target == null) {
+            target = new TextureTarget(main.width, main.height, false, Minecraft.ON_OSX);
+        } else if (target.width != main.width || target.height != main.height) {
+            target.resize(main.width, main.height, Minecraft.ON_OSX);
+            attachedFramebuffer = -1;
+        }
+        int mainDepth = main.getDepthTextureId();
+        if (attachedFramebuffer == target.frameBufferId && attachedDepth == mainDepth && pictureDepthWidth == main.width
+                && pictureDepthHeight == main.height) {
+            return;
+        }
+        if (pictureDepth == 0 || pictureDepthWidth != main.width || pictureDepthHeight != main.height) {
+            if (pictureDepth == 0) {
+                pictureDepth = GL11.glGenTextures();
+            }
+            GlStateManager._bindTexture(pictureDepth);
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
+            GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL30.GL_R32F, main.width, main.height, 0, GL11.GL_RED, GL11.GL_FLOAT, (java.nio.ByteBuffer) null);
+            GlStateManager._bindTexture(0);
+            pictureDepthWidth = main.width;
+            pictureDepthHeight = main.height;
+        }
+        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, target.frameBufferId);
+        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT1, GL11.GL_TEXTURE_2D, pictureDepth, 0);
+        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, main.isStencilEnabled() ? GL30.GL_DEPTH_STENCIL_ATTACHMENT : GL30.GL_DEPTH_ATTACHMENT,
+                GL11.GL_TEXTURE_2D, mainDepth, 0);
+        GL20.glDrawBuffers(GL30.GL_COLOR_ATTACHMENT0);
+        int status = GL30.glCheckFramebufferStatus(GL30.GL_FRAMEBUFFER);
+        if (status != GL30.GL_FRAMEBUFFER_COMPLETE && !warnedIncomplete) {
+            warnedIncomplete = true;
+            SkyBlocksMod.LOGGER.error("Shadered+'s shader pack target is incomplete (status {}); Island Paintings may not show", status);
+        }
+        attachedFramebuffer = target.frameBufferId;
+        attachedDepth = mainDepth;
+    }
+
+    /** True between begin() and end(), when the painting is being drawn into the target. */
+    public static boolean drawing() {
+        return inScope && target != null;
+    }
+
+    /**
+     * Writes the depth of the painting's picture into the painting depth layer, where the window's stencil mark is
+     * (call while the mark is in place); {@code drawPicture} draws the picture quad.
+     */
+    public static void recordPictureDepth(Runnable drawPicture) {
+        ShaderInstance shader = IrisShaders.pictureDepth;
+        if (!drawing() || shader == null) {
+            return;
+        }
+        GL20.glDrawBuffers(GL30.GL_COLOR_ATTACHMENT1);
+        try {
+            RenderSystem.colorMask(true, true, true, true);
+            RenderSystem.depthMask(false);
+            RenderSystem.depthFunc(GL11.GL_ALWAYS);
+            RenderSystem.disableBlend();
+            RenderSystem.stencilMask(0x00);
+            RenderSystem.stencilFunc(GL11.GL_EQUAL, 1, 0xFF);
+            RenderSystem.stencilOp(GL11.GL_KEEP, GL11.GL_KEEP, GL11.GL_KEEP);
+            pictureShader = shader;
+            drawPicture.run();
+        } finally {
+            pictureShader = null;
+            GL20.glDrawBuffers(GL30.GL_COLOR_ATTACHMENT0);
+        }
+    }
+
+    /** The shader to draw the picture quad with right now (the painting depth one while recording it), else null. */
+    public static ShaderInstance pictureShader() {
+        return pictureShader;
+    }
+
     /** Binds the offscreen target for drawing: draw as usual, then call {@link #end}. Null if it couldn't be set up. */
     public static Scope begin() {
         com.example.skyblocks.client.island.PaintingTimings.mark(com.example.skyblocks.client.island.PaintingTimings.Phase.IRIS_SETUP);
@@ -94,30 +180,22 @@ public final class IrisIslandTarget {
                 ssbo ? GL11.glGetInteger(GL43.GL_SHADER_STORAGE_BUFFER_BINDING) : -1,
                 ssbo ? GL30.glGetIntegeri(GL43.GL_SHADER_STORAGE_BUFFER_BINDING, 0) : -1);
         try {
-            if (target == null) {
-                target = new TextureTarget(main.width, main.height, true, Minecraft.ON_OSX);
-                target.enableStencil(); // the painting's window needs it
-            } else if (target.width != main.width || target.height != main.height) {
-                target.resize(main.width, main.height, Minecraft.ON_OSX);
-            }
+            prepare(main);
             resetState();
             target.bindWrite(true);
             if (!usedThisFrame) {
                 usedThisFrame = true;
                 com.example.skyblocks.client.island.PaintingTimings.mark(com.example.skyblocks.client.island.PaintingTimings.Phase.IRIS_DEPTH_COPY);
+                // our colors to transparent, the painting depth layer to "far", and the stencil (part of Minecraft's
+                // depth buffer, which Iris doesn't use) to 0; the depth itself is the world's and stays
                 RenderSystem.clearColor(0.0F, 0.0F, 0.0F, 0.0F);
                 RenderSystem.clearStencil(0);
-                // Iris draws into Minecraft's own depth texture (its depthtex0), so the main target holds the world's
-                // depth. Depth can only be copied between buffers of the same format (the main target has stencil:
-                // ClientSetup turns it on); otherwise start from "far" and let the overlay hide whatever is in front.
-                if (main.isStencilEnabled() == target.isStencilEnabled()) {
-                    RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_STENCIL_BUFFER_BIT, Minecraft.ON_OSX);
-                    target.copyDepthFrom(main);
-                    target.bindWrite(true);
-                } else {
-                    RenderSystem.clearDepth(1.0);
-                    RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT | GL11.GL_STENCIL_BUFFER_BIT, Minecraft.ON_OSX);
-                }
+                RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_STENCIL_BUFFER_BIT, Minecraft.ON_OSX);
+                GL20.glDrawBuffers(GL30.GL_COLOR_ATTACHMENT1);
+                RenderSystem.clearColor(1.0F, 1.0F, 1.0F, 1.0F);
+                RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT, Minecraft.ON_OSX);
+                GL20.glDrawBuffers(GL30.GL_COLOR_ATTACHMENT0);
+                RenderSystem.clearColor(0.0F, 0.0F, 0.0F, 0.0F);
                 worldProjection.set(RenderSystem.getProjectionMatrix());
                 com.example.skyblocks.client.island.PaintingTimings.mark(com.example.skyblocks.client.island.PaintingTimings.Phase.IRIS_SETUP);
             }
@@ -207,7 +285,10 @@ public final class IrisIslandTarget {
             Scope scope = begin();
             try {
                 com.example.skyblocks.client.island.PaintingTimings.mark(com.example.skyblocks.client.island.PaintingTimings.Phase.PEDESTAL_CATS);
+                // tested against the world's depth but not written into it (the shader pack would see cats it never drew)
+                RenderSystem.depthMask(false);
                 IslandCatBatch.flush(partialTick);
+                RenderSystem.depthMask(true);
             } finally {
                 end(scope);
             }
@@ -256,7 +337,7 @@ public final class IrisIslandTarget {
                     GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
 
             shader.setSampler("OverlaySampler", target.getColorTextureId());
-            shader.setSampler("DepthSampler", target.getDepthTextureId());
+            shader.setSampler("DepthSampler", pictureDepth);
             shader.setSampler("MainDepthSampler", main.getDepthTextureId());
             shader.safeGetUniform("WorldProjMat").set(worldProjection);
             RenderSystem.setShader(() -> shader);

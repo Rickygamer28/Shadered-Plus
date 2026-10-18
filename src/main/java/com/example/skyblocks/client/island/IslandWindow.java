@@ -173,6 +173,9 @@ final class IslandWindow {
             backInside();
             PaintingTimings.mark(PaintingTimings.Phase.WINDOW_MASK);
 
+            // (with a shader pack: note the picture's depth where it is visible, so the hand can cover the painting)
+            com.example.skyblocks.client.iris.IrisIslandTarget.recordPictureDepth(() -> drawPicture(picture, box));
+
             // 4. Put the picture's own depth back (so later effects treat it as the wall) and clear the mark.
             RenderSystem.disableCull();
             RenderSystem.colorMask(false, false, false, false);
@@ -325,7 +328,12 @@ final class IslandWindow {
         builder.addVertex(m, b.x1(), b.y0(), PICTURE_Z);
         builder.addVertex(m, b.x1(), b.y1(), PICTURE_Z);
         builder.addVertex(m, b.x0(), b.y1(), PICTURE_Z);
-        RenderSystem.setShader(GameRenderer::getPositionShader);
+        ShaderInstance recording = com.example.skyblocks.client.iris.IrisIslandTarget.pictureShader();
+        if (recording != null) {
+            RenderSystem.setShader(() -> recording);
+        } else {
+            RenderSystem.setShader(GameRenderer::getPositionShader);
+        }
         BufferUploader.drawWithShader(builder.buildOrThrow());
     }
 

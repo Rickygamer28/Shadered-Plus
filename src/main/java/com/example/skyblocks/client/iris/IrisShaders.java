@@ -14,6 +14,8 @@ import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class IrisShaders {
     public static ShaderInstance overlay;
+    /** Writes the depth of a painting's picture into the target's painting depth layer. */
+    public static ShaderInstance pictureDepth;
 
     private IrisShaders() {}
 
@@ -22,5 +24,8 @@ public final class IrisShaders {
         event.registerShader(new ShaderInstance(event.getResourceProvider(),
                         ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "iris_island_overlay"), DefaultVertexFormat.POSITION_TEX),
                 shader -> overlay = shader);
+        event.registerShader(new ShaderInstance(event.getResourceProvider(),
+                        ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "iris_picture_depth"), DefaultVertexFormat.POSITION),
+                shader -> pictureDepth = shader);
     }
 }

@@ -7,7 +7,7 @@
 
 // Not called Sampler0: Minecraft fills Sampler0-11 from RenderSystem's shader textures on every draw.
 uniform sampler2D OverlaySampler;    // our colors (premultiplied, transparent where nothing was drawn)
-uniform sampler2D DepthSampler;      // our depth (the painting's picture, a cat's surface)
+uniform sampler2D DepthSampler;      // the depth of each painting's picture where it is visible (1.0 elsewhere)
 uniform sampler2D MainDepthSampler;  // the frame's final depth (world, translucents, hand)
 uniform mat4 WorldProjMat;           // projection the world was rendered with
 
@@ -34,7 +34,8 @@ void main() {
 
     float own = texelFetch(DepthSampler, pixel, 0).r;
     float scene = texelFetch(MainDepthSampler, pixel, 0).r;
-    if (scene < own) {
+    // (cats of Sky Islands have no depth here: always shown)
+    if (own < 1.0 && scene < own) {
         float d = distanceOf(own);
         // a small margin (island blocks are tiny), growing with distance for the depth buffer's precision
         if (distanceOf(scene) < d - max(0.02, d * 0.004)) {

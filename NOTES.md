@@ -69,3 +69,9 @@
   1 MB, rebuilt on CPU) + glMemoryBarrier on every batch; IslandCatBatch makes one batch per painting. Fixed with
   AssimpRendererBonesMixin (upload only used matrices, nothing + no barrier when no animated model). iris_setup now
   split (IRIS_DEPTH_COPY) to see whether the depth blit or the framebuffer switches cost.
+  Next log: cats fixed (gpu 0.5 ms, cpu 0.3 ms). iris_depth_copy (the once-a-frame clear + depth blit of the main
+  target) was 4.5-7.5 ms gpu. Now no copy: the target's depth/stencil attachment IS Minecraft's main depth texture
+  (Iris's depthtex0), its stencil cleared once a frame; the painting leaves the depth as found (step 4). A second
+  colour attachment (R32F, cleared to 1.0) gets each painting's visible picture depth (iris_picture_depth shader,
+  IslandWindow -> IrisIslandTarget.recordPictureDepth before step 4) for the overlay's hand test. Pedestal cats: depth
+  test only (no writes into the pack's depth), no own depth -> always shown by the overlay.
