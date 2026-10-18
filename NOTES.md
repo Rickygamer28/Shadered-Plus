@@ -75,3 +75,4 @@
   colour attachment (R32F, cleared to 1.0) gets each painting's visible picture depth (iris_picture_depth shader,
   IslandWindow -> IrisIslandTarget.recordPictureDepth before step 4) for the overlay's hand test. Pedestal cats: depth
   test only (no writes into the pack's depth), no own depth -> always shown by the overlay.
+  User: all OK now (paintings right, FPS fine). Painting timings logging now off unless -Dskyblocks.paintingTimings=true.

@@ -16,7 +16,7 @@ import org.lwjgl.opengl.GL33;
 /**
  * Measures where Island Paintings spend their frame time, on the graphics card (timestamp queries, read back a few
  * frames later so nothing waits) and on the CPU, and writes the averages to the log every 10 seconds while paintings
- * are being drawn ("Shadered+ painting timings").
+ * are being drawn ("Shadered+ painting timings"). Off unless the game is started with -Dskyblocks.paintingTimings=true.
  */
 @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, value = Dist.CLIENT)
 public final class PaintingTimings {
@@ -29,7 +29,7 @@ public final class PaintingTimings {
     private static final Map<Phase, double[]> TOTALS = new EnumMap<>(Phase.class); // {gpu ms, cpu ms}
     private static int frames, paintings, paintingsThisFrame;
     private static long windowStart = System.nanoTime();
-    private static boolean broken;
+    private static boolean broken = !Boolean.getBoolean("skyblocks.paintingTimings");
 
     private PaintingTimings() {}
 
