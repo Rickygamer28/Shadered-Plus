@@ -1,5 +1,6 @@
 package com.example.skyblocks;
 
+import com.example.skyblocks.island.IslandMobsPayload;
 import com.example.skyblocks.island.ScanIslandPayload;
 import com.noodlegamer76.shadered.client.util.skyblock.SkyblockPass;
 import com.noodlegamer76.shadered.item.SkyblockHolderBlockItem;
@@ -55,6 +56,7 @@ public class SkyBlocksMod {
     }
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
-        event.registrar("1").playToServer(ScanIslandPayload.TYPE, ScanIslandPayload.STREAM_CODEC, ScanIslandPayload::handle);
+        event.registrar("1").playToServer(ScanIslandPayload.TYPE, ScanIslandPayload.STREAM_CODEC, ScanIslandPayload::handle)
+                .playToClient(IslandMobsPayload.TYPE, IslandMobsPayload.STREAM_CODEC, IslandMobsPayload::handle);
     }
 }

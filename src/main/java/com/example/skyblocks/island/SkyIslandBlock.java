@@ -11,7 +11,11 @@ import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import com.example.skyblocks.ModBlockEntities;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
@@ -72,7 +76,7 @@ public class SkyIslandBlock extends BaseEntityBlock {
     private static ItemStack itemFor(@Nullable BlockEntity be) {
         ItemStack stack = new ItemStack(ModItems.SKY_ISLAND.get());
         if (be instanceof SkyIslandBlockEntity island && island.island() != null) {
-            stack.set(ModComponents.ISLAND.get(), island.island());
+            stack.set(ModComponents.ISLAND.get(), island.islandWithMobs()); // with the mobs on it now
             if (island.name() != null) {
                 stack.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, island.name());
             }
@@ -89,5 +93,12 @@ public class SkyIslandBlock extends BaseEntityBlock {
     @Override
     public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
         return itemFor(level.getBlockEntity(pos));
+    }
+
+    /** Ticks the mobs living on the island (both sides: the server moves them, clients follow along). */
+    @Nullable
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+        return createTickerHelper(type, ModBlockEntities.SKY_ISLAND.get(), SkyIslandBlockEntity::tick);
     }
 }

@@ -102,8 +102,16 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         double shown = painting ? Math.min(width, height) : Math.max(1.0, be.displayWidth());
         double figureReach = FIGURE_REACH * shown;
         boolean details = distance < DETAIL_REACH * shown;
-        if (distance < figureReach * view.biggestFigure()) {
-            view.tickTo(time);
+        // A pedestal's mobs live in its block entity (they can walk over to Sky Islands next to it); a painting's
+        // figures are the scanned ones.
+        java.util.List<com.example.skyblocks.island.IslandMob> mobs = painting ? null : be.mobs();
+        if (painting ? distance < figureReach * view.biggestFigure()
+                : distance < figureReach * view.biggestPedestalFigure(mobs)) {
+            if (painting) {
+                view.tickTo(time);
+            } else {
+                view.tickPedestal(time, mobs);
+            }
         }
 
         if (painting) {
@@ -137,7 +145,7 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
                 com.example.skyblocks.client.iris.IrisIslandTarget.drawCats(partialTick);
             }
         }
-        view.renderFigures(poseStack, buffer, partialTick, distance, figureReach);
+        view.renderPedestal(mobs, poseStack, buffer, partialTick, distance, figureReach);
         poseStack.popPose();
         // its name floats above it while you look at it
         if (be.name() != null && Minecraft.getInstance().hitResult instanceof BlockHitResult hit

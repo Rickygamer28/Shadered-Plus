@@ -15,6 +15,7 @@ import net.minecraft.world.entity.animal.WaterAnimal;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.phys.Vec3;
 import com.example.skyblocks.mixin.EntityAccessor;
+import com.example.skyblocks.island.IslandMob;
 
 /**
  * A mini copy of a scanned mob: a client-only entity (never added to the world: no AI, no drops, can't be hit) that
@@ -114,6 +115,47 @@ final class IslandFigure {
             moved = walk(island, random);
         }
 
+        animate(living, moved);
+    }
+
+    /**
+     * One tick of a figure on a placed Sky Island: the server-side mob (already moved this tick) says where it is; the
+     * figure only animates.
+     */
+    void follow(IslandMob mob) {
+        entity.tickCount++;
+        int hopBefore = hopTick;
+        xo = mob.xo;
+        yo = mob.yo;
+        zo = mob.zo;
+        x = mob.x;
+        y = mob.y;
+        z = mob.z;
+        hopO = mob.hopO;
+        hop = mob.hop;
+        hopTick = mob.hopTick;
+        body = mob.body;
+        if (!(entity instanceof LivingEntity living)) {
+            return;
+        }
+        if (!ownTick && entity instanceof Slime s) {
+            if (hopBefore < 0 && hopTick >= 0) {
+                s.targetSquish = 1.0F; // stretches as it jumps
+            } else if (hopBefore >= 0 && hopTick < 0) {
+                s.targetSquish = -0.5F; // landing squash
+            }
+        }
+        animate(living, mob.moved);
+    }
+
+    /** Puts a figure that changed islands at its new spot without it gliding there. */
+    void jumpTo(IslandMob mob) {
+        x = xo = mob.x;
+        y = yo = mob.y;
+        z = zo = mob.z;
+    }
+
+    private void animate(LivingEntity living, float moved) {
         float t = entity.tickCount + phase;
         boolean resting = moved == 0;
         float headYaw = body + (resting && entity instanceof Mob ? 40.0F * Mth.sin(t * 0.045F) : 0.0F);

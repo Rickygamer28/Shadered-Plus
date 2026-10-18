@@ -1,6 +1,12 @@
 package com.example.skyblocks.client.island;
 
 import com.example.skyblocks.island.IslandData;
+import com.example.skyblocks.island.IslandMob;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import com.example.skyblocks.island.IslandScan;
 import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.ArrayDeque;
@@ -193,6 +199,8 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
                 // an entity that can't be recreated on the client is left out
             }
         }
+        view.figureLevel = level;
+        view.figureAt = at;
         LIVE.add(view);
         return view;
     }
@@ -429,6 +437,113 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
     }
 
     private double biggestFigure = -1;
+
+    // ---- the mobs living on a placed Sky Island (pedestal): the block entity moves them, these figures show them ----
+
+    private Level figureLevel;
+    private BlockPos figureAt;
+    private final Map<UUID, IslandFigure> pedestal = new LinkedHashMap<>();
+    private final Set<UUID> brokenFigures = new HashSet<>();
+    private long pedestalTick = -1;
+
+    /** Makes figures for mobs that arrived on the island and drops those of mobs that left. */
+    private void syncPedestal(List<IslandMob> mobs) {
+        if (pedestal.size() == mobs.size()) {
+            boolean same = true;
+            for (IslandMob mob : mobs) {
+                if (!pedestal.containsKey(mob.id)) {
+                    same = false;
+                    break;
+                }
+            }
+            if (same) {
+                return;
+            }
+        }
+        Map<UUID, IslandFigure> old = new LinkedHashMap<>(pedestal);
+        pedestal.clear();
+        for (IslandMob mob : mobs) {
+            IslandFigure figure = old.get(mob.id);
+            if (figure == null && !brokenFigures.contains(mob.id)) {
+                figure = newFigure(mob);
+            }
+            if (figure != null) {
+                pedestal.put(mob.id, figure);
+            }
+        }
+    }
+
+    @Nullable
+    private IslandFigure newFigure(IslandMob mob) {
+        try {
+            CompoundTag saved = mob.entity.copy();
+            saved.putShort("Fire", (short) -1); // not burning forever
+            var entity = EntityType.create(saved, figureLevel).orElse(null);
+            if (entity == null) {
+                brokenFigures.add(mob.id);
+                return null;
+            }
+            entity.setPos(figureAt.getX() + 0.5, figureAt.getY() + 0.5, figureAt.getZ() + 0.5);
+            entity.setOldPosAndRot();
+            entity.setYRot(mob.body);
+            IslandFigure figure = new IslandFigure(entity, mob.x, mob.y, mob.z, random, this);
+            figure.jumpTo(mob);
+            return figure;
+        } catch (RuntimeException e) {
+            brokenFigures.add(mob.id); // an entity that can't be recreated on the client is left out
+            return null;
+        }
+    }
+
+    /** Animates the figures of a pedestal's mobs up to the given game time (where they are comes from the mobs). */
+    void tickPedestal(long time, List<IslandMob> mobs) {
+        syncPedestal(mobs);
+        int ticks = pedestalTick < 0 || time < pedestalTick ? 1 : (int) Math.min(5, time - pedestalTick);
+        pedestalTick = time;
+        if (ticks <= 0) {
+            return;
+        }
+        for (IslandMob mob : mobs) {
+            IslandFigure figure = pedestal.get(mob.id);
+            if (figure != null) {
+                for (int t = 0; t < ticks; t++) {
+                    figure.follow(mob);
+                }
+            }
+        }
+    }
+
+    /** Draws a pedestal's mob figures (same culling as {@link #renderFigures}). */
+    void renderPedestal(List<IslandMob> mobs, PoseStack poseStack, MultiBufferSource buffer, float partialTick, double distance, double reach) {
+        syncPedestal(mobs);
+        if (pedestal.isEmpty()) {
+            return;
+        }
+        EntityRenderDispatcher dispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
+        dispatcher.setRenderShadow(false);
+        try {
+            pedestal.entrySet().removeIf(e -> {
+                if (distance <= reach * figureSize(e.getValue().entity)
+                        && !e.getValue().render(this, dispatcher, poseStack, buffer, partialTick)) {
+                    brokenFigures.add(e.getKey());
+                    return true;
+                }
+                return false;
+            });
+        } finally {
+            dispatcher.setRenderShadow(true);
+        }
+    }
+
+    /** Size (blocks) of the biggest of a pedestal's mob figures, 0 without any. */
+    double biggestPedestalFigure(List<IslandMob> mobs) {
+        syncPedestal(mobs);
+        double max = 0;
+        for (IslandFigure figure : pedestal.values()) {
+            max = Math.max(max, figureSize(figure.entity));
+        }
+        return max;
+    }
 
     /** Size (blocks) of the biggest mob figure, 0 without figures. */
     double biggestFigure() {
