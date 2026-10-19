@@ -148,29 +148,114 @@ public final class IrisIslandTarget {
         return inScope && target != null;
     }
 
+    /** A painting's picture quad, noted down to test against the frame's final depth at the end of the frame. */
+    private record Picture(Matrix4f modelView, Matrix4f projection, Runnable draw) {}
+
+    private static final java.util.List<Picture> PICTURES = new java.util.ArrayList<>();
+
     /**
-     * Writes the depth of the painting's picture into the painting depth layer, where the window's stencil mark is
-     * (call while the mark is in place); {@code drawPicture} draws the picture quad.
+     * Notes down the painting's picture quad ({@code drawPicture} draws it) with the view it was drawn with. At the end
+     * of the frame, once everything (entities, the hand...) is in Minecraft's main depth buffer, the quads are drawn
+     * again, depth-tested against it, and the painting is only shown where its picture passes (see {@link #composite}).
+     * Testing at block-entity time isn't enough: entities only go into the depth buffer later in the frame.
      */
     public static void recordPictureDepth(Runnable drawPicture) {
-        ShaderInstance shader = IrisShaders.pictureDepth;
-        if (!drawing() || shader == null) {
+        if (!drawing()) {
             return;
         }
+        PICTURES.add(new Picture(new Matrix4f(RenderSystem.getModelViewMatrix()), new Matrix4f(RenderSystem.getProjectionMatrix()), drawPicture));
+    }
+
+    // ---- skies drawn straight into the world (Sky Liquids, their buckets): kept for the end of the frame ----
+
+    /** Draws a sky's geometry into the given consumer (for {@link #deferSky}). */
+    public interface SkyDraw {
+        void emit(com.mojang.blaze3d.vertex.VertexConsumer consumer);
+    }
+
+    private record DeferredSky(net.minecraft.client.renderer.RenderType type, Matrix4f modelView, Matrix4f projection, SkyDraw draw) {}
+
+    private static final java.util.List<DeferredSky> SKIES = new java.util.ArrayList<>();
+    /** Between the level's first render stage and the end-of-frame composite. */
+    private static boolean inLevel;
+    private static BufferBuilder skyMemory;
+
+    /**
+     * True if something drawn into the world right now with a Shadered sky render type has to wait for the end of the
+     * frame: with a shader pack, the pack's final pass overwrites Minecraft's main framebuffer at the end of the level
+     * render, so anything drawn there directly during it (Sky Liquids, a held Sky Liquid bucket) would be lost.
+     */
+    public static boolean deferSky() {
+        return inLevel && active();
+    }
+
+    /** Keeps a sky draw (with the current view and projection) for the end of the frame. */
+    public static void deferSky(net.minecraft.client.renderer.RenderType type, SkyDraw draw) {
+        SKIES.add(new DeferredSky(type, new Matrix4f(RenderSystem.getModelViewMatrix()), new Matrix4f(RenderSystem.getProjectionMatrix()), draw));
+    }
+
+    /** Draws the kept sky draws into the main framebuffer, depth-tested against the frame's final depth. */
+    private static void drawDeferredSkies(RenderTarget main) {
+        if (SKIES.isEmpty()) {
+            return;
+        }
+        if (skyMemory == null) {
+            skyMemory = new BufferBuilder(1 << 16);
+        }
+        main.bindWrite(true);
+        for (DeferredSky sky : SKIES) {
+            try {
+                RenderSystem.setProjectionMatrix(sky.projection(), VertexSorting.DISTANCE_TO_ORIGIN);
+                RenderSystem.getModelViewMatrix().set(sky.modelView());
+                net.minecraft.client.renderer.MultiBufferSource.BufferSource buffers =
+                        net.minecraft.client.renderer.MultiBufferSource.immediate(skyMemory);
+                sky.draw().emit(buffers.getBuffer(sky.type()));
+                buffers.endBatch();
+            } catch (RuntimeException e) {
+                warnOnce("Couldn't draw a Sky Liquid with the shader pack", e);
+            }
+        }
+        SKIES.clear();
+        resetState();
+        main.bindWrite(true);
+    }
+
+    /**
+     * Draws the noted painting pictures into the painting depth layer (cleared to 1.0), depth-tested against Minecraft's
+     * main depth as it is now (world, entities, hand: all drawn), with a small offset towards the camera so the
+     * picture's own depth (put back by the painting) passes. Where a picture passes, its painting is shown.
+     */
+    private static void markVisiblePictures(RenderTarget main) {
+        ShaderInstance shader = IrisShaders.pictureDepth;
+        prepare(main);
+        target.bindWrite(true);
         GL20.glDrawBuffers(GL30.GL_COLOR_ATTACHMENT1);
         try {
             RenderSystem.colorMask(true, true, true, true);
-            RenderSystem.depthMask(false);
-            RenderSystem.depthFunc(GL11.GL_ALWAYS);
+            GL30.glClearBufferfv(GL11.GL_COLOR, 0, new float[] {1.0F, 1.0F, 1.0F, 1.0F});
+            if (shader == null) {
+                return;
+            }
+            GL11.glDisable(GL11.GL_STENCIL_TEST);
             RenderSystem.disableBlend();
-            RenderSystem.stencilMask(0x00);
-            RenderSystem.stencilFunc(GL11.GL_EQUAL, 1, 0xFF);
-            RenderSystem.stencilOp(GL11.GL_KEEP, GL11.GL_KEEP, GL11.GL_KEEP);
+            RenderSystem.disableCull();
+            RenderSystem.enableDepthTest();
+            RenderSystem.depthFunc(GL11.GL_LEQUAL);
+            RenderSystem.depthMask(false);
+            RenderSystem.enablePolygonOffset();
+            RenderSystem.polygonOffset(-1.0F, -4.0F);
             pictureShader = shader;
-            drawPicture.run();
+            for (Picture picture : PICTURES) {
+                RenderSystem.setProjectionMatrix(picture.projection(), VertexSorting.DISTANCE_TO_ORIGIN);
+                RenderSystem.getModelViewMatrix().set(picture.modelView());
+                picture.draw().run();
+            }
         } finally {
             pictureShader = null;
+            RenderSystem.polygonOffset(0.0F, 0.0F);
+            RenderSystem.disablePolygonOffset();
             GL20.glDrawBuffers(GL30.GL_COLOR_ATTACHMENT0);
+            PICTURES.clear();
         }
     }
 
@@ -200,11 +285,6 @@ public final class IrisIslandTarget {
                 RenderSystem.clearColor(0.0F, 0.0F, 0.0F, 0.0F);
                 RenderSystem.clearStencil(0);
                 RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_STENCIL_BUFFER_BIT, Minecraft.ON_OSX);
-                GL20.glDrawBuffers(GL30.GL_COLOR_ATTACHMENT1);
-                RenderSystem.clearColor(1.0F, 1.0F, 1.0F, 1.0F);
-                RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT, Minecraft.ON_OSX);
-                GL20.glDrawBuffers(GL30.GL_COLOR_ATTACHMENT0);
-                RenderSystem.clearColor(0.0F, 0.0F, 0.0F, 0.0F);
                 worldProjection.set(RenderSystem.getProjectionMatrix());
                 com.example.skyblocks.client.island.PaintingTimings.mark(com.example.skyblocks.client.island.PaintingTimings.Phase.IRIS_SETUP);
             }
@@ -297,6 +377,7 @@ public final class IrisIslandTarget {
     /** Draws the queued pedestal cats (once the world's block entities are done, while the world's view is set up). */
     @SubscribeEvent
     public static void onRenderStage(net.minecraftforge.client.event.RenderLevelStageEvent event) {
+        inLevel = true;
         if (event.getStage() != net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES
                 || PEDESTAL_CATS.isEmpty()) {
             return;
@@ -350,7 +431,10 @@ public final class IrisIslandTarget {
         usedThisFrame = false;
         catsUsedThisFrame = false;
         PEDESTAL_CATS.clear();
-        if (!(paintings || cats) || !IrisCompat.shaderPackInUse()) {
+        inLevel = false;
+        if (!(paintings || cats || !SKIES.isEmpty()) || !IrisCompat.shaderPackInUse()) {
+            PICTURES.clear();
+            SKIES.clear();
             return;
         }
         ShaderInstance shader = IrisShaders.overlay;
@@ -371,6 +455,14 @@ public final class IrisIslandTarget {
         int readFramebuffer = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
         try {
             resetState();
+            drawDeferredSkies(main);
+            if (!(paintings || cats)) {
+                return;
+            }
+            if (paintings) {
+                markVisiblePictures(main);
+                resetState();
+            }
             main.bindWrite(true);
             RenderSystem.setProjectionMatrix(new Matrix4f().ortho(0, 1, 0, 1, -1, 1), VertexSorting.ORTHOGRAPHIC_Z);
             RenderSystem.getModelViewMatrix().identity();
@@ -403,6 +495,8 @@ public final class IrisIslandTarget {
         } catch (RuntimeException e) {
             warnOnce("Couldn't draw Island Paintings on top of the shader pack", e);
         } finally {
+            PICTURES.clear();
+            SKIES.clear();
             // back to vanilla's defaults (what the hand and GUI drawn next expect) and the previous view
             RenderSystem.defaultBlendFunc();
             RenderSystem.disableBlend();
@@ -433,6 +527,9 @@ public final class IrisIslandTarget {
             return;
         }
         PEDESTAL_CATS.clear();
+        PICTURES.clear();
+        SKIES.clear();
+        inLevel = false;
         if (usedThisFrame || catsUsedThisFrame) {
             usedThisFrame = false;
             catsUsedThisFrame = false;

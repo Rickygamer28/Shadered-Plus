@@ -90,21 +90,33 @@ public final class SkyLiquidRenderer {
         // the faces were worked out when the blocks were looked up (every few ticks): just place them
         float ox = (float) (originX - camera.x), oy = (float) (originY - camera.y), oz = (float) (originZ - camera.z);
         // (1.20.1: the view's rotation is in the stage's pose, not in RenderSystem's model-view matrix)
-        Matrix4f view = event.getPoseStack().last().pose();
-        MultiBufferSource.BufferSource buffers = MultiBufferSource.immediate(memory);
+        Matrix4f view = new Matrix4f(event.getPoseStack().last().pose());
+        // With a shader pack the pack's final pass would paint over anything drawn into the world now: kept and drawn
+        // at the end of the frame instead (client/iris/IrisIslandTarget), depth-tested against the final depth.
+        boolean defer = com.example.skyblocks.client.iris.IrisIslandTarget.deferSky();
+        MultiBufferSource.BufferSource buffers = defer ? null : MultiBufferSource.immediate(memory);
         for (Map.Entry<ModFluids.SkyLiquid, float[]> entry : GEOMETRY.entrySet()) {
             RenderType sky = skyType(entry.getKey().sky);
             if (sky == null) {
                 continue;
             }
-            VertexConsumer c = buffers.getBuffer(sky);
             float[] d = entry.getValue();
-            for (int i = 0; i < d.length; i += 5) {
-                c.vertex(view, d[i] + ox, d[i + 1] + oy, d[i + 2] + oz).color(255, 255, 255, 255).uv(d[i + 3], d[i + 4])
-                        .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(LightTexture.FULL_BRIGHT).normal(0.0F, 1.0F, 0.0F).endVertex();
+            if (defer) {
+                com.example.skyblocks.client.iris.IrisIslandTarget.deferSky(sky, c -> emit(c, view, d, ox, oy, oz));
+            } else {
+                emit(buffers.getBuffer(sky), view, d, ox, oy, oz);
             }
         }
-        buffers.endBatch();
+        if (buffers != null) {
+            buffers.endBatch();
+        }
+    }
+
+    private static void emit(VertexConsumer c, Matrix4f view, float[] d, float ox, float oy, float oz) {
+        for (int i = 0; i < d.length; i += 5) {
+            c.vertex(view, d[i] + ox, d[i + 1] + oy, d[i + 2] + oz).color(255, 255, 255, 255).uv(d[i + 3], d[i + 4])
+                    .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(LightTexture.FULL_BRIGHT).normal(0.0F, 1.0F, 0.0F).endVertex();
+        }
     }
 
     /** The liquid faces found by the last search, per liquid (x, y, z relative to the origin, u, v per vertex). */

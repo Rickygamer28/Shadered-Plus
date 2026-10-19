@@ -236,15 +236,28 @@ final class IslandMesh implements AutoCloseable {
             if (skyType == null) {
                 continue;
             }
-            VertexConsumer consumer = buffer.getBuffer(skyType);
             int[] d = skyEntry.getValue();
+            if (!com.example.skyblocks.client.iris.IrisIslandTarget.drawing()
+                    && com.example.skyblocks.client.iris.IrisIslandTarget.deferSky()) {
+                // a Sky Island's liquid with a shader pack: drawn at the end of the frame (see SkyLiquidRenderer)
+                Matrix4f m = new Matrix4f(matrix);
+                org.joml.Matrix3f n = new org.joml.Matrix3f(pose.normal());
+                com.example.skyblocks.client.iris.IrisIslandTarget.deferSky(skyType, c -> emitSky(c, m, n, d));
+                continue;
+            }
+            emitSky(buffer.getBuffer(skyType), matrix, pose.normal(), d);
+        }
+    }
+
+    private static void emitSky(VertexConsumer consumer, Matrix4f matrix, org.joml.Matrix3f normal, int[] d) {
+        {
             for (int i = 0; i < d.length; i += QuadCollector.INTS) {
                 consumer.vertex(matrix, Float.intBitsToFloat(d[i]), Float.intBitsToFloat(d[i + 1]), Float.intBitsToFloat(d[i + 2]))
                         .color(255, 255, 255, 255)
                         .uv(Float.intBitsToFloat(d[i + 4]), Float.intBitsToFloat(d[i + 5]))
                         .overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY)
                         .uv2(net.minecraft.client.renderer.LightTexture.FULL_BRIGHT)
-                        .normal(pose.normal(), 0.0F, 1.0F, 0.0F)
+                        .normal(normal, 0.0F, 1.0F, 0.0F)
                         .endVertex();
             }
         }

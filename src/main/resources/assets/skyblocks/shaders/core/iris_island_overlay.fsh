@@ -7,7 +7,7 @@
 
 // Not called Sampler0: Minecraft fills Sampler0-11 from RenderSystem's shader textures on every draw.
 uniform sampler2D OverlaySampler;    // paintings' colors (premultiplied, transparent where nothing was drawn)
-uniform sampler2D DepthSampler;      // the depth of each painting's picture where it is visible (1.0 elsewhere)
+uniform sampler2D DepthSampler;      // where a painting's picture is visible at the end of the frame (< 1.0)
 uniform sampler2D CatSampler;        // the colors of Sky Islands' cats
 uniform sampler2D CatDepthSampler;   // their depth (1.0 where there is no cat)
 uniform sampler2D MainDepthSampler;  // the frame's final depth (world, entities, translucents, hand)
@@ -46,8 +46,10 @@ void main() {
             if (color.a <= 0.0) {
                 color.a = 1.0;
             }
-            float own = texelFetch(DepthSampler, pixel, 0).r;
-            if (!(own < 1.0 && hidden(own, scene))) {
+            // shown only where the painting's picture passed the depth test against the frame's final depth
+            // (IrisIslandTarget.markVisiblePictures: entities and the hand in front of it hide it)
+            float visible = texelFetch(DepthSampler, pixel, 0).r;
+            if (visible < 1.0) {
                 result = color;
             }
         }

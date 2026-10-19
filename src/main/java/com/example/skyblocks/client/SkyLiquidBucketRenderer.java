@@ -60,27 +60,37 @@ public class SkyLiquidBucketRenderer extends BlockEntityWithoutLevelRenderer {
         if (skyType == null) {
             return;
         }
-        VertexConsumer c = buffer.getBuffer(skyType);
         PoseStack.Pose pose = poseStack.last();
+        if (context != ItemDisplayContext.GUI && com.example.skyblocks.client.iris.IrisIslandTarget.deferSky()) {
+            // in the world (or in hand) with a shader pack: drawn at the end of the frame (see SkyLiquidRenderer)
+            org.joml.Matrix4f matrix = new org.joml.Matrix4f(pose.pose());
+            org.joml.Matrix3f normal = new org.joml.Matrix3f(pose.normal());
+            com.example.skyblocks.client.iris.IrisIslandTarget.deferSky(skyType, c -> fill(c, matrix, normal, light));
+            return;
+        }
+        fill(buffer.getBuffer(skyType), pose.pose(), pose.normal(), light);
+    }
+
+    private static void fill(VertexConsumer c, org.joml.Matrix4f matrix, org.joml.Matrix3f normal, int light) {
         for (int[] row : WATER) {
             float y1 = 1.0F - row[0] / 16.0F, y0 = y1 - 1.0F / 16.0F;
             float x0 = row[1] / 16.0F, x1 = (row[2] + 1) / 16.0F;
-            quad(c, pose, x0, y0, x1, y1, FRONT, 1.0F, light);
-            quad(c, pose, x1, y0, x0, y1, BACK, -1.0F, light);
+            quad(c, matrix, normal, x0, y0, x1, y1, FRONT, 1.0F, light);
+            quad(c, matrix, normal, x1, y0, x0, y1, BACK, -1.0F, light);
         }
     }
 
-    private static void quad(VertexConsumer c, PoseStack.Pose pose, float x0, float y0, float x1, float y1, float z,
-                             float nz, int light) {
-        vertex(c, pose, x0, y0, z, 0, 1, nz, light);
-        vertex(c, pose, x1, y0, z, 1, 1, nz, light);
-        vertex(c, pose, x1, y1, z, 1, 0, nz, light);
-        vertex(c, pose, x0, y1, z, 0, 0, nz, light);
+    private static void quad(VertexConsumer c, org.joml.Matrix4f matrix, org.joml.Matrix3f normal, float x0, float y0,
+                             float x1, float y1, float z, float nz, int light) {
+        vertex(c, matrix, normal, x0, y0, z, 0, 1, nz, light);
+        vertex(c, matrix, normal, x1, y0, z, 1, 1, nz, light);
+        vertex(c, matrix, normal, x1, y1, z, 1, 0, nz, light);
+        vertex(c, matrix, normal, x0, y1, z, 0, 0, nz, light);
     }
 
-    private static void vertex(VertexConsumer c, PoseStack.Pose pose, float x, float y, float z, float u, float v,
-                               float nz, int light) {
-        c.vertex(pose.pose(), x, y, z).color(255, 255, 255, 255).uv(u, v).overlayCoords(OverlayTexture.NO_OVERLAY)
-                .uv2(light).normal(pose.normal(), 0.0F, 0.0F, nz).endVertex();
+    private static void vertex(VertexConsumer c, org.joml.Matrix4f matrix, org.joml.Matrix3f normal, float x, float y,
+                               float z, float u, float v, float nz, int light) {
+        c.vertex(matrix, x, y, z).color(255, 255, 255, 255).uv(u, v).overlayCoords(OverlayTexture.NO_OVERLAY)
+                .uv2(light).normal(normal, 0.0F, 0.0F, nz).endVertex();
     }
 }
