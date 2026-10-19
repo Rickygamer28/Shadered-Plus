@@ -87,5 +87,5 @@ jobs:
       - name: Upload jar
         uses: actions/upload-artifact@v4
         with:
-          name: shadered-plus-jar
+          name: shadered-plus-1.20.1
           path: build/libs/*.jar
