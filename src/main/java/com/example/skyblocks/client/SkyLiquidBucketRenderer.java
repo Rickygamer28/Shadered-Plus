@@ -45,8 +45,17 @@ public class SkyLiquidBucketRenderer extends BlockEntityWithoutLevelRenderer {
         if (skyType == null) {
             return;
         }
-        VertexConsumer c = buffer.getBuffer(skyType);
         PoseStack.Pose pose = poseStack.last();
+        if (context != ItemDisplayContext.GUI && com.example.skyblocks.client.iris.IrisIslandTarget.deferSky()) {
+            // in the world (or in hand) with a shader pack: drawn at the end of the frame (see SkyLiquidRenderer)
+            PoseStack.Pose copy = pose.copy();
+            com.example.skyblocks.client.iris.IrisIslandTarget.deferSky(skyType, c -> fill(c, copy, light));
+            return;
+        }
+        fill(buffer.getBuffer(skyType), pose, light);
+    }
+
+    private static void fill(VertexConsumer c, PoseStack.Pose pose, int light) {
         for (int[] row : WATER) {
             float y1 = 1.0F - row[0] / 16.0F, y0 = y1 - 1.0F / 16.0F;
             float x0 = row[1] / 16.0F, x1 = (row[2] + 1) / 16.0F;

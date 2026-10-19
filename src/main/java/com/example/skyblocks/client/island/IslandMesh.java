@@ -224,8 +224,21 @@ final class IslandMesh implements AutoCloseable {
             if (skyType == null) {
                 continue;
             }
-            VertexConsumer consumer = buffer.getBuffer(skyType);
             int[] d = skyEntry.getValue();
+            if (!com.example.skyblocks.client.iris.IrisIslandTarget.drawing()
+                    && com.example.skyblocks.client.iris.IrisIslandTarget.deferSky()) {
+                // a Sky Island's liquid with a shader pack: drawn at the end of the frame (see SkyLiquidRenderer)
+                PoseStack.Pose copy = pose.copy();
+                com.example.skyblocks.client.iris.IrisIslandTarget.deferSky(skyType, c -> emitSky(c, copy, d));
+                continue;
+            }
+            emitSky(buffer.getBuffer(skyType), pose, d);
+        }
+    }
+
+    private static void emitSky(VertexConsumer consumer, PoseStack.Pose pose, int[] d) {
+        Matrix4f matrix = pose.pose();
+        {
             for (int i = 0; i < d.length; i += QuadCollector.INTS) {
                 consumer.addVertex(matrix, Float.intBitsToFloat(d[i]), Float.intBitsToFloat(d[i + 1]), Float.intBitsToFloat(d[i + 2]))
                         .setColor(255, 255, 255, 255)
