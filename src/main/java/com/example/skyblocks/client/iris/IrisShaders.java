@@ -16,6 +16,8 @@ public final class IrisShaders {
     public static ShaderInstance overlay;
     /** Writes the depth of a painting's picture into the target's painting depth layer. */
     public static ShaderInstance pictureDepth;
+    /** Copies Minecraft's main depth into Shadered+'s own depth texture. */
+    public static ShaderInstance depthCopy;
 
     private IrisShaders() {}
 
@@ -27,5 +29,8 @@ public final class IrisShaders {
         event.registerShader(new ShaderInstance(event.getResourceProvider(),
                         ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "iris_picture_depth"), DefaultVertexFormat.POSITION),
                 shader -> pictureDepth = shader);
+        event.registerShader(new ShaderInstance(event.getResourceProvider(),
+                        ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "iris_depth_copy"), DefaultVertexFormat.POSITION_TEX),
+                shader -> depthCopy = shader);
     }
 }
