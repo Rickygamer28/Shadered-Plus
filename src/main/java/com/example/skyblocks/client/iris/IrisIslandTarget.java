@@ -21,6 +21,7 @@ import net.minecraftforge.fml.common.Mod;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL14;
 import org.lwjgl.opengl.GL15;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL30;
@@ -195,15 +196,20 @@ public final class IrisIslandTarget {
     }
 
     /** Draws the kept sky draws into the main framebuffer, depth-tested against the frame's final depth. */
-    private static void drawDeferredSkies(RenderTarget main) {
+    private static void drawDeferredSkies(RenderTarget main, boolean snapshot) {
         if (SKIES.isEmpty()) {
             return;
         }
         if (skyMemory == null) {
             skyMemory = new BufferBuilder(1 << 16);
         }
-        main.bindWrite(true);
         for (DeferredSky sky : SKIES) {
+            // the shader pack's final image, tested against the depth copy (no glass) when there is one
+            if (snapshot) {
+                bindWithSnapshot(liquidFramebuffer, main.getColorTextureId(), main);
+            } else {
+                main.bindWrite(true);
+            }
             try {
                 RenderSystem.setProjectionMatrix(sky.projection(), VertexSorting.DISTANCE_TO_ORIGIN);
                 RenderSystem.getModelViewMatrix().set(sky.modelView());
@@ -225,11 +231,16 @@ public final class IrisIslandTarget {
      * main depth as it is now (world, entities, hand: all drawn), with a small offset towards the camera so the
      * picture's own depth (put back by the painting) passes. Where a picture passes, its painting is shown.
      */
-    private static void markVisiblePictures(RenderTarget main) {
+    private static void markVisiblePictures(RenderTarget main, boolean snapshot) {
         ShaderInstance shader = IrisShaders.pictureDepth;
         prepare(main);
-        target.bindWrite(true);
-        GL20.glDrawBuffers(GL30.GL_COLOR_ATTACHMENT1);
+        if (snapshot) {
+            // the mask layer, tested against the depth copy (no glass, with the hand)
+            bindWithSnapshot(maskFramebuffer, pictureDepth, main);
+        } else {
+            target.bindWrite(true);
+            GL20.glDrawBuffers(GL30.GL_COLOR_ATTACHMENT1);
+        }
         try {
             RenderSystem.colorMask(true, true, true, true);
             GL30.glClearBufferfv(GL11.GL_COLOR, 0, new float[] {1.0F, 1.0F, 1.0F, 1.0F});
@@ -254,9 +265,135 @@ public final class IrisIslandTarget {
             pictureShader = null;
             RenderSystem.polygonOffset(0.0F, 0.0F);
             RenderSystem.disablePolygonOffset();
-            GL20.glDrawBuffers(GL30.GL_COLOR_ATTACHMENT0);
+            if (!snapshot) {
+                GL20.glDrawBuffers(GL30.GL_COLOR_ATTACHMENT0);
+            }
             PICTURES.clear();
         }
+    }
+
+    // ---- the world's depth before see-through blocks and the hand ----
+
+    /**
+     * A copy of Minecraft's main depth taken right before the see-through blocks (glass, water...) are drawn: solid
+     * blocks and entities (Iris draws its batched entities just before), no glass. At the end of the frame the held
+     * item's depth is added on top. Paintings, island cats and Sky Liquids are tested against it instead of the final
+     * depth, so they stay visible behind glass, while entities and the hand still cover them.
+     */
+    private static int snapshotTexture, snapshotWidth, snapshotHeight, snapshotFramebuffer, liquidFramebuffer, maskFramebuffer;
+    private static boolean snapshotThisFrame;
+
+    /** Called right before the level's see-through blocks are drawn (mixin/LevelRendererTranslucentMixin). */
+    public static void snapshotDepth() {
+        ShaderInstance shader = IrisShaders.depthCopy;
+        if (shader == null || !active() || !(usedThisFrame || catsUsedThisFrame || !SKIES.isEmpty())) {
+            return;
+        }
+        RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
+        Matrix4f savedProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
+        VertexSorting savedSorting = RenderSystem.getVertexSorting();
+        Matrix4f savedModelView = new Matrix4f(RenderSystem.getModelViewMatrix());
+        ShaderInstance savedShader = RenderSystem.getShader();
+        int drawFramebuffer = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+        int readFramebuffer = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
+        try {
+            worldProjection.set(savedProjection);
+            ensureSnapshot(main);
+            resetState();
+            GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, snapshotFramebuffer);
+            RenderSystem.viewport(0, 0, main.width, main.height);
+            RenderSystem.colorMask(false, false, false, false);
+            RenderSystem.disableCull();
+            RenderSystem.depthFunc(GL11.GL_ALWAYS);
+            RenderSystem.depthMask(true);
+            copyDepth(shader, main.getDepthTextureId(), false);
+            snapshotThisFrame = true;
+        } catch (RuntimeException e) {
+            warnOnce("Couldn't copy the world's depth for the shader pack overlay", e);
+        } finally {
+            RenderSystem.colorMask(true, true, true, true);
+            RenderSystem.depthFunc(GL11.GL_LEQUAL);
+            RenderSystem.enableCull();
+            RenderSystem.setProjectionMatrix(savedProjection, savedSorting);
+            RenderSystem.getModelViewMatrix().set(savedModelView);
+            RenderSystem.setShader(() -> savedShader);
+            GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, readFramebuffer);
+            GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, drawFramebuffer);
+            RenderSystem.viewport(0, 0, main.width, main.height);
+            BufferUploader.invalidate();
+        }
+    }
+
+    /** End of frame: adds the held item's depth (everything nearer than the world can get) to the copy. */
+    private static void addHandToSnapshot(RenderTarget main) {
+        ShaderInstance shader = IrisShaders.depthCopy;
+        if (shader == null) {
+            return;
+        }
+        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, snapshotFramebuffer);
+        RenderSystem.viewport(0, 0, main.width, main.height);
+        RenderSystem.colorMask(false, false, false, false);
+        RenderSystem.disableCull();
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthFunc(GL11.GL_LESS);
+        RenderSystem.depthMask(true);
+        copyDepth(shader, main.getDepthTextureId(), true);
+        RenderSystem.colorMask(true, true, true, true);
+        RenderSystem.depthFunc(GL11.GL_LEQUAL);
+    }
+
+    private static void copyDepth(ShaderInstance shader, int source, boolean handOnly) {
+        shader.setSampler("MainDepthSampler", source);
+        shader.safeGetUniform("WorldProjMat").set(worldProjection);
+        shader.safeGetUniform("HandOnly").set(handOnly ? 1.0F : 0.0F);
+        RenderSystem.setProjectionMatrix(new Matrix4f().ortho(0, 1, 0, 1, -1, 1), VertexSorting.ORTHOGRAPHIC_Z);
+        RenderSystem.getModelViewMatrix().identity();
+        RenderSystem.setShader(() -> shader);
+        RenderSystem.enableDepthTest();
+        fullscreenQuad();
+    }
+
+    private static void ensureSnapshot(RenderTarget main) {
+        if (snapshotTexture == 0) {
+            snapshotTexture = GL11.glGenTextures();
+            snapshotFramebuffer = GL30.glGenFramebuffers();
+            liquidFramebuffer = GL30.glGenFramebuffers();
+            maskFramebuffer = GL30.glGenFramebuffers();
+        }
+        if (snapshotWidth != main.width || snapshotHeight != main.height) {
+            GlStateManager._bindTexture(snapshotTexture);
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL14.GL_TEXTURE_COMPARE_MODE, GL11.GL_NONE);
+            GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL30.GL_DEPTH_COMPONENT32F, main.width, main.height, 0,
+                    GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT, (java.nio.ByteBuffer) null);
+            GlStateManager._bindTexture(0);
+            snapshotWidth = main.width;
+            snapshotHeight = main.height;
+            GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, snapshotFramebuffer);
+            GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL11.GL_TEXTURE_2D, snapshotTexture, 0);
+            GL11.glDrawBuffer(GL11.GL_NONE);
+            GL11.glReadBuffer(GL11.GL_NONE);
+        }
+    }
+
+    /** Binds a framebuffer of ours drawing into {@code color} with the depth copy as its depth. */
+    private static void bindWithSnapshot(int framebuffer, int color, RenderTarget main) {
+        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, framebuffer);
+        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL11.GL_TEXTURE_2D, color, 0);
+        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL11.GL_TEXTURE_2D, snapshotTexture, 0);
+        GL20.glDrawBuffers(GL30.GL_COLOR_ATTACHMENT0);
+        RenderSystem.viewport(0, 0, main.width, main.height);
+    }
+
+    private static void fullscreenQuad() {
+        BufferBuilder builder = Tesselator.getInstance().getBuilder();
+        builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        builder.vertex(0, 0, 0).uv(0, 0).endVertex();
+        builder.vertex(1, 0, 0).uv(1, 0).endVertex();
+        builder.vertex(1, 1, 0).uv(1, 1).endVertex();
+        builder.vertex(0, 1, 0).uv(0, 1).endVertex();
+        BufferUploader.drawWithShader(builder.end());
     }
 
     /** The shader to draw the picture quad with right now (the painting depth one while recording it), else null. */
@@ -432,6 +569,8 @@ public final class IrisIslandTarget {
         catsUsedThisFrame = false;
         PEDESTAL_CATS.clear();
         inLevel = false;
+        boolean snapshot = snapshotThisFrame && snapshotTexture != 0;
+        snapshotThisFrame = false;
         if (!(paintings || cats || !SKIES.isEmpty()) || !IrisCompat.shaderPackInUse()) {
             PICTURES.clear();
             SKIES.clear();
@@ -455,12 +594,16 @@ public final class IrisIslandTarget {
         int readFramebuffer = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
         try {
             resetState();
-            drawDeferredSkies(main);
+            if (snapshot) {
+                addHandToSnapshot(main);
+                resetState();
+            }
+            drawDeferredSkies(main, snapshot);
             if (!(paintings || cats)) {
                 return;
             }
             if (paintings) {
-                markVisiblePictures(main);
+                markVisiblePictures(main, snapshot);
                 resetState();
             }
             main.bindWrite(true);
@@ -480,18 +623,13 @@ public final class IrisIslandTarget {
             shader.setSampler("DepthSampler", paintings ? pictureDepth : catTarget.getDepthTextureId());
             shader.setSampler("CatSampler", cats ? catTarget.getColorTextureId() : target.getColorTextureId());
             shader.setSampler("CatDepthSampler", cats ? catTarget.getDepthTextureId() : pictureDepth);
-            shader.setSampler("MainDepthSampler", main.getDepthTextureId());
+            // (cats are tested against the depth copy when there is one: not hidden by glass, still by the hand)
+            shader.setSampler("MainDepthSampler", snapshot ? snapshotTexture : main.getDepthTextureId());
             shader.safeGetUniform("Used").set(paintings ? 1.0F : 0.0F, cats ? 1.0F : 0.0F);
             shader.safeGetUniform("WorldProjMat").set(worldProjection);
             RenderSystem.setShader(() -> shader);
 
-            BufferBuilder builder = Tesselator.getInstance().getBuilder();
-            builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-            builder.vertex(0, 0, 0).uv(0, 0).endVertex();
-            builder.vertex(1, 0, 0).uv(1, 0).endVertex();
-            builder.vertex(1, 1, 0).uv(1, 1).endVertex();
-            builder.vertex(0, 1, 0).uv(0, 1).endVertex();
-            BufferUploader.drawWithShader(builder.end());
+            fullscreenQuad();
         } catch (RuntimeException e) {
             warnOnce("Couldn't draw Island Paintings on top of the shader pack", e);
         } finally {
@@ -530,6 +668,7 @@ public final class IrisIslandTarget {
         PICTURES.clear();
         SKIES.clear();
         inLevel = false;
+        snapshotThisFrame = false;
         if (usedThisFrame || catsUsedThisFrame) {
             usedThisFrame = false;
             catsUsedThisFrame = false;

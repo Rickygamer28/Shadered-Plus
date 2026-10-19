@@ -15,6 +15,7 @@
     "AssimpRendererBonesMixin",
     "EntityAccessor",
     "GameRendererIrisMixin",
+    "LevelRendererTranslucentMixin",
     "ModRenderTypesMixin",
     "SkyblockBatchDataMixin",
     "SkyblockRendererMixin",
