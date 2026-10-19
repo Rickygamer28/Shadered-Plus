@@ -300,6 +300,10 @@ public final class IrisIslandTarget {
             worldProjection.set(savedProjection);
             ensureSnapshot(main);
             resetState();
+            // Binding a target that isn't Minecraft's main one tells the shader pack mod not to treat our shader as an
+            // unknown world shader (it would lock depth and colour writes and nothing would be copied).
+            prepare(main);
+            target.bindWrite(false);
             GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, snapshotFramebuffer);
             RenderSystem.viewport(0, 0, main.width, main.height);
             RenderSystem.colorMask(false, false, false, false);
@@ -317,6 +321,7 @@ public final class IrisIslandTarget {
             RenderSystem.setProjectionMatrix(savedProjection, savedSorting);
             RenderSystem.getModelViewMatrix().set(savedModelView);
             RenderSystem.setShader(() -> savedShader);
+            main.bindWrite(false); // (the main target counts as bound again for the shader pack mod)
             GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, readFramebuffer);
             GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, drawFramebuffer);
             RenderSystem.viewport(0, 0, main.width, main.height);
