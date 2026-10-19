@@ -97,3 +97,8 @@
 - Shadered 1.20.1's AssimpRenderer.renderDirect sets ViewMat = identity (1.21.1 uses the camera turn): island-item cats
   and IslandCatBatch's one-by-one fallback pass full view-space matrices.
 - CI: compiles, client reaches the title screen (sky tracking mixins log as active). Not tested in a world.
+
+## Releases (user rule, 19 Oct 2026)
+- Every time the user says they want to share/upload on CurseForge: bump mod_version in gradle.properties to the next
+  version (patch +1, e.g. 1.0.1 -> 1.0.2) on BOTH branches (main = 1.21.1, 1.20.1), push, wait for CI and send the
+  new jars plus the changelog. 1.0.1 = the first update (Sky Liquids, connected islands, shader pack support...).
