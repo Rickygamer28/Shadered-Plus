@@ -76,3 +76,8 @@
   IslandWindow -> IrisIslandTarget.recordPictureDepth before step 4) for the overlay's hand test. Pedestal cats: depth
   test only (no writes into the pack's depth), no own depth -> always shown by the overlay.
   User: all OK now (paintings right, FPS fine). Painting timings logging now off unless -Dskyblocks.paintingTimings=true.
+
+## Releases (user rule, 19 Oct 2026)
+- Every time the user says they want to share/upload on CurseForge: bump mod_version in gradle.properties to the next
+  version (patch +1, e.g. 1.0.1 -> 1.0.2) on BOTH branches (main = 1.21.1, 1.20.1), push, wait for CI and send the
+  new jars plus the changelog. 1.0.1 = the first update (Sky Liquids, connected islands, shader pack support...).
