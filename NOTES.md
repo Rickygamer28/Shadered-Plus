@@ -93,4 +93,6 @@
   mixin/PortalParticlesMixin recolours animateTick's particles (colours from the sky pictures' colourful pixels).
 - Modded portals (user: "the auto choice"): PortalSkies.kind() also takes subclasses of NetherPortalBlock / EndPortalBlock
   / EndGatewayBlock, and blocks whose id contains "portal" (not "frame") with a horizontal axis property (drawn as a
-  sheet on their shape's thin axis). Particles are only recoloured where vanilla's animateTick runs (not overridden).
+  sheet on their shape's thin axis). Flat modded portals (no axis, e.g. Twilight Forest twilight_portal: up face at 13/16 = its shape top) are FLOOR, drawn at
+  the top of their shape. Particles: mixin into ClientLevel.doAnimateTick (notes the animating block) + ClientLevel.addParticle
+  (recolours its particles), so any portal's particles change colour.

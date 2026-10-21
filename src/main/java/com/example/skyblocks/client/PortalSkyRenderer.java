@@ -157,11 +157,16 @@ public final class PortalSkyRenderer {
                 out.add(quad(x + a, y + y0, z, x + a, y + y0, z + 1, x + a, y + y1, z + 1, x + a, y + y1, z));
                 out.add(quad(x + b, y + y0, z, x + b, y + y0, z + 1, x + b, y + y1, z + 1, x + b, y + y1, z));
             }
-        } else if (kind == PortalSkies.Kind.FLOOR) {
+        } else if (kind == PortalSkies.Kind.FLOOR && state.getBlock() instanceof net.minecraft.world.level.block.EndPortalBlock) {
             // where the end portal draws its starfield: 12/16 up, and its bottom at 6/16
             float top = 0.75F + OUT, bottom = 0.375F - OUT;
             out.add(quad(x, y + top, z, x + 1, y + top, z, x + 1, y + top, z + 1, x, y + top, z + 1));
             out.add(quad(x, y + bottom, z, x + 1, y + bottom, z, x + 1, y + bottom, z + 1, x, y + bottom, z + 1));
+        } else if (kind == PortalSkies.Kind.FLOOR) {
+            // a modded flat portal: its surface at the top of its shape (the Twilight Forest's: 13/16 up)
+            net.minecraft.world.phys.shapes.VoxelShape shape = state.getShape(level, pos);
+            float top = (shape.isEmpty() ? 1.0F : (float) shape.bounds().maxY) + OUT;
+            out.add(quad(x, y + top, z, x + 1, y + top, z, x + 1, y + top, z + 1, x, y + top, z + 1));
         } else {
             // end gateway: the whole cube
             float lo = -OUT, hi = 1 + OUT;

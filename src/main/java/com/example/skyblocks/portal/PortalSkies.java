@@ -94,7 +94,7 @@ public final class PortalSkies extends SavedData {
 
     /**
      * What kind of portal a block is, or null if it isn't one. Vanilla's portals, modded portals made from vanilla's
-     * portal blocks (subclasses), and modded blocks named like a portal that stand on an axis like the nether portal.
+     * portal blocks (subclasses), and modded blocks named like a portal (not a portal frame).
      */
     @Nullable
     public static Kind kind(BlockState state) {
@@ -108,11 +108,12 @@ public final class PortalSkies extends SavedData {
         if (block instanceof net.minecraft.world.level.block.EndGatewayBlock) {
             return Kind.CUBE;
         }
-        if (state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_AXIS)) {
-            String name = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block).getPath();
-            if (name.contains("portal") && !name.contains("frame")) {
-                return Kind.SHEET;
-            }
+        String name = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block).getPath();
+        if (name.contains("portal") && !name.contains("frame")) {
+            // standing on an axis like the nether portal: a sheet; otherwise lying flat (like the Twilight Forest's
+            // portal pool): a floor, drawn at the top of its shape
+            return state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_AXIS)
+                    ? Kind.SHEET : Kind.FLOOR;
         }
         return null;
     }
