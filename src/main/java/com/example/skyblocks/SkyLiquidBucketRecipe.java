@@ -50,7 +50,7 @@ public class SkyLiquidBucketRecipe extends CustomRecipe {
     }
 
     /** The sky of a Shadered sky block item (its data, or the kind of sky item it is), or null. */
-    private static SkyblockType skyOf(ItemStack stack) {
+    public static SkyblockType skyOf(ItemStack stack) {
         ShaderedSkyItems.Sky sky = ShaderedSkyItems.sky(stack);
         if (sky != null) {
             return sky.type();

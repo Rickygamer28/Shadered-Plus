@@ -57,6 +57,9 @@ public class SkyBlocksMod {
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
         event.registrar("1").playToServer(ScanIslandPayload.TYPE, ScanIslandPayload.STREAM_CODEC, ScanIslandPayload::handle)
-                .playToClient(IslandMobsPayload.TYPE, IslandMobsPayload.STREAM_CODEC, IslandMobsPayload::handle);
+                .playToClient(IslandMobsPayload.TYPE, IslandMobsPayload.STREAM_CODEC, IslandMobsPayload::handle)
+                .playToClient(com.example.skyblocks.portal.PortalSkiesPayload.TYPE,
+                        com.example.skyblocks.portal.PortalSkiesPayload.STREAM_CODEC,
+                        com.example.skyblocks.portal.PortalSkiesPayload::handle);
     }
 }
