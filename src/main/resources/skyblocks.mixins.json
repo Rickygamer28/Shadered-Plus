@@ -17,6 +17,7 @@
     "GameRendererIrisMixin",
     "LevelRendererTranslucentMixin",
     "ModRenderTypesMixin",
+    "PortalParticlesMixin",
     "SkyblockBatchDataMixin",
     "SkyblockRendererMixin",
     "SkyblockRenderPassMixin",

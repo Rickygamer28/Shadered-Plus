@@ -102,3 +102,20 @@
 - Every time the user says they want to share/upload on CurseForge: bump mod_version in gradle.properties to the next
   version (patch +1, e.g. 1.0.1 -> 1.0.2) on BOTH branches (main = 1.21.1, 1.20.1), push, wait for CI and send the
   new jars plus the changelog. 1.0.1 = the first update (Sky Liquids, connected islands, shader pack support...).
+
+## Portal skies (21 Oct 2026, user request)
+- Right-click a nether portal / end portal / end gateway with a Shadered sky block: the whole connected portal shows
+  that sky (block used up, not in creative); right-click with an empty main hand undoes it. Particles take the sky's
+  colour. 1.21.1 first, then port to 1.20.1.
+- portal/PortalSkies: SavedData per dimension (pos -> SkyblockType name), pruned every 40 ticks when the portal block is
+  gone; PortalSkiesPayload (changes to the dimension, full list on login/dimension change/respawn).
+- client/PortalSkyRenderer: AFTER_ENTITIES, quads 0.01 outside the portal's faces with Shadered's sky render type
+  (covers the vanilla portal, which draws later); deferred to IrisIslandTarget with a shader pack.
+  mixin/PortalParticlesMixin recolours animateTick's particles (colours from the sky pictures' colourful pixels).
+- Modded portals (user: "the auto choice"): PortalSkies.kind() also takes subclasses of NetherPortalBlock / EndPortalBlock
+  / EndGatewayBlock, and blocks whose id contains "portal" (not "frame") with a horizontal axis property (drawn as a
+  sheet on their shape's thin axis). Flat modded portals (no axis, e.g. Twilight Forest twilight_portal: up face at 13/16 = its shape top) are FLOOR, drawn at
+  the top of their shape. Particles: mixin into ClientLevel.doAnimateTick (notes the animating block) + ClientLevel.addParticle
+  (recolours its particles), so any portal's particles change colour.
+- 1.20.1 port (21 Oct 2026): SimpleChannel id 2 (PLAY_TO_CLIENT, DIMENSION/PLAYER distributors), SavedData load/save without
+  registries, stage pose applied to the quads (1.20.1 keeps the view rotation there), amethyst chime instead of resonate.

@@ -74,5 +74,10 @@ public class SkyBlocksMod {
                 .decoder(com.example.skyblocks.island.IslandMobsPayload::decode)
                 .consumerMainThread(com.example.skyblocks.island.IslandMobsPayload::handle)
                 .add();
+        NETWORK.messageBuilder(com.example.skyblocks.portal.PortalSkiesPayload.class, 2, net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.example.skyblocks.portal.PortalSkiesPayload::encode)
+                .decoder(com.example.skyblocks.portal.PortalSkiesPayload::decode)
+                .consumerMainThread(com.example.skyblocks.portal.PortalSkiesPayload::handle)
+                .add();
     }
 }
