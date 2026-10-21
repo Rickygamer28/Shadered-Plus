@@ -91,3 +91,6 @@
 - client/PortalSkyRenderer: AFTER_ENTITIES, quads 0.01 outside the portal's faces with Shadered's sky render type
   (covers the vanilla portal, which draws later); deferred to IrisIslandTarget with a shader pack.
   mixin/PortalParticlesMixin recolours animateTick's particles (colours from the sky pictures' colourful pixels).
+- Modded portals (user: "the auto choice"): PortalSkies.kind() also takes subclasses of NetherPortalBlock / EndPortalBlock
+  / EndGatewayBlock, and blocks whose id contains "portal" (not "frame") with a horizontal axis property (drawn as a
+  sheet on their shape's thin axis). Particles are only recoloured where vanilla's animateTick runs (not overridden).

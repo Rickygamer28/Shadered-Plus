@@ -22,8 +22,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.NetherPortalBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
@@ -105,7 +103,7 @@ public final class PortalSkyRenderer {
                 continue;
             }
             float x = (float) (pos.getX() - camera.x), y = (float) (pos.getY() - camera.y), z = (float) (pos.getZ() - camera.z);
-            faces(state, x, y, z, faces.computeIfAbsent(entry.getValue(), k -> new ArrayList<>()));
+            faces(level, pos, state, x, y, z, faces.computeIfAbsent(entry.getValue(), k -> new ArrayList<>()));
         }
         if (faces.isEmpty()) {
             return;
@@ -136,17 +134,30 @@ public final class PortalSkyRenderer {
     }
 
     /** The quads covering one portal block (4 corners x xyz each), relative to the camera. */
-    private static void faces(BlockState state, float x, float y, float z, List<float[]> out) {
-        if (state.is(Blocks.NETHER_PORTAL)) {
-            float a = 6.0F / 16.0F - OUT, b = 10.0F / 16.0F + OUT;
-            if (state.getValue(NetherPortalBlock.AXIS) == Direction.Axis.X) {
-                out.add(quad(x, y, z + a, x + 1, y, z + a, x + 1, y + 1, z + a, x, y + 1, z + a));
-                out.add(quad(x, y, z + b, x + 1, y, z + b, x + 1, y + 1, z + b, x, y + 1, z + b));
-            } else {
-                out.add(quad(x + a, y, z, x + a, y, z + 1, x + a, y + 1, z + 1, x + a, y + 1, z));
-                out.add(quad(x + b, y, z, x + b, y, z + 1, x + b, y + 1, z + 1, x + b, y + 1, z));
+    private static void faces(Level level, BlockPos pos, BlockState state, float x, float y, float z, List<float[]> out) {
+        PortalSkies.Kind kind = PortalSkies.kind(state);
+        if (kind == PortalSkies.Kind.SHEET) {
+            // the sheet's two sides: where its shape is (vanilla: 6/16 to 10/16 thick), on the axis it doesn't run along
+            boolean alongX = PortalSkies.axis(state) == Direction.Axis.X;
+            float a = 6.0F / 16.0F, b = 10.0F / 16.0F, y0 = 0, y1 = 1;
+            net.minecraft.world.phys.shapes.VoxelShape shape = state.getShape(level, pos);
+            if (!shape.isEmpty()) {
+                net.minecraft.world.phys.AABB box = shape.bounds();
+                a = (float) (alongX ? box.minZ : box.minX);
+                b = (float) (alongX ? box.maxZ : box.maxX);
+                y0 = (float) box.minY;
+                y1 = (float) box.maxY;
             }
-        } else if (state.is(Blocks.END_PORTAL)) {
+            a -= OUT;
+            b += OUT;
+            if (alongX) {
+                out.add(quad(x, y + y0, z + a, x + 1, y + y0, z + a, x + 1, y + y1, z + a, x, y + y1, z + a));
+                out.add(quad(x, y + y0, z + b, x + 1, y + y0, z + b, x + 1, y + y1, z + b, x, y + y1, z + b));
+            } else {
+                out.add(quad(x + a, y + y0, z, x + a, y + y0, z + 1, x + a, y + y1, z + 1, x + a, y + y1, z));
+                out.add(quad(x + b, y + y0, z, x + b, y + y0, z + 1, x + b, y + y1, z + 1, x + b, y + y1, z));
+            }
+        } else if (kind == PortalSkies.Kind.FLOOR) {
             // where the end portal draws its starfield: 12/16 up, and its bottom at 6/16
             float top = 0.75F + OUT, bottom = 0.375F - OUT;
             out.add(quad(x, y + top, z, x + 1, y + top, z, x + 1, y + top, z + 1, x, y + top, z + 1));

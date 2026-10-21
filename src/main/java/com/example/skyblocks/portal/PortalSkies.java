@@ -18,7 +18,6 @@ import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.NetherPortalBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.saveddata.SavedData;
@@ -83,9 +82,50 @@ public final class PortalSkies extends SavedData {
         return skies.get(pos.asLong());
     }
 
+    /** The kinds of portal that can show a sky: how they are drawn and what counts as the same portal. */
+    public enum Kind {
+        /** A flat upright sheet inside a frame (nether portals, and modded portals made like them). */
+        SHEET,
+        /** A flat floor of portal blocks (end portals). */
+        FLOOR,
+        /** A single block drawn as a cube (end gateways). */
+        CUBE
+    }
+
+    /**
+     * What kind of portal a block is, or null if it isn't one. Vanilla's portals, modded portals made from vanilla's
+     * portal blocks (subclasses), and modded blocks named like a portal that stand on an axis like the nether portal.
+     */
+    @Nullable
+    public static Kind kind(BlockState state) {
+        net.minecraft.world.level.block.Block block = state.getBlock();
+        if (block instanceof NetherPortalBlock) {
+            return Kind.SHEET;
+        }
+        if (block instanceof net.minecraft.world.level.block.EndPortalBlock) {
+            return Kind.FLOOR;
+        }
+        if (block instanceof net.minecraft.world.level.block.EndGatewayBlock) {
+            return Kind.CUBE;
+        }
+        if (state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_AXIS)) {
+            String name = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block).getPath();
+            if (name.contains("portal") && !name.contains("frame")) {
+                return Kind.SHEET;
+            }
+        }
+        return null;
+    }
+
     /** Whether a block is one of the portals that can show a sky. */
     public static boolean isPortal(BlockState state) {
-        return state.is(Blocks.NETHER_PORTAL) || state.is(Blocks.END_PORTAL) || state.is(Blocks.END_GATEWAY);
+        return kind(state) != null;
+    }
+
+    /** A sheet portal's axis (the way its plane runs), X if it doesn't say. */
+    public static Direction.Axis axis(BlockState state) {
+        return state.getOptionalValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_AXIS)
+                .orElse(Direction.Axis.X);
     }
 
     /**
@@ -95,7 +135,8 @@ public final class PortalSkies extends SavedData {
     public static List<BlockPos> wholePortal(ServerLevel level, BlockPos pos) {
         BlockState start = level.getBlockState(pos);
         List<BlockPos> found = new ArrayList<>();
-        if (start.is(Blocks.END_GATEWAY)) {
+        Kind kind = kind(start);
+        if (kind == null || kind == Kind.CUBE) {
             found.add(pos.immutable());
             return found;
         }
@@ -103,7 +144,7 @@ public final class PortalSkies extends SavedData {
         ArrayDeque<BlockPos> queue = new ArrayDeque<>();
         queue.add(pos.immutable());
         seen.add(pos.asLong());
-        boolean nether = start.is(Blocks.NETHER_PORTAL);
+        boolean nether = kind == Kind.SHEET;
         while (!queue.isEmpty() && found.size() < MAX_BLOCKS) {
             BlockPos at = queue.poll();
             found.add(at);
@@ -120,11 +161,11 @@ public final class PortalSkies extends SavedData {
         return found;
     }
 
-    private static boolean same(BlockState start, BlockState other, boolean nether) {
+    private static boolean same(BlockState start, BlockState other, boolean sheet) {
         if (!other.is(start.getBlock())) {
             return false;
         }
-        return !nether || other.getValue(NetherPortalBlock.AXIS) == start.getValue(NetherPortalBlock.AXIS);
+        return !sheet || axis(other) == axis(start);
     }
 
     /** Gives the blocks the sky (null: back to the portal's own look); returns whether anything changed. */
