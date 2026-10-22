@@ -18,12 +18,6 @@ public final class IslandRendering {
      * the world's own pass).
      */
     public static boolean directCats;
-    /**
-     * Drawing into a mirror's picture (client/MirrorRenderer): the copied block entities inside Sky Islands are limited
-     * to the ones drawn right away (cats, Minecraft's own), like the Sky Island item: others may queue their drawing for
-     * later in the frame, where the mirror's copy would turn up in the real world.
-     */
-    public static boolean inMirror;
 
     private IslandRendering() {}
 }

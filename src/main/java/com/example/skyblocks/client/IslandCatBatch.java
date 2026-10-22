@@ -63,6 +63,44 @@ public final class IslandCatBatch {
         }
     }
 
+    /**
+     * Runs {@code draw} with Shadered's model queue set aside, and returns the models it queued (taken back out, so
+     * they aren't drawn in Shadered's pass later; the queue is put back as it was).
+     */
+    @SuppressWarnings("unchecked")
+    public static List<RenderableModel> capture(Runnable draw) {
+        AssimpRenderer renderer = AssimpRenderer.getInstance();
+        if (!look()) {
+            draw.run();
+            return List.of();
+        }
+        Object savedOpaque, savedTransparent, savedModels;
+        try {
+            savedOpaque = copyOpaque(opaqueField.get(renderer));
+            savedTransparent = new ArrayList<>((Collection<?>) transparentField.get(renderer));
+            savedModels = new ArrayList<>((Collection<?>) modelsField.get(renderer));
+            ((Map<?, ?>) opaqueField.get(renderer)).clear();
+            ((Collection<?>) transparentField.get(renderer)).clear();
+            ((Collection<?>) modelsField.get(renderer)).clear();
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            usable = false;
+            draw.run();
+            return List.of();
+        }
+        List<RenderableModel> taken = new ArrayList<>();
+        try {
+            draw.run();
+        } finally {
+            try {
+                taken.addAll((Collection<RenderableModel>) modelsField.get(renderer));
+            } catch (ReflectiveOperationException | RuntimeException ignored) {
+                // nothing taken
+            }
+            restore(renderer, savedOpaque, savedTransparent, savedModels);
+        }
+        return taken;
+    }
+
     /** True if cats have been collected and not drawn yet. */
     public static boolean hasPending() {
         return !PENDING.isEmpty();

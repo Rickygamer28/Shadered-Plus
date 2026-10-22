@@ -30,10 +30,6 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
 
     public SkyIslandRenderer(BlockEntityRendererProvider.Context context) {}
 
-    private static boolean shownInMirror(net.minecraft.world.level.block.entity.BlockEntity be) {
-        return be instanceof com.example.skyblocks.OiiaCatBlockEntity || be.getClass().getName().startsWith("net.minecraft.");
-    }
-
     @Override
     public void render(SkyIslandBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffer,
                        int packedLight, int packedOverlay) {
@@ -141,11 +137,7 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         if (details) {
             IslandRendering.collectCats = irisCats;
             try {
-                if (IslandRendering.inMirror) {
-                    view.renderBlockEntities(poseStack, buffer, partialTick, SkyIslandRenderer::shownInMirror);
-                } else {
-                    view.renderBlockEntities(poseStack, buffer, partialTick);
-                }
+                view.renderBlockEntities(poseStack, buffer, partialTick);
             } finally {
                 IslandRendering.collectCats = false;
             }

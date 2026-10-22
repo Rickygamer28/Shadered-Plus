@@ -435,33 +435,43 @@ public final class MirrorRenderer {
                     // an entity that can't be drawn here is left out of the mirror
                 }
             }
-            // block entities in front of the wall: the cats, and Minecraft's own (chests, signs, beds, banners, heads...)
+            // block entities in front of the wall, every mod's. Cats are drawn right away with the mirror's view; what
+            // other renderers queue for Shadered's passes later in the frame (models, sky cubes) is taken out of the
+            // queues and drawn now, inside the mirror, instead of turning up in the real world
             net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher blockEntities = mc.getBlockEntityRenderDispatcher();
             boolean wasDirect = com.example.skyblocks.client.island.IslandRendering.directCats;
-            com.example.skyblocks.client.island.IslandRendering.directCats = true; // cats drawn right away, with the mirror's view
-            com.example.skyblocks.client.island.IslandRendering.inMirror = true;
+            var skiesBefore = ShaderedQueues.sizes();
+            List<com.noodlegamer76.shadered.client.renderer.assimp.RenderableModel> models;
+            com.example.skyblocks.client.island.IslandRendering.directCats = true;
             try {
-                for (BlockEntity be : NEARBY_BLOCK_ENTITIES) {
-                    BlockPos pos = be.getBlockPos();
-                    double front = wall.distance(Vec3.atCenterOf(pos));
-                    if (front < -0.5) {
-                        continue;
+                models = IslandCatBatch.capture(() -> {
+                    for (BlockEntity be : NEARBY_BLOCK_ENTITIES) {
+                        BlockPos pos = be.getBlockPos();
+                        if (wall.distance(Vec3.atCenterOf(pos)) < -0.5) {
+                            continue;
+                        }
+                        pose.pushPose();
+                        pose.translate(pos.getX() - rx, pos.getY() - ry, pos.getZ() - rz);
+                        try {
+                            blockEntities.render(be, partialTick, pose, buffers);
+                        } catch (RuntimeException ignored) {
+                            // left out of the mirror
+                        } finally {
+                            pose.popPose();
+                        }
                     }
-                    pose.pushPose();
-                    pose.translate(pos.getX() - rx, pos.getY() - ry, pos.getZ() - rz);
-                    try {
-                        blockEntities.render(be, partialTick, pose, buffers);
-                    } catch (RuntimeException ignored) {
-                        // left out of the mirror
-                    } finally {
-                        pose.popPose();
-                    }
-                }
+                });
             } finally {
                 com.example.skyblocks.client.island.IslandRendering.directCats = wasDirect;
-                com.example.skyblocks.client.island.IslandRendering.inMirror = false;
             }
+            var skies = ShaderedQueues.takeSince(skiesBefore);
             buffers.endBatch();
+            drawQueuedModels(mc, models, cam);
+            try {
+                ShaderedQueues.draw(skies);
+            } catch (RuntimeException ignored) {
+                // sky blocks left out of the mirror
+            }
         } finally {
             dispatcher.setRenderShadow(true);
             stack.popMatrix();
@@ -470,10 +480,37 @@ public final class MirrorRenderer {
     }
 
     /**
-     * The block entities a mirror can show: ours (cats drawn straight away, Sky Islands and Island Paintings) and
-     * Minecraft's own. Other mods'
-     * are left out: some (Shadered's sky blocks among them) queue up their drawing for later in the frame, and a
-     * queued copy from a mirror would turn up in the real world.
+     * Models queued for Shadered's model pass while drawing a mirror (their matrix: world position = camera + the pose
+     * the renderer was given, which is relative to the mirrored eye), drawn now with the mirror's view instead.
+     */
+    private static void drawQueuedModels(Minecraft mc, List<com.noodlegamer76.shadered.client.renderer.assimp.RenderableModel> models, Vec3 cam) {
+        if (models.isEmpty()) {
+            return;
+        }
+        Camera main = mc.gameRenderer.getMainCamera();
+        // Shadered's shader adds the camera's turn after the model matrix: take it back out
+        Matrix4f undoTurn = new Matrix4f().rotationX(main.getXRot() * Mth.DEG_TO_RAD)
+                .rotateY((main.getYRot() + 180.0F) * Mth.DEG_TO_RAD).invert();
+        Matrix4f toView = undoTurn.mul(new Matrix4f(RenderSystem.getModelViewMatrix()))
+                .translate((float) -cam.x, (float) -cam.y, (float) -cam.z);
+        var renderer = com.noodlegamer76.shadered.client.renderer.assimp.AssimpRenderer.getInstance();
+        int drawFramebuffer = GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+        for (var model : models) {
+            Matrix4f world = new Matrix4f(model.modelMatrix);
+            model.modelMatrix = new Matrix4f(toView).mul(world);
+            try {
+                renderer.renderDirect(model, null, false);
+            } catch (RuntimeException ignored) {
+                // left out of the mirror
+            } finally {
+                model.modelMatrix = world;
+                com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, drawFramebuffer);
+            }
+        }
+    }
+
+    /**
+     * The block entities near the camera, for mirrors (every mod's: what some queue for later is handled when drawing).
      */
     private static void gatherBlockEntities(ClientLevel level, Vec3 cam) {
         NEARBY_BLOCK_ENTITIES.clear();
@@ -489,14 +526,7 @@ public final class MirrorRenderer {
                     if (be.isRemoved() || Vec3.atCenterOf(be.getBlockPos()).distanceToSqr(cam) > ENTITY_RANGE * ENTITY_RANGE) {
                         continue;
                     }
-                    if (be.getClass().getName().startsWith("com.example.skyblocks.")) {
-                        NEARBY_BLOCK_ENTITIES.add(be); // ours: cats, Sky Islands, Island Paintings, the scanner
-                        continue;
-                    }
-                    net.minecraft.resources.ResourceLocation id = net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType());
-                    if (id != null && id.getNamespace().equals("minecraft")) {
-                        NEARBY_BLOCK_ENTITIES.add(be);
-                    }
+                    NEARBY_BLOCK_ENTITIES.add(be);
                 }
             }
         }
