@@ -739,7 +739,7 @@ public final class MirrorRenderer {
         MirrorTiming.start(MirrorTiming.SKY);
         // the sky's colour first (what the main view is cleared to), then the sky itself on top
         float[] fog = RenderSystem.getShaderFogColor();
-        target.setClearColor(fog[0], fog[1], fog[2], 1);
+        target.setClearColor(fog[0], fog[1], fog[2], 0); // (alpha 0: "nothing drawn here", see mirror_surface.fsh)
         // only the part of the picture where the mirror is on screen is drawn (and cleared)
         float[] drawRect = grow(node.rect, RECT_MARGIN);
         scissor(target, drawRect);
