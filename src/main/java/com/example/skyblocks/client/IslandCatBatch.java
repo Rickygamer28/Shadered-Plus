@@ -27,6 +27,13 @@ public final class IslandCatBatch {
         PENDING.add(model);
     }
 
+    /**
+     * While drawing into a mirror: turns a cat's matrix (world position = camera + its pose, which is relative to the
+     * mirrored eye) into one that Shadered's camera turn and position bring to where the mirror sees it.
+     */
+    @org.jetbrains.annotations.Nullable
+    public static org.joml.Matrix4f viewFix;
+
     /** Draws the collected cats now (called by the painting while its window is open). */
     public static void flush(float partialTick) {
         if (PENDING.isEmpty()) {
@@ -34,6 +41,25 @@ public final class IslandCatBatch {
         }
         List<RenderableModel> cats = new ArrayList<>(PENDING);
         PENDING.clear();
+        if (viewFix != null) {
+            List<org.joml.Matrix4f> original = new ArrayList<>();
+            for (RenderableModel cat : cats) {
+                original.add(cat.modelMatrix);
+                cat.modelMatrix = new org.joml.Matrix4f(viewFix).mul(cat.modelMatrix);
+            }
+            try {
+                drawAll(cats, partialTick);
+            } finally {
+                for (int i = 0; i < cats.size(); i++) {
+                    cats.get(i).modelMatrix = original.get(i);
+                }
+            }
+            return;
+        }
+        drawAll(cats, partialTick);
+    }
+
+    private static void drawAll(List<RenderableModel> cats, float partialTick) {
         AssimpRenderer renderer = AssimpRenderer.getInstance();
         if (!look()) {
             drawOneByOne(renderer, cats);
@@ -61,6 +87,44 @@ public final class IslandCatBatch {
         } finally {
             restore(renderer, savedOpaque, savedTransparent, savedModels);
         }
+    }
+
+    /**
+     * Runs {@code draw} with Shadered's model queue set aside, and returns the models it queued (taken back out, so
+     * they aren't drawn in Shadered's pass later; the queue is put back as it was).
+     */
+    @SuppressWarnings("unchecked")
+    public static List<RenderableModel> capture(Runnable draw) {
+        AssimpRenderer renderer = AssimpRenderer.getInstance();
+        if (!look()) {
+            draw.run();
+            return List.of();
+        }
+        Object savedOpaque, savedTransparent, savedModels;
+        try {
+            savedOpaque = copyOpaque(opaqueField.get(renderer));
+            savedTransparent = new ArrayList<>((Collection<?>) transparentField.get(renderer));
+            savedModels = new ArrayList<>((Collection<?>) modelsField.get(renderer));
+            ((Map<?, ?>) opaqueField.get(renderer)).clear();
+            ((Collection<?>) transparentField.get(renderer)).clear();
+            ((Collection<?>) modelsField.get(renderer)).clear();
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            usable = false;
+            draw.run();
+            return List.of();
+        }
+        List<RenderableModel> taken = new ArrayList<>();
+        try {
+            draw.run();
+        } finally {
+            try {
+                taken.addAll((Collection<RenderableModel>) modelsField.get(renderer));
+            } catch (ReflectiveOperationException | RuntimeException ignored) {
+                // nothing taken
+            }
+            restore(renderer, savedOpaque, savedTransparent, savedModels);
+        }
+        return taken;
     }
 
     /** True if cats have been collected and not drawn yet. */

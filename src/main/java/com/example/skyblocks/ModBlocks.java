@@ -37,5 +37,10 @@ public final class ModBlocks {
             () -> new IslandPaintingBlock(BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.WOOD).noOcclusion()
                     .pushReaction(PushReaction.DESTROY)));
 
+    /** A mirror: its faces show a live reflection of the world (client/MirrorRenderer); a plain shiny block otherwise. */
+    public static final RegistryObject<Block> MIRROR = BLOCKS.register("mirror", () -> new Block(
+            BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS)
+                    .mapColor(net.minecraft.world.level.material.MapColor.ICE).isValidSpawn((s, l, p, e) -> false)));
+
     private ModBlocks() {}
 }

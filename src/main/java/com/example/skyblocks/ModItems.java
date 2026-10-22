@@ -43,5 +43,8 @@ public final class ModItems {
     public static final RegistryObject<BlockItem> ISLAND_PAINTING = ITEMS.register("island_painting",
             () -> new BlockItem(ModBlocks.ISLAND_PAINTING.get(), new Item.Properties()));
 
+    public static final RegistryObject<BlockItem> MIRROR = ITEMS.register("mirror",
+            () -> new BlockItem(ModBlocks.MIRROR.get(), new Item.Properties()));
+
     private ModItems() {}
 }

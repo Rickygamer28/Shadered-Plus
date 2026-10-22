@@ -14,8 +14,11 @@
   "client": [
     "AssimpRendererBonesMixin",
     "EntityAccessor",
+    "LevelRendererInvoker",
     "GameRendererIrisMixin",
     "LevelRendererTranslucentMixin",
+    "MirrorBlockChangeMixin",
+    "MirrorStageEventsMixin",
     "ModRenderTypesMixin",
     "PortalParticlesMixin",
     "SkyblockBatchDataMixin",

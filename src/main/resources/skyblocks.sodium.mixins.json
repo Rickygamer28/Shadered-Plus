@@ -1,0 +1,14 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "com.example.skyblocks.mixin.sodium",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "SodiumMirrorCullMixin",
+    "SodiumMirrorIrisMixin",
+    "SodiumViewportMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

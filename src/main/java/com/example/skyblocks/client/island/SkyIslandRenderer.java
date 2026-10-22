@@ -97,16 +97,19 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         long time = level.getGameTime();
         // Far away the mobs and block entities inside are a pixel or two: not worth ticking or drawing them.
         // (Distances scale with how big the island is shown: a joined painting or a wide pedestal shows it bigger.)
-        double distance = Math.sqrt(Minecraft.getInstance().gameRenderer.getMainCamera().getPosition()
-                .distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(be.getBlockPos())));
+        net.minecraft.world.phys.Vec3 viewer = IslandRendering.viewer != null ? IslandRendering.viewer
+                : Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        double distance = Math.sqrt(viewer.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(be.getBlockPos())));
         double shown = painting ? Math.min(width, height) : Math.max(1.0, be.displayWidth());
-        double figureReach = FIGURE_REACH * shown;
-        boolean details = distance < DETAIL_REACH * shown;
+        // in a mirror: just the island's blocks (the real view ticks and draws the rest)
+        boolean simple = IslandRendering.inMirror;
+        double figureReach = simple ? 0.0 : FIGURE_REACH * shown;
+        boolean details = !simple && distance < DETAIL_REACH * shown;
         // A pedestal's mobs live in its block entity (they can walk over to Sky Islands next to it); a painting's
         // figures are the scanned ones.
         java.util.List<com.example.skyblocks.island.IslandMob> mobs = painting ? null : be.mobs();
-        if (painting ? distance < figureReach * view.biggestFigure()
-                : distance < figureReach * view.biggestPedestalFigure(mobs)) {
+        if (!simple && (painting ? distance < figureReach * view.biggestFigure()
+                : distance < figureReach * view.biggestPedestalFigure(mobs))) {
             if (painting) {
                 view.tickTo(time);
             } else {
@@ -117,7 +120,7 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         if (painting) {
             IslandWindow.render(view, mesh, be.background(), be.rotation(), state.getValue(IslandPaintingBlock.FACING), width, height, poseStack, partialTick, packedLight,
                     distance, figureReach, details);
-            if (be.name() != null) {
+            if (be.name() != null && !simple) {
                 IslandPlaque.renderOnPainting(be.name(), state.getValue(IslandPaintingBlock.FRAME), state.getValue(IslandPaintingBlock.FACING), width, poseStack, buffer, packedLight);
             }
             return;
@@ -135,20 +138,23 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         boolean irisCats = details && (com.example.skyblocks.client.iris.IrisIslandTarget.active()
                 || com.example.skyblocks.client.iris.IrisIslandTarget.shadowPass());
         if (details) {
-            IslandRendering.collectCats = irisCats;
+            boolean wasCollecting = IslandRendering.collectCats; // (a mirror collects them too)
+            IslandRendering.collectCats = irisCats || wasCollecting;
             try {
                 view.renderBlockEntities(poseStack, buffer, partialTick);
             } finally {
-                IslandRendering.collectCats = false;
+                IslandRendering.collectCats = wasCollecting;
             }
             if (irisCats) {
                 com.example.skyblocks.client.iris.IrisIslandTarget.queueCats(); // drawn with all the others later
             }
         }
-        view.renderPedestal(mobs, poseStack, buffer, partialTick, distance, figureReach);
+        if (!simple) {
+            view.renderPedestal(mobs, poseStack, buffer, partialTick, distance, figureReach);
+        }
         poseStack.popPose();
         // its name floats above it while you look at it
-        if (be.name() != null && Minecraft.getInstance().hitResult instanceof BlockHitResult hit
+        if (be.name() != null && !simple && Minecraft.getInstance().hitResult instanceof BlockHitResult hit
                 && hit.getType() == HitResult.Type.BLOCK && hit.getBlockPos().equals(be.getBlockPos())) {
             float top = FLOAT + bob + (view.highestLayer() - view.lowestLayer() + 1) * scale;
             IslandPlaque.renderAbovePedestal(be.name(), top, poseStack, buffer, packedLight);

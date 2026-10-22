@@ -23,6 +23,7 @@ legacyForge {
 mixin {
     add sourceSets.main, "${mod_id}.refmap.json"
     config "${mod_id}.mixins.json"
+    config "${mod_id}.sodium.mixins.json"
 }
 
 repositories {
@@ -54,7 +55,7 @@ dependencies {
 }
 
 jar {
-    manifest.attributes(['MixinConfigs': "${mod_id}.mixins.json"])
+    manifest.attributes(['MixinConfigs': "${mod_id}.mixins.json,${mod_id}.sodium.mixins.json"])
 }
 
 tasks.withType(ProcessResources).configureEach {

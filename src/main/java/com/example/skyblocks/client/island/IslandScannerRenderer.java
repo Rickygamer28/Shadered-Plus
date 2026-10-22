@@ -106,7 +106,9 @@ public class IslandScannerRenderer implements BlockEntityRenderer<IslandScannerB
         poseStack.scale(scale, scale, scale);
         poseStack.translate(-view.contentCenterX(), -view.lowestLayer(), -view.contentCenterZ());
         mesh.render(poseStack.last(), buffer);
-        view.renderBlockEntities(poseStack, buffer, partialTick);
+        if (!IslandRendering.inMirror) { // (in a mirror: just the blocks)
+            view.renderBlockEntities(poseStack, buffer, partialTick);
+        }
         poseStack.popPose();
     }
 

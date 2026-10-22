@@ -18,6 +18,16 @@ public final class IslandRendering {
      * the world's own pass).
      */
     public static boolean directCats;
+    /**
+     * Where things are seen from, if not the camera (a mirror: the mirrored eye), for how much detail to draw.
+     */
+    @org.jetbrains.annotations.Nullable
+    public static net.minecraft.world.phys.Vec3 viewer;
+    /**
+     * Drawing into a mirror (client/MirrorRenderer): Sky Islands, Island Paintings and the scanner's preview show only
+     * their blocks (no chests, cats, sky blocks or mobs inside), which keeps mirrors cheap.
+     */
+    public static boolean inMirror;
 
     private IslandRendering() {}
 }
