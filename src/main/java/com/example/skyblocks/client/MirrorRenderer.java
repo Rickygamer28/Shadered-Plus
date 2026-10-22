@@ -245,7 +245,7 @@ public final class MirrorRenderer {
                 .then(net.minecraft.commands.Commands.literal("mirrorpicture").executes(ctx -> {
                     dumpRequested = true;
                     ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(
-                            "Saving the biggest mirror's picture to screenshots/shaderedplus_mirror_picture.png"), false);
+                            "Saving the mirror's pictures to the screenshots folder (shaderedplus_mirror_*.png)"), false);
                     return 1;
                 })));
     }
@@ -502,9 +502,15 @@ public final class MirrorRenderer {
                 restore(mc, main, camera, projection, partialTick);
             }
         }
-        if (dumpRequested && biggest != null && biggest.valid) {
+        boolean dumpOverlay = false;
+        if (dumpRequested) {
             dumpRequested = false;
-            dump(biggest.target, "shaderedplus_mirror_picture.png");
+            dumpOverlay = iris;
+            SkyBlocksMod.LOGGER.info("Shadered+ mirror debug: shader pack {}, {} mirrors in view, {} pictures, {} drawn this frame, biggest valid {}",
+                    iris, visible.size(), all.size(), chosen.size(), biggest != null && biggest.valid);
+            if (biggest != null && biggest.valid) {
+                dump(biggest.target, "shaderedplus_mirror_picture.png");
+            }
         }
         List<MirrorCulling.View> views = new ArrayList<>();
         for (Node node : all) {
@@ -570,6 +576,9 @@ public final class MirrorRenderer {
             }
             LAST_DRAWN.clear();
             LAST_DRAWN.addAll(drawnNow);
+            if (overlay != null && dumpOverlay) {
+                dump(com.example.skyblocks.client.iris.IrisIslandTarget.overlayTarget(), "shaderedplus_mirror_overlay.png");
+            }
             if (overlay != null) {
                 // where the faces are, for the end-of-frame test against the final depth (hand, entities in front)
                 List<Wall> shown = new ArrayList<>(drawnNow);

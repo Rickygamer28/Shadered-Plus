@@ -147,6 +147,11 @@ public final class IrisIslandTarget {
         attachedDepth = mainDepth;
     }
 
+    /** The overlay target (for saving it while debugging), or null. */
+    public static TextureTarget overlayTarget() {
+        return target;
+    }
+
     /** True between begin() and end(), when the painting is being drawn into the target. */
     public static boolean drawing() {
         return inScope && target != null;
