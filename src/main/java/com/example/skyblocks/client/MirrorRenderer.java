@@ -273,6 +273,7 @@ public final class MirrorRenderer {
 
     private static TextureTarget newTarget(int w, int h) {
         TextureTarget t = new TextureTarget(w, h, true, Minecraft.ON_OSX);
+        t.enableStencil(); // Island Paintings mark their window in the stencil buffer
         t.setFilterMode(GL11.GL_LINEAR);
         return t;
     }
@@ -438,6 +439,7 @@ public final class MirrorRenderer {
             net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher blockEntities = mc.getBlockEntityRenderDispatcher();
             boolean wasDirect = com.example.skyblocks.client.island.IslandRendering.directCats;
             com.example.skyblocks.client.island.IslandRendering.directCats = true; // cats drawn right away, with the mirror's view
+            com.example.skyblocks.client.island.IslandRendering.inMirror = true;
             try {
                 for (BlockEntity be : NEARBY_BLOCK_ENTITIES) {
                     BlockPos pos = be.getBlockPos();
@@ -457,6 +459,7 @@ public final class MirrorRenderer {
                 }
             } finally {
                 com.example.skyblocks.client.island.IslandRendering.directCats = wasDirect;
+                com.example.skyblocks.client.island.IslandRendering.inMirror = false;
             }
             buffers.endBatch();
         } finally {
@@ -467,7 +470,8 @@ public final class MirrorRenderer {
     }
 
     /**
-     * The block entities a mirror can show: the cats (drawn straight away in a mirror) and Minecraft's own. Other mods'
+     * The block entities a mirror can show: ours (cats drawn straight away, Sky Islands and Island Paintings) and
+     * Minecraft's own. Other mods'
      * are left out: some (Shadered's sky blocks among them) queue up their drawing for later in the frame, and a
      * queued copy from a mirror would turn up in the real world.
      */
@@ -485,8 +489,8 @@ public final class MirrorRenderer {
                     if (be.isRemoved() || Vec3.atCenterOf(be.getBlockPos()).distanceToSqr(cam) > ENTITY_RANGE * ENTITY_RANGE) {
                         continue;
                     }
-                    if (be instanceof com.example.skyblocks.OiiaCatBlockEntity) {
-                        NEARBY_BLOCK_ENTITIES.add(be);
+                    if (be.getClass().getName().startsWith("com.example.skyblocks.")) {
+                        NEARBY_BLOCK_ENTITIES.add(be); // ours: cats, Sky Islands, Island Paintings, the scanner
                         continue;
                     }
                     net.minecraft.resources.ResourceLocation id = net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType());
