@@ -342,7 +342,9 @@ public final class MirrorRenderer {
         }
         NODES.entrySet().removeIf(e -> {
             if (frame - e.getValue().usedFrame > 200) {
-                e.getValue().target.destroyBuffers();
+                if (e.getValue().target != null) { // (a mirror found but never needed has no picture)
+                    e.getValue().target.destroyBuffers();
+                }
                 return true;
             }
             return false;
