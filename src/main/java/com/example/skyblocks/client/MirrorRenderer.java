@@ -689,6 +689,7 @@ public final class MirrorRenderer {
             RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionShader);
             mc.levelRenderer.renderSky(modelView, projection, partialTick, camera, false,
                     () -> FogRenderer.setupFog(camera, FogRenderer.FogMode.FOG_SKY, far, false, partialTick));
+            rebindPicture();
         } catch (RuntimeException e) {
             if (!warnedSky) {
                 warnedSky = true;
@@ -710,8 +711,11 @@ public final class MirrorRenderer {
         cullChunks(inRect, rx, ry, rz);
         MirrorTiming.start(MirrorTiming.BLOCKS);
         chunks.skyblocks$renderSectionLayer(RenderType.solid(), rx, ry, rz, modelView, clipped);
+        rebindPicture(); // (with a shader pack, Iris binds its own framebuffers around chunk drawing)
         chunks.skyblocks$renderSectionLayer(RenderType.cutoutMipped(), rx, ry, rz, modelView, clipped);
+        rebindPicture();
         chunks.skyblocks$renderSectionLayer(RenderType.cutout(), rx, ry, rz, modelView, clipped);
+        rebindPicture();
         // entities in front of the wall, you included (block entities: in the mirrors themselves, not in bounces)
         if (node.depth <= 3) {
             MirrorTiming.start(MirrorTiming.MOBS);
@@ -758,6 +762,7 @@ public final class MirrorRenderer {
             MirrorTiming.start(MirrorTiming.SEE_THROUGH);
             RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
             chunks.skyblocks$renderSectionLayer(RenderType.translucent(), rx, ry, rz, modelView, clipped);
+            rebindPicture();
         }
         MirrorTiming.end();
 

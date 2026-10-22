@@ -83,7 +83,9 @@ public final class IrisIslandTarget {
 
     /** True while a shader pack is active and this isn't Iris's shadow pass: draw through this target. */
     public static boolean active() {
-        return IrisCompat.shaderPackInUse() && !IrisCompat.renderingShadowPass();
+        // (not while a mirror draws its picture: that's our own framebuffer, drawn into as without a shader pack)
+        return IrisCompat.shaderPackInUse() && !IrisCompat.renderingShadowPass()
+                && !com.example.skyblocks.client.MirrorRenderer.isRenderingReflection();
     }
 
     /** True during Iris's shadow pass (the world seen from the sun): paintings' insides and island cats are skipped. */
