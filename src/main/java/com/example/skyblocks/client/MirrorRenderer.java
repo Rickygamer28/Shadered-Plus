@@ -87,6 +87,7 @@ public final class MirrorRenderer {
     private static final Map<Wall, List<BlockPos>> WALLS = new HashMap<>();
     private static ClientLevel lastLevel;
     private static long lastScan = Long.MIN_VALUE;
+    private static boolean dirty;
     private static int lastChunkX, lastChunkZ;
     /** A wall's reflection picture. */
     private static final class Reflection {
@@ -109,6 +110,23 @@ public final class MirrorRenderer {
 
     private MirrorRenderer() {}
 
+    /** A block changed on the client: rescan straight away if it's a mirror or next to one. */
+    public static void blockChanged(ClientLevel level, BlockPos pos, BlockState oldState, BlockState newState) {
+        boolean mirror = isMirror(oldState) || isMirror(newState);
+        if (!mirror) {
+            BlockPos.MutableBlockPos n = new BlockPos.MutableBlockPos();
+            for (Direction d : Direction.values()) {
+                if (isMirror(level.getBlockState(n.setWithOffset(pos, d)))) {
+                    mirror = true;
+                    break;
+                }
+            }
+        }
+        if (mirror) {
+            dirty = true;
+        }
+    }
+
     public static boolean isRenderingReflection() {
         return rendering;
     }
@@ -129,10 +147,11 @@ public final class MirrorRenderer {
         Vec3 cam = camera.getPosition();
         int chunkX = SectionPos.blockToSectionCoord(cam.x), chunkZ = SectionPos.blockToSectionCoord(cam.z);
         long time = level.getGameTime();
-        if (level != lastLevel || time - lastScan >= RESCAN_TICKS || time < lastScan || chunkX != lastChunkX || chunkZ != lastChunkZ) {
+        if (dirty || level != lastLevel || time - lastScan >= RESCAN_TICKS || time < lastScan || chunkX != lastChunkX || chunkZ != lastChunkZ) {
             scan(level, chunkX, chunkZ);
             lastLevel = level;
             lastScan = time;
+            dirty = false;
             lastChunkX = chunkX;
             lastChunkZ = chunkZ;
         }
@@ -258,7 +277,7 @@ public final class MirrorRenderer {
         // cut off everything behind the wall (the near plane becomes the wall: oblique projection)
         Matrix4f inverseTranspose = new Matrix4f(modelView).invert().transpose();
         Vector4f normal = inverseTranspose.transform(new Vector4f((float) nx, (float) ny, (float) nz, 0));
-        float planeW = (float) (nx * rx + ny * ry + nz * rz - wall.k()) - 0.01F;
+        float planeW = (float) (nx * rx + ny * ry + nz * rz - wall.k()) + 0.005F; // a hair behind the wall: nothing in front of it is cut off
         Matrix4f clipped = oblique(new Matrix4f(projection), new Vector4f(normal.x, normal.y, normal.z, planeW));
         int frontFace = flipped ? GL11.GL_CW : GL11.GL_CCW; // a reflection turns everything inside out
 
@@ -438,7 +457,15 @@ public final class MirrorRenderer {
         }
         MeshData mesh = b.build();
         if (mesh != null) {
-            BufferUploader.drawWithShader(mesh);
+            // pulled towards the camera so the block's own face underneath never flickers through
+            RenderSystem.enablePolygonOffset();
+            RenderSystem.polygonOffset(-2.0F, -20.0F);
+            try {
+                BufferUploader.drawWithShader(mesh);
+            } finally {
+                RenderSystem.polygonOffset(0.0F, 0.0F);
+                RenderSystem.disablePolygonOffset();
+            }
         }
         RenderSystem.enableCull();
     }

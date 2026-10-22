@@ -16,6 +16,7 @@
     "GameRendererIrisMixin",
     "LevelRendererInvoker",
     "LevelRendererTranslucentMixin",
+    "MirrorBlockChangeMixin",
     "ModRenderTypesMixin",
     "PortalParticlesMixin",
     "SkyblockBatchDataMixin",
