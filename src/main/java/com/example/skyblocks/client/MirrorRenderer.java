@@ -392,6 +392,7 @@ public final class MirrorRenderer {
         float partialTick = event.getPartialTick();
         // with a shader pack: what Iris has bound (its own framebuffers) is put back when the mirrors are done
         boolean iris = com.example.skyblocks.client.iris.IrisIslandTarget.active();
+        Object irisPhase = iris ? com.example.skyblocks.client.iris.IrisCompat.phase() : null;
         int irisDraw = iris ? GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING) : 0;
         int irisRead = iris ? GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING) : 0;
         frame++;
@@ -607,6 +608,7 @@ public final class MirrorRenderer {
                 com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, irisDraw);
                 RenderSystem.viewport(0, 0, main.width, main.height);
                 BufferUploader.invalidate();
+                com.example.skyblocks.client.iris.IrisCompat.phase(irisPhase); // (the mirrors' skies moved it)
             }
             stack.popPose();
             RenderSystem.applyModelViewMatrix();

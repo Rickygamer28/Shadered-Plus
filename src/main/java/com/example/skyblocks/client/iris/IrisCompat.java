@@ -46,6 +46,52 @@ public final class IrisCompat {
     }
 
     /** True while Iris is rendering its shadow map (the world from the sun's point of view). */
+    private static java.lang.reflect.Method getPipeline, getPhase, setPhase;
+    private static boolean phaseLooked;
+
+    /** The shader pack pipeline's current rendering phase (to put back after drawing the world again), or null. */
+    public static Object phase() {
+        try {
+            Object pipeline = pipeline();
+            return pipeline == null ? null : getPhase.invoke(pipeline);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
+            return null;
+        }
+    }
+
+    /** Puts back a phase from {@link #phase} (drawing the sky for a mirror moves the pipeline to the sky's phases). */
+    public static void phase(Object phase) {
+        if (phase == null) {
+            return;
+        }
+        try {
+            Object pipeline = pipeline();
+            if (pipeline != null) {
+                setPhase.invoke(pipeline, phase);
+            }
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+            // left as it is
+        }
+    }
+
+    private static Object pipeline() throws ReflectiveOperationException {
+        if (!phaseLooked) {
+            phaseLooked = true;
+            Class<?> iris = Class.forName("net.irisshaders.iris.Iris");
+            Object manager = iris.getMethod("getPipelineManager").invoke(null);
+            getPipeline = manager.getClass().getMethod("getPipelineNullable");
+            Class<?> pipelineClass = Class.forName("net.irisshaders.iris.pipeline.WorldRenderingPipeline");
+            Class<?> phaseClass = Class.forName("net.irisshaders.iris.pipeline.WorldRenderingPhase");
+            getPhase = pipelineClass.getMethod("getPhase");
+            setPhase = pipelineClass.getMethod("setPhase", phaseClass);
+        }
+        if (getPipeline == null) {
+            return null;
+        }
+        Object manager = Class.forName("net.irisshaders.iris.Iris").getMethod("getPipelineManager").invoke(null);
+        return getPipeline.invoke(manager);
+    }
+
     public static boolean renderingShadowPass() {
         init();
         return call(renderingShadowPass);
