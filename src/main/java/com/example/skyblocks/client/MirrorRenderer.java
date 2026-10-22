@@ -792,6 +792,16 @@ public final class MirrorRenderer {
         stack.set(modelView);
         RenderSystem.applyModelViewMatrix();
         try {
+            // portals given a Shadered sky: their sky (the main view draws it at its entity stage, not with the chunks)
+            try {
+                PortalSkyRenderer.drawInMirror(level, rx, ry, rz);
+            } catch (RuntimeException ignored) {
+                // left out of the mirror
+            }
+            target.bindWrite(true);
+            scissor(target, drawRect);
+            GL11.glFrontFace(frontFace);
+            RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
             // infinity mirrors in view (their tunnel worked out from this mirror's eye)
             InfinityMirrorRenderer.drawInMirror(rx, ry, rz, modelView, clipped);
             for (Node child : node.children) {
