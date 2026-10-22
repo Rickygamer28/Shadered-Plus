@@ -6,6 +6,7 @@
   "client": [
     "SodiumMirrorBatchMixin",
     "SodiumMirrorCullMixin",
+    "SodiumMirrorIrisMixin",
     "SodiumViewportMixin"
   ],
   "injectors": {

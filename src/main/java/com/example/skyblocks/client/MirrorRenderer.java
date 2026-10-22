@@ -236,6 +236,22 @@ public final class MirrorRenderer {
         stageRuns = 0;
     }
 
+    private static TextureTarget currentTarget;
+    private static float[] currentRect;
+
+    /**
+     * With a shader pack, Iris binds its own framebuffers when Sodium starts drawing chunks: while a mirror draws, its
+     * picture is bound again right after (mixin/sodium/SodiumMirrorIrisMixin).
+     */
+    public static void rebindPicture() {
+        if (rendering && currentTarget != null) {
+            currentTarget.bindWrite(true);
+            if (currentRect != null) {
+                scissor(currentTarget, currentRect);
+            }
+        }
+    }
+
     public static boolean isRenderingReflection() {
         return rendering;
     }
@@ -250,7 +266,7 @@ public final class MirrorRenderer {
         stageRuns++;
         Minecraft mc = Minecraft.getInstance();
         ClientLevel level = mc.level;
-        if (level == null || com.example.skyblocks.client.iris.IrisCompat.shaderPackInUse()) {
+        if (level == null || com.example.skyblocks.client.iris.IrisCompat.renderingShadowPass()) {
             MirrorCulling.clear();
             return;
         }
@@ -334,6 +350,10 @@ public final class MirrorRenderer {
         }
         RenderTarget main = mc.getMainRenderTarget();
         float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(false);
+        // with a shader pack: what Iris has bound (its own framebuffers) is put back when the mirrors are done
+        boolean iris = com.example.skyblocks.client.iris.IrisIslandTarget.active();
+        int irisDraw = iris ? GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING) : 0;
+        int irisRead = iris ? GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING) : 0;
         frame++;
         MirrorTiming.beginFrame();
         gatherBlockEntities(level, cam);
@@ -473,7 +493,15 @@ public final class MirrorRenderer {
         RenderSystem.applyModelViewMatrix();
         MirrorTiming.start(MirrorTiming.FACES);
         Set<Wall> drawnNow = new HashSet<>();
-        mainDrawState(main);
+        // with a shader pack, the pack's final pass would paint over anything drawn into the world now: the faces go
+        // into Shadered+'s overlay target instead (like Island Paintings), laid over the pack's image at the end of the
+        // frame where nothing ended up in front of them
+        com.example.skyblocks.client.iris.IrisIslandTarget.Scope overlay = null;
+        if (iris) {
+            overlay = com.example.skyblocks.client.iris.IrisIslandTarget.begin();
+        } else {
+            mainDrawState(main);
+        }
         try {
             for (Node node : all) {
                 if (node.depth == 1) {
@@ -502,8 +530,27 @@ public final class MirrorRenderer {
             }
             LAST_DRAWN.clear();
             LAST_DRAWN.addAll(drawnNow);
+            if (overlay != null) {
+                // where the faces are, for the end-of-frame test against the final depth (hand, entities in front)
+                List<Wall> shown = new ArrayList<>(drawnNow);
+                com.example.skyblocks.client.iris.IrisIslandTarget.recordPictureDepth(() -> {
+                    ShaderInstance depthShader = com.example.skyblocks.client.iris.IrisIslandTarget.pictureShader();
+                    for (Wall w : shown) {
+                        drawFaceShape(w, WALLS.get(w), cam.x, cam.y, cam.z, depthShader);
+                    }
+                });
+            }
         } finally {
             MirrorTiming.end();
+            if (iris) {
+                com.example.skyblocks.client.iris.IrisIslandTarget.end(overlay);
+                // back to what Iris had bound (main counts as bound for it, then its real framebuffers)
+                main.bindWrite(false);
+                com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, irisRead);
+                com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, irisDraw);
+                RenderSystem.viewport(0, 0, main.width, main.height);
+                BufferUploader.invalidate();
+            }
             stack.popMatrix();
             RenderSystem.applyModelViewMatrix();
         }
@@ -616,6 +663,8 @@ public final class MirrorRenderer {
         Vec3 cam = camera.getPosition();
         Chain c = node.chain;
         TextureTarget target = node.target;
+        currentTarget = target;
+        currentRect = grow(node.rect, RECT_MARGIN);
         double rx = c.rx, ry = c.ry, rz = c.rz;
         Matrix4f modelView = c.modelView, clipped = c.clipped;
         int frontFace = c.flipped ? GL11.GL_CW : GL11.GL_CCW; // a reflection turns everything inside out
@@ -1029,6 +1078,23 @@ public final class MirrorRenderer {
         RenderSystem.depthMask(true);
         RenderSystem.disableBlend();
         RenderSystem.disableCull();
+        MeshData mesh = faceMesh(wall, faces, cx, cy, cz);
+        if (mesh != null) {
+            // pulled towards the camera so the block's own face underneath never flickers through
+            RenderSystem.enablePolygonOffset();
+            RenderSystem.polygonOffset(-2.0F, -20.0F);
+            try {
+                BufferUploader.drawWithShader(mesh);
+            } finally {
+                RenderSystem.polygonOffset(0.0F, 0.0F);
+                RenderSystem.disablePolygonOffset();
+            }
+        }
+        RenderSystem.enableCull();
+    }
+
+    /** The wall's faces as quads (positions relative to (cx, cy, cz)). */
+    private static MeshData faceMesh(Wall wall, List<BlockPos> faces, double cx, double cy, double cz) {
         BufferBuilder b = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
         Direction d = wall.facing();
         for (BlockPos pos : faces) {
@@ -1042,19 +1108,19 @@ public final class MirrorRenderer {
                 case EAST -> quad(b, x + 1 + OUT, y, z, x + 1 + OUT, y, z + 1, x + 1 + OUT, y + 1, z + 1, x + 1 + OUT, y + 1, z);
             }
         }
-        MeshData mesh = b.build();
-        if (mesh != null) {
-            // pulled towards the camera so the block's own face underneath never flickers through
-            RenderSystem.enablePolygonOffset();
-            RenderSystem.polygonOffset(-2.0F, -20.0F);
-            try {
-                BufferUploader.drawWithShader(mesh);
-            } finally {
-                RenderSystem.polygonOffset(0.0F, 0.0F);
-                RenderSystem.disablePolygonOffset();
-            }
+        return b.build();
+    }
+
+    /** The faces' shape only, with the given shader (the shader pack overlay's depth test of where they show). */
+    private static void drawFaceShape(Wall wall, List<BlockPos> faces, double cx, double cy, double cz, ShaderInstance shader) {
+        if (shader == null || faces == null || faces.isEmpty()) {
+            return;
         }
-        RenderSystem.enableCull();
+        MeshData mesh = faceMesh(wall, faces, cx, cy, cz);
+        if (mesh != null) {
+            RenderSystem.setShader(() -> shader);
+            BufferUploader.drawWithShader(mesh);
+        }
     }
 
     private static void quad(BufferBuilder b, float x0, float y0, float z0, float x1, float y1, float z1,
