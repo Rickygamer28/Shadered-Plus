@@ -270,6 +270,10 @@ public final class MirrorRenderer {
         }
     }
 
+    /** With a shader pack: how far behind the mirror the reflection is cut off (see chain()). */
+    private static final float PACK_CLIP_MARGIN = 0.25F;
+    private static boolean packMargin;
+
     /** The faces are being drawn into the shader pack overlay (its depth is the world's own). */
     private static boolean overlayFaces;
 
@@ -393,6 +397,7 @@ public final class MirrorRenderer {
         // with a shader pack: what Iris has bound (its own framebuffers) is put back when the mirrors are done
         boolean iris = com.example.skyblocks.client.iris.IrisIslandTarget.active();
         Object irisPhase = iris ? com.example.skyblocks.client.iris.IrisCompat.phase() : null;
+        packMargin = iris;
         int irisDraw = iris ? GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING) : 0;
         int irisRead = iris ? GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING) : 0;
         frame++;
@@ -709,7 +714,9 @@ public final class MirrorRenderer {
         c.modelView = new Matrix4f(eyeView).mul(reflect);
         Matrix4f inverseTranspose = new Matrix4f(c.modelView).invert().transpose();
         Vector4f normal = inverseTranspose.transform(new Vector4f((float) nx, (float) ny, (float) nz, 0));
-        float planeW = (float) (nx * c.rx + ny * c.ry + nz * c.rz - wall.k()); // exactly the wall
+        // exactly the wall; with a shader pack a little behind it: the pack works out depth effects with the real
+        // camera's projection, and right at a mirror's near plane that lost the ground next to the mirror
+        float planeW = (float) (nx * c.rx + ny * c.ry + nz * c.rz - wall.k()) + (packMargin ? PACK_CLIP_MARGIN : 0.0F);
         c.clipped = oblique(new Matrix4f(projection), new Vector4f(normal.x, normal.y, normal.z, planeW));
         c.seen = new FrustumIntersection(new Matrix4f(c.clipped).mul(c.modelView));
         c.flipped = !eyeFlipped;
