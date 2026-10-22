@@ -30,6 +30,14 @@ vec3 hue(float h) {
     return clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
 }
 
+// A soft bump at distance x from its middle (r wide), repeating every period; fw: what one pixel covers here.
+float bump(float x, float r, float period, float fw) {
+    float wide = sqrt(r * r + fw * fw * 0.5);
+    float average = 1.7725 * r / period; // (sqrt(pi) r / period: its light spread evenly)
+    float blend = smoothstep(0.18, 0.45, wide / period);
+    return mix(r / wide * exp(-x * x / (wide * wide)), average, blend);
+}
+
 void main() {
     vec3 sight = normalize(facePos - Eye);
     vec3 p = facePos - Origin;
@@ -63,25 +71,25 @@ void main() {
         around = d.y > 0.0 ? w + h + (w - s) : s; // (top wall / bottom wall)
     }
     float depth = t * d.z;
-    float k = floor(depth / SPACING);                          // which reflection
     float dz = (fract(depth / SPACING) - 0.5) * SPACING;       // from that ring's strip
     float n = max(1.0, floor(len / LED_GAP + 0.5));
     float gap = len / n;
     float ds = (fract(s / gap) - 0.5) * gap;                   // from the nearest LED along it
-    // far down the tunnel the LEDs get smaller than a pixel: spread them out (same light) instead of flickering
-    float footprint = max(fwidth(depth), fwidth(s));
-    float r = max(LED_SIZE, footprint * 0.75);
-    float glowR = max(LED_SIZE * 3.0, footprint);
-    float dist2 = ds * ds + dz * dz;
-    float led = (LED_SIZE * LED_SIZE) / (r * r) * exp(-dist2 / (r * r));
-    float glow = 0.22 * (9.0 * LED_SIZE * LED_SIZE) / (glowR * glowR) * exp(-dist2 / (glowR * glowR));
-    float strip = (1.0 - smoothstep(0.012, 0.02 + footprint, abs(dz))) * 0.05;
-    float light = pow(KEEP, k) * (0.86 + 0.14 * sin(Time * 2.5 - k * 0.55)); // dimmer each time, a slow wave inwards
+    // An LED is a soft dot: a bump across the strip times a bump along it. Each bump is widened to what one pixel
+    // covers there (same light), and once it's about as wide as the space between two LEDs (or two rings) it turns
+    // into their average: far down the tunnel, LEDs smaller than a pixel would otherwise sparkle and crawl as you move.
+    float fs = fwidth(s), fz = fwidth(depth);
+    float led = bump(ds, LED_SIZE, gap, fs) * bump(dz, LED_SIZE, SPACING, fz);
+    float glow = 0.22 * bump(ds, LED_SIZE * 3.0, gap, fs) * bump(dz, LED_SIZE * 3.0, SPACING, fz);
+    float strip = bump(dz, 0.014, SPACING, fz) * 0.05;
+    // (smooth with depth, not a step per ring: steps would show as lines once the rings blur together)
+    float ring = depth / SPACING - 0.5;
+    float light = pow(KEEP, ring) * (0.86 + 0.14 * sin(Time * 2.5 - ring * 0.55)); // dimmer each time, a slow wave inwards
     vec3 color;
     if (Rainbow > 0.5) {
-        color = hue(fract(around / (2.0 * (w + h)) - Time * 0.08 + k * 0.02));
+        color = hue(fract(around / (2.0 * (w + h)) - Time * 0.08 + ring * 0.02));
     } else {
-        color = mix(ColorFront, ColorDeep, 1.0 - exp(-k * 0.08));
+        color = mix(ColorFront, ColorDeep, 1.0 - exp(-max(ring, 0.0) * 0.08));
     }
     vec3 lit = color * (led * 2.4 + glow + strip + 0.012) * light;
     lit += vec3(1.0) * led * 0.9 * light;                      // an LED's hot white middle
