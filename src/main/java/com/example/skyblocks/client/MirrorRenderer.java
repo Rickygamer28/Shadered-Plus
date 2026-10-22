@@ -68,7 +68,7 @@ import org.lwjgl.opengl.GL11;
 public final class MirrorRenderer {
     private static final int SCAN_RADIUS = 4; // chunks
     private static final int RESCAN_TICKS = 10;
-    private static final int MAX_WALLS = 6; // the biggest on screen; each one is the whole world drawn again
+    private static final int MAX_WALLS = 256; // (sanity only: mirrors take turns being redrawn, see RENDERS_PER_FRAME)
     private static final double WALL_RANGE = 64.0;
     private static final double ENTITY_RANGE = 48.0;
     /** The reflection's resolution, as a part of the screen's: full for the nearest wall, half for the others. */
@@ -91,11 +91,30 @@ public final class MirrorRenderer {
     private static long lastScan = Long.MIN_VALUE;
     private static boolean dirty;
     private static int lastChunkX, lastChunkZ;
-    /** A wall's reflection picture. */
+    /** A wall's reflection picture, and how it was taken (so an older picture still lines up with the mirror). */
     private static final class Reflection {
         TextureTarget current;
         long usedFrame = -10;
+        long renderedFrame = -1000;
+        boolean valid;
+        float scale;
+        float renderedArea;
+        final Shot shot = new Shot();
+        MirrorCulling.View view;
     }
+
+    /**
+     * How a reflection picture was taken: positions relative to the mirrored eye -> the picture's clip space. The
+     * mirror's face looks the picture up there (rather than at its own screen position), so a picture taken a few
+     * frames ago still sits right on the mirror while the camera moves: not every mirror needs drawing every frame.
+     */
+    private static final class Shot {
+        final Matrix4f projModel = new Matrix4f();
+        double rx, ry, rz;
+    }
+
+    /** Reflections drawn per frame: the biggest mirror on screen every frame, the others take turns (oldest/biggest first). */
+    private static final int RENDERS_PER_FRAME = 4;
 
     /** Pictures for mirrors seen inside the nearest mirror (a second bounce, drawn for real). */
     /** Spare pictures for mirrors seen in mirrors, by size (each bounce is drawn at half the size of the one it's in). */
@@ -106,7 +125,7 @@ public final class MirrorRenderer {
     /** Each mirror seen in a mirror is drawn at this fraction of the size of the one it's in. */
     private static final float BOUNCE_SCALE = 0.8F;
     /** ...or after this many mirror-in-mirror pictures for one mirror, or in one frame (a hall of mirrors multiplies fast). */
-    private static final int BOUNCES_PER_MIRROR = 6, BOUNCES_PER_FRAME = 12;
+    private static final int BOUNCES_PER_MIRROR = 6, BOUNCES_PER_FRAME = 8;
     private static int bouncesLeft, frameBouncesLeft;
     /** Block entities near the camera that mirrors show (gathered once a frame). */
     private static final List<BlockEntity> NEARBY_BLOCK_ENTITIES = new ArrayList<>();
@@ -207,23 +226,56 @@ public final class MirrorRenderer {
             spareForWidth = main.width;
             spareForHeight = main.height;
         }
+        // which mirrors get a new picture this frame: the biggest on screen always, then the ones whose picture is
+        // oldest (weighted by size), any without a picture yet, or that now cover much more of the screen
+        List<Reflection> reflections = new ArrayList<>();
+        List<Double> priority = new ArrayList<>();
         for (int index = 0; index < visible.size(); index++) {
             Map.Entry<Wall, List<BlockPos>> entry = visible.get(index);
-            bouncesLeft = Math.min(BOUNCES_PER_MIRROR, frameBouncesLeft); // every mirror gets its own share
-            Reflection reflection = reflection(entry.getKey(), main, NEAR_SCALE);
+            float area = area(rects.get(entry.getKey()));
+            Reflection reflection = reflection(entry.getKey(), main, area);
+            reflections.add(reflection);
+            double p;
+            if (index == 0 || !reflection.valid || area > reflection.renderedArea * 1.25F + 0.01F) {
+                p = Double.MAX_VALUE - index; // (in screen-size order)
+            } else {
+                p = (area + 0.002) * (frame - reflection.renderedFrame);
+            }
+            priority.add(p);
+        }
+        List<Integer> order = new ArrayList<>();
+        for (int i = 0; i < visible.size(); i++) {
+            order.add(i);
+        }
+        order.sort(Comparator.comparingDouble(i -> -priority.get(i)));
+        for (int n = 0; n < order.size() && n < RENDERS_PER_FRAME; n++) {
+            int index = order.get(n);
+            Map.Entry<Wall, List<BlockPos>> entry = visible.get(index);
+            Reflection reflection = reflections.get(index);
+            bouncesLeft = Math.min(BOUNCES_PER_MIRROR, frameBouncesLeft); // every mirror drawn gets its own share
             try {
-                views.add(renderReflection(mc, level, camera, camera.getPosition(), view, true, entry.getKey(), projection,
-                        reflection.current, partialTick, 0, rects.get(entry.getKey())));
+                reflection.view = renderReflection(mc, level, camera, camera.getPosition(), view, true, entry.getKey(), projection,
+                        reflection.current, partialTick, 0, rects.get(entry.getKey()), reflection.shot);
+                reflection.valid = true;
+                reflection.renderedFrame = frame;
+                reflection.renderedArea = area(rects.get(entry.getKey()));
             } catch (RuntimeException ex) {
                 if (!warnedFail) {
                     warnedFail = true;
                     SkyBlocksMod.LOGGER.warn("Shadered+: a mirror reflection failed", ex);
                 }
             } finally {
-                // drawn either way (a failed frame keeps its last picture instead of flashing the plain block)
-                drawn.add(entry);
-                drawnReflections.add(reflection);
                 restore(mc, main, camera, projection, partialTick);
+            }
+        }
+        for (int index = 0; index < visible.size(); index++) {
+            Reflection reflection = reflections.get(index);
+            if (reflection.valid) {
+                drawn.add(visible.get(index));
+                drawnReflections.add(reflection);
+                if (reflection.view != null) {
+                    views.add(reflection.view);
+                }
             }
         }
         REFLECTIONS.entrySet().removeIf(e -> {
@@ -242,7 +294,7 @@ public final class MirrorRenderer {
         try {
             for (int i = 0; i < drawn.size(); i++) {
                 drawFaces(drawn.get(i).getKey(), drawn.get(i).getValue(), cam.x, cam.y, cam.z,
-                        drawnReflections.get(i).current.getColorTextureId(), main.width, main.height);
+                        drawnReflections.get(i).current.getColorTextureId(), drawnReflections.get(i).shot);
             }
         } finally {
             stack.popMatrix();
@@ -251,15 +303,22 @@ public final class MirrorRenderer {
     }
 
     /** The wall's reflection picture, sized for this frame. */
-    private static Reflection reflection(Wall wall, RenderTarget main, float scale) {
-        int w = Math.max(1, (int) (main.width * scale)), h = Math.max(1, (int) (main.height * scale));
+    private static Reflection reflection(Wall wall, RenderTarget main, float area) {
         Reflection r = REFLECTIONS.computeIfAbsent(wall, k -> {
             Reflection n = new Reflection();
-            n.current = newTarget(w, h);
+            n.scale = area > 0.14F ? NEAR_SCALE : FAR_SCALE;
+            n.current = newTarget(Math.max(1, (int) (main.width * n.scale)), Math.max(1, (int) (main.height * n.scale)));
             return n;
         });
+        // small on screen: a half-size picture is plenty (switching only well past the line, so it doesn't flip-flop)
+        float scale = area > 0.2F ? NEAR_SCALE : area < 0.08F ? FAR_SCALE : r.scale;
         r.usedFrame = frame;
-        resize(r.current, w, h);
+        int w = Math.max(1, (int) (main.width * scale)), h = Math.max(1, (int) (main.height * scale));
+        if (scale != r.scale || r.current.width != w || r.current.height != h) {
+            r.scale = scale;
+            resize(r.current, w, h);
+            r.valid = false; // (resized: the old picture is gone)
+        }
         return r;
     }
 
@@ -295,7 +354,7 @@ public final class MirrorRenderer {
      */
     private static MirrorCulling.View renderReflection(Minecraft mc, ClientLevel level, Camera camera, Vec3 eye, Matrix4f eyeView,
                                                        boolean flipped, Wall wall, Matrix4f projection, TextureTarget target,
-                                                       float partialTick, int depth, float[] rect) {
+                                                       float partialTick, int depth, float[] rect, Shot shot) {
         Vec3 cam = camera.getPosition();
         double nx = wall.nx(), ny = wall.ny(), nz = wall.nz();
         double dist = wall.distance(eye);
@@ -381,9 +440,10 @@ public final class MirrorRenderer {
                 bouncesLeft--;
                 frameBouncesLeft--;
                 TextureTarget inner = acquire(innerW, innerH);
+                Shot innerShot = new Shot();
                 try {
                     MirrorCulling.View innerView = renderReflection(mc, level, camera, mirroredEye, modelView, !flipped,
-                            others.get(i).getKey(), projection, inner, partialTick, depth + 1, innerRects.get(others.get(i).getKey()));
+                            others.get(i).getKey(), projection, inner, partialTick, depth + 1, innerRects.get(others.get(i).getKey()), innerShot);
                     if (depth < 2) {
                         NESTED_VIEWS.add(innerView); // (deeper ones see much the same chunks)
                     }
@@ -404,8 +464,7 @@ public final class MirrorRenderer {
                 stack.set(modelView);
                 RenderSystem.applyModelViewMatrix();
                 try {
-                    drawFaces(others.get(i).getKey(), others.get(i).getValue(), rx, ry, rz, inner.getColorTextureId(),
-                            target.width, target.height);
+                    drawFaces(others.get(i).getKey(), others.get(i).getValue(), rx, ry, rz, inner.getColorTextureId(), innerShot);
                 } finally {
                     stack.popMatrix();
                     RenderSystem.applyModelViewMatrix();
@@ -421,6 +480,10 @@ public final class MirrorRenderer {
             chunks.skyblocks$renderSectionLayer(RenderType.translucent(), rx, ry, rz, modelView, clipped);
         }
 
+        shot.projModel.set(projection).mul(modelView); // (the oblique cut only changes depth: x, y and w are the projection's)
+        shot.rx = rx;
+        shot.ry = ry;
+        shot.rz = rz;
         Matrix4f culling = new Matrix4f(clipped).mul(modelView).translate((float) (cam.x - rx), (float) (cam.y - ry), (float) (cam.z - rz));
         return new MirrorCulling.View(new FrustumIntersection(culling));
     }
@@ -629,12 +692,14 @@ public final class MirrorRenderer {
         return false;
     }
 
-    private static void drawFaces(Wall wall, List<BlockPos> faces, double cx, double cy, double cz, int texture, int screenWidth, int screenHeight) {
+    private static void drawFaces(Wall wall, List<BlockPos> faces, double cx, double cy, double cz, int texture, Shot shot) {
         ShaderInstance shader = MirrorShaders.surface;
         if (shader == null) {
             return;
         }
-        shader.safeGetUniform("MirrorScreenSize").set((float) screenWidth, (float) screenHeight);
+        // positions here are relative to (cx, cy, cz); the picture was taken relative to the mirrored eye
+        shader.safeGetUniform("MirrorTexMat").set(new Matrix4f(shot.projModel)
+                .translate((float) (cx - shot.rx), (float) (cy - shot.ry), (float) (cz - shot.rz)));
         RenderSystem.setShader(() -> shader);
         RenderSystem.setShaderTexture(0, texture);
         RenderSystem.enableDepthTest();
