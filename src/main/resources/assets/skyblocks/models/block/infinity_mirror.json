@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "skyblocks:block/infinity_mirror_side",
+    "north": "skyblocks:block/infinity_mirror_front",
+    "south": "skyblocks:block/infinity_mirror_side",
+    "east": "skyblocks:block/infinity_mirror_side",
+    "west": "skyblocks:block/infinity_mirror_side",
+    "up": "skyblocks:block/infinity_mirror_side",
+    "down": "skyblocks:block/infinity_mirror_side"
+  }
+}

@@ -14,6 +14,8 @@ import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class MirrorShaders {
     public static ShaderInstance surface;
+    /** The infinity mirror's tunnel (InfinityMirrorRenderer). */
+    public static ShaderInstance infinity;
 
     private MirrorShaders() {}
 
@@ -22,5 +24,8 @@ public final class MirrorShaders {
         event.registerShader(new ShaderInstance(event.getResourceProvider(),
                         ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "mirror_surface"), DefaultVertexFormat.POSITION),
                 shader -> surface = shader);
+        event.registerShader(new ShaderInstance(event.getResourceProvider(),
+                        ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "infinity_mirror"), DefaultVertexFormat.POSITION),
+                shader -> infinity = shader);
     }
 }

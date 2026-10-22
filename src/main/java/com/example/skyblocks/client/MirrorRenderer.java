@@ -183,6 +183,7 @@ public final class MirrorRenderer {
 
     /** A block changed on the client: rescan straight away if it's a mirror or next to one. */
     public static void blockChanged(ClientLevel level, BlockPos pos, BlockState oldState, BlockState newState) {
+        InfinityMirrorRenderer.blockChanged(level, pos, oldState, newState);
         boolean mirror = isMirror(oldState) || isMirror(newState);
         if (!mirror) {
             BlockPos.MutableBlockPos n = new BlockPos.MutableBlockPos();
@@ -1054,7 +1055,7 @@ public final class MirrorRenderer {
      * as well as through the game's state cache. Something drawn during the mirrors (other mods' renderers, Shadered's
      * passes) can change OpenGL state behind the cache's back; then the faces weren't drawn for a frame (silver flash).
      */
-    private static void mainDrawState(RenderTarget main) {
+    static void mainDrawState(RenderTarget main) {
         main.bindWrite(true);
         GL11.glColorMask(true, true, true, true);
         RenderSystem.colorMask(false, false, false, false);

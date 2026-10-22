@@ -51,6 +51,7 @@ public class SkyBlocksMod {
         event.accept(ModItems.ISLAND_SCANNER.get());
         event.accept(ModItems.ISLAND_PAINTING.get());
         event.accept(ModItems.MIRROR.get());
+        event.accept(ModItems.INFINITY_MIRROR.get());
         for (ModFluids.SkyLiquid liquid : ModFluids.ALL) {
             event.accept(liquid.bucket.get());
         }
