@@ -69,8 +69,8 @@ public final class MirrorRenderer {
     private static final int MAX_WALLS = 4;
     private static final double WALL_RANGE = 64.0;
     private static final double ENTITY_RANGE = 48.0;
-    /** The reflection's resolution, as a part of the screen's. */
-    private static final float SCALE = 0.5F;
+    /** The reflection's resolution, as a part of the screen's: full for the nearest wall, half for the others. */
+    private static final float NEAR_SCALE = 1.0F, FAR_SCALE = 0.5F;
     /** Just in front of the mirror block's face. */
     private static final float OUT = 0.002F;
 
@@ -155,8 +155,9 @@ public final class MirrorRenderer {
         Matrix4f view = new Matrix4f(event.getModelViewMatrix());
         Matrix4f projection = new Matrix4f(event.getProjectionMatrix());
         frame++;
-        for (Map.Entry<Wall, List<BlockPos>> entry : visible) {
-            Reflection reflection = reflection(entry.getKey(), main);
+        for (int index = 0; index < visible.size(); index++) {
+            Map.Entry<Wall, List<BlockPos>> entry = visible.get(index);
+            Reflection reflection = reflection(entry.getKey(), main, index == 0 ? NEAR_SCALE : FAR_SCALE);
             try {
                 views.add(renderReflection(mc, level, camera, entry.getKey(), view, projection, reflection, partialTick));
                 drawn.add(entry);
@@ -192,8 +193,8 @@ public final class MirrorRenderer {
     }
 
     /** The wall's reflection pictures, sized for this frame, with last frame's picture kept as "previous". */
-    private static Reflection reflection(Wall wall, RenderTarget main) {
-        int w = Math.max(1, (int) (main.width * SCALE)), h = Math.max(1, (int) (main.height * SCALE));
+    private static Reflection reflection(Wall wall, RenderTarget main, float scale) {
+        int w = Math.max(1, (int) (main.width * scale)), h = Math.max(1, (int) (main.height * scale));
         Reflection r = REFLECTIONS.computeIfAbsent(wall, k -> {
             Reflection n = new Reflection();
             n.current = newTarget(w, h);
@@ -204,6 +205,10 @@ public final class MirrorRenderer {
         r.previous = r.current;
         r.current = swap;
         r.hasPrevious = r.usedFrame == frame - 1 && r.previous.width == w && r.previous.height == h;
+        if (r.previous.width != w || r.previous.height != h) {
+            r.previous.resize(w, h, Minecraft.ON_OSX);
+            r.previous.setFilterMode(GL11.GL_LINEAR);
+        }
         r.usedFrame = frame;
         if (r.current.width != w || r.current.height != h) {
             r.current.resize(w, h, Minecraft.ON_OSX);
@@ -249,8 +254,10 @@ public final class MirrorRenderer {
         try {
             RenderSystem.setProjectionMatrix(projection, VertexSorting.DISTANCE_TO_ORIGIN);
             float far = mc.gameRenderer.getRenderDistance();
-            // the sky dome is seen from inside: no face culling for it (the reflection turns its sides around)
+            // the sky dome is seen from inside: no face culling for it (the reflection turns its sides around); the
+            // sky is drawn with whatever shader is set, so set the one the main view uses for it
             RenderSystem.disableCull();
+            RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionShader);
             mc.levelRenderer.renderSky(modelView, projection, partialTick, camera, false,
                     () -> FogRenderer.setupFog(camera, FogRenderer.FogMode.FOG_SKY, far, false, partialTick));
         } catch (RuntimeException e) {

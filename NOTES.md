@@ -104,7 +104,7 @@
   camera mirrored in the plane, view*reflection matrix (glFrontFace CW), Lengyel oblique projection (near plane = wall),
   sky (LevelRenderer.renderSky), chunk layers solid/cutoutMipped/cutout via LevelRendererInvoker.renderSectionLayer
   (Sodium overwrites it: draws its own lists = the main view's), entities within 48 blocks in front (you included);
-  into a half-res TextureTarget sampled in screen space by mirror_surface faces drawn 0.002 in front of the block.
+  into a TextureTarget (full res for the nearest wall, half for others) sampled in screen space by mirror_surface faces drawn 0.002 in front of the block.
 - Sodium: optional skyblocks.sodium.mixins.json, SodiumViewportMixin ORs the mirrors' frustums (last frame) into
   Viewport.isBoxVisible(Looser) so sections seen only in a mirror are in the main list; scheduleTerrainUpdate (reflection)
   when the number of mirror views changes. No translucent layer in reflections (vanilla/Sodium resort by camera).
