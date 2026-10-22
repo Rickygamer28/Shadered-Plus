@@ -87,12 +87,35 @@ public final class PortalSkyRenderer {
             return;
         }
         ClientLevel level = Minecraft.getInstance().level;
-        Map<Long, SkyblockType> map = level == null ? null : SKIES.get(level.dimension().location().toString());
-        if (map == null || map.isEmpty()) {
+        if (level == null) {
             return;
         }
-        Vec3 camera = event.getCamera().getPosition();
+        Map<SkyblockType, List<float[]>> faces = collect(level, event.getCamera().getPosition());
+        if (faces.isEmpty()) {
+            return;
+        }
+        // (1.20.1: the view's rotation is in the stage's pose, not in RenderSystem's model-view matrix)
+        draw(faces, new Matrix4f(event.getPoseStack().last().pose()), com.example.skyblocks.client.iris.IrisIslandTarget.deferSky());
+    }
+
+    /**
+     * Inside a mirror's picture (bound): the portals' skies seen from the mirrored eye at (ex, ey, ez), with the
+     * mirror's model-view.
+     */
+    public static void drawInMirror(ClientLevel level, double ex, double ey, double ez, Matrix4f modelView) {
+        Map<SkyblockType, List<float[]>> faces = collect(level, new Vec3(ex, ey, ez));
+        if (!faces.isEmpty()) {
+            draw(faces, new Matrix4f(modelView), false);
+        }
+    }
+
+    /** Each sky's quads over the portals near {@code camera} (relative to it). */
+    private static Map<SkyblockType, List<float[]>> collect(ClientLevel level, Vec3 camera) {
         Map<SkyblockType, List<float[]>> faces = new LinkedHashMap<>();
+        Map<Long, SkyblockType> map = SKIES.get(level.dimension().location().toString());
+        if (map == null || map.isEmpty()) {
+            return faces;
+        }
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         for (Map.Entry<Long, SkyblockType> entry : map.entrySet()) {
             pos.set(entry.getKey());
@@ -106,12 +129,10 @@ public final class PortalSkyRenderer {
             float x = (float) (pos.getX() - camera.x), y = (float) (pos.getY() - camera.y), z = (float) (pos.getZ() - camera.z);
             faces(level, pos, state, x, y, z, faces.computeIfAbsent(entry.getValue(), k -> new ArrayList<>()));
         }
-        if (faces.isEmpty()) {
-            return;
-        }
-        // (1.20.1: the view's rotation is in the stage's pose, not in RenderSystem's model-view matrix)
-        Matrix4f view = new Matrix4f(event.getPoseStack().last().pose());
-        boolean defer = com.example.skyblocks.client.iris.IrisIslandTarget.deferSky();
+        return faces;
+    }
+
+    private static void draw(Map<SkyblockType, List<float[]>> faces, Matrix4f view, boolean defer) {
         if (memory == null) {
             memory = new BufferBuilder(1 << 16);
         }

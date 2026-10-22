@@ -615,6 +615,7 @@ public final class MirrorRenderer {
                 RenderSystem.viewport(0, 0, main.width, main.height);
                 BufferUploader.invalidate();
                 com.example.skyblocks.client.iris.IrisCompat.phase(irisPhase); // (the mirrors' skies moved it)
+                com.example.skyblocks.client.iris.MirrorIrisState.restore(); // (the real view's matrices for the pack)
             }
             stack.popPose();
             RenderSystem.applyModelViewMatrix();
@@ -772,6 +773,10 @@ public final class MirrorRenderer {
         RenderSystem.enableDepthTest();
         GL11.glFrontFace(frontFace);
         FogRenderer.setupFog(camera, FogRenderer.FogMode.FOG_TERRAIN, Math.max(mc.gameRenderer.getRenderDistance(), 32.0F), false, partialTick);
+        if (packMargin) {
+            // the shader pack works out world positions (shadows, waving) from these: the mirror's, not the real view's
+            com.example.skyblocks.client.iris.MirrorIrisState.mirror(modelView, clipped, rx, ry, rz, cam.x, cam.y, cam.z);
+        }
         // blocks: the chunk meshes already on the graphics card (with Sodium: only the sections this mirror sees)
         LevelRendererInvoker chunks = (LevelRendererInvoker) mc.levelRenderer;
         RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
@@ -796,6 +801,16 @@ public final class MirrorRenderer {
             GL11.glFrontFace(frontFace);
             RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
         }
+        // portals given a Shadered sky: their sky (drawn in the main view at its entity stage, so not by the chunks)
+        try {
+            PortalSkyRenderer.drawInMirror(level, rx, ry, rz, modelView);
+        } catch (RuntimeException ignored) {
+            // left out of the mirror
+        }
+        target.bindWrite(true);
+        scissor(target, drawRect);
+        GL11.glFrontFace(frontFace);
+        RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
         // the mirrors seen in this one: their latest pictures
         MirrorTiming.start(MirrorTiming.INSIDE);
         PoseStack stack = RenderSystem.getModelViewStack();
@@ -1016,6 +1031,7 @@ public final class MirrorRenderer {
     /** Back to the main view after a reflection. */
     private static void restore(Minecraft mc, RenderTarget main, Camera camera, Matrix4f projection, float partialTick) {
         rendering = false;
+        com.example.skyblocks.client.iris.MirrorIrisState.restore(); // (the real view's matrices for the shader pack)
         cullChunks(null, 0, 0, 0);
         RenderSystem.disableScissor();
         GL11.glFrontFace(GL11.GL_CCW);
