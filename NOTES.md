@@ -96,3 +96,16 @@
   sheet on their shape's thin axis). Flat modded portals (no axis, e.g. Twilight Forest twilight_portal: up face at 13/16 = its shape top) are FLOOR, drawn at
   the top of their shape. Particles: mixin into ClientLevel.doAnimateTick (notes the animating block) + ClientLevel.addParticle
   (recolours its particles), so any portal's particles change colour.
+
+## Mirror (22 Oct 2026, user idea; 1.21.1 first)
+- skyblocks:mirror, full block (8 glass + iron ingot -> 8), plain silver texture in the chunk mesh; NO tint on the
+  reflection (user). client/MirrorRenderer at AFTER_CUTOUT_BLOCKS: walls = exposed mirror faces grouped by (facing,
+  plane coord), scanned every 10 ticks (4 chunks); up to 4 nearest visible walls facing the camera each get a reflection:
+  camera mirrored in the plane, view*reflection matrix (glFrontFace CW), Lengyel oblique projection (near plane = wall),
+  sky (LevelRenderer.renderSky), chunk layers solid/cutoutMipped/cutout via LevelRendererInvoker.renderSectionLayer
+  (Sodium overwrites it: draws its own lists = the main view's), entities within 48 blocks in front (you included);
+  into a half-res TextureTarget sampled in screen space by mirror_surface faces drawn 0.002 in front of the block.
+- Sodium: optional skyblocks.sodium.mixins.json, SodiumViewportMixin ORs the mirrors' frustums (last frame) into
+  Viewport.isBoxVisible(Looser) so sections seen only in a mirror are in the main list; scheduleTerrainUpdate (reflection)
+  when the number of mirror views changes. No translucent layer in reflections (vanilla/Sodium resort by camera).
+- Shader packs: mirrors are skipped (block texture) for now; Iris attempt is the next step.

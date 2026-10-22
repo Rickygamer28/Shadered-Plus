@@ -35,5 +35,10 @@ public final class ModBlocks {
             IslandPaintingBlock::new, BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.WOOD).noOcclusion()
                     .pushReaction(PushReaction.DESTROY));
 
+    /** A mirror: its faces show a live reflection of the world (client/MirrorRenderer); a plain shiny block otherwise. */
+    public static final DeferredBlock<net.minecraft.world.level.block.Block> MIRROR = BLOCKS.registerSimpleBlock("mirror",
+            BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS)
+                    .mapColor(net.minecraft.world.level.material.MapColor.ICE).isValidSpawn((s, l, p, e) -> false));
+
     private ModBlocks() {}
 }

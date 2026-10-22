@@ -14,6 +14,9 @@ Shadered+ is an unofficial addon, not made by the Shadered author.'''
 [[mixins]]
 config="skyblocks.mixins.json"
 
+[[mixins]]
+config="skyblocks.sodium.mixins.json"
+
 [[dependencies.${mod_id}]]
 modId="neoforge"
 type="required"
