@@ -269,6 +269,9 @@ public final class MirrorRenderer {
         }
     }
 
+    /** The faces are being drawn into the shader pack overlay (its depth is the world's own). */
+    private static boolean overlayFaces;
+
     private static TextureTarget currentTarget;
     private static float[] currentRect;
 
@@ -545,6 +548,7 @@ public final class MirrorRenderer {
         com.example.skyblocks.client.iris.IrisIslandTarget.Scope overlay = null;
         if (iris) {
             overlay = com.example.skyblocks.client.iris.IrisIslandTarget.begin();
+            overlayFaces = overlay != null;
         } else {
             mainDrawState(main);
         }
@@ -591,7 +595,9 @@ public final class MirrorRenderer {
             }
         } finally {
             MirrorTiming.end();
+            overlayFaces = false;
             if (iris) {
+                RenderSystem.depthMask(true);
                 com.example.skyblocks.client.iris.IrisIslandTarget.end(overlay);
                 // back to what Iris had bound (main counts as bound for it, then its real framebuffers)
                 main.bindWrite(false);
@@ -1129,7 +1135,9 @@ public final class MirrorRenderer {
         RenderSystem.setShaderTexture(0, texture);
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL11.GL_LEQUAL);
-        RenderSystem.depthMask(true);
+        // (into the shader pack overlay: no depth written, the world's depth must stay as it was: the overlay's
+        // end-of-frame test finds the faces against it)
+        RenderSystem.depthMask(!overlayFaces);
         RenderSystem.disableBlend();
         RenderSystem.disableCull();
         MeshData mesh = faceMesh(wall, faces, cx, cy, cz);
