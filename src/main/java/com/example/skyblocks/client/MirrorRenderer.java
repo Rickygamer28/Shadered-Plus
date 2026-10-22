@@ -818,6 +818,22 @@ public final class MirrorRenderer {
                     drawFaces(w, WALLS.get(w), rx, ry, rz, shown.target.getColorTextureId(), shown.shot);
                 }
             }
+            // with a shader pack the cut-off is a little behind the mirror (chain()): the other mirror of a corner then
+            // shows in a strip next to the corner, as its plain blocks. Those faces get that mirror's own picture.
+            if (packMargin) {
+                Vec3 eye = new Vec3(rx, ry, rz);
+                for (Map.Entry<Wall, List<BlockPos>> e : WALLS.entrySet()) {
+                    Wall w = e.getKey();
+                    if (w.equals(node.wall) || w.distance(eye) <= 0.05 || inFrontOf(node.wall, e.getValue())
+                            || !withinMargin(node.wall, e.getValue())) {
+                        continue;
+                    }
+                    Node shown = NODES.get(List.of(w));
+                    if (shown != null && shown.valid && shown.target != null) {
+                        drawFaces(w, e.getValue(), rx, ry, rz, shown.target.getColorTextureId(), shown.shot);
+                    }
+                }
+            }
         } finally {
             stack.popPose();
             RenderSystem.applyModelViewMatrix();
@@ -1116,6 +1132,16 @@ public final class MirrorRenderer {
         int x1 = Math.min(target.width, (int) Math.ceil(rect[2] * target.width) + 1);
         int y1 = Math.min(target.height, (int) Math.ceil(rect[3] * target.height) + 1);
         RenderSystem.enableScissor(x, y, Math.max(1, x1 - x), Math.max(1, y1 - y));
+    }
+
+    /** Whether any of these mirror faces' blocks is right behind the wall (inside the shader-pack cut-off margin). */
+    private static boolean withinMargin(Wall wall, List<BlockPos> faces) {
+        for (BlockPos pos : faces) {
+            if (wall.distance(Vec3.atCenterOf(pos)) > -0.5 - PACK_CLIP_MARGIN - 0.01) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Whether any of these mirror faces is on the front side of the wall (and so can show up in it). */
