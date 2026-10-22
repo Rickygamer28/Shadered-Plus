@@ -514,7 +514,11 @@ public final class MirrorRenderer {
         // blocks: the chunk meshes already on the graphics card (with Sodium: only the sections this mirror sees)
         LevelRendererInvoker chunks = (LevelRendererInvoker) mc.levelRenderer;
         RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
-        cullChunks(c.seen, rx, ry, rz);
+        // only what shows in the mirror's part of the screen: chunk sections, mobs and block entities outside it are
+        // skipped (a small mirror then costs little)
+        FrustumIntersection inRect = new FrustumIntersection(rectOnly(node.rect).mul(clipped).mul(modelView));
+        Matrix4f toPicture = new Matrix4f(projection).mul(modelView);
+        cullChunks(inRect, rx, ry, rz);
         MirrorTiming.start(MirrorTiming.BLOCKS);
         chunks.skyblocks$renderSectionLayer(RenderType.solid(), rx, ry, rz, modelView, clipped);
         chunks.skyblocks$renderSectionLayer(RenderType.cutoutMipped(), rx, ry, rz, modelView, clipped);
@@ -522,7 +526,7 @@ public final class MirrorRenderer {
         // entities in front of the wall, you included (block entities: in the mirrors themselves, not in bounces)
         if (node.depth <= 3) {
             MirrorTiming.start(MirrorTiming.MOBS);
-            renderEntities(mc, level, camera, node.wall, modelView, c.seen, rx, ry, rz, partialTick, withBlockEntities);
+            renderEntities(mc, level, camera, node.wall, modelView, inRect, toPicture, node.rect, rx, ry, rz, partialTick, withBlockEntities);
             target.bindWrite(true);
             scissor(target, node.rect);
             GL11.glFrontFace(frontFace);
@@ -558,12 +562,13 @@ public final class MirrorRenderer {
         node.shot.rx = rx;
         node.shot.ry = ry;
         node.shot.rz = rz;
-        Matrix4f culling = new Matrix4f(clipped).mul(modelView).translate((float) (cam.x - rx), (float) (cam.y - ry), (float) (cam.z - rz));
+        Matrix4f culling = rectOnly(node.rect).mul(clipped).mul(modelView).translate((float) (cam.x - rx), (float) (cam.y - ry), (float) (cam.z - rz));
         node.view = new MirrorCulling.View(new FrustumIntersection(culling));
     }
 
     private static void renderEntities(Minecraft mc, ClientLevel level, Camera camera, Wall wall, Matrix4f modelView,
-                                       FrustumIntersection seen, double rx, double ry, double rz, float partialTick,
+                                       FrustumIntersection seen, Matrix4f toPicture, float[] rect,
+                                       double rx, double ry, double rz, float partialTick,
                                        boolean withBlockEntities) {
         if (entityMemory == null) {
             entityMemory = new ByteBufferBuilder(1 << 18);
@@ -629,6 +634,10 @@ public final class MirrorRenderer {
                         AABB box = renderer.getRenderBoundingBox(be).move(-rx, -ry, -rz);
                         if (!seen.testAab((float) box.minX, (float) box.minY, (float) box.minZ, (float) box.maxX, (float) box.maxY, (float) box.maxZ)) {
                             continue; // not in this mirror's view
+                        }
+                        float[] onScreen = screenRect(toPicture, box, rect);
+                        if (onScreen == null || area(onScreen) < TINY) {
+                            continue; // a few pixels in the mirror: not worth drawing
                         }
                         pose.pushPose();
                         pose.translate(pos.getX() - rx, pos.getY() - ry, pos.getZ() - rz);
@@ -728,6 +737,20 @@ public final class MirrorRenderer {
 
     /** The wall's faces, showing its reflection (in front of the mirror blocks' own faces). */
     private static final float[] FULL = {0, 0, 1, 1};
+    /** Block entities smaller than this part of the screen in a mirror (about 10 x 10 pixels at 1080p) are skipped. */
+    private static final float TINY = 0.00005F;
+
+    /** Clip space -> clip space where {@code rect} (fractions of the screen) fills the whole view. */
+    private static Matrix4f rectOnly(float[] rect) {
+        float cx = rect[0] + rect[2] - 1.0F, cy = rect[1] + rect[3] - 1.0F;
+        float hx = Math.max(1.0E-4F, rect[2] - rect[0]), hy = Math.max(1.0E-4F, rect[3] - rect[1]);
+        Matrix4f m = new Matrix4f();
+        m.m00(1.0F / hx);
+        m.m30(-cx / hx);
+        m.m11(1.0F / hy);
+        m.m31(-cy / hy);
+        return m;
+    }
 
     /**
      * Where the box shows up on screen ({@code toScreen}: positions relative to the eye -> clip space), as fractions
