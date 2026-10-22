@@ -219,6 +219,23 @@ public final class MirrorRenderer {
         cullZ = z;
     }
 
+    private static boolean stageRan;
+    private static int stageRuns;
+
+    /** A frame where mirrors were drawn last time but the stage event never came: logged (that's a silver frame). */
+    @SubscribeEvent
+    public static void onFrameEnd(net.neoforged.neoforge.client.event.RenderFrameEvent.Post event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (!stageRan && !LAST_DRAWN.isEmpty() && mc.level != null && !mc.isPaused() && mc.screen == null) {
+            skipped("the world's cutout stage didn't run this frame", LAST_DRAWN.iterator().next());
+        }
+        stageRan = false;
+        if (stageRuns > 1 && !LAST_DRAWN.isEmpty()) {
+            skipped("the world's cutout stage ran " + stageRuns + " times this frame", LAST_DRAWN.iterator().next());
+        }
+        stageRuns = 0;
+    }
+
     public static boolean isRenderingReflection() {
         return rendering;
     }
@@ -229,6 +246,8 @@ public final class MirrorRenderer {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS || rendering) {
             return;
         }
+        stageRan = true;
+        stageRuns++;
         Minecraft mc = Minecraft.getInstance();
         ClientLevel level = mc.level;
         if (level == null || com.example.skyblocks.client.iris.IrisCompat.shaderPackInUse()) {
@@ -294,8 +313,18 @@ public final class MirrorRenderer {
             if (r == null || d <= 0.05) {
                 continue; // really off screen / behind it now
             }
-            if (d >= WALL_RANGE || !rects.containsKey(w)) {
-                continue; // (out of range / not in view: really gone)
+            if (d >= WALL_RANGE) {
+                continue;
+            }
+            if (!rects.containsKey(w)) {
+                // (only when the box is wholly in front of the eye: then the screen rect is exact, and the in-view
+                // test disagreeing with it means something is off with this frame's view)
+                AABB box = bounds(w, faces).move(-cam.x, -cam.y, -cam.z);
+                if (wholeInFront(toScreen, box)) {
+                    skipped(String.format(java.util.Locale.ROOT, "in-view test said no; cam %.2f %.2f %.2f, view %s, proj %s",
+                            cam.x, cam.y, cam.z, view, projection).replace('\n', ' '), w);
+                }
+                continue;
             }
             skipped("no screen rect", w);
         }
@@ -453,6 +482,21 @@ public final class MirrorRenderer {
                     } else if (LAST_DRAWN.contains(node.wall)) {
                         skipped("no picture", node.wall);
                     }
+                }
+            }
+            // every other mirror facing you that has a picture gets its face too, whatever the in-view test said (the
+            // faces are cheap, and off-screen ones cost nothing): a wrong "not in view" can't flash the plain block
+            for (Map.Entry<Wall, List<BlockPos>> e : WALLS.entrySet()) {
+                Wall w = e.getKey();
+                double d = w.distance(cam);
+                if (drawnNow.contains(w) || d <= 0.05 || d >= WALL_RANGE) {
+                    continue;
+                }
+                Node node = NODES.get(List.of(w));
+                if (node != null && node.valid && node.target != null) {
+                    drawFaces(w, e.getValue(), cam.x, cam.y, cam.z, node.target.getColorTextureId(), node.shot);
+                    drawnNow.add(w);
+                    node.usedFrame = frame;
                 }
             }
             LAST_DRAWN.clear();
@@ -889,6 +933,19 @@ public final class MirrorRenderer {
         }
         float[] r = {Math.max(x0, within[0]), Math.max(y0, within[1]), Math.min(x1, within[2]), Math.min(y1, within[3])};
         return r[2] > r[0] && r[3] > r[1] ? r : null;
+    }
+
+    private static boolean wholeInFront(Matrix4f toScreen, AABB box) {
+        Vector4f v = new Vector4f();
+        for (int i = 0; i < 8; i++) {
+            v.set((float) ((i & 1) == 0 ? box.minX : box.maxX), (float) ((i & 2) == 0 ? box.minY : box.maxY),
+                    (float) ((i & 4) == 0 ? box.minZ : box.maxZ), 1.0F);
+            toScreen.transform(v);
+            if (v.w < 0.05F || Math.abs(v.x) > v.w || Math.abs(v.y) > v.w) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** Whether the picture drawn for {@code drawn} (with its margin) still covers {@code now}. */
