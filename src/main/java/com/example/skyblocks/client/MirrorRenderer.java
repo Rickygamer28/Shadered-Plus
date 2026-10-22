@@ -236,6 +236,39 @@ public final class MirrorRenderer {
         stageRuns = 0;
     }
 
+    /** Set by "/shaderedplus mirrorpicture": the biggest mirror's picture is saved into the screenshots folder. */
+    private static boolean dumpRequested;
+
+    @SubscribeEvent
+    public static void onClientCommands(net.neoforged.neoforge.client.event.RegisterClientCommandsEvent event) {
+        event.getDispatcher().register(net.minecraft.commands.Commands.literal("shaderedplus")
+                .then(net.minecraft.commands.Commands.literal("mirrorpicture").executes(ctx -> {
+                    dumpRequested = true;
+                    ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(
+                            "Saving the biggest mirror's picture to screenshots/shaderedplus_mirror_picture.png"), false);
+                    return 1;
+                })));
+    }
+
+    private static void dump(RenderTarget target, String name) {
+        try {
+            com.mojang.blaze3d.platform.NativeImage image = net.minecraft.client.Screenshot.takeScreenshot(target);
+            java.io.File dir = new java.io.File(Minecraft.getInstance().gameDirectory, "screenshots");
+            dir.mkdirs();
+            java.io.File file = new java.io.File(dir, name);
+            net.minecraft.Util.ioPool().execute(() -> {
+                try (image) {
+                    image.writeToFile(file);
+                    SkyBlocksMod.LOGGER.info("Shadered+: saved {}", file);
+                } catch (java.io.IOException e) {
+                    SkyBlocksMod.LOGGER.warn("Shadered+: couldn't save {}", file, e);
+                }
+            });
+        } catch (RuntimeException e) {
+            SkyBlocksMod.LOGGER.warn("Shadered+: couldn't read the mirror's picture", e);
+        }
+    }
+
     private static TextureTarget currentTarget;
     private static float[] currentRect;
 
@@ -262,11 +295,14 @@ public final class MirrorRenderer {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS || rendering) {
             return;
         }
+        if (com.example.skyblocks.client.iris.IrisCompat.renderingShadowPass()) {
+            return; // (the shader pack's shadow pass draws the world from the sun: no mirrors there)
+        }
         stageRan = true;
         stageRuns++;
         Minecraft mc = Minecraft.getInstance();
         ClientLevel level = mc.level;
-        if (level == null || com.example.skyblocks.client.iris.IrisCompat.renderingShadowPass()) {
+        if (level == null) {
             MirrorCulling.clear();
             return;
         }
@@ -465,6 +501,10 @@ public final class MirrorRenderer {
                 MirrorTiming.end();
                 restore(mc, main, camera, projection, partialTick);
             }
+        }
+        if (dumpRequested && biggest != null && biggest.valid) {
+            dumpRequested = false;
+            dump(biggest.target, "shaderedplus_mirror_picture.png");
         }
         List<MirrorCulling.View> views = new ArrayList<>();
         for (Node node : all) {
