@@ -15,6 +15,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexSorting;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -96,9 +97,14 @@ public final class MirrorRenderer {
     }
 
     /** Pictures for mirrors seen inside the nearest mirror (a second bounce, drawn for real). */
-    private static final List<List<TextureTarget>> NESTED = new ArrayList<>();
-    /** Mirrors seen inside a mirror that get their own reflection, per bounce depth left (2: the nearest mirror). */
-    private static final int[] NESTED_COUNT = {0, 1, 2};
+    /** Spare pictures for mirrors seen in mirrors, by size (each bounce is drawn at half the size of the one it's in). */
+    private static final Map<Long, ArrayDeque<TextureTarget>> SPARE = new HashMap<>();
+    private static int spareForWidth, spareForHeight;
+    /** Bounces stop when the picture would be smaller than this (it'd be a few pixels on screen anyway)... */
+    private static final int MIN_BOUNCE_SIZE = 24;
+    /** ...or after this many mirror-in-mirror pictures for one mirror, or in one frame (a hall of mirrors multiplies fast). */
+    private static final int BOUNCES_PER_MIRROR = 16, BOUNCES_PER_FRAME = 128;
+    private static int bouncesLeft, frameBouncesLeft;
     /** Second-bounce views this frame, so their chunks aren't culled either. */
     private static final List<MirrorCulling.View> NESTED_VIEWS = new ArrayList<>();
 
@@ -181,12 +187,20 @@ public final class MirrorRenderer {
         Matrix4f projection = new Matrix4f(event.getProjectionMatrix());
         frame++;
         NESTED_VIEWS.clear();
+        frameBouncesLeft = BOUNCES_PER_FRAME;
+        if (main.width != spareForWidth || main.height != spareForHeight) {
+            SPARE.values().forEach(q -> q.forEach(TextureTarget::destroyBuffers));
+            SPARE.clear();
+            spareForWidth = main.width;
+            spareForHeight = main.height;
+        }
         for (int index = 0; index < visible.size(); index++) {
             Map.Entry<Wall, List<BlockPos>> entry = visible.get(index);
+            bouncesLeft = Math.min(BOUNCES_PER_MIRROR, frameBouncesLeft); // every mirror gets its own share
             Reflection reflection = reflection(entry.getKey(), main, index < 2 ? NEAR_SCALE : FAR_SCALE);
             try {
                 views.add(renderReflection(mc, level, camera, camera.getPosition(), view, true, entry.getKey(), projection,
-                        reflection.current, partialTick, index == 0 ? 2 : index == 1 ? 1 : 0, 0));
+                        reflection.current, partialTick, 0));
             } catch (RuntimeException ex) {
                 if (!warnedFail) {
                     warnedFail = true;
@@ -243,17 +257,14 @@ public final class MirrorRenderer {
         }
     }
 
-    private static TextureTarget nested(int level, int index, int w, int h) {
-        while (NESTED.size() <= level) {
-            NESTED.add(new ArrayList<>());
-        }
-        List<TextureTarget> pool = NESTED.get(level);
-        while (pool.size() <= index) {
-            pool.add(newTarget(w, h));
-        }
-        TextureTarget t = pool.get(index);
-        resize(t, w, h);
-        return t;
+    private static TextureTarget acquire(int w, int h) {
+        ArrayDeque<TextureTarget> spare = SPARE.get(((long) w << 32) | h);
+        TextureTarget t = spare == null ? null : spare.poll();
+        return t != null ? t : newTarget(w, h);
+    }
+
+    private static void release(TextureTarget t) {
+        SPARE.computeIfAbsent(((long) t.width << 32) | t.height, k -> new ArrayDeque<>()).push(t);
     }
 
     private static TextureTarget newTarget(int w, int h) {
@@ -266,11 +277,11 @@ public final class MirrorRenderer {
      * The world seen in the wall from {@code eye} looking with {@code eyeView} (the real camera, or for a mirror seen in a
      * mirror the camera already mirrored once): drawn from the eye mirrored in the wall's plane, with everything behind
      * the wall cut off. {@code flipped}: whether this view is mirrored an odd number of times (faces turn inside out).
-     * {@code bounces}: how many more times mirrors seen in it get their own reflection drawn.
+     * Mirrors seen in it get their own reflection drawn too, at half the size, and so on down.
      */
     private static MirrorCulling.View renderReflection(Minecraft mc, ClientLevel level, Camera camera, Vec3 eye, Matrix4f eyeView,
                                                        boolean flipped, Wall wall, Matrix4f projection, TextureTarget target,
-                                                       float partialTick, int bounces, int depth) {
+                                                       float partialTick, int depth) {
         Vec3 cam = camera.getPosition();
         double nx = wall.nx(), ny = wall.ny(), nz = wall.nz();
         double dist = wall.distance(eye);
@@ -326,22 +337,34 @@ public final class MirrorRenderer {
         // entities in front of the wall, you included
         renderEntities(mc, level, camera, wall, modelView, rx, ry, rz, partialTick);
         // mirrors seen in this one: their own reflection, from the mirrored eye
-        if (bounces > 0) {
+        // (no limit on how deep: each bounce is half the size of the one it's in, until it's too small to matter)
+        int innerW = target.width / 2, innerH = target.height / 2;
+        if (innerW >= MIN_BOUNCE_SIZE && innerH >= MIN_BOUNCE_SIZE && bouncesLeft > 0) {
             Vec3 mirroredEye = new Vec3(rx, ry, rz);
+            FrustumIntersection seen = new FrustumIntersection(new Matrix4f(clipped).mul(modelView));
             List<Map.Entry<Wall, List<BlockPos>>> others = new ArrayList<>();
             for (Map.Entry<Wall, List<BlockPos>> other : WALLS.entrySet()) {
                 double d = other.getKey().distance(mirroredEye);
                 if (!other.getKey().equals(wall) && d > 0.05 && d < WALL_RANGE && inFrontOf(wall, other.getValue())) {
-                    others.add(other);
+                    AABB box = bounds(other.getKey(), other.getValue()).move(-rx, -ry, -rz);
+                    if (seen.testAab((float) box.minX, (float) box.minY, (float) box.minZ, (float) box.maxX, (float) box.maxY, (float) box.maxZ)) {
+                        others.add(other); // a mirror that shows up in this one
+                    }
                 }
             }
             others.sort(Comparator.comparingDouble(e -> e.getKey().distance(mirroredEye)));
-            for (int i = 0; i < others.size() && i < NESTED_COUNT[bounces]; i++) {
-                TextureTarget inner = nested(depth, i, target.width, target.height);
+            for (int i = 0; i < others.size() && bouncesLeft > 0; i++) {
+                bouncesLeft--;
+                frameBouncesLeft--;
+                TextureTarget inner = acquire(innerW, innerH);
                 try {
-                    NESTED_VIEWS.add(renderReflection(mc, level, camera, mirroredEye, modelView, !flipped, others.get(i).getKey(),
-                            projection, inner, partialTick, bounces - 1, depth + 1));
+                    MirrorCulling.View innerView = renderReflection(mc, level, camera, mirroredEye, modelView, !flipped,
+                            others.get(i).getKey(), projection, inner, partialTick, depth + 1);
+                    if (depth < 2) {
+                        NESTED_VIEWS.add(innerView); // (deeper ones see much the same chunks)
+                    }
                 } catch (RuntimeException ex) {
+                    release(inner);
                     continue;
                 } finally {
                     // back to this reflection
@@ -361,6 +384,7 @@ public final class MirrorRenderer {
                 } finally {
                     stack.popMatrix();
                     RenderSystem.applyModelViewMatrix();
+                    release(inner);
                 }
                 GL11.glFrontFace(frontFace);
             }
