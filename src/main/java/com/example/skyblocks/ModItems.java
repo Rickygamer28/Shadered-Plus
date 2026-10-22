@@ -46,5 +46,8 @@ public final class ModItems {
     public static final RegistryObject<BlockItem> MIRROR = ITEMS.register("mirror",
             () -> new BlockItem(ModBlocks.MIRROR.get(), new Item.Properties()));
 
+    public static final RegistryObject<BlockItem> INFINITY_MIRROR = ITEMS.register("infinity_mirror",
+            () -> new BlockItem(ModBlocks.INFINITY_MIRROR.get(), new Item.Properties()));
+
     private ModItems() {}
 }

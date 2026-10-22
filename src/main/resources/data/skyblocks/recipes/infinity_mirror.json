@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "MGM",
+    "GLG",
+    "MGM"
+  ],
+  "key": {
+    "M": { "item": "skyblocks:mirror" },
+    "G": { "item": "minecraft:glass" },
+    "L": { "item": "minecraft:glowstone_dust" }
+  },
+  "result": {
+    "item": "skyblocks:infinity_mirror",
+    "count": 4
+  }
+}

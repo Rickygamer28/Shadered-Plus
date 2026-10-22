@@ -37,5 +37,6 @@
   "tooltip.skyblocks.island_travel": "Right-click its pedestal or painting with an ender pearl to go there",
   "block.skyblocks.sky_liquid": "%s Liquid",
   "item.skyblocks.sky_liquid_bucket": "%s Liquid Bucket",
-  "block.skyblocks.mirror": "Mirror"
+  "block.skyblocks.mirror": "Mirror",
+  "block.skyblocks.infinity_mirror": "Infinity Mirror"
 }

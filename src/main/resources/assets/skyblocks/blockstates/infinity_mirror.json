@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "facing=north": { "model": "skyblocks:block/infinity_mirror" },
+    "facing=east": { "model": "skyblocks:block/infinity_mirror", "y": 90 },
+    "facing=south": { "model": "skyblocks:block/infinity_mirror", "y": 180 },
+    "facing=west": { "model": "skyblocks:block/infinity_mirror", "y": 270 },
+    "facing=up": { "model": "skyblocks:block/infinity_mirror", "x": 270 },
+    "facing=down": { "model": "skyblocks:block/infinity_mirror", "x": 90 }
+  }
+}
