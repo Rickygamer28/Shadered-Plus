@@ -5,9 +5,7 @@
   "compatibilityLevel": "JAVA_17",
   "client": [
     "OculusChunkFramebufferMixin",
-    "OculusChunkProgramMixin",
     "OculusOverrideMixin",
-    "SodiumMirrorAttribMixin",
     "SodiumMirrorCullMixin",
     "SodiumMirrorIrisMixin",
     "SodiumViewportMixin"

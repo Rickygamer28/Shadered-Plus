@@ -271,7 +271,7 @@ public final class MirrorRenderer {
     }
 
     /** With a shader pack: how far behind the mirror the reflection is cut off (see chain()). */
-    private static final float PACK_CLIP_MARGIN = 0.0F; // (none: mirrors draw chunks with Embeddium's own program)
+    private static final float PACK_CLIP_MARGIN = 0.0F; // (none: a margin leaves a band in the corners)
     private static boolean packMargin;
 
     /** The faces are being drawn into the shader pack overlay (its depth is the world's own). */
@@ -939,8 +939,25 @@ public final class MirrorRenderer {
             MirrorTiming.start(MirrorTiming.SHADERED_MODELS);
             int drawFramebuffer = GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
             try {
-                IslandCatBatch.addAll(models);
-                IslandCatBatch.flush(partialTick);
+                IslandCatBatch.flush(partialTick); // our cats: their matrices already carry the mirror's view
+                if (!models.isEmpty()) {
+                    // other Shadered models (Maxwell...) are placed in plain world coordinates and ignore the pose:
+                    // move them to where the mirror sees them. Shadered then applies the main camera R*T(-cam), so
+                    // the matrix given is T(cam) * R^-1 * mirrorView * T(-mirroredEye) * world
+                    Vec3 cam = camera.getPosition();
+                    Matrix4f turn = new Matrix4f().rotationX((float) Math.toRadians(camera.getXRot()))
+                            .rotateY((float) Math.toRadians(camera.getYRot() + 180.0F));
+                    IslandCatBatch.viewFix = new Matrix4f().translation((float) cam.x, (float) cam.y, (float) cam.z)
+                            .mul(turn.invert())
+                            .mul(modelView)
+                            .translate((float) -rx, (float) -ry, (float) -rz);
+                    try {
+                        IslandCatBatch.addAll(models);
+                        IslandCatBatch.flush(partialTick);
+                    } finally {
+                        IslandCatBatch.viewFix = null;
+                    }
+                }
             } catch (RuntimeException ignored) {
                 IslandCatBatch.discard(); // left out of the mirror
             } finally {
