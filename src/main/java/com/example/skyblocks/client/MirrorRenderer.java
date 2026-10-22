@@ -704,9 +704,13 @@ public final class MirrorRenderer {
                 0, 0, 0, 1);
         c.modelView = new Matrix4f(eyeView).mul(reflect);
         Matrix4f inverseTranspose = new Matrix4f(c.modelView).invert().transpose();
-        Vector4f normal = inverseTranspose.transform(new Vector4f((float) nx, (float) ny, (float) nz, 0));
         float planeW = (float) (nx * c.rx + ny * c.ry + nz * c.rz - wall.k()); // exactly the wall
-        c.clipped = oblique(new Matrix4f(projection), new Vector4f(normal.x, normal.y, normal.z, planeW));
+        // the wall's plane in view space: the whole plane (normal and distance) through the inverse transpose. With
+        // a shader pack the view bobbing is in the model-view (a small shift while walking, not only a turn), and
+        // carrying over just the normal put the cut a few centimetres off the wall: the ground at the mirror's base
+        // was cut away (a line of sky along the bottom) while walking
+        Vector4f plane = inverseTranspose.transform(new Vector4f((float) nx, (float) ny, (float) nz, planeW));
+        c.clipped = oblique(new Matrix4f(projection), plane);
         c.seen = new FrustumIntersection(new Matrix4f(c.clipped).mul(c.modelView));
         c.flipped = !eyeFlipped;
         return c;
