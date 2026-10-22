@@ -320,7 +320,7 @@ public final class MirrorRenderer {
         MirrorTiming.counts(chosen.size(), all.size());
         for (Node node : chosen) {
             try {
-                renderNode(mc, level, camera, node, projection, partialTick);
+                renderNode(mc, level, camera, node, projection, partialTick, node == biggest);
                 node.valid = true;
                 node.renderedFrame = frame;
                 node.renderedArea = node.area;
@@ -449,7 +449,8 @@ public final class MirrorRenderer {
     }
 
     /** Draws a node's picture: sky, blocks, entities, the latest pictures of the mirrors it sees, see-through blocks. */
-    private static void renderNode(Minecraft mc, ClientLevel level, Camera camera, Node node, Matrix4f projection, float partialTick) {
+    private static void renderNode(Minecraft mc, ClientLevel level, Camera camera, Node node, Matrix4f projection, float partialTick,
+                                   boolean withBlockEntities) {
         Vec3 cam = camera.getPosition();
         Chain c = node.chain;
         TextureTarget target = node.target;
@@ -495,10 +496,11 @@ public final class MirrorRenderer {
         chunks.skyblocks$renderSectionLayer(RenderType.solid(), rx, ry, rz, modelView, clipped);
         chunks.skyblocks$renderSectionLayer(RenderType.cutoutMipped(), rx, ry, rz, modelView, clipped);
         chunks.skyblocks$renderSectionLayer(RenderType.cutout(), rx, ry, rz, modelView, clipped);
-        // entities in front of the wall, you included (block entities: in the mirrors themselves, not in bounces)
+        // entities in front of the wall, you included (block entities: only in the biggest mirror's picture, the costly
+        // part; the other pictures keep theirs from when they were the biggest, or go without)
         if (node.depth <= 3) {
             MirrorTiming.start(MirrorTiming.MOBS);
-            renderEntities(mc, level, camera, node.wall, modelView, c.seen, rx, ry, rz, partialTick, node.depth == 1);
+            renderEntities(mc, level, camera, node.wall, modelView, c.seen, rx, ry, rz, partialTick, withBlockEntities);
             target.bindWrite(true);
             scissor(target, node.rect);
             GL11.glFrontFace(frontFace);
