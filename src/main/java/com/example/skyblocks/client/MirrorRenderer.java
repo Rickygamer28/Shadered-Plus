@@ -142,8 +142,10 @@ public final class MirrorRenderer {
         double rx, ry, rz;
     }
 
-    /** Pictures drawn per frame: the biggest mirror on screen every frame, the rest take turns (oldest/biggest first). */
-    private static final int PASSES_PER_FRAME = 3;
+    /** Pictures of mirrors seen in mirrors drawn per frame (they take turns: oldest/biggest first). */
+    private static final int PASSES_PER_FRAME = 4;
+    /** The mirrors themselves (biggest on screen first) drawn every frame. */
+    private static final int TOP_EVERY_FRAME = 8;
     /** At most this many pictures in view (mirrors, and mirrors seen in mirrors), and this many mirrors seen per mirror. */
     private static final int MAX_NODES = 48, MAX_CHILDREN = 4;
     /** Mirrors seen in mirrors: each bounce's picture is this much less sharp than the one it's in... */
@@ -373,14 +375,25 @@ public final class MirrorRenderer {
         List<Node> order = new ArrayList<>(all);
         Node biggest = all.isEmpty() ? null : all.get(0);
         order.sort(Comparator.comparingDouble(n -> -priority(n, n == biggest)));
-        List<Node> chosen = new ArrayList<>(order.subList(0, Math.min(PASSES_PER_FRAME, order.size())));
-        int extra = 0;
+        // the mirrors themselves: every frame (a picture from a few frames ago is from where you stood then, so while
+        // walking the reflection swam and jumped); mirrors seen in mirrors take turns
+        List<Node> chosen = new ArrayList<>();
+        for (Node node : all) {
+            if (node.depth == 1 && chosen.size() < TOP_EVERY_FRAME) {
+                chosen.add(node);
+            }
+        }
+        int bounces = 0, extra = 0;
         for (Node node : order) {
-            if (!node.valid && !chosen.contains(node) && (node.depth == 1 || extra < 4)) {
+            if (chosen.contains(node)) {
+                continue;
+            }
+            if (bounces < PASSES_PER_FRAME) {
+                chosen.add(node);
+                bounces++;
+            } else if (!node.valid && (node.depth == 1 || extra < 4)) {
                 chosen.add(node); // a mirror just come into view gets its picture now (no frame of plain block)
-                if (node.depth > 1) {
-                    extra++;
-                }
+                extra++;
             }
         }
         chosen.sort(Comparator.comparingInt(n -> -n.depth)); // (deeper first: a picture shows the newest ones inside it)
