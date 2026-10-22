@@ -320,7 +320,7 @@ public final class MirrorRenderer {
         MirrorTiming.counts(chosen.size(), all.size());
         for (Node node : chosen) {
             try {
-                renderNode(mc, level, camera, node, projection, partialTick, node == biggest);
+                renderNode(mc, level, camera, node, projection, partialTick, node.depth == 1);
                 node.valid = true;
                 node.renderedFrame = frame;
                 node.renderedArea = node.area;
@@ -498,8 +498,7 @@ public final class MirrorRenderer {
         chunks.skyblocks$renderSectionLayer(RenderType.solid(), rx, ry, rz, modelView, clipped);
         chunks.skyblocks$renderSectionLayer(RenderType.cutoutMipped(), rx, ry, rz, modelView, clipped);
         chunks.skyblocks$renderSectionLayer(RenderType.cutout(), rx, ry, rz, modelView, clipped);
-        // entities in front of the wall, you included (block entities: only in the biggest mirror's picture, they are
-        // the costly part; smaller mirrors and bounces show the world without them)
+        // entities in front of the wall, you included (block entities: in the mirrors themselves, not in bounces)
         if (node.depth <= 3) {
             MirrorTiming.start(MirrorTiming.MOBS);
             renderEntities(mc, level, camera, node.wall, modelView, c.seen, rx, ry, rz, partialTick, withBlockEntities);
