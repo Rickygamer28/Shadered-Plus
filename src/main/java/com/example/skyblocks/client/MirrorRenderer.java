@@ -88,12 +88,17 @@ public final class MirrorRenderer {
     private static ClientLevel lastLevel;
     private static long lastScan = Long.MIN_VALUE;
     private static int lastChunkX, lastChunkZ;
-    /** A wall's reflection: this frame's picture, and last frame's (shown by mirrors seen inside this one). */
+    /** A wall's reflection picture. */
     private static final class Reflection {
-        TextureTarget current, previous;
+        TextureTarget current;
         long usedFrame = -10;
-        boolean hasPrevious;
     }
+
+    /** Pictures for mirrors seen inside the nearest mirror (a second bounce, drawn for real). */
+    private static final List<TextureTarget> NESTED = new ArrayList<>();
+    private static final int MAX_NESTED = 2;
+    /** Second-bounce views this frame, so their chunks aren't culled either. */
+    private static final List<MirrorCulling.View> NESTED_VIEWS = new ArrayList<>();
 
     private static final Map<Wall, Reflection> REFLECTIONS = new HashMap<>();
     private static long frame;
@@ -155,11 +160,13 @@ public final class MirrorRenderer {
         Matrix4f view = new Matrix4f(event.getModelViewMatrix());
         Matrix4f projection = new Matrix4f(event.getProjectionMatrix());
         frame++;
+        NESTED_VIEWS.clear();
         for (int index = 0; index < visible.size(); index++) {
             Map.Entry<Wall, List<BlockPos>> entry = visible.get(index);
             Reflection reflection = reflection(entry.getKey(), main, index == 0 ? NEAR_SCALE : FAR_SCALE);
             try {
-                views.add(renderReflection(mc, level, camera, entry.getKey(), view, projection, reflection, partialTick));
+                views.add(renderReflection(mc, level, camera, camera.getPosition(), view, true, entry.getKey(), projection,
+                        reflection.current, partialTick, index == 0));
                 drawn.add(entry);
                 drawnReflections.add(reflection);
             } catch (RuntimeException ex) {
@@ -171,11 +178,11 @@ public final class MirrorRenderer {
         REFLECTIONS.entrySet().removeIf(e -> {
             if (frame - e.getValue().usedFrame > 200) {
                 e.getValue().current.destroyBuffers();
-                e.getValue().previous.destroyBuffers();
                 return true;
             }
             return false;
         });
+        views.addAll(NESTED_VIEWS);
         MirrorCulling.set(views, cam);
         Matrix4fStack stack = RenderSystem.getModelViewStack();
         stack.pushMatrix();
@@ -192,29 +199,33 @@ public final class MirrorRenderer {
         }
     }
 
-    /** The wall's reflection pictures, sized for this frame, with last frame's picture kept as "previous". */
+    /** The wall's reflection picture, sized for this frame. */
     private static Reflection reflection(Wall wall, RenderTarget main, float scale) {
         int w = Math.max(1, (int) (main.width * scale)), h = Math.max(1, (int) (main.height * scale));
         Reflection r = REFLECTIONS.computeIfAbsent(wall, k -> {
             Reflection n = new Reflection();
             n.current = newTarget(w, h);
-            n.previous = newTarget(w, h);
             return n;
         });
-        TextureTarget swap = r.previous;
-        r.previous = r.current;
-        r.current = swap;
-        r.hasPrevious = r.usedFrame == frame - 1 && r.previous.width == w && r.previous.height == h;
-        if (r.previous.width != w || r.previous.height != h) {
-            r.previous.resize(w, h, Minecraft.ON_OSX);
-            r.previous.setFilterMode(GL11.GL_LINEAR);
-        }
         r.usedFrame = frame;
-        if (r.current.width != w || r.current.height != h) {
-            r.current.resize(w, h, Minecraft.ON_OSX);
-            r.current.setFilterMode(GL11.GL_LINEAR);
-        }
+        resize(r.current, w, h);
         return r;
+    }
+
+    private static void resize(TextureTarget t, int w, int h) {
+        if (t.width != w || t.height != h) {
+            t.resize(w, h, Minecraft.ON_OSX);
+            t.setFilterMode(GL11.GL_LINEAR);
+        }
+    }
+
+    private static TextureTarget nested(int index, int w, int h) {
+        while (NESTED.size() <= index) {
+            NESTED.add(newTarget(w, h));
+        }
+        TextureTarget t = NESTED.get(index);
+        resize(t, w, h);
+        return t;
     }
 
     private static TextureTarget newTarget(int w, int h) {
@@ -223,27 +234,33 @@ public final class MirrorRenderer {
         return t;
     }
 
-    /** The world seen in the wall: drawn from the camera mirrored in its plane, with everything behind the wall cut off. */
-    private static MirrorCulling.View renderReflection(Minecraft mc, ClientLevel level, Camera camera, Wall wall, Matrix4f view,
-                                                       Matrix4f projection, Reflection reflection, float partialTick) {
-        TextureTarget target = reflection.current;
+    /**
+     * The world seen in the wall from {@code eye} looking with {@code eyeView} (the real camera, or for a mirror seen in a
+     * mirror the camera already mirrored once): drawn from the eye mirrored in the wall's plane, with everything behind
+     * the wall cut off. {@code flipped}: whether this view is mirrored an odd number of times (faces turn inside out).
+     * With {@code nested}, mirrors seen in it get their own reflection drawn too (a second bounce).
+     */
+    private static MirrorCulling.View renderReflection(Minecraft mc, ClientLevel level, Camera camera, Vec3 eye, Matrix4f eyeView,
+                                                       boolean flipped, Wall wall, Matrix4f projection, TextureTarget target,
+                                                       float partialTick, boolean nested) {
         Vec3 cam = camera.getPosition();
         double nx = wall.nx(), ny = wall.ny(), nz = wall.nz();
-        double dist = wall.distance(cam);
-        // the mirrored camera, behind the wall
-        double rx = cam.x - 2 * dist * nx, ry = cam.y - 2 * dist * ny, rz = cam.z - 2 * dist * nz;
-        // reflection in the plane (through the origin; positions are relative to the mirrored camera)
+        double dist = wall.distance(eye);
+        // the mirrored eye, behind the wall
+        double rx = eye.x - 2 * dist * nx, ry = eye.y - 2 * dist * ny, rz = eye.z - 2 * dist * nz;
+        // reflection in the plane (through the origin; positions are relative to the mirrored eye)
         Matrix4f reflect = new Matrix4f(
                 (float) (1 - 2 * nx * nx), (float) (-2 * nx * ny), (float) (-2 * nx * nz), 0,
                 (float) (-2 * ny * nx), (float) (1 - 2 * ny * ny), (float) (-2 * ny * nz), 0,
                 (float) (-2 * nz * nx), (float) (-2 * nz * ny), (float) (1 - 2 * nz * nz), 0,
                 0, 0, 0, 1);
-        Matrix4f modelView = new Matrix4f(view).mul(reflect);
+        Matrix4f modelView = new Matrix4f(eyeView).mul(reflect);
         // cut off everything behind the wall (the near plane becomes the wall: oblique projection)
         Matrix4f inverseTranspose = new Matrix4f(modelView).invert().transpose();
         Vector4f normal = inverseTranspose.transform(new Vector4f((float) nx, (float) ny, (float) nz, 0));
         float planeW = (float) (nx * rx + ny * ry + nz * rz - wall.k()) - 0.01F;
         Matrix4f clipped = oblique(new Matrix4f(projection), new Vector4f(normal.x, normal.y, normal.z, planeW));
+        int frontFace = flipped ? GL11.GL_CW : GL11.GL_CCW; // a reflection turns everything inside out
 
         rendering = true;
         // the sky's colour first (what the main view is cleared to), then the sky itself on top
@@ -251,6 +268,7 @@ public final class MirrorRenderer {
         target.setClearColor(fog[0], fog[1], fog[2], 1);
         target.clear(Minecraft.ON_OSX);
         target.bindWrite(true);
+        GL11.glFrontFace(GL11.GL_CCW);
         try {
             RenderSystem.setProjectionMatrix(projection, VertexSorting.DISTANCE_TO_ORIGIN);
             float far = mc.gameRenderer.getRenderDistance();
@@ -269,7 +287,7 @@ public final class MirrorRenderer {
         RenderSystem.enableCull();
         RenderSystem.depthMask(true);
         RenderSystem.enableDepthTest();
-        GL11.glFrontFace(GL11.GL_CW); // a reflection turns everything inside out
+        GL11.glFrontFace(frontFace);
         FogRenderer.setupFog(camera, FogRenderer.FogMode.FOG_TERRAIN, Math.max(mc.gameRenderer.getRenderDistance(), 32.0F), false, partialTick);
         // blocks: the chunk meshes already on the graphics card
         LevelRendererInvoker chunks = (LevelRendererInvoker) mc.levelRenderer;
@@ -279,23 +297,44 @@ public final class MirrorRenderer {
         chunks.skyblocks$renderSectionLayer(RenderType.cutout(), rx, ry, rz, modelView, clipped);
         // entities in front of the wall, you included
         renderEntities(mc, level, camera, wall, modelView, rx, ry, rz, partialTick);
-        // other mirrors seen in this one show this mirror's picture from the last frame (an endless mirror tunnel
-        // without drawing the world again for every bounce)
-        if (reflection.hasPrevious) {
-            Matrix4fStack stack = RenderSystem.getModelViewStack();
-            stack.pushMatrix();
-            stack.set(modelView);
-            RenderSystem.applyModelViewMatrix();
-            try {
-                for (Map.Entry<Wall, List<BlockPos>> other : WALLS.entrySet()) {
-                    if (!other.getKey().equals(wall) && other.getKey().distance(new Vec3(rx, ry, rz)) > 0.05) {
-                        drawFaces(other.getKey(), other.getValue(), rx, ry, rz, reflection.previous.getColorTextureId(),
-                                target.width, target.height);
-                    }
+        // mirrors seen in this one (the nearest only): their own reflection, from the mirrored eye
+        if (nested) {
+            Vec3 mirroredEye = new Vec3(rx, ry, rz);
+            List<Map.Entry<Wall, List<BlockPos>>> others = new ArrayList<>();
+            for (Map.Entry<Wall, List<BlockPos>> other : WALLS.entrySet()) {
+                double d = other.getKey().distance(mirroredEye);
+                if (!other.getKey().equals(wall) && d > 0.05 && d < WALL_RANGE && inFrontOf(wall, other.getValue())) {
+                    others.add(other);
                 }
-            } finally {
-                stack.popMatrix();
+            }
+            others.sort(Comparator.comparingDouble(e -> e.getKey().distance(mirroredEye)));
+            for (int i = 0; i < others.size() && i < MAX_NESTED; i++) {
+                TextureTarget inner = nested(i, target.width, target.height);
+                try {
+                    NESTED_VIEWS.add(renderReflection(mc, level, camera, mirroredEye, modelView, !flipped, others.get(i).getKey(),
+                            projection, inner, partialTick, false));
+                } catch (RuntimeException ex) {
+                    continue;
+                } finally {
+                    // back to this reflection
+                    rendering = true;
+                    target.bindWrite(true);
+                    GL11.glFrontFace(frontFace);
+                    RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
+                    FogRenderer.setupFog(camera, FogRenderer.FogMode.FOG_TERRAIN, Math.max(mc.gameRenderer.getRenderDistance(), 32.0F), false, partialTick);
+                }
+                Matrix4fStack stack = RenderSystem.getModelViewStack();
+                stack.pushMatrix();
+                stack.set(modelView);
                 RenderSystem.applyModelViewMatrix();
+                try {
+                    drawFaces(others.get(i).getKey(), others.get(i).getValue(), rx, ry, rz, inner.getColorTextureId(),
+                            target.width, target.height);
+                } finally {
+                    stack.popMatrix();
+                    RenderSystem.applyModelViewMatrix();
+                }
+                GL11.glFrontFace(frontFace);
             }
         }
         // see-through blocks (glass, water, portals) after the entities, like the main view; only with Sodium: vanilla
@@ -361,6 +400,16 @@ public final class MirrorRenderer {
     }
 
     /** The wall's faces, showing its reflection (in front of the mirror blocks' own faces). */
+    /** Whether any of these mirror faces is on the front side of the wall (and so can show up in it). */
+    private static boolean inFrontOf(Wall wall, List<BlockPos> faces) {
+        for (BlockPos pos : faces) {
+            if (wall.distance(Vec3.atCenterOf(pos)) > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static void drawFaces(Wall wall, List<BlockPos> faces, double cx, double cy, double cz, int texture, int screenWidth, int screenHeight) {
         ShaderInstance shader = MirrorShaders.surface;
         if (shader == null) {
