@@ -66,7 +66,7 @@ import org.lwjgl.opengl.GL11;
 public final class MirrorRenderer {
     private static final int SCAN_RADIUS = 4; // chunks
     private static final int RESCAN_TICKS = 10;
-    private static final int MAX_WALLS = 8;
+    private static final int MAX_WALLS = Integer.MAX_VALUE; // no cap (testing the cost): every mirror in range reflects
     private static final double WALL_RANGE = 64.0;
     private static final double ENTITY_RANGE = 48.0;
     /** The reflection's resolution, as a part of the screen's: full for the nearest wall, half for the others. */
@@ -106,7 +106,7 @@ public final class MirrorRenderer {
     private static long frame;
     private static ByteBufferBuilder entityMemory;
     private static boolean rendering;
-    private static boolean warnedSky;
+    private static boolean warnedSky, warnedFail;
     private static final boolean SODIUM = net.neoforged.fml.ModList.get().isLoaded("sodium");
 
     private MirrorRenderer() {}
@@ -164,7 +164,7 @@ public final class MirrorRenderer {
         List<Map.Entry<Wall, List<BlockPos>>> visible = new ArrayList<>();
         for (Map.Entry<Wall, List<BlockPos>> e : WALLS.entrySet()) {
             double d = e.getKey().distance(cam);
-            if (d > 0.05 && d < WALL_RANGE && (frustum == null || frustum.isVisible(bounds(e.getKey(), e.getValue())))) {
+            if (d > 0.05 && d < WALL_RANGE && (frustum == null || frustum.isVisible(bounds(e.getKey(), e.getValue()).inflate(0.5)))) {
                 visible.add(e);
             }
         }
@@ -187,11 +187,15 @@ public final class MirrorRenderer {
             try {
                 views.add(renderReflection(mc, level, camera, camera.getPosition(), view, true, entry.getKey(), projection,
                         reflection.current, partialTick, index == 0 ? 2 : index == 1 ? 1 : 0, 0));
+            } catch (RuntimeException ex) {
+                if (!warnedFail) {
+                    warnedFail = true;
+                    SkyBlocksMod.LOGGER.warn("Shadered+: a mirror reflection failed", ex);
+                }
+            } finally {
+                // drawn either way (a failed frame keeps its last picture instead of flashing the plain block)
                 drawn.add(entry);
                 drawnReflections.add(reflection);
-            } catch (RuntimeException ex) {
-                SkyBlocksMod.LOGGER.debug("Mirror reflection failed", ex);
-            } finally {
                 restore(mc, main, camera, projection, partialTick);
             }
         }

@@ -17,6 +17,7 @@
     "LevelRendererInvoker",
     "LevelRendererTranslucentMixin",
     "MirrorBlockChangeMixin",
+    "MirrorStageEventsMixin",
     "ModRenderTypesMixin",
     "PortalParticlesMixin",
     "SkyblockBatchDataMixin",
