@@ -792,6 +792,8 @@ public final class MirrorRenderer {
         stack.set(modelView);
         RenderSystem.applyModelViewMatrix();
         try {
+            // infinity mirrors in view (their tunnel worked out from this mirror's eye)
+            InfinityMirrorRenderer.drawInMirror(rx, ry, rz, modelView, clipped);
             for (Node child : node.children) {
                 Node shown = child.valid ? child : NODES.get(List.of(child.wall)); // (not drawn yet: that mirror's own picture)
                 if (shown != null && shown.valid && shown.target != null) {

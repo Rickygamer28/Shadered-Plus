@@ -140,7 +140,7 @@ public final class InfinityMirrorRenderer {
         }
         // the real eye (the model-view can hold a small shift: view bobbing with a shader pack)
         Vector3f eye = new Matrix4f(view).invert().transformPosition(new Vector3f());
-        float seconds = (Util.getMillis() % 3_600_000L) / 1000.0F;
+        float seconds = seconds();
         RenderTarget main = mc.getMainRenderTarget();
         boolean iris = IrisIslandTarget.active();
         int irisDraw = iris ? GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING) : 0;
@@ -162,28 +162,8 @@ public final class InfinityMirrorRenderer {
             } else {
                 MirrorRenderer.mainDrawState(main);
             }
-            RenderSystem.enableDepthTest();
-            RenderSystem.depthFunc(GL11.GL_LEQUAL);
             // (into the shader pack overlay: the world's depth stays as it was, for the overlay's end-of-frame test)
-            RenderSystem.depthMask(overlay == null);
-            RenderSystem.disableBlend();
-            RenderSystem.disableCull();
-            RenderSystem.enablePolygonOffset();
-            RenderSystem.polygonOffset(-2.0F, -20.0F); // over the block's own front face
-            try {
-                for (Frame f : shown) {
-                    setUniforms(shader, f, cam, eye, seconds);
-                    RenderSystem.setShader(() -> shader);
-                    MeshData mesh = mesh(f, cam);
-                    if (mesh != null) {
-                        BufferUploader.drawWithShader(mesh);
-                    }
-                }
-            } finally {
-                RenderSystem.polygonOffset(0.0F, 0.0F);
-                RenderSystem.disablePolygonOffset();
-                RenderSystem.enableCull();
-            }
+            drawFrames(shader, shown, cam, eye, seconds, overlay == null);
             if (overlay != null) {
                 // where the faces are, for the end-of-frame test against the final depth (hand, mobs in front)
                 Vec3 at = cam;
@@ -215,6 +195,72 @@ public final class InfinityMirrorRenderer {
             RenderSystem.applyModelViewMatrix();
             RenderSystem.setProjectionMatrix(savedProjection, savedSorting);
         }
+    }
+
+    private static float seconds() {
+        return (Util.getMillis() % 3_600_000L) / 1000.0F;
+    }
+
+    /** Draws the frames' faces with the tunnel shader (positions relative to {@code cam}; the view is already set). */
+    private static void drawFrames(ShaderInstance shader, List<Frame> frames, Vec3 cam, Vector3f eye, float seconds, boolean writeDepth) {
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthFunc(GL11.GL_LEQUAL);
+        RenderSystem.depthMask(writeDepth);
+        RenderSystem.disableBlend();
+        RenderSystem.disableCull();
+        RenderSystem.enablePolygonOffset();
+        RenderSystem.polygonOffset(-2.0F, -20.0F); // over the block's own front face
+        try {
+            for (Frame f : frames) {
+                setUniforms(shader, f, cam, eye, seconds);
+                RenderSystem.setShader(() -> shader);
+                MeshData mesh = mesh(f, cam);
+                if (mesh != null) {
+                    BufferUploader.drawWithShader(mesh);
+                }
+            }
+        } finally {
+            RenderSystem.polygonOffset(0.0F, 0.0F);
+            RenderSystem.disablePolygonOffset();
+            RenderSystem.enableCull();
+        }
+    }
+
+    /**
+     * Inside a mirror's picture: the infinity mirrors it sees, drawn from the mirrored eye at (ex, ey, ez) with the
+     * mirror's model-view (already set, with its projection). The tunnel is worked out from that eye, so it's seen in
+     * the mirror the way it would be from there.
+     */
+    static void drawInMirror(double ex, double ey, double ez, Matrix4f modelView, Matrix4f projection) {
+        ShaderInstance shader = MirrorShaders.infinity;
+        if (shader == null || FRAMES.isEmpty()) {
+            return;
+        }
+        Vec3 at = new Vec3(ex, ey, ez);
+        FrustumIntersection seen = new FrustumIntersection(new Matrix4f(projection).mul(modelView));
+        List<Frame> shown = new ArrayList<>();
+        for (Frame f : FRAMES) {
+            if (facesTowards(f, at) && inView(f, at, seen)) {
+                shown.add(f);
+            }
+        }
+        if (shown.isEmpty()) {
+            return;
+        }
+        Vector3f eye = new Matrix4f(modelView).invert().transformPosition(new Vector3f());
+        drawFrames(shader, shown, at, eye, seconds(), true);
+    }
+
+    private static boolean facesTowards(Frame f, Vec3 eye) {
+        return (f.facing.getAxis().choose(eye.x, eye.y, eye.z) - f.plane) * f.facing.getAxisDirection().getStep() > 0.0;
+    }
+
+    private static boolean inView(Frame f, Vec3 cam, FrustumIntersection view) {
+        Vec3 corner = corner(f, f.minU, f.minV);
+        Vec3 far = corner(f, f.maxU + 1, f.maxV + 1);
+        return view.testAab((float) (Math.min(corner.x, far.x) - cam.x), (float) (Math.min(corner.y, far.y) - cam.y),
+                (float) (Math.min(corner.z, far.z) - cam.z), (float) (Math.max(corner.x, far.x) - cam.x),
+                (float) (Math.max(corner.y, far.y) - cam.y), (float) (Math.max(corner.z, far.z) - cam.z));
     }
 
     private static void setUniforms(ShaderInstance shader, Frame f, Vec3 cam, Vector3f eye, float seconds) {
