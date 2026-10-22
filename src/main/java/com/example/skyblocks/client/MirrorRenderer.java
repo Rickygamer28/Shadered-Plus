@@ -66,13 +66,13 @@ import org.lwjgl.opengl.GL11;
 public final class MirrorRenderer {
     private static final int SCAN_RADIUS = 4; // chunks
     private static final int RESCAN_TICKS = 10;
-    private static final int MAX_WALLS = 4;
+    private static final int MAX_WALLS = 8;
     private static final double WALL_RANGE = 64.0;
     private static final double ENTITY_RANGE = 48.0;
     /** The reflection's resolution, as a part of the screen's: full for the nearest wall, half for the others. */
     private static final float NEAR_SCALE = 1.0F, FAR_SCALE = 0.5F;
     /** Just in front of the mirror block's face. */
-    private static final float OUT = 0.002F;
+    private static final float OUT = 0.0F;
 
     /** A flat wall of mirror faces: which way it faces and where it is on that axis. */
     record Wall(Direction facing, int coord) {
@@ -96,8 +96,9 @@ public final class MirrorRenderer {
     }
 
     /** Pictures for mirrors seen inside the nearest mirror (a second bounce, drawn for real). */
-    private static final List<TextureTarget> NESTED = new ArrayList<>();
-    private static final int MAX_NESTED = 2;
+    private static final List<List<TextureTarget>> NESTED = new ArrayList<>();
+    /** Mirrors seen inside a mirror that get their own reflection, per bounce depth left (2: the nearest mirror). */
+    private static final int[] NESTED_COUNT = {0, 1, 2};
     /** Second-bounce views this frame, so their chunks aren't culled either. */
     private static final List<MirrorCulling.View> NESTED_VIEWS = new ArrayList<>();
 
@@ -182,10 +183,10 @@ public final class MirrorRenderer {
         NESTED_VIEWS.clear();
         for (int index = 0; index < visible.size(); index++) {
             Map.Entry<Wall, List<BlockPos>> entry = visible.get(index);
-            Reflection reflection = reflection(entry.getKey(), main, index == 0 ? NEAR_SCALE : FAR_SCALE);
+            Reflection reflection = reflection(entry.getKey(), main, index < 2 ? NEAR_SCALE : FAR_SCALE);
             try {
                 views.add(renderReflection(mc, level, camera, camera.getPosition(), view, true, entry.getKey(), projection,
-                        reflection.current, partialTick, index == 0));
+                        reflection.current, partialTick, index == 0 ? 2 : index == 1 ? 1 : 0, 0));
                 drawn.add(entry);
                 drawnReflections.add(reflection);
             } catch (RuntimeException ex) {
@@ -238,11 +239,15 @@ public final class MirrorRenderer {
         }
     }
 
-    private static TextureTarget nested(int index, int w, int h) {
-        while (NESTED.size() <= index) {
-            NESTED.add(newTarget(w, h));
+    private static TextureTarget nested(int level, int index, int w, int h) {
+        while (NESTED.size() <= level) {
+            NESTED.add(new ArrayList<>());
         }
-        TextureTarget t = NESTED.get(index);
+        List<TextureTarget> pool = NESTED.get(level);
+        while (pool.size() <= index) {
+            pool.add(newTarget(w, h));
+        }
+        TextureTarget t = pool.get(index);
         resize(t, w, h);
         return t;
     }
@@ -257,11 +262,11 @@ public final class MirrorRenderer {
      * The world seen in the wall from {@code eye} looking with {@code eyeView} (the real camera, or for a mirror seen in a
      * mirror the camera already mirrored once): drawn from the eye mirrored in the wall's plane, with everything behind
      * the wall cut off. {@code flipped}: whether this view is mirrored an odd number of times (faces turn inside out).
-     * With {@code nested}, mirrors seen in it get their own reflection drawn too (a second bounce).
+     * {@code bounces}: how many more times mirrors seen in it get their own reflection drawn.
      */
     private static MirrorCulling.View renderReflection(Minecraft mc, ClientLevel level, Camera camera, Vec3 eye, Matrix4f eyeView,
                                                        boolean flipped, Wall wall, Matrix4f projection, TextureTarget target,
-                                                       float partialTick, boolean nested) {
+                                                       float partialTick, int bounces, int depth) {
         Vec3 cam = camera.getPosition();
         double nx = wall.nx(), ny = wall.ny(), nz = wall.nz();
         double dist = wall.distance(eye);
@@ -277,7 +282,7 @@ public final class MirrorRenderer {
         // cut off everything behind the wall (the near plane becomes the wall: oblique projection)
         Matrix4f inverseTranspose = new Matrix4f(modelView).invert().transpose();
         Vector4f normal = inverseTranspose.transform(new Vector4f((float) nx, (float) ny, (float) nz, 0));
-        float planeW = (float) (nx * rx + ny * ry + nz * rz - wall.k()) + 0.005F; // a hair behind the wall: nothing in front of it is cut off
+        float planeW = (float) (nx * rx + ny * ry + nz * rz - wall.k()); // exactly the wall: nothing in front of it is cut off
         Matrix4f clipped = oblique(new Matrix4f(projection), new Vector4f(normal.x, normal.y, normal.z, planeW));
         int frontFace = flipped ? GL11.GL_CW : GL11.GL_CCW; // a reflection turns everything inside out
 
@@ -316,8 +321,8 @@ public final class MirrorRenderer {
         chunks.skyblocks$renderSectionLayer(RenderType.cutout(), rx, ry, rz, modelView, clipped);
         // entities in front of the wall, you included
         renderEntities(mc, level, camera, wall, modelView, rx, ry, rz, partialTick);
-        // mirrors seen in this one (the nearest only): their own reflection, from the mirrored eye
-        if (nested) {
+        // mirrors seen in this one: their own reflection, from the mirrored eye
+        if (bounces > 0) {
             Vec3 mirroredEye = new Vec3(rx, ry, rz);
             List<Map.Entry<Wall, List<BlockPos>>> others = new ArrayList<>();
             for (Map.Entry<Wall, List<BlockPos>> other : WALLS.entrySet()) {
@@ -327,11 +332,11 @@ public final class MirrorRenderer {
                 }
             }
             others.sort(Comparator.comparingDouble(e -> e.getKey().distance(mirroredEye)));
-            for (int i = 0; i < others.size() && i < MAX_NESTED; i++) {
-                TextureTarget inner = nested(i, target.width, target.height);
+            for (int i = 0; i < others.size() && i < NESTED_COUNT[bounces]; i++) {
+                TextureTarget inner = nested(depth, i, target.width, target.height);
                 try {
                     NESTED_VIEWS.add(renderReflection(mc, level, camera, mirroredEye, modelView, !flipped, others.get(i).getKey(),
-                            projection, inner, partialTick, false));
+                            projection, inner, partialTick, bounces - 1, depth + 1));
                 } catch (RuntimeException ex) {
                     continue;
                 } finally {
@@ -479,17 +484,23 @@ public final class MirrorRenderer {
     }
 
     /** A projection whose near plane is the given (view space) plane: Eric Lengyel's oblique near-plane clipping. */
+    /**
+     * Replaces the projection's near plane with {@code clip} (Lengyel's oblique near-plane clipping), for any
+     * projection: while walking the game folds view bobbing (a small turn and shift) into the projection, so the
+     * textbook shortcut that assumes a plain perspective matrix cut the reflection in the wrong place every step.
+     */
     static Matrix4f oblique(Matrix4f p, Vector4f clip) {
-        Vector4f q = new Vector4f(
-                (Math.signum(clip.x) + p.m20()) / p.m00(),
-                (Math.signum(clip.y) + p.m21()) / p.m11(),
-                -1.0F,
-                (1.0F + p.m22()) / p.m32());
-        float scale = 2.0F / clip.dot(q);
-        p.m02(clip.x * scale);
-        p.m12(clip.y * scale);
-        p.m22(clip.z * scale + 1.0F);
-        p.m32(clip.w * scale);
+        Matrix4f inverse = new Matrix4f(p).invert();
+        Vector4f clipSpace = new Matrix4f(inverse).transpose().transform(new Vector4f(clip));
+        // the far corner of the view on the plane's side
+        Vector4f q = inverse.transform(new Vector4f(Math.signum(clipSpace.x), Math.signum(clipSpace.y), 1.0F, 1.0F));
+        float wRow = p.m03() * q.x + p.m13() * q.y + p.m23() * q.z + p.m33() * q.w;
+        float a = 2.0F * wRow / clip.dot(q);
+        float r0 = a * clip.x - p.m03(), r1 = a * clip.y - p.m13(), r2 = a * clip.z - p.m23(), r3 = a * clip.w - p.m33();
+        p.m02(r0);
+        p.m12(r1);
+        p.m22(r2);
+        p.m32(r3);
         return p;
     }
 
