@@ -276,6 +276,11 @@ public final class MirrorRenderer {
 
     /** The faces are being drawn into the shader pack overlay (its depth is the world's own). */
     private static boolean overlayFaces;
+    /**
+     * With a shader pack: how far (blocks, more with distance) the faces are pulled towards the camera for its depth
+     * tests, so the floor at a mirror's base, jittered by the pack's anti-aliasing, can't cover the face's edge.
+     */
+    private static final float PACK_PULL = 0.04F;
 
     private static TextureTarget currentTarget;
     private static float[] currentRect;
@@ -1152,6 +1157,7 @@ public final class MirrorRenderer {
         // positions here are relative to (cx, cy, cz); the picture was taken relative to the mirrored eye
         shader.safeGetUniform("MirrorTexMat").set(new Matrix4f(shot.projModel)
                 .translate((float) (cx - shot.rx), (float) (cy - shot.ry), (float) (cz - shot.rz)));
+        shader.safeGetUniform("Pull").set(overlayFaces ? PACK_PULL : 0.0F);
         RenderSystem.setShader(() -> shader);
         RenderSystem.setShaderTexture(0, texture);
         RenderSystem.enableDepthTest();
@@ -1202,8 +1208,14 @@ public final class MirrorRenderer {
         }
         BufferBuilder.RenderedBuffer mesh = faceMesh(wall, faces, cx, cy, cz);
         if (mesh != null) {
+            // (the same pull towards the camera as the faces got: shader pack only, this is its overlay's test)
+            shader.safeGetUniform("Pull").set(PACK_PULL);
             RenderSystem.setShader(() -> shader);
-            BufferUploader.drawWithShader(mesh);
+            try {
+                BufferUploader.drawWithShader(mesh);
+            } finally {
+                shader.safeGetUniform("Pull").set(0.0F); // (Island Paintings use this shader too)
+            }
         }
     }
 
