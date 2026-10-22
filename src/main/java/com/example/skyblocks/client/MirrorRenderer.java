@@ -114,6 +114,8 @@ public final class MirrorRenderer {
         float area;
         Chain chain;
         final List<Node> children = new ArrayList<>();
+        /** Mirrors seen in this one past the limits (too many, too small): shown with the latest picture there is. */
+        final List<Wall> overflow = new ArrayList<>();
 
         Node(List<Wall> path) {
             this.path = path;
@@ -290,7 +292,10 @@ public final class MirrorRenderer {
             if (r == null || d <= 0.05) {
                 continue; // really off screen / behind it now
             }
-            skipped(d >= WALL_RANGE ? "too far" : !rects.containsKey(w) ? "not in view" : "no screen rect", w);
+            if (d >= WALL_RANGE || !rects.containsKey(w)) {
+                continue; // (out of range / not in view: really gone)
+            }
+            skipped("no screen rect", w);
         }
         visible.sort(Comparator.comparingDouble(e -> -area(rects.get(e.getKey()))));
         if (visible.size() > MAX_WALLS) {
@@ -316,6 +321,7 @@ public final class MirrorRenderer {
         while (!queue.isEmpty()) {
             Node parent = queue.poll();
             parent.children.clear();
+            parent.overflow.clear();
             Chain c = parent.chain;
             Vec3 eye = new Vec3(c.rx, c.ry, c.rz);
             Matrix4f innerScreen = new Matrix4f(projection).mul(c.modelView);
@@ -331,7 +337,11 @@ public final class MirrorRenderer {
                     continue;
                 }
                 float[] rect = screenRect(innerScreen, box, parent.rect);
-                if (rect == null || area(rect) < MIN_BOUNCE_AREA) {
+                if (rect == null) {
+                    continue;
+                }
+                if (area(rect) < MIN_BOUNCE_AREA) {
+                    parent.overflow.add(w);
                     continue;
                 }
                 List<Wall> path = new ArrayList<>(parent.path);
@@ -345,7 +355,8 @@ public final class MirrorRenderer {
             for (Node child : found) {
                 if (parent.children.size() >= MAX_CHILDREN || all.size() >= MAX_NODES
                         || main.width * scaleFor(child) < MIN_BOUNCE_SIZE) {
-                    break;
+                    parent.overflow.add(child.wall);
+                    continue;
                 }
                 child.chain = chain(child.wall, c.rx, c.ry, c.rz, c.modelView, c.flipped, farless);
                 parent.children.add(child);
@@ -614,6 +625,19 @@ public final class MirrorRenderer {
                 Node shown = child.valid ? child : NODES.get(List.of(child.wall)); // (not drawn yet: that mirror's own picture)
                 if (shown != null && shown.valid && shown.target != null) {
                     drawFaces(child.wall, WALLS.get(child.wall), rx, ry, rz, shown.target.getColorTextureId(), shown.shot);
+                }
+            }
+            // where the bounces stop (too deep, too small, too many): the latest picture there is of that mirror, so the
+            // innermost mirror doesn't flicker between a reflection and the plain block as the limit moves around
+            for (Wall w : node.overflow) {
+                List<Wall> path = new ArrayList<>(node.path);
+                path.add(w);
+                Node shown = NODES.get(path);
+                if (shown == null || !shown.valid || shown.target == null) {
+                    shown = NODES.get(List.of(w));
+                }
+                if (shown != null && shown.valid && shown.target != null) {
+                    drawFaces(w, WALLS.get(w), rx, ry, rz, shown.target.getColorTextureId(), shown.shot);
                 }
             }
         } finally {
