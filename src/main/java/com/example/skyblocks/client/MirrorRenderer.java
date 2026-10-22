@@ -104,6 +104,7 @@ public final class MirrorRenderer {
         long usedFrame = -10, renderedFrame = -1000;
         boolean valid;
         float renderedArea;
+        float[] renderedRect;
         final Shot shot = new Shot();
         MirrorCulling.View view;
         // this frame
@@ -150,6 +151,7 @@ public final class MirrorRenderer {
     private static final List<BlockEntity> NEARBY_BLOCK_ENTITIES = new ArrayList<>();
 
     private static final Map<List<Wall>, Node> NODES = new HashMap<>();
+    private static final List<MirrorCulling.View> LAST_VIEWS = new ArrayList<>();
     private static long frame;
     private static ByteBufferBuilder entityMemory;
     private static boolean rendering;
@@ -317,6 +319,11 @@ public final class MirrorRenderer {
         Node biggest = all.isEmpty() ? null : all.get(0);
         order.sort(Comparator.comparingDouble(n -> -priority(n, n == biggest)));
         List<Node> chosen = new ArrayList<>(order.subList(0, Math.min(PASSES_PER_FRAME, order.size())));
+        for (Node node : order) {
+            if (node.depth == 1 && !node.valid && !chosen.contains(node)) {
+                chosen.add(node); // a mirror just come into view gets its picture now (no frame of plain block)
+            }
+        }
         chosen.sort(Comparator.comparingInt(n -> -n.depth)); // (deeper first: a picture shows the newest ones inside it)
         MirrorTiming.counts(chosen.size(), all.size());
         for (Node node : chosen) {
@@ -326,6 +333,7 @@ public final class MirrorRenderer {
                 node.valid = true;
                 node.renderedFrame = frame;
                 node.renderedArea = node.area;
+                node.renderedRect = node.rect.clone();
             } catch (RuntimeException ex) {
                 if (!warnedFail) {
                     warnedFail = true;
@@ -351,7 +359,12 @@ public final class MirrorRenderer {
             }
             return false;
         });
-        MirrorCulling.set(views, cam);
+        // (this frame's and the last frame's views: chunks a mirror just stopped seeing stay one more frame)
+        List<MirrorCulling.View> kept = new ArrayList<>(views);
+        kept.addAll(LAST_VIEWS);
+        LAST_VIEWS.clear();
+        LAST_VIEWS.addAll(views);
+        MirrorCulling.set(kept, cam);
         Matrix4fStack stack = RenderSystem.getModelViewStack();
         stack.pushMatrix();
         stack.set(view); // (the camera's turn; at this stage it may not be in RenderSystem's model-view yet)
@@ -380,7 +393,7 @@ public final class MirrorRenderer {
         if (biggest) {
             return Double.MAX_VALUE;
         }
-        if (!n.valid || n.area > n.renderedArea * 1.25F + 0.01F) {
+        if (!n.valid || n.area > n.renderedArea * 1.25F + 0.01F || !covers(n.renderedRect, n.rect)) {
             return 1.0E12 * (n.area + 0.001) / n.depth;
         }
         return (n.area + 0.002) * (frame - n.renderedFrame) / Math.sqrt(n.depth);
@@ -487,10 +500,11 @@ public final class MirrorRenderer {
         float[] fog = RenderSystem.getShaderFogColor();
         target.setClearColor(fog[0], fog[1], fog[2], 1);
         // only the part of the picture where the mirror is on screen is drawn (and cleared)
-        scissor(target, node.rect);
+        float[] drawRect = grow(node.rect, RECT_MARGIN);
+        scissor(target, drawRect);
         target.clear(Minecraft.ON_OSX);
         target.bindWrite(true);
-        scissor(target, node.rect);
+        scissor(target, drawRect);
         GL11.glFrontFace(GL11.GL_CCW);
         try {
             RenderSystem.setProjectionMatrix(projection, VertexSorting.DISTANCE_TO_ORIGIN);
@@ -516,7 +530,7 @@ public final class MirrorRenderer {
         RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
         // only what shows in the mirror's part of the screen: chunk sections, mobs and block entities outside it are
         // skipped (a small mirror then costs little)
-        FrustumIntersection inRect = new FrustumIntersection(rectOnly(node.rect).mul(clipped).mul(modelView));
+        FrustumIntersection inRect = new FrustumIntersection(rectOnly(drawRect).mul(clipped).mul(modelView));
         Matrix4f toPicture = new Matrix4f(projection).mul(modelView);
         cullChunks(inRect, rx, ry, rz);
         MirrorTiming.start(MirrorTiming.BLOCKS);
@@ -526,9 +540,9 @@ public final class MirrorRenderer {
         // entities in front of the wall, you included (block entities: in the mirrors themselves, not in bounces)
         if (node.depth <= 3) {
             MirrorTiming.start(MirrorTiming.MOBS);
-            renderEntities(mc, level, camera, node.wall, modelView, inRect, toPicture, node.rect, rx, ry, rz, partialTick, withBlockEntities);
+            renderEntities(mc, level, camera, node.wall, modelView, inRect, toPicture, drawRect, rx, ry, rz, partialTick, withBlockEntities);
             target.bindWrite(true);
-            scissor(target, node.rect);
+            scissor(target, drawRect);
             GL11.glFrontFace(frontFace);
             RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
         }
@@ -562,7 +576,7 @@ public final class MirrorRenderer {
         node.shot.rx = rx;
         node.shot.ry = ry;
         node.shot.rz = rz;
-        Matrix4f culling = rectOnly(node.rect).mul(clipped).mul(modelView).translate((float) (cam.x - rx), (float) (cam.y - ry), (float) (cam.z - rz));
+        Matrix4f culling = rectOnly(grow(node.rect, CHUNK_MARGIN)).mul(clipped).mul(modelView).translate((float) (cam.x - rx), (float) (cam.y - ry), (float) (cam.z - rz));
         node.view = new MirrorCulling.View(new FrustumIntersection(culling));
     }
 
@@ -739,6 +753,12 @@ public final class MirrorRenderer {
 
     /** The wall's faces, showing its reflection (in front of the mirror blocks' own faces). */
     private static final float[] FULL = {0, 0, 1, 1};
+    /**
+     * A picture is drawn a bit past the mirror's edges, so moving doesn't show the picture's undrawn border before
+     * its next turn; and the chunks kept for mirrors reach well past them (the chunk list is made before the frame's
+     * mirrors are worked out, from the last frame's): no missing (sky-coloured) patches while moving.
+     */
+    private static final float RECT_MARGIN = 0.04F, CHUNK_MARGIN = 0.2F;
     /** Block entities smaller than this part of the screen in a mirror (about 10 x 10 pixels at 1080p) are skipped. */
     private static final float TINY = 0.00005F;
 
@@ -774,6 +794,20 @@ public final class MirrorRenderer {
         }
         float[] r = {Math.max(x0, within[0]), Math.max(y0, within[1]), Math.min(x1, within[2]), Math.min(y1, within[3])};
         return r[2] > r[0] && r[3] > r[1] ? r : null;
+    }
+
+    /** Whether the picture drawn for {@code drawn} (with its margin) still covers {@code now}. */
+    private static boolean covers(float[] drawn, float[] now) {
+        if (drawn == null) {
+            return false;
+        }
+        float m = RECT_MARGIN * 0.8F;
+        return now[0] >= drawn[0] - m && now[1] >= drawn[1] - m && now[2] <= drawn[2] + m && now[3] <= drawn[3] + m;
+    }
+
+    /** The rect grown by {@code by} (fractions of the screen) on each side, kept on screen. */
+    private static float[] grow(float[] r, float by) {
+        return new float[] {Math.max(0, r[0] - by), Math.max(0, r[1] - by), Math.min(1, r[2] + by), Math.min(1, r[3] + by)};
     }
 
     private static float area(float[] r) {

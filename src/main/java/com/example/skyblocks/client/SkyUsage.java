@@ -63,7 +63,16 @@ public final class SkyUsage {
     private static Matrix4f skyProjection;
     private static boolean drawing;
 
+    /**
+     * In a mirror, a sky's last picture is reused (it's painted from the real camera's angle anyway, so it's never
+     * exact in a mirror): seen only in mirrors, a sky is painted at most this often (frames), not every frame.
+     */
+    private static final long MIRROR_REFRESH_FRAMES = 60;
+
     public static void mark(@Nullable SkyblockBatchData data) {
+        if (MirrorRenderer.isRenderingReflection()) {
+            return; // (a sky seen only in a mirror isn't kept painted every frame)
+        }
         if (data instanceof Tracked tracked) {
             tracked.skyblocks$markUsed();
         }
@@ -114,6 +123,10 @@ public final class SkyUsage {
                 || drawing || !RenderSystem.isOnRenderThread()) {
             return;
         }
+        if (MirrorRenderer.isRenderingReflection() && tracked.skyblocks$drawnFrame() >= 0
+                && frame - tracked.skyblocks$drawnFrame() < MIRROR_REFRESH_FRAMES) {
+            return; // in a mirror: its last picture will do
+        }
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) {
             return;
@@ -124,6 +137,9 @@ public final class SkyUsage {
         int[] viewport = new int[4];
         GL11.glGetIntegerv(GL11.GL_VIEWPORT, viewport);
         boolean stencil = GL11.glIsEnabled(GL11.GL_STENCIL_TEST);
+        boolean scissor = GL11.glIsEnabled(GL11.GL_SCISSOR_TEST); // (a mirror draws only its part of the screen)
+        int[] scissorBox = new int[4];
+        GL11.glGetIntegerv(GL11.GL_SCISSOR_BOX, scissorBox);
         Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewMatrix());
         ShaderInstance shader = RenderSystem.getShader();
         int[] textures = {RenderSystem.getShaderTexture(0), RenderSystem.getShaderTexture(1), RenderSystem.getShaderTexture(2)};
@@ -132,6 +148,9 @@ public final class SkyUsage {
         try {
             if (stencil) {
                 GL11.glDisable(GL11.GL_STENCIL_TEST);
+            }
+            if (scissor) {
+                GlStateManager._disableScissorTest();
             }
             RenderSystem.setProjectionMatrix(new Matrix4f(skyProjection), VertexSorting.DISTANCE_TO_ORIGIN);
             // the same view rotation Shadered gives its sky passes
@@ -150,6 +169,10 @@ public final class SkyUsage {
             RenderSystem.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
             if (stencil) {
                 GL11.glEnable(GL11.GL_STENCIL_TEST);
+            }
+            if (scissor) {
+                GlStateManager._enableScissorTest();
+                GlStateManager._scissorBox(scissorBox[0], scissorBox[1], scissorBox[2], scissorBox[3]);
             }
             if (shader != null) {
                 RenderSystem.setShader(() -> shader);
