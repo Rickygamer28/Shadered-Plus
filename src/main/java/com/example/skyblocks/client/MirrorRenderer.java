@@ -961,7 +961,7 @@ public final class MirrorRenderer {
         RenderSystem.enableScissor(0, 0, 1, 1);
         RenderSystem.disableScissor();
         GL11.glFrontFace(GL11.GL_CCW);
-        org.lwjgl.opengl.GL30.glBindVertexArray(0);
+        com.mojang.blaze3d.vertex.VertexBuffer.unbind(); // (and the game forgets which one it had bound)
     }
 
     private static boolean wholeInFront(Matrix4f toScreen, AABB box) {
