@@ -147,6 +147,9 @@ final class IslandWindow {
                 // pass later in the frame, which would draw them outside this window: take what they queue here and
                 // draw it now, inside the window.
                 Map<SkyblockBatchData, Map<SkyblockPass, Integer>> before = queuedSizes();
+                // cats collected before this painting (in a mirror: the world's cats) are not this window's: set aside
+                java.util.List<com.noodlegamer76.shadered.client.renderer.assimp.RenderableModel> outsideCats = new java.util.ArrayList<>();
+                com.example.skyblocks.client.IslandCatBatch.drainTo(outsideCats);
                 IslandRendering.inWindow = true;
                 PaintingTimings.mark(PaintingTimings.Phase.BLOCK_ENTITIES);
                 try {
@@ -163,6 +166,7 @@ final class IslandWindow {
                     backInside(); // Shadered's model renderer may have bound another framebuffer or changed the stencil
                 } finally {
                     com.example.skyblocks.client.IslandCatBatch.discard();
+                    com.example.skyblocks.client.IslandCatBatch.addAll(outsideCats);
                 }
                 PaintingTimings.mark(PaintingTimings.Phase.BATCH_DRAW); // (figures queued, then everything queued drawn at endBatch)
                 view.renderFigures(poseStack, scene, partialTick, distance, figureReach);
