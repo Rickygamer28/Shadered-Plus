@@ -38,6 +38,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
@@ -105,6 +106,8 @@ public final class MirrorRenderer {
     /** ...or after this many mirror-in-mirror pictures for one mirror, or in one frame (a hall of mirrors multiplies fast). */
     private static final int BOUNCES_PER_MIRROR = 16, BOUNCES_PER_FRAME = 128;
     private static int bouncesLeft, frameBouncesLeft;
+    /** Block entities near the camera that mirrors show (gathered once a frame). */
+    private static final List<BlockEntity> NEARBY_BLOCK_ENTITIES = new ArrayList<>();
     /** Second-bounce views this frame, so their chunks aren't culled either. */
     private static final List<MirrorCulling.View> NESTED_VIEWS = new ArrayList<>();
 
@@ -188,6 +191,7 @@ public final class MirrorRenderer {
         frame++;
         NESTED_VIEWS.clear();
         frameBouncesLeft = BOUNCES_PER_FRAME;
+        gatherBlockEntities(level, cam);
         if (main.width != spareForWidth || main.height != spareForHeight) {
             SPARE.values().forEach(q -> q.forEach(TextureTarget::destroyBuffers));
             SPARE.clear();
@@ -430,11 +434,67 @@ public final class MirrorRenderer {
                     // an entity that can't be drawn here is left out of the mirror
                 }
             }
+            // block entities in front of the wall: the cats, and Minecraft's own (chests, signs, beds, banners, heads...)
+            net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher blockEntities = mc.getBlockEntityRenderDispatcher();
+            boolean wasDirect = com.example.skyblocks.client.island.IslandRendering.directCats;
+            com.example.skyblocks.client.island.IslandRendering.directCats = true; // cats drawn right away, with the mirror's view
+            try {
+                for (BlockEntity be : NEARBY_BLOCK_ENTITIES) {
+                    BlockPos pos = be.getBlockPos();
+                    double front = wall.distance(Vec3.atCenterOf(pos));
+                    if (front < -0.5) {
+                        continue;
+                    }
+                    pose.pushPose();
+                    pose.translate(pos.getX() - rx, pos.getY() - ry, pos.getZ() - rz);
+                    try {
+                        blockEntities.render(be, partialTick, pose, buffers);
+                    } catch (RuntimeException ignored) {
+                        // left out of the mirror
+                    } finally {
+                        pose.popPose();
+                    }
+                }
+            } finally {
+                com.example.skyblocks.client.island.IslandRendering.directCats = wasDirect;
+            }
             buffers.endBatch();
         } finally {
             dispatcher.setRenderShadow(true);
             stack.popMatrix();
             RenderSystem.applyModelViewMatrix();
+        }
+    }
+
+    /**
+     * The block entities a mirror can show: the cats (drawn straight away in a mirror) and Minecraft's own. Other mods'
+     * are left out: some (Shadered's sky blocks among them) queue up their drawing for later in the frame, and a
+     * queued copy from a mirror would turn up in the real world.
+     */
+    private static void gatherBlockEntities(ClientLevel level, Vec3 cam) {
+        NEARBY_BLOCK_ENTITIES.clear();
+        int radius = (int) (ENTITY_RANGE / 16) + 1;
+        int cx = SectionPos.blockToSectionCoord(cam.x), cz = SectionPos.blockToSectionCoord(cam.z);
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                LevelChunk chunk = level.getChunkSource().getChunk(cx + dx, cz + dz, false);
+                if (chunk == null) {
+                    continue;
+                }
+                for (BlockEntity be : chunk.getBlockEntities().values()) {
+                    if (be.isRemoved() || Vec3.atCenterOf(be.getBlockPos()).distanceToSqr(cam) > ENTITY_RANGE * ENTITY_RANGE) {
+                        continue;
+                    }
+                    if (be instanceof com.example.skyblocks.OiiaCatBlockEntity) {
+                        NEARBY_BLOCK_ENTITIES.add(be);
+                        continue;
+                    }
+                    net.minecraft.resources.ResourceLocation id = net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType());
+                    if (id != null && id.getNamespace().equals("minecraft")) {
+                        NEARBY_BLOCK_ENTITIES.add(be);
+                    }
+                }
+            }
         }
     }
 
