@@ -251,16 +251,22 @@ public final class MirrorRenderer {
             MirrorCulling.clear();
             return;
         }
-        Frustum frustum = event.getFrustum();
+        Matrix4f view = new Matrix4f(event.getModelViewMatrix());
+        Matrix4f projection = new Matrix4f(event.getProjectionMatrix());
+        // in view: tested against this frame's own view (the game's culling frustum sometimes said a mirror right in
+        // front of you wasn't visible for a frame: the silver blink)
+        FrustumIntersection inView = new FrustumIntersection(new Matrix4f(projection).mul(view));
         List<Map.Entry<Wall, List<BlockPos>>> visible = new ArrayList<>();
         for (Map.Entry<Wall, List<BlockPos>> e : WALLS.entrySet()) {
             double d = e.getKey().distance(cam);
-            if (d > 0.05 && d < WALL_RANGE && (frustum == null || frustum.isVisible(bounds(e.getKey(), e.getValue()).inflate(0.5)))) {
+            if (d <= 0.05 || d >= WALL_RANGE) {
+                continue;
+            }
+            AABB box = bounds(e.getKey(), e.getValue()).inflate(0.5).move(-cam.x, -cam.y, -cam.z);
+            if (inView.testAab((float) box.minX, (float) box.minY, (float) box.minZ, (float) box.maxX, (float) box.maxY, (float) box.maxZ)) {
                 visible.add(e);
             }
         }
-        Matrix4f view = new Matrix4f(event.getModelViewMatrix());
-        Matrix4f projection = new Matrix4f(event.getProjectionMatrix());
         Matrix4f farless = infiniteFar(projection);
         // biggest on screen first (not nearest: a mirror's thin edge right next to you would win over the mirror)
         Matrix4f toScreen = new Matrix4f(projection).mul(view);
@@ -284,7 +290,7 @@ public final class MirrorRenderer {
             if (r == null || d <= 0.05) {
                 continue; // really off screen / behind it now
             }
-            skipped(d >= WALL_RANGE ? "too far" : !rects.containsKey(w) ? "frustum said not visible" : "no screen rect", w);
+            skipped(d >= WALL_RANGE ? "too far" : !rects.containsKey(w) ? "not in view" : "no screen rect", w);
         }
         visible.sort(Comparator.comparingDouble(e -> -area(rects.get(e.getKey()))));
         if (visible.size() > MAX_WALLS) {
