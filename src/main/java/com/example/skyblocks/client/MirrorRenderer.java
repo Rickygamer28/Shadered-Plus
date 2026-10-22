@@ -238,6 +238,7 @@ public final class MirrorRenderer {
         }
         Matrix4f view = new Matrix4f(event.getModelViewMatrix());
         Matrix4f projection = new Matrix4f(event.getProjectionMatrix());
+        Matrix4f farless = infiniteFar(projection);
         // biggest on screen first (not nearest: a mirror's thin edge right next to you would win over the mirror)
         Matrix4f toScreen = new Matrix4f(projection).mul(view);
         Map<Wall, float[]> rects = new HashMap<>();
@@ -262,7 +263,7 @@ public final class MirrorRenderer {
             Node node = node(List.of(e.getKey()));
             node.rect = rects.get(e.getKey());
             node.area = area(node.rect);
-            node.chain = chain(e.getKey(), cam.x, cam.y, cam.z, view, false, projection);
+            node.chain = chain(e.getKey(), cam.x, cam.y, cam.z, view, false, farless);
             all.add(node);
             queue.add(node);
         }
@@ -300,7 +301,7 @@ public final class MirrorRenderer {
                         || main.width * scaleFor(child) < MIN_BOUNCE_SIZE) {
                     break;
                 }
-                child.chain = chain(child.wall, c.rx, c.ry, c.rz, c.modelView, c.flipped, projection);
+                child.chain = chain(child.wall, c.rx, c.ry, c.rz, c.modelView, c.flipped, farless);
                 parent.children.add(child);
                 all.add(child);
                 queue.add(child);
@@ -310,7 +311,7 @@ public final class MirrorRenderer {
         // ...which of them get a new picture this frame: the biggest mirror on screen always, then any without a
         // picture yet or that now cover much more of the screen, then the oldest (weighted by size)
         for (Node node : all) {
-            prepare(node, main);
+            prepare(node, main, false);
         }
         List<Node> order = new ArrayList<>(all);
         Node biggest = all.isEmpty() ? null : all.get(0);
@@ -320,6 +321,7 @@ public final class MirrorRenderer {
         MirrorTiming.counts(chosen.size(), all.size());
         for (Node node : chosen) {
             try {
+                prepare(node, main, true); // (a new size only right before drawing: no frame without a picture)
                 renderNode(mc, level, camera, node, projection, partialTick, node.depth == 1);
                 node.valid = true;
                 node.renderedFrame = frame;
@@ -395,18 +397,34 @@ public final class MirrorRenderer {
     }
 
     /** The node's picture, sized for this frame (a new size loses the old picture). */
-    private static void prepare(Node n, RenderTarget main) {
+    private static void prepare(Node n, RenderTarget main, boolean drawingNow) {
         float scale = scaleFor(n);
         int w = Math.max(1, (int) (main.width * scale)), h = Math.max(1, (int) (main.height * scale));
         if (n.target == null) {
             n.target = newTarget(w, h);
             n.scale = scale;
             n.valid = false;
-        } else if (Math.abs(scale - n.scale) > 0.001F || n.target.width != w || n.target.height != h) {
+        } else if (drawingNow && (Math.abs(scale - n.scale) > 0.001F || n.target.width != w || n.target.height != h)) {
+            // (until it's drawn again, the old picture keeps showing: it still lines up at any size)
             resize(n.target, w, h);
             n.scale = scale;
-            n.valid = false;
         }
+    }
+
+    /**
+     * The projection with its far plane at infinity. Moving the near plane onto a mirror (oblique projection) tilts
+     * the far plane in, more the farther the mirror is from the eye: things far away in a mirror (a big cat behind
+     * you) got cut off unless you stood right at the mirror. With no far plane there is nothing to tilt in. (The game's
+     * projection is a perspective times view bobbing, a turn and shift: its depth row is rebuilt from the w row.)
+     */
+    private static Matrix4f infiniteFar(Matrix4f p) {
+        float near = 0.05F;
+        Matrix4f m = new Matrix4f(p);
+        m.m02(p.m03());
+        m.m12(p.m13());
+        m.m22(p.m23());
+        m.m32(p.m33() - 2.0F * near);
+        return m;
     }
 
     private static void resize(TextureTarget t, int w, int h) {
