@@ -19,6 +19,8 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.client.Camera;
@@ -152,6 +154,21 @@ public final class MirrorRenderer {
 
     private static final Map<List<Wall>, Node> NODES = new HashMap<>();
     private static final List<MirrorCulling.View> LAST_VIEWS = new ArrayList<>();
+    /** Mirrors whose face was drawn last frame (to notice one dropping out for a frame: the silver blink). */
+    private static final Set<Wall> LAST_DRAWN = new HashSet<>();
+    private static long skipLogWindow;
+    private static int skipLogs;
+
+    private static void skipped(String why, Wall wall) {
+        long now = System.currentTimeMillis();
+        if (now - skipLogWindow > 60_000) {
+            skipLogWindow = now;
+            skipLogs = 0;
+        }
+        if (skipLogs++ < 20) {
+            SkyBlocksMod.LOGGER.info("Shadered+ mirror skipped a frame ({}): {} {} (frame {})", why, wall.facing(), wall.coord(), frame);
+        }
+    }
     private static long frame;
     private static ByteBufferBuilder entityMemory;
     private static boolean rendering;
@@ -227,6 +244,10 @@ public final class MirrorRenderer {
             lastChunkZ = chunkZ;
         }
         if (WALLS.isEmpty()) {
+            if (!LAST_DRAWN.isEmpty()) {
+                skipped("no mirrors found (scan)", LAST_DRAWN.iterator().next());
+                LAST_DRAWN.clear();
+            }
             MirrorCulling.clear();
             return;
         }
@@ -248,6 +269,23 @@ public final class MirrorRenderer {
             rects.put(e.getKey(), screenRect(toScreen, bounds(e.getKey(), e.getValue()).move(-cam.x, -cam.y, -cam.z), FULL));
         }
         visible.removeIf(e -> rects.get(e.getKey()) == null);
+        // (why a mirror shown last frame isn't this frame, if it's still in front: written to the log)
+        for (Wall w : LAST_DRAWN) {
+            if (rects.get(w) != null) {
+                continue;
+            }
+            List<BlockPos> faces = WALLS.get(w);
+            if (faces == null) {
+                skipped("gone after a rescan", w);
+                continue;
+            }
+            double d = w.distance(cam);
+            float[] r = screenRect(toScreen, bounds(w, faces).move(-cam.x, -cam.y, -cam.z), FULL);
+            if (r == null || d <= 0.05) {
+                continue; // really off screen / behind it now
+            }
+            skipped(d >= WALL_RANGE ? "too far" : !rects.containsKey(w) ? "frustum said not visible" : "no screen rect", w);
+        }
         visible.sort(Comparator.comparingDouble(e -> -area(rects.get(e.getKey()))));
         if (visible.size() > MAX_WALLS) {
             visible = visible.subList(0, MAX_WALLS);
@@ -319,9 +357,13 @@ public final class MirrorRenderer {
         Node biggest = all.isEmpty() ? null : all.get(0);
         order.sort(Comparator.comparingDouble(n -> -priority(n, n == biggest)));
         List<Node> chosen = new ArrayList<>(order.subList(0, Math.min(PASSES_PER_FRAME, order.size())));
+        int extra = 0;
         for (Node node : order) {
-            if (node.depth == 1 && !node.valid && !chosen.contains(node)) {
+            if (!node.valid && !chosen.contains(node) && (node.depth == 1 || extra < 4)) {
                 chosen.add(node); // a mirror just come into view gets its picture now (no frame of plain block)
+                if (node.depth > 1) {
+                    extra++;
+                }
             }
         }
         chosen.sort(Comparator.comparingInt(n -> -n.depth)); // (deeper first: a picture shows the newest ones inside it)
@@ -335,6 +377,7 @@ public final class MirrorRenderer {
                 node.renderedArea = node.area;
                 node.renderedRect = node.rect.clone();
             } catch (RuntimeException ex) {
+                skipped("drawing failed: " + ex, node.wall);
                 if (!warnedFail) {
                     warnedFail = true;
                     SkyBlocksMod.LOGGER.warn("Shadered+: a mirror reflection failed", ex);
@@ -370,12 +413,20 @@ public final class MirrorRenderer {
         stack.set(view); // (the camera's turn; at this stage it may not be in RenderSystem's model-view yet)
         RenderSystem.applyModelViewMatrix();
         MirrorTiming.start(MirrorTiming.FACES);
+        Set<Wall> drawnNow = new HashSet<>();
         try {
             for (Node node : all) {
-                if (node.depth == 1 && node.valid) {
-                    drawFaces(node.wall, WALLS.get(node.wall), cam.x, cam.y, cam.z, node.target.getColorTextureId(), node.shot);
+                if (node.depth == 1) {
+                    if (node.valid) {
+                        drawFaces(node.wall, WALLS.get(node.wall), cam.x, cam.y, cam.z, node.target.getColorTextureId(), node.shot);
+                        drawnNow.add(node.wall);
+                    } else if (LAST_DRAWN.contains(node.wall)) {
+                        skipped("no picture", node.wall);
+                    }
                 }
             }
+            LAST_DRAWN.clear();
+            LAST_DRAWN.addAll(drawnNow);
         } finally {
             MirrorTiming.end();
             stack.popMatrix();
@@ -554,8 +605,9 @@ public final class MirrorRenderer {
         RenderSystem.applyModelViewMatrix();
         try {
             for (Node child : node.children) {
-                if (child.valid) {
-                    drawFaces(child.wall, WALLS.get(child.wall), rx, ry, rz, child.target.getColorTextureId(), child.shot);
+                Node shown = child.valid ? child : NODES.get(List.of(child.wall)); // (not drawn yet: that mirror's own picture)
+                if (shown != null && shown.valid && shown.target != null) {
+                    drawFaces(child.wall, WALLS.get(child.wall), rx, ry, rz, shown.target.getColorTextureId(), shown.shot);
                 }
             }
         } finally {
