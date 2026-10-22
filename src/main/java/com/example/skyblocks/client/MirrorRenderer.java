@@ -944,7 +944,7 @@ public final class MirrorRenderer {
                     // other Shadered models (Maxwell...) are placed in plain world coordinates and ignore the pose:
                     // move them to where the mirror sees them. Shadered then applies the main camera R*T(-cam), so
                     // the matrix given is T(cam) * R^-1 * mirrorView * T(-mirroredEye) * world
-                    Vec3 cam = camera.getPosition();
+                    Vec3 eye = camera.getPosition();
                     Matrix4f turn = new Matrix4f().rotationX((float) Math.toRadians(camera.getXRot()))
                             .rotateY((float) Math.toRadians(camera.getYRot() + 180.0F));
                     IslandCatBatch.viewFix = new Matrix4f().translation((float) cam.x, (float) cam.y, (float) cam.z)
