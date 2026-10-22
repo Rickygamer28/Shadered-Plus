@@ -252,6 +252,7 @@ public final class MirrorRenderer {
         RenderTarget main = mc.getMainRenderTarget();
         float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(false);
         frame++;
+        MirrorTiming.beginFrame();
         gatherBlockEntities(level, cam);
 
         // every picture in view this frame: the mirrors on screen, then (biggest first) the mirrors seen in them...
@@ -316,6 +317,7 @@ public final class MirrorRenderer {
         order.sort(Comparator.comparingDouble(n -> -priority(n, n == biggest)));
         List<Node> chosen = new ArrayList<>(order.subList(0, Math.min(PASSES_PER_FRAME, order.size())));
         chosen.sort(Comparator.comparingInt(n -> -n.depth)); // (deeper first: a picture shows the newest ones inside it)
+        MirrorTiming.counts(chosen.size(), all.size());
         for (Node node : chosen) {
             try {
                 renderNode(mc, level, camera, node, projection, partialTick);
@@ -328,6 +330,7 @@ public final class MirrorRenderer {
                     SkyBlocksMod.LOGGER.warn("Shadered+: a mirror reflection failed", ex);
                 }
             } finally {
+                MirrorTiming.end();
                 restore(mc, main, camera, projection, partialTick);
             }
         }
@@ -349,6 +352,7 @@ public final class MirrorRenderer {
         stack.pushMatrix();
         stack.set(view); // (the camera's turn; at this stage it may not be in RenderSystem's model-view yet)
         RenderSystem.applyModelViewMatrix();
+        MirrorTiming.start(MirrorTiming.FACES);
         try {
             for (Node node : all) {
                 if (node.depth == 1 && node.valid) {
@@ -356,6 +360,7 @@ public final class MirrorRenderer {
                 }
             }
         } finally {
+            MirrorTiming.end();
             stack.popMatrix();
             RenderSystem.applyModelViewMatrix();
         }
@@ -453,6 +458,7 @@ public final class MirrorRenderer {
         int frontFace = c.flipped ? GL11.GL_CW : GL11.GL_CCW; // a reflection turns everything inside out
 
         rendering = true;
+        MirrorTiming.start(MirrorTiming.SKY);
         // the sky's colour first (what the main view is cleared to), then the sky itself on top
         float[] fog = RenderSystem.getShaderFogColor();
         target.setClearColor(fog[0], fog[1], fog[2], 1);
@@ -485,11 +491,13 @@ public final class MirrorRenderer {
         LevelRendererInvoker chunks = (LevelRendererInvoker) mc.levelRenderer;
         RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
         cullChunks(c.seen, rx, ry, rz);
+        MirrorTiming.start(MirrorTiming.BLOCKS);
         chunks.skyblocks$renderSectionLayer(RenderType.solid(), rx, ry, rz, modelView, clipped);
         chunks.skyblocks$renderSectionLayer(RenderType.cutoutMipped(), rx, ry, rz, modelView, clipped);
         chunks.skyblocks$renderSectionLayer(RenderType.cutout(), rx, ry, rz, modelView, clipped);
         // entities in front of the wall, you included (block entities: in the mirrors themselves, not in bounces)
         if (node.depth <= 3) {
+            MirrorTiming.start(MirrorTiming.MOBS);
             renderEntities(mc, level, camera, node.wall, modelView, c.seen, rx, ry, rz, partialTick, node.depth == 1);
             target.bindWrite(true);
             scissor(target, node.rect);
@@ -497,6 +505,7 @@ public final class MirrorRenderer {
             RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
         }
         // the mirrors seen in this one: their latest pictures
+        MirrorTiming.start(MirrorTiming.INSIDE);
         Matrix4fStack stack = RenderSystem.getModelViewStack();
         stack.pushMatrix();
         stack.set(modelView);
@@ -515,9 +524,11 @@ public final class MirrorRenderer {
         // see-through blocks (glass, water, portals) after the entities, like the main view; only with Sodium: vanilla
         // would re-sort its see-through chunks for the mirror's camera and then again for the real one every frame
         if (SODIUM) {
+            MirrorTiming.start(MirrorTiming.SEE_THROUGH);
             RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
             chunks.skyblocks$renderSectionLayer(RenderType.translucent(), rx, ry, rz, modelView, clipped);
         }
+        MirrorTiming.end();
 
         node.shot.projModel.set(projection).mul(modelView); // (the oblique cut only changes depth: x, y and w are the projection's)
         node.shot.rx = rx;
@@ -567,6 +578,8 @@ public final class MirrorRenderer {
             // block entities in front of the wall, every mod's. Cats are drawn right away with the mirror's view; what
             // other renderers queue for Shadered's passes later in the frame (models, sky cubes) is taken out of the
             // queues and drawn now, inside the mirror, instead of turning up in the real world
+            buffers.endBatch(); // (the mobs drawn now, for timing)
+            MirrorTiming.start(MirrorTiming.BLOCK_ENTITIES);
             net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher blockEntities = mc.getBlockEntityRenderDispatcher();
             boolean wasDirect = com.example.skyblocks.client.island.IslandRendering.directCats;
             var skiesBefore = ShaderedQueues.sizes();
@@ -603,7 +616,9 @@ public final class MirrorRenderer {
             }
             var skies = ShaderedQueues.takeSince(skiesBefore);
             buffers.endBatch();
+            MirrorTiming.start(MirrorTiming.SHADERED_MODELS);
             drawQueuedModels(mc, models, cam);
+            MirrorTiming.start(MirrorTiming.SHADERED_SKIES);
             try {
                 ShaderedQueues.draw(skies);
             } catch (RuntimeException ignored) {
