@@ -27,6 +27,13 @@ public final class IslandCatBatch {
         PENDING.add(model);
     }
 
+    /**
+     * While drawing into a mirror: turns a cat's matrix (world position = camera + its pose, which is relative to the
+     * mirrored eye) into one that Shadered's camera turn and position bring to where the mirror sees it.
+     */
+    @org.jetbrains.annotations.Nullable
+    public static org.joml.Matrix4f viewFix;
+
     /** Draws the collected cats now (called by the painting while its window is open). */
     public static void flush(float partialTick) {
         if (PENDING.isEmpty()) {
@@ -34,6 +41,25 @@ public final class IslandCatBatch {
         }
         List<RenderableModel> cats = new ArrayList<>(PENDING);
         PENDING.clear();
+        if (viewFix != null) {
+            List<org.joml.Matrix4f> original = new ArrayList<>();
+            for (RenderableModel cat : cats) {
+                original.add(cat.modelMatrix);
+                cat.modelMatrix = new org.joml.Matrix4f(viewFix).mul(cat.modelMatrix);
+            }
+            try {
+                drawAll(cats, partialTick);
+            } finally {
+                for (int i = 0; i < cats.size(); i++) {
+                    cats.get(i).modelMatrix = original.get(i);
+                }
+            }
+            return;
+        }
+        drawAll(cats, partialTick);
+    }
+
+    private static void drawAll(List<RenderableModel> cats, float partialTick) {
         AssimpRenderer renderer = AssimpRenderer.getInstance();
         if (!look()) {
             drawOneByOne(renderer, cats);

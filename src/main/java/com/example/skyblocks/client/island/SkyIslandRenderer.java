@@ -97,8 +97,9 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         long time = level.getGameTime();
         // Far away the mobs and block entities inside are a pixel or two: not worth ticking or drawing them.
         // (Distances scale with how big the island is shown: a joined painting or a wide pedestal shows it bigger.)
-        double distance = Math.sqrt(Minecraft.getInstance().gameRenderer.getMainCamera().getPosition()
-                .distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(be.getBlockPos())));
+        net.minecraft.world.phys.Vec3 viewer = IslandRendering.viewer != null ? IslandRendering.viewer
+                : Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        double distance = Math.sqrt(viewer.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(be.getBlockPos())));
         double shown = painting ? Math.min(width, height) : Math.max(1.0, be.displayWidth());
         double figureReach = FIGURE_REACH * shown;
         boolean details = distance < DETAIL_REACH * shown;
@@ -135,11 +136,12 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         boolean irisCats = details && (com.example.skyblocks.client.iris.IrisIslandTarget.active()
                 || com.example.skyblocks.client.iris.IrisIslandTarget.shadowPass());
         if (details) {
-            IslandRendering.collectCats = irisCats;
+            boolean wasCollecting = IslandRendering.collectCats; // (a mirror collects them too)
+            IslandRendering.collectCats = irisCats || wasCollecting;
             try {
                 view.renderBlockEntities(poseStack, buffer, partialTick);
             } finally {
-                IslandRendering.collectCats = false;
+                IslandRendering.collectCats = wasCollecting;
             }
             if (irisCats) {
                 com.example.skyblocks.client.iris.IrisIslandTarget.queueCats(); // drawn with all the others later

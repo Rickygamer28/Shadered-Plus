@@ -586,9 +586,15 @@ public final class MirrorRenderer {
             MirrorTiming.start(MirrorTiming.BLOCK_ENTITIES);
             net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher blockEntities = mc.getBlockEntityRenderDispatcher();
             boolean wasDirect = com.example.skyblocks.client.island.IslandRendering.directCats;
+            boolean wasCollecting = com.example.skyblocks.client.island.IslandRendering.collectCats;
             var skiesBefore = ShaderedQueues.sizes();
             List<com.noodlegamer76.shadered.client.renderer.assimp.RenderableModel> models;
-            com.example.skyblocks.client.island.IslandRendering.directCats = true;
+            // cats (and other Shadered models) all in one batch, turned to the mirror's view; detail by how far
+            // things are from the mirrored eye
+            com.example.skyblocks.client.island.IslandRendering.directCats = false;
+            com.example.skyblocks.client.island.IslandRendering.collectCats = true;
+            com.example.skyblocks.client.island.IslandRendering.viewer = new Vec3(rx, ry, rz);
+            IslandCatBatch.viewFix = shaderedViewFix(mc, cam);
             try {
                 models = !withBlockEntities ? List.of() : IslandCatBatch.capture(() -> {
                     for (BlockEntity be : NEARBY_BLOCK_ENTITIES) {
@@ -619,11 +625,22 @@ public final class MirrorRenderer {
                 });
             } finally {
                 com.example.skyblocks.client.island.IslandRendering.directCats = wasDirect;
+                com.example.skyblocks.client.island.IslandRendering.collectCats = wasCollecting;
+                com.example.skyblocks.client.island.IslandRendering.viewer = null;
             }
             var skies = ShaderedQueues.takeSince(skiesBefore);
             buffers.endBatch();
             MirrorTiming.start(MirrorTiming.SHADERED_MODELS);
-            drawQueuedModels(mc, models, cam);
+            int drawFramebuffer = GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+            try {
+                IslandCatBatch.addAll(models);
+                IslandCatBatch.flush(partialTick);
+            } catch (RuntimeException ignored) {
+                IslandCatBatch.discard(); // left out of the mirror
+            } finally {
+                IslandCatBatch.viewFix = null;
+                com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, drawFramebuffer);
+            }
             MirrorTiming.start(MirrorTiming.SHADERED_SKIES);
             try {
                 ShaderedQueues.draw(skies);
@@ -638,33 +655,17 @@ public final class MirrorRenderer {
     }
 
     /**
-     * Models queued for Shadered's model pass while drawing a mirror (their matrix: world position = camera + the pose
-     * the renderer was given, which is relative to the mirrored eye), drawn now with the mirror's view instead.
+     * For Shadered's models drawn into a mirror. Their matrix is camera + the pose they were given (relative to the
+     * mirrored eye); Shadered's shader then takes off the camera's position and turns by the camera. This puts the
+     * mirror's view (the current model-view) in between instead.
      */
-    private static void drawQueuedModels(Minecraft mc, List<com.noodlegamer76.shadered.client.renderer.assimp.RenderableModel> models, Vec3 cam) {
-        if (models.isEmpty()) {
-            return;
-        }
+    private static Matrix4f shaderedViewFix(Minecraft mc, Vec3 cam) {
         Camera main = mc.gameRenderer.getMainCamera();
-        // Shadered's shader adds the camera's turn after the model matrix: take it back out
         Matrix4f undoTurn = new Matrix4f().rotationX(main.getXRot() * Mth.DEG_TO_RAD)
                 .rotateY((main.getYRot() + 180.0F) * Mth.DEG_TO_RAD).invert();
-        Matrix4f toView = undoTurn.mul(new Matrix4f(RenderSystem.getModelViewMatrix()))
+        return new Matrix4f().translation((float) cam.x, (float) cam.y, (float) cam.z).mul(undoTurn)
+                .mul(new Matrix4f(RenderSystem.getModelViewMatrix()))
                 .translate((float) -cam.x, (float) -cam.y, (float) -cam.z);
-        var renderer = com.noodlegamer76.shadered.client.renderer.assimp.AssimpRenderer.getInstance();
-        int drawFramebuffer = GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
-        for (var model : models) {
-            Matrix4f world = new Matrix4f(model.modelMatrix);
-            model.modelMatrix = new Matrix4f(toView).mul(world);
-            try {
-                renderer.renderDirect(model, null, false);
-            } catch (RuntimeException ignored) {
-                // left out of the mirror
-            } finally {
-                model.modelMatrix = world;
-                com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, drawFramebuffer);
-            }
-        }
     }
 
     /**

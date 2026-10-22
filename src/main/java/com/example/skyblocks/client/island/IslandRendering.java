@@ -18,6 +18,11 @@ public final class IslandRendering {
      * the world's own pass).
      */
     public static boolean directCats;
+    /**
+     * Where things are seen from, if not the camera (a mirror: the mirrored eye), for how much detail to draw.
+     */
+    @org.jetbrains.annotations.Nullable
+    public static net.minecraft.world.phys.Vec3 viewer;
 
     private IslandRendering() {}
 }
