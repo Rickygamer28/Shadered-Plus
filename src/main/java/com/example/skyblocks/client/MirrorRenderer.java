@@ -619,6 +619,7 @@ public final class MirrorRenderer {
             com.example.skyblocks.client.island.IslandRendering.directCats = false;
             com.example.skyblocks.client.island.IslandRendering.collectCats = true;
             com.example.skyblocks.client.island.IslandRendering.viewer = new Vec3(rx, ry, rz);
+            com.example.skyblocks.client.island.IslandRendering.inMirror = true;
             IslandCatBatch.viewFix = shaderedViewFix(mc, cam);
             try {
                 models = !withBlockEntities ? List.of() : IslandCatBatch.capture(() -> {
@@ -656,6 +657,7 @@ public final class MirrorRenderer {
                 com.example.skyblocks.client.island.IslandRendering.directCats = wasDirect;
                 com.example.skyblocks.client.island.IslandRendering.collectCats = wasCollecting;
                 com.example.skyblocks.client.island.IslandRendering.viewer = null;
+                com.example.skyblocks.client.island.IslandRendering.inMirror = false;
             }
             var skies = ShaderedQueues.takeSince(skiesBefore);
             buffers.endBatch();
