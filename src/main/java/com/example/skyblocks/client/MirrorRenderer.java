@@ -473,6 +473,7 @@ public final class MirrorRenderer {
         RenderSystem.applyModelViewMatrix();
         MirrorTiming.start(MirrorTiming.FACES);
         Set<Wall> drawnNow = new HashSet<>();
+        mainDrawState(main);
         try {
             for (Node node : all) {
                 if (node.depth == 1) {
@@ -933,6 +934,34 @@ public final class MirrorRenderer {
         }
         float[] r = {Math.max(x0, within[0]), Math.max(y0, within[1]), Math.min(x1, within[2]), Math.min(y1, within[3])};
         return r[2] > r[0] && r[3] > r[1] ? r : null;
+    }
+
+    /**
+     * Before the faces go onto the real view: the main framebuffer bound and the drawing state set straight in OpenGL
+     * as well as through the game's state cache. Something drawn during the mirrors (other mods' renderers, Shadered's
+     * passes) can change OpenGL state behind the cache's back; then the faces weren't drawn for a frame (silver flash).
+     */
+    private static void mainDrawState(RenderTarget main) {
+        main.bindWrite(true);
+        GL11.glColorMask(true, true, true, true);
+        RenderSystem.colorMask(false, false, false, false);
+        RenderSystem.colorMask(true, true, true, true);
+        GL11.glDepthMask(true);
+        RenderSystem.depthMask(false);
+        RenderSystem.depthMask(true);
+        GL11.glEnable(GL11.GL_DEPTH_TEST);
+        RenderSystem.disableDepthTest();
+        RenderSystem.enableDepthTest();
+        GL11.glDepthFunc(GL11.GL_LEQUAL);
+        RenderSystem.depthFunc(GL11.GL_ALWAYS);
+        RenderSystem.depthFunc(GL11.GL_LEQUAL);
+        GL11.glDepthRange(0.0, 1.0);
+        GL11.glDisable(GL11.GL_STENCIL_TEST);
+        GL11.glDisable(GL11.GL_SCISSOR_TEST);
+        RenderSystem.enableScissor(0, 0, 1, 1);
+        RenderSystem.disableScissor();
+        GL11.glFrontFace(GL11.GL_CCW);
+        org.lwjgl.opengl.GL30.glBindVertexArray(0);
     }
 
     private static boolean wholeInFront(Matrix4f toScreen, AABB box) {

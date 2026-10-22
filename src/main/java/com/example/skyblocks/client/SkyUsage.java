@@ -65,9 +65,8 @@ public final class SkyUsage {
 
     /**
      * In a mirror, a sky's last picture is reused (it's painted from the real camera's angle anyway, so it's never
-     * exact in a mirror): seen only in mirrors, a sky is painted at most this often (frames), not every frame.
+     * exact in a mirror); one never painted yet is painted once.
      */
-    private static final long MIRROR_REFRESH_FRAMES = 60;
 
     public static void mark(@Nullable SkyblockBatchData data) {
         if (MirrorRenderer.isRenderingReflection()) {
@@ -123,9 +122,8 @@ public final class SkyUsage {
                 || drawing || !RenderSystem.isOnRenderThread()) {
             return;
         }
-        if (MirrorRenderer.isRenderingReflection() && tracked.skyblocks$drawnFrame() >= 0
-                && frame - tracked.skyblocks$drawnFrame() < MIRROR_REFRESH_FRAMES) {
-            return; // in a mirror: its last picture will do
+        if (MirrorRenderer.isRenderingReflection() && tracked.skyblocks$drawnFrame() >= 0) {
+            return; // in a mirror: its last picture will do (painting one in the middle of a mirror upset the frame)
         }
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) {
