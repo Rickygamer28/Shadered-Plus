@@ -602,8 +602,10 @@ public final class MirrorRenderer {
                         }
                         pose.pushPose();
                         pose.translate(pos.getX() - rx, pos.getY() - ry, pos.getZ() - rz);
+                        long started = System.nanoTime();
                         try {
                             blockEntities.render(be, partialTick, pose, buffers);
+                            MirrorTiming.blockEntity(be.getClass().getSimpleName(), System.nanoTime() - started);
                         } catch (RuntimeException ignored) {
                             // left out of the mirror
                         } finally {

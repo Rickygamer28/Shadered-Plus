@@ -40,6 +40,15 @@ public final class MirrorTiming {
     private static double passes, pictures;
     private static long lastSeen;
     private static int openPhase = -1, openQuery;
+    /** Processor time per kind of block entity drawn in mirrors (this frame, and averaged): ms and how many. */
+    private static final java.util.Map<String, double[]> KINDS_NOW = new java.util.HashMap<>();
+    private static final java.util.Map<String, double[]> KINDS = new java.util.HashMap<>();
+
+    public static void blockEntity(String kind, long nanos) {
+        double[] k = KINDS_NOW.computeIfAbsent(kind, x -> new double[2]);
+        k[0] += nanos / 1.0e6;
+        k[1]++;
+    }
     private static long openCpu;
 
     private MirrorTiming() {}
@@ -82,6 +91,17 @@ public final class MirrorTiming {
                     pictures = pictures * 0.9 + f.pictures * 0.1;
                 }
             }
+            for (double[] k : KINDS.values()) {
+                k[0] *= 0.9;
+                k[1] *= 0.9;
+            }
+            for (java.util.Map.Entry<String, double[]> e : KINDS_NOW.entrySet()) {
+                double[] k = KINDS.computeIfAbsent(e.getKey(), x -> new double[2]);
+                k[0] += e.getValue()[0] * 0.1;
+                k[1] += e.getValue()[1] * 0.1;
+            }
+            KINDS_NOW.clear();
+            KINDS.values().removeIf(k -> k[0] < 0.001 && k[1] < 0.01);
             f.spans.clear();
             java.util.Arrays.fill(f.cpu, 0);
             f.passes = 0;
@@ -155,5 +175,7 @@ public final class MirrorTiming {
                 lines.add(String.format(Locale.ROOT, "  %s: GPU %.2f ms, CPU %.2f ms", NAMES[i], gpuMs[i], cpuMs[i]));
             }
         }
+        KINDS.entrySet().stream().sorted((a, b) -> Double.compare(b.getValue()[0], a.getValue()[0])).limit(5)
+                .forEach(e -> lines.add(String.format(Locale.ROOT, "    %s x%.0f: CPU %.2f ms", e.getKey(), e.getValue()[1], e.getValue()[0])));
     }
 }
