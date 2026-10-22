@@ -2,6 +2,7 @@ package com.example.skyblocks.mixin.sodium;
 
 import com.example.skyblocks.client.MirrorCulling;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
@@ -11,6 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * in the chunk list the mirror's reflection draws (client/MirrorRenderer). Only applied when Embeddium is installed
  * (skyblocks.sodium.mixins.json is optional).
  */
+@Pseudo // (Embeddium may not be installed)
 @Mixin(targets = "me.jellysquid.mods.sodium.client.render.viewport.Viewport", remap = false)
 public abstract class SodiumViewportMixin {
     @Inject(method = "isBoxVisible(IIIF)Z", at = @At("RETURN"), cancellable = true, require = 0)
