@@ -387,12 +387,15 @@ public final class MirrorRenderer {
     }
 
     /**
-     * How sharp a picture is (part of the screen's resolution): by how big it is on screen (switching only well past
-     * the line, so it doesn't flip-flop), and a bit less with every bounce.
+     * How sharp a picture is (part of the screen's resolution).
      */
     private static float scaleFor(Node n) {
-        float tier = n.area > 0.2F ? 1.0F : n.area < 0.02F ? 0.35F : n.area < 0.08F ? 0.5F
-                : n.scale > 0 ? Math.min(1.0F, Math.max(0.5F, n.scale / (float) Math.pow(BOUNCE_SCALE, n.depth - 1))) : 0.75F;
+        // full sharpness for the mirrors themselves (only the part on screen is drawn, so a small mirror is cheap
+        // anyway); bounces a bit less sharp each, and tiny ones at half
+        if (n.depth == 1) {
+            return 1.0F;
+        }
+        float tier = n.area < 0.01F ? 0.5F : 1.0F;
         return tier * (float) Math.pow(BOUNCE_SCALE, n.depth - 1);
     }
 
