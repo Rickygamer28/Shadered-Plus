@@ -158,6 +158,27 @@ public final class MirrorRenderer {
         }
     }
 
+    /** The view of the mirror being drawn (positions relative to its eye), for skipping chunk sections it can't see. */
+    private static FrustumIntersection chunkCull;
+    private static double cullX, cullY, cullZ;
+
+    /** Whether the chunk section (section coordinates) is in the view of the mirror being drawn. */
+    public static boolean sectionInMirror(int sx, int sy, int sz) {
+        FrustumIntersection cull = chunkCull;
+        if (cull == null) {
+            return true;
+        }
+        float x = (float) ((sx << 4) - cullX), y = (float) ((sy << 4) - cullY), z = (float) ((sz << 4) - cullZ);
+        return cull.testAab(x - 1, y - 1, z - 1, x + 17, y + 17, z + 17);
+    }
+
+    private static void cullChunks(FrustumIntersection cull, double x, double y, double z) {
+        chunkCull = cull;
+        cullX = x;
+        cullY = y;
+        cullZ = z;
+    }
+
     public static boolean isRenderingReflection() {
         return rendering;
     }
@@ -407,11 +428,12 @@ public final class MirrorRenderer {
         // blocks: the chunk meshes already on the graphics card
         LevelRendererInvoker chunks = (LevelRendererInvoker) mc.levelRenderer;
         RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
+        FrustumIntersection seen = new FrustumIntersection(new Matrix4f(clipped).mul(modelView));
+        cullChunks(seen, rx, ry, rz);
         chunks.skyblocks$renderSectionLayer(RenderType.solid(), rx, ry, rz, modelView, clipped);
         chunks.skyblocks$renderSectionLayer(RenderType.cutoutMipped(), rx, ry, rz, modelView, clipped);
         chunks.skyblocks$renderSectionLayer(RenderType.cutout(), rx, ry, rz, modelView, clipped);
         // entities in front of the wall, you included
-        FrustumIntersection seen = new FrustumIntersection(new Matrix4f(clipped).mul(modelView));
         if (depth <= 1) {
             renderEntities(mc, level, camera, wall, modelView, seen, rx, ry, rz, partialTick, depth == 0);
         }
@@ -477,6 +499,7 @@ public final class MirrorRenderer {
         // would re-sort its see-through chunks for the mirror's camera and then again for the real one every frame
         if (SODIUM) {
             RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
+            cullChunks(seen, rx, ry, rz); // (a mirror drawn inside this one set its own)
             chunks.skyblocks$renderSectionLayer(RenderType.translucent(), rx, ry, rz, modelView, clipped);
         }
 
@@ -633,6 +656,7 @@ public final class MirrorRenderer {
     /** Back to the main view after a reflection. */
     private static void restore(Minecraft mc, RenderTarget main, Camera camera, Matrix4f projection, float partialTick) {
         rendering = false;
+        cullChunks(null, 0, 0, 0);
         RenderSystem.disableScissor();
         GL11.glFrontFace(GL11.GL_CCW);
         main.bindWrite(true);

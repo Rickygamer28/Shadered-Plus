@@ -4,6 +4,8 @@
   "package": "com.example.skyblocks.mixin.sodium",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "SodiumMirrorBatchMixin",
+    "SodiumMirrorCullMixin",
     "SodiumViewportMixin"
   ],
   "injectors": {
