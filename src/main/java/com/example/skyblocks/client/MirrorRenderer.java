@@ -271,7 +271,7 @@ public final class MirrorRenderer {
     }
 
     /** With a shader pack: how far behind the mirror the reflection is cut off (see chain()). */
-    private static final float PACK_CLIP_MARGIN = 0.04F;
+    private static final float PACK_CLIP_MARGIN = 0.0F; // (none: mirrors draw chunks with Embeddium's own program)
     private static boolean packMargin;
 
     /** The faces are being drawn into the shader pack overlay (its depth is the world's own). */
