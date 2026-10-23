@@ -261,8 +261,8 @@ void main() {
 
     // ---- the water between: deeper colour with distance, lighter near the top, a soft shimmer ----
     float travel = max(hitT - tEnter, 0.0);
-    vec3 water = mix(vec3(0.02, 0.2, 0.32), vec3(0.15, 0.55, 0.62), clamp(entry.y / BoxSize.y, 0.0, 1.0));
-    col = mix(col, water, 1.0 - exp(-travel * 0.38));
+    vec3 waterCol = mix(vec3(0.02, 0.2, 0.32), vec3(0.15, 0.55, 0.62), clamp(entry.y / BoxSize.y, 0.0, 1.0));
+    col = mix(col, waterCol, 1.0 - exp(-travel * 0.38));
     col += vec3(0.25, 0.5, 0.55) * 0.08 * (0.5 + 0.5 * sin(entry.x * 4.0 + entry.z * 3.0 + entry.y * 2.0 + t * 1.5));
 
     // looking down through the top: the surface ripples catch the light

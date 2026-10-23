@@ -31,8 +31,9 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A fog machine: puffs low fog out of its front that drifts along the floor (client/FogParticle). Right-click or a new
- * redstone signal: on / off. Disco ball beams show up much brighter in its fog.
+ * A fog machine: puffs low fog out of its front that fills an area in front of it (client/FogParticle). Right-click or
+ * a new redstone signal: on / off; sneak + right-click: the area's size and whether it's outlined. Disco ball beams
+ * show up much brighter in its fog.
  */
 public class FogMachineBlock extends BaseEntityBlock {
     public static final MapCodec<FogMachineBlock> CODEC = simpleCodec(FogMachineBlock::new);
@@ -60,6 +61,15 @@ public class FogMachineBlock extends BaseEntityBlock {
         return RenderShape.MODEL;
     }
 
+    private static final net.minecraft.world.phys.shapes.VoxelShape SHAPE =
+            net.minecraft.world.phys.shapes.Shapes.or(Block.box(2.0, 0.0, 2.0, 14.0, 9.0, 14.0), Block.box(4.0, 9.0, 7.0, 12.0, 13.0, 9.0));
+
+    @Override
+    protected net.minecraft.world.phys.shapes.VoxelShape getShape(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos,
+                                                                  net.minecraft.world.phys.shapes.CollisionContext context) {
+        return SHAPE;
+    }
+
     @Nullable
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
@@ -69,6 +79,12 @@ public class FogMachineBlock extends BaseEntityBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        if (player.isShiftKeyDown()) { // the fog's area
+            if (level.isClientSide) {
+                com.example.skyblocks.client.ClientAccess.openFogMachine(pos); // (client-only class, never loaded on a server)
+            }
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
         if (!level.isClientSide) {
             toggle(state, level, pos);
         }

@@ -46,6 +46,7 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.WATER_CAUSTICS.get(), WaterCausticsRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.DISCO_BALL.get(), DiscoBallRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SPEAKER.get(), SpeakerRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.FOG_MACHINE.get(), FogMachineRenderer::new);
         BlockEntityRendererProvider<OiiaCatBlockEntity> big = OiiaCatRenderer::new;
         event.registerBlockEntityRenderer(ModBlockEntities.BIG_OIIA_CAT.get(), big);
         event.registerBlockEntityRenderer(ModBlockEntities.SKY_ISLAND.get(), SkyIslandRenderer::new);
@@ -149,16 +150,11 @@ public final class ClientSetup {
             net.minecraft.client.resources.model.ModelResourceLocation.standalone(
                     net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "block/water_caustics_overlay"));
 
-    private static final net.minecraft.client.resources.model.ModelResourceLocation GALAXY_OVERLAY =
-            net.minecraft.client.resources.model.ModelResourceLocation.standalone(
-                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "block/galaxy_floor_overlay"));
-
     @SubscribeEvent
     public static void registerModels(net.neoforged.neoforge.client.event.ModelEvent.RegisterAdditional event) {
         event.register(BUCKET_MODEL);
         event.register(LIQUID_MODEL);
         event.register(CAUSTICS_OVERLAY);
-        event.register(GALAXY_OVERLAY);
     }
 
     /** The water caustics block's model also draws the block put under its water (client/WaterCausticsModel). */
@@ -176,16 +172,6 @@ public final class ClientSetup {
                 models.put(key, new WaterCausticsModel(water, overlay));
             }
         }
-        net.minecraft.client.resources.model.BakedModel galaxyOverlay = models.get(GALAXY_OVERLAY);
-        if (galaxyOverlay != null) {
-        for (net.minecraft.world.level.block.state.BlockState state : com.example.skyblocks.ModBlocks.GALAXY_FLOOR.get().getStateDefinition().getPossibleStates()) {
-            var key = net.minecraft.client.renderer.block.BlockModelShaper.stateToModelLocation(state);
-            net.minecraft.client.resources.model.BakedModel water = models.get(key);
-            if (water != null) {
-                models.put(key, new WaterCausticsModel(water, galaxyOverlay));
-            }
-        }
-        }
     }
 
     @SubscribeEvent
@@ -202,7 +188,7 @@ public final class ClientSetup {
                 return Minecraft.getInstance().getBlockColors().getColor(be.inside(), level, pos, tint);
             }
             return -1;
-        }, com.example.skyblocks.ModBlocks.WATER_CAUSTICS.get(), com.example.skyblocks.ModBlocks.GALAXY_FLOOR.get());
+        }, com.example.skyblocks.ModBlocks.WATER_CAUSTICS.get());
     }
 
     /** A sky added by another mod has no model files of ours: give its bucket and liquid the shared models. */

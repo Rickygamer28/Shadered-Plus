@@ -152,8 +152,7 @@
   (10x20 tiles, glints), 96 Fibonacci beams rotated by the spin, level.clip(VISUAL) each frame (glass passes; the ball's
   visual shape is empty), additive soft spot decals stretched by incidence + faint billboard beams. Spin speed and spot
   brightness follow MusicReactor bass. Item = flat generated icon.
-- Party set 2 (23 Oct 2026): Galaxy Floor (GalaxyFloorBlock extends WaterCausticsBlock, same BE type/model wrapper,
-  textures from tools/make_galaxy_floor.py); Fog Machine (client BE ticker puffs skyblocks:fog particles, ON toggled by
+- Party set 2 (23 Oct 2026; a Galaxy Floor was added and removed again the same evening): Fog Machine (client BE ticker puffs skyblocks:fog particles, ON toggled by
   right-click / new signal; FogMachineBlockEntity.ACTIVE -> disco beams 4.5x brighter within 20 blocks); Speaker (BER
   cone on a spring driven by MusicReactor bass, front texture has cut-out holes; SpeakerBlockEntity.CLIENT_SPEAKERS ->
   MusicReactor.weight: a jukebox within 24 blocks of a speaker counts as loud near the speaker, range 32); Aquarium

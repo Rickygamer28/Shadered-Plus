@@ -43,8 +43,6 @@ public final class ModItems {
 
     public static final DeferredItem<BlockItem> DANCE_FLOOR = ITEMS.registerSimpleBlockItem("dance_floor", ModBlocks.DANCE_FLOOR);
 
-    public static final DeferredItem<BlockItem> GALAXY_FLOOR = ITEMS.registerSimpleBlockItem("galaxy_floor", ModBlocks.GALAXY_FLOOR);
-
     public static final DeferredItem<BlockItem> FOG_MACHINE = ITEMS.registerSimpleBlockItem("fog_machine", ModBlocks.FOG_MACHINE);
 
     public static final DeferredItem<BlockItem> SPEAKER = ITEMS.registerSimpleBlockItem("speaker", ModBlocks.SPEAKER);

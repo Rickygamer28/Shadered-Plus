@@ -40,14 +40,9 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS)
                     .mapColor(net.minecraft.world.level.material.MapColor.ICE).isValidSpawn((s, l, p, e) -> false));
 
-    /** Galaxy floor: a flowing nebula, any block can go under it (GalaxyFloorBlock, like the water caustics). */
-    public static final DeferredBlock<GalaxyFloorBlock> GALAXY_FLOOR = BLOCKS.registerBlock("galaxy_floor", GalaxyFloorBlock::new,
-            BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.AMETHYST).requiresCorrectToolForDrops().lightLevel(state -> 4)
-                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE));
-
     /** A fog machine: low fog drifting along the floor (FogMachineBlock, client/FogParticle). */
     public static final DeferredBlock<FogMachineBlock> FOG_MACHINE = BLOCKS.registerBlock("fog_machine", FogMachineBlock::new,
-            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).mapColor(net.minecraft.world.level.material.MapColor.METAL));
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion().mapColor(net.minecraft.world.level.material.MapColor.METAL));
 
     /** A speaker: its cone thumps with the bass, and it carries the music's reaction further (SpeakerBlock). */
     public static final DeferredBlock<SpeakerBlock> SPEAKER = BLOCKS.registerBlock("speaker", SpeakerBlock::new,

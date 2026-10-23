@@ -54,7 +54,6 @@ public class SkyBlocksMod {
         event.accept(ModItems.MIRROR.get());
         event.accept(ModItems.INFINITY_MIRROR.get());
         event.accept(ModItems.WATER_CAUSTICS.get());
-        event.accept(ModItems.GALAXY_FLOOR.get());
         event.accept(ModItems.DANCE_FLOOR.get());
         event.accept(ModItems.DISCO_BALL.get());
         event.accept(ModItems.SPEAKER.get());
@@ -68,6 +67,7 @@ public class SkyBlocksMod {
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
         event.registrar("1").playToServer(ScanIslandPayload.TYPE, ScanIslandPayload.STREAM_CODEC, ScanIslandPayload::handle)
+                .playToServer(FogAreaPayload.TYPE, FogAreaPayload.STREAM_CODEC, FogAreaPayload::handle)
                 .playToClient(IslandMobsPayload.TYPE, IslandMobsPayload.STREAM_CODEC, IslandMobsPayload::handle)
                 .playToClient(com.example.skyblocks.portal.PortalSkiesPayload.TYPE,
                         com.example.skyblocks.portal.PortalSkiesPayload.STREAM_CODEC,

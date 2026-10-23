@@ -11,8 +11,10 @@ import net.minecraft.util.Mth;
 
 /** A puff of fog: shoots out, slows down, spreads and sinks to the floor, drifting there until it thins away. */
 public class FogParticle extends TextureSheetParticle {
+    @org.jetbrains.annotations.Nullable
+    private final net.minecraft.world.phys.AABB bounds;
     private final float startSize;
-    private final float endSize;
+    private float endSize;
 
     protected FogParticle(ClientLevel level, double x, double y, double z, double dx, double dy, double dz, SpriteSet sprites) {
         super(level, x, y, z, dx, dy, dz);
@@ -31,11 +33,21 @@ public class FogParticle extends TextureSheetParticle {
         alpha = 0.0F;
         roll = oRoll = random.nextFloat() * Mth.TWO_PI;
         pickSprite(sprites);
+        bounds = com.example.skyblocks.FogParticleBounds.next;
+        if (bounds != null && dx * dx + dz * dz < 0.0009) {
+            gravity = 0.0F; // (the fog filling the area floats where it is, drifting a little)
+            endSize = Math.min(endSize, 1.2F + random.nextFloat() * 0.8F);
+        }
     }
 
     @Override
     public void tick() {
         super.tick();
+        if (bounds != null && !bounds.inflate(0.3).contains(x, y, z)) {
+            age = Math.max(age, lifetime - 15); // (out of the area: thins away quickly)
+            xd *= 0.5;
+            zd *= 0.5;
+        }
         float life = age / (float) lifetime;
         quadSize = Mth.lerp(Math.min(1.0F, life * 2.5F), startSize, endSize);
         alpha = 0.32F * Math.min(1.0F, age / 12.0F) * (1.0F - life);

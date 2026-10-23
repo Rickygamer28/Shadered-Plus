@@ -15,5 +15,12 @@ public final class ClientAccess {
         }
     }
 
+    public static void openFogMachine(BlockPos pos) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null && mc.level.getBlockEntity(pos) instanceof com.example.skyblocks.FogMachineBlockEntity machine) {
+            mc.setScreen(new FogMachineScreen(pos, machine.width(), machine.depth(), machine.height(), machine.showArea()));
+        }
+    }
+
     private ClientAccess() {}
 }
