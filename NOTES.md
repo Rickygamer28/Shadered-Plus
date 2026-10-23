@@ -158,3 +158,8 @@
   MusicReactor.weight: a jukebox within 24 blocks of a speaker counts as loud near the speaker, range 32); Aquarium
   (TransparentBlock, touching blocks = one tank, client/AquariumRenderer per-face trace in aquarium.fsh: ellipsoid fish
   x4 species, bubbles, sand + caustics, seaweed on back walls, frame on tank edges).
+- Fog machine round 2 (23 Oct): model with feet/nozzle/handle (shape 2..14 x 0..9 + handle), sneak + right-click ->
+  client/FogMachineScreen (width 1-32, depth 1-32, height 1-12, Area outline toggle) -> FogAreaPayload; area starts at
+  the machine's front, centred; client ticker fills the area with floating fog + nozzle jet, particles thin out when
+  leaving the area (FogParticleBounds.next handed to the particle). FogMachineRenderer draws the outline. Speaker model:
+  metal corner protectors, raised front trim, badge. Galaxy Floor removed (user).
