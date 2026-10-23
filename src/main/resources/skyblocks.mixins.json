@@ -24,7 +24,8 @@
     "SkyblockBatchDataMixin",
     "SkyblockRendererMixin",
     "SkyblockRenderPassMixin",
-    "SkyPassMixin"
+    "SkyPassMixin",
+    "SkyboxSeamMixin"
   ],
   "injectors": {
     "defaultRequire": 1
