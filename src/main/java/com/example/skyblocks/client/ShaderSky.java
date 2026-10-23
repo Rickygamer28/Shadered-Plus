@@ -147,7 +147,10 @@ public final class ShaderSky {
                 setup.accept(shader); // (its own uniforms / texture brought up to date)
             }
             target.bindWrite(true);
-            draw(shader, texture, poseStack.last().pose(), (renderTick % 240000) + partialTick);
+            // (Shadered passes the frame's length in ticks as partialTick, not the part of the tick gone by, so the
+            // time would only move 20 times a second: animations stepping instead of moving smoothly)
+            float partial = Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false);
+            draw(shader, texture, poseStack.last().pose(), (renderTick % 240000) + partial);
             renderer.getRenderBuffer().bindWrite(true);
         }
 
