@@ -80,6 +80,68 @@ float lines(float v, float width) {
 
 // ---- sky things ----
 
+float noise3(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(mix(hash13(i), hash13(i + vec3(1, 0, 0)), f.x), mix(hash13(i + vec3(0, 1, 0)), hash13(i + vec3(1, 1, 0)), f.x), f.y),
+               mix(mix(hash13(i + vec3(0, 0, 1)), hash13(i + vec3(1, 0, 1)), f.x), mix(hash13(i + vec3(0, 1, 1)), hash13(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+}
+
+float fbm(vec3 p) {
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 4; i++) {
+        v += a * noise3(p);
+        p = p * 2.03 + vec3(1.7, 9.2, 4.1);
+        a *= 0.5;
+    }
+    return v;
+}
+
+// soft streaks of cloud high up, drifting; lit orange-pink towards the sun, purple elsewhere
+vec3 wisps(vec3 d, float elev, float t, float facing, vec3 col) {
+    if (elev < 0.05 || elev > 1.0) {
+        return col;
+    }
+    float c = fbm(vec3(d.x * 2.2 + t * 0.012, d.y * 9.0, d.z * 2.2 - t * 0.008));
+    float mask = smoothstep(0.52, 0.78, c) * smoothstep(0.05, 0.2, elev) * (1.0 - smoothstep(0.55, 1.0, elev));
+    vec3 lit = mix(vec3(0.42, 0.1, 0.55), vec3(1.0, 0.5, 0.55), facing * 0.8);
+    return mix(col, lit, mask * 0.38);
+}
+
+// two searchlight beams from the city, sweeping slowly
+vec3 searchlights(vec3 d, float elev, float t, vec3 col) {
+    float a = azFrom(d, vec3(1.0, 0.0, 0.0));
+    if (abs(a) > 1.4 || elev < 0.0) {
+        return col;
+    }
+    for (int k = 0; k < 2; k++) {
+        float base = k == 0 ? -0.35 : 0.42;
+        float swing = sin(t * (0.23 + 0.07 * float(k)) + float(k) * 2.1) * 0.55;
+        vec2 dir2 = vec2(sin(swing), cos(swing));
+        vec2 rel = vec2(a - base, elev);
+        float along = dot(rel, dir2);
+        if (along <= 0.0) {
+            continue;
+        }
+        float across = abs(rel.x * dir2.y - rel.y * dir2.x);
+        float width = 0.006 + along * 0.06;
+        col += vec3(1.0, 0.6, 0.85) * 0.22 * exp(-across * across / (width * width)) * exp(-along * 1.6);
+    }
+    return col;
+}
+
+// the farthest hills: pale and soft, all the way round
+vec3 farHills(float az, float elev, vec3 col, float facing) {
+    float h = 0.09 + 0.045 * sin(3.0 * az + 1.3) + 0.03 * sin(7.0 * az - 0.4) + 0.018 * sin(17.0 * az + 2.0) + 0.01 * sin(41.0 * az);
+    if (elev < h) {
+        vec3 hazy = mix(mix(HORIZON_COOL, HORIZON, facing), MID, 0.45);
+        col = mix(col, hazy, 0.6 * (0.6 + 0.4 * elev / h));
+    }
+    return col;
+}
+
+
 vec3 stars(vec3 d, float h, float away, float t, vec3 col) {
     vec3 cell = floor(d * 170.0);
     float rnd = hash13(cell);
@@ -212,7 +274,10 @@ vec3 mountains(float az, float elev, vec3 col) {
     // far, hazy layer
     float far = (ridge(x * 1.5, 54.0, 77.0) * 0.16 + 0.03) * pulse;
     if (elev < far) {
-        col = mix(col, mix(vec3(0.45, 0.08, 0.42), HORIZON_COOL * 0.8, 0.35), 0.85);
+        float up = elev / max(far, 0.001);
+        vec3 rock = mix(vec3(0.16, 0.02, 0.22), mix(vec3(0.5, 0.1, 0.45), HORIZON_COOL * 0.85, 0.35), up);
+        col = mix(col, rock, 0.88);
+        col += PINK * 0.18 * lines(elev * 45.0, 0.03) * up; // (faint contour lines)
         col += PINK * 0.6 * (1.0 - smoothstep(0.0, fwidth(elev) * 2.5, far - elev));
     }
     // near, wireframe layer (lower in front of the sun so it shows through the valley)
@@ -222,6 +287,19 @@ vec3 mountains(float az, float elev, vec3 col) {
         float wire = max(lines(elev * 70.0, 0.04), lines(x * 2.0, 0.04)) * 0.55 * (1.0 + Mid);
         float rim = 1.0 - smoothstep(0.0, fwidth(elev) * 2.5, peak - elev);
         col = ROCK + WIRE * max(wire * (0.4 + 0.6 * elev / max(peak, 0.001)), rim);
+    }
+    // radio masts with blinking red lights on some of the peaks
+    float vx = floor(x + 0.5);
+    float mast = hash11(mod(vx, 36.0) + 91.0);
+    if (mast > 0.72) {
+        float top = max(hash11(mod(vx, 36.0) + 3.0) * 0.12, ridge(vx * 2.0, 72.0, 41.0) * 0.07)
+                * mix(0.3, 1.0, smoothstep(0.08, 0.55, abs(az))) * pulse + 0.012;
+        vec2 rel = vec2((x - vx) / 36.0 * TAU * cos(elev), elev - top);
+        float blink = step(0.5, fract(Time / 20.0 * 0.6 + mast * 7.0));
+        col += vec3(1.0, 0.12, 0.25) * (smoothstep(0.003, 0.0, length(rel)) * 2.0 + 0.25 * exp(-length(rel) * 120.0)) * blink;
+        if (abs(rel.x) < 0.0008 && rel.y < 0.0 && rel.y > -0.012) {
+            col = ROCK; // the mast
+        }
     }
     return col;
 }
@@ -277,26 +355,48 @@ vec3 city(vec3 d, float elev, float t, vec3 col) {
     return col;
 }
 
+// distance from p to the segment a-b, and how far along it (0..1) the nearest point is
+vec2 segment(vec2 p, vec2 a, vec2 b) {
+    vec2 ab = b - a;
+    float h = clamp(dot(p - a, ab) / dot(ab, ab), 0.0, 1.0);
+    return vec2(length(p - a - ab * h), h);
+}
+
 // a palm tree silhouette: q = position from its foot (blocks), size = its height, aa = one pixel in palm heights
-float palm(vec2 q, float size, float lean, float aa) {
+float palm(vec2 q, float size, float lean, float aa, float seed) {
     vec2 p = q / size;
-    if (p.x < -1.0 || p.x > 1.3 || p.y < -0.05 || p.y > 1.4) {
+    if (p.x < -1.05 || p.x > 1.05 || p.y < -0.05 || p.y > 1.45) {
         return 0.0;
     }
     float s = 0.0;
+    // trunk: curved, thinner towards the top, slightly ringed
     if (p.y < 1.0) {
-        float width = 0.035 - 0.015 * p.y;
+        float width = (0.036 - 0.016 * p.y) * (0.9 + 0.1 * abs(sin(p.y * 70.0)));
         s = 1.0 - smoothstep(width, width + aa, abs(p.x - lean * p.y * p.y));
     }
     vec2 top = vec2(lean, 1.0);
-    for (int k = 0; k < 7; k++) {
-        float ang = -0.25 + float(k) / 6.0 * (PI + 0.5);
-        vec2 frond = vec2(cos(ang), sin(ang));
-        for (int j = 0; j < 9; j++) {
-            float along = (float(j) + 0.5) / 9.0;
-            vec2 c = top + frond * along * 0.6 - vec2(0.0, 0.42 * along * along);
-            float w = 0.045 * (1.0 - along) + 0.01;
-            s = max(s, 1.0 - smoothstep(w, w + aa, length(p - c)));
+    if (length(p - top) > 0.75) {
+        return s;
+    }
+    // coconuts
+    s = max(s, 1.0 - smoothstep(0.03, 0.03 + aa, length(p - top - vec2(0.02, -0.04))));
+    s = max(s, 1.0 - smoothstep(0.026, 0.026 + aa, length(p - top - vec2(-0.03, -0.05))));
+    // fronds: arching out and drooping, tapering, with leaflets along them
+    for (int k = 0; k < 8; k++) {
+        float ang = -0.35 + (float(k) + 0.5 * hash11(seed + float(k))) / 7.5 * (PI + 0.7);
+        vec2 spread = vec2(cos(ang), sin(ang) * 0.75 + 0.25);
+        float len = 0.5 + 0.18 * hash11(seed * 1.7 + float(k));
+        float droop = 0.35 + 0.25 * hash11(seed * 2.3 + float(k));
+        vec2 prev = top;
+        for (int j = 1; j <= 6; j++) {
+            float along = float(j) / 6.0;
+            vec2 next = top + spread * along * len - vec2(0.0, droop * along * along * len);
+            vec2 seg = segment(p, prev, next);
+            float f = (float(j) - 1.0 + seg.y) / 6.0; // 0 at the top .. 1 at the tip
+            float leaflets = 0.55 + 0.9 * abs(fract(f * 11.0) - 0.5); // (a jagged edge, like a palm leaf)
+            float w = (0.045 * (1.0 - f) + 0.006) * leaflets;
+            s = max(s, 1.0 - smoothstep(w, w + aa, seg.x));
+            prev = next;
         }
     }
     return s;
@@ -313,33 +413,34 @@ vec4 roadPalms(vec3 d, float side, float t, float facing, out float depth) {
     float pixel = length(fwidth(d)); // (taken before any branching, so it's reliable)
     float da = dot(d, SUN_DIR);
     float db = dot(d, SIDE);
-    float dir = da >= 0.0 ? 1.0 : -1.0;
     float scroll = t * 2.5; // (as the grid)
-    // the stretch of road where this ray passes close enough to the row to touch a palm
-    float reach = 7.5;
-    float lo = 0.0, hi = 110.0;
-    float slope = db / max(abs(da), 1.0e-4);
-    if (abs(slope) > 1.0e-4) {
-        float a1 = (side - reach) / slope, a2 = (side + reach) / slope;
-        lo = max(lo, min(a1, a2));
-        hi = min(hi, max(a1, a2));
+    // how far along the ray it is within reach of this side's row of palms...
+    float reach = 6.0;
+    float t1 = 0.0, t2 = 130.0;
+    if (abs(db) > 1.0e-4) {
+        float ta = (side - reach) / db, tb = (side + reach) / db;
+        t1 = max(t1, min(ta, tb));
+        t2 = min(t2, max(ta, tb));
     } else if (abs(side) > reach) {
         return acc;
     }
-    if (lo > hi) {
+    if (t1 > t2) {
         return acc;
     }
-    // palm k stands at k * PALM_SPACING - scroll along the highway; nearest first
-    float first = dir > 0.0 ? ceil((lo + scroll) / PALM_SPACING) : floor((scroll - lo) / PALM_SPACING);
-    for (int i = 0; i < 16; i++) {
+    // ...and so which stretch of the highway (plus a palm's reach either way), walked from the near end
+    float near = da * t1, far = da * t2;
+    float dir = far >= near ? 1.0 : -1.0;
+    near -= dir * reach;
+    far += dir * reach;
+    float first = dir > 0.0 ? ceil((near + scroll) / PALM_SPACING) : floor((near + scroll) / PALM_SPACING);
+    for (int i = 0; i < 18; i++) {
         float k = first + dir * float(i);
         float along = k * PALM_SPACING - scroll;
-        float u = along * dir;
-        if (u > hi) {
+        if ((along - far) * dir > 0.0) {
             break;
         }
         float seed = k * 3.7 + side * 11.0;
-        if (u < 0.2 || hash11(seed) < 0.15) {
+        if (hash11(seed) < 0.15) {
             continue; // (a gap now and then)
         }
         vec2 base = SUN_DIR.xz * along + SIDE.xz * (side + sign(side) * hash11(seed + 5.0) * 0.6);
@@ -354,7 +455,7 @@ vec4 roadPalms(vec3 d, float side, float t, float facing, out float depth) {
         vec2 q = vec2(dot(h.xz - base, vec2(-n.y, n.x)), h.y + 1.0);
         float size = 3.4 + 1.8 * hash11(seed + 1.3);
         float lean = (hash11(seed + 2.9) - 0.5) * 0.55;
-        float cover = palm(q, size, lean, th * pixel / size * 1.5);
+        float cover = palm(q, size, lean, th * pixel / size * 1.5, seed);
         if (cover > 0.0) {
             float haze = exp(-14.0 / th) * 0.85;
             vec3 c = mix(SILHOUETTE, mix(HORIZON_COOL, HORIZON, facing) * 0.9, haze);
@@ -488,9 +589,12 @@ void main() {
         col = shootingStars(az, elev, t, col);
         col = planet(d, t, col);
         col = sun(az, elev, t, col);
+        col = wisps(d, elev, t, facing, col);
+        col = searchlights(d, elev, t, col);
         col = equaliser(az, elev, col);
         col = clouds(az, elev, t, facing, col);
         col += mix(PINK, ORANGE, facing * 0.4) * 0.45 * exp(-elev * 40.0); // glow along the horizon
+        col = farHills(az, elev, col, facing);
         col = mountains(az, elev, col);
     } else {
         col = floorColour(d, az, t, facing, 1.0 / max(-d.y, 1.0e-4));
