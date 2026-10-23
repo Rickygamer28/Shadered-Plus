@@ -1,28 +1,48 @@
 #version 150
 
-// Shadered+'s synthwave sky: a sunset in pink / purple / orange, a big striped sun sinking into the horizon (its
-// stripes drift down, it pulses slowly), low-poly wireframe mountains in front of it, twinkling stars, and a neon grid
-// floor rushing towards you from the sun.
+// Shadered+'s synthwave sky (our own code). All around you:
+//  west   the big striped sun sinking into the horizon, striped clouds drifting over it
+//  east   a neon city skyline, windows lighting up and going dark, blinking antenna lights
+//  north / south  palm tree silhouettes; high in the north a ringed planet
+//  everywhere  wireframe mountains (two layers), stars, shooting stars, the neon grid floor rushing towards you, a
+//         highway along it from the city to the sun
+// With music playing (client/MusicReactor) the grid rises into peaks either side of the highway (bass near it,
+// treble far out, flowing away from you), the mountains pulse, the sun swells with the bass and equaliser bars glow
+// along the horizon.
 
-uniform float Time; // ticks
+uniform sampler2D Sampler0; // the last seconds of music: x = how long ago (0 now .. 1 oldest), y = band (bass .. treble)
+uniform float Time;         // ticks
+uniform float Music;        // how loud the music is here (0 = none)
+uniform float Bass;
+uniform float Mid;
+uniform float High;
+uniform vec4 Bars0;
+uniform vec4 Bars1;
+uniform vec4 Bars2;
+uniform vec4 Bars3;
 
 in vec3 dir;
 
 out vec4 fragColor;
 
 const float PI = 3.14159265;
-const vec3 SUN_DIR = vec3(-1.0, 0.0, 0.0); // the sun sets in the west
+const float TAU = 6.2831853;
+const vec3 SUN_DIR = vec3(-1.0, 0.0, 0.0); // west
 const vec3 SIDE = vec3(0.0, 0.0, 1.0);
+const vec3 PLANET_DIR = vec3(0.30, 0.52, -0.80);
 
-const vec3 TOP = vec3(0.06, 0.01, 0.15);
+const vec3 TOP = vec3(0.05, 0.01, 0.13);
 const vec3 MID = vec3(0.42, 0.05, 0.45);
-const vec3 HORIZON = vec3(1.0, 0.36, 0.45);
+const vec3 MID_COOL = vec3(0.24, 0.04, 0.40);
+const vec3 HORIZON = vec3(1.0, 0.40, 0.42);
+const vec3 HORIZON_COOL = vec3(0.80, 0.18, 0.62);
 const vec3 PINK = vec3(1.0, 0.16, 0.62);
 const vec3 ORANGE = vec3(1.0, 0.52, 0.12);
 const vec3 YELLOW = vec3(1.0, 0.86, 0.24);
 const vec3 WIRE = vec3(0.95, 0.35, 1.0);
 const vec3 FLOOR = vec3(0.05, 0.0, 0.1);
 const vec3 ROCK = vec3(0.07, 0.01, 0.13);
+const vec3 SILHOUETTE = vec3(0.035, 0.0, 0.07);
 
 float hash11(float n) {
     return fract(sin(n * 12.9898) * 43758.5453);
@@ -34,87 +54,367 @@ float hash13(vec3 p) {
     return fract((p.x + p.y) * p.z);
 }
 
-// a low-poly ridge around the horizon: straight lines between random peaks, N segments all the way round
+float bar(int i) {
+    vec4 v = i < 4 ? Bars0 : i < 8 ? Bars1 : i < 12 ? Bars2 : Bars3;
+    return v[i - (i / 4) * 4];
+}
+
+// the angle round the horizon from a horizontal direction c (0 towards it)
+float azFrom(vec3 d, vec3 c) {
+    return atan(dot(d, vec3(-c.z, 0.0, c.x)), dot(d, c));
+}
+
+// straight lines between random peaks, n of them all the way round
 float ridge(float x, float n, float seed) {
     float i = floor(x);
     return mix(hash11(mod(i, n) + seed), hash11(mod(i + 1.0, n) + seed), fract(x));
 }
 
-// how much of a thin line through every whole number of v there is at this pixel (smooth, no shimmer)
+// a thin line through every whole number of v (smooth, fades out before it would shimmer)
 float lines(float v, float width) {
     float aa = fwidth(v);
     float d = 0.5 - abs(fract(v) - 0.5);
     return (1.0 - smoothstep(width, width + aa * 1.5, d)) * (1.0 - smoothstep(0.3, 0.8, aa));
 }
 
+// ---- sky things ----
+
+vec3 stars(vec3 d, float h, float away, float t, vec3 col) {
+    vec3 cell = floor(d * 170.0);
+    float rnd = hash13(cell);
+    if (rnd > mix(0.994, 0.988, away)) {
+        vec3 centre = cell + 0.5 + (vec3(hash13(cell + 1.7), hash13(cell + 3.1), hash13(cell + 5.3)) - 0.5) * 0.5;
+        float twinkle = 0.5 + 0.5 * sin(t * (1.5 + 3.0 * hash13(cell + 9.0)) + rnd * 300.0);
+        twinkle = min(1.3, twinkle + High * 0.6);
+        float star = smoothstep(0.32, 0.0, length(d * 170.0 - centre));
+        col += vec3(1.0, 0.85, 1.0) * star * twinkle * smoothstep(0.1, 0.35, h);
+    }
+    return col;
+}
+
+vec3 shootingStars(float az, float elev, float t, vec3 col) {
+    for (int k = 0; k < 2; k++) {
+        float period = 6.0 + 3.0 * float(k);
+        float shifted = t + float(k) * 2.7;
+        float slot = floor(shifted / period);
+        float age = shifted - slot * period;
+        if (age > 1.1) {
+            continue;
+        }
+        float r1 = hash11(slot * 1.7 + float(k) * 13.0), r2 = hash11(slot * 3.1 + float(k) * 7.0), r3 = hash11(slot * 5.3 + 3.0);
+        vec2 start = vec2((r1 * 2.0 - 1.0) * PI, 0.5 + r2 * 0.55);
+        float a = -0.3 - r3 * 0.5;
+        vec2 dv = vec2(cos(a) * (r1 < 0.5 ? -1.0 : 1.0), sin(a));
+        vec2 head = start + dv * (age / 1.1) * 0.8;
+        vec2 rel = vec2(az, elev) - head;
+        rel.x = (mod(rel.x + PI, TAU) - PI) * cos(elev);
+        vec2 tail = -dv * 0.2;
+        float along = clamp(dot(rel, tail) / dot(tail, tail), 0.0, 1.0);
+        float dist = length(rel - tail * along);
+        float fade = (1.0 - along) * sin(age / 1.1 * PI);
+        col += (vec3(1.0, 0.85, 0.95) * smoothstep(0.004, 0.0, dist) + PINK * 0.35 * smoothstep(0.02, 0.0, dist)) * fade;
+    }
+    return col;
+}
+
+vec3 planet(vec3 d, float t, vec3 col) {
+    vec3 c = normalize(PLANET_DIR);
+    float z = dot(d, c);
+    if (z <= 0.5) {
+        return col;
+    }
+    vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), c));
+    vec3 up = cross(c, right);
+    vec2 uv = vec2(dot(d, right), dot(d, up)) / z;
+    float r = 0.12;
+    float pd = length(uv);
+    // the ring, in a tilted plane; its far half goes behind the planet
+    float tilt = 0.38;
+    vec2 ru = mat2(cos(tilt), sin(tilt), -sin(tilt), cos(tilt)) * uv;
+    float rr = length(vec2(ru.x, ru.y / 0.27));
+    float ring = smoothstep(0.165, 0.17, rr) * (1.0 - smoothstep(0.245, 0.25, rr)) * (0.55 + 0.45 * sin(rr * 170.0));
+    vec3 ringCol = mix(PINK, ORANGE, 0.45);
+    col += PINK * 0.18 * exp(-max(pd - r, 0.0) * 22.0);
+    if (ru.y > 0.0) {
+        col = mix(col, ringCol, ring * 0.8);
+    }
+    if (pd < r + 0.003) {
+        vec2 q = uv / r;
+        float band = 0.5 + 0.5 * sin(q.y * 13.0 + sin(q.x * 3.0 + t * 0.15) * 0.7);
+        vec3 surface = mix(vec3(0.32, 0.05, 0.45), vec3(0.98, 0.38, 0.62), band * 0.65 + 0.15);
+        vec2 sunFlat = normalize(vec2(dot(SUN_DIR, right), dot(SUN_DIR, up)) + vec2(0.0, 0.001));
+        vec3 n = vec3(q, sqrt(max(0.0, 1.0 - dot(q, q))));
+        float light = clamp(dot(n, normalize(vec3(sunFlat * 0.85, 0.45))), 0.0, 1.0);
+        surface = surface * (0.18 + 0.95 * light) + PINK * 0.5 * pow(1.0 - n.z, 3.0);
+        col = mix(col, surface, 1.0 - smoothstep(r - 0.002, r + 0.002, pd));
+    }
+    if (ru.y <= 0.0) {
+        col = mix(col, ringCol, ring * 0.8);
+    }
+    return col;
+}
+
+vec3 sun(float az, float elev, float t, vec3 col) {
+    float radius = 0.3 * (1.0 + 0.025 * sin(t * 1.3) + 0.12 * Bass);
+    vec2 sp = vec2(az, elev - 0.14);
+    float sd = length(sp);
+    col += PINK * (0.5 + 0.4 * Bass) * exp(-max(sd - radius, 0.0) * 6.0);
+    if (sd < radius + 0.01) {
+        float up = sp.y / radius * 0.5 + 0.5;
+        vec3 disc = mix(PINK, ORANGE, smoothstep(0.0, 0.55, up));
+        disc = mix(disc, YELLOW, smoothstep(0.5, 1.0, up));
+        float keep = 1.0;
+        if (up < 0.6) {
+            float band = fract(up * 9.0 + t * 0.35);
+            float gap = mix(0.5, 0.06, up / 0.6);
+            keep = smoothstep(gap - 0.03, gap + 0.03, band);
+        }
+        float edge = 1.0 - smoothstep(radius - 0.004, radius + 0.004, sd);
+        col = mix(col, disc * 1.15, keep * edge);
+    }
+    return col;
+}
+
+// thin bands of cloud near the horizon, drifting; dark against the sun, glowing pink elsewhere
+vec3 clouds(float az, float elev, float t, float facing, vec3 col) {
+    if (elev < 0.015 || elev > 0.3) {
+        return col;
+    }
+    float s = 0.5 + 0.22 * sin(3.0 * az + 1.0 + t * 0.03) + 0.16 * sin(7.0 * az - 2.0 - t * 0.05) + 0.12 * sin(13.0 * az + 0.5 + t * 0.02);
+    float mask = smoothstep(0.52, 0.72, s + 0.22 * sin(az * 5.0 + elev * 25.0)) * smoothstep(0.015, 0.05, elev) * (1.0 - smoothstep(0.18, 0.3, elev));
+    float stripe = smoothstep(0.25, 0.6, sin(elev * 120.0 + s * 7.0));
+    vec3 cloud = mix(vec3(1.0, 0.45, 0.72) * 0.75, vec3(0.22, 0.02, 0.28), smoothstep(0.55, 0.95, facing));
+    return mix(col, cloud, mask * stripe * 0.7);
+}
+
+// equaliser bars round the horizon (with music only), mirrored, faded in front of the sun
+vec3 equaliser(float az, float elev, vec3 col) {
+    if (Music < 0.001 || elev > 0.3) {
+        return col;
+    }
+    float x = (az / TAU + 0.5) * 64.0;
+    float i = floor(x);
+    float f = fract(x);
+    int b = int(mod(i, 32.0));
+    b = b < 16 ? b : 31 - b;
+    float height = bar(b) * 0.24 * Music;
+    float inBar = smoothstep(0.12, 0.18, f) * (1.0 - smoothstep(0.82, 0.88, f));
+    float show = inBar * (1.0 - smoothstep(height - 0.004, height, elev)) * smoothstep(0.2, 0.6, abs(az));
+    vec3 c = mix(PINK, ORANGE, clamp(elev / 0.24, 0.0, 1.0) * 1.3);
+    float lit = 0.35 + 0.65 * lines(elev * 90.0, 0.25); // (segmented, like an old equaliser)
+    return mix(col, c * (0.6 + 0.6 * lit), show * 0.75);
+}
+
+vec3 mountains(float az, float elev, vec3 col) {
+    float x = (az / TAU + 0.5) * 36.0;
+    float pulse = 1.0 + 0.6 * Bass;
+    // far, hazy layer
+    float far = (ridge(x * 1.5, 54.0, 77.0) * 0.16 + 0.03) * pulse;
+    if (elev < far) {
+        col = mix(col, mix(vec3(0.45, 0.08, 0.42), HORIZON_COOL * 0.8, 0.35), 0.85);
+        col += PINK * 0.6 * (1.0 - smoothstep(0.0, fwidth(elev) * 2.5, far - elev));
+    }
+    // near, wireframe layer (lower in front of the sun so it shows through the valley)
+    float peak = max(ridge(x, 36.0, 3.0) * 0.12, ridge(x * 2.0, 72.0, 41.0) * 0.07);
+    peak *= mix(0.3, 1.0, smoothstep(0.08, 0.55, abs(az))) * pulse;
+    if (elev < peak) {
+        float wire = max(lines(elev * 70.0, 0.04), lines(x * 2.0, 0.04)) * 0.55 * (1.0 + Mid);
+        float rim = 1.0 - smoothstep(0.0, fwidth(elev) * 2.5, peak - elev);
+        col = ROCK + WIRE * max(wire * (0.4 + 0.6 * elev / max(peak, 0.001)), rim);
+    }
+    return col;
+}
+
+vec3 city(vec3 d, float elev, float t, vec3 col) {
+    float a = azFrom(d, vec3(1.0, 0.0, 0.0)); // 0 = east
+    const float SPAN = 1.05;
+    if (abs(a) > SPAN || elev > 0.25 || elev < -0.01) {
+        return col;
+    }
+    float edge = 1.0 - smoothstep(0.55, 1.0, abs(a) / SPAN);
+    // back row: taller, hazy
+    float xb = (a + SPAN) * 15.0 + 0.37;
+    float ib = floor(xb);
+    float hb = (0.05 + 0.13 * pow(hash11(ib + 51.0), 1.4)) * edge;
+    float fb = fract(xb);
+    if (elev < hb && fb > 0.06 && fb < 0.94) {
+        col = mix(col, vec3(0.2, 0.03, 0.27), 0.9);
+        vec3 wcell = vec3(ib, floor(fb * 5.0), floor(elev * 200.0));
+        if (hash13(wcell + 3.0) > 0.7 && fract(fb * 5.0) > 0.3 && fract(elev * 200.0) > 0.4) {
+            col += ORANGE * 0.25;
+        }
+    }
+    // front row: dark, lit windows, neon tops, antennas
+    float x = (a + SPAN) * 24.0;
+    float i = floor(x);
+    float f = fract(x);
+    float r = hash11(i + 101.0);
+    float h = (0.022 + 0.1 * pow(r, 1.7)) * edge;
+    float gap = 0.05 + 0.15 * hash11(i + 7.0);
+    bool inside = f > gap && f < 1.0 - gap;
+    if (inside && elev < h) {
+        col = SILHOUETTE;
+        float u = (f - gap) / (1.0 - 2.0 * gap) * 4.0;
+        float v = elev * 260.0;
+        vec3 cell = vec3(i, floor(u), floor(v));
+        float w = hash13(cell);
+        float flicker = hash13(cell + floor(t / (4.0 + 9.0 * hash13(cell + 2.0))));
+        if (w > 0.45 && flicker > 0.25 && fract(u) > 0.22 && fract(u) < 0.78 && fract(v) > 0.3 && fract(v) < 0.75 && elev < h - 0.004) {
+            vec3 lamp = hash13(cell + 5.0) > 0.9 ? vec3(0.4, 0.9, 1.0) : mix(ORANGE, PINK, hash13(cell + 8.0));
+            col = lamp * (0.7 + 0.3 * w);
+        }
+        col += PINK * 0.8 * (1.0 - smoothstep(0.0, fwidth(elev) * 2.0, h - elev));
+    }
+    if (r > 0.82 && abs(f - 0.5) < 0.035 && elev >= h && elev < h + 0.035 * edge) {
+        col = SILHOUETTE; // antenna
+    }
+    if (r > 0.82) {
+        vec2 tip = vec2((f - 0.5) / 24.0, elev - (h + 0.035 * edge));
+        float blink = step(0.55, fract(t * 0.7 + r * 5.0));
+        col += vec3(1.0, 0.15, 0.3) * blink * smoothstep(0.004, 0.0, length(tip)) * 2.0;
+    }
+    return col;
+}
+
+// a palm tree silhouette: q = (angle round, elevation) from its foot, size = its height
+float palm(vec2 q, float size, float lean) {
+    vec2 p = q / size;
+    if (p.x < -1.0 || p.x > 1.3 || p.y < -0.05 || p.y > 1.4) {
+        return 0.0;
+    }
+    float aa = fwidth(p.y) * 1.5;
+    float s = 0.0;
+    if (p.y < 1.0) {
+        float width = 0.035 - 0.015 * p.y;
+        s = 1.0 - smoothstep(width, width + aa, abs(p.x - lean * p.y * p.y));
+    }
+    vec2 top = vec2(lean, 1.0);
+    for (int k = 0; k < 7; k++) {
+        float ang = -0.25 + float(k) / 6.0 * (PI + 0.5);
+        vec2 frond = vec2(cos(ang), sin(ang));
+        for (int j = 0; j < 9; j++) {
+            float along = (float(j) + 0.5) / 9.0;
+            vec2 c = top + frond * along * 0.6 - vec2(0.0, 0.42 * along * along);
+            float w = 0.045 * (1.0 - along) + 0.01;
+            s = max(s, 1.0 - smoothstep(w, w + aa, length(p - c)));
+        }
+    }
+    return s;
+}
+
+vec3 palms(vec3 d, float elev, vec3 col) {
+    float north = azFrom(d, vec3(0.0, 0.0, -1.0));
+    float south = azFrom(d, vec3(0.0, 0.0, 1.0));
+    float s = max(palm(vec2(north + 0.22, elev + 0.02), 0.3, 0.18), palm(vec2(north - 0.12, elev + 0.02), 0.22, -0.22));
+    s = max(s, max(palm(vec2(south - 0.25, elev + 0.02), 0.28, -0.2), palm(vec2(south + 0.08, elev + 0.02), 0.2, 0.25)));
+    return mix(col, SILHOUETTE, s);
+}
+
+// ---- the floor ----
+
+// how high the music raises the floor at (along the highway, across it), unscrolled
+float terrain(vec2 g) {
+    float lateral = abs(g.y) - 0.9;
+    if (lateral <= 0.0) {
+        return 0.0;
+    }
+    float band = lateral / 9.0;
+    float age = abs(g.x) / 16.0;
+    if (band >= 1.0 || age >= 1.0) {
+        return 0.0;
+    }
+    float v = texture(Sampler0, vec2(age, band * (15.0 / 16.0) + 0.5 / 16.0)).r;
+    return 0.72 * v * Music * smoothstep(0.0, 0.3, lateral) * (1.0 - smoothstep(0.7, 1.0, age)) * (1.0 - smoothstep(0.85, 1.0, band));
+}
+
+vec2 gridAt(vec3 p) {
+    return vec2(dot(p.xz, SUN_DIR.xz), dot(p.xz, SIDE.xz));
+}
+
+vec3 floorColour(vec3 d, float az, float t, float facing) {
+    float down = -d.y;
+    float hit = 1.0 / down; // flat floor one block below
+    if (Music > 0.001) {
+        // march along the view ray over the music's peaks
+        float start = 0.28 / down;
+        float end = min(hit, 26.0 / max(length(d.xz), 1.0e-4));
+        if (start < end) {
+            const int STEPS = 48;
+            float stride = (end - start) / float(STEPS);
+            float before = start;
+            for (int i = 0; i <= STEPS; i++) {
+                float ti = start + stride * float(i);
+                vec3 p = d * ti;
+                if (p.y < -1.0 + terrain(gridAt(p))) {
+                    float lo = before, hi = ti;
+                    for (int k = 0; k < 6; k++) {
+                        float m = 0.5 * (lo + hi);
+                        vec3 pm = d * m;
+                        if (pm.y < -1.0 + terrain(gridAt(pm))) {
+                            hi = m;
+                        } else {
+                            lo = m;
+                        }
+                    }
+                    hit = hi;
+                    break;
+                }
+                before = ti;
+            }
+        }
+    }
+    vec3 p = d * hit;
+    float height = clamp((p.y + 1.0) / 0.72, 0.0, 1.0);
+    vec2 g = gridAt(p);
+    vec2 moving = vec2(g.x + t * 2.5, g.y);
+    float road = abs(g.y);
+    vec3 col;
+    if (road < 0.75) {
+        // the highway: dark, orange edges, a dashed middle line
+        col = vec3(0.03, 0.0, 0.06);
+        float edgeLine = 1.0 - smoothstep(0.03, 0.03 + fwidth(road) * 1.5, abs(road - 0.7));
+        float dash = (1.0 - smoothstep(0.025, 0.025 + fwidth(road) * 1.5, road)) * step(0.5, fract(moving.x * 0.5));
+        col += ORANGE * 1.2 * edgeLine + YELLOW * 0.9 * dash * (1.0 - smoothstep(0.3, 0.9, fwidth(moving.x)));
+    } else {
+        float grid = max(lines(moving.x, 0.03), lines(moving.y, 0.03));
+        float near = 0.5 - max(abs(fract(moving.x) - 0.5), abs(fract(moving.y) - 0.5));
+        vec3 lineCol = mix(PINK, mix(ORANGE, YELLOW, height), smoothstep(0.05, 0.6, height));
+        col = FLOOR + PINK * 0.3 * height + lineCol * 1.3 * grid * (1.0 + 0.6 * Mid)
+                + PINK * 0.12 * (1.0 - smoothstep(0.0, 0.2, near)) * (1.0 - smoothstep(0.3, 0.9, fwidth(moving.x)));
+    }
+    // the sun's reflection, the haze far away
+    float haze = exp(-14.0 / hit);
+    col += ORANGE * 0.3 * exp(-abs(az) * 5.0) * haze;
+    col = mix(col, mix(HORIZON_COOL, HORIZON, facing) * 0.9, haze * 0.8);
+    col += PINK * 0.45 * exp(-down * 40.0);
+    return col;
+}
+
 void main() {
     vec3 d = normalize(dir);
     float t = Time / 20.0; // seconds
     float elev = asin(clamp(d.y, -1.0, 1.0));
-    float az = atan(dot(d, SIDE), dot(d, SUN_DIR)); // 0 towards the sun
+    float az = azFrom(d, SUN_DIR); // 0 towards the sun
+    float facing = pow(clamp(dot(normalize(d.xz + vec2(1.0e-5)), SUN_DIR.xz) * 0.5 + 0.5, 0.0, 1.0), 1.5); // 1 sunwards
     vec3 col;
 
     if (elev >= 0.0) {
-        // ---- sky ----
         float h = elev / (PI * 0.5);
-        col = mix(HORIZON, MID, smoothstep(0.0, 0.2, h));
+        col = mix(mix(HORIZON_COOL, HORIZON, facing), mix(MID_COOL, MID, facing), smoothstep(0.0, 0.2, h));
         col = mix(col, TOP, smoothstep(0.15, 0.65, h));
-
-        // stars, twinkling
-        vec3 cell = floor(d * 170.0);
-        float rnd = hash13(cell);
-        if (rnd > 0.994) {
-            vec3 centre = cell + 0.5 + (vec3(hash13(cell + 1.7), hash13(cell + 3.1), hash13(cell + 5.3)) - 0.5) * 0.5;
-            float twinkle = 0.5 + 0.5 * sin(t * (1.5 + 3.0 * hash13(cell + 9.0)) + rnd * 300.0);
-            float star = smoothstep(0.32, 0.0, length(d * 170.0 - centre));
-            col += vec3(1.0, 0.85, 1.0) * star * twinkle * smoothstep(0.12, 0.4, h);
-        }
-
-        // the sun: glow, then the disc with stripes in its lower half drifting down
-        float radius = 0.3 * (1.0 + 0.025 * sin(t * 1.3));
-        vec2 sp = vec2(az, elev - 0.14);
-        float sd = length(sp);
-        col += PINK * 0.5 * exp(-max(sd - radius, 0.0) * 6.0);
-        if (sd < radius + 0.01) {
-            float up = sp.y / radius * 0.5 + 0.5; // 0 at the bottom of the disc, 1 at the top
-            vec3 sun = mix(PINK, ORANGE, smoothstep(0.0, 0.55, up));
-            sun = mix(sun, YELLOW, smoothstep(0.5, 1.0, up));
-            float keep = 1.0;
-            if (up < 0.6) {
-                float band = fract(up * 9.0 + t * 0.35);
-                float gap = mix(0.5, 0.06, up / 0.6); // wider gaps lower down
-                keep = smoothstep(gap - 0.03, gap + 0.03, band);
-            }
-            float edge = 1.0 - smoothstep(radius - 0.004, radius + 0.004, sd);
-            col = mix(col, sun * 1.15, keep * edge);
-        }
-
-        // a glow along the horizon
-        col += PINK * 0.45 * exp(-elev * 40.0);
-
-        // wireframe mountains (lower right in front of the sun, so it shows through the valley)
-        float x = (az / (2.0 * PI) + 0.5) * 36.0;
-        float peak = max(ridge(x, 36.0, 3.0) * 0.12, ridge(x * 2.0, 72.0, 41.0) * 0.07);
-        peak *= mix(0.3, 1.0, smoothstep(0.08, 0.55, abs(az)));
-        if (elev < peak) {
-            float wire = max(lines(elev * 70.0, 0.04), lines(x * 2.0, 0.04)) * 0.55;
-            float rim = 1.0 - smoothstep(0.0, fwidth(elev) * 2.5, peak - elev);
-            col = ROCK + WIRE * max(wire * (0.4 + 0.6 * elev / max(peak, 0.001)), rim);
-        }
+        col = stars(d, h, 1.0 - facing, t, col);
+        col = shootingStars(az, elev, t, col);
+        col = planet(d, t, col);
+        col = sun(az, elev, t, col);
+        col = equaliser(az, elev, col);
+        col = clouds(az, elev, t, facing, col);
+        col += mix(PINK, ORANGE, facing * 0.4) * 0.45 * exp(-elev * 40.0); // glow along the horizon
+        col = mountains(az, elev, col);
     } else {
-        // ---- the floor: a grid on a plane below you, moving towards you ----
-        float down = -d.y;
-        vec2 p = d.xz / down;
-        vec2 g = vec2(dot(p, SUN_DIR.xz) + t * 2.5, dot(p, SIDE.xz));
-        float grid = max(lines(g.x, 0.03), lines(g.y, 0.03));
-        float near = 0.5 - max(abs(fract(g.x) - 0.5), abs(fract(g.y) - 0.5));
-        col = FLOOR + PINK * 1.3 * grid + PINK * 0.12 * (1.0 - smoothstep(0.0, 0.2, near)) * (1.0 - smoothstep(0.3, 0.9, fwidth(g.x)));
-        // the sun's reflection and the haze far away
-        float haze = exp(-down * 14.0);
-        col += ORANGE * 0.3 * exp(-abs(az) * 5.0) * haze;
-        col = mix(col, HORIZON * 0.9, haze * 0.8);
-        col += PINK * 0.45 * exp(-down * 40.0);
+        col = floorColour(d, az, t, facing);
     }
+    col = city(d, elev, t, col);
+    col = palms(d, elev, col);
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

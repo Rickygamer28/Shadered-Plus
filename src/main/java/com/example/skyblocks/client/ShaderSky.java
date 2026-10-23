@@ -55,8 +55,8 @@ public final class ShaderSky {
     @org.jetbrains.annotations.Nullable
     public static SkyboxRenderPass passFor(String name, ResourceLocation folder, SkyblockBatchData batch) {
         return switch (name) {
-            case SkyNames.CHAOS -> new Pass(folder, batch, () -> chaos, NOISE);
-            case SkyNames.SYNTHWAVE -> new Pass(folder, batch, () -> synthwave, null);
+            case SkyNames.CHAOS -> new Pass(folder, batch, () -> chaos, NOISE, null);
+            case SkyNames.SYNTHWAVE -> new Pass(folder, batch, () -> synthwave, MusicReactor.HISTORY, MusicReactor::apply); // (reacts to music)
             default -> null;
         };
     }
@@ -108,14 +108,18 @@ public final class ShaderSky {
         private final java.util.function.Supplier<ShaderInstance> shaderSource;
         @org.jetbrains.annotations.Nullable
         private final ResourceLocation texture;
+        @org.jetbrains.annotations.Nullable
+        private final java.util.function.Consumer<ShaderInstance> setup;
         private TextureTarget target;
 
         Pass(ResourceLocation folder, SkyblockBatchData batch, java.util.function.Supplier<ShaderInstance> shader,
-             @org.jetbrains.annotations.Nullable ResourceLocation texture) {
+             @org.jetbrains.annotations.Nullable ResourceLocation texture,
+             @org.jetbrains.annotations.Nullable java.util.function.Consumer<ShaderInstance> setup) {
             super(folder, batch, new SkyboxTranslation());
             this.batch = batch;
             this.shaderSource = shader;
             this.texture = texture;
+            this.setup = setup;
         }
 
         @Override
@@ -138,6 +142,10 @@ public final class ShaderSky {
                 target.resize(renderer.getPreviousWidth(), renderer.getPreviousHeight(), Minecraft.ON_OSX);
             }
             SkyblockRenderer.DATA_LIST.put(batch, target.getColorTextureId());
+            target.bindWrite(true);
+            if (setup != null) {
+                setup.accept(shader); // (its own uniforms / texture brought up to date)
+            }
             target.bindWrite(true);
             draw(shader, texture, poseStack.last().pose(), (renderTick % 240000) + partialTick);
             renderer.getRenderBuffer().bindWrite(true);

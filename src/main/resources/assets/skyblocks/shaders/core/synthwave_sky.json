@@ -1,7 +1,11 @@
 {
     "vertex": "skyblocks:shader_sky",
     "fragment": "skyblocks:synthwave_sky",
-    "samplers": [],
+    "samplers": [
+        {
+            "name": "Sampler0"
+        }
+    ],
     "uniforms": [
         {
             "name": "ModelViewMat",
@@ -54,6 +58,82 @@
             "type": "float",
             "count": 1,
             "values": [
+                0.0
+            ]
+        },
+        {
+            "name": "Music",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
+            ]
+        },
+        {
+            "name": "Bass",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
+            ]
+        },
+        {
+            "name": "Mid",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
+            ]
+        },
+        {
+            "name": "High",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
+            ]
+        },
+        {
+            "name": "Bars0",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ]
+        },
+        {
+            "name": "Bars1",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ]
+        },
+        {
+            "name": "Bars2",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ]
+        },
+        {
+            "name": "Bars3",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0.0,
+                0.0,
+                0.0,
                 0.0
             ]
         }

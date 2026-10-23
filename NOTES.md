@@ -127,3 +127,10 @@
   dropped on break); sneak + empty hand takes it out. client/WaterCausticsModel wraps the block model (ModelData):
   inside block's quads + the overlay model (block/water_caustics_overlay, 0.01 outside). A separate Pool Floor block was
   made and dropped again (user: right-click instead). Recipe: 4 light blue concrete + water bucket + prismarine crystals -> 4.
+- Synthwave round 2 (23 Oct 2026, user: "do all reactions + jukebox distance, make it better all round"): city skyline
+  east, palms north/south, ringed planet NNE, shooting stars, cloud stripes, far mountain layer, highway along the sun
+  axis. client/MusicReactor: PlayStreamingSourceEvent (RECORDS/MUSIC) -> decodes the same .ogg (SoundBufferLibrary.getStream,
+  background) into 16 log bands per 1024 samples (FFT), per-band 20-95th percentile normalised; follows play time
+  (minus pause); weight = jukebox linear falloff (range = max(vol,1)*attenuationDistance) * volume settings; note blocks
+  = kicks by pitch. Uniforms Music/Bass/Mid/High/Bars0-3 + history texture skyblocks:dynamic/music_history (128 steps
+  at 24/s x 16 bands) -> floor heightfield raymarch (peaks beside the highway, flowing away), mountains/sun pulse, EQ ring.
