@@ -3,8 +3,9 @@
 // An infinity cube: six half mirrors with LED strips along the twelve edges. Light bounces between every pair of
 // facing walls, so the box is seen again and again in every direction: its edges make a glowing grid that goes on
 // forever. Mirror images of a box fill space with copies of it, so the line of sight from the eye is simply followed
-// straight on through that endless grid of boxes, wall to wall; the further it goes, the more reflections (dimmer),
-// and where it passes close to a strip, its LEDs light the pixel. The boxes are exactly the blocks, so the grid lines
+// straight on through that endless grid of boxes, box by box; the further it goes, the more reflections (dimmer). In
+// each box it passes, the twelve strips are checked: how close the line of sight really comes to each one (in 3D,
+// within that box, so every strip is counted exactly once) and where along it, for the LED there. The boxes are exactly the blocks, so the grid lines
 // up with them; each strip sits just inside the bars, so in the reflections they come in pairs along every wall.
 
 uniform vec3 Eye;        // the eye (relative to the camera position)
@@ -25,7 +26,7 @@ const float INSET = 0.072;     // the LED strips: on the bars' inner side, this 
 const float LED_GAP = 0.0625;  // between two LEDs on a strip
 const float LED_SIZE = 0.013;  // an LED's radius
 const float KEEP = 0.84;       // light left after each reflection
-const int STEPS = 40;          // walls followed at most
+const int STEPS = 40;          // boxes followed at most
 
 vec3 hue(float h) {
     return clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
@@ -41,6 +42,12 @@ float bump(float x, float r, float period, float fw) {
     return mix(r / wide * exp(-x * x / (wide * wide)), average, blend);
 }
 
+// Across a strip: a soft line r wide at distance x, widened to at least a pixel (same light), never thinner than that.
+float line(float x, float r, float fw) {
+    float wide = sqrt(r * r + fw * fw);
+    return r / wide * exp(-x * x / (wide * wide));
+}
+
 vec2 others(vec3 v, int axis) {
     return axis == 0 ? v.yz : (axis == 1 ? v.xz : v.xy);
 }
@@ -53,42 +60,41 @@ vec3 ledColor(vec3 at, float reflections) {
     return mix(ColorFront, ColorDeep, 1.0 - exp(-reflections * 0.12));
 }
 
-// The strips near a wall crossed at `at` (wall across `axis`, at the whole-box coordinate A): the ones on side `side`
-// of it (+1 / -1: towards bigger / smaller coordinates), for both directions the strips run in. Light of their LEDs
-// (x) and glow (y) for the line of sight passing there; distances are the real 3D distance to each strip.
-vec2 strips(int axis, vec3 at, vec3 sight, float side, vec3 size, float fw) {
-    float A = size[axis] * floor(at[axis] / size[axis] + 0.5);
-    float wa = A - (A + side * INSET);                      // (from the strip to the wall, across it)
-    vec2 c = others(at, axis);
-    vec2 period = others(size, axis);
-    vec2 offW = c - period * floor(c / period + 0.5);       // from the nearest wall, each way, on this wall
-    vec2 strip = sign(offW + 1e-6) * INSET;                 // the nearest strip each way
-    vec2 w = offW - strip;
-    vec2 gap = period / max(vec2(1.0), floor(period / LED_GAP + 0.5));
-    float da = sight[axis];
-    vec2 db = others(sight, axis);
-    vec2 result = vec2(0.0);
-    for (int k = 0; k < 2; k++) {
-        // k = 0: strips running along the wall's second axis (lying at a whole first coordinate), k = 1: the other way
-        float wb = k == 0 ? w.x : w.y, d1 = k == 0 ? db.x : db.y, d2 = k == 0 ? db.y : db.x;
-        float s = max(length(vec2(da, d1)), 1e-4);
-        float dist = abs(wa * d1 - wb * da) / s;
-        float along = (k == 0 ? c.y : c.x) - d2 * (wa * da + wb * d1) / (s * s);
-        float g = k == 0 ? gap.y : gap.x;
-        float spacing = (k == 0 ? period.x : period.y) * max(abs(da) / s, 0.3);
-        float fwAlong = fw / max(s, 0.05);
-        float x = (fract(along / g) - 0.5) * g;
-        result.x += bump(dist, LED_SIZE, spacing, fw) * bump(x, LED_SIZE, g, fwAlong);
-        result.y += bump(dist, LED_SIZE * 3.0, spacing, fw) * bump(x, LED_SIZE * 3.0, g, fwAlong);
+// The light (x: LEDs, y: glow) of the strip running along `axis` at (s1, s2) on the other two axes, inside the box at
+// `origin`, for the line of sight q + sight * t with t from t0 to t1 (its part in that box). `reflections` per block.
+vec3 strip(int axis, float s1, float s2, vec3 local, vec3 sight, float t0, float t1, vec3 size, float eyeDistance,
+           float perBlock, vec3 origin) {
+    vec2 o = others(local, axis), d = others(sight, axis);
+    vec2 w = vec2(s1, s2) - o;
+    float dd = max(dot(d, d), 1e-8);
+    float t = clamp(dot(w, d) / dd, t0, t1);                  // closest along the line of sight, within this box
+    vec2 off = o + d * t - vec2(s1, s2);
+    float dist2 = dot(off, off);
+    float fw = PixelSize * (eyeDistance + t);
+    float reach = 3.0 * (LED_SIZE * 3.0) + 3.0 * fw;
+    if (dist2 > reach * reach) {
+        return vec3(0.0);                                     // too far to light this pixel
     }
-    return result;
+    float dist = sqrt(dist2);
+    float len = size[axis];
+    float gap = len / max(1.0, floor(len / LED_GAP + 0.5));
+    float along = local[axis] + sight[axis] * t;
+    float x = (fract(along / gap) - 0.5) * gap;
+    float fwAlong = fw / max(sqrt(dd), 0.05);                 // (a strip seen end-on: its LEDs bunch up)
+    float reflections = t * perBlock;
+    float light = pow(KEEP, reflections) * (0.86 + 0.14 * sin(Time * 2.5 - reflections * 0.5));
+    float led = line(dist, LED_SIZE, fw) * bump(x, LED_SIZE, gap, fwAlong);
+    float glow = line(dist, LED_SIZE * 3.0, fw) * bump(x, LED_SIZE * 3.0, gap, fwAlong);
+    // (an LED's hot white middle only while it's bigger than a pixel: blurred together they'd turn the grid grey)
+    float sharp = LED_SIZE * LED_SIZE / (LED_SIZE * LED_SIZE + fw * fw);
+    vec3 at = origin + local + sight * t;
+    return (ledColor(at, reflections) * (led * 2.4 + glow * 0.15) + vec3(led * 0.9 * sharp)) * light;
 }
 
 void main() {
     vec3 sight = normalize(facePos - Eye);
     vec3 p = facePos - BoxMin;
     float eyeDistance = length(facePos - Eye);
-    float pixel = PixelSize * eyeDistance;
     vec3 base = Rainbow > 0.5 ? hue(fract(Time * 0.2)) : ColorFront;
 
     // the face this pixel is on (the axis it's flat across), and how far from that face's border
@@ -105,39 +111,43 @@ void main() {
     }
 
     vec3 size = BoxSize;
-    float perBlock = dot(abs(sight), 1.0 / size);           // walls passed per block travelled (on average)
-    vec3 lit = vec3(0.0);
-    // the strips just behind the face looked through (the real ones, along this face's edges)
-    {
-        vec2 l = strips(face, p, sight, sign(sight[face]), size, pixel);
-        float sharp = LED_SIZE * LED_SIZE / (LED_SIZE * LED_SIZE + pixel * pixel);
-        lit += ledColor(p, 0.0) * (l.x * 2.4 + l.y * 0.12) * 0.6 + vec3(l.x * 0.9 * sharp) * 0.6;
-    }
-    // then on through the box and its endless mirror images (a hair inside the face, so the face isn't a wall again)
-    vec3 q = p + sight * 1e-4;
+    float perBlock = dot(abs(sight), 1.0 / size);            // walls passed per block travelled (on average)
+    vec3 q = p + sight * 1e-4;                               // (a hair inside the face)
     vec3 inv = 1.0 / max(abs(sight), vec3(1e-5));
     vec3 cell = floor(q / size);
-    vec3 next = (cell + step(0.0, sight)) * size;           // the next wall on each axis
+    vec3 next = (cell + step(0.0, sight)) * size;            // the next wall on each axis
     vec3 tNext = abs(next - q) * inv;
     vec3 tStep = size * inv;
+    vec3 cellStep = sign(sight);
+    vec3 lit = vec3(0.0);
+    float t0 = 0.0;
+    vec3 hi = size - INSET;
     for (int i = 0; i < STEPS; i++) {
         int axis = tNext.x < tNext.y ? (tNext.x < tNext.z ? 0 : 2) : (tNext.y < tNext.z ? 1 : 2);
-        float t = tNext[axis];
-        tNext[axis] += tStep[axis];
-        // how many reflections deep: smooth with the distance (counting walls one by one jumped where two walls are
-        // crossed at nearly the same spot, and those spots sparkled as you moved)
-        float reflections = t * perBlock;
-        float light = pow(KEEP, reflections) * (0.86 + 0.14 * sin(Time * 2.5 - reflections * 0.5));
-        if (light < 0.004) {
+        float t1 = tNext[axis];
+        // this box: from t0 to t1, positions relative to its corner
+        vec3 origin = cell * size;
+        vec3 local = q - origin;
+        if (pow(KEEP, t0 * perBlock) < 0.004) {
             break;
         }
-        vec3 at = q + sight * t;
-        float fw = PixelSize * (eyeDistance + t);
-        // the strips on both sides of this wall
-        vec2 l = strips(axis, at, sight, 1.0, size, fw) + strips(axis, at, sight, -1.0, size, fw);
-        // (an LED's hot white middle only while it's bigger than a pixel: blurred together they'd turn the grid grey)
-        float sharp = LED_SIZE * LED_SIZE / (LED_SIZE * LED_SIZE + fw * fw);
-        lit += (ledColor(at, reflections) * (l.x * 2.4 + l.y * 0.12 + 0.006) + vec3(l.x * 0.9 * sharp)) * 0.6 * light;
+        lit += strip(0, INSET, INSET, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
+             + strip(0, hi.y, INSET, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
+             + strip(0, INSET, hi.z, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
+             + strip(0, hi.y, hi.z, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
+             + strip(1, INSET, INSET, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
+             + strip(1, hi.x, INSET, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
+             + strip(1, INSET, hi.z, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
+             + strip(1, hi.x, hi.z, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
+             + strip(2, INSET, INSET, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
+             + strip(2, hi.x, INSET, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
+             + strip(2, INSET, hi.y, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
+             + strip(2, hi.x, hi.y, local, sight, t0, t1, size, eyeDistance, perBlock, origin);
+        lit += ledColor(origin, t0 * perBlock) * 0.004 * pow(KEEP, t0 * perBlock); // (a faint glow in the glass)
+        // on to the next box
+        t0 = t1;
+        tNext[axis] += tStep[axis];
+        cell[axis] += cellStep[axis];
     }
     vec3 col = 1.0 - exp(-lit * 1.5);
     float fresnel = pow(1.0 - abs(sight[face]), 4.0);
