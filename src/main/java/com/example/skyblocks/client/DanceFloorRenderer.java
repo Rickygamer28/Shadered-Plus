@@ -444,5 +444,4 @@ public final class DanceFloorRenderer {
             }
         });
     }
-    }
 }

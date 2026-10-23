@@ -511,5 +511,4 @@ public final class AquariumRenderer {
             }
         });
     }
-    }
 }
