@@ -154,7 +154,7 @@ public final class InfinityMirrorRenderer {
                     for (IslandJob job : jobs) {
                         // in the island's own coordinates: positions relative to its corner, the eye brought in too
                         Matrix4f modelView = new Matrix4f(view).mul(job.pose);
-                        Vector3f eye = new Matrix4f(modelView).invert().transformPosition(new Vector3f());
+                        Vector3f eye = eyeOf(projection, modelView);
                         setModelView(modelView);
                         List<Runnable> shapes = new ArrayList<>();
                         drawSet(job.set, Vec3.ZERO, new Vec3(eye.x, eye.y, eye.z), eye, modelView, projection, !overlay, shapes);
@@ -178,7 +178,7 @@ public final class InfinityMirrorRenderer {
             return;
         }
         // the real eye (the model-view can hold a small shift: view bobbing with a shader pack)
-        Vector3f eyeRel = new Matrix4f(view).invert().transformPosition(new Vector3f());
+        Vector3f eyeRel = eyeOf(projection, view);
         Vec3 eye = cam.add(eyeRel.x, eyeRel.y, eyeRel.z);
         InfinitySet set = world;
         scoped(view, projection, overlay -> {
@@ -258,6 +258,19 @@ public final class InfinityMirrorRenderer {
         });
     }
 
+    /**
+     * Where the eye really is (in the coordinates {@code modelView} takes): the centre of the whole projection. While
+     * walking, the game puts the view bobbing (a small sway and shift) into the projection; working the tunnels out
+     * from the camera position without it, their insides swayed and stretched against their frames with every step.
+     */
+    static Vector3f eyeOf(Matrix4f projection, Matrix4f modelView) {
+        org.joml.Vector4f centre = new Matrix4f(projection).mul(modelView).invert().transform(new org.joml.Vector4f(0, 0, 1, 0));
+        if (Math.abs(centre.w) < 1e-9F) {
+            return new Matrix4f(modelView).invert().transformPosition(new Vector3f());
+        }
+        return new Vector3f(centre.x / centre.w, centre.y / centre.w, centre.z / centre.w);
+    }
+
     private static float seconds() {
         return (Util.getMillis() % 3_600_000L) / 1000.0F;
     }
@@ -329,7 +342,7 @@ public final class InfinityMirrorRenderer {
             return;
         }
         Vec3 at = new Vec3(ex, ey, ez);
-        Vector3f eyeRel = new Matrix4f(modelView).invert().transformPosition(new Vector3f());
+        Vector3f eyeRel = eyeOf(projection, modelView);
         drawSet(world, at, at.add(eyeRel.x, eyeRel.y, eyeRel.z), eyeRel, modelView, projection, true, new ArrayList<>());
     }
 
@@ -343,7 +356,7 @@ public final class InfinityMirrorRenderer {
         }
         Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewMatrix()).mul(pose);
         Matrix4f projection = new Matrix4f(RenderSystem.getProjectionMatrix());
-        Vector3f eye = new Matrix4f(modelView).invert().transformPosition(new Vector3f());
+        Vector3f eye = eyeOf(projection, modelView);
         Matrix4fStack stack = RenderSystem.getModelViewStack();
         stack.pushMatrix();
         try {
