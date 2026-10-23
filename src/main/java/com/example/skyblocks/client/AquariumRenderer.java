@@ -53,9 +53,15 @@ public final class AquariumRenderer {
     /** One tank: its blocks' outer faces, its corner and size. */
     private static final class Floor {
         final List<Face> faces = new ArrayList<>();
+        final Set<BlockPos> blocks = new HashSet<>();
         BlockPos min;
         int sizeX, sizeY, sizeZ;
+        /** Which spots of the box round the tank are water (1 bit each, 24 to a float, in 4 matrices); or the whole box. */
+        final Matrix4f[] occupancy = {new Matrix4f(), new Matrix4f(), new Matrix4f(), new Matrix4f()};
+        boolean full;
     }
+
+    private static final int MAX_BITS = 4 * 16 * 24;
 
     static ShaderInstance shader;
     private static final List<Floor> FLOORS = new ArrayList<>();
@@ -73,7 +79,7 @@ public final class AquariumRenderer {
         @SubscribeEvent
         public static void register(RegisterShadersEvent event) throws java.io.IOException {
             event.registerShader(new ShaderInstance(event.getResourceProvider(),
-                    ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "aquarium"), DefaultVertexFormat.POSITION), s -> shader = s);
+                    ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "aquarium"), DefaultVertexFormat.POSITION_TEX_COLOR), s -> shader = s);
         }
     }
 
@@ -171,6 +177,7 @@ public final class AquariumRenderer {
                 shader.safeGetUniform("BoxMin").set(mx, my, mz);
                 shader.safeGetUniform("BoxSize").set((float) floor.sizeX, (float) floor.sizeY, (float) floor.sizeZ);
                 shader.safeGetUniform("Seed").set(seed);
+                setShape(floor);
                 MeshData mesh = mesh(floor, shown, cam);
                 if (mesh != null) {
                     BufferUploader.drawWithShader(mesh);
@@ -179,6 +186,7 @@ public final class AquariumRenderer {
                     shader.safeGetUniform("BoxMin").set(mx, my, mz);
                     shader.safeGetUniform("BoxSize").set((float) floor.sizeX, (float) floor.sizeY, (float) floor.sizeZ);
                     shader.safeGetUniform("Seed").set(seed);
+                    setShape(floor);
                     MeshData shape = mesh(floor, shown, cam);
                     if (shape != null) {
                         BufferUploader.drawWithShader(shape);
@@ -192,29 +200,51 @@ public final class AquariumRenderer {
         }
     }
 
-    /** The tank's outer faces (positions relative to the camera). */
+    private static void setShape(Floor floor) {
+        for (int m = 0; m < 4; m++) {
+            shader.safeGetUniform("Occ" + m).set(floor.occupancy[m]);
+        }
+        shader.safeGetUniform("Full").set(floor.full ? 1.0F : 0.0F);
+    }
+
+    /**
+     * The tank's outer faces (positions relative to the camera). Texture coordinates: across the face (0..1); colour:
+     * which of the face's 4 edges are edges of the tank (and so get a frame): u = 0, u = 1, v = 0, v = 1.
+     */
     private static MeshData mesh(Floor floor, List<Face> faces, Vec3 cam) {
-        BufferBuilder b = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
+        BufferBuilder b = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         for (Face f : faces) {
-            float x = (float) (f.pos().getX() - cam.x), y = (float) (f.pos().getY() - cam.y), z = (float) (f.pos().getZ() - cam.z);
-            switch (f.side()) {
-                case UP -> quad(b, x, y + 1, z, x, y + 1, z + 1, x + 1, y + 1, z + 1, x + 1, y + 1, z);
-                case DOWN -> quad(b, x, y, z, x + 1, y, z, x + 1, y, z + 1, x, y, z + 1);
-                case NORTH -> quad(b, x + 1, y, z, x, y, z, x, y + 1, z, x + 1, y + 1, z);
-                case SOUTH -> quad(b, x, y, z + 1, x + 1, y, z + 1, x + 1, y + 1, z + 1, x, y + 1, z + 1);
-                case WEST -> quad(b, x, y, z, x, y, z + 1, x, y + 1, z + 1, x, y + 1, z);
-                case EAST -> quad(b, x + 1, y, z + 1, x + 1, y, z, x + 1, y + 1, z, x + 1, y + 1, z + 1);
+            Direction side = f.side();
+            Direction du = side.getAxis() == Direction.Axis.X ? Direction.SOUTH : Direction.EAST;
+            Direction dv = side.getAxis() == Direction.Axis.Y ? Direction.SOUTH : Direction.UP;
+            int flags = (framed(floor, f.pos(), du.getOpposite(), side) ? 0xFF : 0)
+                    | (framed(floor, f.pos(), du, side) ? 0xFF00 : 0)
+                    | (framed(floor, f.pos(), dv.getOpposite(), side) ? 0xFF0000 : 0)
+                    | (framed(floor, f.pos(), dv, side) ? 0xFF000000 : 0);
+            int x = f.pos().getX(), y = f.pos().getY(), z = f.pos().getZ();
+            int[][] corners = switch (side) {
+                case UP -> new int[][] {{x, y + 1, z}, {x, y + 1, z + 1}, {x + 1, y + 1, z + 1}, {x + 1, y + 1, z}};
+                case DOWN -> new int[][] {{x, y, z}, {x + 1, y, z}, {x + 1, y, z + 1}, {x, y, z + 1}};
+                case NORTH -> new int[][] {{x + 1, y, z}, {x, y, z}, {x, y + 1, z}, {x + 1, y + 1, z}};
+                case SOUTH -> new int[][] {{x, y, z + 1}, {x + 1, y, z + 1}, {x + 1, y + 1, z + 1}, {x, y + 1, z + 1}};
+                case WEST -> new int[][] {{x, y, z}, {x, y, z + 1}, {x, y + 1, z + 1}, {x, y + 1, z}};
+                case EAST -> new int[][] {{x + 1, y, z + 1}, {x + 1, y, z}, {x + 1, y + 1, z}, {x + 1, y + 1, z + 1}};
+            };
+            for (int[] c : corners) {
+                int ox = c[0] - x, oy = c[1] - y, oz = c[2] - z;
+                float u = side.getAxis() == Direction.Axis.X ? oz : ox;
+                float v = side.getAxis() == Direction.Axis.Y ? oz : oy;
+                b.addVertex((float) (c[0] - cam.x), (float) (c[1] - cam.y), (float) (c[2] - cam.z)).setUv(u, v)
+                        .setColor(flags & 0xFF, (flags >> 8) & 0xFF, (flags >> 16) & 0xFF, (flags >>> 24) & 0xFF);
             }
         }
         return b.build();
     }
 
-    private static void quad(BufferBuilder b, float x0, float y0, float z0, float x1, float y1, float z1,
-                             float x2, float y2, float z2, float x3, float y3, float z3) {
-        b.addVertex(x0, y0, z0);
-        b.addVertex(x1, y1, z1);
-        b.addVertex(x2, y2, z2);
-        b.addVertex(x3, y3, z3);
+    /** Whether the edge of this face towards {@code d} is an edge of the tank (not where it carries on, flat or round a corner). */
+    private static boolean framed(Floor floor, BlockPos pos, Direction d, Direction side) {
+        BlockPos next = pos.relative(d);
+        return !floor.blocks.contains(next) || floor.blocks.contains(next.relative(side));
     }
 
     private static void scan(ClientLevel level, int centerX, int centerZ) {
@@ -261,6 +291,7 @@ public final class AquariumRenderer {
             done.add(start);
             while (!queue.isEmpty()) {
                 BlockPos p = queue.poll();
+                floor.blocks.add(p);
                 minX = Math.min(minX, p.getX()); minY = Math.min(minY, p.getY()); minZ = Math.min(minZ, p.getZ());
                 maxX = Math.max(maxX, p.getX()); maxY = Math.max(maxY, p.getY()); maxZ = Math.max(maxZ, p.getZ());
                 for (Direction d : Direction.values()) {
@@ -282,6 +313,20 @@ public final class AquariumRenderer {
             floor.sizeX = maxX - minX + 1;
             floor.sizeY = maxY - minY + 1;
             floor.sizeZ = maxZ - minZ + 1;
+            // the tank's shape for the shader (so an L-shaped tank isn't traced as a full box)
+            int volume = floor.sizeX * floor.sizeY * floor.sizeZ;
+            floor.full = volume > MAX_BITS;
+            if (!floor.full) {
+                float[][] words = new float[4][16];
+                for (BlockPos b : floor.blocks) {
+                    int index = (b.getX() - minX) + floor.sizeX * ((b.getZ() - minZ) + floor.sizeZ * (b.getY() - minY));
+                    int word = index / 24, bit = index % 24;
+                    words[word / 16][word % 16] += (float) (1 << bit);
+                }
+                for (int m = 0; m < 4; m++) {
+                    floor.occupancy[m].set(words[m]); // (column by column, as GLSL reads a mat4)
+                }
+            }
             FLOORS.add(floor);
         }
     }

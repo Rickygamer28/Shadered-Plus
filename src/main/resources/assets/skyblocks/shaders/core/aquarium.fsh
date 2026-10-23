@@ -10,8 +10,15 @@ uniform vec3 BoxMin;   // the tank's corner, relative to the camera
 uniform vec3 BoxSize;
 uniform float Time;    // seconds
 uniform float Seed;
+uniform mat4 Occ0;     // which spots of the box are water: 1 bit each, 24 to a number (x + sizeX * (z + sizeZ * y))
+uniform mat4 Occ1;
+uniform mat4 Occ2;
+uniform mat4 Occ3;
+uniform float Full;    // 1: the whole box is water (too big to say spot by spot)
 
 in vec3 fragPos;
+in vec2 faceUV;
+in vec4 edges;
 
 out vec4 fragColor;
 
@@ -83,17 +90,48 @@ vec3 fishColour(int kind, vec3 q, bool tail) {
     return vec3(0.75, 0.78, 0.85);
 }
 
+bool water(ivec3 c) {
+    ivec3 size = ivec3(BoxSize + 0.5);
+    if (any(lessThan(c, ivec3(0))) || any(greaterThanEqual(c, size))) {
+        return false;
+    }
+    if (Full > 0.5) {
+        return true;
+    }
+    int index = c.x + size.x * (c.z + size.z * c.y);
+    int word = index / 24;
+    int m = word / 16, e = word - m * 16;
+    mat4 occ = m == 0 ? Occ0 : m == 1 ? Occ1 : m == 2 ? Occ2 : Occ3;
+    int bits = int(occ[e / 4][e - (e / 4) * 4] + 0.5);
+    return ((bits >> (index - word * 24)) & 1) == 1;
+}
+
 void main() {
     vec3 ro = Eye;
     vec3 rd = normalize(fragPos - Eye);
-    vec3 bmax = BoxMin + BoxSize;
-    vec3 inv = 1.0 / rd;
-    vec3 ta = (BoxMin - ro) * inv, tb = (bmax - ro) * inv;
-    vec3 tsmall = min(ta, tb), tbig = max(ta, tb);
-    float tEnter = max(max(max(tsmall.x, tsmall.y), tsmall.z), 0.0);
-    float tExit = min(min(tbig.x, tbig.y), tbig.z);
-    tEnter = max(tEnter, length(fragPos - Eye) - 0.002);
+    float tEnter = length(fragPos - Eye);
     vec3 entry = ro + rd * tEnter - BoxMin; // (tank coordinates, 0..BoxSize)
+    // walk through the tank's blocks to where the ray leaves the water (a tank of any shape)
+    vec3 pos = entry + rd * 0.002;
+    ivec3 cell = ivec3(floor(pos));
+    vec3 stepDir = sign(rd);
+    vec3 tDelta = abs(1.0 / rd);
+    vec3 tMax = (vec3(cell) + max(stepDir, 0.0) - pos) / rd;
+    float leave = 0.0;
+    int exitAxis = 1;
+    for (int i = 0; i < 64; i++) {
+        if (tMax.x < tMax.y && tMax.x < tMax.z) {
+            leave = tMax.x; cell.x += int(stepDir.x); tMax.x += tDelta.x; exitAxis = 0;
+        } else if (tMax.y < tMax.z) {
+            leave = tMax.y; cell.y += int(stepDir.y); tMax.y += tDelta.y; exitAxis = 1;
+        } else {
+            leave = tMax.z; cell.z += int(stepDir.z); tMax.z += tDelta.z; exitAxis = 2;
+        }
+        if (!water(cell)) {
+            break;
+        }
+    }
+    float tExit = tEnter + 0.002 + leave;
 
     float surface = BoxSize.y - 0.06;
     float t = Time;
@@ -188,18 +226,19 @@ void main() {
                 p = ro - BoxMin + rd * ts;
             }
         }
-        if (p.y <= sand + 0.02) {
+        bool down = exitAxis == 1 && rd.y < 0.0, up = exitAxis == 1 && rd.y > 0.0;
+        if (down || p.y <= sand + 0.02) {
             // sand with pebbles, lit by the moving light patterns
             vec2 cell = floor(p.xz * 9.0);
             float pebble = hash22(cell).x > 0.93 ? 0.7 : 1.0;
             col = vec3(0.85, 0.75, 0.52) * pebble * (0.75 + 0.1 * hash22(floor(p.xz * 40.0)).x);
             col += vec3(0.6, 0.85, 1.0) * caustics(p.xz, t) * 0.55;
-        } else if (p.y >= surface - 0.02) {
+        } else if (up) {
             // the underside of the surface: bright, rippling
             col = vec3(0.35, 0.75, 0.85) + vec3(0.5, 0.8, 0.9) * caustics(p.xz * 1.3, t * 1.4) * 0.6;
         } else {
             // the back glass: deep water, seaweed swaying on it, darker lower down
-            vec2 wall = abs(p.x) < 0.01 || abs(p.x - BoxSize.x) < 0.01 ? vec2(p.z, p.y) : vec2(p.x, p.y);
+            vec2 wall = exitAxis == 0 ? vec2(p.z, p.y) : vec2(p.x, p.y);
             col = mix(vec3(0.02, 0.18, 0.3), vec3(0.1, 0.45, 0.55), p.y / BoxSize.y);
             for (int k = 0; k < 3; k++) {
                 float fk = float(k);
@@ -227,16 +266,16 @@ void main() {
     col += vec3(0.25, 0.5, 0.55) * 0.08 * (0.5 + 0.5 * sin(entry.x * 4.0 + entry.z * 3.0 + entry.y * 2.0 + t * 1.5));
 
     // looking down through the top: the surface ripples catch the light
-    if (abs(entry.y - BoxSize.y) < 0.01) {
+    if (abs(entry.y - floor(entry.y + 0.5)) < 0.01 && rd.y < 0.0 && !water(ivec3(floor(entry + vec3(0.0, 0.01, 0.0))))) {
         col += vec3(0.8, 0.95, 1.0) * caustics(entry.xz * 1.6 + vec2(t * 0.1, 0.0), t * 1.6) * 0.18;
     }
 
     // ---- the frame round the tank's edges ----
-    vec3 e = min(entry, BoxSize - entry);
-    float edgeA = min(e.x, min(e.y, e.z));
-    float edgeB = e.x + e.y + e.z - edgeA - max(e.x, max(e.y, e.z)); // the second smallest
-    if (edgeB < 0.05) {
-        col = vec3(0.08, 0.08, 0.09) + 0.05 * (1.0 - edgeB / 0.05);
+    const float W = 0.05;
+    float frame = max(max(edges.r * step(faceUV.x, W), edges.g * step(1.0 - W, faceUV.x)),
+                      max(edges.b * step(faceUV.y, W), edges.a * step(1.0 - W, faceUV.y)));
+    if (frame > 0.5) {
+        col = vec3(0.09, 0.09, 0.1);
     }
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
