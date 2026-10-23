@@ -32,7 +32,7 @@ vec3 hue(float h) {
 
 // A soft bump at distance x from its middle (r wide), repeating every period; fw: what one pixel covers here.
 float bump(float x, float r, float period, float fw) {
-    float wide = sqrt(r * r + fw * fw * 0.5);
+    float wide = sqrt(r * r + fw * fw);
     float average = 1.7725 * r / period; // (sqrt(pi) r / period: its light spread evenly)
     float blend = smoothstep(0.18, 0.45, wide / period);
     return mix(r / wide * exp(-x * x / (wide * wide)), average, blend);
@@ -44,7 +44,7 @@ void main() {
     vec3 d = vec3(dot(sight, AxisU), dot(sight, AxisV), dot(sight, Inward));
     float w = Size.x - 2.0 * FRAME, h = Size.y - 2.0 * FRAME;
     float a = dot(p, AxisU) - FRAME, b = dot(p, AxisV) - FRAME;
-    vec3 base = Rainbow > 0.5 ? hue(fract(Time * 0.05)) : ColorFront;
+    vec3 base = Rainbow > 0.5 ? hue(fract(Time * 0.2)) : ColorFront;
     // the glass edge: dark, lit a little by the LEDs
     float fresnel = pow(1.0 - clamp(d.z, 0.0, 1.0), 4.0);
     if (a < 0.0 || b < 0.0 || a > w || b > h) {
@@ -87,7 +87,8 @@ void main() {
     float light = pow(KEEP, ring) * (0.86 + 0.14 * sin(Time * 2.5 - ring * 0.55)); // dimmer each time, a slow wave inwards
     vec3 color;
     if (Rainbow > 0.5) {
-        color = hue(fract(around / (2.0 * (w + h)) - Time * 0.08 + ring * 0.02));
+        // colours running round the rings and on down the tunnel, like an addressable LED strip running a rainbow
+        color = hue(fract(around / (w + h) + ring * 0.06 - Time * 0.45));
     } else {
         color = mix(ColorFront, ColorDeep, 1.0 - exp(-max(ring, 0.0) * 0.08));
     }

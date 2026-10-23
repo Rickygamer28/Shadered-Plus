@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    " I ",
+    "IGI",
+    " I "
+  ],
+  "key": {
+    "I": { "item": "skyblocks:infinity_mirror" },
+    "G": { "item": "minecraft:glowstone_dust" }
+  },
+  "result": {
+    "item": "skyblocks:infinity_cube",
+    "count": 1
+  }
+}

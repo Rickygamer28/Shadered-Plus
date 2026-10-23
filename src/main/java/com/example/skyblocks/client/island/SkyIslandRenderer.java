@@ -38,6 +38,13 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         BlockState state = be.getBlockState();
         boolean painting = state.getBlock() instanceof IslandPaintingBlock;
         int width = 1, height = 1;
+        // a painting copied into a Sky Island: its neighbours are in that island, not in the world
+        IslandView host = IslandRendering.island;
+        boolean copied = host != null && be.getBlockPos().getX() > IslandView.FAR / 2;
+        if (painting && copied && IslandRendering.inWindow) {
+            return; // (a painting inside a painting's window: its window can't be cut out inside the other one)
+        }
+        net.minecraft.world.level.BlockGetter around = copied ? host.copies() : level;
         if (painting && level != null) {
             if (state.getValue(IslandPaintingBlock.CCW) || state.getValue(IslandPaintingBlock.DOWN)) {
                 // part of a joined painting: its bottom corner block draws the whole thing
@@ -47,8 +54,8 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
                 be.clientView = null;
                 return;
             }
-            width = IslandPaintingBlock.width(level, be.getBlockPos(), state);
-            height = IslandPaintingBlock.height(level, be.getBlockPos(), state);
+            width = IslandPaintingBlock.width(around, be.getBlockPos(), state);
+            height = IslandPaintingBlock.height(around, be.getBlockPos(), state);
         }
         if (data == null || level == null) {
             if (be.clientView instanceof IslandView old) {
@@ -133,6 +140,12 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         poseStack.scale(scale, scale, scale);
         poseStack.translate(-view.contentCenterX(), -view.lowestLayer(), -view.contentCenterZ());
         mesh.render(poseStack.last(), buffer);
+        if (!simple) {
+            // infinity mirrors and cubes inside: drawn with their own shaders after the block entities
+            com.example.skyblocks.client.InfinityMirrorRenderer.queueIsland(view.infinity(), poseStack.last().pose());
+            // portals given a Shadered sky: that sky
+            com.example.skyblocks.client.PortalSkyRenderer.drawInIsland(view, view.portalSkies, poseStack, buffer, true);
+        }
         // With a shader pack, cats drawn with Shadered's own shader into Iris's buffers don't show: collect them and
         // draw them through our own target (client/iris/IrisIslandTarget); in Iris's shadow pass they are skipped.
         boolean irisCats = details && (com.example.skyblocks.client.iris.IrisIslandTarget.active()

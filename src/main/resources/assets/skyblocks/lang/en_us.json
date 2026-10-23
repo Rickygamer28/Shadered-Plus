@@ -38,5 +38,6 @@
   "block.skyblocks.sky_liquid": "%s Liquid",
   "item.skyblocks.sky_liquid_bucket": "%s Liquid Bucket",
   "block.skyblocks.mirror": "Mirror",
-  "block.skyblocks.infinity_mirror": "Infinity Mirror"
+  "block.skyblocks.infinity_mirror": "Infinity Mirror",
+  "block.skyblocks.infinity_cube": "Infinity Cube"
 }

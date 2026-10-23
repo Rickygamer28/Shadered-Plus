@@ -35,7 +35,9 @@ public final class IslandScan {
     public static final int MAX_ENTITIES = 64;
     private static final int MAX_ENTITY_BYTES = 16 * 1024;
     private static final int MAX_BLOCK_ENTITY_BYTES = 16 * 1024;
-    private static final int MAX_ALL_BLOCK_ENTITY_BYTES = 384 * 1024;
+    private static final int MAX_ALL_BLOCK_ENTITY_BYTES = 768 * 1024;
+    /** An Island Painting inside the island, with the island it shows. */
+    private static final int MAX_PAINTING_BYTES = 256 * 1024;
     private static final int MAX_ALL_ENTITY_BYTES = 256 * 1024;
     /** Saved entity data a figure doesn't need to look right (inventories, AI memory, trades...). */
     private static final String[] HEAVY_ENTITY_DATA = {"Passengers", "UUID", "Items", "Inventory", "Brain", "Offers",
@@ -75,6 +77,8 @@ public final class IslandScan {
         BlockPos origin = origin(scanner, size, depth);
 
         ListTag blockEntities = new ListTag();
+        ListTag portalSkies = new ListTag(); // portals given a Shadered sky: which one (the miniature shows it too)
+        com.example.skyblocks.portal.PortalSkies skies = com.example.skyblocks.portal.PortalSkies.get(level);
         long blockEntityBytes = 0;
         Map<BlockState, Integer> palette = new LinkedHashMap<>();
         palette.put(Blocks.AIR.defaultBlockState(), 0);
@@ -97,6 +101,17 @@ public final class IslandScan {
                         palette.put(state, index);
                     }
                     blocks[(y * size + z) * size + x] = index;
+                    if (com.example.skyblocks.portal.PortalSkies.isPortal(state)) {
+                        var sky = skies.skyAt(p);
+                        if (sky != null) {
+                            CompoundTag entry = new CompoundTag();
+                            entry.putInt("x", x);
+                            entry.putInt("y", y);
+                            entry.putInt("z", z);
+                            entry.putString("sky", sky.name());
+                            portalSkies.add(entry);
+                        }
+                    }
 
                     // Chests, beds, signs, banners, heads...: keep their data so the miniature can draw them.
                     if (state.hasBlockEntity() && blockEntityBytes < MAX_ALL_BLOCK_ENTITY_BYTES) {
@@ -159,6 +174,9 @@ public final class IslandScan {
         }
         tag.put("biomes", biomeList);
         tag.put("block_entities", blockEntities);
+        if (!portalSkies.isEmpty()) {
+            tag.put("portal_skies", portalSkies);
+        }
         tag.putByteArray("biome_map", biomeMap);
 
         // Mobs and decorations.
@@ -209,8 +227,12 @@ public final class IslandScan {
     @org.jetbrains.annotations.Nullable
     private static CompoundTag saveBlockEntity(ServerLevel level, BlockPos pos) {
         BlockEntity be = level.getBlockEntity(pos);
-        if (be == null || be instanceof SkyIslandBlockEntity || be instanceof IslandScannerBlockEntity) {
-            return null; // no islands inside islands
+        if (be == null || be instanceof IslandScannerBlockEntity) {
+            return null;
+        }
+        boolean painting = be instanceof SkyIslandBlockEntity && be.getBlockState().getBlock() instanceof IslandPaintingBlock;
+        if (be instanceof SkyIslandBlockEntity && !painting) {
+            return null; // no pedestal islands inside islands
         }
         // Only what clients normally get for drawing it (sign text, banner patterns, head owner, lectern book...),
         // never server-only data such as loot seeds or command block commands.
@@ -225,6 +247,24 @@ public final class IslandScan {
             return null;
         }
         saved.putString("id", id.toString());
+        if (painting) {
+            // An Island Painting keeps the island it shows (so the miniature's painting isn't empty), but not the
+            // paintings inside that one (one level deep only), nor its live mobs.
+            saved.remove("live_mobs");
+            if (saved.contains("island", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+                CompoundTag inner = saved.getCompound("island");
+                net.minecraft.nbt.ListTag innerEntities = inner.getList("block_entities", net.minecraft.nbt.Tag.TAG_COMPOUND);
+                for (int i = 0; i < innerEntities.size(); i++) {
+                    CompoundTag data = innerEntities.getCompound(i).getCompound("data");
+                    if (data.contains("island")) {
+                        data.remove("island");
+                        data.putBoolean("has_island", false);
+                    }
+                }
+                inner.remove("entities"); // (the inner island's mobs: too small to see in there)
+            }
+            return bytes(saved) > MAX_PAINTING_BYTES ? null : saved;
+        }
         return bytes(saved) > MAX_BLOCK_ENTITY_BYTES ? null : saved;
     }
 

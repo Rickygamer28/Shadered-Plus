@@ -66,10 +66,15 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
      * Where the copied block entities "are" in the real world: far away in unloaded chunks, so renderers that look
      * at neighbouring blocks (double chests, beds) find nothing there and use the block entity's own block state.
      */
-    private static final int FAR = 29_000_000;
+    static final int FAR = 29_000_000;
     private final RandomSource random = RandomSource.create();
     @Nullable
     private IslandMesh mesh;
+    /** Portals inside given a Shadered sky (island coordinates -> sky). */
+    final java.util.Map<BlockPos, com.noodlegamer76.shadered.client.util.SkyblockType> portalSkies = new java.util.HashMap<>();
+    /** The infinity mirrors and cubes inside (worked out the first time it's needed). */
+    @Nullable
+    private com.example.skyblocks.client.InfinitySet infinity;
     /** Resource reload count the mesh was baked for (textures move on the atlas after a reload). */
     private int meshGeneration = -1;
     private long lastTick = -1;
@@ -154,6 +159,15 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
         }
 
         IslandView view = new IslandView(data, size, height, states, columns);
+
+        ListTag savedSkies = tag.getList("portal_skies", Tag.TAG_COMPOUND);
+        for (int i = 0; i < savedSkies.size(); i++) {
+            CompoundTag entry = savedSkies.getCompound(i);
+            var sky = com.example.skyblocks.portal.PortalSkies.sky(entry.getString("sky"));
+            if (sky != null) {
+                view.portalSkies.put(new BlockPos(entry.getInt("x"), entry.getInt("y"), entry.getInt("z")), sky);
+            }
+        }
 
         ListTag savedBlockEntities = tag.getList("block_entities", Tag.TAG_COMPOUND);
         for (int i = 0; i < savedBlockEntities.size(); i++) {
@@ -242,6 +256,12 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
             for (int z = 0; z < size; z++) {
                 for (int x = 0; x < size; x++) {
                     BlockState state = states[(y * size + z) * size + x];
+                    if (com.example.skyblocks.portal.PortalSkies.isPortal(state)) {
+                        var sky = com.example.skyblocks.client.PortalSkyRenderer.skyAt(level, origin.offset(x, y, z));
+                        if (sky != null) {
+                            view.portalSkies.put(new BlockPos(x, y, z), sky);
+                        }
+                    }
                     if (!state.hasBlockEntity()) {
                         continue;
                     }
@@ -288,6 +308,49 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
 
     private int index(int x, int y, int z) {
         return (y * size + z) * size + x;
+    }
+
+    /**
+     * The island's blocks where its copied block entities think they are (far away in the real world): so an Island
+     * Painting inside the island finds the paintings it's joined to.
+     */
+    net.minecraft.world.level.BlockGetter copies() {
+        IslandView self = this;
+        return new net.minecraft.world.level.BlockGetter() {
+            @Override
+            public BlockState getBlockState(BlockPos pos) {
+                return self.stateAt(pos.getX() - FAR, pos.getY(), pos.getZ() - FAR);
+            }
+
+            @Override
+            public net.minecraft.world.level.material.FluidState getFluidState(BlockPos pos) {
+                return getBlockState(pos).getFluidState();
+            }
+
+            @Nullable
+            @Override
+            public BlockEntity getBlockEntity(BlockPos pos) {
+                return null;
+            }
+
+            @Override
+            public int getHeight() {
+                return 1024;
+            }
+
+            @Override
+            public int getMinBuildHeight() {
+                return -512;
+            }
+        };
+    }
+
+    /** The infinity mirrors and cubes inside, ready to draw. */
+    public com.example.skyblocks.client.InfinitySet infinity() {
+        if (infinity == null) {
+            infinity = com.example.skyblocks.client.InfinityMirrorRenderer.islandSet(this, size, height, size);
+        }
+        return infinity;
     }
 
     BlockState stateAt(int x, int y, int z) {
@@ -406,12 +469,15 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
         EntityRenderDispatcher entities = Minecraft.getInstance().getEntityRenderDispatcher();
         entities.setRenderShadow(false); // e.g. a spawner's mob would cast its shadow on the real world
         boolean wasInIsland = IslandRendering.inIsland;
+        IslandView wasIsland = IslandRendering.island;
         IslandRendering.inIsland = true;
+        IslandRendering.island = this;
         try {
             blockEntities.removeIf(be -> (only == null || only.test(be.blockEntity()))
                     && !be.render(this, dispatcher, poseStack, buffer, partialTick));
         } finally {
             IslandRendering.inIsland = wasInIsland;
+            IslandRendering.island = wasIsland;
             entities.setRenderShadow(true);
         }
     }

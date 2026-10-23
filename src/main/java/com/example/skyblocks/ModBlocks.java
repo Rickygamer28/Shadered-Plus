@@ -48,5 +48,11 @@ public final class ModBlocks {
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLUE).lightLevel(state -> 11)
                     .isValidSpawn((s, l, p, e) -> false)));
 
+    /** An infinity cube: a glowing grid of LED edges going on forever in every direction (client/InfinityCubeRenderer). */
+    public static final RegistryObject<InfinityCubeBlock> INFINITY_CUBE = BLOCKS.register("infinity_cube",
+            () -> new InfinityCubeBlock(BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE).lightLevel(state -> 12)
+                    .isValidSpawn((s, l, p, e) -> false)));
+
     private ModBlocks() {}
 }

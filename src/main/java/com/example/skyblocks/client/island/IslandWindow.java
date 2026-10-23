@@ -141,6 +141,12 @@ final class IslandWindow {
                 PaintingTimings.mark(PaintingTimings.Phase.ISLAND);
                 placeIsland(poseStack, view, rotation, box);
                 mesh.render(poseStack.last(), scene);
+                if (details) {
+                    // infinity mirrors and cubes inside, with their own shaders, inside the window
+                    com.example.skyblocks.client.InfinityMirrorRenderer.drawInWindow(view.infinity(), poseStack.last().pose());
+                    com.example.skyblocks.client.PortalSkyRenderer.drawInIsland(view, view.portalSkies, poseStack, scene, false);
+                    backInside();
+                }
                 // Shadered's renderers (sky blocks, Illusorite ores...) only queue their sky cubes for Shadered's own
                 // pass later in the frame, which would draw them outside this window: take what they queue here and
                 // draw it now, inside the window.

@@ -49,5 +49,8 @@ public final class ModItems {
     public static final RegistryObject<BlockItem> INFINITY_MIRROR = ITEMS.register("infinity_mirror",
             () -> new BlockItem(ModBlocks.INFINITY_MIRROR.get(), new Item.Properties()));
 
+    public static final RegistryObject<BlockItem> INFINITY_CUBE = ITEMS.register("infinity_cube",
+            () -> new BlockItem(ModBlocks.INFINITY_CUBE.get(), new Item.Properties()));
+
     private ModItems() {}
 }
