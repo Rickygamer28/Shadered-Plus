@@ -80,7 +80,7 @@
 ## Releases (user rule, 19 Oct 2026)
 - Every time the user says they want to share/upload on CurseForge: bump mod_version in gradle.properties to the next
   version (patch +1, e.g. 1.0.1 -> 1.0.2) on BOTH branches (main = 1.21.1, 1.20.1), push, wait for CI and send the
-  new jars plus the changelog. 1.0.1 = the first update (Sky Liquids, connected islands, shader pack support...).
+  new jars plus the changelog. 1.0.1 = the first update (Sky Liquids, connected islands, shader pack support...). 1.0.2 (23 Oct 2026) = Mirror, Infinity Mirror, Infinity Cube, portal skies, 16 Elden Ring skies, islands show infinity blocks/portal skies/paintings.
 
 ## Portal skies (21 Oct 2026, user request)
 - Right-click a nether portal / end portal / end gateway with a Shadered sky block: the whole connected portal shows
