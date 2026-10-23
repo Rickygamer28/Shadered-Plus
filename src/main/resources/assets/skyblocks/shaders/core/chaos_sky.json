@@ -1,5 +1,5 @@
 {
-    "vertex": "skyblocks:chaos_sky",
+    "vertex": "skyblocks:shader_sky",
     "fragment": "skyblocks:chaos_sky",
     "samplers": [
         {

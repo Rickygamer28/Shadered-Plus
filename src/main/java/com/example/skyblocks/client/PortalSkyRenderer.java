@@ -274,6 +274,7 @@ public final class PortalSkyRenderer {
             Map.entry("OCEAN", new float[] {0.49F, 0.76F, 1.0F}),
             Map.entry("IRIDIA", new float[] {0.84F, 0.04F, 1.0F}),
             Map.entry("END_SKY", new float[] {0.55F, 0.4F, 0.75F}),
+            Map.entry("SKYBLOCKS_SYNTHWAVE", new float[] {1.0F, 0.3F, 0.75F}),
             Map.entry("SKYBLOCKS_CHAOS", new float[] {1.0F, 0.3F, 0.12F}),
             Map.entry("SKYBLOCKS_JUPITER", new float[] {0.9F, 0.8F, 1.0F}),
             Map.entry("SKYBLOCKS_CAT", new float[] {0.71F, 0.79F, 1.0F}),

@@ -36,16 +36,30 @@ import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
 
 /**
- * The chaos sky: a Shadered sky like the others (sky block, Illusorite ores, Sky Liquid, Sky Emitter, portals, islands,
- * the item in hand...), except that its screen-sized picture is drawn by Draconic Evolution's chaos shader (adapted
- * from Draconic Evolution / BrandonsCore by brandon3055, credited in the tooltip and CREDITS.md) instead of six
- * pictures.
+ * Skies drawn by a shader: Shadered skies like the others (sky block, Illusorite ores, Sky Liquid, Sky Emitter, portals,
+ * islands, the item in hand...), except that their screen-sized picture is drawn by a shader instead of six pictures.
+ * <ul>
+ * <li>chaos: Draconic Evolution's chaos shader (adapted from Draconic Evolution / BrandonsCore by brandon3055, credited
+ * in the tooltip and CREDITS.md)</li>
+ * <li>synthwave: Shadered+'s own (sunset, striped sun, wireframe mountains, stars, moving neon grid)</li>
+ * </ul>
  */
-public final class ChaosSky {
+public final class ShaderSky {
     static final ResourceLocation NOISE = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "textures/effect/chaos_noise.png");
-    private static ShaderInstance shader;
+    private static ShaderInstance chaos;
+    private static ShaderInstance synthwave;
 
-    private ChaosSky() {}
+    private ShaderSky() {}
+
+    /** The pass for a sky drawn by a shader, or null if the sky is made of pictures. */
+    @org.jetbrains.annotations.Nullable
+    public static SkyboxRenderPass passFor(String name, ResourceLocation folder, SkyblockBatchData batch) {
+        return switch (name) {
+            case SkyNames.CHAOS -> new Pass(folder, batch, () -> chaos, NOISE);
+            case SkyNames.SYNTHWAVE -> new Pass(folder, batch, () -> synthwave, null);
+            default -> null;
+        };
+    }
 
     @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
@@ -54,7 +68,9 @@ public final class ChaosSky {
         @SubscribeEvent
         public static void register(RegisterShadersEvent event) throws java.io.IOException {
             event.registerShader(new ShaderInstance(event.getResourceProvider(),
-                    ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "chaos_sky"), DefaultVertexFormat.POSITION), s -> shader = s);
+                    ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "chaos_sky"), DefaultVertexFormat.POSITION), s -> chaos = s);
+            event.registerShader(new ShaderInstance(event.getResourceProvider(),
+                    ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "synthwave_sky"), DefaultVertexFormat.POSITION), s -> synthwave = s);
         }
     }
 
@@ -86,14 +102,20 @@ public final class ChaosSky {
         }
     }
 
-    /** The chaos sky's pass: draws the chaos shader into the sky's screen-sized picture (as SkyboxRenderPass does). */
+    /** A shader sky's pass: draws its shader into the sky's screen-sized picture (as SkyboxRenderPass does). */
     public static final class Pass extends SkyboxRenderPass {
         private final SkyblockBatchData batch;
+        private final java.util.function.Supplier<ShaderInstance> shaderSource;
+        @org.jetbrains.annotations.Nullable
+        private final ResourceLocation texture;
         private TextureTarget target;
 
-        public Pass(ResourceLocation folder, SkyblockBatchData batch) {
+        Pass(ResourceLocation folder, SkyblockBatchData batch, java.util.function.Supplier<ShaderInstance> shader,
+             @org.jetbrains.annotations.Nullable ResourceLocation texture) {
             super(folder, batch, new SkyboxTranslation());
             this.batch = batch;
+            this.shaderSource = shader;
+            this.texture = texture;
         }
 
         @Override
@@ -102,6 +124,7 @@ public final class ChaosSky {
             if (stage == RenderStage.AFTER_SKY) {
                 SkyUsage.skyStage(renderTick, partialTick);
             }
+            ShaderInstance shader = shaderSource.get();
             if (!SkyUsage.recentlyUsed(batch) || shader == null) {
                 return;
             }
@@ -116,7 +139,7 @@ public final class ChaosSky {
             }
             SkyblockRenderer.DATA_LIST.put(batch, target.getColorTextureId());
             target.bindWrite(true);
-            draw(poseStack.last().pose(), (renderTick % 240000) + partialTick);
+            draw(shader, texture, poseStack.last().pose(), (renderTick % 240000) + partialTick);
             renderer.getRenderBuffer().bindWrite(true);
         }
 
@@ -127,7 +150,8 @@ public final class ChaosSky {
         }
 
         /** A cube around the camera turned by the view (like Shadered's skyboxes), every pixel coloured by the shader. */
-        private static void draw(Matrix4f view, float ticks) {
+        private static void draw(ShaderInstance shader, @org.jetbrains.annotations.Nullable ResourceLocation texture, Matrix4f view,
+                                 float ticks) {
             Matrix4fStack modelView = RenderSystem.getModelViewStack();
             modelView.pushMatrix();
             modelView.mul(view);
@@ -140,7 +164,9 @@ public final class ChaosSky {
             RenderSystem.disableCull();
             try {
                 shader.safeGetUniform("Time").set(ticks);
-                RenderSystem.setShaderTexture(0, NOISE);
+                if (texture != null) {
+                    RenderSystem.setShaderTexture(0, texture);
+                }
                 RenderSystem.setShader(() -> shader);
                 BufferBuilder b = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
                 // the six faces of a cube from -1 to 1, scaled to the render distance like Shadered's skyboxes: the view

@@ -118,3 +118,6 @@
   screen-sized picture instead of six pictures; it repeats SkyPassMixin's usage tracking itself (render is overridden).
   Credit tooltip via ItemTooltipEvent on the chaos sky block and bucket. No textures/environment/chaos folder and no
   tools/skies entry (not a picture sky). Old skyblocks:chaos_block blocks in test worlds disappear.
+- Synthwave sky (23 Oct 2026, user: all extras, classic pink/purple/orange, moving grid): last entry of SkyNames,
+  shaders/core/synthwave_sky.fsh (our own code), drawn like chaos by client/ShaderSky.Pass (ChaosSky renamed ShaderSky;
+  shader_sky.vsh shared). Sun sets towards -X (west).

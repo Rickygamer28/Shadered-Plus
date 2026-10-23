@@ -1,6 +1,6 @@
 #version 150
 
-// Shadered+'s chaos sky: a cube around the camera; the direction to each corner goes to the fragment shader.
+// Shadered+'s shader skies (chaos, synthwave): a cube around the camera; the direction to each corner goes to the fragment shader.
 
 in vec3 Position;
 
