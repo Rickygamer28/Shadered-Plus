@@ -21,6 +21,8 @@ import org.joml.Matrix4f;
 public class SpeakerRenderer implements BlockEntityRenderer<SpeakerBlockEntity> {
     private static final int SEGMENTS = 24;
     private static final Map<SpeakerBlockEntity, float[]> PUSH = new WeakHashMap<>();
+    /** The light's colour this frame (the speaker's own, or the RGB rainbow). */
+    private static float cr = 1.0F, cg = 0.3F, cb = 0.8F;
 
     public SpeakerRenderer(BlockEntityRendererProvider.Context context) {}
 
@@ -30,7 +32,7 @@ public class SpeakerRenderer implements BlockEntityRenderer<SpeakerBlockEntity> 
         MusicReactor.tick();
         float bass = MusicReactor.bass();
         // a little spring: the cone jumps out on a hit and settles back
-        float[] push = PUSH.computeIfAbsent(be, b -> new float[] {0.0F, 0.0F, System.nanoTime() / 1.0e9F});
+        float[] push = PUSH.computeIfAbsent(be, b -> new float[] {0.0F, 0.0F, System.nanoTime() / 1.0e9F, (b.getBlockPos().hashCode() & 255) / 255.0F});
         float now = System.nanoTime() / 1.0e9F;
         float dt = Math.min(0.05F, Math.max(0.0F, now - push[2]));
         push[2] = now;
@@ -38,6 +40,18 @@ public class SpeakerRenderer implements BlockEntityRenderer<SpeakerBlockEntity> 
         push[1] += ((target - push[0]) * 900.0F - push[1] * 30.0F) * dt;
         push[0] += push[1] * dt;
         float out = Math.max(-0.02F, Math.min(0.09F, push[0]));
+        if (be.rgb()) {
+            push[3] = (push[3] + dt * (0.08F + bass * 0.9F)) % 1.0F; // (round the rainbow, faster on the beat)
+            float h = push[3] * 6.0F;
+            cr = Math.max(0.0F, Math.min(1.0F, Math.abs(h - 3.0F) - 1.0F));
+            cg = Math.max(0.0F, Math.min(1.0F, 2.0F - Math.abs(h - 2.0F)));
+            cb = Math.max(0.0F, Math.min(1.0F, 2.0F - Math.abs(h - 4.0F)));
+        } else {
+            int c = be.colour();
+            cr = ((c >> 16) & 255) / 255.0F;
+            cg = ((c >> 8) & 255) / 255.0F;
+            cb = (c & 255) / 255.0F;
+        }
 
         if (be.getLevel() != null) { // (the light in front of it: inside a solid block there's none)
             light = net.minecraft.client.renderer.LevelRenderer.getLightColor(be.getLevel(), be.getBlockPos().relative(facing));
@@ -86,14 +100,14 @@ public class SpeakerRenderer implements BlockEntityRenderer<SpeakerBlockEntity> 
             // the dust cap: a little dome, glowing pink on the beat
             float glow = Math.min(1.0F, 0.1F * lit + bass * 0.9F);
             float hi = Math.min(1.0F, glow + 0.08F * lit);
-            v.addVertex(pose, cx + c0 * r1, cy + s0 * r1, zInner).setColor(glow, glow * 0.3F, glow * 0.8F, 1.0F);
-            v.addVertex(pose, cx + c1 * r1, cy + s1 * r1, zInner).setColor(glow, glow * 0.3F, glow * 0.8F, 1.0F);
-            v.addVertex(pose, cx + c1 * r1 * 0.5F, cy + s1 * r1 * 0.5F, (zInner + zCap) * 0.5F - 0.004F).setColor(hi, hi * 0.35F, hi * 0.85F, 1.0F);
-            v.addVertex(pose, cx + c0 * r1 * 0.5F, cy + s0 * r1 * 0.5F, (zInner + zCap) * 0.5F - 0.004F).setColor(hi, hi * 0.35F, hi * 0.85F, 1.0F);
-            v.addVertex(pose, cx + c0 * r1 * 0.5F, cy + s0 * r1 * 0.5F, (zInner + zCap) * 0.5F - 0.004F).setColor(hi, hi * 0.35F, hi * 0.85F, 1.0F);
-            v.addVertex(pose, cx + c1 * r1 * 0.5F, cy + s1 * r1 * 0.5F, (zInner + zCap) * 0.5F - 0.004F).setColor(hi, hi * 0.35F, hi * 0.85F, 1.0F);
-            v.addVertex(pose, cx, cy, zCap).setColor(hi, hi * 0.4F, hi * 0.9F, 1.0F);
-            v.addVertex(pose, cx, cy, zCap).setColor(hi, hi * 0.4F, hi * 0.9F, 1.0F);
+            v.addVertex(pose, cx + c0 * r1, cy + s0 * r1, zInner).setColor(glow * cr, glow * cg, glow * cb, 1.0F);
+            v.addVertex(pose, cx + c1 * r1, cy + s1 * r1, zInner).setColor(glow * cr, glow * cg, glow * cb, 1.0F);
+            v.addVertex(pose, cx + c1 * r1 * 0.5F, cy + s1 * r1 * 0.5F, (zInner + zCap) * 0.5F - 0.004F).setColor(hi * cr, hi * cg, hi * cb, 1.0F);
+            v.addVertex(pose, cx + c0 * r1 * 0.5F, cy + s0 * r1 * 0.5F, (zInner + zCap) * 0.5F - 0.004F).setColor(hi * cr, hi * cg, hi * cb, 1.0F);
+            v.addVertex(pose, cx + c0 * r1 * 0.5F, cy + s0 * r1 * 0.5F, (zInner + zCap) * 0.5F - 0.004F).setColor(hi * cr, hi * cg, hi * cb, 1.0F);
+            v.addVertex(pose, cx + c1 * r1 * 0.5F, cy + s1 * r1 * 0.5F, (zInner + zCap) * 0.5F - 0.004F).setColor(hi * cr, hi * cg, hi * cb, 1.0F);
+            v.addVertex(pose, cx, cy, zCap).setColor(Math.min(1.0F, hi * cr + 0.05F), Math.min(1.0F, hi * cg + 0.05F), Math.min(1.0F, hi * cb + 0.05F), 1.0F);
+            v.addVertex(pose, cx, cy, zCap).setColor(Math.min(1.0F, hi * cr + 0.05F), Math.min(1.0F, hi * cg + 0.05F), Math.min(1.0F, hi * cb + 0.05F), 1.0F);
         }
     }
 

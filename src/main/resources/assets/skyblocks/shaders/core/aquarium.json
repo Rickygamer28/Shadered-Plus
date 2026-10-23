@@ -280,6 +280,14 @@
             ]
         },
         {
+            "name": "FishCount",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
+            ]
+        },
+        {
             "name": "Fish0",
             "type": "float",
             "count": 4,
@@ -588,7 +596,139 @@
             ]
         },
         {
-            "name": "FishCount",
+            "name": "Fish28",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Fish29",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Fish30",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Fish31",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Fish32",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Fish33",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Fish34",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Fish35",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Fish36",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Fish37",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Fish38",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Fish39",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Ocean",
             "type": "float",
             "count": 1,
             "values": [

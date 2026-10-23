@@ -163,3 +163,9 @@
   the machine's front, centred; client ticker fills the area with floating fog + nozzle jet, particles thin out when
   leaving the area (FogParticleBounds.next handed to the particle). FogMachineRenderer draws the outline. Speaker model:
   metal corner protectors, raised front trim, badge. Galaxy Floor removed (user).
+- 24 Oct 2026: aquarium fixes (shape as vec4 uniforms, Full for boxes; per-fish swim boxes from the CPU (placeFish);
+  solid sand layer; surface highlight only via top faces (faceN), which was the seam line); 18 species (10 normal,
+  8 ocean: struct Species body/tail/fin radii); Ocean Aquarium block (AquariumBlock(ocean=true), Ocean uniform,
+  tanks only join the same kind; fewer, bigger fish; kelp + coral + rocks). Islands: animated block textures for
+  aquarium/ocean_aquarium/dance_floor; fog machine BER draws soft fog layers when IslandRendering.inIsland.
+  Speaker: dye = light colour, sneak + right-click = RGB mode (BE colour/rgb synced).

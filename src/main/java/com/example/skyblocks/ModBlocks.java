@@ -53,6 +53,11 @@ public final class ModBlocks {
     public static final DeferredBlock<AquariumBlock> AQUARIUM = BLOCKS.registerBlock("aquarium", AquariumBlock::new,
             BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS).lightLevel(state -> 6));
 
+    /** The ocean aquarium: the same, with sharks, rays, turtles... for giant tanks. */
+    public static final DeferredBlock<AquariumBlock> OCEAN_AQUARIUM = BLOCKS.registerBlock("ocean_aquarium",
+            properties -> new AquariumBlock(properties, true),
+            BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS).lightLevel(state -> 6));
+
     /** A disco ball throwing real light spots around (DiscoBallBlock, client/DiscoBallRenderer). */
     public static final DeferredBlock<DiscoBallBlock> DISCO_BALL = BLOCKS.registerBlock("disco_ball", DiscoBallBlock::new,
             BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS).noOcclusion()

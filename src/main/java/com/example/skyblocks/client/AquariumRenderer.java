@@ -62,11 +62,12 @@ public final class AquariumRenderer {
         /** Per fish: the middle of the stretch of water it swims in (x, y, z) and how far it reaches each way (x, y, z). */
         final float[] fish = new float[MAX_FISH * 8];
         int fishCount;
+        boolean ocean;
     }
 
     private static final int OCC_VECS = 16;
     private static final int MAX_BITS = OCC_VECS * 4 * 24;
-    private static final int MAX_FISH = 14;
+    private static final int MAX_FISH = 20;
 
     static ShaderInstance shader;
     private static final List<Floor> FLOORS = new ArrayList<>();
@@ -230,6 +231,7 @@ public final class AquariumRenderer {
             shader.safeGetUniform("Fish" + v).set(f[v * 4], f[v * 4 + 1], f[v * 4 + 2], f[v * 4 + 3]);
         }
         shader.safeGetUniform("FishCount").set((float) floor.fishCount);
+        shader.safeGetUniform("Ocean").set(floor.ocean ? 1.0F : 0.0F);
     }
 
     /**
@@ -240,12 +242,12 @@ public final class AquariumRenderer {
         java.util.List<BlockPos> water = new ArrayList<>(floor.blocks);
         water.sort(java.util.Comparator.comparingLong(BlockPos::asLong));
         java.util.Random random = new java.util.Random(floor.min.asLong() * 31L + water.size());
-        floor.fishCount = Math.max(3, Math.min(MAX_FISH, (int) (water.size() * 1.6F)));
+        floor.fishCount = Math.max(3, Math.min(MAX_FISH, (int) (water.size() * (floor.ocean ? 0.5F : 1.6F))));
         for (int i = 0; i < floor.fishCount; i++) {
             BlockPos start = water.get(random.nextInt(water.size()));
             int[] lo = {start.getX(), start.getY(), start.getZ()}, hi = {start.getX(), start.getY(), start.getZ()};
-            int[] limit = {12, 6, 12};
-            for (int round = 0; round < 24; round++) {
+            int[] limit = floor.ocean ? new int[] {24, 10, 24} : new int[] {12, 6, 12};
+            for (int round = 0; round < (floor.ocean ? 60 : 24); round++) {
                 int axis = random.nextInt(3);
                 boolean up = random.nextBoolean();
                 if (hi[axis] - lo[axis] + 1 >= limit[axis]) {
@@ -320,7 +322,7 @@ public final class AquariumRenderer {
 
     private static void scan(ClientLevel level, int centerX, int centerZ) {
         FLOORS.clear();
-        Set<BlockPos> tiles = new HashSet<>();
+        Map<BlockPos, Boolean> tiles = new HashMap<>(); // (true: an ocean aquarium block)
         for (int dx = -SCAN_RADIUS; dx <= SCAN_RADIUS; dx++) {
             for (int dz = -SCAN_RADIUS; dz <= SCAN_RADIUS; dz++) {
                 LevelChunk chunk = level.getChunkSource().getChunk(centerX + dx, centerZ + dz, false);
@@ -338,8 +340,8 @@ public final class AquariumRenderer {
                     for (int y = 0; y < 16; y++) {
                         for (int z = 0; z < 16; z++) {
                             for (int x = 0; x < 16; x++) {
-                                if (section.getBlockState(x, y, z).getBlock() instanceof AquariumBlock) {
-                                    tiles.add(new BlockPos(baseX + x, baseY + y, baseZ + z));
+                                if (section.getBlockState(x, y, z).getBlock() instanceof AquariumBlock tank) {
+                                    tiles.put(new BlockPos(baseX + x, baseY + y, baseZ + z), tank.ocean());
                                 }
                             }
                         }
@@ -350,11 +352,12 @@ public final class AquariumRenderer {
         // touching aquarium blocks -> tanks
         Set<BlockPos> done = new HashSet<>();
         BlockPos.MutableBlockPos n = new BlockPos.MutableBlockPos();
-        for (BlockPos start : tiles) {
+        for (BlockPos start : tiles.keySet()) {
             if (done.contains(start)) {
                 continue;
             }
             Floor floor = new Floor();
+            floor.ocean = tiles.get(start);
             int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
             int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
             ArrayDeque<BlockPos> queue = new ArrayDeque<>();
@@ -367,7 +370,8 @@ public final class AquariumRenderer {
                 maxX = Math.max(maxX, p.getX()); maxY = Math.max(maxY, p.getY()); maxZ = Math.max(maxZ, p.getZ());
                 for (Direction d : Direction.values()) {
                     n.setWithOffset(p, d);
-                    if (tiles.contains(n)) {
+                    Boolean kind = tiles.get(n);
+                    if (kind != null && kind == floor.ocean) { // (the same kind of tank: one tank)
                         if (!done.contains(n)) {
                             BlockPos next = n.immutable();
                             done.add(next);

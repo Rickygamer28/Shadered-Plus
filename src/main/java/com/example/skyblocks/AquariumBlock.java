@@ -9,8 +9,20 @@ import net.minecraft.world.level.block.state.BlockState;
  * client/AquariumRenderer (up close; further away the plain glass-and-water texture).
  */
 public class AquariumBlock extends TransparentBlock {
+    private final boolean ocean;
+
     public AquariumBlock(Properties properties) {
+        this(properties, false);
+    }
+
+    /** ocean: the ocean aquarium (big sea animals, for giant tanks). */
+    public AquariumBlock(Properties properties, boolean ocean) {
         super(properties);
+        this.ocean = ocean;
+    }
+
+    public boolean ocean() {
+        return ocean;
     }
 
     @Override
