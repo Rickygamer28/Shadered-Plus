@@ -28,5 +28,8 @@ public final class ModBlockEntities {
     public static final Supplier<BlockEntityType<WaterCausticsBlockEntity>> WATER_CAUSTICS = TYPES.register("water_caustics",
             () -> BlockEntityType.Builder.of(WaterCausticsBlockEntity::new, ModBlocks.WATER_CAUSTICS.get()).build(null));
 
+    public static final Supplier<BlockEntityType<DiscoBallBlockEntity>> DISCO_BALL = TYPES.register("disco_ball",
+            () -> BlockEntityType.Builder.of(DiscoBallBlockEntity::new, ModBlocks.DISCO_BALL.get()).build(null));
+
     private ModBlockEntities() {}
 }

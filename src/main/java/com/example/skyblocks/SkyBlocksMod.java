@@ -54,6 +54,7 @@ public class SkyBlocksMod {
         event.accept(ModItems.INFINITY_MIRROR.get());
         event.accept(ModItems.WATER_CAUSTICS.get());
         event.accept(ModItems.DANCE_FLOOR.get());
+        event.accept(ModItems.DISCO_BALL.get());
         event.accept(ModItems.INFINITY_CUBE.get());
         for (ModFluids.SkyLiquid liquid : ModFluids.ALL) {
             event.accept(liquid.bucket.get());

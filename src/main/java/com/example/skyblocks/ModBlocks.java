@@ -40,6 +40,12 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS)
                     .mapColor(net.minecraft.world.level.material.MapColor.ICE).isValidSpawn((s, l, p, e) -> false));
 
+    /** A disco ball throwing real light spots around (DiscoBallBlock, client/DiscoBallRenderer). */
+    public static final DeferredBlock<DiscoBallBlock> DISCO_BALL = BLOCKS.registerBlock("disco_ball", DiscoBallBlock::new,
+            BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS).noOcclusion()
+                    .lightLevel(state -> state.getValue(DiscoBallBlock.MODE) > 0 ? 12 : 0)
+                    .mapColor(net.minecraft.world.level.material.MapColor.METAL));
+
     /** A dance floor tile: touching tiles play one animation together (DanceFloorBlock, client/DanceFloorRenderer). */
     public static final DeferredBlock<DanceFloorBlock> DANCE_FLOOR = BLOCKS.registerBlock("dance_floor", DanceFloorBlock::new,
             BlockBehaviour.Properties.of().strength(0.6F).sound(SoundType.GLASS).lightLevel(state -> 10)

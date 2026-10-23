@@ -147,3 +147,8 @@
   the client; last signal off -> server stores the shown one. Right-click: next animation. Bass pulses the lights,
   animation 8 = equaliser (MusicReactor bands). Recipe: red dye, glass, blue dye / glowstone, redstone, glowstone /
   glass, glowstone, glass -> 8.
+- Disco Ball (23 Oct 2026, user "a disco ball that actually works"): skyblocks:disco_ball (MODE 0 off / 1 white /
+  2 coloured, right-click; light 12 when on). client/DiscoBallRenderer (BER, render bounds inflated 24): faceted ball
+  (10x20 tiles, glints), 96 Fibonacci beams rotated by the spin, level.clip(VISUAL) each frame (glass passes; the ball's
+  visual shape is empty), additive soft spot decals stretched by incidence + faint billboard beams. Spin speed and spot
+  brightness follow MusicReactor bass. Item = flat generated icon.
