@@ -39,6 +39,9 @@ public class SpeakerRenderer implements BlockEntityRenderer<SpeakerBlockEntity> 
         push[0] += push[1] * dt;
         float out = Math.max(-0.02F, Math.min(0.09F, push[0]));
 
+        if (be.getLevel() != null) { // (the light in front of it: inside a solid block there's none)
+            light = net.minecraft.client.renderer.LevelRenderer.getLightColor(be.getLevel(), be.getBlockPos().relative(facing));
+        }
         int block = LightTexture.block(light), sky = LightTexture.sky(light);
         float lit = 0.18F + 0.82F * Math.max(block, sky) / 15.0F;
         poseStack.pushPose();
@@ -46,32 +49,51 @@ public class SpeakerRenderer implements BlockEntityRenderer<SpeakerBlockEntity> 
         poseStack.mulPose(Axis.YP.rotationDegrees(-facing.toYRot() + 180.0F)); // (front = -z)
         poseStack.translate(0.0F, 0.0F, -0.5F);
         Matrix4f pose = poseStack.last().pose();
-        VertexConsumer solid = buffers.getBuffer(DiscoBallRenderer.Types.BALL);
-        // woofer (lower) and tweeter (upper)
-        cone(solid, pose, 0.0F, -0.1F, 0.3F, 0.09F, 0.16F, out, lit, bass);
-        cone(solid, pose, 0.0F, 0.32F, 0.09F, 0.03F, 0.05F, out * 0.3F, lit, bass);
+        VertexConsumer solid = buffers.getBuffer(DiscoBallRenderer.Types.SOLID_TWO_SIDED);
+        // woofer (lower) and tweeter (upper), on the front panel (half a pixel in from the front)
+        cone(solid, pose, 0.0F, -0.1F, 0.26F, 0.1F, out, lit, bass);
+        cone(solid, pose, 0.0F, 0.35F, 0.075F, 0.03F, out * 0.35F, lit, bass);
         poseStack.popPose();
     }
 
-    /** A cone: rim radius r0 at the front face, narrowing to r1 at depth, pushed out by `out`, dust cap in the middle. */
-    private static void cone(VertexConsumer v, Matrix4f pose, float cx, float cy, float r0, float r1, float depth, float out, float lit,
-                             float bass) {
-        float zRim = -0.002F, zIn = depth - out, zCap = depth - out * 1.1F - 0.03F;
+    /**
+     * A speaker cone on the front panel: a raised rubber surround (radius r0), the cone shaded darker towards the middle
+     * (so it reads as dished), and the dust cap (radius r1) bulging out in the middle, glowing with the bass. Everything
+     * moves out by `out` on a hit.
+     */
+    private static void cone(VertexConsumer v, Matrix4f pose, float cx, float cy, float r0, float r1, float out, float lit, float bass) {
+        float panel = 0.5F / 16.0F;                 // the front panel's depth
+        float zSurround = panel - 0.012F, zEdge = panel - 0.004F - out * 0.5F, zInner = panel - 0.006F - out, zCap = panel - 0.035F - out * 1.1F;
+        float rs = r0 * 1.14F;
         for (int i = 0; i < SEGMENTS; i++) {
             float a0 = (float) (Math.PI * 2 * i / SEGMENTS), a1 = (float) (Math.PI * 2 * (i + 1) / SEGMENTS);
             float c0 = (float) Math.cos(a0), s0 = (float) Math.sin(a0), c1 = (float) Math.cos(a1), s1 = (float) Math.sin(a1);
-            // the surround (a dark rubber ring), then the cone, ribbed
-            float rs = r0 * 1.12F;
-            float ring = 0.09F * lit;
-            quad(v, pose, cx + c0 * rs, cy + s0 * rs, zRim, cx + c1 * rs, cy + s1 * rs, zRim, cx + c1 * r0, cy + s1 * r0, zRim - out * 0.5F,
-                    cx + c0 * r0, cy + s0 * r0, zRim - out * 0.5F, ring, ring, ring * 1.1F);
-            float shade = (0.16F + 0.05F * (i % 2)) * lit;
-            quad(v, pose, cx + c0 * r0, cy + s0 * r0, zRim - out * 0.5F, cx + c1 * r0, cy + s1 * r0, zRim - out * 0.5F,
-                    cx + c1 * r1, cy + s1 * r1, zIn, cx + c0 * r1, cy + s0 * r1, zIn, shade, shade, shade * 1.05F);
-            // the dust cap, its glow brighter with the bass
-            float glow = Math.min(1.0F, 0.12F * lit + bass * 0.9F);
-            quad(v, pose, cx + c0 * r1, cy + s0 * r1, zIn, cx + c1 * r1, cy + s1 * r1, zIn, cx, cy, zCap, cx, cy, zCap,
-                    glow, glow * 0.25F, glow * 0.8F);
+            // metal mounting ring, then the rubber surround (lighter on top: light from above)
+            float rm = r0 * 1.24F;
+            float metal = (0.45F + 0.12F * s0) * lit;
+            quad(v, pose, cx + c0 * rm, cy + s0 * rm, panel - 0.002F, cx + c1 * rm, cy + s1 * rm, panel - 0.002F,
+                    cx + c1 * rs, cy + s1 * rs, panel - 0.004F, cx + c0 * rs, cy + s0 * rs, panel - 0.004F, metal, metal, metal * 1.04F);
+            float rubber = (0.07F + 0.05F * (0.5F + 0.5F * s0)) * lit;
+            quad(v, pose, cx + c0 * rs, cy + s0 * rs, panel - 0.004F, cx + c1 * rs, cy + s1 * rs, panel - 0.004F,
+                    cx + c1 * r0, cy + s1 * r0, zSurround - out * 0.5F, cx + c0 * r0, cy + s0 * r0, zSurround - out * 0.5F, rubber, rubber, rubber);
+            // the cone: lighter at the rim, darker towards the middle, faint ribs
+            float rib = (i % 2 == 0) ? 1.0F : 0.92F;
+            float rim = 0.2F * rib * lit, mid = 0.1F * rib * lit;
+            v.addVertex(pose, cx + c0 * r0, cy + s0 * r0, zEdge).setColor(rim, rim, rim * 1.05F, 1.0F);
+            v.addVertex(pose, cx + c1 * r0, cy + s1 * r0, zEdge).setColor(rim, rim, rim * 1.05F, 1.0F);
+            v.addVertex(pose, cx + c1 * r1, cy + s1 * r1, zInner).setColor(mid, mid, mid * 1.05F, 1.0F);
+            v.addVertex(pose, cx + c0 * r1, cy + s0 * r1, zInner).setColor(mid, mid, mid * 1.05F, 1.0F);
+            // the dust cap: a little dome, glowing pink on the beat
+            float glow = Math.min(1.0F, 0.1F * lit + bass * 0.9F);
+            float hi = Math.min(1.0F, glow + 0.08F * lit);
+            v.addVertex(pose, cx + c0 * r1, cy + s0 * r1, zInner).setColor(glow, glow * 0.3F, glow * 0.8F, 1.0F);
+            v.addVertex(pose, cx + c1 * r1, cy + s1 * r1, zInner).setColor(glow, glow * 0.3F, glow * 0.8F, 1.0F);
+            v.addVertex(pose, cx + c1 * r1 * 0.5F, cy + s1 * r1 * 0.5F, (zInner + zCap) * 0.5F - 0.004F).setColor(hi, hi * 0.35F, hi * 0.85F, 1.0F);
+            v.addVertex(pose, cx + c0 * r1 * 0.5F, cy + s0 * r1 * 0.5F, (zInner + zCap) * 0.5F - 0.004F).setColor(hi, hi * 0.35F, hi * 0.85F, 1.0F);
+            v.addVertex(pose, cx + c0 * r1 * 0.5F, cy + s0 * r1 * 0.5F, (zInner + zCap) * 0.5F - 0.004F).setColor(hi, hi * 0.35F, hi * 0.85F, 1.0F);
+            v.addVertex(pose, cx + c1 * r1 * 0.5F, cy + s1 * r1 * 0.5F, (zInner + zCap) * 0.5F - 0.004F).setColor(hi, hi * 0.35F, hi * 0.85F, 1.0F);
+            v.addVertex(pose, cx, cy, zCap).setColor(hi, hi * 0.4F, hi * 0.9F, 1.0F);
+            v.addVertex(pose, cx, cy, zCap).setColor(hi, hi * 0.4F, hi * 0.9F, 1.0F);
         }
     }
 

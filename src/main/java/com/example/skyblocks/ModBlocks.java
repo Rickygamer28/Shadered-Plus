@@ -46,7 +46,7 @@ public final class ModBlocks {
 
     /** A speaker: its cone thumps with the bass, and it carries the music's reaction further (SpeakerBlock). */
     public static final DeferredBlock<SpeakerBlock> SPEAKER = BLOCKS.registerBlock("speaker", SpeakerBlock::new,
-            BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.WOOD).noOcclusion()
+            BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.WOOD)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
 
     /** An aquarium: touching blocks make one tank with fish in it (AquariumBlock, client/AquariumRenderer). */

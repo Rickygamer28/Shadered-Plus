@@ -24,7 +24,7 @@ public class FogMachineRenderer implements BlockEntityRenderer<FogMachineBlockEn
                 return;
             }
             Direction facing = be.getBlockState().getValue(FogMachineBlock.FACING);
-            area = FogMachineBlockEntity.area(be.getBlockPos(), facing, screen.fogWidth(), screen.fogDepth(), screen.fogHeight());
+            area = FogMachineBlockEntity.area(be.getBlockPos(), facing, screen.value(0), screen.value(1), screen.value(2), screen.value(3), screen.value(4));
         } else {
             if (!be.showArea()) {
                 return;
@@ -42,6 +42,6 @@ public class FogMachineRenderer implements BlockEntityRenderer<FogMachineBlockEn
 
     @Override
     public AABB getRenderBoundingBox(FogMachineBlockEntity be) {
-        return new AABB(be.getBlockPos()).inflate(FogMachineBlockEntity.MAX_DEPTH + 1, FogMachineBlockEntity.MAX_HEIGHT + 1, FogMachineBlockEntity.MAX_DEPTH + 1);
+        return new AABB(be.getBlockPos()).inflate(FogMachineBlockEntity.MAX_REACH + 1, FogMachineBlockEntity.MAX_HEIGHT + 1, FogMachineBlockEntity.MAX_REACH + 1);
     }
 }

@@ -112,7 +112,11 @@ void main() {
     float tEnter = length(fragPos - Eye);
     vec3 entry = ro + rd * tEnter - BoxMin; // (tank coordinates, 0..BoxSize)
     // walk through the tank's blocks to where the ray leaves the water (a tank of any shape)
-    vec3 pos = entry + rd * 0.002;
+    // (start just inside the face, straight in from it: right on the line between two blocks the ray could start a
+    // hair outside the tank and "leave the water" at once, drawing a broken line along the seam)
+    vec3 faceN = normalize(cross(dFdx(fragPos), dFdy(fragPos)));
+    faceN = dot(faceN, rd) < 0.0 ? -faceN : faceN;
+    vec3 pos = clamp(entry + faceN * 0.01, vec3(0.001), BoxSize - 0.001);
     ivec3 cell = ivec3(floor(pos));
     vec3 stepDir = sign(rd);
     vec3 tDelta = abs(1.0 / rd);
@@ -131,7 +135,7 @@ void main() {
             break;
         }
     }
-    float tExit = tEnter + 0.002 + leave;
+    float tExit = tEnter + leave;
 
     float surface = BoxSize.y - 0.06;
     float t = Time;

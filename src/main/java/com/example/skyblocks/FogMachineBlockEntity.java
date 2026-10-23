@@ -17,29 +17,34 @@ import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The fog machine's settings (the fog's area: width x depth x height, in front of it; whether the area is outlined),
+ * The fog machine's settings (the fog's area: how far it goes in front, behind, left, right and up; whether it's outlined),
  * and its fog: puffed on the client every tick, spread through the area and kept inside it.
  */
 public class FogMachineBlockEntity extends BlockEntity {
-    public static final int MAX_WIDTH = 32, MAX_DEPTH = 32, MAX_HEIGHT = 12;
+    public static final int MAX_REACH = 32, MAX_HEIGHT = 12;
     /** Fog machines going on this client: position -> when it last puffed (System.nanoTime). */
     public static final Map<BlockPos, Long> ACTIVE = new HashMap<>();
 
-    private int width = 7, depth = 8, height = 2;
+    /** How many blocks the fog goes out from the machine: in front, behind, to its left, to its right; how high. */
+    private int front = 8, back = 0, left = 3, right = 3, height = 2;
     private boolean showArea;
 
     public FogMachineBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.FOG_MACHINE.get(), pos, state);
     }
 
-    public int width() { return width; }
-    public int depth() { return depth; }
+    public int front() { return front; }
+    public int back() { return back; }
+    public int left() { return left; }
+    public int right() { return right; }
     public int height() { return height; }
     public boolean showArea() { return showArea; }
 
-    public void setSettings(int width, int depth, int height, boolean showArea) {
-        this.width = Mth.clamp(width, 1, MAX_WIDTH);
-        this.depth = Mth.clamp(depth, 1, MAX_DEPTH);
+    public void setSettings(int front, int back, int left, int right, int height, boolean showArea) {
+        this.front = Mth.clamp(front, 0, MAX_REACH);
+        this.back = Mth.clamp(back, 0, MAX_REACH);
+        this.left = Mth.clamp(left, 0, MAX_REACH);
+        this.right = Mth.clamp(right, 0, MAX_REACH);
         this.height = Mth.clamp(height, 1, MAX_HEIGHT);
         this.showArea = showArea;
         setChanged();
@@ -48,24 +53,19 @@ public class FogMachineBlockEntity extends BlockEntity {
         }
     }
 
-    /** The fog's area for these settings: starting just in front of the machine, centred on it, from its floor up. */
-    public static AABB area(BlockPos pos, Direction facing, int width, int depth, int height) {
-        Direction right = facing.getClockWise();
-        double left = -(width / 2), rightEnd = width - width / 2;
-        double x0 = pos.getX() + 0.5, z0 = pos.getZ() + 0.5;
-        double ax = x0 + facing.getStepX() * 0.5, az = z0 + facing.getStepZ() * 0.5; // (the machine's front face)
-        double bx = ax + facing.getStepX() * depth, bz = az + facing.getStepZ() * depth;
-        double lx = right.getStepX() * (left - 0.5), lz = right.getStepZ() * (left - 0.5);
-        double rx = right.getStepX() * (rightEnd - 0.5), rz = right.getStepZ() * (rightEnd - 0.5);
-        return new AABB(Math.min(Math.min(ax + lx, ax + rx), Math.min(bx + lx, bx + rx)), pos.getY(),
-                Math.min(Math.min(az + lz, az + rz), Math.min(bz + lz, bz + rz)),
-                Math.max(Math.max(ax + lx, ax + rx), Math.max(bx + lx, bx + rx)), pos.getY() + height,
-                Math.max(Math.max(az + lz, az + rz), Math.max(bz + lz, bz + rz)));
+    /** The fog's area: the machine's block, stretched out that far each way (relative to where it faces), from its floor up. */
+    public static AABB area(BlockPos pos, Direction facing, int front, int back, int left, int right, int height) {
+        Direction toRight = facing.getClockWise();
+        AABB box = new AABB(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1, pos.getY() + height, pos.getZ() + 1);
+        box = box.expandTowards(facing.getStepX() * front, 0, facing.getStepZ() * front);
+        box = box.expandTowards(-facing.getStepX() * back, 0, -facing.getStepZ() * back);
+        box = box.expandTowards(toRight.getStepX() * right, 0, toRight.getStepZ() * right);
+        return box.expandTowards(-toRight.getStepX() * left, 0, -toRight.getStepZ() * left);
     }
 
     public AABB area() {
         Direction facing = getBlockState().hasProperty(FogMachineBlock.FACING) ? getBlockState().getValue(FogMachineBlock.FACING) : Direction.NORTH;
-        return area(worldPosition, facing, width, depth, height);
+        return area(worldPosition, facing, front, back, left, right, height);
     }
 
     public static void clientTick(Level level, BlockPos pos, BlockState state, FogMachineBlockEntity be) {
@@ -118,8 +118,10 @@ public class FogMachineBlockEntity extends BlockEntity {
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        tag.putInt("width", width);
-        tag.putInt("depth", depth);
+        tag.putInt("front", front);
+        tag.putInt("back", back);
+        tag.putInt("left", left);
+        tag.putInt("right", right);
         tag.putInt("height", height);
         tag.putBoolean("show_area", showArea);
     }
@@ -127,9 +129,11 @@ public class FogMachineBlockEntity extends BlockEntity {
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        if (tag.contains("width")) {
-            width = Mth.clamp(tag.getInt("width"), 1, MAX_WIDTH);
-            depth = Mth.clamp(tag.getInt("depth"), 1, MAX_DEPTH);
+        if (tag.contains("front")) {
+            front = Mth.clamp(tag.getInt("front"), 0, MAX_REACH);
+            back = Mth.clamp(tag.getInt("back"), 0, MAX_REACH);
+            left = Mth.clamp(tag.getInt("left"), 0, MAX_REACH);
+            right = Mth.clamp(tag.getInt("right"), 0, MAX_REACH);
             height = Mth.clamp(tag.getInt("height"), 1, MAX_HEIGHT);
             showArea = tag.getBoolean("show_area");
         }

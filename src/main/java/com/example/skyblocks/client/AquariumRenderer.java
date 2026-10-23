@@ -121,6 +121,20 @@ public final class AquariumRenderer {
         }
     }
 
+    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, value = Dist.CLIENT)
+    public static final class Outline {
+        private Outline() {}
+
+        /** No black outline round the one block you look at: the tank is one piece of glass. */
+        @SubscribeEvent
+        public static void onHighlight(net.neoforged.neoforge.client.event.RenderHighlightEvent.Block event) {
+            ClientLevel level = Minecraft.getInstance().level;
+            if (level != null && level.getBlockState(event.getTarget().getBlockPos()).getBlock() instanceof AquariumBlock) {
+                event.setCanceled(true);
+            }
+        }
+    }
+
     /** A block changed on the client: rescan if an aquarium block came or went. */
     static void blockChanged(BlockState oldState, BlockState newState) {
         if (oldState.getBlock() instanceof AquariumBlock || newState.getBlock() instanceof AquariumBlock) {

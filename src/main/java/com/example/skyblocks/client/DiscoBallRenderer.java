@@ -302,6 +302,14 @@ public class DiscoBallRenderer implements BlockEntityRenderer<DiscoBallBlockEnti
                         .setTransparencyState(NO_TRANSPARENCY)
                         .setWriteMaskState(COLOR_DEPTH_WRITE)
                         .createCompositeState(false));
+        /** Like BALL, but both sides of each face drawn (the speaker's cones). */
+        static final RenderType SOLID_TWO_SIDED = create("skyblocks_solid_two_sided", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 8192,
+                false, false, CompositeState.builder()
+                        .setShaderState(RENDERTYPE_LIGHTNING_SHADER)
+                        .setTransparencyState(NO_TRANSPARENCY)
+                        .setWriteMaskState(COLOR_DEPTH_WRITE)
+                        .setCullState(NO_CULL)
+                        .createCompositeState(false));
         /** The light: added on top (glowing), not hiding anything behind it. */
         static final RenderType GLOW = create("skyblocks_disco_glow", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 65536,
                 false, true, CompositeState.builder()

@@ -11,13 +11,15 @@ import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /** Fog machine menu -> server: the fog's area and whether it's outlined. */
-public record FogAreaPayload(BlockPos pos, int width, int depth, int height, boolean showArea) implements CustomPacketPayload {
+public record FogAreaPayload(BlockPos pos, int front, int back, int left, int right, int height, boolean showArea) implements CustomPacketPayload {
     public static final Type<FogAreaPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "fog_area"));
 
     public static final StreamCodec<ByteBuf, FogAreaPayload> STREAM_CODEC = StreamCodec.composite(
             BlockPos.STREAM_CODEC, FogAreaPayload::pos,
-            ByteBufCodecs.VAR_INT, FogAreaPayload::width,
-            ByteBufCodecs.VAR_INT, FogAreaPayload::depth,
+            ByteBufCodecs.VAR_INT, FogAreaPayload::front,
+            ByteBufCodecs.VAR_INT, FogAreaPayload::back,
+            ByteBufCodecs.VAR_INT, FogAreaPayload::left,
+            ByteBufCodecs.VAR_INT, FogAreaPayload::right,
             ByteBufCodecs.VAR_INT, FogAreaPayload::height,
             ByteBufCodecs.BOOL, FogAreaPayload::showArea,
             FogAreaPayload::new);
@@ -33,7 +35,7 @@ public record FogAreaPayload(BlockPos pos, int width, int depth, int height, boo
             if (player.level() instanceof ServerLevel level && level.isLoaded(payload.pos())
                     && player.distanceToSqr(payload.pos().getCenter()) <= 8 * 8
                     && level.getBlockEntity(payload.pos()) instanceof FogMachineBlockEntity machine) {
-                machine.setSettings(payload.width(), payload.depth(), payload.height(), payload.showArea());
+                machine.setSettings(payload.front(), payload.back(), payload.left(), payload.right(), payload.height(), payload.showArea());
             }
         });
     }
