@@ -20,6 +20,9 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -29,17 +32,18 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A disco ball: a spinning mirror ball throwing real light spots onto the blocks around it (client/DiscoBallRenderer
- * traces its beams through the world every frame). Right-click: off, white spots, coloured spots.
+ * traces its beams through the world every frame). Right-click or a new redstone signal: off, white spots, coloured spots.
  */
 public class DiscoBallBlock extends BaseEntityBlock {
     public static final MapCodec<DiscoBallBlock> CODEC = simpleCodec(DiscoBallBlock::new);
     /** 0 off, 1 white spots, 2 coloured spots. */
     public static final IntegerProperty MODE = IntegerProperty.create("mode", 0, 2);
+    public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
     private static final VoxelShape SHAPE = Shapes.or(Block.box(3.0, 2.0, 3.0, 13.0, 12.0, 13.0), Block.box(7.5, 12.0, 7.5, 8.5, 16.0, 8.5));
 
     public DiscoBallBlock(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(MODE, 1));
+        registerDefaultState(stateDefinition.any().setValue(MODE, 1).setValue(POWERED, false));
     }
 
     @Override
@@ -49,7 +53,7 @@ public class DiscoBallBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(MODE);
+        builder.add(MODE, POWERED);
     }
 
     @Override
@@ -72,6 +76,30 @@ public class DiscoBallBlock extends BaseEntityBlock {
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new DiscoBallBlockEntity(pos, state);
+    }
+
+    @Nullable
+    @Override
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
+        return defaultBlockState().setValue(POWERED, context.getLevel().hasNeighborSignal(context.getClickedPos()));
+    }
+
+    /** Each new redstone signal: the next mode (like a right-click). */
+    @Override
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean moving) {
+        super.neighborChanged(state, level, pos, block, fromPos, moving);
+        if (level.isClientSide) {
+            return;
+        }
+        boolean powered = level.hasNeighborSignal(pos);
+        if (powered != state.getValue(POWERED)) {
+            BlockState next = state.setValue(POWERED, powered);
+            if (powered) {
+                next = next.setValue(MODE, (state.getValue(MODE) + 1) % 3);
+                level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.0F, 0.7F + 0.3F * next.getValue(MODE));
+            }
+            level.setBlock(pos, next, Block.UPDATE_ALL);
+        }
     }
 
     @Override

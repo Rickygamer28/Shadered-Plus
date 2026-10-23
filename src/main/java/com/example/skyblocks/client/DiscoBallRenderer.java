@@ -89,7 +89,9 @@ public class DiscoBallRenderer implements BlockEntityRenderer<DiscoBallBlockEnti
         Vec3 centre = Vec3.atCenterOf(pos).add(0.0, -0.1, 0.0);
         Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         Matrix4f pose = poseStack.last().pose();
-        drawBall(buffers.getBuffer(Types.BALL), pose, centre, pos, cam, angle, mode, seconds);
+        Vector3f local = new Vector3f((float) (centre.x - pos.getX()), (float) (centre.y - pos.getY()), (float) (centre.z - pos.getZ()));
+        Vector3f toCam = new Vector3f((float) (cam.x - centre.x), (float) (cam.y - centre.y), (float) (cam.z - centre.z)).normalize();
+        drawBall(buffers.getBuffer(Types.BALL), pose, local, toCam, angle, mode, seconds, true);
         if (mode == 0) {
             return;
         }
@@ -122,13 +124,11 @@ public class DiscoBallRenderer implements BlockEntityRenderer<DiscoBallBlockEnti
     }
 
     /** The ball: dark behind, little mirror tiles in front, each glinting when it catches a light towards you. */
-    private static void drawBall(VertexConsumer out, Matrix4f pose, Vec3 centre, BlockPos pos, Vec3 cam, float angle, int mode, double seconds) {
-        Vector3f c = new Vector3f((float) (centre.x - pos.getX()), (float) (centre.y - pos.getY()), (float) (centre.z - pos.getZ()));
-        Vector3f toCam = new Vector3f((float) (cam.x - centre.x), (float) (cam.y - centre.y), (float) (cam.z - centre.z)).normalize();
+    static void drawBall(VertexConsumer out, Matrix4f pose, Vector3f c, Vector3f toCam, float angle, int mode, double seconds, boolean rod) {
         Vector3f[] lights = {new Vector3f(0.3F, 0.9F, 0.3F).normalize(), new Vector3f(-0.8F, 0.2F, 0.4F).normalize(),
                 new Vector3f(0.5F, -0.3F, -0.8F).normalize()};
         // the hanging rod
-        box(out, pose, c.x - 0.02F, c.y + RADIUS, c.z - 0.02F, c.x + 0.02F, 1.0F, c.z + 0.02F, 0.15F, 0.15F, 0.17F);
+        if (rod) box(out, pose, c.x - 0.02F, c.y + RADIUS, c.z - 0.02F, c.x + 0.02F, 1.0F, c.z + 0.02F, 0.15F, 0.15F, 0.17F);
         float cos = (float) Math.cos(angle), sin = (float) Math.sin(angle);
         for (int i = 0; i < RINGS; i++) {
             float lat0 = (float) (-Math.PI / 2 + Math.PI * i / RINGS), lat1 = (float) (-Math.PI / 2 + Math.PI * (i + 1) / RINGS);
@@ -229,7 +229,7 @@ public class DiscoBallRenderer implements BlockEntityRenderer<DiscoBallBlockEnti
     }
 
     /** (A subclass only to reach RenderType's building blocks.) */
-    private abstract static class Types extends RenderType {
+    abstract static class Types extends RenderType {
         /** The ball: plain colours, solid, full bright. */
         static final RenderType BALL = create("skyblocks_disco_ball", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 8192,
                 false, false, CompositeState.builder()
