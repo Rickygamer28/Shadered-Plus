@@ -20,6 +20,7 @@ uniform vec4 Bars0;
 uniform vec4 Bars1;
 uniform vec4 Bars2;
 uniform vec4 Bars3;
+uniform float HistoryPhase; // 0..1: how far into the next history step
 
 in vec3 dir;
 
@@ -312,59 +313,77 @@ vec3 palms(vec3 d, float elev, vec3 col) {
 
 // ---- the floor ----
 
-// how high the music raises the floor at (along the highway, across it), unscrolled
-float terrain(vec2 g) {
+const float FLOW_STEP = 0.7; // blocks the music moves away per history step (24 steps a second)
+const float SPREAD = 60.0;   // blocks across for the 16 bands, from the highway out
+
+// how tall the peaks may get at distance r (taller far away, so they still show near the horizon)
+float amp(float r) {
+    return 0.7 + 0.045 * r;
+}
+
+// how high the music raises the floor at (along the highway, across it), r blocks away
+float terrain(vec2 g, float r) {
     float lateral = abs(g.y) - 0.9;
     if (lateral <= 0.0) {
         return 0.0;
     }
-    float band = lateral / 9.0;
-    float age = abs(g.x) / 16.0;
-    if (band >= 1.0 || age >= 1.0) {
+    float band = lateral / SPREAD;
+    float steps = abs(g.x) / FLOW_STEP;
+    if (band >= 1.0 || steps >= 127.0) {
         return 0.0;
     }
-    float v = texture(Sampler0, vec2(age, band * (15.0 / 16.0) + 0.5 / 16.0)).r;
-    return 0.72 * v * Music * smoothstep(0.0, 0.3, lateral) * (1.0 - smoothstep(0.7, 1.0, age)) * (1.0 - smoothstep(0.85, 1.0, band));
+    // (HistoryPhase: part of the next step already gone by, so the peaks glide instead of jumping)
+    float x = (max(steps - HistoryPhase, 0.0) + 0.5) / 128.0;
+    float v = texture(Sampler0, vec2(x, band * (15.0 / 16.0) + 0.5 / 16.0)).r;
+    return amp(r) * v * Music * smoothstep(0.0, 0.4, lateral) * (1.0 - smoothstep(100.0, 127.0, steps))
+            * (1.0 - smoothstep(0.85, 1.0, band));
 }
 
 vec2 gridAt(vec3 p) {
     return vec2(dot(p.xz, SUN_DIR.xz), dot(p.xz, SIDE.xz));
 }
 
-vec3 floorColour(vec3 d, float az, float t, float facing) {
-    float down = -d.y;
-    float hit = 1.0 / down; // flat floor one block below
-    if (Music > 0.001) {
-        // march along the view ray over the music's peaks
-        float start = 0.28 / down;
-        float end = min(hit, 26.0 / max(length(d.xz), 1.0e-4));
-        if (start < end) {
-            const int STEPS = 48;
-            float stride = (end - start) / float(STEPS);
-            float before = start;
-            for (int i = 0; i <= STEPS; i++) {
-                float ti = start + stride * float(i);
-                vec3 p = d * ti;
-                if (p.y < -1.0 + terrain(gridAt(p))) {
-                    float lo = before, hi = ti;
-                    for (int k = 0; k < 6; k++) {
-                        float m = 0.5 * (lo + hi);
-                        vec3 pm = d * m;
-                        if (pm.y < -1.0 + terrain(gridAt(pm))) {
-                            hi = m;
-                        } else {
-                            lo = m;
-                        }
-                    }
-                    hit = hi;
-                    break;
-                }
-                before = ti;
-            }
+// where the view ray meets the music's peaks (or the floor under them), -1 if it doesn't
+float marchTerrain(vec3 d) {
+    float t = 0.3;
+    float before = t;
+    for (int i = 0; i < 100; i++) {
+        vec3 p = d * t;
+        float r = length(p.xz);
+        if (r > 130.0 || (d.y >= 0.0 && p.y > -1.0 + amp(r))) {
+            break; // out of the music's floor, or above every peak and rising
         }
+        if (p.y < -1.0 + terrain(gridAt(p), r)) {
+            float lo = before, hi = t;
+            for (int k = 0; k < 7; k++) {
+                float m = 0.5 * (lo + hi);
+                vec3 pm = d * m;
+                if (pm.y < -1.0 + terrain(gridAt(pm), length(pm.xz))) {
+                    hi = m;
+                } else {
+                    lo = m;
+                }
+            }
+            return hi;
+        }
+        before = t;
+        t = t * 1.05 + 0.05; // (longer steps further away)
     }
+    return -1.0;
+}
+
+// lines through every whole number of v, aa = how much of v one pixel covers
+float linesW(float v, float width, float aa) {
+    float d = 0.5 - abs(fract(v) - 0.5);
+    return (1.0 - smoothstep(width, width + aa * 1.5, d)) * (1.0 - smoothstep(0.3, 0.8, aa));
+}
+
+vec3 floorColour(vec3 d, float az, float t, float facing, float hit) {
+    float down = -d.y;
     vec3 p = d * hit;
-    float height = clamp((p.y + 1.0) / 0.72, 0.0, 1.0);
+    float height = clamp((p.y + 1.0) / amp(length(p.xz)), 0.0, 1.0);
+    // how many blocks of floor one pixel covers (from the view direction, smooth everywhere, unlike fwidth of the hit)
+    float aa = hit * length(fwidth(d)) / max(abs(d.y) + 0.35 * height, 0.06);
     vec2 g = gridAt(p);
     vec2 moving = vec2(g.x + t * 2.5, g.y);
     float road = abs(g.y);
@@ -372,21 +391,21 @@ vec3 floorColour(vec3 d, float az, float t, float facing) {
     if (road < 0.75) {
         // the highway: dark, orange edges, a dashed middle line
         col = vec3(0.03, 0.0, 0.06);
-        float edgeLine = 1.0 - smoothstep(0.03, 0.03 + fwidth(road) * 1.5, abs(road - 0.7));
-        float dash = (1.0 - smoothstep(0.025, 0.025 + fwidth(road) * 1.5, road)) * step(0.5, fract(moving.x * 0.5));
-        col += ORANGE * 1.2 * edgeLine + YELLOW * 0.9 * dash * (1.0 - smoothstep(0.3, 0.9, fwidth(moving.x)));
+        float edgeLine = 1.0 - smoothstep(0.03, 0.03 + aa * 1.5, abs(road - 0.7));
+        float dash = (1.0 - smoothstep(0.025, 0.025 + aa * 1.5, road)) * step(0.5, fract(moving.x * 0.5));
+        col += ORANGE * 1.2 * edgeLine + YELLOW * 0.9 * dash * (1.0 - smoothstep(0.3, 0.9, aa));
     } else {
-        float grid = max(lines(moving.x, 0.03), lines(moving.y, 0.03));
+        float grid = max(linesW(moving.x, 0.03, aa), linesW(moving.y, 0.03, aa));
         float near = 0.5 - max(abs(fract(moving.x) - 0.5), abs(fract(moving.y) - 0.5));
         vec3 lineCol = mix(PINK, mix(ORANGE, YELLOW, height), smoothstep(0.05, 0.6, height));
         col = FLOOR + PINK * 0.3 * height + lineCol * 1.3 * grid * (1.0 + 0.6 * Mid)
-                + PINK * 0.12 * (1.0 - smoothstep(0.0, 0.2, near)) * (1.0 - smoothstep(0.3, 0.9, fwidth(moving.x)));
+                + PINK * 0.12 * (1.0 - smoothstep(0.0, 0.2, near)) * (1.0 - smoothstep(0.3, 0.9, aa));
     }
     // the sun's reflection, the haze far away
-    float haze = exp(-14.0 / hit);
+    float haze = exp(-14.0 / hit) * (1.0 - 0.6 * height); // (peaks stand out of the haze)
     col += ORANGE * 0.3 * exp(-abs(az) * 5.0) * haze;
     col = mix(col, mix(HORIZON_COOL, HORIZON, facing) * 0.9, haze * 0.8);
-    col += PINK * 0.45 * exp(-down * 40.0);
+    col += PINK * 0.45 * exp(-max(down, 0.0) * 40.0) * (1.0 - height);
     return col;
 }
 
@@ -398,7 +417,12 @@ void main() {
     float facing = pow(clamp(dot(normalize(d.xz + vec2(1.0e-5)), SUN_DIR.xz) * 0.5 + 0.5, 0.0, 1.0), 1.5); // 1 sunwards
     vec3 col;
 
-    if (elev >= 0.0) {
+    // with music the floor rises into peaks, all the way out (far ones above the horizon, in front of the mountains)
+    float peaks = Music > 0.001 && elev < 0.12 ? marchTerrain(d) : -1.0;
+    bool raised = peaks > 0.0 && (d * peaks).y > -0.995;
+    if (peaks > 0.0) {
+        col = floorColour(d, az, t, facing, peaks);
+    } else if (elev >= 0.0) {
         float h = elev / (PI * 0.5);
         col = mix(mix(HORIZON_COOL, HORIZON, facing), mix(MID_COOL, MID, facing), smoothstep(0.0, 0.2, h));
         col = mix(col, TOP, smoothstep(0.15, 0.65, h));
@@ -411,10 +435,12 @@ void main() {
         col += mix(PINK, ORANGE, facing * 0.4) * 0.45 * exp(-elev * 40.0); // glow along the horizon
         col = mountains(az, elev, col);
     } else {
-        col = floorColour(d, az, t, facing);
+        col = floorColour(d, az, t, facing, 1.0 / max(-d.y, 1.0e-4));
     }
-    col = city(d, elev, t, col);
-    col = palms(d, elev, col);
+    if (!raised) { // (the city and palms are behind the peaks)
+        col = city(d, elev, t, col);
+        col = palms(d, elev, col);
+    }
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

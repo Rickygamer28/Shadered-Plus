@@ -127,6 +127,7 @@ public final class MusicReactor {
     static void apply(ShaderInstance shader) {
         update();
         shader.safeGetUniform("Music").set(music);
+        shader.safeGetUniform("HistoryPhase").set(Math.min(1.0F, historyClock));
         float bass = (current[0] + current[1] + current[2]) / 3.0F;
         float mid = 0.0F;
         for (int b = 3; b < 10; b++) {
