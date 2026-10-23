@@ -40,6 +40,14 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS)
                     .mapColor(net.minecraft.world.level.material.MapColor.ICE).isValidSpawn((s, l, p, e) -> false));
 
+    /**
+     * Water caustics: the moving light on the bottom of a pool (animated textures, tools/make_water_caustics.py); right-click
+     * it with a full block to show that block's texture under the light (WaterCausticsBlock, client/WaterCausticsModel).
+     */
+    public static final DeferredBlock<WaterCausticsBlock> WATER_CAUSTICS = BLOCKS.registerBlock("water_caustics", WaterCausticsBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()
+                    .mapColor(net.minecraft.world.level.material.MapColor.DIAMOND));
+
     /** An infinity mirror: a tunnel of LED rings going on forever (InfinityMirrorBlock, client/InfinityMirrorRenderer). */
     public static final DeferredBlock<InfinityMirrorBlock> INFINITY_MIRROR = BLOCKS.registerBlock("infinity_mirror",
             InfinityMirrorBlock::new, BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS)

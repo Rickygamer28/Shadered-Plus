@@ -25,5 +25,8 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(SkyIslandBlockEntity::new, ModBlocks.SKY_ISLAND.get(),
                     ModBlocks.ISLAND_PAINTING.get()).build(null));
 
+    public static final Supplier<BlockEntityType<WaterCausticsBlockEntity>> WATER_CAUSTICS = TYPES.register("water_caustics",
+            () -> BlockEntityType.Builder.of(WaterCausticsBlockEntity::new, ModBlocks.WATER_CAUSTICS.get()).build(null));
+
     private ModBlockEntities() {}
 }

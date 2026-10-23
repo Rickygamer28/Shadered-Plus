@@ -1,5 +1,7 @@
 package com.example.skyblocks.client;
 
+import net.minecraft.client.Minecraft;
+
 import com.example.skyblocks.ModBlockEntities;
 import com.example.skyblocks.OiiaCatBlockEntity;
 import com.example.skyblocks.ModItems;
@@ -129,10 +131,44 @@ public final class ClientSetup {
             net.minecraft.client.resources.model.ModelResourceLocation.standalone(
                     net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "block/sky_liquid"));
 
+    private static final net.minecraft.client.resources.model.ModelResourceLocation CAUSTICS_OVERLAY =
+            net.minecraft.client.resources.model.ModelResourceLocation.standalone(
+                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "block/water_caustics_overlay"));
+
     @SubscribeEvent
     public static void registerModels(net.neoforged.neoforge.client.event.ModelEvent.RegisterAdditional event) {
         event.register(BUCKET_MODEL);
         event.register(LIQUID_MODEL);
+        event.register(CAUSTICS_OVERLAY);
+    }
+
+    /** The water caustics block's model also draws the block put under its water (client/WaterCausticsModel). */
+    @SubscribeEvent
+    public static void causticsModel(net.neoforged.neoforge.client.event.ModelEvent.ModifyBakingResult event) {
+        var models = event.getModels();
+        net.minecraft.client.resources.model.BakedModel overlay = models.get(CAUSTICS_OVERLAY);
+        if (overlay == null) {
+            return;
+        }
+        for (net.minecraft.world.level.block.state.BlockState state : com.example.skyblocks.ModBlocks.WATER_CAUSTICS.get().getStateDefinition().getPossibleStates()) {
+            var key = net.minecraft.client.renderer.block.BlockModelShaper.stateToModelLocation(state);
+            net.minecraft.client.resources.model.BakedModel water = models.get(key);
+            if (water != null) {
+                models.put(key, new WaterCausticsModel(water, overlay));
+            }
+        }
+    }
+
+    /** Tinted blocks under the water (grass, leaves...) keep their colour. */
+    @SubscribeEvent
+    public static void causticsColours(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Block event) {
+        event.register((state, level, pos, tint) -> {
+            if (level != null && pos != null && level.getBlockEntity(pos) instanceof com.example.skyblocks.WaterCausticsBlockEntity be
+                    && be.inside() != null) {
+                return Minecraft.getInstance().getBlockColors().getColor(be.inside(), level, pos, tint);
+            }
+            return -1;
+        }, com.example.skyblocks.ModBlocks.WATER_CAUSTICS.get());
     }
 
     /** A sky added by another mod has no model files of ours: give its bucket and liquid the shared models. */

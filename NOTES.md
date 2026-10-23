@@ -121,3 +121,9 @@
 - Synthwave sky (23 Oct 2026, user: all extras, classic pink/purple/orange, moving grid): last entry of SkyNames,
   shaders/core/synthwave_sky.fsh (our own code), drawn like chaos by client/ShaderSky.Pass (ChaosSky renamed ShaderSky;
   shader_sky.vsh shared). Sun sets towards -X (west).
+- Water Caustics (23 Oct 2026, user): skyblocks:water_caustics, animated textures from tools/make_water_caustics.py
+  (water_caustics.png = moving water + light, water_caustics_overlay.png = blue tint + light, translucent). Right-click
+  with a full solid block (no BE) puts it under the water (WaterCausticsBlockEntity.inside, item used up / given back,
+  dropped on break); sneak + empty hand takes it out. client/WaterCausticsModel wraps the block model (ModelData):
+  inside block's quads + the overlay model (block/water_caustics_overlay, 0.01 outside). A separate Pool Floor block was
+  made and dropped again (user: right-click instead). Recipe: 4 light blue concrete + water bucket + prismarine crystals -> 4.
