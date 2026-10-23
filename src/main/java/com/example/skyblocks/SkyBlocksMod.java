@@ -31,6 +31,7 @@ public class SkyBlocksMod {
         ModBlocks.BLOCKS.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
         ModBlockEntities.TYPES.register(modEventBus);
+        ModParticles.TYPES.register(modEventBus);
         ModComponents.COMPONENTS.register(modEventBus);
         ModFluids.TYPES.register(modEventBus);
         ModFluids.FLUIDS.register(modEventBus);
@@ -53,8 +54,12 @@ public class SkyBlocksMod {
         event.accept(ModItems.MIRROR.get());
         event.accept(ModItems.INFINITY_MIRROR.get());
         event.accept(ModItems.WATER_CAUSTICS.get());
+        event.accept(ModItems.GALAXY_FLOOR.get());
         event.accept(ModItems.DANCE_FLOOR.get());
         event.accept(ModItems.DISCO_BALL.get());
+        event.accept(ModItems.SPEAKER.get());
+        event.accept(ModItems.FOG_MACHINE.get());
+        event.accept(ModItems.AQUARIUM.get());
         event.accept(ModItems.INFINITY_CUBE.get());
         for (ModFluids.SkyLiquid liquid : ModFluids.ALL) {
             event.accept(liquid.bucket.get());

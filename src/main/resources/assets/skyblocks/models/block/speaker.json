@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/orientable",
+  "render_type": "minecraft:cutout",
+  "textures": {
+    "front": "skyblocks:block/speaker_front",
+    "side": "skyblocks:block/speaker_side",
+    "top": "skyblocks:block/speaker_side"
+  }
+}

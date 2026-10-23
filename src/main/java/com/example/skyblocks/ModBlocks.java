@@ -40,6 +40,24 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS)
                     .mapColor(net.minecraft.world.level.material.MapColor.ICE).isValidSpawn((s, l, p, e) -> false));
 
+    /** Galaxy floor: a flowing nebula, any block can go under it (GalaxyFloorBlock, like the water caustics). */
+    public static final DeferredBlock<GalaxyFloorBlock> GALAXY_FLOOR = BLOCKS.registerBlock("galaxy_floor", GalaxyFloorBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.AMETHYST).requiresCorrectToolForDrops().lightLevel(state -> 4)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE));
+
+    /** A fog machine: low fog drifting along the floor (FogMachineBlock, client/FogParticle). */
+    public static final DeferredBlock<FogMachineBlock> FOG_MACHINE = BLOCKS.registerBlock("fog_machine", FogMachineBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).mapColor(net.minecraft.world.level.material.MapColor.METAL));
+
+    /** A speaker: its cone thumps with the bass, and it carries the music's reaction further (SpeakerBlock). */
+    public static final DeferredBlock<SpeakerBlock> SPEAKER = BLOCKS.registerBlock("speaker", SpeakerBlock::new,
+            BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.WOOD).noOcclusion()
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+
+    /** An aquarium: touching blocks make one tank with fish in it (AquariumBlock, client/AquariumRenderer). */
+    public static final DeferredBlock<AquariumBlock> AQUARIUM = BLOCKS.registerBlock("aquarium", AquariumBlock::new,
+            BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS).lightLevel(state -> 6));
+
     /** A disco ball throwing real light spots around (DiscoBallBlock, client/DiscoBallRenderer). */
     public static final DeferredBlock<DiscoBallBlock> DISCO_BALL = BLOCKS.registerBlock("disco_ball", DiscoBallBlock::new,
             BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS).noOcclusion()

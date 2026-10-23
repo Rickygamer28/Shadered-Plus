@@ -26,10 +26,17 @@ public final class ModBlockEntities {
                     ModBlocks.ISLAND_PAINTING.get()).build(null));
 
     public static final Supplier<BlockEntityType<WaterCausticsBlockEntity>> WATER_CAUSTICS = TYPES.register("water_caustics",
-            () -> BlockEntityType.Builder.of(WaterCausticsBlockEntity::new, ModBlocks.WATER_CAUSTICS.get()).build(null));
+            () -> BlockEntityType.Builder.of(WaterCausticsBlockEntity::new, ModBlocks.WATER_CAUSTICS.get(),
+                    ModBlocks.GALAXY_FLOOR.get()).build(null));
 
     public static final Supplier<BlockEntityType<DiscoBallBlockEntity>> DISCO_BALL = TYPES.register("disco_ball",
             () -> BlockEntityType.Builder.of(DiscoBallBlockEntity::new, ModBlocks.DISCO_BALL.get()).build(null));
+
+    public static final Supplier<BlockEntityType<FogMachineBlockEntity>> FOG_MACHINE = TYPES.register("fog_machine",
+            () -> BlockEntityType.Builder.of(FogMachineBlockEntity::new, ModBlocks.FOG_MACHINE.get()).build(null));
+
+    public static final Supplier<BlockEntityType<SpeakerBlockEntity>> SPEAKER = TYPES.register("speaker",
+            () -> BlockEntityType.Builder.of(SpeakerBlockEntity::new, ModBlocks.SPEAKER.get()).build(null));
 
     private ModBlockEntities() {}
 }

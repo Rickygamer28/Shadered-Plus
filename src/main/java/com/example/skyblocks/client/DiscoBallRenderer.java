@@ -98,6 +98,7 @@ public class DiscoBallRenderer implements BlockEntityRenderer<DiscoBallBlockEnti
             return;
         }
         VertexConsumer glow = buffers.getBuffer(Types.GLOW);
+        float beamStrength = com.example.skyblocks.FogMachineBlockEntity.fogNear(pos, 20.0) ? 0.45F : 0.1F; // (beams show in fog)
         float cos = (float) Math.cos(angle), sin = (float) Math.sin(angle);
         for (int i = 0; i < BEAMS; i++) {
             Vec3 d0 = DIRECTIONS[i];
@@ -129,7 +130,7 @@ public class DiscoBallRenderer implements BlockEntityRenderer<DiscoBallBlockEnti
             float sizeScale = animation == 7 ? 0.6F + 0.9F * (float) Math.pow(0.5 + 0.5 * Math.sin(seconds * 4.0), 2.0) + bass : 1.0F;
             spot(glow, pose, p.subtract(Vec3.atLowerCornerOf(pos)), n, dir, dist * sizeScale, r, g, b, strength);
             beam(glow, pose, start.subtract(Vec3.atLowerCornerOf(pos)), p.subtract(Vec3.atLowerCornerOf(pos)),
-                    cam.subtract(Vec3.atLowerCornerOf(pos)), r, g, b, strength * 0.1F);
+                    cam.subtract(Vec3.atLowerCornerOf(pos)), r, g, b, strength * beamStrength);
         }
     }
 

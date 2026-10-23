@@ -255,6 +255,18 @@ public final class MusicReactor {
             float range = Math.max(sound.getVolume(), 1.0F) * (sound.getSound() != null ? sound.getSound().getAttenuationDistance() : 16);
             double distance = cam.distanceTo(new Vec3(sound.getX(), sound.getY(), sound.getZ()));
             strength = (float) Math.max(0.0, 1.0 - distance / range);
+            if (sound.getSource() == SoundSource.RECORDS) {
+                // speakers within 24 blocks of the jukebox carry it: as loud near them as near the jukebox
+                Vec3 at = new Vec3(sound.getX(), sound.getY(), sound.getZ());
+                synchronized (com.example.skyblocks.SpeakerBlockEntity.CLIENT_SPEAKERS) {
+                    for (net.minecraft.core.BlockPos speaker : com.example.skyblocks.SpeakerBlockEntity.CLIENT_SPEAKERS) {
+                        Vec3 s = Vec3.atCenterOf(speaker);
+                        if (s.distanceToSqr(at) < 24.0 * 24.0) {
+                            strength = Math.max(strength, (float) Math.max(0.0, 1.0 - cam.distanceTo(s) / 32.0));
+                        }
+                    }
+                }
+            }
         }
         // (quiet settings still react, a bit less)
         return strength * (0.6F + 0.4F * Math.min(1.0F, volume));
