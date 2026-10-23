@@ -145,6 +145,25 @@ public final class MusicReactor {
         }
     }
 
+    /** For others reacting to music (the dance floor): brings it up to date (at most once a frame). */
+    static void tick() {
+        if (System.nanoTime() - lastUpdate > 2_000_000L) {
+            update();
+        }
+    }
+
+    static float music() {
+        return music;
+    }
+
+    static float bass() {
+        return (current[0] + current[1] + current[2]) / 3.0F;
+    }
+
+    static float band(int b) {
+        return current[Math.max(0, Math.min(BANDS - 1, b))];
+    }
+
     private static void update() {
         Minecraft mc = Minecraft.getInstance();
         long now = System.nanoTime();

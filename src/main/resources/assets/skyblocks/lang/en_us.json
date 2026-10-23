@@ -39,6 +39,7 @@
   "item.skyblocks.sky_liquid_bucket": "%s Liquid Bucket",
   "block.skyblocks.mirror": "Mirror",
   "block.skyblocks.water_caustics": "Water Caustics",
+  "block.skyblocks.dance_floor": "Dance Floor",
   "tooltip.skyblocks.water_caustics": "Right-click with a block or a sky block to put it under the water",
   "tooltip.skyblocks.water_caustics_clear": "Sneak + right-click with an empty hand to take it back",
   "block.skyblocks.infinity_mirror": "Infinity Mirror",

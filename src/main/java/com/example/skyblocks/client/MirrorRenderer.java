@@ -184,6 +184,7 @@ public final class MirrorRenderer {
     /** A block changed on the client: rescan straight away if it's a mirror or next to one. */
     public static void blockChanged(ClientLevel level, BlockPos pos, BlockState oldState, BlockState newState) {
         InfinityMirrorRenderer.blockChanged(level, pos, oldState, newState);
+        DanceFloorRenderer.blockChanged(oldState, newState);
         boolean mirror = isMirror(oldState) || isMirror(newState);
         if (!mirror) {
             BlockPos.MutableBlockPos n = new BlockPos.MutableBlockPos();
@@ -804,6 +805,7 @@ public final class MirrorRenderer {
             RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
             // infinity mirrors in view (their tunnel worked out from this mirror's eye)
             InfinityMirrorRenderer.drawInMirror(rx, ry, rz, modelView, clipped);
+            DanceFloorRenderer.drawInMirror(rx, ry, rz, modelView, clipped);
             for (Node child : node.children) {
                 Node shown = child.valid ? child : NODES.get(List.of(child.wall)); // (not drawn yet: that mirror's own picture)
                 if (shown != null && shown.valid && shown.target != null) {

@@ -40,6 +40,11 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS)
                     .mapColor(net.minecraft.world.level.material.MapColor.ICE).isValidSpawn((s, l, p, e) -> false));
 
+    /** A dance floor tile: touching tiles play one animation together (DanceFloorBlock, client/DanceFloorRenderer). */
+    public static final DeferredBlock<DanceFloorBlock> DANCE_FLOOR = BLOCKS.registerBlock("dance_floor", DanceFloorBlock::new,
+            BlockBehaviour.Properties.of().strength(0.6F).sound(SoundType.GLASS).lightLevel(state -> 10)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_MAGENTA).isValidSpawn((s, l, p, e) -> false));
+
     /**
      * Water caustics: the moving light on the bottom of a pool (animated textures, tools/make_water_caustics.py); right-click
      * it with a full block to show that block's texture under the light (WaterCausticsBlock, client/WaterCausticsModel).

@@ -41,6 +41,8 @@ public final class ModItems {
 
     public static final DeferredItem<BlockItem> MIRROR = ITEMS.registerSimpleBlockItem("mirror", ModBlocks.MIRROR);
 
+    public static final DeferredItem<BlockItem> DANCE_FLOOR = ITEMS.registerSimpleBlockItem("dance_floor", ModBlocks.DANCE_FLOOR);
+
     public static final DeferredItem<BlockItem> WATER_CAUSTICS = ITEMS.registerSimpleBlockItem("water_caustics", ModBlocks.WATER_CAUSTICS);
 
     public static final DeferredItem<BlockItem> INFINITY_MIRROR = ITEMS.registerSimpleBlockItem("infinity_mirror", ModBlocks.INFINITY_MIRROR);

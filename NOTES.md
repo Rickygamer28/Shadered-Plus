@@ -140,3 +140,10 @@
 - Synthwave colour skies (23 Oct 2026, user "do all of them"): synthwave_outrun, synthwave_night (moon), synthwave_miami,
   darksynth, synthwave_terminal, vaporwave = same synthwave_sky shader, colours as uniforms set by
   client/SynthwavePalettes (classic = "synthwave"). Particle textures generated per palette.
+- Dance Floor (23 Oct 2026, user): skyblocks:dance_floor (POWERED + ANIMATION 0..8 block state). Touching tiles = one
+  floor (6-way flood fill); one animation across it in floor coordinates (client/DanceFloorRenderer, per-face shader
+  dance_floor.fsh, 2x2 LED tiles per block, Iris overlay via InfinityMirrorRenderer.scoped, mirrors). Redstone on any
+  tile: the floor cycles all animations (DanceFloorBlock.shown = (ANIMATION + gameTime/200) % 9), 1.5 s crossfade on
+  the client; last signal off -> server stores the shown one. Right-click: next animation. Bass pulses the lights,
+  animation 8 = equaliser (MusicReactor bands). Recipe: red dye, glass, blue dye / glowstone, redstone, glowstone /
+  glass, glowstone, glass -> 8.
