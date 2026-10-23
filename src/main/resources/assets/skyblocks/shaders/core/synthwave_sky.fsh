@@ -392,6 +392,8 @@ float palm(vec2 q, float size, float lean, float aa, float seed) {
     return s;
 }
 
+float terrain(vec2 g, float r); // (below: the music's peaks; the palms ride on them)
+
 const float PALM_SPACING = 7.0; // blocks between palms along the highway
 const float PALM_SIDE = 1.4;     // how far from the middle of the highway they stand
 
@@ -442,7 +444,9 @@ vec4 roadPalms(vec3 d, float side, float t, float facing, out float depth) {
         }
         float th = dist / toward; // where the ray meets the palm's cut-out
         vec3 h = d * th;
-        vec2 q = vec2(dot(h.xz - base, vec2(-n.y, n.x)), h.y + 1.0);
+        // standing on the floor, lifted with it when the music raises it there (so they don't sink into the peaks)
+        float lift = Music > 0.001 ? terrain(vec2(dot(base, SUN_DIR.xz), dot(base, SIDE.xz)), dist) : 0.0;
+        vec2 q = vec2(dot(h.xz - base, vec2(-n.y, n.x)), h.y + 1.0 - lift);
         float size = 3.4 + 1.8 * hash11(seed + 1.3);
         float lean = (hash11(seed + 2.9) - 0.5) * 0.55;
         float cover = palm(q, size, lean, th * pixel / size * 1.5, seed);
