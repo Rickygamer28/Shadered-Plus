@@ -56,12 +56,17 @@ public final class AquariumRenderer {
         final Set<BlockPos> blocks = new HashSet<>();
         BlockPos min;
         int sizeX, sizeY, sizeZ;
-        /** Which spots of the box round the tank are water (1 bit each, 24 to a float, in 4 matrices); or the whole box. */
-        final Matrix4f[] occupancy = {new Matrix4f(), new Matrix4f(), new Matrix4f(), new Matrix4f()};
+        /** Which spots of the box round the tank are water (1 bit each, 24 to a number, 4 numbers to a vec4); or the whole box. */
+        final float[] occupancy = new float[OCC_VECS * 4];
         boolean full;
+        /** Per fish: the middle of the stretch of water it swims in (x, y, z) and how far it reaches each way (x, y, z). */
+        final float[] fish = new float[MAX_FISH * 8];
+        int fishCount;
     }
 
-    private static final int MAX_BITS = 4 * 16 * 24;
+    private static final int OCC_VECS = 16;
+    private static final int MAX_BITS = OCC_VECS * 4 * 24;
+    private static final int MAX_FISH = 14;
 
     static ShaderInstance shader;
     private static final List<Floor> FLOORS = new ArrayList<>();
@@ -215,10 +220,62 @@ public final class AquariumRenderer {
     }
 
     private static void setShape(Floor floor) {
-        for (int m = 0; m < 4; m++) {
-            shader.safeGetUniform("Occ" + m).set(floor.occupancy[m]);
+        float[] o = floor.occupancy;
+        for (int v = 0; v < OCC_VECS; v++) {
+            shader.safeGetUniform("Occ" + v).set(o[v * 4], o[v * 4 + 1], o[v * 4 + 2], o[v * 4 + 3]);
         }
         shader.safeGetUniform("Full").set(floor.full ? 1.0F : 0.0F);
+        float[] f = floor.fish;
+        for (int v = 0; v < MAX_FISH * 2; v++) {
+            shader.safeGetUniform("Fish" + v).set(f[v * 4], f[v * 4 + 1], f[v * 4 + 2], f[v * 4 + 3]);
+        }
+        shader.safeGetUniform("FishCount").set((float) floor.fishCount);
+    }
+
+    /**
+     * Gives each fish a stretch of the tank to swim in: from a random spot of water, a box grown as far as the water
+     * goes (so in an L-shaped tank no fish swims into the corner that isn't there).
+     */
+    private static void placeFish(Floor floor) {
+        java.util.List<BlockPos> water = new ArrayList<>(floor.blocks);
+        water.sort(java.util.Comparator.comparingLong(BlockPos::asLong));
+        java.util.Random random = new java.util.Random(floor.min.asLong() * 31L + water.size());
+        floor.fishCount = Math.max(3, Math.min(MAX_FISH, (int) (water.size() * 1.6F)));
+        for (int i = 0; i < floor.fishCount; i++) {
+            BlockPos start = water.get(random.nextInt(water.size()));
+            int[] lo = {start.getX(), start.getY(), start.getZ()}, hi = {start.getX(), start.getY(), start.getZ()};
+            int[] limit = {12, 6, 12};
+            for (int round = 0; round < 24; round++) {
+                int axis = random.nextInt(3);
+                boolean up = random.nextBoolean();
+                if (hi[axis] - lo[axis] + 1 >= limit[axis]) {
+                    continue;
+                }
+                int[] nlo = lo.clone(), nhi = hi.clone();
+                if (up) nhi[axis]++; else nlo[axis]--;
+                int at = up ? nhi[axis] : nlo[axis];
+                boolean all = true;
+                for (int x = nlo[0]; x <= nhi[0] && all; x++) {
+                    for (int y = nlo[1]; y <= nhi[1] && all; y++) {
+                        for (int z = nlo[2]; z <= nhi[2] && all; z++) {
+                            int c = axis == 0 ? x : axis == 1 ? y : z;
+                            if (c == at && !floor.blocks.contains(new BlockPos(x, y, z))) {
+                                all = false;
+                            }
+                        }
+                    }
+                }
+                if (all) {
+                    lo = nlo;
+                    hi = nhi;
+                }
+            }
+            for (int k = 0; k < 3; k++) {
+                int min = k == 0 ? floor.min.getX() : k == 1 ? floor.min.getY() : floor.min.getZ();
+                floor.fish[i * 8 + k] = (lo[k] + hi[k] + 1) * 0.5F - min;   // middle (tank coordinates)
+                floor.fish[i * 8 + 4 + k] = (hi[k] - lo[k] + 1) * 0.5F;     // reach each way
+            }
+        }
     }
 
     /**
@@ -329,18 +386,14 @@ public final class AquariumRenderer {
             floor.sizeZ = maxZ - minZ + 1;
             // the tank's shape for the shader (so an L-shaped tank isn't traced as a full box)
             int volume = floor.sizeX * floor.sizeY * floor.sizeZ;
-            floor.full = volume > MAX_BITS;
+            floor.full = floor.blocks.size() == volume || volume > MAX_BITS;
             if (!floor.full) {
-                float[][] words = new float[4][16];
                 for (BlockPos b : floor.blocks) {
                     int index = (b.getX() - minX) + floor.sizeX * ((b.getZ() - minZ) + floor.sizeZ * (b.getY() - minY));
-                    int word = index / 24, bit = index % 24;
-                    words[word / 16][word % 16] += (float) (1 << bit);
-                }
-                for (int m = 0; m < 4; m++) {
-                    floor.occupancy[m].set(words[m]); // (column by column, as GLSL reads a mat4)
+                    floor.occupancy[index / 24] += (float) (1 << (index % 24));
                 }
             }
+            placeFish(floor);
             FLOORS.add(floor);
         }
     }

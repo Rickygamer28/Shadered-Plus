@@ -10,11 +10,54 @@ uniform vec3 BoxMin;   // the tank's corner, relative to the camera
 uniform vec3 BoxSize;
 uniform float Time;    // seconds
 uniform float Seed;
-uniform mat4 Occ0;     // which spots of the box are water: 1 bit each, 24 to a number (x + sizeX * (z + sizeZ * y))
-uniform mat4 Occ1;
-uniform mat4 Occ2;
-uniform mat4 Occ3;
-uniform float Full;    // 1: the whole box is water (too big to say spot by spot)
+// which spots of the box are water: 1 bit each, 24 to a number, 4 to a vec4 (spot = x + sizeX * (z + sizeZ * y))
+uniform vec4 Occ0;
+uniform vec4 Occ1;
+uniform vec4 Occ2;
+uniform vec4 Occ3;
+uniform vec4 Occ4;
+uniform vec4 Occ5;
+uniform vec4 Occ6;
+uniform vec4 Occ7;
+uniform vec4 Occ8;
+uniform vec4 Occ9;
+uniform vec4 Occ10;
+uniform vec4 Occ11;
+uniform vec4 Occ12;
+uniform vec4 Occ13;
+uniform vec4 Occ14;
+uniform vec4 Occ15;
+uniform float Full;    // 1: the whole box is water (a box-shaped tank, or too big to say spot by spot)
+// per fish: (middle of its stretch of water x, y, z, -), (how far it reaches x, y, z, -)
+uniform vec4 Fish0;
+uniform vec4 Fish1;
+uniform vec4 Fish2;
+uniform vec4 Fish3;
+uniform vec4 Fish4;
+uniform vec4 Fish5;
+uniform vec4 Fish6;
+uniform vec4 Fish7;
+uniform vec4 Fish8;
+uniform vec4 Fish9;
+uniform vec4 Fish10;
+uniform vec4 Fish11;
+uniform vec4 Fish12;
+uniform vec4 Fish13;
+uniform vec4 Fish14;
+uniform vec4 Fish15;
+uniform vec4 Fish16;
+uniform vec4 Fish17;
+uniform vec4 Fish18;
+uniform vec4 Fish19;
+uniform vec4 Fish20;
+uniform vec4 Fish21;
+uniform vec4 Fish22;
+uniform vec4 Fish23;
+uniform vec4 Fish24;
+uniform vec4 Fish25;
+uniform vec4 Fish26;
+uniform vec4 Fish27;
+uniform float FishCount;
 
 in vec3 fragPos;
 in vec2 faceUV;
@@ -90,6 +133,10 @@ vec3 fishColour(int kind, vec3 q, bool tail) {
     return vec3(0.75, 0.78, 0.85);
 }
 
+vec4 fishData(int k) {
+    return k == 0 ? Fish0 : k == 1 ? Fish1 : k == 2 ? Fish2 : k == 3 ? Fish3 : k == 4 ? Fish4 : k == 5 ? Fish5 : k == 6 ? Fish6 : k == 7 ? Fish7 : k == 8 ? Fish8 : k == 9 ? Fish9 : k == 10 ? Fish10 : k == 11 ? Fish11 : k == 12 ? Fish12 : k == 13 ? Fish13 : k == 14 ? Fish14 : k == 15 ? Fish15 : k == 16 ? Fish16 : k == 17 ? Fish17 : k == 18 ? Fish18 : k == 19 ? Fish19 : k == 20 ? Fish20 : k == 21 ? Fish21 : k == 22 ? Fish22 : k == 23 ? Fish23 : k == 24 ? Fish24 : k == 25 ? Fish25 : k == 26 ? Fish26 : Fish27;
+}
+
 bool water(ivec3 c) {
     ivec3 size = ivec3(BoxSize + 0.5);
     if (any(lessThan(c, ivec3(0))) || any(greaterThanEqual(c, size))) {
@@ -100,9 +147,9 @@ bool water(ivec3 c) {
     }
     int index = c.x + size.x * (c.z + size.z * c.y);
     int word = index / 24;
-    int m = word / 16, e = word - m * 16;
-    mat4 occ = m == 0 ? Occ0 : m == 1 ? Occ1 : m == 2 ? Occ2 : Occ3;
-    int bits = int(occ[e / 4][e - (e / 4) * 4] + 0.5);
+    int v = word / 4;
+    vec4 o = v == 0 ? Occ0 : v == 1 ? Occ1 : v == 2 ? Occ2 : v == 3 ? Occ3 : v == 4 ? Occ4 : v == 5 ? Occ5 : v == 6 ? Occ6 : v == 7 ? Occ7 : v == 8 ? Occ8 : v == 9 ? Occ9 : v == 10 ? Occ10 : v == 11 ? Occ11 : v == 12 ? Occ12 : v == 13 ? Occ13 : v == 14 ? Occ14 : Occ15;
+    int bits = int(o[word - v * 4] + 0.5);
     return ((bits >> (index - word * 24)) & 1) == 1;
 }
 
@@ -144,8 +191,7 @@ void main() {
     vec3 hitPos = ro + rd * tExit - BoxMin;
 
     // ---- the fish ----
-    float volume = BoxSize.x * BoxSize.y * BoxSize.z;
-    int count = int(clamp(volume * 1.6, 3.0, 14.0));
+    int count = int(FishCount + 0.5);
     vec3 fishCol = vec3(0.0);
     bool fish = false;
     for (int i = 0; i < 14; i++) {
@@ -153,15 +199,16 @@ void main() {
             break;
         }
         float fi = float(i);
+        // its own stretch of water (worked out on the CPU from the tank's shape)
+        vec3 middle = fishData(i * 2).xyz, reach = fishData(i * 2 + 1).xyz;
         float size = 0.65 + 0.6 * hash11(fi * 3.1);
-        if (min(BoxSize.x, BoxSize.z) < 1.5) size *= 0.75;
+        if (min(reach.x, reach.z) < 0.75) size *= 0.75;
         float speed = 0.25 + 0.35 * hash11(fi * 5.7);
-        vec3 half_ = BoxSize * 0.5;
-        vec3 range = max(half_ - vec3(0.22 * size + 0.06), vec3(0.02));
+        vec3 range = max(reach - vec3(0.22 * size + 0.06), vec3(0.02));
         float a1 = t * speed + hash11(fi) * 6.2831, a2 = t * speed * 0.73 + hash11(fi + 9.0) * 6.2831;
-        float level = mix(0.25, BoxSize.y - 0.3, hash11(fi * 2.3));
-        vec3 c = vec3(half_.x + range.x * sin(a1), clamp(level + 0.08 * sin(t * 0.7 + fi), 0.2, BoxSize.y - 0.2),
-                      half_.z + range.z * sin(a2));
+        float level = middle.y + (hash11(fi * 2.3) * 2.0 - 1.0) * max(reach.y - 0.3, 0.0);
+        vec3 c = vec3(middle.x + range.x * sin(a1), clamp(level + 0.08 * sin(t * 0.7 + fi), middle.y - reach.y + 0.2, middle.y + reach.y - 0.2),
+                      middle.z + range.z * sin(a2));
         vec3 vel = vec3(range.x * cos(a1) * speed, 0.0, range.z * cos(a2) * speed * 0.73);
         vec3 fwd = normalize(vel + vec3(1.0e-4, 0.0, 0.0));
         vec3 up = vec3(0.0, 1.0, 0.0);
@@ -222,16 +269,17 @@ void main() {
         col = fishCol;
     } else {
         vec3 p = hitPos;
-        float sand = 0.12 + 0.03 * sin(p.x * 3.0) * sin(p.z * 2.7);
+        bool onSand = false;
         if (rd.y < 0.0) {
-            float ts = (BoxMin.y + sand - ro.y) / rd.y;
+            float ts = (BoxMin.y + 0.12 - ro.y) / rd.y;
             if (ts > tEnter && ts < hitT) {
                 hitT = ts;
                 p = ro - BoxMin + rd * ts;
+                onSand = true;
             }
         }
         bool down = exitAxis == 1 && rd.y < 0.0, up = exitAxis == 1 && rd.y > 0.0;
-        if (down || p.y <= sand + 0.02) {
+        if (down || onSand) {
             // sand with pebbles, lit by the moving light patterns
             vec2 cell = floor(p.xz * 9.0);
             float pebble = hash22(cell).x > 0.93 ? 0.7 : 1.0;
