@@ -39,11 +39,14 @@ public class DiscoBallBlock extends BaseEntityBlock {
     /** 0 off, 1 white spots, 2 coloured spots. */
     public static final IntegerProperty MODE = IntegerProperty.create("mode", 0, 2);
     public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
+    /** How the lights move (client/DiscoBallRenderer): sneak + right-click for the next. */
+    public static final int ANIMATIONS = 9;
+    public static final IntegerProperty ANIMATION = IntegerProperty.create("animation", 0, ANIMATIONS - 1);
     private static final VoxelShape SHAPE = Shapes.or(Block.box(3.0, 2.0, 3.0, 13.0, 12.0, 13.0), Block.box(7.5, 12.0, 7.5, 8.5, 16.0, 8.5));
 
     public DiscoBallBlock(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(MODE, 1).setValue(POWERED, false));
+        registerDefaultState(stateDefinition.any().setValue(MODE, 1).setValue(POWERED, false).setValue(ANIMATION, 0));
     }
 
     @Override
@@ -53,7 +56,7 @@ public class DiscoBallBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(MODE, POWERED);
+        builder.add(MODE, POWERED, ANIMATION);
     }
 
     @Override
@@ -104,6 +107,16 @@ public class DiscoBallBlock extends BaseEntityBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        if (player.isShiftKeyDown()) { // the next light animation
+            if (!level.isClientSide) {
+                int animation = (state.getValue(ANIMATION) + 1) % ANIMATIONS;
+                level.setBlock(pos, state.setValue(ANIMATION, animation), Block.UPDATE_ALL);
+                level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 1.0F, 0.6F + 0.1F * animation);
+                player.displayClientMessage(Component.translatable("disco.skyblocks.animation",
+                        Component.translatable("disco.skyblocks.animation." + animation)).withStyle(ChatFormatting.LIGHT_PURPLE), true);
+            }
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
         if (!level.isClientSide) {
             int mode = (state.getValue(MODE) + 1) % 3;
             level.setBlock(pos, state.setValue(MODE, mode), Block.UPDATE_ALL);
@@ -115,5 +128,6 @@ public class DiscoBallBlock extends BaseEntityBlock {
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.skyblocks.disco_ball").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("tooltip.skyblocks.disco_ball_animation").withStyle(ChatFormatting.GRAY));
     }
 }

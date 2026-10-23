@@ -72,6 +72,7 @@ public class DiscoBallRenderer implements BlockEntityRenderer<DiscoBallBlockEnti
             return;
         }
         int mode = be.getBlockState().getBlock() instanceof DiscoBallBlock ? be.getBlockState().getValue(DiscoBallBlock.MODE) : 0;
+        int animation = be.getBlockState().getBlock() instanceof DiscoBallBlock ? be.getBlockState().getValue(DiscoBallBlock.ANIMATION) : 0;
         MusicReactor.tick();
         float bass = MusicReactor.bass();
         // the spin, faster with the bass (kept per ball, so a change in speed doesn't make it jump)
@@ -80,7 +81,8 @@ public class DiscoBallRenderer implements BlockEntityRenderer<DiscoBallBlockEnti
         double dt = Math.min(0.25, (now - spin[1]) / 1.0e9);
         spin[1] = now;
         if (mode > 0 && !Minecraft.getInstance().isPaused()) {
-            spin[0] += dt * 0.6 * (1.0 + 1.5 * bass);
+            double gameSeconds = (level.getGameTime() + partialTick) / 20.0;
+            spin[0] += dt * 0.6 * (1.0 + 1.5 * bass) * spinSpeed(animation, gameSeconds);
         }
         float angle = (float) spin[0];
         double seconds = (level.getGameTime() % 1_728_000L + partialTick) / 20.0;
@@ -108,7 +110,10 @@ public class DiscoBallRenderer implements BlockEntityRenderer<DiscoBallBlockEnti
             }
             Vec3 p = hit.getLocation();
             double dist = start.distanceTo(p);
-            float strength = (float) ((1.0 - dist / RANGE) * (0.75 + 0.7 * bass));
+            float strength = (float) ((1.0 - dist / RANGE) * (0.75 + 0.7 * bass)) * light(animation, i, d0, dir, seconds, bass);
+            if (strength <= 0.003F) {
+                continue;
+            }
             float r, g, b;
             if (mode == 1) {
                 r = 1.0F; g = 0.97F; b = 0.9F;
@@ -117,10 +122,69 @@ public class DiscoBallRenderer implements BlockEntityRenderer<DiscoBallBlockEnti
                 r = c[0]; g = c[1]; b = c[2];
             }
             Vec3 n = Vec3.atLowerCornerOf(hit.getDirection().getNormal());
-            spot(glow, pose, p.subtract(Vec3.atLowerCornerOf(pos)), n, dir, dist, r, g, b, strength);
+            if (mode == 2 && animation == 5) { // (colour waves round the room)
+                float[] c = hsv((float) (((Math.atan2(dir.z, dir.x) / (Math.PI * 2) + 1.0) + seconds * 0.15) % 1.0));
+                r = c[0]; g = c[1]; b = c[2];
+            }
+            float sizeScale = animation == 7 ? 0.6F + 0.9F * (float) Math.pow(0.5 + 0.5 * Math.sin(seconds * 4.0), 2.0) + bass : 1.0F;
+            spot(glow, pose, p.subtract(Vec3.atLowerCornerOf(pos)), n, dir, dist * sizeScale, r, g, b, strength);
             beam(glow, pose, start.subtract(Vec3.atLowerCornerOf(pos)), p.subtract(Vec3.atLowerCornerOf(pos)),
                     cam.subtract(Vec3.atLowerCornerOf(pos)), r, g, b, strength * 0.1F);
         }
+    }
+
+    /** How fast (and which way) the ball turns, for each animation. */
+    private static double spinSpeed(int animation, double t) {
+        return switch (animation) {
+            case 4 -> Math.cos(t * 0.35) * 1.4;           // swinging back and forth
+            case 8 -> 3.5;                                // fast
+            case 1 -> 0.5;                                // (strobe: slow, the flashes do the work)
+            default -> 1.0;
+        };
+    }
+
+    /**
+     * How bright beam i is now, for each animation (d0: its direction on the ball before turning, dir: after).
+     * 0 classic, 1 strobe, 2 sweep up and down, 3 twinkle, 4 swing + breathe, 5 waves round the room, 6 spiral,
+     * 7 pulsing spots, 8 fast spin.
+     */
+    private static float light(int animation, int i, Vec3 d0, Vec3 dir, double t, float bass) {
+        switch (animation) {
+            case 1: { // strobe: all flashing together (harder with the bass)
+                double rate = bass > 0.2F ? 10.0 : 6.0;
+                return ((t * rate) % 1.0) < 0.35 ? 1.25F : 0.0F;
+            }
+            case 2: { // a band of light sweeping up and down the room
+                double band = Math.sin(t * 1.4) * 0.9;
+                double d = Math.abs(d0.y - band);
+                return (float) Math.max(0.0, 1.0 - d / 0.28) * 1.3F;
+            }
+            case 3: { // spots fading in and out at random
+                double phase = t * 0.7 + hash(i) * 10.0;
+                double f = phase % 1.0;
+                double on = hash(i * 31 + (int) Math.floor(phase)) > 0.45 ? 1.0 : 0.0;
+                return (float) (on * Math.sin(f * Math.PI)) * 1.2F;
+            }
+            case 4: { // breathing
+                return 0.35F + 0.65F * (float) (0.5 + 0.5 * Math.sin(t * 1.6));
+            }
+            case 5: { // a wave of light going round
+                double az = Math.atan2(dir.z, dir.x);
+                return 0.25F + 0.85F * (float) Math.pow(0.5 + 0.5 * Math.sin(az * 3.0 - t * 2.5), 2.0);
+            }
+            case 6: { // a spiral of lit spots climbing round
+                double az = Math.atan2(d0.z, d0.x);
+                double s = Math.sin(az * 2.0 + d0.y * 6.0 - t * 3.0);
+                return s > 0.55 ? 1.3F : 0.05F;
+            }
+            default:
+                return 1.0F;
+        }
+    }
+
+    private static double hash(int n) {
+        double x = Math.sin(n * 12.9898) * 43758.5453;
+        return x - Math.floor(x);
     }
 
     /** The ball: dark behind, little mirror tiles in front, each glinting when it catches a light towards you. */
