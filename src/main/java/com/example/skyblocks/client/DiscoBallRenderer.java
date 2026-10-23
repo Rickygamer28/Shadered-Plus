@@ -106,7 +106,7 @@ public class DiscoBallRenderer implements BlockEntityRenderer<DiscoBallBlockEnti
             }
             Vec3 p = hit.getLocation();
             double dist = start.distanceTo(p);
-            float strength = (float) (1.0 - dist / RANGE) * (0.75 + 0.7 * bass);
+            float strength = (float) ((1.0 - dist / RANGE) * (0.75 + 0.7 * bass));
             float r, g, b;
             if (mode == 1) {
                 r = 1.0F; g = 0.97F; b = 0.9F;
