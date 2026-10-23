@@ -2,7 +2,7 @@
 
 // An infinity cube: six half mirrors with LED strips along the twelve edges. Light bounces between every pair of
 // facing walls, so the box is seen again and again in every direction: its edges make a glowing grid that goes on
-// forever. Mirror images of a box fill space with copies of it, so a line of sight is simply followed
+// forever. Mirror images of a box fill space with copies of it, so the line of sight from the eye is simply followed
 // straight on through that endless grid of boxes, box by box; the further it goes, the more reflections (dimmer). In
 // each box it passes, the twelve strips are checked: how close the line of sight really comes to each one (in 3D,
 // within that box, so every strip is counted exactly once) and where along it, for the LED there. The boxes are exactly the blocks, so the grid lines
@@ -60,9 +60,6 @@ vec3 ledColor(vec3 at, float reflections) {
     return mix(ColorFront, ColorDeep, 1.0 - exp(-reflections * 0.12));
 }
 
-// What one pixel covers, per block of distance along the (fixed) line of sight (see main).
-float pixelScale;
-
 // The light (x: LEDs, y: glow) of the strip running along `axis` at (s1, s2) on the other two axes, inside the box at
 // `origin`, for the line of sight q + sight * t with t from t0 to t1 (its part in that box). `reflections` per block.
 vec3 strip(int axis, float s1, float s2, vec3 local, vec3 sight, float t0, float t1, vec3 size, float eyeDistance,
@@ -73,7 +70,7 @@ vec3 strip(int axis, float s1, float s2, vec3 local, vec3 sight, float t0, float
     float t = clamp(dot(w, d) / dd, t0, t1);                  // closest along the line of sight, within this box
     vec2 off = o + d * t - vec2(s1, s2);
     float dist2 = dot(off, off);
-    float fw = pixelScale * (eyeDistance + t);
+    float fw = PixelSize * (eyeDistance + t);
     float reach = 3.0 * (LED_SIZE * 3.0) + 3.0 * fw;
     if (dist2 > reach * reach) {
         return vec3(0.0);                                     // too far to light this pixel
@@ -95,8 +92,9 @@ vec3 strip(int axis, float s1, float s2, vec3 local, vec3 sight, float t0, float
 }
 
 void main() {
-    vec3 realSight = normalize(facePos - Eye);
+    vec3 sight = normalize(facePos - Eye);
     vec3 p = facePos - BoxMin;
+    float eyeDistance = length(facePos - Eye);
     vec3 base = Rainbow > 0.5 ? hue(fract(Time * 0.2)) : ColorFront;
 
     // the face this pixel is on (the axis it's flat across), and how far from that face's border
@@ -111,16 +109,6 @@ void main() {
         fragColor = vec4(col, 1.0);
         return;
     }
-
-    // Each face shows a fixed picture: the grid as seen from straight in front of the face's middle, not from where
-    // you stand (seen from you, the inside slid and stretched as you walked). Walking past, it stays put like a
-    // painting; only how sharp it is depends on how far away you are.
-    vec2 faceSize = others(BoxSize, face);
-    vec3 from = BoxSize * 0.5;
-    from[face] = p[face] + (p[face] < BoxSize[face] * 0.5 ? -1.0 : 1.0) * 1.4 * max(faceSize.x, faceSize.y);
-    vec3 sight = normalize(p - from);
-    float eyeDistance = length(p - from);
-    pixelScale = PixelSize * length(facePos - Eye) / eyeDistance;
 
     vec3 size = BoxSize;
     float perBlock = dot(abs(sight), 1.0 / size);            // walls passed per block travelled (on average)
@@ -165,7 +153,7 @@ void main() {
         cell[axis] += cellStep[axis];
     }
     vec3 col = 1.0 - exp(-lit * 1.5);
-    float fresnel = pow(1.0 - abs(realSight[face]), 4.0);
+    float fresnel = pow(1.0 - abs(sight[face]), 4.0);
     col += vec3(0.04, 0.045, 0.06) * fresnel;                // the glass
     fragColor = vec4(col, 1.0);
 }
