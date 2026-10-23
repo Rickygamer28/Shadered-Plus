@@ -143,6 +143,9 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         if (!simple) {
             // infinity mirrors and cubes inside: drawn with their own shaders after the block entities
             com.example.skyblocks.client.InfinityMirrorRenderer.queueIsland(view.infinity(), poseStack.last().pose());
+            // aquariums and dance floors too
+            com.example.skyblocks.client.AquariumRenderer.queueIsland(view.aquariums(), poseStack.last().pose());
+            com.example.skyblocks.client.DanceFloorRenderer.queueIsland(view.danceFloors(), poseStack.last().pose());
             // portals given a Shadered sky: that sky
             com.example.skyblocks.client.PortalSkyRenderer.drawInIsland(view, view.portalSkies, poseStack, buffer, true);
         }

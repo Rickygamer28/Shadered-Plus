@@ -69,6 +69,30 @@ uniform vec4 Fish36;
 uniform vec4 Fish37;
 uniform vec4 Fish38;
 uniform vec4 Fish39;
+uniform vec4 Fish40;
+uniform vec4 Fish41;
+uniform vec4 Fish42;
+uniform vec4 Fish43;
+uniform vec4 Fish44;
+uniform vec4 Fish45;
+uniform vec4 Fish46;
+uniform vec4 Fish47;
+uniform vec4 Fish48;
+uniform vec4 Fish49;
+uniform vec4 Fish50;
+uniform vec4 Fish51;
+uniform vec4 Fish52;
+uniform vec4 Fish53;
+uniform vec4 Fish54;
+uniform vec4 Fish55;
+uniform vec4 Fish56;
+uniform vec4 Fish57;
+uniform vec4 Fish58;
+uniform vec4 Fish59;
+uniform vec4 Fish60;
+uniform vec4 Fish61;
+uniform vec4 Fish62;
+uniform vec4 Fish63;
 uniform float FishCount;
 uniform float Ocean;   // 1: the ocean tank (big sea animals, deeper water, coral)
 
@@ -224,6 +248,78 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
     return q.y > 0.25 ? vec3(0.15, 0.3, 0.5) : vec3(0.8, 0.84, 0.9); // sardine
 }
 
+// One part of a fish, in the fish's own frame (x forward, y up, z sideways): where, its radii, how it's turned
+// (yaw about up, then pitch about sideways), and what it is (0 body, 1 tail, 2 fin).
+struct Part {
+    vec3 at;
+    vec3 r;
+    float yaw;
+    float pitch;
+    int type;
+};
+
+const int PARTS = 8;
+
+// part j of a fish of this kind (radii scaled by the species, not yet by the fish's size); swing: tail beat (-1..1)
+Part fishPart(int kind, Species sp, int j, float swing, float flap) {
+    vec3 b = sp.body, tl = sp.tail, fn = sp.fin;
+    bool forked = kind == 0 || kind == 1 || kind == 2 || kind == 3 || kind == 4 || kind == 9 || kind == 10 || kind == 11 || kind == 14 || kind == 17;
+    if (kind == 13) { // sea turtle: shell, head, four flippers
+        if (j == 0) return Part(vec3(0.0), b, 0.0, 0.0, 0);
+        if (j == 1) return Part(vec3(b.x + tl.x * 0.4, 0.0, 0.0), tl, 0.0, 0.0, 1);
+        if (j == 2 || j == 3) { float s = j == 2 ? 1.0 : -1.0;
+            return Part(vec3(b.x * 0.35, -b.y * 0.15, s * b.z * 0.95), vec3(fn.x, fn.y, fn.z * 0.55), s * 0.5, 0.0, 1); }
+        if (j == 4 || j == 5) { float s = j == 4 ? 1.0 : -1.0;
+            return Part(vec3(-b.x * 0.7, -b.y * 0.2, s * b.z * 0.7), vec3(fn.x * 0.6, fn.y, fn.z * 0.25), -s * 0.7, 0.0, 1); }
+        return Part(vec3(0.0), vec3(0.0), 0.0, 0.0, 0);
+    }
+    if (kind == 15) { // jellyfish: dome and four wavy tentacles
+        if (j == 0) return Part(vec3(0.0), b, 0.0, 0.0, 0);
+        if (j <= 4) { float a = float(j) * 1.5708;
+            return Part(vec3(b.x * 0.45 * cos(a) + 0.03 * swing, -b.y - tl.y * 0.7, b.z * 0.45 * sin(a)), tl, 0.0, 0.08 * swing * (float(j) - 2.5), 1); }
+        return Part(vec3(0.0), vec3(0.0), 0.0, 0.0, 0);
+    }
+    if (kind == 12) { // manta ray: wide body, long thin tail, two head fins
+        if (j == 0) return Part(vec3(0.0), b, 0.0, 0.0, 0);
+        if (j == 1) return Part(vec3(-b.x - tl.x * 0.8, 0.0, 0.0), tl, swing * 0.15, 0.0, 1);
+        if (j == 2 || j == 3) { float s = j == 2 ? 1.0 : -1.0;
+            return Part(vec3(b.x * 0.95, -b.y * 0.2, s * b.z * 0.18), vec3(b.x * 0.25, b.y * 0.6, b.z * 0.06), 0.0, 0.0, 2); }
+        return Part(vec3(0.0), vec3(0.0), 0.0, 0.0, 0);
+    }
+    if (j == 0) return Part(vec3(0.0), b, 0.0, 0.0, 0);
+    if (j == 1) { // the narrow part before the tail
+        if (kind == 7) return Part(vec3(0.0), vec3(0.0), 0.0, 0.0, 0);
+        return Part(vec3(-b.x * 0.82, 0.0, 0.0), vec3(b.x * 0.38, b.y * 0.42, b.z * 0.62), swing * 0.25, 0.0, 0);
+    }
+    vec3 tailRoot = vec3(-b.x * 1.12, 0.0, 0.0);
+    if (kind == 16) { // dolphin: flat flukes, sideways
+        if (j == 2 || j == 3) { float s = j == 2 ? 1.0 : -1.0;
+            return Part(tailRoot + vec3(-tl.x * 0.6, 0.0, s * tl.z * 0.45), vec3(tl.x, tl.y, tl.z * 0.55), swing * 0.4 - s * 0.45, swing * 0.3, 1); }
+    } else if (forked) { // forked tail: two lobes (the shark's top lobe bigger)
+        if (j == 2 || j == 3) { float s = j == 2 ? 1.0 : -1.0;
+            float big = kind == 10 ? (s > 0.0 ? 1.25 : 0.75) : 1.0;
+            return Part(tailRoot + vec3(-tl.x * 0.55, s * tl.y * 0.42 * big, 0.0), vec3(tl.x * big, tl.y * 0.5 * big, tl.z), swing * 0.5, -s * 0.55, 1); }
+    } else if (j == 2) { // a round, flowing tail
+        return Part(tailRoot + vec3(-tl.x * 0.6, 0.0, 0.0), tl, swing * 0.5, 0.0, 1);
+    }
+    if (j == 4 && fn.x > 0.0) { // dorsal fin, swept back
+        return Part(vec3(-b.x * 0.12, b.y * 0.86, 0.0), fn, 0.0, 0.35, 2);
+    }
+    if (j == 5 || j == 6) { // side fins, gently paddling
+        if (kind == 7 || kind == 8) return Part(vec3(0.0), vec3(0.0), 0.0, 0.0, 0);
+        float s = j == 5 ? 1.0 : -1.0;
+        float big = kind == 10 || kind == 16 ? 1.6 : 1.0;
+        return Part(vec3(b.x * 0.25, -b.y * 0.35, s * b.z * 0.95), vec3(b.x * 0.22 * big, b.y * 0.07, b.z * 0.55 * big), s * (0.7 + 0.25 * flap), -0.35, 2);
+    }
+    if (j == 7) { // a fin underneath (long on the angelfish and betta)
+        if (kind == 4 || kind == 6) return Part(vec3(-b.x * 0.2, -b.y * 0.9, 0.0), vec3(fn.x * 0.9, fn.y * 0.9, fn.z), 0.0, -0.3, 2);
+        if (kind == 0 || kind == 1 || kind == 2 || kind == 9 || kind == 14) return Part(vec3(-b.x * 0.4, -b.y * 0.8, 0.0), vec3(b.x * 0.25, b.y * 0.25, b.z * 0.2), 0.0, -0.4, 2);
+    }
+    if (j == 3 && kind == 16) return Part(vec3(0.0), vec3(0.0), 0.0, 0.0, 0);
+    if (j == 7 && kind == 16) return Part(vec3(0.0), vec3(0.0), 0.0, 0.0, 0);
+    return Part(vec3(0.0), vec3(0.0), 0.0, 0.0, 0);
+}
+
 int pickKind(float r) {
     if (Ocean < 0.5) {
         return int(r * 9.999);
@@ -240,7 +336,7 @@ int pickKind(float r) {
 }
 
 vec4 fishData(int k) {
-    return k == 0 ? Fish0 : k == 1 ? Fish1 : k == 2 ? Fish2 : k == 3 ? Fish3 : k == 4 ? Fish4 : k == 5 ? Fish5 : k == 6 ? Fish6 : k == 7 ? Fish7 : k == 8 ? Fish8 : k == 9 ? Fish9 : k == 10 ? Fish10 : k == 11 ? Fish11 : k == 12 ? Fish12 : k == 13 ? Fish13 : k == 14 ? Fish14 : k == 15 ? Fish15 : k == 16 ? Fish16 : k == 17 ? Fish17 : k == 18 ? Fish18 : k == 19 ? Fish19 : k == 20 ? Fish20 : k == 21 ? Fish21 : k == 22 ? Fish22 : k == 23 ? Fish23 : k == 24 ? Fish24 : k == 25 ? Fish25 : k == 26 ? Fish26 : k == 27 ? Fish27 : k == 28 ? Fish28 : k == 29 ? Fish29 : k == 30 ? Fish30 : k == 31 ? Fish31 : k == 32 ? Fish32 : k == 33 ? Fish33 : k == 34 ? Fish34 : k == 35 ? Fish35 : k == 36 ? Fish36 : k == 37 ? Fish37 : k == 38 ? Fish38 : Fish39;
+    return k == 0 ? Fish0 : k == 1 ? Fish1 : k == 2 ? Fish2 : k == 3 ? Fish3 : k == 4 ? Fish4 : k == 5 ? Fish5 : k == 6 ? Fish6 : k == 7 ? Fish7 : k == 8 ? Fish8 : k == 9 ? Fish9 : k == 10 ? Fish10 : k == 11 ? Fish11 : k == 12 ? Fish12 : k == 13 ? Fish13 : k == 14 ? Fish14 : k == 15 ? Fish15 : k == 16 ? Fish16 : k == 17 ? Fish17 : k == 18 ? Fish18 : k == 19 ? Fish19 : k == 20 ? Fish20 : k == 21 ? Fish21 : k == 22 ? Fish22 : k == 23 ? Fish23 : k == 24 ? Fish24 : k == 25 ? Fish25 : k == 26 ? Fish26 : k == 27 ? Fish27 : k == 28 ? Fish28 : k == 29 ? Fish29 : k == 30 ? Fish30 : k == 31 ? Fish31 : k == 32 ? Fish32 : k == 33 ? Fish33 : k == 34 ? Fish34 : k == 35 ? Fish35 : k == 36 ? Fish36 : k == 37 ? Fish37 : k == 38 ? Fish38 : k == 39 ? Fish39 : k == 40 ? Fish40 : k == 41 ? Fish41 : k == 42 ? Fish42 : k == 43 ? Fish43 : k == 44 ? Fish44 : k == 45 ? Fish45 : k == 46 ? Fish46 : k == 47 ? Fish47 : k == 48 ? Fish48 : k == 49 ? Fish49 : k == 50 ? Fish50 : k == 51 ? Fish51 : k == 52 ? Fish52 : k == 53 ? Fish53 : k == 54 ? Fish54 : k == 55 ? Fish55 : k == 56 ? Fish56 : k == 57 ? Fish57 : k == 58 ? Fish58 : k == 59 ? Fish59 : k == 60 ? Fish60 : k == 61 ? Fish61 : k == 62 ? Fish62 : Fish63;
 }
 
 bool water(ivec3 c) {
@@ -302,7 +398,7 @@ void main() {
     bool fish = false;
     float fishAlpha = 1.0;
     vec3 rot = ro - BoxMin;
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < 32; i++) {
         if (i >= count) {
             break;
         }
@@ -334,38 +430,39 @@ void main() {
         float beat = sin(t * (7.0 + 4.0 * speed) / max(size * extent * 4.0, 1.0) + fi * 2.0);
         vec3 bodyFwd = normalize(fwd + side * beat * 0.06);
         vec3 bodySide = normalize(cross(bodyFwd, up));
-        vec3 bodyR = sp.body * size;
-        if (kind == 15) {
-            bodyR.y *= 0.85 + 0.15 * sin(t * 2.0 + fi); // (pulsing)
+        // (a quick test first: does the ray pass near this fish at all?)
+        float reachAll = size * (sp.body.x * 1.3 + sp.tail.x * 2.2 + max(sp.body.z, sp.fin.z) + sp.tail.y * (kind == 15 ? 2.2 : 0.6));
+        vec3 oc = rot - c;
+        float bq = dot(oc, rd), cq = dot(oc, oc) - reachAll * reachAll;
+        if (bq * bq - cq < 0.0 || -bq - sqrt(max(bq * bq - cq, 0.0)) > hitT) {
+            continue;
         }
-        vec3 n, q;
-        float tf = ellipsoid(rot, rd, c, bodyFwd, up, bodySide, bodyR, n, q);
-        int part = 0;
-        // tail (the turtle's head, in front; the jellyfish's tentacles, below; the dolphin's flukes, flat)
-        vec3 tailDir = normalize(-fwd + side * beat * 0.5);
-        vec3 tc = c - fwd * (sp.body.x + sp.tail.x * 0.6) * size + side * beat * 0.03 * size;
-        vec3 tAx = tailDir, tAy = up;
-        if (kind == 13) { tc = c + fwd * (sp.body.x + sp.tail.x * 0.4) * size; tAx = fwd; }
-        if (kind == 15) { tc = c - up * (bodyR.y + sp.tail.y * size * 0.7); tAx = fwd; }
-        vec3 n2, q2;
-        float tt = ellipsoid(rot, rd, tc, tAx, tAy, normalize(cross(tAx, tAy)), sp.tail * size, n2, q2);
-        if (tt > 0.0 && (tf < 0.0 || tt < tf)) {
-            tf = tt; n = n2; q = q2; part = 1;
-        }
-        // fin: a dorsal fin on top (the turtle's flippers, flapping)
-        if (sp.fin.x > 0.0) {
-            vec3 fc = c + up * bodyR.y * 0.85 - fwd * sp.body.x * size * 0.1;
-            vec3 fUp = up;
-            if (kind == 13) {
-                fc = c + fwd * sp.body.x * size * 0.25 - up * bodyR.y * 0.2;
-                fUp = normalize(up + side * 0.0 + fwd * 0.3 * sin(t * 1.8 + fi));
+        float tf = -1.0;
+        vec3 n = vec3(0.0, 1.0, 0.0), q = vec3(0.0);
+        int part_ = 0;
+        float flap = sin(t * 3.0 + fi * 1.3);
+        for (int j = 0; j < PARTS; j++) {
+            Part pt = fishPart(kind, sp, j, beat, flap);
+            if (pt.r.x <= 0.0) {
+                continue;
             }
-            vec3 n3, q3;
-            float tfin = ellipsoid(rot, rd, fc, fwd, fUp, normalize(cross(fwd, fUp)), sp.fin * size, n3, q3);
-            if (tfin > 0.0 && (tf < 0.0 || tfin < tf)) {
-                tf = tfin; n = n3; q = q3; part = 2;
+            vec3 r = pt.r * size;
+            if (kind == 15 && j == 0) {
+                r.y *= 0.85 + 0.15 * sin(t * 2.0 + fi); // (the jellyfish pulsing)
+            }
+            // the part's axes: the body's, turned by yaw (about up) then pitch (about sideways)
+            vec3 fx = bodyFwd * cos(pt.yaw) + bodySide * sin(pt.yaw);
+            vec3 fz = bodySide * cos(pt.yaw) - bodyFwd * sin(pt.yaw);
+            vec3 ax = fx * cos(pt.pitch) + up * sin(pt.pitch);
+            vec3 ay = up * cos(pt.pitch) - fx * sin(pt.pitch);
+            vec3 pc = c + bodyFwd * pt.at.x * size + up * pt.at.y * size + bodySide * pt.at.z * size;
+            vec3 pn, pq;
+            float tp = ellipsoid(rot, rd, pc, ax, ay, fz, r, pn, pq);
+            if (tp > 0.0 && (tf < 0.0 || tp < tf)) {
+                tf = tp; n = pn; q = pq; part_ = pt.type;
             }
         }
+        int part = part_;
         if (tf > 0.0 && tf > tEnter - 0.01 && tf < hitT) {
             hitT = tf;
             fish = true;
@@ -373,10 +470,17 @@ void main() {
             vec3 base = fishColour(kind, q, part, rnd);
             // the eye
             bool eyed = kind != 12 && kind != 15 && kind != 13;
-            if ((eyed && part == 0 && q.x > 0.6 && abs(q.y - 0.2) < 0.18 && abs(q.z) > 0.6)
-                    || (kind == 13 && part == 1 && q.x > 0.3 && abs(q.y - 0.2) < 0.25 && abs(q.z) > 0.6)) {
-                base = vec3(0.02);
+            float eyeD = length(vec2((q.x - 0.7) * 1.4, q.y - 0.2));
+            if (kind == 13) eyeD = length(vec2((q.x - 0.45) * 1.2, q.y - 0.2));
+            if (((eyed && part == 0) || (kind == 13 && part == 1)) && abs(q.z) > 0.55) {
+                if (eyeD < 0.07) base = vec3(0.9);                 // (glint)
+                else if (eyeD < 0.13) base = vec3(0.02);           // pupil
+                else if (eyeD < 0.19) base = kind == 10 || kind == 16 ? vec3(0.05) : vec3(0.95, 0.9, 0.6); // ring
             }
+            if (part == 2) {
+                base = mix(base, vec3(1.0), 0.15); // (fins a little lighter, as if thin)
+            }
+            base *= mix(0.8, 1.12, clamp(n.y * 0.5 + 0.5, 0.0, 1.0)); // (darker underneath)
             vec3 p = rot + rd * tf;
             float light = 0.45 + 0.55 * max(n.y, 0.0) + 0.25 * max(dot(n, -rd), 0.0);
             float caust = caustics(p.xz, t) * max(n.y, 0.0) * (p.y / BoxSize.y);
@@ -427,9 +531,17 @@ void main() {
         bool down = exitAxis == 1 && rd.y < 0.0, up = exitAxis == 1 && rd.y > 0.0;
         if (down || onSand) {
             // sand with pebbles, lit by the moving light patterns
+            // round pebbles, and in the ocean round rocks, soft at the edges
             vec2 cell = floor(p.xz * 9.0);
-            float pebble = hash22(cell).x > 0.93 ? 0.7 : 1.0;
-            if (Ocean > 0.5 && hash22(floor(p.xz * 2.0)).y > 0.86) pebble = 0.45; // (rocks)
+            vec2 inCell = fract(p.xz * 9.0) - 0.5;
+            vec2 jitter = hash22(cell + 3.1) - 0.5;
+            float pebble = hash22(cell).x > 0.9 ? mix(0.72, 1.0, smoothstep(0.18, 0.3, length(inCell - jitter * 0.3))) : 1.0;
+            if (Ocean > 0.5) {
+                vec2 rc = floor(p.xz * 1.6);
+                vec2 rin = fract(p.xz * 1.6) - 0.5 - (hash22(rc + 7.7) - 0.5) * 0.4;
+                float rr = 0.12 + 0.12 * hash22(rc + 1.3).x;
+                if (hash22(rc).y > 0.72) pebble *= mix(0.55, 1.0, smoothstep(rr - 0.04, rr + 0.02, length(rin)));
+            }
             col = vec3(0.85, 0.75, 0.52) * pebble * (0.75 + 0.1 * hash22(floor(p.xz * 40.0)).x);
             col += vec3(0.6, 0.85, 1.0) * caustics(p.xz, t) * 0.55;
         } else if (up) {
@@ -477,7 +589,7 @@ void main() {
     float travel = max(hitT - tEnter, 0.0);
     vec3 waterCol = Ocean > 0.5 ? mix(vec3(0.0, 0.1, 0.24), vec3(0.05, 0.38, 0.58), clamp(entry.y / BoxSize.y, 0.0, 1.0))
                                 : mix(vec3(0.02, 0.2, 0.32), vec3(0.15, 0.55, 0.62), clamp(entry.y / BoxSize.y, 0.0, 1.0));
-    col = mix(col, waterCol, 1.0 - exp(-travel * (Ocean > 0.5 ? 0.16 : 0.38)));
+    col = mix(col, waterCol, 1.0 - exp(-travel * (Ocean > 0.5 ? 0.22 : 0.3)));
     col += vec3(0.25, 0.5, 0.55) * 0.08 * (0.5 + 0.5 * sin(entry.x * 4.0 + entry.z * 3.0 + entry.y * 2.0 + t * 1.5));
 
     // looking down through the top: the surface ripples catch the light

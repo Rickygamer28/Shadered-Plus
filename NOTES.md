@@ -169,3 +169,8 @@
   tanks only join the same kind; fewer, bigger fish; kelp + coral + rocks). Islands: animated block textures for
   aquarium/ocean_aquarium/dance_floor; fog machine BER draws soft fog layers when IslandRendering.inIsland.
   Speaker: dye = light colour, sneak + right-click = RGB mode (BE colour/rgb synced).
+- Aquarium/dance floor in Sky Islands (24 Oct): AquariumRenderer/DanceFloorRenderer.build(BlockGetter, tiles) shared by
+  the world scan and islandSet(IslandView); queueIsland (pedestals, drawn at AFTER_BLOCK_ENTITIES in scoped()) and
+  drawInWindow (paintings), like InfinityMirrorRenderer. Fish = up to 8 ellipsoid parts per fish (fishPart: forked
+  tails, peduncle, dorsal/pectoral/ventral fins, turtle flippers, jelly tentacles, manta head fins) with a bounding
+  sphere pre-test; up to 32 fish (2.4 per block normal, 0.8 ocean); haze 0.3 normal / 0.22 ocean; round rocks.

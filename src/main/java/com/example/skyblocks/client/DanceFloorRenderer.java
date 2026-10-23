@@ -93,6 +93,17 @@ public final class DanceFloorRenderer {
 
         @SubscribeEvent
         public static void onStage(RenderLevelStageEvent event) {
+            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES) {
+                if (MirrorRenderer.isRenderingReflection()) {
+                    return;
+                }
+                if (IrisCompat.renderingShadowPass() || Minecraft.getInstance().level == null) {
+                    ISLANDS.clear();
+                    return;
+                }
+                drawIslands(new Matrix4f(event.getModelViewMatrix()), new Matrix4f(event.getProjectionMatrix()));
+                return;
+            }
             if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS || MirrorRenderer.isRenderingReflection()
                     || IrisCompat.renderingShadowPass()) {
                 return;
@@ -119,7 +130,7 @@ public final class DanceFloorRenderer {
             Matrix4f projection = new Matrix4f(event.getProjectionMatrix());
             InfinityMirrorRenderer.scoped(view, projection, overlay -> {
                 List<Runnable> shapes = new ArrayList<>();
-                draw(cam, view, projection, !overlay, shapes);
+                draw(FLOORS, cam, view, projection, !overlay, shapes, RANGE);
                 InfinityMirrorRenderer.recordShapes(overlay, shapes, 0.0F);
             });
         }
@@ -137,10 +148,11 @@ public final class DanceFloorRenderer {
         if (FLOORS.isEmpty() || shader == null || Minecraft.getInstance().level == null) {
             return;
         }
-        draw(new Vec3(ex, ey, ez), modelView, projection, true, new ArrayList<>());
+        draw(FLOORS, new Vec3(ex, ey, ez), modelView, projection, true, new ArrayList<>(), RANGE);
     }
 
-    private static void draw(Vec3 cam, Matrix4f modelView, Matrix4f projection, boolean writeDepth, List<Runnable> shapes) {
+    private static void draw(List<Floor> floors, Vec3 cam, Matrix4f modelView, Matrix4f projection, boolean writeDepth, List<Runnable> shapes,
+                             double range) {
         Minecraft mc = Minecraft.getInstance();
         Vec3 eye = cam.add(new Vec3(InfinityMirrorRenderer.eyeOf(projection, modelView)));
         FrustumIntersection seen = new FrustumIntersection(new Matrix4f(projection).mul(modelView));
@@ -166,13 +178,13 @@ public final class DanceFloorRenderer {
                         MusicReactor.band(i * 4 + 3));
             }
             RenderSystem.setShader(() -> shader);
-            for (Floor floor : FLOORS) {
+            for (Floor floor : floors) {
                 List<Face> shown = new ArrayList<>();
                 for (Face f : floor.faces) {
                     Direction d = f.side();
                     double plane = f.pos().get(d.getAxis()) + (d.getAxisDirection() == Direction.AxisDirection.POSITIVE ? 1 : 0);
                     if ((d.getAxis().choose(eye.x, eye.y, eye.z) - plane) * d.getAxisDirection().getStep() <= 0.0
-                            || f.pos().distToCenterSqr(eye) > RANGE * RANGE
+                            || f.pos().distToCenterSqr(eye) > range * range
                             || !seen.testAab((float) (f.pos().getX() - cam.x), (float) (f.pos().getY() - cam.y), (float) (f.pos().getZ() - cam.z),
                             (float) (f.pos().getX() + 1 - cam.x), (float) (f.pos().getY() + 1 - cam.y), (float) (f.pos().getZ() + 1 - cam.z))) {
                         continue;
@@ -286,6 +298,16 @@ public final class DanceFloorRenderer {
                 }
             }
         }
+        FLOORS.clear();
+        FLOORS.addAll(build(level, tiles));
+        if (FLOORS.size() > 4096) {
+            FLOORS.clear();
+        }
+    }
+
+    /** Touching blocks -> floors (in the world, or in an island's own blocks). */
+    private static List<Floor> build(net.minecraft.world.level.BlockGetter level, Set<BlockPos> tiles) {
+        List<Floor> out = new ArrayList<>();
         // touching tiles -> floors
         Set<BlockPos> done = new HashSet<>();
         BlockPos.MutableBlockPos n = new BlockPos.MutableBlockPos();
@@ -331,10 +353,96 @@ public final class DanceFloorRenderer {
             floor.sizeX = maxX - minX + 1;
             floor.sizeY = maxY - minY + 1;
             floor.sizeZ = maxZ - minZ + 1;
-            FLOORS.add(floor);
+            out.add(floor);
         }
-        if (SHOWS.size() > 256) {
-            SHOWS.clear();
+        return out;
+    }
+
+    // ---- in Sky Islands (on pedestals and in paintings) ----
+
+    /** The floors in an island (built once per island view). */
+    public static final class Island {
+        public static final Island EMPTY = new Island(List.of());
+        final List<Floor> floors;
+
+        Island(List<Floor> floors) {
+            this.floors = floors;
         }
+
+        public boolean isEmpty() {
+            return floors.isEmpty();
+        }
+    }
+
+    private record IslandJob(Island island, Matrix4f pose) {}
+
+    private static final List<IslandJob> ISLANDS = new ArrayList<>();
+
+    public static Island islandSet(net.minecraft.world.level.BlockGetter island, int sizeX, int height, int sizeZ) {
+        Set<BlockPos> tiles = new HashSet<>();
+        for (int y = 0; y < height; y++) {
+            for (int z = 0; z < sizeZ; z++) {
+                for (int x = 0; x < sizeX; x++) {
+                    BlockPos p = new BlockPos(x, y, z);
+                    BlockState state = island.getBlockState(p);
+                    if (state.getBlock() instanceof DanceFloorBlock b) {
+                        tiles.add(p);
+                    }
+                }
+            }
+        }
+        return tiles.isEmpty() ? Island.EMPTY : new Island(build(island, tiles));
+    }
+
+    /** A Sky Island on a pedestal with these, drawn this frame with this pose (drawn after the block entities). */
+    public static void queueIsland(Island island, Matrix4f pose) {
+        if (!island.isEmpty() && ISLANDS.size() < 64) {
+            ISLANDS.add(new IslandJob(island, new Matrix4f(pose)));
+        }
+    }
+
+    /** Inside an Island Painting's window (its target bound, its mask set): drawn now, in the island's coordinates by pose. */
+    public static void drawInWindow(Island island, Matrix4f pose) {
+        if (island.isEmpty() || shader == null || Minecraft.getInstance().level == null) {
+            return;
+        }
+        Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewMatrix()).mul(pose);
+        Matrix4f projection = new Matrix4f(RenderSystem.getProjectionMatrix());
+        org.joml.Matrix4fStack stack = RenderSystem.getModelViewStack();
+        stack.pushMatrix();
+        try {
+            stack.mul(pose);
+            RenderSystem.applyModelViewMatrix();
+            draw(island.floors, Vec3.ZERO, modelView, projection, true, new ArrayList<>(), Double.MAX_VALUE / 4);
+        } finally {
+            stack.popMatrix();
+            RenderSystem.applyModelViewMatrix();
+        }
+    }
+
+    private static void drawIslands(Matrix4f view, Matrix4f projection) {
+        List<IslandJob> jobs = new ArrayList<>(ISLANDS);
+        ISLANDS.clear();
+        if (jobs.isEmpty() || shader == null) {
+            return;
+        }
+        InfinityMirrorRenderer.scoped(view, projection, overlay -> {
+            for (IslandJob job : jobs) {
+                Matrix4f modelView = new Matrix4f(view).mul(job.pose());
+                org.joml.Matrix4fStack stack = RenderSystem.getModelViewStack();
+                stack.pushMatrix();
+                try {
+                    stack.mul(job.pose());
+                    RenderSystem.applyModelViewMatrix();
+                    List<Runnable> shapes = new ArrayList<>();
+                    draw(job.island().floors, Vec3.ZERO, modelView, projection, !overlay, shapes, Double.MAX_VALUE / 4);
+                    InfinityMirrorRenderer.recordShapes(overlay, shapes, overlay ? 0.012F : 0.0F);
+                } finally {
+                    stack.popMatrix();
+                    RenderSystem.applyModelViewMatrix();
+                }
+            }
+        });
+    }
     }
 }

@@ -146,6 +146,8 @@ final class IslandWindow {
                 if (details) {
                     // infinity mirrors and cubes inside, with their own shaders, inside the window
                     com.example.skyblocks.client.InfinityMirrorRenderer.drawInWindow(view.infinity(), poseStack.last().pose());
+                    com.example.skyblocks.client.AquariumRenderer.drawInWindow(view.aquariums(), poseStack.last().pose());
+                    com.example.skyblocks.client.DanceFloorRenderer.drawInWindow(view.danceFloors(), poseStack.last().pose());
                     com.example.skyblocks.client.PortalSkyRenderer.drawInIsland(view, view.portalSkies, poseStack, scene, false);
                     backInside();
                 }
