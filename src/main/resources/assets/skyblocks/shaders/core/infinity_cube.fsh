@@ -46,7 +46,7 @@ void main() {
     vec3 sight = normalize(facePos - Eye);
     vec3 p = facePos - BoxMin;
     float eyeDistance = length(facePos - Eye);
-    vec3 base = Rainbow > 0.5 ? hue(fract(Time * 0.05)) : ColorFront;
+    vec3 base = Rainbow > 0.5 ? hue(fract(Time * 0.2)) : ColorFront;
 
     // the face this pixel is on (the axis it's flat across), and how far from that face's border
     vec3 toSide = min(p, BoxSize - p);
@@ -81,22 +81,32 @@ void main() {
         }
         vec3 at = q + sight * t;
         float fw = PixelSize * (eyeDistance + t);
-        // on this wall: the edges running across it are where one of the other two coordinates is a whole box
+        // on this wall: the edges lying in it are where one of the other two coordinates is a whole box. How far the
+        // line of sight passes from such an edge (really, in 3D, not just on this wall: on the wall alone the lines got
+        // thicker and thinner with the angle and the grid swam as you moved), and where along the edge it passes
         vec2 c = others(at, axis);
         vec2 period = others(size, axis);
-        vec2 off = c - period * floor(c / period + 0.5);   // from the nearest edge, each way
+        vec2 off = c - period * floor(c / period + 0.5);   // from the nearest edge, each way, on this wall
         vec2 n = max(vec2(1.0), floor(period / LED_GAP + 0.5));
         vec2 gap = period / n;
-        vec2 along = (fract(c / gap) - 0.5) * gap;          // from the nearest LED on a strip
-        // (an edge where the first coordinate is whole runs along the second, its LEDs spaced along it, and so on)
-        float led = bump(off.x, LED_SIZE, period.x, fw) * bump(along.y, LED_SIZE, gap.y, fw)
-                + bump(off.y, LED_SIZE, period.y, fw) * bump(along.x, LED_SIZE, gap.x, fw);
-        float glow = 0.2 * (bump(off.x, LED_SIZE * 3.0, period.x, fw) * bump(along.y, LED_SIZE * 3.0, gap.y, fw)
-                + bump(off.y, LED_SIZE * 3.0, period.y, fw) * bump(along.x, LED_SIZE * 3.0, gap.x, fw));
+        float da = abs(sight[axis]);
+        vec2 db = others(sight, axis);
+        // edges running along the wall's second axis (first coordinate whole), then along its first
+        float s1 = max(length(vec2(da, db.x)), 1e-4), s2 = max(length(vec2(da, db.y)), 1e-4);
+        float dist1 = abs(off.x) * da / s1, dist2 = abs(off.y) * da / s2;
+        float near1 = c.y - db.y * off.x * db.x / (s1 * s1); // (where along the edge the sight passes closest)
+        float near2 = c.x - db.x * off.y * db.y / (s2 * s2);
+        float along1 = (fract(near1 / gap.y) - 0.5) * gap.y, along2 = (fract(near2 / gap.x) - 0.5) * gap.x;
+        float spacing1 = max(period.x * da / s1, 1e-3), spacing2 = max(period.y * da / s2, 1e-3);
+        float fwAlong1 = fw / max(s1, 0.05), fwAlong2 = fw / max(s2, 0.05); // (an edge seen end-on: LEDs bunch up)
+        float led = 0.6 * (bump(dist1, LED_SIZE, spacing1, fw) * bump(along1, LED_SIZE, gap.y, fwAlong1)
+                + bump(dist2, LED_SIZE, spacing2, fw) * bump(along2, LED_SIZE, gap.x, fwAlong2));
+        float glow = 0.12 * (bump(dist1, LED_SIZE * 3.0, spacing1, fw) * bump(along1, LED_SIZE * 3.0, gap.y, fwAlong1)
+                + bump(dist2, LED_SIZE * 3.0, spacing2, fw) * bump(along2, LED_SIZE * 3.0, gap.x, fwAlong2));
         vec3 color;
         if (Rainbow > 0.5) {
-            vec3 cellAt = floor((at + sight * 1e-3) / size);
-            color = hue(fract(dot(cellAt, vec3(0.11, 0.17, 0.07)) + bounces * 0.03 - Time * 0.08));
+            // colours flowing through the grid, like an addressable LED strip running a rainbow
+            color = hue(fract(dot(at, vec3(0.23, 0.31, 0.17)) + bounces * 0.05 - Time * 0.45));
         } else {
             color = mix(ColorFront, ColorDeep, 1.0 - exp(-bounces * 0.12));
         }
