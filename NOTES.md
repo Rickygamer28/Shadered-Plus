@@ -137,3 +137,6 @@
 - Water Caustics can hold a Shadered sky block too (user, 23 Oct): the BE keeps the item put in (ItemStack "held", old
   "inside" tag read too); a sky -> WaterCausticsRenderer queues the sky cube with SkyblockRenderer.getData(type) like
   Shadered's own BER (drawn AFTER_BLOCK_ENTITIES, before translucent), model gives only the translucent light overlay.
+- Synthwave colour skies (23 Oct 2026, user "do all of them"): synthwave_outrun, synthwave_night (moon), synthwave_miami,
+  darksynth, synthwave_terminal, vaporwave = same synthwave_sky shader, colours as uniforms set by
+  client/SynthwavePalettes (classic = "synthwave"). Particle textures generated per palette.

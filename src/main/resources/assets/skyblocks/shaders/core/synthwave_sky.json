@@ -144,6 +144,174 @@
             "values": [
                 0.0
             ]
+        },
+        {
+            "name": "TOP",
+            "type": "float",
+            "count": 3,
+            "values": [
+                0.05,
+                0.01,
+                0.13
+            ]
+        },
+        {
+            "name": "MID",
+            "type": "float",
+            "count": 3,
+            "values": [
+                0.42,
+                0.05,
+                0.45
+            ]
+        },
+        {
+            "name": "MID_COOL",
+            "type": "float",
+            "count": 3,
+            "values": [
+                0.24,
+                0.04,
+                0.4
+            ]
+        },
+        {
+            "name": "HORIZON",
+            "type": "float",
+            "count": 3,
+            "values": [
+                1.0,
+                0.4,
+                0.42
+            ]
+        },
+        {
+            "name": "HORIZON_COOL",
+            "type": "float",
+            "count": 3,
+            "values": [
+                0.8,
+                0.18,
+                0.62
+            ]
+        },
+        {
+            "name": "PINK",
+            "type": "float",
+            "count": 3,
+            "values": [
+                1.0,
+                0.16,
+                0.62
+            ]
+        },
+        {
+            "name": "ORANGE",
+            "type": "float",
+            "count": 3,
+            "values": [
+                1.0,
+                0.52,
+                0.12
+            ]
+        },
+        {
+            "name": "YELLOW",
+            "type": "float",
+            "count": 3,
+            "values": [
+                1.0,
+                0.86,
+                0.24
+            ]
+        },
+        {
+            "name": "WIRE",
+            "type": "float",
+            "count": 3,
+            "values": [
+                0.95,
+                0.35,
+                1.0
+            ]
+        },
+        {
+            "name": "FLOOR",
+            "type": "float",
+            "count": 3,
+            "values": [
+                0.05,
+                0.0,
+                0.1
+            ]
+        },
+        {
+            "name": "ROCK",
+            "type": "float",
+            "count": 3,
+            "values": [
+                0.07,
+                0.01,
+                0.13
+            ]
+        },
+        {
+            "name": "SILHOUETTE",
+            "type": "float",
+            "count": 3,
+            "values": [
+                0.035,
+                0.0,
+                0.07
+            ]
+        },
+        {
+            "name": "ACCENT",
+            "type": "float",
+            "count": 3,
+            "values": [
+                0.4,
+                0.9,
+                1.0
+            ]
+        },
+        {
+            "name": "SUN0",
+            "type": "float",
+            "count": 3,
+            "values": [
+                1.0,
+                0.16,
+                0.62
+            ]
+        },
+        {
+            "name": "SUN1",
+            "type": "float",
+            "count": 3,
+            "values": [
+                1.0,
+                0.52,
+                0.12
+            ]
+        },
+        {
+            "name": "SUN2",
+            "type": "float",
+            "count": 3,
+            "values": [
+                1.0,
+                0.86,
+                0.24
+            ]
+        },
+        {
+            "name": "Moon",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
+            ]
         }
     ]
 }

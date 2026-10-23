@@ -56,8 +56,12 @@ public final class ShaderSky {
     public static SkyboxRenderPass passFor(String name, ResourceLocation folder, SkyblockBatchData batch) {
         return switch (name) {
             case SkyNames.CHAOS -> new Pass(folder, batch, () -> chaos, NOISE, null);
-            case SkyNames.SYNTHWAVE -> new Pass(folder, batch, () -> synthwave, MusicReactor.HISTORY, MusicReactor::apply); // (reacts to music)
-            default -> null;
+            default -> SynthwavePalettes.has(name) // the synthwave skies: one scene, their own colours, reacting to music
+                    ? new Pass(folder, batch, () -> synthwave, MusicReactor.HISTORY, shader -> {
+                        MusicReactor.apply(shader);
+                        SynthwavePalettes.apply(shader, name);
+                    })
+                    : null;
         };
     }
 

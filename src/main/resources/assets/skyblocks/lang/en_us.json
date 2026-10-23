@@ -79,5 +79,17 @@
   "skyblock_type.skyblocks.chaos": "Chaos",
   "item.skyblocks.synthwave_sky_block": "Synthwave Sky Block",
   "skyblock_type.skyblocks.synthwave": "Synthwave",
+  "item.skyblocks.synthwave_outrun_sky_block": "Outrun Sky Block",
+  "skyblock_type.skyblocks.synthwave_outrun": "Outrun",
+  "item.skyblocks.synthwave_night_sky_block": "Synthwave Night Sky Block",
+  "skyblock_type.skyblocks.synthwave_night": "Synthwave Night",
+  "item.skyblocks.synthwave_miami_sky_block": "Synthwave Miami Sky Block",
+  "skyblock_type.skyblocks.synthwave_miami": "Synthwave Miami",
+  "item.skyblocks.darksynth_sky_block": "Darksynth Sky Block",
+  "skyblock_type.skyblocks.darksynth": "Darksynth",
+  "item.skyblocks.synthwave_terminal_sky_block": "Synthwave Terminal Sky Block",
+  "skyblock_type.skyblocks.synthwave_terminal": "Synthwave Terminal",
+  "item.skyblocks.vaporwave_sky_block": "Vaporwave Sky Block",
+  "skyblock_type.skyblocks.vaporwave": "Vaporwave",
   "tooltip.skyblocks.draconic_credit": "Shader from Draconic Evolution by brandon3055"
 }

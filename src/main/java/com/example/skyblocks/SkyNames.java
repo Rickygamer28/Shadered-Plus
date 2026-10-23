@@ -14,7 +14,7 @@ import java.util.Locale;
  *  - lang keys           skyblock_type.skyblocks.<name>, item.skyblocks.<name>_sky_block
  */
 public final class SkyNames {
-    public static final String[] NAMES = {"jupiter", "cat", "twilight", "hell", "nebula", "golden_hour", "scadu_altus", "cerulean_coast", "gravesite_plain", "mountaintops", "altus_plateau_night", "altus_plateau_sunset", "altus_plateau", "divine_tower", "caelid", "siofra_river", "limgrave_sunset", "limgrave_rainy", "academy_of_raya_lucaria", "liurnia_sunset", "liurnia_rainy", "liurnia", "chaos", "synthwave"};
+    public static final String[] NAMES = {"jupiter", "cat", "twilight", "hell", "nebula", "golden_hour", "scadu_altus", "cerulean_coast", "gravesite_plain", "mountaintops", "altus_plateau_night", "altus_plateau_sunset", "altus_plateau", "divine_tower", "caelid", "siofra_river", "limgrave_sunset", "limgrave_rainy", "academy_of_raya_lucaria", "liurnia_sunset", "liurnia_rainy", "liurnia", "chaos", "synthwave", "synthwave_outrun", "synthwave_night", "synthwave_miami", "darksynth", "synthwave_terminal", "vaporwave"};
 
     /** The chaos sky: not a picture but Draconic Evolution's chaos shader (adapted with credit, client/ShaderSky). */
     public static final String CHAOS = "chaos";

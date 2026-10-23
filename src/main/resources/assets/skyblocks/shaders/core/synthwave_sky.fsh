@@ -34,18 +34,24 @@ const vec3 SUN_DIR = vec3(-1.0, 0.0, 0.0); // west
 const vec3 SIDE = vec3(0.0, 0.0, 1.0);
 const vec3 PLANET_DIR = vec3(0.30, 0.52, -0.80);
 
-const vec3 TOP = vec3(0.05, 0.01, 0.13);
-const vec3 MID = vec3(0.42, 0.05, 0.45);
-const vec3 MID_COOL = vec3(0.24, 0.04, 0.40);
-const vec3 HORIZON = vec3(1.0, 0.40, 0.42);
-const vec3 HORIZON_COOL = vec3(0.80, 0.18, 0.62);
-const vec3 PINK = vec3(1.0, 0.16, 0.62);
-const vec3 ORANGE = vec3(1.0, 0.52, 0.12);
-const vec3 YELLOW = vec3(1.0, 0.86, 0.24);
-const vec3 WIRE = vec3(0.95, 0.35, 1.0);
-const vec3 FLOOR = vec3(0.05, 0.0, 0.1);
-const vec3 ROCK = vec3(0.07, 0.01, 0.13);
-const vec3 SILHOUETTE = vec3(0.035, 0.0, 0.07);
+// the colours: set per sky (classic, Outrun, Night, Miami, Darksynth, Terminal, Vaporwave) by client/SynthwavePalettes
+uniform vec3 TOP;          // sky overhead
+uniform vec3 MID;          // sky halfway up, towards the sun
+uniform vec3 MID_COOL;     // ... away from the sun
+uniform vec3 HORIZON;      // at the horizon, towards the sun
+uniform vec3 HORIZON_COOL; // ... away from the sun
+uniform vec3 PINK;         // the main neon (grid, glows)
+uniform vec3 ORANGE;       // the second neon (road edges, peaks, lit faces)
+uniform vec3 YELLOW;       // the brightest (dashes, peak tops)
+uniform vec3 WIRE;         // mountain wireframe
+uniform vec3 FLOOR;
+uniform vec3 ROCK;
+uniform vec3 SILHOUETTE;   // palms, city, pylons
+uniform vec3 ACCENT;       // odd windows, the crystal
+uniform vec3 SUN0;         // sun (or moon): bottom
+uniform vec3 SUN1;         // middle
+uniform vec3 SUN2;         // top
+uniform float Moon;        // 1: a moon instead of the striped sun
 
 float hash11(float n) {
     return fract(sin(n * 12.9898) * 43758.5453);
@@ -107,7 +113,7 @@ vec3 wisps(vec3 d, float elev, float t, float facing, vec3 col) {
     }
     float c = fbm(vec3(d.x * 2.2 + t * 0.012, d.y * 9.0, d.z * 2.2 - t * 0.008));
     float mask = smoothstep(0.52, 0.78, c) * smoothstep(0.05, 0.2, elev) * (1.0 - smoothstep(0.55, 1.0, elev));
-    vec3 lit = mix(vec3(0.42, 0.1, 0.55), vec3(1.0, 0.5, 0.55), facing * 0.8);
+    vec3 lit = mix(MID, mix(HORIZON, SUN1, 0.3), facing * 0.8);
     return mix(col, lit, mask * 0.38);
 }
 
@@ -128,7 +134,7 @@ vec3 searchlights(vec3 d, float elev, float t, vec3 col) {
         }
         float across = abs(rel.x * dir2.y - rel.y * dir2.x);
         float width = 0.006 + along * 0.06;
-        col += vec3(1.0, 0.6, 0.85) * 0.22 * exp(-across * across / (width * width)) * exp(-along * 1.6);
+        col += mix(vec3(1.0), PINK, 0.4) * 0.22 * exp(-across * across / (width * width)) * exp(-along * 1.6);
     }
     return col;
 }
@@ -206,7 +212,7 @@ vec3 planet(vec3 d, float t, vec3 col) {
     if (pd < r + 0.003) {
         vec2 q = uv / r;
         float band = 0.5 + 0.5 * sin(q.y * 13.0 + sin(q.x * 3.0 + t * 0.15) * 0.7);
-        vec3 surface = mix(vec3(0.32, 0.05, 0.45), vec3(0.98, 0.38, 0.62), band * 0.65 + 0.15);
+        vec3 surface = mix(MID * 0.8, mix(PINK, HORIZON, 0.5), band * 0.65 + 0.15);
         vec2 sunFlat = normalize(vec2(dot(SUN_DIR, right), dot(SUN_DIR, up)) + vec2(0.0, 0.001));
         vec3 n = vec3(q, sqrt(max(0.0, 1.0 - dot(q, q))));
         float light = clamp(dot(n, normalize(vec3(sunFlat * 0.85, 0.45))), 0.0, 1.0);
@@ -220,14 +226,28 @@ vec3 planet(vec3 d, float t, vec3 col) {
 }
 
 vec3 sun(float az, float elev, float t, vec3 col) {
+    if (Moon > 0.5) {
+        // a big pale moon, higher up, with craters and a soft halo
+        float radius = 0.16 * (1.0 + 0.08 * Bass);
+        vec2 mp = vec2(az, elev - 0.32);
+        float md = length(mp);
+        col += SUN0 * (0.35 + 0.3 * Bass) * exp(-max(md - radius, 0.0) * 9.0);
+        if (md < radius + 0.01) {
+            vec2 q = mp / radius;
+            float craters = noise3(vec3(q * 4.0, 1.7)) * 0.6 + noise3(vec3(q * 11.0, 4.2)) * 0.4;
+            vec3 disc = mix(SUN1, SUN2, smoothstep(-1.0, 1.0, q.y)) * (0.8 + 0.25 * smoothstep(0.35, 0.75, craters));
+            col = mix(col, disc, 1.0 - smoothstep(radius - 0.004, radius + 0.004, md));
+        }
+        return col;
+    }
     float radius = 0.3 * (1.0 + 0.025 * sin(t * 1.3) + 0.12 * Bass);
     vec2 sp = vec2(az, elev - 0.14);
     float sd = length(sp);
-    col += PINK * (0.5 + 0.4 * Bass) * exp(-max(sd - radius, 0.0) * 6.0);
+    col += SUN0 * (0.5 + 0.4 * Bass) * exp(-max(sd - radius, 0.0) * 6.0);
     if (sd < radius + 0.01) {
         float up = sp.y / radius * 0.5 + 0.5;
-        vec3 disc = mix(PINK, ORANGE, smoothstep(0.0, 0.55, up));
-        disc = mix(disc, YELLOW, smoothstep(0.5, 1.0, up));
+        vec3 disc = mix(SUN0, SUN1, smoothstep(0.0, 0.55, up));
+        disc = mix(disc, SUN2, smoothstep(0.5, 1.0, up));
         float keep = 1.0;
         if (up < 0.6) {
             float band = fract(up * 9.0 + t * 0.35);
@@ -248,7 +268,7 @@ vec3 clouds(float az, float elev, float t, float facing, vec3 col) {
     float s = 0.5 + 0.22 * sin(3.0 * az + 1.0 + t * 0.03) + 0.16 * sin(7.0 * az - 2.0 - t * 0.05) + 0.12 * sin(13.0 * az + 0.5 + t * 0.02);
     float mask = smoothstep(0.52, 0.72, s + 0.22 * sin(az * 5.0 + elev * 25.0)) * smoothstep(0.015, 0.05, elev) * (1.0 - smoothstep(0.18, 0.3, elev));
     float stripe = smoothstep(0.25, 0.6, sin(elev * 120.0 + s * 7.0));
-    vec3 cloud = mix(vec3(1.0, 0.45, 0.72) * 0.75, vec3(0.22, 0.02, 0.28), smoothstep(0.55, 0.95, facing));
+    vec3 cloud = mix(mix(HORIZON, PINK, 0.4) * 0.75, MID_COOL * 0.55, smoothstep(0.55, 0.95, facing));
     return mix(col, cloud, mask * stripe * 0.7);
 }
 
@@ -277,7 +297,7 @@ vec3 mountains(float az, float elev, vec3 col) {
     float far = (ridge(x * 1.5, 54.0, 77.0) * 0.16 + 0.03) * pulse;
     if (elev < far) {
         float up = elev / max(far, 0.001);
-        vec3 rock = mix(vec3(0.16, 0.02, 0.22), mix(vec3(0.5, 0.1, 0.45), HORIZON_COOL * 0.85, 0.35), up);
+        vec3 rock = mix(ROCK * 2.2, mix(MID, HORIZON_COOL * 0.85, 0.35), up);
         col = mix(col, rock, 0.88);
         col += PINK * 0.18 * lines(elev * 45.0, 0.03) * up; // (faint contour lines)
         col += PINK * 0.6 * (1.0 - smoothstep(0.0, fwidth(elev) * 2.5, far - elev));
@@ -319,7 +339,7 @@ vec3 city(vec3 d, float elev, float t, vec3 col) {
     float hb = (0.05 + 0.13 * pow(hash11(ib + 51.0), 1.4)) * edge;
     float fb = fract(xb);
     if (elev < hb && fb > 0.06 && fb < 0.94) {
-        col = mix(col, vec3(0.2, 0.03, 0.27), 0.9);
+        col = mix(col, mix(ROCK, MID_COOL, 0.5) * 1.3, 0.9);
         vec3 wcell = vec3(ib, floor(fb * 5.0), floor(elev * 200.0));
         if (hash13(wcell + 3.0) > 0.7 && fract(fb * 5.0) > 0.3 && fract(elev * 200.0) > 0.4) {
             col += ORANGE * 0.25;
@@ -341,7 +361,7 @@ vec3 city(vec3 d, float elev, float t, vec3 col) {
         float w = hash13(cell);
         float flicker = hash13(cell + floor(t / (4.0 + 9.0 * hash13(cell + 2.0))));
         if (w > 0.45 && flicker > 0.25 && fract(u) > 0.22 && fract(u) < 0.78 && fract(v) > 0.3 && fract(v) < 0.75 && elev < h - 0.004) {
-            vec3 lamp = hash13(cell + 5.0) > 0.9 ? vec3(0.4, 0.9, 1.0) : mix(ORANGE, PINK, hash13(cell + 8.0));
+            vec3 lamp = hash13(cell + 5.0) > 0.9 ? ACCENT : mix(ORANGE, PINK, hash13(cell + 8.0));
             col = lamp * (0.7 + 0.3 * w);
         }
         col += PINK * 0.8 * (1.0 - smoothstep(0.0, fwidth(elev) * 2.0, h - elev));
@@ -523,7 +543,7 @@ vec3 floater(vec3 d, vec3 centre, float size, int kind, float t, vec3 col) {
         }
     }
     float aa = fwidth(uv.y) * 1.5;
-    col += mix(PINK, vec3(0.45, 0.9, 1.0), float(kind) * 0.6) * (1.0 - smoothstep(0.0015, 0.0015 + aa, dist)) * 1.2;
+    col += mix(PINK, ACCENT, float(kind) * 0.6) * (1.0 - smoothstep(0.0015, 0.0015 + aa, dist)) * 1.2;
     col += PINK * 0.35 * exp(-dist * 90.0) * (1.0 + 0.6 * Bass);
     return col;
 }
@@ -545,7 +565,7 @@ vec3 pyramids(vec3 d, float elev, vec3 col) {
             float side = x - (cx + (ridgeX - cx) * (1.0 - elev / h)); // (left of the ridge line: the face towards the sun)
             bool lit = side < 0.0;
             float up = clamp(elev / h, 0.0, 1.0);
-            vec3 face = lit ? mix(vec3(0.75, 0.2, 0.45), vec3(1.0, 0.55, 0.35), up) * 0.8 : mix(vec3(0.12, 0.02, 0.2), vec3(0.3, 0.05, 0.38), up);
+            vec3 face = lit ? mix(PINK * 0.75, mix(ORANGE, SUN1, 0.5), up) * 0.8 : mix(ROCK * 1.7, MID_COOL * 0.9, up);
             face += PINK * 0.25 * lines(elev * 110.0, 0.05); // (stone courses)
             float edge = max(1.0 - smoothstep(0.0, aa, top - elev), 1.0 - smoothstep(0.0, aa * 0.8, abs(side)));
             col = face + PINK * edge * 1.1;
@@ -676,7 +696,7 @@ vec3 floorColour(vec3 d, float az, float t, float facing, float hit) {
     vec3 col;
     if (road < 0.75) {
         // the highway: dark, orange edges, a dashed middle line
-        col = vec3(0.03, 0.0, 0.06);
+        col = FLOOR * 0.6;
         float edgeLine = 1.0 - smoothstep(0.03, 0.03 + fwidth(road) * 1.5, abs(road - 0.7));
         float dash = (1.0 - smoothstep(0.025, 0.025 + fwidth(road) * 1.5, road)) * step(0.5, fract(moving.x * 0.5));
         col += ORANGE * 1.2 * edgeLine + YELLOW * 0.9 * dash * (1.0 - smoothstep(0.3, 0.9, fwidth(moving.x)));
@@ -689,7 +709,7 @@ vec3 floorColour(vec3 d, float az, float t, float facing, float hit) {
     }
     // the sun's reflection, the haze far away
     float haze = exp(-14.0 / hit) * (1.0 - 0.6 * height); // (peaks stand out of the haze)
-    col += ORANGE * 0.3 * exp(-abs(az) * 5.0) * haze;
+    col += SUN1 * 0.3 * exp(-abs(az) * 5.0) * haze;
     col = mix(col, mix(HORIZON_COOL, HORIZON, facing) * 0.9, haze * 0.8);
     col += PINK * 0.45 * exp(-max(down, 0.0) * 40.0) * (1.0 - height);
     return col;
