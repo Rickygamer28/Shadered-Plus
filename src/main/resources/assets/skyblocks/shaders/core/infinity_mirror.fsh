@@ -32,7 +32,7 @@ vec3 hue(float h) {
 
 // A soft bump at distance x from its middle (r wide), repeating every period; fw: what one pixel covers here.
 float bump(float x, float r, float period, float fw) {
-    float wide = sqrt(r * r + fw * fw * 0.5);
+    float wide = sqrt(r * r + fw * fw);
     float average = 1.7725 * r / period; // (sqrt(pi) r / period: its light spread evenly)
     float blend = smoothstep(0.18, 0.45, wide / period);
     return mix(r / wide * exp(-x * x / (wide * wide)), average, blend);
