@@ -45,7 +45,5 @@ public final class ModItems {
 
     public static final DeferredItem<BlockItem> INFINITY_CUBE = ITEMS.registerSimpleBlockItem("infinity_cube", ModBlocks.INFINITY_CUBE);
 
-    public static final DeferredItem<BlockItem> CHAOS_BLOCK = ITEMS.registerSimpleBlockItem("chaos_block", ModBlocks.CHAOS_BLOCK);
-
     private ModItems() {}
 }

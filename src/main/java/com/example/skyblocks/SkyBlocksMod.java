@@ -53,7 +53,6 @@ public class SkyBlocksMod {
         event.accept(ModItems.MIRROR.get());
         event.accept(ModItems.INFINITY_MIRROR.get());
         event.accept(ModItems.INFINITY_CUBE.get());
-        event.accept(ModItems.CHAOS_BLOCK.get());
         for (ModFluids.SkyLiquid liquid : ModFluids.ALL) {
             event.accept(liquid.bucket.get());
         }

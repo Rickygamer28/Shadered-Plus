@@ -1,7 +1,7 @@
 {
   "parent": "builtin/entity",
   "textures": {
-    "particle": "skyblocks:block/chaos_block"
+    "particle": "skyblocks:block/chaos_sky_block"
   },
   "display": {
     "gui": {

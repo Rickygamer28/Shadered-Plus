@@ -52,10 +52,6 @@ public final class ModBlocks {
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE).lightLevel(state -> 12)
                     .isValidSpawn((s, l, p, e) -> false));
 
-    /** The chaos block: Draconic Evolution's chaos shader on its faces (adapted with credit; client/ChaosBlockRenderer). */
-    public static final DeferredBlock<ChaosBlock> CHAOS_BLOCK = BLOCKS.registerBlock("chaos_block", ChaosBlock::new,
-            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.AMETHYST).lightLevel(state -> 10)
-                    .isValidSpawn((s, l, q, e) -> false));
 
     private ModBlocks() {}
 }

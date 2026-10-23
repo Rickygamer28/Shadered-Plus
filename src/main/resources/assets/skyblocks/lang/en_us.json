@@ -72,6 +72,7 @@
   "skyblock_type.skyblocks.liurnia_rainy": "Liurnia Rainy",
   "item.skyblocks.liurnia_sky_block": "Liurnia Sky Block",
   "skyblock_type.skyblocks.liurnia": "Liurnia",
-  "block.skyblocks.chaos_block": "Chaos Block",
+  "item.skyblocks.chaos_sky_block": "Chaos Sky Block",
+  "skyblock_type.skyblocks.chaos": "Chaos",
   "tooltip.skyblocks.draconic_credit": "Shader from Draconic Evolution by brandon3055"
 }

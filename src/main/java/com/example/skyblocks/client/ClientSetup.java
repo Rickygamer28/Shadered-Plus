@@ -119,17 +119,6 @@ public final class ClientSetup {
                 return renderer;
             }
         }, ModItems.SKY_ISLAND.get());
-        event.registerItem(new IClientItemExtensions() {
-            private ChaosItemRenderer renderer;
-
-            @Override
-            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
-                if (renderer == null) {
-                    renderer = new ChaosItemRenderer();
-                }
-                return renderer;
-            }
-        }, ModItems.CHAOS_BLOCK.get());
     }
 
     /** The shared models of the Sky Liquids (any sky without its own model files falls back to these). */

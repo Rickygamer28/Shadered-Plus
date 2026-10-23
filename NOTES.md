@@ -109,3 +109,12 @@
   Viewport.isBoxVisible(Looser) so sections seen only in a mirror are in the main list; scheduleTerrainUpdate (reflection)
   when the number of mirror views changes. No translucent layer in reflections (vanilla/Sodium resort by camera).
 - Shader packs: mirrors are skipped (block texture) for now; Iris attempt is the next step.
+
+## Chaos sky (23 Oct 2026, user: "make the block work like the other shadered blocks")
+- The separate Chaos Block (own block + renderers) became a Shadered sky: "chaos" is the last entry of SkyNames.NAMES,
+  so it gets the sky block item (skyblocks:chaos_sky_block), Illusorite ores, Sky Liquid, Sky Emitter, portal skies,
+  islands, the item renderer, like every sky. No recipe (sky rule). client/ChaosSky.Pass (a SkyboxRenderPass subclass)
+  draws the chaos shader (shaders/core/chaos_sky.*, brandon_chaos.glsl with CHAOS_FULL_BRIGHT) into the sky's
+  screen-sized picture instead of six pictures; it repeats SkyPassMixin's usage tracking itself (render is overridden).
+  Credit tooltip via ItemTooltipEvent on the chaos sky block and bucket. No textures/environment/chaos folder and no
+  tools/skies entry (not a picture sky). Old skyblocks:chaos_block blocks in test worlds disappear.

@@ -94,7 +94,11 @@ vec4 chaos(sampler2D sampler0, float time, float yaw, float pitch, float alpha, 
         col = col*(1-a) + vec4(r, g, b, 1)*a;
     }
 
+#ifdef CHAOS_FULL_BRIGHT
+    float br = 1.0; // (Shadered+: as a sky there's no distance to fade with)
+#else
     float br = clamp(2.5*gl_FragCoord.w + alpha, 0, 1);
+#endif
 
     col = col * br + vec4(0.047, 0.035, 0.063, 1) * (1-br);
 
