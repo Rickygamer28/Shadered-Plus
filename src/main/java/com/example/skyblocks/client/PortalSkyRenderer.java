@@ -30,6 +30,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
 
 /**
  * Draws portals that were given a Shadered sky (portal/PortalSkies) with that sky: quads just outside the portal's own
@@ -144,9 +145,9 @@ public final class PortalSkyRenderer {
             List<float[]> quads = entry.getValue();
             if (defer) {
                 // with a shader pack: drawn at the end of the frame (client/iris/IrisIslandTarget)
-                com.example.skyblocks.client.iris.IrisIslandTarget.deferSky(type, c -> emit(c, quads));
+                com.example.skyblocks.client.iris.IrisIslandTarget.deferSky(type, c -> emit(c, null, quads));
             } else {
-                emit(buffers.getBuffer(type), quads);
+                emit(buffers.getBuffer(type), null, quads);
             }
         }
         if (buffers != null) {
@@ -154,8 +155,43 @@ public final class PortalSkyRenderer {
         }
     }
 
+    /**
+     * In a Sky Island (its blocks in {@code island}, island coordinates): the skies of its portals, with the pose that
+     * places the island. {@code mayDefer}: with a shader pack, drawn at the end of the frame (not inside a painting's
+     * window, which draws into its own target).
+     */
+    public static void drawInIsland(net.minecraft.world.level.BlockGetter island, Map<BlockPos, SkyblockType> skies,
+                                    com.mojang.blaze3d.vertex.PoseStack poseStack, MultiBufferSource buffer, boolean mayDefer) {
+        if (skies.isEmpty()) {
+            return;
+        }
+        Map<SkyblockType, List<float[]>> faces = new LinkedHashMap<>();
+        for (Map.Entry<BlockPos, SkyblockType> e : skies.entrySet()) {
+            BlockPos pos = e.getKey();
+            BlockState state = island.getBlockState(pos);
+            if (PortalSkies.isPortal(state)) {
+                faces(island, pos, state, pos.getX(), pos.getY(), pos.getZ(), faces.computeIfAbsent(e.getValue(), k -> new ArrayList<>()));
+            }
+        }
+        Matrix4f pose = new Matrix4f(poseStack.last().pose());
+        boolean defer = mayDefer && com.example.skyblocks.client.iris.IrisIslandTarget.deferSky();
+        for (Map.Entry<SkyblockType, List<float[]>> entry : faces.entrySet()) {
+            SkyUsage.ensureFresh(com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(entry.getKey()));
+            RenderType type = SkyLiquidRenderer.skyType(entry.getKey());
+            if (type == null) {
+                continue;
+            }
+            List<float[]> quads = entry.getValue();
+            if (defer) {
+                com.example.skyblocks.client.iris.IrisIslandTarget.deferSky(type, c -> emit(c, pose, quads));
+            } else {
+                emit(buffer.getBuffer(type), pose, quads);
+            }
+        }
+    }
+
     /** The quads covering one portal block (4 corners x xyz each), relative to the camera. */
-    private static void faces(Level level, BlockPos pos, BlockState state, float x, float y, float z, List<float[]> out) {
+    private static void faces(net.minecraft.world.level.BlockGetter level, BlockPos pos, BlockState state, float x, float y, float z, List<float[]> out) {
         PortalSkies.Kind kind = PortalSkies.kind(state);
         if (kind == PortalSkies.Kind.SHEET) {
             // the sheet's two sides: where its shape is (vanilla: 6/16 to 10/16 thick), on the axis it doesn't run along
@@ -206,21 +242,21 @@ public final class PortalSkyRenderer {
     }
 
     /** Each quad from both sides (it shows from either side of the portal). */
-    private static void emit(VertexConsumer c, List<float[]> quads) {
+    private static void emit(VertexConsumer c, @Nullable Matrix4f pose, List<float[]> quads) {
         for (float[] q : quads) {
-            vertex(c, q[0], q[1], q[2], 0, 0);
-            vertex(c, q[3], q[4], q[5], 1, 0);
-            vertex(c, q[6], q[7], q[8], 1, 1);
-            vertex(c, q[9], q[10], q[11], 0, 1);
-            vertex(c, q[9], q[10], q[11], 0, 1);
-            vertex(c, q[6], q[7], q[8], 1, 1);
-            vertex(c, q[3], q[4], q[5], 1, 0);
-            vertex(c, q[0], q[1], q[2], 0, 0);
+            vertex(c, pose, q[0], q[1], q[2], 0, 0);
+            vertex(c, pose, q[3], q[4], q[5], 1, 0);
+            vertex(c, pose, q[6], q[7], q[8], 1, 1);
+            vertex(c, pose, q[9], q[10], q[11], 0, 1);
+            vertex(c, pose, q[9], q[10], q[11], 0, 1);
+            vertex(c, pose, q[6], q[7], q[8], 1, 1);
+            vertex(c, pose, q[3], q[4], q[5], 1, 0);
+            vertex(c, pose, q[0], q[1], q[2], 0, 0);
         }
     }
 
-    private static void vertex(VertexConsumer c, float x, float y, float z, float u, float v) {
-        c.addVertex(x, y, z).setColor(255, 255, 255, 255).setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY)
+    private static void vertex(VertexConsumer c, @Nullable Matrix4f pose, float x, float y, float z, float u, float v) {
+        (pose == null ? c.addVertex(x, y, z) : c.addVertex(pose, x, y, z)).setColor(255, 255, 255, 255).setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY)
                 .setLight(LightTexture.FULL_BRIGHT).setNormal(0.0F, 1.0F, 0.0F);
     }
 

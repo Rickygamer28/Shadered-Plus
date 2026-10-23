@@ -75,6 +75,8 @@ public final class IslandScan {
         BlockPos origin = origin(scanner, size, depth);
 
         ListTag blockEntities = new ListTag();
+        ListTag portalSkies = new ListTag(); // portals given a Shadered sky: which one (the miniature shows it too)
+        com.example.skyblocks.portal.PortalSkies skies = com.example.skyblocks.portal.PortalSkies.get(level);
         long blockEntityBytes = 0;
         Map<BlockState, Integer> palette = new LinkedHashMap<>();
         palette.put(Blocks.AIR.defaultBlockState(), 0);
@@ -97,6 +99,17 @@ public final class IslandScan {
                         palette.put(state, index);
                     }
                     blocks[(y * size + z) * size + x] = index;
+                    if (com.example.skyblocks.portal.PortalSkies.isPortal(state)) {
+                        var sky = skies.skyAt(p);
+                        if (sky != null) {
+                            CompoundTag entry = new CompoundTag();
+                            entry.putInt("x", x);
+                            entry.putInt("y", y);
+                            entry.putInt("z", z);
+                            entry.putString("sky", sky.name());
+                            portalSkies.add(entry);
+                        }
+                    }
 
                     // Chests, beds, signs, banners, heads...: keep their data so the miniature can draw them.
                     if (state.hasBlockEntity() && blockEntityBytes < MAX_ALL_BLOCK_ENTITY_BYTES) {
@@ -159,6 +172,9 @@ public final class IslandScan {
         }
         tag.put("biomes", biomeList);
         tag.put("block_entities", blockEntities);
+        if (!portalSkies.isEmpty()) {
+            tag.put("portal_skies", portalSkies);
+        }
         tag.putByteArray("biome_map", biomeMap);
 
         // Mobs and decorations.

@@ -133,6 +133,12 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         poseStack.scale(scale, scale, scale);
         poseStack.translate(-view.contentCenterX(), -view.lowestLayer(), -view.contentCenterZ());
         mesh.render(poseStack.last(), buffer);
+        if (!simple) {
+            // infinity mirrors and cubes inside: drawn with their own shaders after the block entities
+            com.example.skyblocks.client.InfinityMirrorRenderer.queueIsland(view.infinity(), poseStack.last().pose());
+            // portals given a Shadered sky: that sky
+            com.example.skyblocks.client.PortalSkyRenderer.drawInIsland(view, view.portalSkies, poseStack, buffer, true);
+        }
         // With a shader pack, cats drawn with Shadered's own shader into Iris's buffers don't show: collect them and
         // draw them through our own target (client/iris/IrisIslandTarget); in Iris's shadow pass they are skipped.
         boolean irisCats = details && (com.example.skyblocks.client.iris.IrisIslandTarget.active()

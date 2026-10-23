@@ -1,6 +1,5 @@
 package com.example.skyblocks.client;
 
-import com.example.skyblocks.InfinityMirrorBlock;
 import com.example.skyblocks.SkyBlocksMod;
 import com.example.skyblocks.client.iris.IrisCompat;
 import com.example.skyblocks.client.iris.IrisIslandTarget;
@@ -14,13 +13,10 @@ import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexSorting;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -44,7 +40,8 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL30;
 
 /**
- * Draws the infinity mirrors' fronts: each frame (infinity mirrors side by side on one wall, facing the same way, same
+ * Draws the infinity mirrors' and cubes' fronts (InfinitySet): in the world, in mirrors and in Sky Islands. Infinity
+ * mirrors' fronts: each frame (infinity mirrors side by side on one wall, facing the same way, same
  * colour) is one draw of its faces with the infinity_mirror shader, which works out the endless tunnel per pixel. With
  * a shader pack the faces go into Shadered+'s overlay, like the mirrors' faces.
  */
@@ -65,14 +62,17 @@ public final class InfinityMirrorRenderer {
             {1.0F, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F},      // rainbow
     };
 
-    /** One frame: its blocks (front faces showing), the rectangle around them on the wall, its colour. */
-    private record Frame(Direction facing, int plane, int minU, int minV, int maxU, int maxV, int color, List<BlockPos> blocks) {}
-
-    private static final List<Frame> FRAMES = new ArrayList<>();
+    /** What's near the camera. */
+    private static InfinitySet world = InfinitySet.EMPTY;
     private static boolean dirty = true;
     private static ClientLevel lastLevel;
     private static long lastScan;
     private static int lastChunkX, lastChunkZ;
+
+    /** Sky Islands on pedestals this frame with infinity blocks: their set and pose (island -> camera-relative). */
+    private record IslandJob(InfinitySet set, Matrix4f pose) {}
+
+    private static final List<IslandJob> ISLANDS = new ArrayList<>();
 
     private InfinityMirrorRenderer() {}
 
@@ -85,75 +85,119 @@ public final class InfinityMirrorRenderer {
         return Math.floorMod(color, COLORS.length) == COLORS.length - 1;
     }
 
-    private static boolean ours(BlockState state) {
-        return state.getBlock() instanceof InfinityMirrorBlock || InfinityCubeRenderer.isCube(state);
-    }
-
-    /** A block changed on the client: rescan if it's an infinity mirror or next to one. */
+    /** A block changed on the client: rescan if it's an infinity block or next to one. */
     static void blockChanged(ClientLevel level, BlockPos pos, BlockState oldState, BlockState newState) {
-        if (ours(oldState) || ours(newState)) {
+        if (InfinitySet.ours(oldState) || InfinitySet.ours(newState)) {
             dirty = true;
             return;
         }
         BlockPos.MutableBlockPos n = new BlockPos.MutableBlockPos();
         for (Direction d : Direction.values()) {
-            if (ours(level.getBlockState(n.setWithOffset(pos, d)))) {
+            if (InfinitySet.ours(level.getBlockState(n.setWithOffset(pos, d)))) {
                 dirty = true;
                 return;
             }
         }
     }
 
+    /** A Sky Island on a pedestal with infinity blocks, drawn this frame with this pose (drawn after the block entities). */
+    public static void queueIsland(InfinitySet set, Matrix4f pose) {
+        if (!set.isEmpty() && ISLANDS.size() < 64) {
+            ISLANDS.add(new IslandJob(set, new Matrix4f(pose)));
+        }
+    }
+
+    /** What an island holds (built once per island view). */
+    public static InfinitySet islandSet(net.minecraft.world.level.BlockGetter island, int sizeX, int height, int sizeZ) {
+        Map<BlockPos, BlockState> found = new HashMap<>();
+        for (int y = 0; y < height; y++) {
+            for (int z = 0; z < sizeZ; z++) {
+                for (int x = 0; x < sizeX; x++) {
+                    BlockPos p = new BlockPos(x, y, z);
+                    BlockState state = island.getBlockState(p);
+                    if (InfinitySet.ours(state)) {
+                        found.put(p, state);
+                    }
+                }
+            }
+        }
+        return found.isEmpty() ? InfinitySet.EMPTY : InfinitySet.build(island, found);
+    }
+
     @SubscribeEvent
     public static void onStage(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS || MirrorRenderer.isRenderingReflection()
-                || IrisCompat.renderingShadowPass()) {
+        boolean worldStage = event.getStage() == RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS;
+        boolean islandStage = event.getStage() == RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES;
+        if (!worldStage && !islandStage) {
+            return;
+        }
+        if (MirrorRenderer.isRenderingReflection() || IrisCompat.renderingShadowPass()) {
+            if (islandStage && !MirrorRenderer.isRenderingReflection()) {
+                ISLANDS.clear();
+            }
             return;
         }
         Minecraft mc = Minecraft.getInstance();
         ClientLevel level = mc.level;
-        ShaderInstance shader = MirrorShaders.infinity;
-        if (level == null || shader == null) {
+        if (level == null) {
+            ISLANDS.clear();
             return;
         }
         Vec3 cam = event.getCamera().getPosition();
+        Matrix4f view = new Matrix4f(event.getModelViewMatrix());
+        Matrix4f projection = new Matrix4f(event.getProjectionMatrix());
+        if (islandStage) {
+            List<IslandJob> jobs = new ArrayList<>(ISLANDS);
+            ISLANDS.clear();
+            if (!jobs.isEmpty()) {
+                scoped(view, projection, overlay -> {
+                    for (IslandJob job : jobs) {
+                        // in the island's own coordinates: positions relative to its corner, the eye brought in too
+                        Matrix4f modelView = new Matrix4f(view).mul(job.pose);
+                        Vector3f eye = new Matrix4f(modelView).invert().transformPosition(new Vector3f());
+                        setModelView(modelView);
+                        List<Runnable> shapes = new ArrayList<>();
+                        drawSet(job.set, Vec3.ZERO, new Vec3(eye.x, eye.y, eye.z), eye, modelView, projection, !overlay, shapes);
+                        recordShapes(overlay, shapes);
+                    }
+                });
+            }
+            return;
+        }
         int chunkX = SectionPos.blockToSectionCoord(cam.x), chunkZ = SectionPos.blockToSectionCoord(cam.z);
         long time = level.getGameTime();
         if (dirty || level != lastLevel || time - lastScan >= RESCAN_TICKS || time < lastScan || chunkX != lastChunkX || chunkZ != lastChunkZ) {
-            scan(level, chunkX, chunkZ);
+            world = scan(level, chunkX, chunkZ);
             dirty = false;
             lastLevel = level;
             lastScan = time;
             lastChunkX = chunkX;
             lastChunkZ = chunkZ;
         }
-        if (FRAMES.isEmpty() && InfinityCubeRenderer.isEmpty()) {
-            return;
-        }
-        Matrix4f view = new Matrix4f(event.getModelViewMatrix());
-        Matrix4f projection = new Matrix4f(event.getProjectionMatrix());
-        FrustumIntersection inView = new FrustumIntersection(new Matrix4f(projection).mul(view));
-        List<Frame> shown = new ArrayList<>();
-        for (Frame f : FRAMES) {
-            Vec3 corner = corner(f, f.minU, f.minV);
-            Vec3 far = corner(f, f.maxU + 1, f.maxV + 1);
-            Direction facing = f.facing;
-            double front = (facing.getAxis().choose(cam.x, cam.y, cam.z) - f.plane) * facing.getAxisDirection().getStep();
-            if (front <= 0.0 || corner.distanceTo(cam) > RANGE + (f.maxU - f.minU + f.maxV - f.minV)) {
-                continue; // seen from behind, or far away
-            }
-            if (inView.testAab((float) (Math.min(corner.x, far.x) - cam.x), (float) (Math.min(corner.y, far.y) - cam.y),
-                    (float) (Math.min(corner.z, far.z) - cam.z), (float) (Math.max(corner.x, far.x) - cam.x),
-                    (float) (Math.max(corner.y, far.y) - cam.y), (float) (Math.max(corner.z, far.z) - cam.z))) {
-                shown.add(f);
-            }
-        }
-        if (shown.isEmpty() && InfinityCubeRenderer.isEmpty()) {
+        if (world.isEmpty()) {
             return;
         }
         // the real eye (the model-view can hold a small shift: view bobbing with a shader pack)
-        Vector3f eye = new Matrix4f(view).invert().transformPosition(new Vector3f());
-        float seconds = seconds();
+        Vector3f eyeRel = new Matrix4f(view).invert().transformPosition(new Vector3f());
+        Vec3 eye = cam.add(eyeRel.x, eyeRel.y, eyeRel.z);
+        InfinitySet set = world;
+        scoped(view, projection, overlay -> {
+            List<Runnable> shapes = new ArrayList<>();
+            drawSet(set, cam, eye, eyeRel, view, projection, !overlay, shapes);
+            recordShapes(overlay, shapes);
+        });
+    }
+
+    private interface Body {
+        void draw(boolean overlay);
+    }
+
+    /**
+     * Runs {@code body} set up for drawing into the world: the projection and view set, the main framebuffer (or, with
+     * a shader pack, Shadered+'s overlay, laid over the pack's image at the end of the frame), everything put back after.
+     */
+    private static void scoped(Matrix4f view, Matrix4f projection, Body body) {
+        Minecraft mc = Minecraft.getInstance();
         RenderTarget main = mc.getMainRenderTarget();
         boolean iris = IrisIslandTarget.active();
         int irisDraw = iris ? GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING) : 0;
@@ -175,30 +219,7 @@ public final class InfinityMirrorRenderer {
             } else {
                 MirrorRenderer.mainDrawState(main);
             }
-            // (into the shader pack overlay: the world's depth stays as it was, for the overlay's end-of-frame test)
-            drawFrames(shader, shown, cam, eye, seconds, overlay == null);
-            List<Runnable> cubeShapes = InfinityCubeRenderer.draw(cam, eye, view, projection, seconds, overlay == null);
-            if (overlay != null) {
-                // where the faces are, for the end-of-frame test against the final depth (hand, mobs in front)
-                Vec3 at = cam;
-                IrisIslandTarget.recordPictureDepth(() -> {
-                    ShaderInstance depthShader = IrisIslandTarget.pictureShader();
-                    if (depthShader == null) {
-                        return;
-                    }
-                    for (Frame f : shown) {
-                        MeshData mesh = mesh(f, at);
-                        if (mesh != null) {
-                            RenderSystem.setShader(() -> depthShader);
-                            BufferUploader.drawWithShader(mesh);
-                        }
-                    }
-                    for (Runnable shape : cubeShapes) {
-                        RenderSystem.setShader(() -> depthShader);
-                        shape.run();
-                    }
-                });
-            }
+            body.draw(overlay != null);
         } finally {
             RenderSystem.depthMask(true);
             if (iris) {
@@ -215,12 +236,61 @@ public final class InfinityMirrorRenderer {
         }
     }
 
+    private static void setModelView(Matrix4f modelView) {
+        RenderSystem.getModelViewStack().set(modelView);
+        RenderSystem.applyModelViewMatrix();
+    }
+
+    /** With a shader pack: where the faces just drawn are (with the view now set), for the overlay's end-of-frame test. */
+    private static void recordShapes(boolean overlay, List<Runnable> shapes) {
+        if (!overlay || shapes.isEmpty()) {
+            return;
+        }
+        IrisIslandTarget.recordPictureDepth(() -> {
+            ShaderInstance depthShader = IrisIslandTarget.pictureShader();
+            if (depthShader == null) {
+                return;
+            }
+            for (Runnable shape : shapes) {
+                RenderSystem.setShader(() -> depthShader);
+                shape.run();
+            }
+        });
+    }
+
     private static float seconds() {
         return (Util.getMillis() % 3_600_000L) / 1000.0F;
     }
 
-    /** Draws the frames' faces with the tunnel shader (positions relative to {@code cam}; the view is already set). */
-    private static void drawFrames(ShaderInstance shader, List<Frame> frames, Vec3 cam, Vector3f eye, float seconds, boolean writeDepth) {
+    /**
+     * Draws a set (the view and projection already set; positions relative to {@code origin}): {@code eye} where the
+     * eye is, in the set's coordinates, {@code eyeRel} the same relative to origin.
+     */
+    private static void drawSet(InfinitySet set, Vec3 origin, Vec3 eye, Vector3f eyeRel, Matrix4f modelView, Matrix4f projection,
+                                boolean writeDepth, List<Runnable> shapes) {
+        float seconds = seconds();
+        ShaderInstance shader = MirrorShaders.infinity;
+        if (shader != null && !set.frames.isEmpty()) {
+            FrustumIntersection seen = new FrustumIntersection(new Matrix4f(projection).mul(modelView));
+            List<InfinitySet.Frame> shown = new ArrayList<>();
+            for (InfinitySet.Frame f : set.frames) {
+                Vec3 corner = InfinitySet.corner(f, f.minU(), f.minV());
+                if (facesTowards(f, eye) && corner.distanceTo(eye) <= RANGE + (f.maxU() - f.minU() + f.maxV() - f.minV())
+                        && inView(f, origin, seen)) {
+                    shown.add(f);
+                }
+            }
+            drawFrames(shader, shown, origin, eyeRel, seconds, writeDepth, shapes);
+        }
+        InfinityCubeRenderer.draw(set.boxes, origin, eye, eyeRel, modelView, projection, seconds, writeDepth, shapes);
+    }
+
+    /** Draws the frames' faces with the tunnel shader (positions relative to {@code origin}; the view is already set). */
+    private static void drawFrames(ShaderInstance shader, List<InfinitySet.Frame> frames, Vec3 origin, Vector3f eye, float seconds,
+                                   boolean writeDepth, List<Runnable> shapes) {
+        if (frames.isEmpty()) {
+            return;
+        }
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL11.GL_LEQUAL);
         RenderSystem.depthMask(writeDepth);
@@ -229,13 +299,19 @@ public final class InfinityMirrorRenderer {
         RenderSystem.enablePolygonOffset();
         RenderSystem.polygonOffset(-2.0F, -20.0F); // over the block's own front face
         try {
-            for (Frame f : frames) {
-                setUniforms(shader, f, cam, eye, seconds);
+            for (InfinitySet.Frame f : frames) {
+                setUniforms(shader, f, origin, eye, seconds);
                 RenderSystem.setShader(() -> shader);
-                MeshData mesh = mesh(f, cam);
+                MeshData mesh = mesh(f, origin);
                 if (mesh != null) {
                     BufferUploader.drawWithShader(mesh);
                 }
+                shapes.add(() -> {
+                    MeshData shape = mesh(f, origin);
+                    if (shape != null) {
+                        BufferUploader.drawWithShader(shape);
+                    }
+                });
             }
         } finally {
             RenderSystem.polygonOffset(0.0F, 0.0F);
@@ -245,116 +321,90 @@ public final class InfinityMirrorRenderer {
     }
 
     /**
-     * Inside a mirror's picture: the infinity mirrors it sees, drawn from the mirrored eye at (ex, ey, ez) with the
-     * mirror's model-view (already set, with its projection). The tunnel is worked out from that eye, so it's seen in
-     * the mirror the way it would be from there.
+     * Inside a mirror's picture: the infinity blocks it sees, drawn from the mirrored eye at (ex, ey, ez) with the
+     * mirror's model-view (already set, with its projection), so they're seen in the mirror as they would be from there.
      */
     static void drawInMirror(double ex, double ey, double ez, Matrix4f modelView, Matrix4f projection) {
-        ShaderInstance shader = MirrorShaders.infinity;
+        if (world.isEmpty()) {
+            return;
+        }
         Vec3 at = new Vec3(ex, ey, ez);
-        if (!InfinityCubeRenderer.isEmpty()) {
-            Vector3f cubeEye = new Matrix4f(modelView).invert().transformPosition(new Vector3f());
-            InfinityCubeRenderer.draw(at, cubeEye, modelView, projection, seconds(), true);
-        }
-        if (shader == null || FRAMES.isEmpty()) {
+        Vector3f eyeRel = new Matrix4f(modelView).invert().transformPosition(new Vector3f());
+        drawSet(world, at, at.add(eyeRel.x, eyeRel.y, eyeRel.z), eyeRel, modelView, projection, true, new ArrayList<>());
+    }
+
+    /**
+     * Inside an Island Painting's window (its target bound, its mask set): the island's infinity blocks, positions in the
+     * island's coordinates turned into the world by {@code pose} (on top of the view now set).
+     */
+    public static void drawInWindow(InfinitySet set, Matrix4f pose) {
+        if (set.isEmpty()) {
             return;
         }
-        FrustumIntersection seen = new FrustumIntersection(new Matrix4f(projection).mul(modelView));
-        List<Frame> shown = new ArrayList<>();
-        for (Frame f : FRAMES) {
-            if (facesTowards(f, at) && inView(f, at, seen)) {
-                shown.add(f);
-            }
-        }
-        if (shown.isEmpty()) {
-            return;
-        }
+        Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewMatrix()).mul(pose);
+        Matrix4f projection = new Matrix4f(RenderSystem.getProjectionMatrix());
         Vector3f eye = new Matrix4f(modelView).invert().transformPosition(new Vector3f());
-        drawFrames(shader, shown, at, eye, seconds(), true);
+        Matrix4fStack stack = RenderSystem.getModelViewStack();
+        stack.pushMatrix();
+        try {
+            setModelView(modelView);
+            drawSet(set, Vec3.ZERO, new Vec3(eye.x, eye.y, eye.z), eye, modelView, projection, true, new ArrayList<>());
+        } finally {
+            stack.popMatrix();
+            RenderSystem.applyModelViewMatrix();
+        }
     }
 
-    private static boolean facesTowards(Frame f, Vec3 eye) {
-        return (f.facing.getAxis().choose(eye.x, eye.y, eye.z) - f.plane) * f.facing.getAxisDirection().getStep() > 0.0;
+    private static boolean facesTowards(InfinitySet.Frame f, Vec3 eye) {
+        return (f.facing().getAxis().choose(eye.x, eye.y, eye.z) - f.plane()) * f.facing().getAxisDirection().getStep() > 0.0;
     }
 
-    private static boolean inView(Frame f, Vec3 cam, FrustumIntersection view) {
-        Vec3 corner = corner(f, f.minU, f.minV);
-        Vec3 far = corner(f, f.maxU + 1, f.maxV + 1);
+    private static boolean inView(InfinitySet.Frame f, Vec3 cam, FrustumIntersection view) {
+        Vec3 corner = InfinitySet.corner(f, f.minU(), f.minV());
+        Vec3 far = InfinitySet.corner(f, f.maxU() + 1, f.maxV() + 1);
         return view.testAab((float) (Math.min(corner.x, far.x) - cam.x), (float) (Math.min(corner.y, far.y) - cam.y),
                 (float) (Math.min(corner.z, far.z) - cam.z), (float) (Math.max(corner.x, far.x) - cam.x),
                 (float) (Math.max(corner.y, far.y) - cam.y), (float) (Math.max(corner.z, far.z) - cam.z));
     }
 
-    private static void setUniforms(ShaderInstance shader, Frame f, Vec3 cam, Vector3f eye, float seconds) {
-        Vec3 origin = corner(f, f.minU, f.minV).subtract(cam);
-        Vector3f u = axisU(f.facing), v = axisV(f.facing);
-        Vector3f inward = new Vector3f(-f.facing.getStepX(), -f.facing.getStepY(), -f.facing.getStepZ());
-        float[] c = COLORS[Math.floorMod(f.color, COLORS.length)];
+    private static void setUniforms(ShaderInstance shader, InfinitySet.Frame f, Vec3 origin, Vector3f eye, float seconds) {
+        Vec3 corner = InfinitySet.corner(f, f.minU(), f.minV()).subtract(origin);
+        Vector3f u = InfinitySet.axisU(f.facing()), v = InfinitySet.axisV(f.facing());
+        Vector3f inward = new Vector3f(-f.facing().getStepX(), -f.facing().getStepY(), -f.facing().getStepZ());
+        float[] c = color(f.color());
         shader.safeGetUniform("Eye").set(eye.x, eye.y, eye.z);
-        shader.safeGetUniform("Origin").set((float) origin.x, (float) origin.y, (float) origin.z);
+        shader.safeGetUniform("Origin").set((float) corner.x, (float) corner.y, (float) corner.z);
         shader.safeGetUniform("AxisU").set(u.x, u.y, u.z);
         shader.safeGetUniform("AxisV").set(v.x, v.y, v.z);
         shader.safeGetUniform("Inward").set(inward.x, inward.y, inward.z);
-        shader.safeGetUniform("Size").set((float) (f.maxU - f.minU + 1), (float) (f.maxV - f.minV + 1));
+        shader.safeGetUniform("Size").set((float) (f.maxU() - f.minU() + 1), (float) (f.maxV() - f.minV() + 1));
         shader.safeGetUniform("ColorFront").set(c[0], c[1], c[2]);
         shader.safeGetUniform("ColorDeep").set(c[3], c[4], c[5]);
-        shader.safeGetUniform("Rainbow").set(f.color == COLORS.length - 1 ? 1.0F : 0.0F);
+        shader.safeGetUniform("Rainbow").set(isRainbow(f.color()) ? 1.0F : 0.0F);
         shader.safeGetUniform("Time").set(seconds);
     }
 
-    /** The frame's faces as quads (positions relative to the camera). */
-    private static MeshData mesh(Frame f, Vec3 cam) {
+    /** The frame's faces as quads (positions relative to {@code origin}). */
+    private static MeshData mesh(InfinitySet.Frame f, Vec3 origin) {
         BufferBuilder b = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
-        for (BlockPos pos : f.blocks) {
-            int u = u(pos, f.facing), v = v(pos, f.facing);
-            vertex(b, corner(f, u, v), cam);
-            vertex(b, corner(f, u + 1, v), cam);
-            vertex(b, corner(f, u + 1, v + 1), cam);
-            vertex(b, corner(f, u, v + 1), cam);
+        for (BlockPos pos : f.blocks()) {
+            int u = InfinitySet.u(pos, f.facing()), v = InfinitySet.v(pos, f.facing());
+            vertex(b, InfinitySet.corner(f, u, v), origin);
+            vertex(b, InfinitySet.corner(f, u + 1, v), origin);
+            vertex(b, InfinitySet.corner(f, u + 1, v + 1), origin);
+            vertex(b, InfinitySet.corner(f, u, v + 1), origin);
         }
         return b.build();
     }
 
-    private static void vertex(BufferBuilder b, Vec3 p, Vec3 cam) {
-        b.addVertex((float) (p.x - cam.x), (float) (p.y - cam.y), (float) (p.z - cam.z));
+    private static void vertex(BufferBuilder b, Vec3 p, Vec3 origin) {
+        b.addVertex((float) (p.x - origin.x), (float) (p.y - origin.y), (float) (p.z - origin.z));
     }
 
-    // ---- the wall's own coordinates: u across, v up (or along z on floors and ceilings) ----
+    // ---- finding the infinity blocks near the camera ----
 
-    private static int u(BlockPos pos, Direction facing) {
-        return facing.getAxis() == Direction.Axis.X ? pos.getZ() : pos.getX();
-    }
-
-    private static int v(BlockPos pos, Direction facing) {
-        return facing.getAxis() == Direction.Axis.Y ? pos.getZ() : pos.getY();
-    }
-
-    private static Vector3f axisU(Direction facing) {
-        return facing.getAxis() == Direction.Axis.X ? new Vector3f(0, 0, 1) : new Vector3f(1, 0, 0);
-    }
-
-    private static Vector3f axisV(Direction facing) {
-        return facing.getAxis() == Direction.Axis.Y ? new Vector3f(0, 0, 1) : new Vector3f(0, 1, 0);
-    }
-
-    /** The point on the frame's wall at (u, v) in world coordinates. */
-    private static Vec3 corner(Frame f, double u, double v) {
-        return switch (f.facing.getAxis()) {
-            case X -> new Vec3(f.plane, v, u);
-            case Y -> new Vec3(u, f.plane, v);
-            case Z -> new Vec3(u, v, f.plane);
-        };
-    }
-
-    // ---- finding the infinity mirrors near the camera ----
-
-    private record Wall(Direction facing, int plane, int color) {}
-
-    private static void scan(ClientLevel level, int centerX, int centerZ) {
-        FRAMES.clear();
-        Map<Wall, Set<BlockPos>> walls = new HashMap<>();
-        Map<BlockPos, Integer> cubes = new HashMap<>();
-        BlockPos.MutableBlockPos neighbour = new BlockPos.MutableBlockPos();
+    private static InfinitySet scan(ClientLevel level, int centerX, int centerZ) {
+        Map<BlockPos, BlockState> found = new HashMap<>();
         for (int dx = -SCAN_RADIUS; dx <= SCAN_RADIUS; dx++) {
             for (int dz = -SCAN_RADIUS; dz <= SCAN_RADIUS; dz++) {
                 LevelChunk chunk = level.getChunkSource().getChunk(centerX + dx, centerZ + dz, false);
@@ -365,7 +415,7 @@ public final class InfinityMirrorRenderer {
                 int baseX = chunk.getPos().getMinBlockX(), baseZ = chunk.getPos().getMinBlockZ();
                 for (int i = 0; i < sections.length; i++) {
                     LevelChunkSection section = sections[i];
-                    if (section == null || section.hasOnlyAir() || !section.maybeHas(InfinityMirrorRenderer::ours)) {
+                    if (section == null || section.hasOnlyAir() || !section.maybeHas(InfinitySet::ours)) {
                         continue;
                     }
                     int baseY = SectionPos.sectionToBlockCoord(chunk.getSectionYFromSectionIndex(i));
@@ -373,59 +423,15 @@ public final class InfinityMirrorRenderer {
                         for (int z = 0; z < 16; z++) {
                             for (int x = 0; x < 16; x++) {
                                 BlockState state = section.getBlockState(x, y, z);
-                                if (InfinityCubeRenderer.isCube(state)) {
-                                    cubes.put(new BlockPos(baseX + x, baseY + y, baseZ + z), state.getValue(com.example.skyblocks.InfinityCubeBlock.COLOR));
-                                    continue;
+                                if (InfinitySet.ours(state)) {
+                                    found.put(new BlockPos(baseX + x, baseY + y, baseZ + z), state);
                                 }
-                                if (!(state.getBlock() instanceof InfinityMirrorBlock)) {
-                                    continue;
-                                }
-                                BlockPos pos = new BlockPos(baseX + x, baseY + y, baseZ + z);
-                                Direction facing = state.getValue(InfinityMirrorBlock.FACING);
-                                neighbour.setWithOffset(pos, facing);
-                                if (level.getBlockState(neighbour).isSolidRender(level, neighbour)) {
-                                    continue; // its front is covered
-                                }
-                                int plane = pos.get(facing.getAxis()) + (facing.getAxisDirection() == Direction.AxisDirection.POSITIVE ? 1 : 0);
-                                walls.computeIfAbsent(new Wall(facing, plane, state.getValue(InfinityMirrorBlock.COLOR)), w -> new HashSet<>()).add(pos);
                             }
                         }
                     }
                 }
             }
         }
-        InfinityCubeRenderer.found(level, cubes);
-        // joined ones (side by side on the wall) make one frame
-        for (Map.Entry<Wall, Set<BlockPos>> e : walls.entrySet()) {
-            Wall wall = e.getKey();
-            Set<BlockPos> left = new HashSet<>(e.getValue());
-            while (!left.isEmpty()) {
-                BlockPos start = left.iterator().next();
-                left.remove(start);
-                List<BlockPos> blocks = new ArrayList<>();
-                ArrayDeque<BlockPos> queue = new ArrayDeque<>();
-                queue.add(start);
-                int minU = Integer.MAX_VALUE, minV = Integer.MAX_VALUE, maxU = Integer.MIN_VALUE, maxV = Integer.MIN_VALUE;
-                while (!queue.isEmpty()) {
-                    BlockPos p = queue.poll();
-                    blocks.add(p);
-                    int u = u(p, wall.facing), v = v(p, wall.facing);
-                    minU = Math.min(minU, u);
-                    maxU = Math.max(maxU, u);
-                    minV = Math.min(minV, v);
-                    maxV = Math.max(maxV, v);
-                    for (Direction d : Direction.values()) {
-                        if (d.getAxis() == wall.facing.getAxis()) {
-                            continue;
-                        }
-                        BlockPos n = p.relative(d);
-                        if (left.remove(n)) {
-                            queue.add(n);
-                        }
-                    }
-                }
-                FRAMES.add(new Frame(wall.facing, wall.plane, minU, minV, maxU, maxV, wall.color, blocks));
-            }
-        }
+        return found.isEmpty() ? InfinitySet.EMPTY : InfinitySet.build(level, found);
     }
 }

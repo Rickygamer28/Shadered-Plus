@@ -68,6 +68,12 @@ public final class PortalSkies extends SavedData {
         return tag;
     }
 
+    /** The sky given to the portal block at {@code pos}, or null. */
+    @Nullable
+    public SkyblockType skyAt(BlockPos pos) {
+        return skies.get(pos.asLong());
+    }
+
     @Nullable
     public static SkyblockType sky(String name) {
         try {

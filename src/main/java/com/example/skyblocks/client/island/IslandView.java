@@ -70,6 +70,11 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
     private final RandomSource random = RandomSource.create();
     @Nullable
     private IslandMesh mesh;
+    /** Portals inside given a Shadered sky (island coordinates -> sky). */
+    final java.util.Map<BlockPos, com.noodlegamer76.shadered.client.util.SkyblockType> portalSkies = new java.util.HashMap<>();
+    /** The infinity mirrors and cubes inside (worked out the first time it's needed). */
+    @Nullable
+    private com.example.skyblocks.client.InfinitySet infinity;
     /** Resource reload count the mesh was baked for (textures move on the atlas after a reload). */
     private int meshGeneration = -1;
     private long lastTick = -1;
@@ -154,6 +159,15 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
         }
 
         IslandView view = new IslandView(data, size, height, states, columns);
+
+        ListTag savedSkies = tag.getList("portal_skies", Tag.TAG_COMPOUND);
+        for (int i = 0; i < savedSkies.size(); i++) {
+            CompoundTag entry = savedSkies.getCompound(i);
+            var sky = com.example.skyblocks.portal.PortalSkies.sky(entry.getString("sky"));
+            if (sky != null) {
+                view.portalSkies.put(new BlockPos(entry.getInt("x"), entry.getInt("y"), entry.getInt("z")), sky);
+            }
+        }
 
         ListTag savedBlockEntities = tag.getList("block_entities", Tag.TAG_COMPOUND);
         for (int i = 0; i < savedBlockEntities.size(); i++) {
@@ -243,6 +257,12 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
             for (int z = 0; z < size; z++) {
                 for (int x = 0; x < size; x++) {
                     BlockState state = states[(y * size + z) * size + x];
+                    if (com.example.skyblocks.portal.PortalSkies.isPortal(state)) {
+                        var sky = com.example.skyblocks.client.PortalSkyRenderer.skyAt(level, origin.offset(x, y, z));
+                        if (sky != null) {
+                            view.portalSkies.put(new BlockPos(x, y, z), sky);
+                        }
+                    }
                     if (!state.hasBlockEntity()) {
                         continue;
                     }
@@ -289,6 +309,14 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
 
     private int index(int x, int y, int z) {
         return (y * size + z) * size + x;
+    }
+
+    /** The infinity mirrors and cubes inside, ready to draw. */
+    public com.example.skyblocks.client.InfinitySet infinity() {
+        if (infinity == null) {
+            infinity = com.example.skyblocks.client.InfinityMirrorRenderer.islandSet(this, size, height, size);
+        }
+        return infinity;
     }
 
     BlockState stateAt(int x, int y, int z) {
