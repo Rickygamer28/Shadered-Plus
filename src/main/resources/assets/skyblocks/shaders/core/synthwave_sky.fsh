@@ -355,48 +355,26 @@ vec3 city(vec3 d, float elev, float t, vec3 col) {
     return col;
 }
 
-// distance from p to the segment a-b, and how far along it (0..1) the nearest point is
-vec2 segment(vec2 p, vec2 a, vec2 b) {
-    vec2 ab = b - a;
-    float h = clamp(dot(p - a, ab) / dot(ab, ab), 0.0, 1.0);
-    return vec2(length(p - a - ab * h), h);
-}
-
 // a palm tree silhouette: q = position from its foot (blocks), size = its height, aa = one pixel in palm heights
 float palm(vec2 q, float size, float lean, float aa, float seed) {
     vec2 p = q / size;
-    if (p.x < -1.05 || p.x > 1.05 || p.y < -0.05 || p.y > 1.45) {
+    if (p.x < -1.0 || p.x > 1.3 || p.y < -0.05 || p.y > 1.4) {
         return 0.0;
     }
     float s = 0.0;
-    // trunk: curved, thinner towards the top, slightly ringed
     if (p.y < 1.0) {
-        float width = (0.036 - 0.016 * p.y) * (0.9 + 0.1 * abs(sin(p.y * 70.0)));
+        float width = 0.035 - 0.015 * p.y;
         s = 1.0 - smoothstep(width, width + aa, abs(p.x - lean * p.y * p.y));
     }
     vec2 top = vec2(lean, 1.0);
-    if (length(p - top) > 0.75) {
-        return s;
-    }
-    // coconuts
-    s = max(s, 1.0 - smoothstep(0.03, 0.03 + aa, length(p - top - vec2(0.02, -0.04))));
-    s = max(s, 1.0 - smoothstep(0.026, 0.026 + aa, length(p - top - vec2(-0.03, -0.05))));
-    // fronds: arching out and drooping, tapering, with leaflets along them
-    for (int k = 0; k < 8; k++) {
-        float ang = -0.35 + (float(k) + 0.5 * hash11(seed + float(k))) / 7.5 * (PI + 0.7);
-        vec2 spread = vec2(cos(ang), sin(ang) * 0.75 + 0.25);
-        float len = 0.5 + 0.18 * hash11(seed * 1.7 + float(k));
-        float droop = 0.35 + 0.25 * hash11(seed * 2.3 + float(k));
-        vec2 prev = top;
-        for (int j = 1; j <= 6; j++) {
-            float along = float(j) / 6.0;
-            vec2 next = top + spread * along * len - vec2(0.0, droop * along * along * len);
-            vec2 seg = segment(p, prev, next);
-            float f = (float(j) - 1.0 + seg.y) / 6.0; // 0 at the top .. 1 at the tip
-            float leaflets = 0.55 + 0.9 * abs(fract(f * 11.0) - 0.5); // (a jagged edge, like a palm leaf)
-            float w = (0.045 * (1.0 - f) + 0.006) * leaflets;
-            s = max(s, 1.0 - smoothstep(w, w + aa, seg.x));
-            prev = next;
+    for (int k = 0; k < 7; k++) {
+        float ang = -0.25 + float(k) / 6.0 * (PI + 0.5);
+        vec2 frond = vec2(cos(ang), sin(ang));
+        for (int j = 0; j < 9; j++) {
+            float along = (float(j) + 0.5) / 9.0;
+            vec2 c = top + frond * along * 0.6 - vec2(0.0, 0.42 * along * along);
+            float w = 0.045 * (1.0 - along) + 0.01;
+            s = max(s, 1.0 - smoothstep(w, w + aa, length(p - c)));
         }
     }
     return s;
