@@ -75,6 +75,7 @@ final class InfinityCubeRenderer {
                 shader.safeGetUniform("Rainbow").set(InfinityMirrorRenderer.isRainbow(b.color()) ? 1.0F : 0.0F);
                 shader.safeGetUniform("Time").set(seconds);
                 shader.safeGetUniform("PixelSize").set(pixel);
+                shader.safeGetUniform("Pull").set(InfinityMirrorRenderer.pull);
                 RenderSystem.setShader(() -> shader);
                 BufferBuilder.RenderedBuffer mesh = mesh(facing, origin);
                 if (mesh != null) {
