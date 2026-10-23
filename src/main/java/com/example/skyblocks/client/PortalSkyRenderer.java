@@ -281,7 +281,23 @@ public final class PortalSkyRenderer {
             Map.entry("SKYBLOCKS_TWILIGHT", new float[] {0.23F, 0.63F, 1.0F}),
             Map.entry("SKYBLOCKS_HELL", new float[] {1.0F, 0.2F, 0.16F}),
             Map.entry("SKYBLOCKS_NEBULA", new float[] {0.69F, 0.71F, 1.0F}),
-            Map.entry("SKYBLOCKS_GOLDEN_HOUR", new float[] {1.0F, 0.8F, 0.5F}));
+            Map.entry("SKYBLOCKS_GOLDEN_HOUR", new float[] {1.0F, 0.8F, 0.5F}),
+            Map.entry("SKYBLOCKS_SCADU_ALTUS", new float[] {0.4F, 0.73F, 1.0F}),
+            Map.entry("SKYBLOCKS_CERULEAN_COAST", new float[] {0.92F, 0.97F, 1.0F}),
+            Map.entry("SKYBLOCKS_GRAVESITE_PLAIN", new float[] {0.87F, 0.93F, 1.0F}),
+            Map.entry("SKYBLOCKS_MOUNTAINTOPS", new float[] {0.92F, 0.89F, 1.0F}),
+            Map.entry("SKYBLOCKS_ALTUS_PLATEAU_NIGHT", new float[] {0.41F, 0.69F, 1.0F}),
+            Map.entry("SKYBLOCKS_ALTUS_PLATEAU_SUNSET", new float[] {1.0F, 0.61F, 0.29F}),
+            Map.entry("SKYBLOCKS_ALTUS_PLATEAU", new float[] {1.0F, 0.83F, 0.13F}),
+            Map.entry("SKYBLOCKS_DIVINE_TOWER", new float[] {1.0F, 0.92F, 0.63F}),
+            Map.entry("SKYBLOCKS_CAELID", new float[] {1.0F, 0.33F, 0.12F}),
+            Map.entry("SKYBLOCKS_SIOFRA_RIVER", new float[] {0.44F, 0.47F, 1.0F}),
+            Map.entry("SKYBLOCKS_LIMGRAVE_SUNSET", new float[] {1.0F, 0.57F, 0.37F}),
+            Map.entry("SKYBLOCKS_LIMGRAVE_RAINY", new float[] {0.91F, 1.0F, 0.96F}),
+            Map.entry("SKYBLOCKS_ACADEMY_OF_RAYA_LUCARIA", new float[] {0.36F, 0.9F, 1.0F}),
+            Map.entry("SKYBLOCKS_LIURNIA_SUNSET", new float[] {1.0F, 0.75F, 0.71F}),
+            Map.entry("SKYBLOCKS_LIURNIA_RAINY", new float[] {0.83F, 0.95F, 1.0F}),
+            Map.entry("SKYBLOCKS_LIURNIA", new float[] {0.76F, 0.78F, 1.0F}));
     private static final float[] DEFAULT_COLOR = {0.6F, 0.3F, 1.0F};
 
     public static float[] color(SkyblockType sky) {
