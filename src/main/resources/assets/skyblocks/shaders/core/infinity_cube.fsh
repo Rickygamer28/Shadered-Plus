@@ -22,7 +22,7 @@ in vec3 facePos;
 out vec4 fragColor;
 
 const float FRAME = 0.06;      // the black bars along the edges
-const float INSET = 0.072;     // the LED strips: on the bars' inner side, this far in from both walls
+const float INSET = 0.072;     // big cubes: the LED strips on the bars' inner side, this far in from both walls
 const float LED_GAP = 0.0625;  // between two LEDs on a strip
 const float LED_SIZE = 0.013;  // an LED's radius
 const float KEEP = 0.84;       // light left after each reflection
@@ -88,7 +88,7 @@ vec3 strip(int axis, float s1, float s2, vec3 local, vec3 sight, float t0, float
     // (an LED's hot white middle only while it's bigger than a pixel: blurred together they'd turn the grid grey)
     float sharp = LED_SIZE * LED_SIZE / (LED_SIZE * LED_SIZE + fw * fw);
     vec3 at = origin + local + sight * t;
-    return (ledColor(at, reflections) * (led * 2.4 + glow * 0.15) + vec3(led * 0.9 * sharp)) * light;
+    return (ledColor(at, reflections) * (led * 2.4 + glow * 0.1) + vec3(led * 0.9 * sharp)) * light;
 }
 
 void main() {
@@ -121,7 +121,10 @@ void main() {
     vec3 cellStep = sign(sight);
     vec3 lit = vec3(0.0);
     float t0 = 0.0;
-    vec3 hi = size - INSET;
+    // In a one-block cube the strips are drawn right on the edges: just inside the bars, every seam in the reflections
+    // gets a pair of lines so close together the small grid turned into a mess. From two blocks wide up, the pairs.
+    float inset = mix(0.004, INSET, clamp(min(size.x, min(size.y, size.z)) - 1.0, 0.0, 1.0));
+    vec3 hi = size - inset;
     for (int i = 0; i < STEPS; i++) {
         int axis = tNext.x < tNext.y ? (tNext.x < tNext.z ? 0 : 2) : (tNext.y < tNext.z ? 1 : 2);
         float t1 = tNext[axis];
@@ -131,17 +134,17 @@ void main() {
         if (pow(KEEP, t0 * perBlock) < 0.004) {
             break;
         }
-        lit += strip(0, INSET, INSET, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
-             + strip(0, hi.y, INSET, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
-             + strip(0, INSET, hi.z, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
+        lit += strip(0, inset, inset, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
+             + strip(0, hi.y, inset, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
+             + strip(0, inset, hi.z, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
              + strip(0, hi.y, hi.z, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
-             + strip(1, INSET, INSET, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
-             + strip(1, hi.x, INSET, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
-             + strip(1, INSET, hi.z, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
+             + strip(1, inset, inset, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
+             + strip(1, hi.x, inset, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
+             + strip(1, inset, hi.z, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
              + strip(1, hi.x, hi.z, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
-             + strip(2, INSET, INSET, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
-             + strip(2, hi.x, INSET, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
-             + strip(2, INSET, hi.y, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
+             + strip(2, inset, inset, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
+             + strip(2, hi.x, inset, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
+             + strip(2, inset, hi.y, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
              + strip(2, hi.x, hi.y, local, sight, t0, t1, size, eyeDistance, perBlock, origin);
         lit += ledColor(origin, t0 * perBlock) * 0.004 * pow(KEEP, t0 * perBlock); // (a faint glow in the glass)
         // on to the next box
