@@ -53,6 +53,11 @@ public class SkyBlocksMod {
         event.accept(ModItems.MIRROR.get());
         event.accept(ModItems.INFINITY_MIRROR.get());
         event.accept(ModItems.INFINITY_CUBE.get());
+        event.accept(ModItems.CHAOS_BLOCK.get());
+        event.accept(ModItems.REACTOR_CORE_BLOCK.get());
+        event.accept(ModItems.REACTOR_SHIELD_BLOCK.get());
+        event.accept(ModItems.ENERGY_CRYSTAL_BLOCK.get());
+        event.accept(ModItems.ENERGY_SHIELD_BLOCK.get());
         for (ModFluids.SkyLiquid liquid : ModFluids.ALL) {
             event.accept(liquid.bucket.get());
         }

@@ -45,5 +45,11 @@ public final class ModItems {
 
     public static final DeferredItem<BlockItem> INFINITY_CUBE = ITEMS.registerSimpleBlockItem("infinity_cube", ModBlocks.INFINITY_CUBE);
 
+    public static final DeferredItem<BlockItem> CHAOS_BLOCK = ITEMS.registerSimpleBlockItem("chaos_block", ModBlocks.CHAOS_BLOCK);
+    public static final DeferredItem<BlockItem> REACTOR_CORE_BLOCK = ITEMS.registerSimpleBlockItem("reactor_core_block", ModBlocks.REACTOR_CORE_BLOCK);
+    public static final DeferredItem<BlockItem> REACTOR_SHIELD_BLOCK = ITEMS.registerSimpleBlockItem("reactor_shield_block", ModBlocks.REACTOR_SHIELD_BLOCK);
+    public static final DeferredItem<BlockItem> ENERGY_CRYSTAL_BLOCK = ITEMS.registerSimpleBlockItem("energy_crystal_block", ModBlocks.ENERGY_CRYSTAL_BLOCK);
+    public static final DeferredItem<BlockItem> ENERGY_SHIELD_BLOCK = ITEMS.registerSimpleBlockItem("energy_shield_block", ModBlocks.ENERGY_SHIELD_BLOCK);
+
     private ModItems() {}
 }

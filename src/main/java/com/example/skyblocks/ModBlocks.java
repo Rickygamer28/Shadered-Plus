@@ -52,5 +52,22 @@ public final class ModBlocks {
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE).lightLevel(state -> 12)
                     .isValidSpawn((s, l, p, e) -> false));
 
+    /** Blocks showing Draconic Evolution's animated shaders (adapted with credit; client/DraconicEffectRenderer). */
+    public static final DeferredBlock<DraconicEffectBlock> CHAOS_BLOCK = BLOCKS.registerBlock("chaos_block",
+            p -> new DraconicEffectBlock(p, DraconicEffectBlock.Kind.CHAOS), BlockBehaviour.Properties.of().strength(1.5F)
+                    .sound(SoundType.AMETHYST).lightLevel(state -> 10).isValidSpawn((s, l, q, e) -> false));
+    public static final DeferredBlock<DraconicEffectBlock> REACTOR_CORE_BLOCK = BLOCKS.registerBlock("reactor_core_block",
+            p -> new DraconicEffectBlock(p, DraconicEffectBlock.Kind.REACTOR_CORE), BlockBehaviour.Properties.of().strength(1.5F)
+                    .sound(SoundType.AMETHYST).lightLevel(state -> 15).isValidSpawn((s, l, q, e) -> false));
+    public static final DeferredBlock<DraconicEffectBlock> REACTOR_SHIELD_BLOCK = BLOCKS.registerBlock("reactor_shield_block",
+            p -> new DraconicEffectBlock(p, DraconicEffectBlock.Kind.REACTOR_SHIELD), BlockBehaviour.Properties.of().strength(1.5F)
+                    .sound(SoundType.AMETHYST).lightLevel(state -> 12).isValidSpawn((s, l, q, e) -> false));
+    public static final DeferredBlock<DraconicEffectBlock> ENERGY_CRYSTAL_BLOCK = BLOCKS.registerBlock("energy_crystal_block",
+            p -> new DraconicEffectBlock(p, DraconicEffectBlock.Kind.ENERGY_CRYSTAL), BlockBehaviour.Properties.of().strength(1.5F)
+                    .sound(SoundType.AMETHYST).lightLevel(state -> 10).isValidSpawn((s, l, q, e) -> false));
+    public static final DeferredBlock<DraconicEffectBlock> ENERGY_SHIELD_BLOCK = BLOCKS.registerBlock("energy_shield_block",
+            p -> new DraconicEffectBlock(p, DraconicEffectBlock.Kind.ENERGY_SHIELD), BlockBehaviour.Properties.of().strength(1.5F)
+                    .sound(SoundType.AMETHYST).lightLevel(state -> 10).isValidSpawn((s, l, q, e) -> false));
+
     private ModBlocks() {}
 }

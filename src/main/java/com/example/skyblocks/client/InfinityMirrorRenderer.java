@@ -197,7 +197,7 @@ public final class InfinityMirrorRenderer {
         });
     }
 
-    private interface Body {
+    interface Body {
         void draw(boolean overlay);
     }
 
@@ -205,7 +205,7 @@ public final class InfinityMirrorRenderer {
      * Runs {@code body} set up for drawing into the world: the projection and view set, the main framebuffer (or, with
      * a shader pack, Shadered+'s overlay, laid over the pack's image at the end of the frame), everything put back after.
      */
-    private static void scoped(Matrix4f view, Matrix4f projection, Body body) {
+    static void scoped(Matrix4f view, Matrix4f projection, Body body) {
         Minecraft mc = Minecraft.getInstance();
         RenderTarget main = mc.getMainRenderTarget();
         boolean iris = IrisIslandTarget.active();
@@ -251,7 +251,7 @@ public final class InfinityMirrorRenderer {
     }
 
     /** With a shader pack: where the faces just drawn are (with the view now set), for the overlay's end-of-frame test. */
-    private static void recordShapes(boolean overlay, List<Runnable> shapes, float shapePull) {
+    static void recordShapes(boolean overlay, List<Runnable> shapes, float shapePull) {
         if (!overlay || shapes.isEmpty()) {
             return;
         }

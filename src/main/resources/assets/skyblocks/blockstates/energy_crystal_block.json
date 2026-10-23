@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "skyblocks:block/energy_crystal_block" }
+  }
+}
