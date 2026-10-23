@@ -134,3 +134,6 @@
   (minus pause); weight = jukebox linear falloff (range = max(vol,1)*attenuationDistance) * volume settings; note blocks
   = kicks by pitch. Uniforms Music/Bass/Mid/High/Bars0-3 + history texture skyblocks:dynamic/music_history (128 steps
   at 24/s x 16 bands) -> floor heightfield raymarch (peaks beside the highway, flowing away), mountains/sun pulse, EQ ring.
+- Water Caustics can hold a Shadered sky block too (user, 23 Oct): the BE keeps the item put in (ItemStack "held", old
+  "inside" tag read too); a sky -> WaterCausticsRenderer queues the sky cube with SkyblockRenderer.getData(type) like
+  Shadered's own BER (drawn AFTER_BLOCK_ENTITIES, before translucent), model gives only the translucent light overlay.

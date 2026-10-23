@@ -1,5 +1,6 @@
 package com.example.skyblocks;
 
+import com.example.skyblocks.island.ShaderedSkyItems;
 import com.mojang.serialization.MapCodec;
 import java.util.List;
 import net.minecraft.ChatFormatting;
@@ -24,9 +25,9 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Water caustics: the moving light on the bottom of a pool. Right-click it with a full block to put that block under the
- * water (the block is used up and given back when taken out or broken); sneak + right-click with an empty hand to take
- * it out. Drawn by client/WaterCausticsModel.
+ * Water caustics: the moving light on the bottom of a pool. Right-click it with a full block or a Shadered sky block to
+ * put it under the water (used up, given back when taken out or broken); sneak + right-click with an empty hand to take
+ * it out. Drawn by client/WaterCausticsModel (and client/WaterCausticsRenderer for a sky).
  */
 public class WaterCausticsBlock extends BaseEntityBlock {
     public static final MapCodec<WaterCausticsBlock> CODEC = simpleCodec(WaterCausticsBlock::new);
@@ -60,23 +61,24 @@ public class WaterCausticsBlock extends BaseEntityBlock {
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
                                               InteractionHand hand, BlockHitResult hit) {
-        if (!(stack.getItem() instanceof BlockItem item) || !(level.getBlockEntity(pos) instanceof WaterCausticsBlockEntity be)) {
+        if (stack.isEmpty() || !(level.getBlockEntity(pos) instanceof WaterCausticsBlockEntity be)) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
-        BlockState inside = item.getBlock().defaultBlockState();
-        if (!canHold(inside, level, pos)) {
+        boolean sky = ShaderedSkyItems.sky(stack) != null; // a Shadered sky block: that sky under the water
+        if (!sky && !(stack.getItem() instanceof BlockItem item && canHold(item.getBlock().defaultBlockState(), level, pos))) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
-        if (be.inside() != null && be.inside().getBlock() == inside.getBlock()) {
-            return ItemInteractionResult.SUCCESS; // (already that block)
+        if (ItemStack.isSameItemSameComponents(be.held(), stack)) {
+            return ItemInteractionResult.SUCCESS; // (already that)
         }
         if (!level.isClientSide) {
-            giveBack(be, level, pos, player);
-            be.setInside(inside);
+            BlockState placed = stack.getItem() instanceof BlockItem item ? item.getBlock().defaultBlockState() : state;
+            giveBack(be, player);
+            be.setHeld(stack);
             if (!player.getAbilities().instabuild) {
                 stack.shrink(1);
             }
-            var sound = inside.getSoundType(level, pos, player);
+            var sound = placed.getSoundType(level, pos, player);
             level.playSound(null, pos, sound.getPlaceSound(), SoundSource.BLOCKS, (sound.getVolume() + 1.0F) / 2.0F, sound.getPitch() * 0.8F);
         }
         return ItemInteractionResult.sidedSuccess(level.isClientSide);
@@ -84,31 +86,31 @@ public class WaterCausticsBlock extends BaseEntityBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        if (!player.isShiftKeyDown() || !(level.getBlockEntity(pos) instanceof WaterCausticsBlockEntity be) || be.inside() == null) {
+        if (!player.isShiftKeyDown() || !(level.getBlockEntity(pos) instanceof WaterCausticsBlockEntity be) || be.held().isEmpty()) {
             return InteractionResult.PASS;
         }
         if (!level.isClientSide) {
-            giveBack(be, level, pos, player);
-            be.setInside(null);
+            giveBack(be, player);
+            be.setHeld(ItemStack.EMPTY);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    /** The block under the water goes back to the player (not in creative). */
-    private static void giveBack(WaterCausticsBlockEntity be, Level level, BlockPos pos, Player player) {
-        if (be.inside() == null || player.getAbilities().instabuild) {
+    /** What was under the water goes back to the player (not in creative). */
+    private static void giveBack(WaterCausticsBlockEntity be, Player player) {
+        if (be.held().isEmpty() || player.getAbilities().instabuild) {
             return;
         }
-        ItemStack back = new ItemStack(be.inside().getBlock().asItem());
-        if (!back.isEmpty() && !player.getInventory().add(back)) {
+        ItemStack back = be.held().copy();
+        if (!player.getInventory().add(back)) {
             player.drop(back, false);
         }
     }
 
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof WaterCausticsBlockEntity be && be.inside() != null) {
-            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), new ItemStack(be.inside().getBlock().asItem()));
+        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof WaterCausticsBlockEntity be && !be.held().isEmpty()) {
+            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), be.held().copy());
         }
         super.onRemove(state, level, pos, newState, moved);
     }

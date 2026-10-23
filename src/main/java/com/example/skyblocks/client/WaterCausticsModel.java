@@ -36,6 +36,11 @@ public class WaterCausticsModel extends BakedModelWrapper<BakedModel> {
     @Override
     public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, RandomSource rand, ModelData data,
                                     @Nullable RenderType renderType) {
+        if (Boolean.TRUE.equals(data.get(WaterCausticsBlockEntity.SKY))) {
+            // a sky under the water: Shadered draws the sky (client/WaterCausticsRenderer), we add the light over it
+            return renderType == null || renderType == RenderType.translucent()
+                    ? overlay.getQuads(state, side, rand, ModelData.EMPTY, renderType) : List.of();
+        }
         BlockState inside = data.get(WaterCausticsBlockEntity.INSIDE);
         if (inside == null) {
             return super.getQuads(state, side, rand, data, renderType);
@@ -53,6 +58,9 @@ public class WaterCausticsModel extends BakedModelWrapper<BakedModel> {
 
     @Override
     public ChunkRenderTypeSet getRenderTypes(BlockState state, RandomSource rand, ModelData data) {
+        if (Boolean.TRUE.equals(data.get(WaterCausticsBlockEntity.SKY))) {
+            return ChunkRenderTypeSet.of(RenderType.translucent());
+        }
         BlockState inside = data.get(WaterCausticsBlockEntity.INSIDE);
         if (inside == null) {
             return super.getRenderTypes(state, rand, data);
