@@ -14,15 +14,20 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 public record FogAreaPayload(BlockPos pos, int front, int back, int left, int right, int height, boolean showArea) implements CustomPacketPayload {
     public static final Type<FogAreaPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "fog_area"));
 
-    public static final StreamCodec<ByteBuf, FogAreaPayload> STREAM_CODEC = StreamCodec.composite(
-            BlockPos.STREAM_CODEC, FogAreaPayload::pos,
-            ByteBufCodecs.VAR_INT, FogAreaPayload::front,
-            ByteBufCodecs.VAR_INT, FogAreaPayload::back,
-            ByteBufCodecs.VAR_INT, FogAreaPayload::left,
-            ByteBufCodecs.VAR_INT, FogAreaPayload::right,
-            ByteBufCodecs.VAR_INT, FogAreaPayload::height,
-            ByteBufCodecs.BOOL, FogAreaPayload::showArea,
-            FogAreaPayload::new);
+    // (more fields than StreamCodec.composite takes: written out by hand)
+    public static final StreamCodec<ByteBuf, FogAreaPayload> STREAM_CODEC = StreamCodec.of(
+            (buf, p) -> {
+                BlockPos.STREAM_CODEC.encode(buf, p.pos());
+                ByteBufCodecs.VAR_INT.encode(buf, p.front());
+                ByteBufCodecs.VAR_INT.encode(buf, p.back());
+                ByteBufCodecs.VAR_INT.encode(buf, p.left());
+                ByteBufCodecs.VAR_INT.encode(buf, p.right());
+                ByteBufCodecs.VAR_INT.encode(buf, p.height());
+                ByteBufCodecs.BOOL.encode(buf, p.showArea());
+            },
+            buf -> new FogAreaPayload(BlockPos.STREAM_CODEC.decode(buf), ByteBufCodecs.VAR_INT.decode(buf), ByteBufCodecs.VAR_INT.decode(buf),
+                    ByteBufCodecs.VAR_INT.decode(buf), ByteBufCodecs.VAR_INT.decode(buf), ByteBufCodecs.VAR_INT.decode(buf),
+                    ByteBufCodecs.BOOL.decode(buf)));
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
