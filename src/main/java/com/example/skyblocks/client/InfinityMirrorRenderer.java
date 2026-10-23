@@ -76,15 +76,28 @@ public final class InfinityMirrorRenderer {
 
     private InfinityMirrorRenderer() {}
 
+    /** Front and deep colour of a colour setting. */
+    static float[] color(int color) {
+        return COLORS[Math.floorMod(color, COLORS.length)];
+    }
+
+    static boolean isRainbow(int color) {
+        return Math.floorMod(color, COLORS.length) == COLORS.length - 1;
+    }
+
+    private static boolean ours(BlockState state) {
+        return state.getBlock() instanceof InfinityMirrorBlock || InfinityCubeRenderer.isCube(state);
+    }
+
     /** A block changed on the client: rescan if it's an infinity mirror or next to one. */
     static void blockChanged(ClientLevel level, BlockPos pos, BlockState oldState, BlockState newState) {
-        if (oldState.getBlock() instanceof InfinityMirrorBlock || newState.getBlock() instanceof InfinityMirrorBlock) {
+        if (ours(oldState) || ours(newState)) {
             dirty = true;
             return;
         }
         BlockPos.MutableBlockPos n = new BlockPos.MutableBlockPos();
         for (Direction d : Direction.values()) {
-            if (level.getBlockState(n.setWithOffset(pos, d)).getBlock() instanceof InfinityMirrorBlock) {
+            if (ours(level.getBlockState(n.setWithOffset(pos, d)))) {
                 dirty = true;
                 return;
             }
@@ -114,7 +127,7 @@ public final class InfinityMirrorRenderer {
             lastChunkX = chunkX;
             lastChunkZ = chunkZ;
         }
-        if (FRAMES.isEmpty()) {
+        if (FRAMES.isEmpty() && InfinityCubeRenderer.isEmpty()) {
             return;
         }
         Matrix4f view = new Matrix4f(event.getModelViewMatrix());
@@ -135,7 +148,7 @@ public final class InfinityMirrorRenderer {
                 shown.add(f);
             }
         }
-        if (shown.isEmpty()) {
+        if (shown.isEmpty() && InfinityCubeRenderer.isEmpty()) {
             return;
         }
         // the real eye (the model-view can hold a small shift: view bobbing with a shader pack)
@@ -164,6 +177,7 @@ public final class InfinityMirrorRenderer {
             }
             // (into the shader pack overlay: the world's depth stays as it was, for the overlay's end-of-frame test)
             drawFrames(shader, shown, cam, eye, seconds, overlay == null);
+            List<Runnable> cubeShapes = InfinityCubeRenderer.draw(cam, eye, view, projection, seconds, overlay == null);
             if (overlay != null) {
                 // where the faces are, for the end-of-frame test against the final depth (hand, mobs in front)
                 Vec3 at = cam;
@@ -178,6 +192,10 @@ public final class InfinityMirrorRenderer {
                             RenderSystem.setShader(() -> depthShader);
                             BufferUploader.drawWithShader(mesh);
                         }
+                    }
+                    for (Runnable shape : cubeShapes) {
+                        RenderSystem.setShader(() -> depthShader);
+                        shape.run();
                     }
                 });
             }
@@ -233,10 +251,14 @@ public final class InfinityMirrorRenderer {
      */
     static void drawInMirror(double ex, double ey, double ez, Matrix4f modelView, Matrix4f projection) {
         ShaderInstance shader = MirrorShaders.infinity;
+        Vec3 at = new Vec3(ex, ey, ez);
+        if (!InfinityCubeRenderer.isEmpty()) {
+            Vector3f cubeEye = new Matrix4f(modelView).invert().transformPosition(new Vector3f());
+            InfinityCubeRenderer.draw(at, cubeEye, modelView, projection, seconds(), true);
+        }
         if (shader == null || FRAMES.isEmpty()) {
             return;
         }
-        Vec3 at = new Vec3(ex, ey, ez);
         FrustumIntersection seen = new FrustumIntersection(new Matrix4f(projection).mul(modelView));
         List<Frame> shown = new ArrayList<>();
         for (Frame f : FRAMES) {
@@ -331,6 +353,7 @@ public final class InfinityMirrorRenderer {
     private static void scan(ClientLevel level, int centerX, int centerZ) {
         FRAMES.clear();
         Map<Wall, Set<BlockPos>> walls = new HashMap<>();
+        Map<BlockPos, Integer> cubes = new HashMap<>();
         BlockPos.MutableBlockPos neighbour = new BlockPos.MutableBlockPos();
         for (int dx = -SCAN_RADIUS; dx <= SCAN_RADIUS; dx++) {
             for (int dz = -SCAN_RADIUS; dz <= SCAN_RADIUS; dz++) {
@@ -342,7 +365,7 @@ public final class InfinityMirrorRenderer {
                 int baseX = chunk.getPos().getMinBlockX(), baseZ = chunk.getPos().getMinBlockZ();
                 for (int i = 0; i < sections.length; i++) {
                     LevelChunkSection section = sections[i];
-                    if (section == null || section.hasOnlyAir() || !section.maybeHas(s -> s.getBlock() instanceof InfinityMirrorBlock)) {
+                    if (section == null || section.hasOnlyAir() || !section.maybeHas(InfinityMirrorRenderer::ours)) {
                         continue;
                     }
                     int baseY = SectionPos.sectionToBlockCoord(chunk.getSectionYFromSectionIndex(i));
@@ -350,6 +373,10 @@ public final class InfinityMirrorRenderer {
                         for (int z = 0; z < 16; z++) {
                             for (int x = 0; x < 16; x++) {
                                 BlockState state = section.getBlockState(x, y, z);
+                                if (InfinityCubeRenderer.isCube(state)) {
+                                    cubes.put(new BlockPos(baseX + x, baseY + y, baseZ + z), state.getValue(com.example.skyblocks.InfinityCubeBlock.COLOR));
+                                    continue;
+                                }
                                 if (!(state.getBlock() instanceof InfinityMirrorBlock)) {
                                     continue;
                                 }
@@ -367,6 +394,7 @@ public final class InfinityMirrorRenderer {
                 }
             }
         }
+        InfinityCubeRenderer.found(level, cubes);
         // joined ones (side by side on the wall) make one frame
         for (Map.Entry<Wall, Set<BlockPos>> e : walls.entrySet()) {
             Wall wall = e.getKey();

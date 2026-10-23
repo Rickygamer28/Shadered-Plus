@@ -16,6 +16,8 @@ public final class MirrorShaders {
     public static ShaderInstance surface;
     /** The infinity mirror's tunnel (InfinityMirrorRenderer). */
     public static ShaderInstance infinity;
+    /** The infinity cube's endless grid (InfinityCubeRenderer). */
+    public static ShaderInstance infinityCube;
 
     private MirrorShaders() {}
 
@@ -27,5 +29,8 @@ public final class MirrorShaders {
         event.registerShader(new ShaderInstance(event.getResourceProvider(),
                         ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "infinity_mirror"), DefaultVertexFormat.POSITION),
                 shader -> infinity = shader);
+        event.registerShader(new ShaderInstance(event.getResourceProvider(),
+                        ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "infinity_cube"), DefaultVertexFormat.POSITION),
+                shader -> infinityCube = shader);
     }
 }
