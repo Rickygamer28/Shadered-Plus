@@ -4,6 +4,8 @@
 //  west   the big striped sun sinking into the horizon, striped clouds drifting over it
 //  east   a neon city skyline, windows lighting up and going dark, blinking antenna lights
 //  along the highway  palm trees passing by as the road moves; high in the north a ringed planet
+//  north  three neon pyramids, a wireframe cube turning above them
+//  south  power pylons with sagging cables and blinking lights, a glowing crystal turning above them
 //  everywhere  wireframe mountains (two layers), stars, shooting stars, the neon grid floor rushing towards you, a
 //         highway along it from the city to the sun
 // With music playing (client/MusicReactor) the grid rises into peaks either side of the highway (bass near it,
@@ -367,9 +369,19 @@ float palm(vec2 q, float size, float lean, float aa, float seed) {
         s = 1.0 - smoothstep(width, width + aa, abs(p.x - lean * p.y * p.y));
     }
     vec2 top = vec2(lean, 1.0);
+    if (length(p - top) > 0.72) {
+        return s; // (nowhere near the leaves)
+    }
     for (int k = 0; k < 7; k++) {
         float ang = -0.25 + float(k) / 6.0 * (PI + 0.5);
         vec2 frond = vec2(cos(ang), sin(ang));
+        // (only the frond(s) the point is near: within reach of the line from the crown to the tip)
+        vec2 tip = top + frond * 0.6 - vec2(0.0, 0.42);
+        vec2 ab = tip - top;
+        float h = clamp(dot(p - top, ab) / dot(ab, ab), 0.0, 1.0);
+        if (length(p - top - ab * h) > 0.17 + aa) {
+            continue;
+        }
         for (int j = 0; j < 9; j++) {
             float along = (float(j) + 0.5) / 9.0;
             vec2 c = top + frond * along * 0.6 - vec2(0.0, 0.42 * along * along);
@@ -393,7 +405,7 @@ vec4 roadPalms(vec3 d, float side, float t, float facing, out float depth) {
     float db = dot(d, SIDE);
     float scroll = t * 2.5; // (as the grid)
     // how far along the ray it is within reach of this side's row of palms...
-    float reach = 6.0;
+    float reach = 5.0;
     float t1 = 0.0, t2 = 130.0;
     if (abs(db) > 1.0e-4) {
         float ta = (side - reach) / db, tb = (side + reach) / db;
@@ -411,7 +423,7 @@ vec4 roadPalms(vec3 d, float side, float t, float facing, out float depth) {
     near -= dir * reach;
     far += dir * reach;
     float first = dir > 0.0 ? ceil((near + scroll) / PALM_SPACING) : floor((near + scroll) / PALM_SPACING);
-    for (int i = 0; i < 18; i++) {
+    for (int i = 0; i < 14; i++) {
         float k = first + dir * float(i);
         float along = k * PALM_SPACING - scroll;
         if ((along - far) * dir > 0.0) {
@@ -448,6 +460,141 @@ vec4 roadPalms(vec3 d, float side, float t, float facing, out float depth) {
     return acc;
 }
 
+
+// distance from p to the segment a-b
+float segDist(vec2 p, vec2 a, vec2 b) {
+    vec2 ab = b - a;
+    return length(p - a - ab * clamp(dot(p - a, ab) / dot(ab, ab), 0.0, 1.0));
+}
+
+// gnomonic coordinates round a direction (flat picture plane there), or a big number behind it
+vec2 planeAround(vec3 d, vec3 c) {
+    float z = dot(d, c);
+    if (z <= 0.2) {
+        return vec2(1.0e3);
+    }
+    vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), c));
+    vec3 up = cross(c, right);
+    return vec2(dot(d, right), dot(d, up)) / z;
+}
+
+mat3 spin(float a, float b) {
+    float ca = cos(a), sa = sin(a), cb = cos(b), sb = sin(b);
+    return mat3(ca, 0.0, -sa, 0.0, 1.0, 0.0, sa, 0.0, ca) * mat3(1.0, 0.0, 0.0, 0.0, cb, sb, 0.0, -sb, cb);
+}
+
+// a glowing wireframe shape floating in the sky, turning slowly: a cube (kind 0) or an octahedron (kind 1)
+vec3 floater(vec3 d, vec3 centre, float size, int kind, float t, vec3 col) {
+    vec2 uv = planeAround(d, normalize(centre));
+    if (length(uv) > size * 2.4) {
+        return col;
+    }
+    mat3 r = spin(t * 0.25 + float(kind), t * 0.17 + 0.6);
+    float dist = 1.0e3;
+    float bob = sin(t * 0.8 + float(kind) * 2.0) * size * 0.08;
+    if (kind == 0) {
+        vec3 v[8];
+        for (int i = 0; i < 8; i++) {
+            v[i] = r * (vec3(float(i & 1), float((i >> 1) & 1), float((i >> 2) & 1)) * 2.0 - 1.0) * size * 0.75;
+        }
+        for (int i = 0; i < 8; i++) {
+            for (int b = 0; b < 3; b++) {
+                int j = i | (1 << b);
+                if (j != i) {
+                    dist = min(dist, segDist(uv, v[i].xy + vec2(0.0, bob), v[j].xy + vec2(0.0, bob)));
+                }
+            }
+        }
+    } else {
+        vec3 v[6];
+        v[0] = r * vec3(size, 0.0, 0.0); v[1] = r * vec3(-size, 0.0, 0.0);
+        v[2] = r * vec3(0.0, size * 1.4, 0.0); v[3] = r * vec3(0.0, -size * 1.4, 0.0);
+        v[4] = r * vec3(0.0, 0.0, size); v[5] = r * vec3(0.0, 0.0, -size);
+        for (int i = 0; i < 6; i++) {
+            for (int j = 0; j < 6; j++) {
+                if (j > i && (i / 2) != (j / 2)) {
+                    dist = min(dist, segDist(uv, v[i].xy + vec2(0.0, bob), v[j].xy + vec2(0.0, bob)));
+                }
+            }
+        }
+    }
+    float aa = fwidth(uv.y) * 1.5;
+    col += mix(PINK, vec3(0.45, 0.9, 1.0), float(kind) * 0.6) * (1.0 - smoothstep(0.0015, 0.0015 + aa, dist)) * 1.2;
+    col += PINK * 0.35 * exp(-dist * 90.0) * (1.0 + 0.6 * Bass);
+    return col;
+}
+
+// three pyramids on the northern horizon: the face towards the sun lit, the other dark, neon edges
+vec3 pyramids(vec3 d, float elev, vec3 col) {
+    float x = azFrom(d, vec3(0.0, 0.0, -1.0)); // (+ = east, so the sun is to the left)
+    if (abs(x) > 0.75 || elev > 0.32 || elev < -0.01) {
+        return col;
+    }
+    float aa = fwidth(elev) * 2.0;
+    for (int k = 0; k < 3; k++) {
+        float cx = k == 0 ? -0.22 : k == 1 ? 0.12 : 0.38;
+        float w = k == 0 ? 0.2 : k == 1 ? 0.28 : 0.14;
+        float h = w * 0.95;
+        float ridgeX = cx + w * 0.25;
+        float top = h * (1.0 - abs(x - cx) / w);
+        if (elev < top && elev > -0.01) {
+            float side = x - (cx + (ridgeX - cx) * (1.0 - elev / h)); // (left of the ridge line: the face towards the sun)
+            bool lit = side < 0.0;
+            float up = clamp(elev / h, 0.0, 1.0);
+            vec3 face = lit ? mix(vec3(0.75, 0.2, 0.45), vec3(1.0, 0.55, 0.35), up) * 0.8 : mix(vec3(0.12, 0.02, 0.2), vec3(0.3, 0.05, 0.38), up);
+            face += PINK * 0.25 * lines(elev * 110.0, 0.05); // (stone courses)
+            float edge = max(1.0 - smoothstep(0.0, aa, top - elev), 1.0 - smoothstep(0.0, aa * 0.8, abs(side)));
+            col = face + PINK * edge * 1.1;
+        }
+    }
+    return col;
+}
+
+// power pylons along the southern horizon, cables sagging between them, red lights on top
+vec3 pylons(vec3 d, float elev, float t, vec3 col) {
+    float x = azFrom(d, vec3(0.0, 0.0, 1.0));
+    if (abs(x) > 1.0 || elev > 0.14 || elev < -0.005) {
+        return col;
+    }
+    float aa = fwidth(elev) * 1.5;
+    const float GAP = 0.24;
+    float i = floor(x / GAP + 0.5);
+    float px = x - i * GAP; // from the nearest pylon
+    float h = 0.075 + 0.02 * hash11(i + 17.0);
+    float hNext = 0.075 + 0.02 * hash11(i + (px > 0.0 ? 1.0 : -1.0) + 17.0);
+    vec3 dark = SILHOUETTE;
+    float s = 0.0;
+    // tower: two legs meeting near the top, cross braces, two arms
+    if (elev < h && abs(px) < 0.03) {
+        float half_ = mix(0.012, 0.002, elev / h);
+        s = max(s, 1.0 - smoothstep(0.0012, 0.0012 + aa, abs(abs(px) - half_)));
+        float brace = abs(fract(elev / h * 6.0) - 0.5) * 2.0; // zig-zag lattice
+        s = max(s, (1.0 - smoothstep(0.001, 0.001 + aa, abs(px - (brace * 2.0 - 1.0) * half_))) * step(abs(px), half_));
+    }
+    for (int a = 0; a < 2; a++) {
+        float ay = h * (a == 0 ? 0.72 : 0.9);
+        float aw = a == 0 ? 0.028 : 0.02;
+        if (abs(px) < aw) {
+            s = max(s, 1.0 - smoothstep(0.0012, 0.0012 + aa, abs(elev - ay)));
+        }
+        // cables from this pylon's arm tips to the next pylon's, sagging
+        float u = (abs(px)) / GAP; // 0 here .. 0.5 halfway
+        float ny = hNext * (a == 0 ? 0.72 : 0.9);
+        for (int c = 0; c < 2; c++) {
+            float off = (c == 0 ? -1.0 : 1.0) * aw;
+            float yLine = mix(ay, ny, u) - 0.012 * (1.0 - pow(abs(u * 2.0 - 1.0), 2.0)) * 0.5;
+            if (abs(px) > abs(off) * 0.5) {
+                s = max(s, (1.0 - smoothstep(0.0006, 0.0006 + aa, abs(elev - yLine + off * 0.08))) * 0.85);
+            }
+        }
+    }
+    col = mix(col, dark, s);
+    float blink = step(0.5, fract(t * 0.5 + hash11(i) * 3.0));
+    col += vec3(1.0, 0.12, 0.25) * blink * (smoothstep(0.0035, 0.0, length(vec2(px * cos(elev), elev - h - 0.003))) * 2.0
+            + 0.3 * exp(-length(vec2(px, elev - h - 0.003)) * 140.0));
+    return col;
+}
+
 // ---- the floor ----
 
 const float FLOW_STEP = 0.7; // blocks the music moves away per history step (24 steps a second)
@@ -460,7 +607,7 @@ float amp(float r) {
 
 // how high the music raises the floor at (along the highway, across it), r blocks away
 float terrain(vec2 g, float r) {
-    float lateral = abs(g.y) - 2.2; // (beyond the palms)
+    float lateral = abs(g.y) - 0.9; // (right up to the road's edges)
     if (lateral <= 0.0) {
         return 0.0;
     }
@@ -472,7 +619,7 @@ float terrain(vec2 g, float r) {
     // (HistoryPhase: part of the next step already gone by, so the peaks glide instead of jumping)
     float x = (max(steps - HistoryPhase, 0.0) + 0.5) / 128.0;
     float v = texture(Sampler0, vec2(x, band * (15.0 / 16.0) + 0.5 / 16.0)).r;
-    return amp(r) * v * Music * smoothstep(0.0, 0.8, lateral) * (1.0 - smoothstep(100.0, 127.0, steps))
+    return amp(r) * v * Music * smoothstep(0.0, 0.3, lateral) * (1.0 - smoothstep(100.0, 127.0, steps))
             * (1.0 - smoothstep(0.85, 1.0, band));
 }
 
@@ -519,8 +666,6 @@ vec3 floorColour(vec3 d, float az, float t, float facing, float hit) {
     float down = -d.y;
     vec3 p = d * hit;
     float height = clamp((p.y + 1.0) / amp(length(p.xz)), 0.0, 1.0);
-    // how many blocks of floor one pixel covers (from the view direction, smooth everywhere, unlike fwidth of the hit)
-    float aa = hit * length(fwidth(d)) / max(abs(d.y) + 0.35 * height, 0.06);
     vec2 g = gridAt(p);
     vec2 moving = vec2(g.x + t * 2.5, g.y);
     float road = abs(g.y);
@@ -528,15 +673,15 @@ vec3 floorColour(vec3 d, float az, float t, float facing, float hit) {
     if (road < 0.75) {
         // the highway: dark, orange edges, a dashed middle line
         col = vec3(0.03, 0.0, 0.06);
-        float edgeLine = 1.0 - smoothstep(0.03, 0.03 + aa * 1.5, abs(road - 0.7));
-        float dash = (1.0 - smoothstep(0.025, 0.025 + aa * 1.5, road)) * step(0.5, fract(moving.x * 0.5));
-        col += ORANGE * 1.2 * edgeLine + YELLOW * 0.9 * dash * (1.0 - smoothstep(0.3, 0.9, aa));
+        float edgeLine = 1.0 - smoothstep(0.03, 0.03 + fwidth(road) * 1.5, abs(road - 0.7));
+        float dash = (1.0 - smoothstep(0.025, 0.025 + fwidth(road) * 1.5, road)) * step(0.5, fract(moving.x * 0.5));
+        col += ORANGE * 1.2 * edgeLine + YELLOW * 0.9 * dash * (1.0 - smoothstep(0.3, 0.9, fwidth(moving.x)));
     } else {
-        float grid = max(linesW(moving.x, 0.03, aa), linesW(moving.y, 0.03, aa));
+        float grid = max(lines(moving.x, 0.03), lines(moving.y, 0.03));
         float near = 0.5 - max(abs(fract(moving.x) - 0.5), abs(fract(moving.y) - 0.5));
         vec3 lineCol = mix(PINK, mix(ORANGE, YELLOW, height), smoothstep(0.05, 0.6, height));
         col = FLOOR + PINK * 0.3 * height + lineCol * 1.3 * grid * (1.0 + 0.6 * Mid)
-                + PINK * 0.12 * (1.0 - smoothstep(0.0, 0.2, near)) * (1.0 - smoothstep(0.3, 0.9, aa));
+                + PINK * 0.12 * (1.0 - smoothstep(0.0, 0.2, near)) * (1.0 - smoothstep(0.3, 0.9, fwidth(moving.x)));
     }
     // the sun's reflection, the haze far away
     float haze = exp(-14.0 / hit) * (1.0 - 0.6 * height); // (peaks stand out of the haze)
@@ -572,8 +717,12 @@ void main() {
         col = equaliser(az, elev, col);
         col = clouds(az, elev, t, facing, col);
         col += mix(PINK, ORANGE, facing * 0.4) * 0.45 * exp(-elev * 40.0); // glow along the horizon
+        col = floater(d, vec3(0.05, 0.42, -1.0), 0.07, 0, t, col);  // a cube above the pyramids (north)
+        col = floater(d, vec3(-0.1, 0.38, 1.0), 0.06, 1, t, col);  // a crystal above the pylons (south)
         col = farHills(az, elev, col, facing);
         col = mountains(az, elev, col);
+        col = pyramids(d, elev, col);
+        col = pylons(d, elev, t, col);
     } else {
         col = floorColour(d, az, t, facing, 1.0 / max(-d.y, 1.0e-4));
     }
