@@ -73,10 +73,5 @@
   "item.skyblocks.liurnia_sky_block": "Liurnia Sky Block",
   "skyblock_type.skyblocks.liurnia": "Liurnia",
   "block.skyblocks.chaos_block": "Chaos Block",
-  "block.skyblocks.reactor_core_block": "Reactor Core Block",
-  "block.skyblocks.reactor_shield_block": "Reactor Shield Block",
-  "block.skyblocks.energy_crystal_block": "Energy Crystal Block",
-  "block.skyblocks.energy_shield_block": "Energy Shield Block",
-  "tooltip.skyblocks.draconic_credit": "Shader from Draconic Evolution by brandon3055",
-  "tooltip.skyblocks.draconic_tiers": "Right-click to change its colour (sneak to go back)"
+  "tooltip.skyblocks.draconic_credit": "Shader from Draconic Evolution by brandon3055"
 }
