@@ -93,7 +93,7 @@ vec3 strip(int axis, float s1, float s2, vec3 local, vec3 sight, float t0, float
 
 void main() {
     vec3 sight = normalize(facePos - Eye);
-    vec3 p = facePos - BoxMin;
+    vec3 p = clamp(facePos - BoxMin, vec3(0.0), BoxSize);
     float eyeDistance = length(facePos - Eye);
     vec3 base = Rainbow > 0.5 ? hue(fract(Time * 0.2)) : ColorFront;
 

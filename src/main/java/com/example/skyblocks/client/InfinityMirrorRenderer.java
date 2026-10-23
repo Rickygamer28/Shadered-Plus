@@ -73,6 +73,10 @@ public final class InfinityMirrorRenderer {
     private record IslandJob(InfinitySet set, Matrix4f pose) {}
 
     private static final List<IslandJob> ISLANDS = new ArrayList<>();
+    /** How far the faces being drawn are pulled towards the camera for depth tests (see the shaders' pulled()). */
+    static float pull;
+    /** Sky Islands with a shader pack: the faces are tiny and the pack jitters the world's depth. */
+    private static final float ISLAND_PULL = 0.012F;
 
     private InfinityMirrorRenderer() {}
 
@@ -157,8 +161,13 @@ public final class InfinityMirrorRenderer {
                         Vector3f eye = eyeOf(projection, modelView);
                         setModelView(modelView);
                         List<Runnable> shapes = new ArrayList<>();
-                        drawSet(job.set, Vec3.ZERO, new Vec3(eye.x, eye.y, eye.z), eye, modelView, projection, !overlay, shapes);
-                        recordShapes(overlay, shapes);
+                        pull = overlay ? ISLAND_PULL : 0.0F;
+                        try {
+                            drawSet(job.set, Vec3.ZERO, new Vec3(eye.x, eye.y, eye.z), eye, modelView, projection, !overlay, shapes);
+                        } finally {
+                            pull = 0.0F;
+                        }
+                        recordShapes(overlay, shapes, overlay ? ISLAND_PULL : 0.0F);
                     }
                 });
             }
@@ -184,7 +193,7 @@ public final class InfinityMirrorRenderer {
         scoped(view, projection, overlay -> {
             List<Runnable> shapes = new ArrayList<>();
             drawSet(set, cam, eye, eyeRel, view, projection, !overlay, shapes);
-            recordShapes(overlay, shapes);
+            recordShapes(overlay, shapes, 0.0F);
         });
     }
 
@@ -242,7 +251,7 @@ public final class InfinityMirrorRenderer {
     }
 
     /** With a shader pack: where the faces just drawn are (with the view now set), for the overlay's end-of-frame test. */
-    private static void recordShapes(boolean overlay, List<Runnable> shapes) {
+    private static void recordShapes(boolean overlay, List<Runnable> shapes, float shapePull) {
         if (!overlay || shapes.isEmpty()) {
             return;
         }
@@ -251,9 +260,14 @@ public final class InfinityMirrorRenderer {
             if (depthShader == null) {
                 return;
             }
-            for (Runnable shape : shapes) {
-                RenderSystem.setShader(() -> depthShader);
-                shape.run();
+            depthShader.safeGetUniform("Pull").set(shapePull);
+            try {
+                for (Runnable shape : shapes) {
+                    RenderSystem.setShader(() -> depthShader);
+                    shape.run();
+                }
+            } finally {
+                depthShader.safeGetUniform("Pull").set(0.0F); // (Island Paintings use this shader too)
             }
         });
     }
@@ -395,6 +409,7 @@ public final class InfinityMirrorRenderer {
         shader.safeGetUniform("ColorDeep").set(c[3], c[4], c[5]);
         shader.safeGetUniform("Rainbow").set(isRainbow(f.color()) ? 1.0F : 0.0F);
         shader.safeGetUniform("Time").set(seconds);
+        shader.safeGetUniform("Pull").set(pull);
     }
 
     /** The frame's faces as quads (positions relative to {@code origin}). */
