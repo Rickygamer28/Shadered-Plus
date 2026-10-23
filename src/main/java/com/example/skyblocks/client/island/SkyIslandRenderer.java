@@ -38,6 +38,13 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         BlockState state = be.getBlockState();
         boolean painting = state.getBlock() instanceof IslandPaintingBlock;
         int width = 1, height = 1;
+        // a painting copied into a Sky Island: its neighbours are in that island, not in the world
+        IslandView host = IslandRendering.island;
+        boolean copied = host != null && be.getBlockPos().getX() > IslandView.FAR / 2;
+        if (painting && copied && IslandRendering.inWindow) {
+            return; // (a painting inside a painting's window: its window can't be cut out inside the other one)
+        }
+        net.minecraft.world.level.BlockGetter around = copied ? host.copies() : level;
         if (painting && level != null) {
             if (state.getValue(IslandPaintingBlock.CCW) || state.getValue(IslandPaintingBlock.DOWN)) {
                 // part of a joined painting: its bottom corner block draws the whole thing
@@ -47,8 +54,8 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
                 be.clientView = null;
                 return;
             }
-            width = IslandPaintingBlock.width(level, be.getBlockPos(), state);
-            height = IslandPaintingBlock.height(level, be.getBlockPos(), state);
+            width = IslandPaintingBlock.width(around, be.getBlockPos(), state);
+            height = IslandPaintingBlock.height(around, be.getBlockPos(), state);
         }
         if (data == null || level == null) {
             if (be.clientView instanceof IslandView old) {

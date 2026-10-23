@@ -28,6 +28,9 @@ public final class IslandRendering {
      * their blocks (no chests, cats, sky blocks or mobs inside), which keeps mirrors cheap.
      */
     public static boolean inMirror;
+    /** The Sky Island whose copied block entities are being drawn (null when none). */
+    @org.jetbrains.annotations.Nullable
+    public static IslandView island;
 
     private IslandRendering() {}
 }

@@ -35,7 +35,9 @@ public final class IslandScan {
     public static final int MAX_ENTITIES = 64;
     private static final int MAX_ENTITY_BYTES = 16 * 1024;
     private static final int MAX_BLOCK_ENTITY_BYTES = 16 * 1024;
-    private static final int MAX_ALL_BLOCK_ENTITY_BYTES = 384 * 1024;
+    private static final int MAX_ALL_BLOCK_ENTITY_BYTES = 768 * 1024;
+    /** An Island Painting inside the island, with the island it shows. */
+    private static final int MAX_PAINTING_BYTES = 256 * 1024;
     private static final int MAX_ALL_ENTITY_BYTES = 256 * 1024;
     /** Saved entity data a figure doesn't need to look right (inventories, AI memory, trades...). */
     private static final String[] HEAVY_ENTITY_DATA = {"Passengers", "UUID", "Items", "Inventory", "Brain", "Offers",
@@ -225,8 +227,12 @@ public final class IslandScan {
     @org.jetbrains.annotations.Nullable
     private static CompoundTag saveBlockEntity(ServerLevel level, BlockPos pos) {
         BlockEntity be = level.getBlockEntity(pos);
-        if (be == null || be instanceof SkyIslandBlockEntity || be instanceof IslandScannerBlockEntity) {
-            return null; // no islands inside islands
+        if (be == null || be instanceof IslandScannerBlockEntity) {
+            return null;
+        }
+        boolean painting = be instanceof SkyIslandBlockEntity && be.getBlockState().getBlock() instanceof IslandPaintingBlock;
+        if (be instanceof SkyIslandBlockEntity && !painting) {
+            return null; // no pedestal islands inside islands
         }
         // Only what clients normally get for drawing it (sign text, banner patterns, head owner, lectern book...),
         // never server-only data such as loot seeds or command block commands.
@@ -241,6 +247,24 @@ public final class IslandScan {
             return null;
         }
         saved.putString("id", id.toString());
+        if (painting) {
+            // An Island Painting keeps the island it shows (so the miniature's painting isn't empty), but not the
+            // paintings inside that one (one level deep only), nor its live mobs.
+            saved.remove("live_mobs");
+            if (saved.contains("island", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+                CompoundTag inner = saved.getCompound("island");
+                net.minecraft.nbt.ListTag innerEntities = inner.getList("block_entities", net.minecraft.nbt.Tag.TAG_COMPOUND);
+                for (int i = 0; i < innerEntities.size(); i++) {
+                    CompoundTag data = innerEntities.getCompound(i).getCompound("data");
+                    if (data.contains("island")) {
+                        data.remove("island");
+                        data.putBoolean("has_island", false);
+                    }
+                }
+                inner.remove("entities"); // (the inner island's mobs: too small to see in there)
+            }
+            return saved.sizeInBytes() > MAX_PAINTING_BYTES ? null : saved;
+        }
         return saved.sizeInBytes() > MAX_BLOCK_ENTITY_BYTES ? null : saved;
     }
 

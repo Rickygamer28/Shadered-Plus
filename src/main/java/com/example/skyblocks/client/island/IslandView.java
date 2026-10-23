@@ -66,7 +66,7 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
      * Where the copied block entities "are" in the real world: far away in unloaded chunks, so renderers that look
      * at neighbouring blocks (double chests, beds) find nothing there and use the block entity's own block state.
      */
-    private static final int FAR = 29_000_000;
+    static final int FAR = 29_000_000;
     private final RandomSource random = RandomSource.create();
     @Nullable
     private IslandMesh mesh;
@@ -311,6 +311,41 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
         return (y * size + z) * size + x;
     }
 
+    /**
+     * The island's blocks where its copied block entities think they are (far away in the real world): so an Island
+     * Painting inside the island finds the paintings it's joined to.
+     */
+    net.minecraft.world.level.BlockGetter copies() {
+        IslandView self = this;
+        return new net.minecraft.world.level.BlockGetter() {
+            @Override
+            public BlockState getBlockState(BlockPos pos) {
+                return self.stateAt(pos.getX() - FAR, pos.getY(), pos.getZ() - FAR);
+            }
+
+            @Override
+            public net.minecraft.world.level.material.FluidState getFluidState(BlockPos pos) {
+                return getBlockState(pos).getFluidState();
+            }
+
+            @Nullable
+            @Override
+            public BlockEntity getBlockEntity(BlockPos pos) {
+                return null;
+            }
+
+            @Override
+            public int getHeight() {
+                return 1024;
+            }
+
+            @Override
+            public int getMinBuildHeight() {
+                return -512;
+            }
+        };
+    }
+
     /** The infinity mirrors and cubes inside, ready to draw. */
     public com.example.skyblocks.client.InfinitySet infinity() {
         if (infinity == null) {
@@ -435,12 +470,15 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
         EntityRenderDispatcher entities = Minecraft.getInstance().getEntityRenderDispatcher();
         entities.setRenderShadow(false); // e.g. a spawner's mob would cast its shadow on the real world
         boolean wasInIsland = IslandRendering.inIsland;
+        IslandView wasIsland = IslandRendering.island;
         IslandRendering.inIsland = true;
+        IslandRendering.island = this;
         try {
             blockEntities.removeIf(be -> (only == null || only.test(be.blockEntity()))
                     && !be.render(this, dispatcher, poseStack, buffer, partialTick));
         } finally {
             IslandRendering.inIsland = wasInIsland;
+            IslandRendering.island = wasIsland;
             entities.setRenderShadow(true);
         }
     }
