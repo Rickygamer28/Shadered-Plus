@@ -105,7 +105,7 @@ public final class ChaosSky {
             if (!SkyUsage.recentlyUsed(batch) || shader == null) {
                 return;
             }
-            if (this instanceof SkyUsage.Pass tracked) {
+            if ((Object) this instanceof SkyUsage.Pass tracked) { // (added to SkyboxRenderPass by SkyPassMixin)
                 tracked.skyblocks$setDrawnFrame(SkyUsage.frame());
             }
             ComplexPassRenderer renderer = ComplexPassRenderer.getInstance();
