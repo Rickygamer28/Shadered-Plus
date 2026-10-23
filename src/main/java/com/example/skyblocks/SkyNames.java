@@ -14,7 +14,7 @@ import java.util.Locale;
  *  - lang keys           skyblock_type.skyblocks.<name>, item.skyblocks.<name>_sky_block
  */
 public final class SkyNames {
-    public static final String[] NAMES = {"jupiter", "cat", "twilight", "hell", "nebula", "golden_hour"};
+    public static final String[] NAMES = {"jupiter", "cat", "twilight", "hell", "nebula", "golden_hour", "scadu_altus", "cerulean_coast", "gravesite_plain", "mountaintops", "altus_plateau_night", "altus_plateau_sunset", "altus_plateau", "divine_tower", "caelid", "siofra_river", "limgrave_sunset", "limgrave_rainy", "academy_of_raya_lucaria", "liurnia_sunset", "liurnia_rainy", "liurnia"};
 
     public static String enumName(int index) {
         return "SKYBLOCKS_" + NAMES[index].toUpperCase(Locale.ROOT);
