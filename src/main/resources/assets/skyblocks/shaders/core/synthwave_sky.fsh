@@ -3,7 +3,7 @@
 // Shadered+'s synthwave sky (our own code). All around you:
 //  west   the big striped sun sinking into the horizon, striped clouds drifting over it
 //  east   a neon city skyline, windows lighting up and going dark, blinking antenna lights
-//  north / south  palm tree silhouettes; high in the north a ringed planet
+//  along the highway  palm trees passing by as the road moves; high in the north a ringed planet
 //  everywhere  wireframe mountains (two layers), stars, shooting stars, the neon grid floor rushing towards you, a
 //         highway along it from the city to the sun
 // With music playing (client/MusicReactor) the grid rises into peaks either side of the highway (bass near it,
@@ -277,13 +277,12 @@ vec3 city(vec3 d, float elev, float t, vec3 col) {
     return col;
 }
 
-// a palm tree silhouette: q = (angle round, elevation) from its foot, size = its height
-float palm(vec2 q, float size, float lean) {
+// a palm tree silhouette: q = position from its foot (blocks), size = its height, aa = one pixel in palm heights
+float palm(vec2 q, float size, float lean, float aa) {
     vec2 p = q / size;
     if (p.x < -1.0 || p.x > 1.3 || p.y < -0.05 || p.y > 1.4) {
         return 0.0;
     }
-    float aa = fwidth(p.y) * 1.5;
     float s = 0.0;
     if (p.y < 1.0) {
         float width = 0.035 - 0.015 * p.y;
@@ -303,12 +302,71 @@ float palm(vec2 q, float size, float lean) {
     return s;
 }
 
-vec3 palms(vec3 d, float elev, vec3 col) {
-    float north = azFrom(d, vec3(0.0, 0.0, -1.0));
-    float south = azFrom(d, vec3(0.0, 0.0, 1.0));
-    float s = max(palm(vec2(north + 0.22, elev + 0.02), 0.3, 0.18), palm(vec2(north - 0.12, elev + 0.02), 0.22, -0.22));
-    s = max(s, max(palm(vec2(south - 0.25, elev + 0.02), 0.28, -0.2), palm(vec2(south + 0.08, elev + 0.02), 0.2, 0.25)));
-    return mix(col, SILHOUETTE, s);
+const float PALM_SPACING = 7.0; // blocks between palms along the highway
+const float PALM_SIDE = 1.4;     // how far from the middle of the highway they stand
+
+// the palms along one side of the highway, moving with it: colour (premultiplied) and coverage at this pixel, and how
+// far away the nearest one is. Each palm is a flat cut-out turned to face you, standing on the floor.
+vec4 roadPalms(vec3 d, float side, float t, float facing, out float depth) {
+    depth = 1.0e9;
+    vec4 acc = vec4(0.0);
+    float pixel = length(fwidth(d)); // (taken before any branching, so it's reliable)
+    float da = dot(d, SUN_DIR);
+    float db = dot(d, SIDE);
+    float dir = da >= 0.0 ? 1.0 : -1.0;
+    float scroll = t * 2.5; // (as the grid)
+    // the stretch of road where this ray passes close enough to the row to touch a palm
+    float reach = 7.5;
+    float lo = 0.0, hi = 110.0;
+    float slope = db / max(abs(da), 1.0e-4);
+    if (abs(slope) > 1.0e-4) {
+        float a1 = (side - reach) / slope, a2 = (side + reach) / slope;
+        lo = max(lo, min(a1, a2));
+        hi = min(hi, max(a1, a2));
+    } else if (abs(side) > reach) {
+        return acc;
+    }
+    if (lo > hi) {
+        return acc;
+    }
+    // palm k stands at k * PALM_SPACING - scroll along the highway; nearest first
+    float first = dir > 0.0 ? ceil((lo + scroll) / PALM_SPACING) : floor((scroll - lo) / PALM_SPACING);
+    for (int i = 0; i < 16; i++) {
+        float k = first + dir * float(i);
+        float along = k * PALM_SPACING - scroll;
+        float u = along * dir;
+        if (u > hi) {
+            break;
+        }
+        float seed = k * 3.7 + side * 11.0;
+        if (u < 0.2 || hash11(seed) < 0.15) {
+            continue; // (a gap now and then)
+        }
+        vec2 base = SUN_DIR.xz * along + SIDE.xz * (side + sign(side) * hash11(seed + 5.0) * 0.6);
+        float dist = length(base);
+        vec2 n = base / dist;
+        float toward = dot(d.xz, n);
+        if (toward <= 1.0e-3) {
+            continue;
+        }
+        float th = dist / toward; // where the ray meets the palm's cut-out
+        vec3 h = d * th;
+        vec2 q = vec2(dot(h.xz - base, vec2(-n.y, n.x)), h.y + 1.0);
+        float size = 3.4 + 1.8 * hash11(seed + 1.3);
+        float lean = (hash11(seed + 2.9) - 0.5) * 0.55;
+        float cover = palm(q, size, lean, th * pixel / size * 1.5);
+        if (cover > 0.0) {
+            float haze = exp(-14.0 / th) * 0.85;
+            vec3 c = mix(SILHOUETTE, mix(HORIZON_COOL, HORIZON, facing) * 0.9, haze);
+            acc.rgb += (1.0 - acc.a) * cover * c;
+            acc.a += (1.0 - acc.a) * cover;
+            depth = min(depth, th);
+            if (acc.a > 0.98) {
+                break;
+            }
+        }
+    }
+    return acc;
 }
 
 // ---- the floor ----
@@ -323,7 +381,7 @@ float amp(float r) {
 
 // how high the music raises the floor at (along the highway, across it), r blocks away
 float terrain(vec2 g, float r) {
-    float lateral = abs(g.y) - 0.9;
+    float lateral = abs(g.y) - 2.2; // (beyond the palms)
     if (lateral <= 0.0) {
         return 0.0;
     }
@@ -335,7 +393,7 @@ float terrain(vec2 g, float r) {
     // (HistoryPhase: part of the next step already gone by, so the peaks glide instead of jumping)
     float x = (max(steps - HistoryPhase, 0.0) + 0.5) / 128.0;
     float v = texture(Sampler0, vec2(x, band * (15.0 / 16.0) + 0.5 / 16.0)).r;
-    return amp(r) * v * Music * smoothstep(0.0, 0.4, lateral) * (1.0 - smoothstep(100.0, 127.0, steps))
+    return amp(r) * v * Music * smoothstep(0.0, 0.8, lateral) * (1.0 - smoothstep(100.0, 127.0, steps))
             * (1.0 - smoothstep(0.85, 1.0, band));
 }
 
@@ -437,9 +495,23 @@ void main() {
     } else {
         col = floorColour(d, az, t, facing, 1.0 / max(-d.y, 1.0e-4));
     }
-    if (!raised) { // (the city and palms are behind the peaks)
+    if (!raised) { // (the city is behind the peaks)
         col = city(d, elev, t, col);
-        col = palms(d, elev, col);
+    }
+    // the palms along the highway, in front of whatever is behind them (far side first)
+    float depthA, depthB;
+    vec4 palmsA = roadPalms(d, PALM_SIDE, t, facing, depthA);
+    vec4 palmsB = roadPalms(d, -PALM_SIDE, t, facing, depthB);
+    float scene = peaks > 0.0 ? peaks : elev < 0.0 ? 1.0 / max(-d.y, 1.0e-4) : 1.0e9;
+    if (depthA < depthB) {
+        vec4 swap = palmsA; palmsA = palmsB; palmsB = swap;
+        float swapDepth = depthA; depthA = depthB; depthB = swapDepth;
+    }
+    if (depthA < scene) {
+        col = col * (1.0 - palmsA.a) + palmsA.rgb;
+    }
+    if (depthB < scene) {
+        col = col * (1.0 - palmsB.a) + palmsB.rgb;
     }
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
