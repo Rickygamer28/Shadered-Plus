@@ -131,6 +131,8 @@ public final class ChaosSky {
             Matrix4fStack modelView = RenderSystem.getModelViewStack();
             modelView.pushMatrix();
             modelView.mul(view);
+            float far = Math.max(16.0F, Minecraft.getInstance().gameRenderer.getRenderDistance());
+            modelView.scale(far);
             RenderSystem.applyModelViewMatrix();
             RenderSystem.disableDepthTest();
             RenderSystem.depthMask(false);
@@ -141,7 +143,9 @@ public final class ChaosSky {
                 RenderSystem.setShaderTexture(0, NOISE);
                 RenderSystem.setShader(() -> shader);
                 BufferBuilder b = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
-                // the six faces of the cube from -1 to 1
+                // the six faces of a cube from -1 to 1, scaled to the render distance like Shadered's skyboxes: the view
+                // bobbing's small sideways / up-down shift (in the projection) must be tiny next to it, or the whole
+                // picture swims as you walk
                 quad(b, -1, -1, -1, 1, -1, -1, 1, 1, -1, -1, 1, -1);
                 quad(b, -1, -1, 1, -1, 1, 1, 1, 1, 1, 1, -1, 1);
                 quad(b, -1, -1, -1, -1, 1, -1, -1, 1, 1, -1, -1, 1);
