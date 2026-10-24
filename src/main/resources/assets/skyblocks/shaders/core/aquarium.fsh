@@ -462,7 +462,7 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
             outer = p.y > 0.0 ? span * (0.2 + 1.0 * kt) : span * (0.2 + 0.55 * kt);
         }
     } else {
-        outer = span * (0.25 + 0.75 * sqrt(sin(kt * 1.5708))); // a rounded fan
+        outer = span * (0.25 + 0.75 * sqrt(max(sin(kt * 1.5708), 0.0))); // a rounded fan
     }
     float tail = max(max(max(across - outer, inner - across), max(-xt, xt - tl)) * 0.7, sideways - thick);
     res = smin(res, tail, 0.05 * L);
@@ -474,7 +474,7 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
     if (sp.fin.x > 0.0) {
         float fx1 = L * 0.3, fx0 = fx1 - sp.fin.x * 2.2;
         float kx = clamp((p.x - fx0) / (fx1 - fx0), 0.0, 1.0);
-        float dh = sp.fin.y * pow(sin(kx * 3.1416), 0.7) * (1.25 - 0.5 * kx);
+        float dh = sp.fin.y * pow(max(sin(kx * 3.1416), 0.0), 0.7) * (1.25 - 0.5 * kx);
         float dorsal = max(max(max(p.y - (h * 0.92 + dh), h * 0.55 - p.y), max(fx0 - p.x, p.x - fx1)) * 0.7, abs(p.z) - sp.fin.z);
         res = smin(res, dorsal, 0.04 * L);
         if (dorsal < best) {
@@ -485,7 +485,7 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
     if (sh.w > 0.0) {
         float ax1 = -L * 0.05, ax0 = -L * 0.65;
         float kx = clamp((p.x - ax0) / (ax1 - ax0), 0.0, 1.0);
-        float dh = H * 0.35 * sh.w * pow(sin(kx * 3.1416), 0.7) * (1.2 - 0.4 * kx);
+        float dh = H * 0.35 * sh.w * pow(max(sin(kx * 3.1416), 0.0), 0.7) * (1.2 - 0.4 * kx);
         float anal = max(max(max(-p.y - (h * 0.92 + dh), h * 0.55 + p.y), max(ax0 - p.x, p.x - ax1)) * 0.7, abs(p.z) - max(sp.fin.z, 0.006));
         res = smin(res, anal, 0.04 * L);
         if (anal < best) {
