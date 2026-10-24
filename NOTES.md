@@ -182,3 +182,5 @@
   along x per species, fishShape(kind): deepest point, bluntness, tail type, belly fin), bulging eyes, mouth notch,
   thin 2D-outline tail (fan/forked/shark/dolphin flukes), dorsal + anal fins, paddling pectorals; fin rays, scales,
   gill line, rim light, silver shine. Manta/turtle/jellyfish keep the part-based shape.
+- The aquarium "compartments" bug (24 Oct): int(o + 0.5) in water() rounded a word with all 24 bits set (2^24-1) up
+  to 2^24 = no bits. Fixed by int(o) (the floats hold exact whole numbers). Ocean sunfish added (kind 18).

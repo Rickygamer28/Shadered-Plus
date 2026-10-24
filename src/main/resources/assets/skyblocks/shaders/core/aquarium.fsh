@@ -662,7 +662,7 @@ bool water(ivec3 c) {
     int word = index / 24;
     int v = word / 4;
     vec4 o = v == 0 ? Occ0 : v == 1 ? Occ1 : v == 2 ? Occ2 : v == 3 ? Occ3 : v == 4 ? Occ4 : v == 5 ? Occ5 : v == 6 ? Occ6 : v == 7 ? Occ7 : v == 8 ? Occ8 : v == 9 ? Occ9 : v == 10 ? Occ10 : v == 11 ? Occ11 : v == 12 ? Occ12 : v == 13 ? Occ13 : v == 14 ? Occ14 : Occ15;
-    int bits = int(o[word - v * 4] + 0.5);
+    int bits = int(o[word - v * 4]); // (exact whole numbers: no + 0.5, which rounds a full 24 bits up to 2^24)
     return ((bits >> (index - word * 24)) & 1) == 1;
 }
 
