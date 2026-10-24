@@ -174,3 +174,7 @@
   drawInWindow (paintings), like InfinityMirrorRenderer. Fish = up to 8 ellipsoid parts per fish (fishPart: forked
   tails, peduncle, dorsal/pectoral/ventral fins, turtle flippers, jelly tentacles, manta head fins) with a bounding
   sphere pre-test; up to 32 fish (2.4 per block normal, 0.8 ocean); haze 0.3 normal / 0.22 ocean; round rocks.
+- Aquarium round 4 (24 Oct): fish are ray-marched signed-distance shapes (fishSDF: the fishPart ellipsoids blended
+  with smin, a teardrop back-body part, the rear bending in a travelling wave); 3D decorations on the floor
+  (decoSDF: rock, shell, starfish, castle, coral, chest, anemone, vase; placed by placeDecor, Deco0-23 vec4s);
+  no more dark sand patches (they read as shadows).

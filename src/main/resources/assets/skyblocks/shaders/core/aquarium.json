@@ -998,6 +998,278 @@
                 0,
                 0
             ]
+        },
+        {
+            "name": "Deco0",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco1",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco2",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco3",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco4",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco5",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco6",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco7",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco8",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco9",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco10",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco11",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco12",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco13",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco14",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco15",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco16",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco17",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco18",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco19",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco20",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco21",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco22",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Deco23",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "DecoCount",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
+            ]
         }
     ]
 }

@@ -63,11 +63,15 @@ public final class AquariumRenderer {
         final float[] fish = new float[MAX_FISH * 8];
         int fishCount;
         boolean ocean;
+        /** Per decoration: its base (x, y, z, tank coordinates) and type + 8 * (turn + 16 * size * 10). */
+        final float[] decor = new float[MAX_DECOR * 4];
+        int decorCount;
     }
 
     private static final int OCC_VECS = 16;
     private static final int MAX_BITS = OCC_VECS * 4 * 24;
     private static final int MAX_FISH = 32;
+    private static final int MAX_DECOR = 24;
 
     static ShaderInstance shader;
     private static final List<Floor> FLOORS = new ArrayList<>();
@@ -244,6 +248,50 @@ public final class AquariumRenderer {
         }
         shader.safeGetUniform("FishCount").set((float) floor.fishCount);
         shader.safeGetUniform("Ocean").set(floor.ocean ? 1.0F : 0.0F);
+        float[] d = floor.decor;
+        for (int v = 0; v < MAX_DECOR; v++) {
+            shader.safeGetUniform("Deco" + v).set(d[v * 4], d[v * 4 + 1], d[v * 4 + 2], d[v * 4 + 3]);
+        }
+        shader.safeGetUniform("DecoCount").set((float) floor.decorCount);
+    }
+
+    /**
+     * Puts decorations on the tank's floor (the bottom of each column of water): rocks, shells, starfish, a castle,
+     * coral, vases, anemones; in the ocean tank bigger, with coral and anemones more often and a treasure chest.
+     */
+    private static void placeDecor(Floor floor) {
+        java.util.List<BlockPos> bottom = new ArrayList<>();
+        for (BlockPos b : floor.blocks) {
+            if (!floor.blocks.contains(b.below())) {
+                bottom.add(b);
+            }
+        }
+        bottom.sort(java.util.Comparator.comparingLong(BlockPos::asLong));
+        java.util.Random random = new java.util.Random(floor.min.asLong() * 17L + bottom.size() * 7L + 3L);
+        int count = Math.max(2, Math.min(MAX_DECOR, (int) (bottom.size() * (floor.ocean ? 0.45F : 0.6F))));
+        boolean castle = false, chest = false;
+        floor.decorCount = 0;
+        for (int i = 0; i < count; i++) {
+            BlockPos cell = bottom.get(random.nextInt(bottom.size()));
+            float r = random.nextFloat();
+            int type;
+            if (floor.ocean) {
+                type = r < 0.3F ? 0 : r < 0.55F ? 4 : r < 0.7F ? 6 : r < 0.75F && !chest ? 5 : r < 0.85F ? 2 : r < 0.93F ? 1 : 7;
+            } else {
+                type = r < 0.3F ? 0 : r < 0.45F ? 1 : r < 0.57F ? 2 : r < 0.65F && !castle ? 3 : r < 0.8F ? 4 : r < 0.9F ? 7 : 6;
+            }
+            castle |= type == 3;
+            chest |= type == 5;
+            float size = floor.ocean ? 1.3F + random.nextFloat() * 1.1F : 0.7F + random.nextFloat() * 0.6F;
+            size = Math.min(size, floor.sizeY * 2.0F); // (fits under the surface)
+            int sizeQ = Math.max(1, Math.min(60, Math.round(size * 10.0F)));
+            int turn = random.nextInt(16);
+            int k = floor.decorCount++;
+            floor.decor[k * 4] = cell.getX() - floor.min.getX() + 0.2F + random.nextFloat() * 0.6F;
+            floor.decor[k * 4 + 1] = cell.getY() - floor.min.getY() + (cell.getY() == floor.min.getY() ? 0.12F : 0.0F);
+            floor.decor[k * 4 + 2] = cell.getZ() - floor.min.getZ() + 0.2F + random.nextFloat() * 0.6F;
+            floor.decor[k * 4 + 3] = type + 8 * (turn + 16 * sizeQ);
+        }
     }
 
     /**
@@ -420,6 +468,7 @@ public final class AquariumRenderer {
                 }
             }
             placeFish(floor);
+            placeDecor(floor);
             out.add(floor);
         }
         return out;

@@ -94,7 +94,33 @@ uniform vec4 Fish61;
 uniform vec4 Fish62;
 uniform vec4 Fish63;
 uniform float FishCount;
-uniform float Ocean;   // 1: the ocean tank (big sea animals, deeper water, coral)
+uniform float Ocean;
+// decorations: (x, y, z of its base, type + 8 * (turn + 16 * size * 10))
+uniform vec4 Deco0;
+uniform vec4 Deco1;
+uniform vec4 Deco2;
+uniform vec4 Deco3;
+uniform vec4 Deco4;
+uniform vec4 Deco5;
+uniform vec4 Deco6;
+uniform vec4 Deco7;
+uniform vec4 Deco8;
+uniform vec4 Deco9;
+uniform vec4 Deco10;
+uniform vec4 Deco11;
+uniform vec4 Deco12;
+uniform vec4 Deco13;
+uniform vec4 Deco14;
+uniform vec4 Deco15;
+uniform vec4 Deco16;
+uniform vec4 Deco17;
+uniform vec4 Deco18;
+uniform vec4 Deco19;
+uniform vec4 Deco20;
+uniform vec4 Deco21;
+uniform vec4 Deco22;
+uniform vec4 Deco23;
+uniform float DecoCount;   // 1: the ocean tank (big sea animals, deeper water, coral)
 
 in vec3 fragPos;
 in vec2 faceUV;
@@ -258,7 +284,7 @@ struct Part {
     int type;
 };
 
-const int PARTS = 8;
+const int PARTS = 9;
 
 // part j of a fish of this kind (radii scaled by the species, not yet by the fish's size); swing: tail beat (-1..1)
 Part fishPart(int kind, Species sp, int j, float swing, float flap) {
@@ -315,9 +341,168 @@ Part fishPart(int kind, Species sp, int j, float swing, float flap) {
         if (kind == 4 || kind == 6) return Part(vec3(-b.x * 0.2, -b.y * 0.9, 0.0), vec3(fn.x * 0.9, fn.y * 0.9, fn.z), 0.0, -0.3, 2);
         if (kind == 0 || kind == 1 || kind == 2 || kind == 9 || kind == 14) return Part(vec3(-b.x * 0.4, -b.y * 0.8, 0.0), vec3(b.x * 0.25, b.y * 0.25, b.z * 0.2), 0.0, -0.4, 2);
     }
+    if (j == 8 && kind != 7) { // (the back half of the body, narrower: a teardrop)
+        return Part(vec3(-b.x * 0.42, -b.y * 0.04, 0.0), vec3(b.x * 0.68, b.y * 0.8, b.z * 0.78), 0.0, 0.0, 0);
+    }
     if (j == 3 && kind == 16) return Part(vec3(0.0), vec3(0.0), 0.0, 0.0, 0);
     if (j == 7 && kind == 16) return Part(vec3(0.0), vec3(0.0), 0.0, 0.0, 0);
     return Part(vec3(0.0), vec3(0.0), 0.0, 0.0, 0);
+}
+
+// ---- smooth shapes (signed distances) ----
+
+float sdEllipsoid(vec3 p, vec3 r) {
+    float k0 = length(p / r);
+    float k1 = length(p / (r * r));
+    return k0 * (k0 - 1.0) / max(k1, 1.0e-6);
+}
+
+float smin(float a, float b, float k) {
+    float h = max(k - abs(a - b), 0.0) / k;
+    return min(a, b) - h * h * k * 0.25;
+}
+
+float sdBox(vec3 p, vec3 b) {
+    vec3 q = abs(p) - b;
+    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
+
+float sdCapsule(vec3 p, vec3 a, vec3 b, float r) {
+    vec3 pa = p - a, ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h) - r;
+}
+
+float sdStar5(vec2 p, float r, float rf) {
+    const vec2 k1 = vec2(0.809016994375, -0.587785252292);
+    const vec2 k2 = vec2(-0.809016994375, -0.587785252292);
+    p.x = abs(p.x);
+    p -= 2.0 * max(dot(k1, p), 0.0) * k1;
+    p -= 2.0 * max(dot(k2, p), 0.0) * k2;
+    p.x = abs(p.x);
+    p.y -= r;
+    vec2 ba = rf * vec2(-k1.y, k1.x) - vec2(0.0, 1.0);
+    float h = clamp(dot(p, ba) / dot(ba, ba), 0.0, r);
+    return length(p - ba * h) * sign(p.y * ba.x - p.x * ba.y);
+}
+
+/**
+ * A fish as one smooth shape: its parts blended together, the back half swinging in a travelling wave as it swims.
+ * p: in the fish's own frame (x forward, y up, z sideways), in species units. ptype / q: the nearest part and the
+ * point in that part's coordinates (for its colours).
+ */
+float fishSDF(int kind, Species sp, vec3 p, float wave, float flap, float pulse, out int ptype, out vec3 q) {
+    float L = sp.body.x;
+    bool bends = kind != 12 && kind != 13 && kind != 15;
+    if (bends) {
+        p.z += 0.2 * L * sin(wave - p.x / L * 2.2) * smoothstep(0.4 * L, -1.9 * L, p.x);
+    }
+    float swing = kind == 12 || kind == 15 ? sin(wave) : kind == 13 ? flap : 0.0;
+    float res = 1.0e9, best = 1.0e9;
+    ptype = 0;
+    q = p / sp.body;
+    for (int j = 0; j < PARTS; j++) {
+        Part pt = fishPart(kind, sp, j, swing, flap);
+        if (pt.r.x <= 0.0) {
+            continue;
+        }
+        vec3 r = pt.r;
+        if (kind == 15 && j == 0) {
+            r.y *= pulse;
+        }
+        vec3 d0 = p - pt.at;
+        vec3 fx = vec3(cos(pt.yaw), 0.0, sin(pt.yaw));
+        vec3 fz = vec3(-sin(pt.yaw), 0.0, cos(pt.yaw));
+        vec3 ax = fx * cos(pt.pitch) + vec3(0.0, sin(pt.pitch), 0.0);
+        vec3 ay = vec3(0.0, cos(pt.pitch), 0.0) - fx * sin(pt.pitch);
+        vec3 lq = vec3(dot(d0, ax), dot(d0, ay), dot(d0, fz));
+        float d = sdEllipsoid(lq, r);
+        float k = pt.type == 0 ? 0.35 * min(sp.body.y, sp.body.z) : 0.2 * min(r.y, r.z) + 0.012 * L;
+        res = smin(res, d, k);
+        if (d < best) {
+            best = d;
+            ptype = pt.type;
+            q = pt.type == 0 ? p / sp.body : lq / r;
+        }
+    }
+    return res;
+}
+
+/**
+ * A decoration on the bottom (p: from its base, y up, in its own units). 0 rock, 1 shell, 2 starfish, 3 castle,
+ * 4 coral, 5 treasure chest, 6 sea anemone, 7 old vase.
+ */
+float decoSDF(int type, vec3 p, float t) {
+    if (type == 0) {
+        float d = sdEllipsoid(p - vec3(0.0, 0.07, 0.0), vec3(0.2, 0.13, 0.16));
+        d = smin(d, sdEllipsoid(p - vec3(0.13, 0.04, 0.07), vec3(0.12, 0.08, 0.1)), 0.05);
+        return smin(d, sdEllipsoid(p - vec3(-0.11, 0.03, -0.08), vec3(0.11, 0.07, 0.09)), 0.05);
+    }
+    if (type == 1) {
+        float d = sdEllipsoid(p - vec3(0.0, 0.02, 0.0), vec3(0.07, 0.035, 0.06));
+        return d - 0.003 * sin(atan(p.z, p.x - 0.07) * 18.0); // (ridges)
+    }
+    if (type == 2) {
+        return max(sdStar5(p.xz, 0.1, 0.42), abs(p.y - 0.012) - 0.012) - 0.006;
+    }
+    if (type == 3) {
+        float tower = sdBox(p - vec3(0.0, 0.2, 0.0), vec3(0.1, 0.2, 0.1));
+        vec3 c = p - vec3(0.0, 0.39, 0.0);
+        float notch = min(sdBox(vec3(abs(c.x) - 0.05, c.y, c.z), vec3(0.022, 0.025, 0.12)), sdBox(vec3(c.x, c.y, abs(c.z) - 0.05), vec3(0.12, 0.025, 0.022)));
+        tower = max(tower, -notch);
+        tower = max(tower, -sdBox(p - vec3(0.0, 0.06, 0.1), vec3(0.035, 0.065, 0.03))); // (door)
+        tower = max(tower, -sdBox(p - vec3(0.0, 0.25, 0.1), vec3(0.018, 0.03, 0.03))); // (window)
+        float small = sdBox(p - vec3(0.17, 0.12, 0.05), vec3(0.06, 0.12, 0.06));
+        return min(tower, small);
+    }
+    if (type == 4) {
+        float d = sdCapsule(p, vec3(0.0), vec3(0.0, 0.16, 0.0), 0.03);
+        d = smin(d, sdCapsule(p, vec3(0.0, 0.11, 0.0), vec3(0.09, 0.26, 0.03), 0.022), 0.03);
+        d = smin(d, sdCapsule(p, vec3(0.0, 0.09, 0.0), vec3(-0.08, 0.24, -0.04), 0.022), 0.03);
+        d = smin(d, sdCapsule(p, vec3(0.0, 0.15, 0.0), vec3(0.02, 0.32, -0.06), 0.02), 0.03);
+        return smin(d, sdCapsule(p, vec3(0.05, 0.19, 0.015), vec3(0.12, 0.3, 0.08), 0.017), 0.025);
+    }
+    if (type == 5) {
+        float body = sdBox(p - vec3(0.0, 0.07, 0.0), vec3(0.14, 0.07, 0.09)) - 0.004;
+        float lid = max(max(length(p.yz - vec2(0.14, 0.0)) - 0.09, abs(p.x) - 0.14), 0.14 - p.y);
+        return min(body, lid);
+    }
+    if (type == 6) {
+        float d = sdEllipsoid(p - vec3(0.0, 0.03, 0.0), vec3(0.08, 0.05, 0.08));
+        for (int k = 0; k < 7; k++) {
+            float a = float(k) * 0.8976;
+            vec3 tip = vec3(cos(a) * 0.11 + 0.025 * sin(t * 1.3 + float(k)), 0.18, sin(a) * 0.11 + 0.025 * cos(t * 1.1 + float(k)));
+            d = smin(d, sdCapsule(p, vec3(cos(a) * 0.04, 0.05, sin(a) * 0.04), tip, 0.012), 0.02);
+        }
+        return d;
+    }
+    float d = sdEllipsoid(p - vec3(0.0, 0.12, 0.0), vec3(0.09, 0.12, 0.09));
+    d = smin(d, max(length(p.xz) - 0.035, abs(p.y - 0.27) - 0.05), 0.03);
+    return smin(d, max(length(p.xz) - 0.05, abs(p.y - 0.32) - 0.012), 0.01);
+}
+
+vec3 decoColour(int type, vec3 p, vec3 n, float rnd) {
+    float speck = hash22(floor(p.xz * 60.0) + floor(p.y * 60.0)).x;
+    if (type == 0) {
+        vec3 c = mix(vec3(0.45, 0.43, 0.39), vec3(0.3, 0.28, 0.25), speck * 0.7 + rnd * 0.3);
+        return mix(c, vec3(0.22, 0.4, 0.15), smoothstep(0.55, 0.9, n.y) * 0.6); // (moss on top)
+    }
+    if (type == 1) {
+        float ridge = 0.5 + 0.5 * sin(atan(p.z, p.x - 0.07) * 18.0);
+        return mix(vec3(0.95, 0.85, 0.75), vec3(0.95, 0.6, 0.6), ridge * 0.5 + rnd * 0.3);
+    }
+    if (type == 2) return mix(vec3(0.95, 0.38, 0.12), vec3(0.85, 0.15, 0.2), rnd) * (0.85 + 0.25 * step(0.7, speck));
+    if (type == 3) {
+        float mortar = step(0.9, fract(p.y * 22.0)) + step(0.92, fract(p.x * 11.0 + p.z * 11.0 + floor(p.y * 22.0) * 0.5));
+        return mix(vec3(0.62, 0.6, 0.58), vec3(0.35, 0.34, 0.33), min(mortar, 1.0)) * (0.9 + 0.1 * speck);
+    }
+    if (type == 4) return mix(hue(0.9 + rnd * 0.2), vec3(1.0, 0.9, 0.85), smoothstep(0.2, 0.33, p.y) * 0.5);
+    if (type == 5) {
+        bool gold = abs(abs(p.x) - 0.09) < 0.015 || abs(p.y - 0.14) < 0.012;
+        return gold ? vec3(1.0, 0.8, 0.25) * 1.2 : vec3(0.42, 0.25, 0.12) * (0.8 + 0.2 * step(0.5, fract(p.y * 25.0)));
+    }
+    if (type == 6) return mix(vec3(0.95, 0.5, 0.2), mix(vec3(0.75, 0.2, 0.9), vec3(1.0, 0.5, 0.9), rnd), smoothstep(0.05, 0.16, p.y)) * 1.1;
+    return abs(p.y - 0.16) < 0.015 ? vec3(0.12, 0.08, 0.06) : vec3(0.75, 0.38, 0.2) * (0.85 + 0.15 * speck);
 }
 
 int pickKind(float r) {
@@ -337,6 +522,10 @@ int pickKind(float r) {
 
 vec4 fishData(int k) {
     return k == 0 ? Fish0 : k == 1 ? Fish1 : k == 2 ? Fish2 : k == 3 ? Fish3 : k == 4 ? Fish4 : k == 5 ? Fish5 : k == 6 ? Fish6 : k == 7 ? Fish7 : k == 8 ? Fish8 : k == 9 ? Fish9 : k == 10 ? Fish10 : k == 11 ? Fish11 : k == 12 ? Fish12 : k == 13 ? Fish13 : k == 14 ? Fish14 : k == 15 ? Fish15 : k == 16 ? Fish16 : k == 17 ? Fish17 : k == 18 ? Fish18 : k == 19 ? Fish19 : k == 20 ? Fish20 : k == 21 ? Fish21 : k == 22 ? Fish22 : k == 23 ? Fish23 : k == 24 ? Fish24 : k == 25 ? Fish25 : k == 26 ? Fish26 : k == 27 ? Fish27 : k == 28 ? Fish28 : k == 29 ? Fish29 : k == 30 ? Fish30 : k == 31 ? Fish31 : k == 32 ? Fish32 : k == 33 ? Fish33 : k == 34 ? Fish34 : k == 35 ? Fish35 : k == 36 ? Fish36 : k == 37 ? Fish37 : k == 38 ? Fish38 : k == 39 ? Fish39 : k == 40 ? Fish40 : k == 41 ? Fish41 : k == 42 ? Fish42 : k == 43 ? Fish43 : k == 44 ? Fish44 : k == 45 ? Fish45 : k == 46 ? Fish46 : k == 47 ? Fish47 : k == 48 ? Fish48 : k == 49 ? Fish49 : k == 50 ? Fish50 : k == 51 ? Fish51 : k == 52 ? Fish52 : k == 53 ? Fish53 : k == 54 ? Fish54 : k == 55 ? Fish55 : k == 56 ? Fish56 : k == 57 ? Fish57 : k == 58 ? Fish58 : k == 59 ? Fish59 : k == 60 ? Fish60 : k == 61 ? Fish61 : k == 62 ? Fish62 : Fish63;
+}
+
+vec4 decoData(int k) {
+    return k == 0 ? Deco0 : k == 1 ? Deco1 : k == 2 ? Deco2 : k == 3 ? Deco3 : k == 4 ? Deco4 : k == 5 ? Deco5 : k == 6 ? Deco6 : k == 7 ? Deco7 : k == 8 ? Deco8 : k == 9 ? Deco9 : k == 10 ? Deco10 : k == 11 ? Deco11 : k == 12 ? Deco12 : k == 13 ? Deco13 : k == 14 ? Deco14 : k == 15 ? Deco15 : k == 16 ? Deco16 : k == 17 ? Deco17 : k == 18 ? Deco18 : k == 19 ? Deco19 : k == 20 ? Deco20 : k == 21 ? Deco21 : k == 22 ? Deco22 : Deco23;
 }
 
 bool water(ivec3 c) {
@@ -427,41 +616,51 @@ void main() {
             fwd = vec3(1.0, 0.0, 0.0);
         }
         vec3 side = normalize(cross(fwd, up));
-        float beat = sin(t * (7.0 + 4.0 * speed) / max(size * extent * 4.0, 1.0) + fi * 2.0);
-        vec3 bodyFwd = normalize(fwd + side * beat * 0.06);
-        vec3 bodySide = normalize(cross(bodyFwd, up));
+        float wave = t * (7.0 + 4.0 * speed) / max(size * extent * 4.0, 1.0) + fi * 2.0;
         // (a quick test first: does the ray pass near this fish at all?)
         float reachAll = size * (sp.body.x * 1.3 + sp.tail.x * 2.2 + max(sp.body.z, sp.fin.z) + sp.tail.y * (kind == 15 ? 2.2 : 0.6));
         vec3 oc = rot - c;
         float bq = dot(oc, rd), cq = dot(oc, oc) - reachAll * reachAll;
-        if (bq * bq - cq < 0.0 || -bq - sqrt(max(bq * bq - cq, 0.0)) > hitT) {
+        float disc = bq * bq - cq;
+        if (disc < 0.0) {
             continue;
         }
-        float tf = -1.0;
-        vec3 n = vec3(0.0, 1.0, 0.0), q = vec3(0.0);
-        int part_ = 0;
+        float t0 = max(-bq - sqrt(disc), tEnter), t1 = min(-bq + sqrt(disc), hitT);
+        if (t0 >= t1) {
+            continue;
+        }
+        vec3 F = fwd, U = up, S = side;
+        vec3 lo = vec3(dot(oc, F), dot(oc, U), dot(oc, S)) / size;
+        vec3 ld = vec3(dot(rd, F), dot(rd, U), dot(rd, S));
         float flap = sin(t * 3.0 + fi * 1.3);
-        for (int j = 0; j < PARTS; j++) {
-            Part pt = fishPart(kind, sp, j, beat, flap);
-            if (pt.r.x <= 0.0) {
-                continue;
+        float pulse = 0.85 + 0.15 * sin(t * 2.0 + fi);
+        float tf = -1.0;
+        int part_ = 0;
+        vec3 q = vec3(0.0);
+        float tm = t0;
+        for (int s = 0; s < 48; s++) {
+            float d = fishSDF(kind, sp, lo + ld * (tm / size), wave, flap, pulse, part_, q) * size;
+            if (d < 0.0012) {
+                tf = tm;
+                break;
             }
-            vec3 r = pt.r * size;
-            if (kind == 15 && j == 0) {
-                r.y *= 0.85 + 0.15 * sin(t * 2.0 + fi); // (the jellyfish pulsing)
-            }
-            // the part's axes: the body's, turned by yaw (about up) then pitch (about sideways)
-            vec3 fx = bodyFwd * cos(pt.yaw) + bodySide * sin(pt.yaw);
-            vec3 fz = bodySide * cos(pt.yaw) - bodyFwd * sin(pt.yaw);
-            vec3 ax = fx * cos(pt.pitch) + up * sin(pt.pitch);
-            vec3 ay = up * cos(pt.pitch) - fx * sin(pt.pitch);
-            vec3 pc = c + bodyFwd * pt.at.x * size + up * pt.at.y * size + bodySide * pt.at.z * size;
-            vec3 pn, pq;
-            float tp = ellipsoid(rot, rd, pc, ax, ay, fz, r, pn, pq);
-            if (tp > 0.0 && (tf < 0.0 || tp < tf)) {
-                tf = tp; n = pn; q = pq; part_ = pt.type;
+            tm += max(d * 0.75, 0.0015);
+            if (tm > t1) {
+                break;
             }
         }
+        if (tf < 0.0) {
+            continue;
+        }
+        vec3 pl = lo + ld * (tf / size);
+        vec2 e = vec2(0.003, -0.003);
+        int dummyT;
+        vec3 dummyQ;
+        vec3 g = e.xyy * fishSDF(kind, sp, pl + e.xyy, wave, flap, pulse, dummyT, dummyQ)
+               + e.yyx * fishSDF(kind, sp, pl + e.yyx, wave, flap, pulse, dummyT, dummyQ)
+               + e.yxy * fishSDF(kind, sp, pl + e.yxy, wave, flap, pulse, dummyT, dummyQ)
+               + e.xxx * fishSDF(kind, sp, pl + e.xxx, wave, flap, pulse, dummyT, dummyQ);
+        vec3 n = normalize(F * g.x + U * g.y + S * g.z);
         int part = part_;
         if (tf > 0.0 && tf > tEnter - 0.01 && tf < hitT) {
             hitT = tf;
@@ -490,6 +689,66 @@ void main() {
         }
     }
 
+    // ---- decorations on the bottom (placed on the CPU, from the tank's floor) ----
+    bool deco = false;
+    vec3 decoCol = vec3(0.0);
+    int decoCount = int(DecoCount + 0.5);
+    for (int k = 0; k < 24; k++) {
+        if (k >= decoCount) {
+            break;
+        }
+        vec4 dd = decoData(k);
+        int pk = int(dd.w + 0.5);
+        int type = pk - (pk / 8) * 8;
+        float ang = float((pk / 8) - (pk / 128) * 16) * 0.3927;
+        float sz = float(pk / 128) / 10.0;
+        vec3 base = dd.xyz;
+        float rad = 0.5 * sz;
+        vec3 oc = rot - (base + vec3(0.0, 0.2 * sz, 0.0));
+        float bq = dot(oc, rd), cq = dot(oc, oc) - rad * rad;
+        float disc = bq * bq - cq;
+        if (disc < 0.0) {
+            continue;
+        }
+        float t0 = max(-bq - sqrt(disc), tEnter), t1 = min(-bq + sqrt(disc), hitT);
+        if (t0 >= t1) {
+            continue;
+        }
+        float ca = cos(ang), sa = sin(ang);
+        vec3 lo = rot - base;
+        lo = vec3(ca * lo.x + sa * lo.z, lo.y, -sa * lo.x + ca * lo.z) / sz;
+        vec3 ld = vec3(ca * rd.x + sa * rd.z, rd.y, -sa * rd.x + ca * rd.z);
+        float tm = t0, td = -1.0;
+        for (int s = 0; s < 40; s++) {
+            float d = decoSDF(type, lo + ld * (tm / sz), t) * sz;
+            if (d < 0.0012) {
+                td = tm;
+                break;
+            }
+            tm += max(d * 0.8, 0.0015);
+            if (tm > t1) {
+                break;
+            }
+        }
+        if (td < 0.0) {
+            continue;
+        }
+        vec3 pl = lo + ld * (td / sz);
+        vec2 e = vec2(0.002, -0.002);
+        vec3 g = e.xyy * decoSDF(type, pl + e.xyy, t) + e.yyx * decoSDF(type, pl + e.yyx, t)
+               + e.yxy * decoSDF(type, pl + e.yxy, t) + e.xxx * decoSDF(type, pl + e.xxx, t);
+        g = normalize(g);
+        vec3 n = vec3(ca * g.x - sa * g.z, g.y, sa * g.x + ca * g.z);
+        vec3 p = rot + rd * td;
+        float light = 0.4 + 0.6 * max(n.y, 0.0) + 0.2 * max(dot(n, -rd), 0.0);
+        decoCol = decoColour(type, pl, g, hash11(float(k) * 17.1)) * light
+                + vec3(0.6, 0.85, 1.0) * caustics(p.xz, t) * max(n.y, 0.0) * 0.45;
+        if (type == 5) decoCol += vec3(1.0, 0.8, 0.3) * 0.15 * pow(max(dot(reflect(rd, n), vec3(0.0, 1.0, 0.0)), 0.0), 8.0);
+        deco = true;
+        fish = false;
+        hitT = td;
+    }
+
     // ---- bubbles from a bubbler in one corner ----
     vec2 bubbler = vec2(0.3, 0.3) + vec2(hash11(41.0), hash11(43.0)) * max(BoxSize.xz - 0.6, vec2(0.0));
     vec3 bubbleCol = vec3(0.0);
@@ -512,7 +771,9 @@ void main() {
     }
 
     // ---- what the ray reaches: a fish, or the sand / back glass / surface ----
-    if (fish && fishAlpha > 0.99) {
+    if (deco) {
+        col = decoCol;
+    } else if (fish && fishAlpha > 0.99) {
         col = fishCol;
     } else {
         vec3 p = hitPos;
@@ -531,18 +792,9 @@ void main() {
         bool down = exitAxis == 1 && rd.y < 0.0, up = exitAxis == 1 && rd.y > 0.0;
         if (down || onSand) {
             // sand with pebbles, lit by the moving light patterns
-            // round pebbles, and in the ocean round rocks, soft at the edges
-            vec2 cell = floor(p.xz * 9.0);
-            vec2 inCell = fract(p.xz * 9.0) - 0.5;
-            vec2 jitter = hash22(cell + 3.1) - 0.5;
-            float pebble = hash22(cell).x > 0.9 ? mix(0.72, 1.0, smoothstep(0.18, 0.3, length(inCell - jitter * 0.3))) : 1.0;
-            if (Ocean > 0.5) {
-                vec2 rc = floor(p.xz * 1.6);
-                vec2 rin = fract(p.xz * 1.6) - 0.5 - (hash22(rc + 7.7) - 0.5) * 0.4;
-                float rr = 0.12 + 0.12 * hash22(rc + 1.3).x;
-                if (hash22(rc).y > 0.72) pebble *= mix(0.55, 1.0, smoothstep(rr - 0.04, rr + 0.02, length(rin)));
-            }
-            col = vec3(0.85, 0.75, 0.52) * pebble * (0.75 + 0.1 * hash22(floor(p.xz * 40.0)).x);
+            // a fine, lighter grain (no dark patches: they looked like shadows)
+            float pebble = 0.94 + 0.1 * hash22(floor(p.xz * 30.0)).x;
+            col = vec3(0.85, 0.75, 0.52) * pebble * 0.82;
             col += vec3(0.6, 0.85, 1.0) * caustics(p.xz, t) * 0.55;
         } else if (up) {
             // the underside of the surface: bright, rippling
