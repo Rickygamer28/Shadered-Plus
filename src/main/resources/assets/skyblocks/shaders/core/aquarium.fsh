@@ -178,7 +178,8 @@ float ellipsoid(vec3 ro, vec3 rd, vec3 c, vec3 ax, vec3 ay, vec3 az, vec3 r, out
 
 // A species: body radii (along, up, sideways), tail radii, fin radii (a dorsal fin; the turtle's flippers), how fast.
 // 0-9 the normal tank (clownfish, blue tang, yellow tang, neon tetra, angelfish, goldfish, betta, pufferfish, guppy,
-// discus); 10-17 the ocean tank (shark, tuna, manta ray, sea turtle, grouper, jellyfish, dolphin, sardine).
+// discus); 10-19 the ocean tank (shark, tuna, manta ray, sea turtle, grouper, jellyfish, dolphin, sardine, ocean
+// sunfish, basking shark).
 struct Species {
     vec3 body;
     vec3 tail;
@@ -189,14 +190,14 @@ struct Species {
 Species species(int k) {
     if (k == 0) return Species(vec3(0.16, 0.075, 0.035), vec3(0.06, 0.065, 0.01), vec3(0.07, 0.03, 0.008), 1.0);
     if (k == 1) return Species(vec3(0.16, 0.09, 0.03), vec3(0.06, 0.07, 0.01), vec3(0.12, 0.03, 0.008), 1.0);
-    if (k == 2) return Species(vec3(0.13, 0.11, 0.03), vec3(0.05, 0.06, 0.01), vec3(0.1, 0.04, 0.008), 0.9);
+    if (k == 2) return Species(vec3(0.13, 0.11, 0.03), vec3(0.05, 0.06, 0.01), vec3(0.11, 0.08, 0.008), 0.9);
     if (k == 3) return Species(vec3(0.11, 0.04, 0.025), vec3(0.04, 0.04, 0.008), vec3(0.0), 1.4);
     if (k == 4) return Species(vec3(0.11, 0.13, 0.025), vec3(0.05, 0.08, 0.008), vec3(0.06, 0.15, 0.008), 0.6);
     if (k == 5) return Species(vec3(0.13, 0.09, 0.065), vec3(0.09, 0.09, 0.012), vec3(0.06, 0.04, 0.008), 0.7);
-    if (k == 6) return Species(vec3(0.12, 0.05, 0.03), vec3(0.12, 0.12, 0.01), vec3(0.1, 0.07, 0.008), 0.6);
+    if (k == 6) return Species(vec3(0.12, 0.05, 0.03), vec3(0.13, 0.17, 0.008), vec3(0.11, 0.11, 0.008), 0.6);
     if (k == 7) return Species(vec3(0.12, 0.1, 0.1), vec3(0.04, 0.04, 0.01), vec3(0.0), 0.5);
-    if (k == 8) return Species(vec3(0.08, 0.03, 0.02), vec3(0.06, 0.05, 0.006), vec3(0.0), 1.3);
-    if (k == 9) return Species(vec3(0.12, 0.13, 0.025), vec3(0.04, 0.05, 0.008), vec3(0.1, 0.03, 0.008), 0.6);
+    if (k == 8) return Species(vec3(0.08, 0.03, 0.02), vec3(0.085, 0.075, 0.006), vec3(0.04, 0.035, 0.005), 1.3);
+    if (k == 9) return Species(vec3(0.12, 0.13, 0.025), vec3(0.04, 0.05, 0.008), vec3(0.11, 0.035, 0.008), 0.6);
     if (k == 10) return Species(vec3(0.9, 0.18, 0.16), vec3(0.25, 0.3, 0.03), vec3(0.18, 0.22, 0.03), 0.8);
     if (k == 11) return Species(vec3(0.45, 0.13, 0.11), vec3(0.12, 0.18, 0.02), vec3(0.08, 0.1, 0.02), 1.3);
     if (k == 12) return Species(vec3(0.35, 0.05, 0.75), vec3(0.35, 0.015, 0.015), vec3(0.0), 0.6);
@@ -205,6 +206,7 @@ Species species(int k) {
     if (k == 15) return Species(vec3(0.25, 0.18, 0.25), vec3(0.06, 0.4, 0.06), vec3(0.0), 0.25);
     if (k == 16) return Species(vec3(0.8, 0.17, 0.17), vec3(0.12, 0.04, 0.28), vec3(0.15, 0.18, 0.03), 1.1);
     if (k == 18) return Species(vec3(0.5, 0.42, 0.12), vec3(0.05, 0.4, 0.02), vec3(0.14, 0.6, 0.03), 0.35); // ocean sunfish
+    if (k == 19) return Species(vec3(1.25, 0.27, 0.25), vec3(0.32, 0.42, 0.04), vec3(0.22, 0.3, 0.04), 0.45); // basking shark
     return Species(vec3(0.12, 0.035, 0.025), vec3(0.04, 0.035, 0.006), vec3(0.0), 1.5);
 }
 
@@ -212,72 +214,221 @@ vec3 hue(float h) {
     return clamp(abs(fract(h + vec3(0.0, 2.0 / 3.0, 1.0 / 3.0)) * 6.0 - 3.0) - 1.0, 0.0, 1.0);
 }
 
+// how close to the edge of a cell of a random net (small on the lines): the discus's and the turtle's patterns
+float cellEdge(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    float f1 = 8.0, f2 = 8.0;
+    for (int y = -1; y <= 1; y++) {
+        for (int x = -1; x <= 1; x++) {
+            vec2 g = vec2(float(x), float(y));
+            float d = length(g + hash22(i + g) - f);
+            if (d < f1) { f2 = f1; f1 = d; } else if (d < f2) { f2 = d; }
+        }
+    }
+    return f2 - f1;
+}
+
+// 1 inside a round spot (one per cell, placed at random), 0 elsewhere
+float spot(vec2 p, float r) {
+    vec2 o = hash22(floor(p)) * 0.5 + 0.25;
+    return 1.0 - smoothstep(r * 0.8, r, length(fract(p) - o));
+}
+
 // a fish's colour at a point on it (q: that part's own coordinates, x along it nose-first, -1..1; part 0 body,
-// 1 tail (the turtle's head), 2 fin); rnd: this fish's own random number (colour variants)
+// 1 tail (the turtle's head and flippers; the jellyfish's arms), 2 fin (the jellyfish's tentacles); on the fins
+// q.y is the height out from the body and q.z says which: 0 the back's, -1 underneath, 2 a side fin, 3 a filament);
+// rnd: this fish's own random number (colour variants). Each matched to a photo of the real fish.
 vec3 fishColour(int kind, vec3 q, int part, float rnd) {
     bool tail = part == 1, fin = part == 2;
-    if (kind == 0) { // clownfish: orange, white bands edged black
-        float b = min(abs(q.x - 0.45), min(abs(q.x + 0.05), abs(q.x + 0.55)));
-        vec3 c = b < 0.09 ? vec3(0.95) : b < 0.13 ? vec3(0.05) : vec3(1.0, 0.42, 0.05);
-        return part > 0 ? vec3(1.0, 0.42, 0.05) : c;
-    }
-    if (kind == 1) { // blue tang: blue, dark mark, yellow tail
-        if (tail) return vec3(1.0, 0.85, 0.1);
-        return q.y > 0.2 && abs(q.x) < 0.6 ? vec3(0.03, 0.06, 0.2) : vec3(0.1, 0.35, 0.95);
-    }
-    if (kind == 2) return vec3(1.0, 0.86, 0.1) * (tail ? 0.9 : 1.0); // yellow tang
-    if (kind == 3) { // neon tetra
-        if (abs(q.y - 0.15) < 0.18 && !tail) return vec3(0.1, 0.9, 1.0) * 1.3;
-        if (q.y < -0.05 && q.x < 0.2 && !tail) return vec3(0.9, 0.1, 0.15);
-        return vec3(0.75, 0.78, 0.85);
-    }
-    if (kind == 4) { // angelfish: silver, black bands, long fins
-        if (part > 0) return mix(vec3(0.85, 0.85, 0.9), vec3(0.1), step(0.75, abs(q.y)));
-        return abs(fract(q.x * 1.4 + 0.15) - 0.5) < 0.12 ? vec3(0.08) : vec3(0.82, 0.84, 0.88);
-    }
-    if (kind == 5) { // goldfish
-        vec3 c = mix(vec3(1.0, 0.45, 0.05), vec3(1.0, 0.8, 0.35), smoothstep(0.0, -0.8, q.y));
-        return part > 0 ? vec3(1.0, 0.55, 0.15) : c;
-    }
-    if (kind == 6) { // betta: deep body, big glowing fins in its own colour
-        vec3 c = rnd < 0.33 ? vec3(0.75, 0.05, 0.12) : rnd < 0.66 ? vec3(0.1, 0.15, 0.85) : vec3(0.55, 0.1, 0.75);
-        return part > 0 ? mix(c, c * 1.4 + 0.1, abs(q.y)) : c * 0.8;
-    }
-    if (kind == 7) { // pufferfish: spotted on top, white belly
-        if (q.y < -0.2) return vec3(0.95, 0.93, 0.85);
-        vec2 s = fract(q.xz * 3.5) - 0.5;
-        return length(s) < 0.18 ? vec3(0.25, 0.18, 0.08) : vec3(0.85, 0.72, 0.35);
-    }
-    if (kind == 8) return tail ? hue(rnd) * 1.1 : vec3(0.65, 0.68, 0.72); // guppy: a colourful tail
-    if (kind == 9) { // discus: red with blue wavy lines
-        return sin(q.y * 18.0 + sin(q.x * 7.0) * 1.5) > 0.55 ? vec3(0.15, 0.45, 0.95) : vec3(0.85, 0.2, 0.15);
-    }
-    if (kind == 10) return q.y < -0.25 && part == 0 ? vec3(0.9, 0.9, 0.92) : vec3(0.42, 0.48, 0.55); // shark
-    if (kind == 11) { // tuna
-        if (fin) return vec3(0.95, 0.8, 0.2);
-        return q.y > 0.3 ? vec3(0.05, 0.12, 0.35) : vec3(0.72, 0.78, 0.85);
-    }
-    if (kind == 12) return q.y > 0.0 ? vec3(0.08, 0.08, 0.1) : vec3(0.9, 0.9, 0.92); // manta ray
-    if (kind == 13) { // sea turtle: patterned shell, spotted olive skin
+    bool anal = fin && q.z < -0.5, pect = fin && q.z > 1.5 && q.z < 2.5, fil = fin && q.z > 2.5;
+    bool dorsal = fin && !anal && !pect && !fil;
+    float tk = 0.5 - 0.5 * q.x; // along the tail: 0 at its root, 1 at its tip
+    if (kind == 0) { // clownfish: orange, three white bands edged black, black-rimmed fins
+        vec3 o = vec3(1.0, 0.42, 0.03);
         if (part == 0) {
-            vec2 s = abs(fract(q.xz * vec2(2.2, 2.6)) - 0.5);
-            return max(s.x, s.y) > 0.42 ? vec3(0.22, 0.18, 0.08) : mix(vec3(0.42, 0.32, 0.12), vec3(0.3, 0.38, 0.15), rnd);
+            float b1 = abs(q.x - 0.4 + 0.1 * q.y * q.y) - 0.08;  // behind the eye, curving
+            float b2 = abs(q.x + 0.1 - 0.12 * q.y) - 0.11;        // the middle, leaning forward at the top
+            float b3 = abs(q.x + 0.86) - 0.06;                     // at the tail root
+            float b = min(b1, min(b2, b3));
+            return b < 0.0 ? vec3(0.97) : b < 0.035 ? vec3(0.03) : o;
         }
-        vec2 s = fract(q.xz * 4.0) - 0.5;
-        return length(s) < 0.2 ? vec3(0.25, 0.28, 0.15) : vec3(0.48, 0.55, 0.32);
+        float edge = tail ? smoothstep(0.8, 0.88, tk) : pect ? smoothstep(0.62, 0.78, abs(q.x)) : smoothstep(0.72, 0.84, abs(q.y));
+        return mix(o, vec3(0.03), edge);
     }
-    if (kind == 14) { // grouper: brown with darker blotches
-        vec2 s = fract(q.xy * vec2(3.0, 2.5) + rnd) - 0.5;
-        return length(s) < 0.22 ? vec3(0.25, 0.17, 0.1) : vec3(0.5, 0.36, 0.22);
+    if (kind == 1) { // blue tang: royal blue, the black "palette" mark with a blue window, yellow tail
+        vec3 blue = vec3(0.08, 0.3, 0.95), black = vec3(0.02, 0.03, 0.08), yellow = vec3(1.0, 0.85, 0.08);
+        if (tail) return abs(q.y) > 0.78 ? black : yellow;
+        if (pect) return yellow;
+        if (dorsal) return q.y > 0.72 ? blue : black;
+        if (anal) return abs(q.y) > 0.72 ? black : blue;
+        float lower = mix(0.18, -0.22, smoothstep(0.6, -0.1, q.x)) + 0.24 * smoothstep(-0.4, -0.95, q.x);
+        bool mark = q.x < 0.58 && q.y > lower && q.y < 0.8;
+        bool window = length((q.xy - vec2(-0.12, 0.42)) / vec2(0.36, 0.15)) < 1.0;
+        return mark && !window ? black : blue;
     }
-    if (kind == 15) return mix(vec3(1.0, 0.45, 0.85), vec3(0.6, 0.4, 1.0), rnd) * (tail ? 0.8 : 1.2); // jellyfish
-    if (kind == 16) return q.y < -0.3 && part == 0 ? vec3(0.82, 0.85, 0.88) : vec3(0.45, 0.5, 0.58); // dolphin
-    if (kind == 18) { // ocean sunfish: silver-grey, mottled, darker fins
-        vec2 s = fract(q.xy * vec2(3.0, 3.5) + rnd) - 0.5;
-        vec3 c = mix(vec3(0.68, 0.7, 0.74), vec3(0.85, 0.86, 0.88), smoothstep(0.3, 0.15, length(s)));
-        return part > 0 ? vec3(0.45, 0.48, 0.52) : c;
+    if (kind == 2) { // yellow tang: all yellow, a little green on the belly, a white spine at the tail root
+        vec3 y = vec3(1.0, 0.86, 0.05);
+        if (part > 0) return y * 0.95;
+        if (q.x < -0.84 && abs(q.y) < 0.08) return vec3(0.95);
+        return mix(y, vec3(0.78, 0.9, 0.15), smoothstep(-0.1, -0.6, q.y) * 0.6);
     }
-    return q.y > 0.25 ? vec3(0.15, 0.3, 0.5) : vec3(0.8, 0.84, 0.9); // sardine
+    if (kind == 3) { // neon tetra: glowing blue line, red rear belly, silvery, see-through fins
+        if (part > 0) return tail && tk < 0.2 && abs(q.y) < 0.3 ? vec3(0.9, 0.2, 0.2) : vec3(0.55, 0.65, 0.85);
+        if (abs(q.y - 0.12) < 0.13 && q.x < 0.6 && q.x > -0.6) return vec3(0.15, 0.85, 1.0) * 1.35;
+        if (q.y < -0.01 && q.y > -0.8 && q.x < 0.15) return vec3(1.0, 0.15, 0.12) * 1.1;
+        return q.y > 0.0 ? vec3(0.55, 0.58, 0.62) : vec3(0.88, 0.88, 0.92);
+    }
+    if (kind == 4) { // angelfish: silver, black bands (one through the eye), orange shoulders, long fins and filaments
+        vec3 silver = vec3(0.86, 0.86, 0.9), black = vec3(0.06), orange = vec3(0.95, 0.42, 0.12);
+        if (fil) return vec3(0.7, 0.82, 1.0);
+        if (tail) return mix(silver, vec3(1.0), 0.3);
+        if (pect) return silver;
+        if (fin) return q.x > 0.6 ? black : abs(fract(q.x * 1.6 + 0.3) - 0.5) < 0.1 ? black * 2.0 : silver * 0.95;
+        float b = min(abs(q.x - 0.62), min(abs(q.x - 0.18), abs(q.x + 0.3)));
+        if (b < 0.07) return black;
+        if (q.x > 0.7) return vec3(0.78, 0.62, 0.45);
+        if (q.y > 0.1 && q.x > -0.3) return mix(silver, orange, smoothstep(0.1, 0.45, q.y));
+        return silver;
+    }
+    if (kind == 5) { // goldfish: deep orange back, golden sides, pale belly
+        if (part > 0) return vec3(1.0, 0.52, 0.1);
+        vec3 c = mix(vec3(1.0, 0.68, 0.15), vec3(0.95, 0.42, 0.04), smoothstep(0.1, 0.7, q.y));
+        c = mix(c, vec3(1.0, 0.82, 0.45), smoothstep(-0.1, -0.7, q.y));
+        return mix(c, vec3(1.0, 0.38, 0.08), smoothstep(0.55, 0.9, q.x) * 0.6);
+    }
+    if (kind == 6) { // betta: blue body, reddish head, huge fins blue at the base going red, pale tips
+        vec3 blue = vec3(0.2, 0.25, 0.95), red = vec3(0.9, 0.12, 0.08);
+        if (rnd > 0.6) { blue = rnd > 0.8 ? vec3(0.1, 0.15, 0.85) : vec3(0.55, 0.1, 0.75); red = blue * 1.3 + 0.05; }
+        if (part == 0) return mix(blue * 0.95, vec3(0.55, 0.15, 0.25), smoothstep(0.45, 0.7, q.x));
+        float away = tail ? tk : pect ? 0.3 : abs(q.y);
+        vec3 c = mix(blue, red, smoothstep(0.1, 0.45, away));
+        c *= 0.85 + 0.15 * sin(tail ? q.y * 25.0 : q.x * 25.0); // (streaks)
+        return mix(c, vec3(0.95, 0.85, 0.85), smoothstep(0.85, 1.0, away) * 0.7);
+    }
+    if (kind == 7) { // pufferfish: cream with small black spots, white belly, pink lips, spotted yellowish fins
+        if (part > 0) return vec3(0.8, 0.8, 0.55) * (1.0 - 0.6 * spot(q.xy * 9.0, 0.15));
+        if (q.y < -0.38) return vec3(0.96, 0.95, 0.9);
+        if (q.x > 0.9 && abs(q.y + 0.12) < 0.1) return vec3(0.9, 0.55, 0.55);
+        vec3 c = mix(vec3(0.55, 0.52, 0.42), vec3(0.9, 0.88, 0.78), smoothstep(-0.38, -0.1, q.y));
+        return c * (1.0 - 0.9 * spot(vec2(q.x * 9.0, (q.y + abs(q.z)) * 7.0), 0.14));
+    }
+    if (kind == 8) { // guppy: silver-green front, deep blue back half, a big orange tail with black blotches
+        if (part > 0) {
+            vec3 c = rnd < 0.5 ? vec3(1.0, 0.45, 0.1) : hue(rnd) * 1.05;
+            if (sin(q.x * 13.0 + sin(q.y * 8.0) * 2.0) * sin(q.y * 10.0 + q.x * 5.0) > 0.35) c = vec3(0.05);
+            return tail ? mix(c, vec3(0.8, 0.78, 0.75), smoothstep(0.85, 1.0, tk)) : c;
+        }
+        vec3 c = mix(vec3(0.12, 0.2, 0.55), vec3(0.62, 0.75, 0.78), smoothstep(-0.2, 0.4, q.x));
+        if (q.x < -0.7) c = mix(c, vec3(0.3, 0.75, 0.85), 0.5);
+        return q.y < -0.4 ? mix(c, vec3(0.85, 0.85, 0.88), 0.5) : c;
+    }
+    if (kind == 9) { // discus: cream with a red net pattern, orange face, red-striped fins, clear tail
+        vec3 cream = vec3(0.98, 0.92, 0.85), red = vec3(0.9, 0.22, 0.08);
+        if (tail) return vec3(0.85, 0.86, 0.82);
+        if (fin) return fract(q.x * 9.0) < 0.35 || abs(q.y) > 0.8 ? red : cream;
+        vec3 c = cellEdge(q.xy * vec2(4.0, 5.0) + rnd * 7.0) < 0.12 ? red : cream;
+        return q.x > 0.62 ? mix(c, vec3(1.0, 0.7, 0.45), 0.6) : c;
+    }
+    if (kind == 10) { // mako shark: metallic blue-grey above, a sharp white belly, gill slits
+        vec3 top = vec3(0.3, 0.4, 0.56), belly = vec3(0.93, 0.94, 0.96);
+        if (part > 0) return top * (dorsal ? 0.8 : 0.9);
+        float line = -0.15 + 0.1 * q.x;
+        vec3 c = mix(belly, top, smoothstep(line - 0.06, line + 0.06, q.y));
+        if (q.x > 0.25 && q.x < 0.5 && fract((q.x - 0.25) * 20.0) < 0.2 && abs(q.y + 0.05) < 0.35) c *= 0.6;
+        if (q.x > 0.72 && abs(q.y + 0.38 - (q.x - 0.72) * 0.4) < 0.035) c = vec3(0.15, 0.1, 0.1); // (mouth)
+        return c;
+    }
+    if (kind == 11) { // bluefin tuna: navy back, steel-blue band, silver belly, golden first fin, yellow finlets
+        if (tail) return vec3(0.14, 0.15, 0.2);
+        if (pect) return vec3(0.12, 0.13, 0.18);
+        if (dorsal) return q.x > -0.2 ? vec3(0.7, 0.55, 0.25) : vec3(0.15, 0.16, 0.22);
+        if (anal) return vec3(0.6, 0.6, 0.62);
+        vec3 c = mix(vec3(0.86, 0.89, 0.92), vec3(0.35, 0.45, 0.62), smoothstep(-0.05, 0.15, q.y));
+        c = mix(c, vec3(0.04, 0.07, 0.16), smoothstep(0.3, 0.5, q.y));
+        if (q.x < -0.45 && q.x > -0.92 && abs(q.z) < 0.3 && fract(q.x * 14.0) < 0.45) c = vec3(0.95, 0.85, 0.3);
+        return c;
+    }
+    if (kind == 12) { // manta ray: speckled dark brown on top, white underneath, pale-tipped head fins
+        vec3 top = vec3(0.17, 0.14, 0.11);
+        if (part == 2) return mix(top, vec3(0.88, 0.85, 0.72), smoothstep(0.0, 0.6, q.x));
+        if (part == 0 && q.y < 0.0) return vec3(0.9, 0.9, 0.92);
+        return mix(top, vec3(0.6), step(0.9, hash22(floor(q.xz * 40.0)).x) * 0.6);
+    }
+    if (kind == 13) { // green sea turtle: red-brown shell with streaked plates, cream-netted scaly skin
+        if (part == 0) {
+            if (q.y < -0.25) return vec3(0.9, 0.84, 0.66);
+            vec2 sv = fract(q.xz * vec2(2.2, 2.6)) - 0.5;
+            float streak = 0.5 + 0.5 * sin(atan(sv.y, sv.x) * 9.0 + rnd * 5.0);
+            vec3 c = mix(vec3(0.5, 0.22, 0.1), vec3(0.68, 0.4, 0.2), streak * 0.6);
+            return max(abs(sv.x), abs(sv.y)) > 0.44 ? vec3(0.85, 0.72, 0.52) : c;
+        }
+        if (q.y < -0.4) return vec3(0.9, 0.85, 0.7);
+        return cellEdge(vec2(q.x * 4.0, q.z * 4.0 + q.y * 3.0)) < 0.15 ? vec3(0.9, 0.84, 0.68) : vec3(0.45, 0.22, 0.12);
+    }
+    if (kind == 14) { // giant grouper: blue-grey with pale spots on the front, dark fins with yellowish spotted edges
+        if (part > 0) {
+            float edge = tail ? smoothstep(0.6, 0.9, tk) : pect ? smoothstep(0.3, 0.8, abs(q.x)) : smoothstep(0.5, 0.9, abs(q.y));
+            return mix(vec3(0.24, 0.26, 0.3), vec3(0.7, 0.62, 0.3), spot(q.xy * 10.0, 0.18) * edge);
+        }
+        vec3 base = mix(vec3(0.42, 0.47, 0.54), vec3(0.32, 0.36, 0.42), smoothstep(-0.2, 0.6, q.y));
+        return mix(base, vec3(0.86, 0.88, 0.9), spot(q.xy * vec2(9.0, 7.0) + rnd * 3.0, 0.13) * smoothstep(-0.3, 0.3, q.x) * 0.85);
+    }
+    if (kind == 15) { // jellyfish: mostly sea nettles (orange, dark stripes), some pink-purple ones
+        bool nettle = rnd < 0.6;
+        if (part == 1) return nettle ? vec3(0.98, 0.9, 0.86) : vec3(0.9, 0.75, 1.0);
+        if (part == 2) return nettle ? vec3(1.0, 0.55, 0.45) : vec3(0.95, 0.6, 0.95);
+        vec3 bell = nettle ? vec3(1.0, 0.55, 0.22) : mix(vec3(1.0, 0.45, 0.85), vec3(0.6, 0.4, 1.0), rnd);
+        if (nettle && q.y > -0.3 && abs(fract(atan(q.z, q.x) * 2.546) - 0.5) < 0.1) bell = vec3(0.5, 0.1, 0.07);
+        return mix(bell, vec3(1.0, 0.9, 0.85), smoothstep(-0.2, -0.7, q.y)) * 1.15;
+    }
+    if (kind == 16) { // dolphin: dark grey back, lighter sides, pale belly, a smile
+        vec3 dark = vec3(0.36, 0.39, 0.44);
+        if (part > 0) return dark;
+        vec3 c = mix(vec3(0.86, 0.86, 0.88), vec3(0.55, 0.58, 0.63), smoothstep(-0.55, -0.25, q.y));
+        c = mix(c, dark, smoothstep(0.1, 0.5, q.y));
+        if (q.x > 0.78 && abs(q.y + 0.12 + (q.x - 0.78) * 0.3) < 0.025) c *= 0.55;
+        return c;
+    }
+    if (kind == 18) { // ocean sunfish: brownish grey, brown mottling round the head, white specks behind, pale below
+        if (pect) return vec3(0.6, 0.45, 0.25);
+        if (part > 0) return mix(vec3(0.33, 0.31, 0.3), vec3(0.85), spot(q.xy * 12.0, 0.1));
+        if (q.x > 0.9 && abs(q.y + 0.12) < 0.1) return vec3(0.85, 0.65, 0.62);
+        float m = sin(q.x * 17.0 + sin(q.y * 13.0) * 2.0) * sin(q.y * 15.0 + q.x * 7.0);
+        vec3 upper = mix(vec3(0.5, 0.47, 0.44), vec3(0.34, 0.24, 0.16), step(0.2, m) * smoothstep(-0.2, 0.3, q.x));
+        upper = mix(upper, vec3(0.88, 0.87, 0.84), spot(q.xy * vec2(11.0, 13.0), 0.12) * smoothstep(0.2, -0.3, q.x));
+        return mix(vec3(0.9, 0.88, 0.83), upper, smoothstep(-0.2, 0.15, q.y));
+    }
+    if (kind == 19) { // basking shark: mottled grey-brown, its huge mouth gaping (white gill rakers), long gill slits
+        vec3 c = mix(vec3(0.62, 0.6, 0.57), vec3(0.42, 0.4, 0.38), smoothstep(-0.4, 0.3, q.y));
+        if (part > 0) return c * 0.85;
+        c *= 0.9 + 0.1 * sin(q.x * 40.0 + sin(q.y * 20.0) * 3.0);
+        float m = length((q.xy - vec2(0.95, -0.25)) / vec2(0.22, 0.32));
+        if (m < 1.0) return fract(q.x * 22.0) < 0.4 ? vec3(0.85, 0.83, 0.8) : vec3(0.2, 0.1, 0.1);
+        if (m < 1.12) return vec3(0.8, 0.6, 0.58);
+        if (q.x > 0.05 && q.x < 0.55 && fract((q.x - 0.05) * 10.0) < 0.15 && abs(q.y) < 0.85) c *= 0.5;
+        return c;
+    }
+    // sardine: dark blue-green back, bright silver sides, golden tail and back fin
+    if (tail || dorsal) return vec3(0.85, 0.78, 0.5);
+    if (fin) return vec3(0.85, 0.85, 0.82);
+    vec3 c = mix(vec3(0.86, 0.88, 0.92), vec3(0.16, 0.27, 0.38), smoothstep(0.1, 0.4, q.y));
+    return q.x > 0.45 && q.x < 0.62 && abs(q.y) < 0.5 ? mix(c, vec3(0.8, 0.7, 0.45), 0.35) : c;
+}
+
+// how big a fish's eye is, against the usual
+float eyeScale(int kind) {
+    return kind == 7 ? 1.3 : kind == 18 ? 1.25 : kind == 3 || kind == 17 ? 1.2 : kind == 19 ? 0.6 : kind == 10 ? 0.8 : 1.0;
+}
+
+// the ring round a fish's pupil
+vec3 eyeRing(int kind) {
+    if (kind == 10 || kind == 16 || kind == 19 || kind == 1) return vec3(0.05);
+    if (kind == 9 || kind == 4) return vec3(0.75, 0.2, 0.08);
+    if (kind == 3) return vec3(0.3, 0.8, 0.7);
+    if (kind == 18 || kind == 17 || kind == 8) return vec3(0.9, 0.9, 0.88);
+    if (kind == 7) return vec3(0.35, 0.45, 0.5);
+    if (kind == 0) return vec3(0.9, 0.4, 0.05);
+    return vec3(0.95, 0.9, 0.6);
 }
 
 // One part of a fish, in the fish's own frame (x forward, y up, z sideways): where, its radii, how it's turned
@@ -309,7 +460,8 @@ Part fishPart(int kind, Species sp, int j, float swing, float flap) {
         if (j == 0) return Part(vec3(0.0), b, 0.0, 0.0, 0);
         if (j <= 4) { float a = float(j) * 1.5708;
             return Part(vec3(b.x * 0.45 * cos(a) + 0.03 * swing, -b.y - tl.y * 0.7, b.z * 0.45 * sin(a)), tl, 0.0, 0.08 * swing * (float(j) - 2.5), 1); }
-        return Part(vec3(0.0), vec3(0.0), 0.0, 0.0, 0);
+        { float a = float(j) * 1.5708 + 0.785; // long thin tentacles from the rim
+            return Part(vec3(b.x * 0.85 * cos(a) + 0.05 * swing, -b.y - tl.y * 0.95, b.z * 0.85 * sin(a)), vec3(0.018, tl.y * 1.15, 0.018), 0.0, 0.1 * swing * (float(j) - 6.5), 2); }
     }
     if (kind == 12) { // manta ray: wide body, long thin tail, two head fins
         if (j == 0) return Part(vec3(0.0), b, 0.0, 0.0, 0);
@@ -402,19 +554,20 @@ float sdStar5(vec2 p, float r, float rf) {
 vec4 fishShape(int kind) {
     if (kind == 0) return vec4(0.55, 0.5, 0.0, 0.6);
     if (kind == 1) return vec4(0.5, 0.45, 1.0, 0.8);
-    if (kind == 2) return vec4(0.5, 0.4, 0.0, 1.0);
+    if (kind == 2) return vec4(0.5, 0.4, 0.0, 1.8);
     if (kind == 3) return vec4(0.55, 0.5, 1.0, 0.7);
-    if (kind == 4) return vec4(0.5, 0.55, 1.0, 1.4);
+    if (kind == 4) return vec4(0.5, 0.55, 1.0, 2.6);
     if (kind == 5) return vec4(0.55, 0.55, 1.0, 0.6);
-    if (kind == 6) return vec4(0.62, 0.5, 0.0, 1.5);
+    if (kind == 6) return vec4(0.62, 0.5, 0.0, 3.5);
     if (kind == 7) return vec4(0.5, 0.5, 0.0, 0.0);
     if (kind == 8) return vec4(0.62, 0.5, 0.0, 0.4);
-    if (kind == 9) return vec4(0.5, 0.6, 0.0, 1.0);
+    if (kind == 9) return vec4(0.5, 0.6, 0.0, 0.8);
     if (kind == 10) return vec4(0.62, 0.35, 2.0, 0.35);
     if (kind == 11) return vec4(0.55, 0.35, 1.0, 0.5);
     if (kind == 14) return vec4(0.55, 0.55, 0.0, 0.7);
     if (kind == 16) return vec4(0.6, 0.4, 3.0, 0.0);
     if (kind == 18) return vec4(0.45, 0.7, 0.0, 1.7);
+    if (kind == 19) return vec4(0.6, 0.35, 2.0, 0.35);
     return vec4(0.55, 0.4, 1.0, 0.5);
 }
 
@@ -438,12 +591,15 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
     float se = 0.81;
     float ue = (se - sh.x) / (1.0 - sh.x);
     float we = W * pow(max(1.0 - ue * ue, 0.0), sh.y);
-    float eyeR = H * 0.13;
+    float eyeR = H * 0.13 * eyeScale(kind);
     float eye = length(vec3(p.x - L * 0.62, p.y - H * 0.22, abs(p.z) - we * 0.8)) - eyeR;
-    if (kind != 10 && kind != 16) {
+    if (kind != 10 && kind != 16 && kind != 19) {
         body = smin(body, eye, eyeR * 0.7);
     }
-    body = max(body, -sdEllipsoid(p - vec3(L * 1.0, -H * 0.12, 0.0), vec3(L * 0.08, H * 0.05, W * 0.7)));
+    vec3 mc = vec3(L * 1.0, -H * 0.12, 0.0), mr = vec3(L * 0.08, H * 0.05, W * 0.7);
+    if (kind == 14) mr = vec3(L * 0.12, H * 0.1, W * 0.8); // (the grouper's big mouth)
+    if (kind == 19) { mc = vec3(L * 0.95, -H * 0.25, 0.0); mr = vec3(L * 0.2, H * 0.3, W * 0.7); } // (gaping)
+    body = max(body, -sdEllipsoid(p - mc, mr));
     float res = body, best = body;
     ptype = 0;
     q = p / sp.body;
@@ -490,12 +646,12 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
         res = smin(res, anal, 0.04 * L);
         if (anal < best) {
             best = anal; ptype = 2;
-            q = vec3(kx * 2.0 - 1.0, -clamp((-p.y - h) / max(dh, 0.001), 0.0, 1.0), 0.0);
+            q = vec3(kx * 2.0 - 1.0, -clamp((-p.y - h) / max(dh, 0.001), 0.0, 1.0), -1.0);
         }
     }
     // side fins, paddling
-    if (kind != 7 && kind != 8) {
-        float big = kind == 10 || kind == 16 ? 1.7 : 1.0;
+    if (kind != 8) {
+        float big = kind == 10 || kind == 16 || kind == 19 ? 1.7 : 1.0;
         vec3 pp = vec3(p.x - L * 0.3, p.y + H * 0.35, abs(p.z) - W * 0.85);
         float a = 0.7 + 0.25 * flap;
         vec3 lq = vec3(pp.x * cos(a) - pp.z * sin(a), pp.y, pp.x * sin(a) + pp.z * cos(a));
@@ -503,7 +659,16 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
         res = smin(res, pect, 0.02 * L);
         if (pect < best) {
             best = pect; ptype = 2;
-            q = vec3(lq.x / (L * 0.2 * big), 0.0, 0.0);
+            q = vec3(lq.x / (L * 0.2 * big), 0.0, 2.0);
+        }
+    }
+    if (kind == 4) { // the angelfish's two long filaments, hanging down from its chest
+        vec3 fp = vec3(p.x, p.y, abs(p.z));
+        float fil = sdCapsule(fp, vec3(L * 0.3, -H * 0.55, W * 0.25), vec3(-L * 0.1 + 0.05 * L * sin(wave * 0.5), -H * 2.0, W * 0.4), 0.006);
+        res = min(res, fil);
+        if (fil < best) {
+            best = fil; ptype = 2;
+            q = vec3(0.0, 0.0, 3.0);
         }
     }
     return res;
@@ -631,14 +796,15 @@ int pickKind(float r) {
         return int(r * 9.999);
     }
     // the ocean: more sardines and tuna than sharks
-    if (r < 0.1) return 10;
-    if (r < 0.23) return 11;
-    if (r < 0.31) return 12;
-    if (r < 0.42) return 13;
-    if (r < 0.52) return 14;
-    if (r < 0.61) return 15;
-    if (r < 0.68) return 16;
-    if (r < 0.75) return 18;
+    if (r < 0.09) return 10;
+    if (r < 0.21) return 11;
+    if (r < 0.28) return 12;
+    if (r < 0.38) return 13;
+    if (r < 0.47) return 14;
+    if (r < 0.56) return 15;
+    if (r < 0.63) return 16;
+    if (r < 0.70) return 18;
+    if (r < 0.76) return 19;
     return 17;
 }
 
@@ -722,9 +888,10 @@ void main() {
         float size = (Ocean > 0.5 ? 0.75 : 0.65) + 0.5 * hash11(fi * 3.1);
         if (kind == 18) size *= 1.9; // the sunfish is a giant (still made to fit the water it has)
         size = min(size, max(min(reach.x, reach.z) - 0.08, 0.1) / extent);
-        size = min(size, max(reach.y - 0.05, 0.1) / max(sp.body.y + sp.tail.y * (kind == 15 ? 2.0 : 0.0) + (kind == 18 ? sp.fin.y * 0.8 : 0.0), 0.05));
+        float tallH = sp.body.y + (kind == 15 ? sp.tail.y * 2.0 : 0.0) + (kind == 18 ? 0.8 : 0.7) * max(sp.fin.y, sp.body.y * 0.42 * fishShape(kind).w) + (kind == 4 ? sp.body.y * 0.8 : 0.0);
+        size = min(size, max(reach.y - 0.05, 0.1) / max(tallH, 0.05));
         float speed = (0.25 + 0.35 * hash11(fi * 5.7)) * sp.speed;
-        vec3 range = max(reach - vec3(extent * size + 0.06, sp.body.y * size + 0.06, extent * size + 0.06), vec3(0.02));
+        vec3 range = max(reach - vec3(extent * size + 0.06, tallH * size + 0.04, extent * size + 0.06), vec3(0.02));
         float a1 = t * speed + hash11(fi) * 6.2831, a2 = t * speed * 0.73 + hash11(fi + 9.0) * 6.2831;
         float level = middle.y + (hash11(fi * 2.3) * 2.0 - 1.0) * range.y;
         float bob = kind == 15 ? 0.25 * sin(t * 0.6 + fi) : 0.08 * sin(t * 0.7 + fi);
@@ -741,7 +908,9 @@ void main() {
         vec3 side = normalize(cross(fwd, up));
         float wave = t * (7.0 + 4.0 * speed) / max(size * extent * 4.0, 1.0) + fi * 2.0;
         // (a quick test first: does the ray pass near this fish at all?)
-        float reachAll = size * (sp.body.x * 1.3 + sp.tail.x * 2.2 + max(sp.body.z, sp.fin.z) + sp.tail.y * (kind == 15 ? 2.2 : 0.6));
+        float tallest = sp.body.y + max(sp.fin.y * 1.3, sp.body.y * 0.45 * fishShape(kind).w) + (kind == 4 ? sp.body.y : 0.0);
+        float reachAll = size * max(sp.body.x * 1.3 + sp.tail.x * 2.2 + max(sp.body.z, sp.fin.z) + sp.tail.y * (kind == 15 ? 2.2 : 0.6),
+                length(vec2(sp.body.x + sp.tail.x * 2.0, tallest)) + 0.02);
         vec3 oc = rot - c;
         float bq = dot(oc, rd), cq = dot(oc, oc) - reachAll * reachAll;
         float disc = bq * bq - cq;
@@ -792,18 +961,24 @@ void main() {
             vec3 base = fishColour(kind, q, part, rnd);
             // the eye
             bool eyed = kind != 12 && kind != 15 && kind != 13;
-            float eyeD = length(vec2((q.x - 0.7) * 1.4, q.y - 0.2));
-            if (kind == 13) eyeD = length(vec2((q.x - 0.45) * 1.2, q.y - 0.2));
-            if (((eyed && part == 0) || (kind == 13 && part == 1)) && abs(q.z) > 0.55) {
-                if (eyeD < 0.07) base = vec3(0.9);                 // (glint)
-                else if (eyeD < 0.13) base = vec3(0.02);           // pupil
-                else if (eyeD < 0.19) base = kind == 10 || kind == 16 ? vec3(0.05) : vec3(0.95, 0.9, 0.6); // ring
+            if (kind == 13 && part == 1 && abs(q.z) > 0.55) {
+                float eyeD = length(vec2((q.x - 0.45) * 1.2, q.y - 0.2));
+                if (eyeD < 0.13) base = vec3(0.02);
+                else if (eyeD < 0.19) base = vec3(0.6, 0.45, 0.2);
+            }
+            if (eyed && part == 0 && abs(q.z) > 0.55) { // (where the eye bulges out)
+                float er = sp.body.y * eyeScale(kind);
+                vec2 ev = vec2((q.x - 0.62) * sp.body.x, (q.y - 0.22) * sp.body.y) / er;
+                float eyeD = length(ev);
+                if (length(ev - vec2(0.025, 0.035)) < 0.025) base = vec3(0.95); // (glint)
+                else if (eyeD < 0.07) base = vec3(0.02);                       // pupil
+                else if (eyeD < 0.115) base = eyeRing(kind);                    // ring
             }
             if (part >= 1 && kind != 13 && kind != 15) {
                 base *= 0.82 + 0.18 * step(0.45, fract(q.x * 7.0 + q.y * 2.0)); // (fin rays)
                 base = mix(base, vec3(1.0), 0.12);
             }
-            if (part == 0 && kind != 12 && kind != 13 && kind != 15 && kind != 10 && kind != 16) {
+            if (part == 0 && kind != 12 && kind != 13 && kind != 15 && kind != 10 && kind != 16 && kind != 19 && kind != 18) {
                 vec2 sc = vec2(q.x * 14.0, q.y * 9.0 + 0.5 * floor(q.x * 14.0));
                 base *= 0.93 + 0.07 * smoothstep(0.2, 0.45, length(fract(sc) - 0.5)); // (faint scales)
                 if (abs(q.x - 0.5) < 0.03 && abs(q.y) < 0.7) base *= 0.75;          // (gill line)
