@@ -184,3 +184,6 @@
   gill line, rim light, silver shine. Manta/turtle/jellyfish keep the part-based shape.
 - The aquarium "compartments" bug (24 Oct): int(o + 0.5) in water() rounded a word with all 24 bits set (2^24-1) up
   to 2^24 = no bits. Fixed by int(o) (the floats hold exact whole numbers). Ocean sunfish added (kind 18).
+- Aquarium fish colours/shapes redone from the user's photos (fishColour per species; fins tagged by q.z: 0 back,
+  -1 under, 2 side, 3 angelfish filament). New species 19 basking shark (ocean, gaping mouth). Eyes sized per
+  species (eyeScale) and painted where the bulge is. Sunfish ×1.9 size.
