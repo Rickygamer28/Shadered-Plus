@@ -720,8 +720,9 @@ void main() {
         vec3 middle = fishData(i * 2).xyz, reach = fishData(i * 2 + 1).xyz;
         float extent = max(sp.body.x + sp.tail.x * 1.6, max(sp.body.z, sp.fin.z));
         float size = (Ocean > 0.5 ? 0.75 : 0.65) + 0.5 * hash11(fi * 3.1);
+        if (kind == 18) size *= 1.9; // the sunfish is a giant (still made to fit the water it has)
         size = min(size, max(min(reach.x, reach.z) - 0.08, 0.1) / extent);
-        size = min(size, max(reach.y - 0.05, 0.1) / max(sp.body.y + sp.tail.y * (kind == 15 ? 2.0 : 0.0), 0.05));
+        size = min(size, max(reach.y - 0.05, 0.1) / max(sp.body.y + sp.tail.y * (kind == 15 ? 2.0 : 0.0) + (kind == 18 ? sp.fin.y * 0.8 : 0.0), 0.05));
         float speed = (0.25 + 0.35 * hash11(fi * 5.7)) * sp.speed;
         vec3 range = max(reach - vec3(extent * size + 0.06, sp.body.y * size + 0.06, extent * size + 0.06), vec3(0.02));
         float a1 = t * speed + hash11(fi) * 6.2831, a2 = t * speed * 0.73 + hash11(fi + 9.0) * 6.2831;
