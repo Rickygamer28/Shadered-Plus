@@ -178,3 +178,7 @@
   with smin, a teardrop back-body part, the rear bending in a travelling wave); 3D decorations on the floor
   (decoSDF: rock, shell, starfish, castle, coral, chest, anemone, vase; placed by placeDecor, Deco0-23 vec4s);
   no more dark sand patches (they read as shadows).
+- Aquarium round 5 (24 Oct, "better fish models"): regular fish use fishBody: profile body (height/width outline
+  along x per species, fishShape(kind): deepest point, bluntness, tail type, belly fin), bulging eyes, mouth notch,
+  thin 2D-outline tail (fan/forked/shark/dolphin flukes), dorsal + anal fins, paddling pectorals; fin rays, scales,
+  gill line, rim light, silver shine. Manta/turtle/jellyfish keep the part-based shape.

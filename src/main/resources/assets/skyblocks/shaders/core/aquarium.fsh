@@ -391,7 +391,121 @@ float sdStar5(vec2 p, float r, float rf) {
  * p: in the fish's own frame (x forward, y up, z sideways), in species units. ptype / q: the nearest part and the
  * point in that part's coordinates (for its colours).
  */
+// how each fish is shaped: where it is deepest (0 tail root .. 1 nose), how blunt, its tail (0 round / fan,
+// 1 forked, 2 the shark's (forked, top lobe longer), 3 flat flukes sideways (dolphin)), how big its belly fin is
+vec4 fishShape(int kind) {
+    if (kind == 0) return vec4(0.55, 0.5, 0.0, 0.6);
+    if (kind == 1) return vec4(0.5, 0.45, 1.0, 0.8);
+    if (kind == 2) return vec4(0.5, 0.4, 0.0, 1.0);
+    if (kind == 3) return vec4(0.55, 0.5, 1.0, 0.7);
+    if (kind == 4) return vec4(0.5, 0.55, 1.0, 1.4);
+    if (kind == 5) return vec4(0.55, 0.55, 1.0, 0.6);
+    if (kind == 6) return vec4(0.62, 0.5, 0.0, 1.5);
+    if (kind == 7) return vec4(0.5, 0.5, 0.0, 0.0);
+    if (kind == 8) return vec4(0.62, 0.5, 0.0, 0.4);
+    if (kind == 9) return vec4(0.5, 0.6, 0.0, 1.0);
+    if (kind == 10) return vec4(0.62, 0.35, 2.0, 0.35);
+    if (kind == 11) return vec4(0.55, 0.35, 1.0, 0.5);
+    if (kind == 14) return vec4(0.55, 0.55, 0.0, 0.7);
+    if (kind == 16) return vec4(0.6, 0.4, 3.0, 0.0);
+    return vec4(0.55, 0.4, 1.0, 0.5);
+}
+
+/**
+ * A fish's real shape: a body whose height and width follow a fish outline along its length (blunt head, deepest
+ * part, narrowing to the tail root), bulging eyes and a mouth, a thin tail fin (forked, fan, or a shark's), a thin
+ * fin along the back and one underneath, paddling side fins; the back half swinging in a travelling wave.
+ */
+float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int ptype, out vec3 q) {
+    float L = sp.body.x, H = sp.body.y, W = sp.body.z;
+    vec4 sh = fishShape(kind);
+    p.z += 0.2 * L * sin(wave - p.x / L * 2.2) * smoothstep(0.4 * L, -1.9 * L, p.x);
+    // the body's outline at this point along it
+    float s = clamp((p.x + L) / (2.0 * L), 0.0, 1.0);
+    float u = (s - sh.x) / (s < sh.x ? sh.x : 1.0 - sh.x);
+    float prof = pow(max(1.0 - u * u, 0.0), sh.y);
+    float root = smoothstep(0.3, 0.0, s) * 0.22;
+    float h = H * max(prof, root) + 0.002, w = W * max(prof, root * 0.8) + 0.002;
+    float body = max((length(vec2(p.y / h, p.z / w)) - 1.0) * min(h, w), abs(p.x) - L);
+    // eyes, bulging a little, and a small mouth
+    float se = 0.81;
+    float ue = (se - sh.x) / (1.0 - sh.x);
+    float we = W * pow(max(1.0 - ue * ue, 0.0), sh.y);
+    float eyeR = H * 0.13;
+    float eye = length(vec3(p.x - L * 0.62, p.y - H * 0.22, abs(p.z) - we * 0.8)) - eyeR;
+    if (kind != 10 && kind != 16) {
+        body = smin(body, eye, eyeR * 0.7);
+    }
+    body = max(body, -sdEllipsoid(p - vec3(L * 1.0, -H * 0.12, 0.0), vec3(L * 0.08, H * 0.05, W * 0.7)));
+    float res = body, best = body;
+    ptype = 0;
+    q = p / sp.body;
+    // tail fin, behind the tail root
+    float tl = sp.tail.x * 2.0, th = sp.tail.y, thick = max(sp.tail.z, 0.004);
+    float xt = -L * 0.92 - p.x;
+    float kt = clamp(xt / tl, 0.0, 1.0);
+    float across = sh.z > 2.5 ? abs(p.z) : abs(p.y), flat = sh.z > 2.5 ? abs(p.y) : abs(p.z);
+    float span = sh.z > 2.5 ? sp.tail.z : th;
+    if (sh.z > 2.5) thick = max(sp.tail.y * 0.5, 0.004);
+    float outer, inner = -1.0;
+    if (sh.z > 0.5) {
+        outer = span * (0.2 + 0.8 * kt);
+        inner = span * 0.85 * kt * kt;
+        if (sh.z > 1.5 && sh.z < 2.5) { // the shark's: the top lobe longer than the bottom one
+            outer = p.y > 0.0 ? span * (0.2 + 1.0 * kt) : span * (0.2 + 0.55 * kt);
+        }
+    } else {
+        outer = span * (0.25 + 0.75 * sqrt(sin(kt * 1.5708))); // a rounded fan
+    }
+    float tail = max(max(max(across - outer, inner - across), max(-xt, xt - tl)) * 0.7, flat - thick);
+    res = smin(res, tail, 0.05 * L);
+    if (tail < best) {
+        best = tail; ptype = 1;
+        q = vec3(1.0 - 2.0 * kt, p.y / span, p.z / thick);
+    }
+    // the fin along the back (swept back), and one underneath
+    if (sp.fin.x > 0.0) {
+        float fx1 = L * 0.3, fx0 = fx1 - sp.fin.x * 2.2;
+        float kx = clamp((p.x - fx0) / (fx1 - fx0), 0.0, 1.0);
+        float dh = sp.fin.y * pow(sin(kx * 3.1416), 0.7) * (1.25 - 0.5 * kx);
+        float dorsal = max(max(max(p.y - (h * 0.92 + dh), h * 0.55 - p.y), max(fx0 - p.x, p.x - fx1)) * 0.7, abs(p.z) - sp.fin.z);
+        res = smin(res, dorsal, 0.04 * L);
+        if (dorsal < best) {
+            best = dorsal; ptype = 2;
+            q = vec3(kx * 2.0 - 1.0, clamp((p.y - h) / max(dh, 0.001), 0.0, 1.0), 0.0);
+        }
+    }
+    if (sh.w > 0.0) {
+        float ax1 = -L * 0.05, ax0 = -L * 0.65;
+        float kx = clamp((p.x - ax0) / (ax1 - ax0), 0.0, 1.0);
+        float dh = H * 0.35 * sh.w * pow(sin(kx * 3.1416), 0.7) * (1.2 - 0.4 * kx);
+        float anal = max(max(max(-p.y - (h * 0.92 + dh), h * 0.55 + p.y), max(ax0 - p.x, p.x - ax1)) * 0.7, abs(p.z) - max(sp.fin.z, 0.006));
+        res = smin(res, anal, 0.04 * L);
+        if (anal < best) {
+            best = anal; ptype = 2;
+            q = vec3(kx * 2.0 - 1.0, -clamp((-p.y - h) / max(dh, 0.001), 0.0, 1.0), 0.0);
+        }
+    }
+    // side fins, paddling
+    if (kind != 7 && kind != 8) {
+        float big = kind == 10 || kind == 16 ? 1.7 : 1.0;
+        vec3 pp = vec3(p.x - L * 0.3, p.y + H * 0.35, abs(p.z) - W * 0.85);
+        float a = 0.7 + 0.25 * flap;
+        vec3 lq = vec3(pp.x * cos(a) - pp.z * sin(a), pp.y, pp.x * sin(a) + pp.z * cos(a));
+        float pect = sdEllipsoid(lq, vec3(L * 0.2 * big, H * 0.05, W * 0.5 * big));
+        res = smin(res, pect, 0.02 * L);
+        if (pect < best) {
+            best = pect; ptype = 2;
+            q = vec3(lq.x / (L * 0.2 * big), 0.0, 0.0);
+        }
+    }
+    return res;
+}
+
 float fishSDF(int kind, Species sp, vec3 p, float wave, float flap, float pulse, out int ptype, out vec3 q) {
+    if (kind != 12 && kind != 13 && kind != 15) {
+        return fishBody(kind, sp, p, wave, flap, ptype, q);
+    }
     float L = sp.body.x;
     bool bends = kind != 12 && kind != 13 && kind != 15;
     if (bends) {
@@ -638,13 +752,13 @@ void main() {
         int part_ = 0;
         vec3 q = vec3(0.0);
         float tm = t0;
-        for (int s = 0; s < 48; s++) {
+        for (int s = 0; s < 64; s++) {
             float d = fishSDF(kind, sp, lo + ld * (tm / size), wave, flap, pulse, part_, q) * size;
             if (d < 0.0012) {
                 tf = tm;
                 break;
             }
-            tm += max(d * 0.75, 0.0015);
+            tm += max(d * 0.6, 0.0012);
             if (tm > t1) {
                 break;
             }
@@ -676,15 +790,23 @@ void main() {
                 else if (eyeD < 0.13) base = vec3(0.02);           // pupil
                 else if (eyeD < 0.19) base = kind == 10 || kind == 16 ? vec3(0.05) : vec3(0.95, 0.9, 0.6); // ring
             }
-            if (part == 2) {
-                base = mix(base, vec3(1.0), 0.15); // (fins a little lighter, as if thin)
+            if (part >= 1 && kind != 13 && kind != 15) {
+                base *= 0.82 + 0.18 * step(0.45, fract(q.x * 7.0 + q.y * 2.0)); // (fin rays)
+                base = mix(base, vec3(1.0), 0.12);
+            }
+            if (part == 0 && kind != 12 && kind != 13 && kind != 15 && kind != 10 && kind != 16) {
+                vec2 sc = vec2(q.x * 14.0, q.y * 9.0 + 0.5 * floor(q.x * 14.0));
+                base *= 0.93 + 0.07 * smoothstep(0.2, 0.45, length(fract(sc) - 0.5)); // (faint scales)
+                if (abs(q.x - 0.5) < 0.03 && abs(q.y) < 0.7) base *= 0.75;          // (gill line)
             }
             base *= mix(0.8, 1.12, clamp(n.y * 0.5 + 0.5, 0.0, 1.0)); // (darker underneath)
             vec3 p = rot + rd * tf;
             float light = 0.45 + 0.55 * max(n.y, 0.0) + 0.25 * max(dot(n, -rd), 0.0);
             float caust = caustics(p.xz, t) * max(n.y, 0.0) * (p.y / BoxSize.y);
             fishCol = base * light + vec3(0.6, 0.9, 1.0) * caust * 0.5;
-            fishCol += vec3(1.0) * pow(max(dot(reflect(rd, n), vec3(0.0, 1.0, 0.0)), 0.0), 24.0) * (kind == 13 ? 0.15 : 0.4);
+            bool silver = kind == 3 || kind == 11 || kind == 17 || kind == 4;
+            fishCol += vec3(1.0) * pow(max(dot(reflect(rd, n), vec3(0.0, 1.0, 0.0)), 0.0), silver ? 16.0 : 24.0) * (kind == 13 ? 0.15 : silver ? 0.7 : 0.4);
+            fishCol += vec3(0.5, 0.8, 1.0) * pow(1.0 - max(dot(n, -rd), 0.0), 3.0) * 0.25; // (light round the edges, from the water)
             fishAlpha = kind == 15 ? 0.55 : 1.0; // (the jellyfish is see-through)
         }
     }
