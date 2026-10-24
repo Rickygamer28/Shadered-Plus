@@ -204,6 +204,7 @@ Species species(int k) {
     if (k == 14) return Species(vec3(0.55, 0.25, 0.2), vec3(0.15, 0.2, 0.03), vec3(0.3, 0.08, 0.02), 0.5);
     if (k == 15) return Species(vec3(0.25, 0.18, 0.25), vec3(0.06, 0.4, 0.06), vec3(0.0), 0.25);
     if (k == 16) return Species(vec3(0.8, 0.17, 0.17), vec3(0.12, 0.04, 0.28), vec3(0.15, 0.18, 0.03), 1.1);
+    if (k == 18) return Species(vec3(0.5, 0.42, 0.12), vec3(0.05, 0.4, 0.02), vec3(0.14, 0.6, 0.03), 0.35); // ocean sunfish
     return Species(vec3(0.12, 0.035, 0.025), vec3(0.04, 0.035, 0.006), vec3(0.0), 1.5);
 }
 
@@ -271,6 +272,11 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
     }
     if (kind == 15) return mix(vec3(1.0, 0.45, 0.85), vec3(0.6, 0.4, 1.0), rnd) * (tail ? 0.8 : 1.2); // jellyfish
     if (kind == 16) return q.y < -0.3 && part == 0 ? vec3(0.82, 0.85, 0.88) : vec3(0.45, 0.5, 0.58); // dolphin
+    if (kind == 18) { // ocean sunfish: silver-grey, mottled, darker fins
+        vec2 s = fract(q.xy * vec2(3.0, 3.5) + rnd) - 0.5;
+        vec3 c = mix(vec3(0.68, 0.7, 0.74), vec3(0.85, 0.86, 0.88), smoothstep(0.3, 0.15, length(s)));
+        return part > 0 ? vec3(0.45, 0.48, 0.52) : c;
+    }
     return q.y > 0.25 ? vec3(0.15, 0.3, 0.5) : vec3(0.8, 0.84, 0.9); // sardine
 }
 
@@ -408,6 +414,7 @@ vec4 fishShape(int kind) {
     if (kind == 11) return vec4(0.55, 0.35, 1.0, 0.5);
     if (kind == 14) return vec4(0.55, 0.55, 0.0, 0.7);
     if (kind == 16) return vec4(0.6, 0.4, 3.0, 0.0);
+    if (kind == 18) return vec4(0.45, 0.7, 0.0, 1.7);
     return vec4(0.55, 0.4, 1.0, 0.5);
 }
 
@@ -424,7 +431,7 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
     float s = clamp((p.x + L) / (2.0 * L), 0.0, 1.0);
     float u = (s - sh.x) / (s < sh.x ? sh.x : 1.0 - sh.x);
     float prof = pow(max(1.0 - u * u, 0.0), sh.y);
-    float root = smoothstep(0.3, 0.0, s) * 0.22;
+    float root = smoothstep(0.3, 0.0, s) * (kind == 18 ? 0.75 : 0.22); // (the sunfish ends as if cut off)
     float h = H * max(prof, root) + 0.002, w = W * max(prof, root * 0.8) + 0.002;
     float body = max((length(vec2(p.y / h, p.z / w)) - 1.0) * min(h, w), abs(p.x) - L);
     // eyes, bulging a little, and a small mouth
@@ -444,7 +451,7 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
     float tl = sp.tail.x * 2.0, th = sp.tail.y, thick = max(sp.tail.z, 0.004);
     float xt = -L * 0.92 - p.x;
     float kt = clamp(xt / tl, 0.0, 1.0);
-    float across = sh.z > 2.5 ? abs(p.z) : abs(p.y), flat = sh.z > 2.5 ? abs(p.y) : abs(p.z);
+    float across = sh.z > 2.5 ? abs(p.z) : abs(p.y), sideways = sh.z > 2.5 ? abs(p.y) : abs(p.z);
     float span = sh.z > 2.5 ? sp.tail.z : th;
     if (sh.z > 2.5) thick = max(sp.tail.y * 0.5, 0.004);
     float outer, inner = -1.0;
@@ -457,7 +464,7 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
     } else {
         outer = span * (0.25 + 0.75 * sqrt(sin(kt * 1.5708))); // a rounded fan
     }
-    float tail = max(max(max(across - outer, inner - across), max(-xt, xt - tl)) * 0.7, flat - thick);
+    float tail = max(max(max(across - outer, inner - across), max(-xt, xt - tl)) * 0.7, sideways - thick);
     res = smin(res, tail, 0.05 * L);
     if (tail < best) {
         best = tail; ptype = 1;
@@ -625,12 +632,13 @@ int pickKind(float r) {
     }
     // the ocean: more sardines and tuna than sharks
     if (r < 0.1) return 10;
-    if (r < 0.25) return 11;
-    if (r < 0.33) return 12;
-    if (r < 0.45) return 13;
-    if (r < 0.56) return 14;
-    if (r < 0.66) return 15;
-    if (r < 0.74) return 16;
+    if (r < 0.23) return 11;
+    if (r < 0.31) return 12;
+    if (r < 0.42) return 13;
+    if (r < 0.52) return 14;
+    if (r < 0.61) return 15;
+    if (r < 0.68) return 16;
+    if (r < 0.75) return 18;
     return 17;
 }
 
