@@ -166,7 +166,7 @@
   "message.skyblocks.rgb_on": "RGB: on",
   "message.skyblocks.rgb_off": "RGB: off",
   "block.skyblocks.wall_fire": "Wall Fire",
-  "tooltip.skyblocks.wall_fire": "Joins side by side. Right-click: on / off. Dye: flame colour. Sneak + right-click: RGB. Dances to music",
+  "tooltip.skyblocks.wall_fire": "A floating glass fire box. Joins side by side. Right-click: on / off. Dye: flame colour. Sneak + right-click: RGB. Dances to music",
   "block.skyblocks.neon_sign": "Neon Sign",
   "tooltip.skyblocks.neon_sign": "Right-click: text, colour, glow, size, background. Signs side by side or stacked join into one panel",
   "screen.skyblocks.neon_sign": "Neon Sign",
@@ -179,5 +179,7 @@
   "screen.skyblocks.neon_mode_rainbow": "Glow: Rainbow",
   "screen.skyblocks.neon_background": "Background (the whole joined panel)",
   "block.skyblocks.big_lava_lamp": "Big Lava Lamp",
-  "tooltip.skyblocks.big_lava_lamp": "Two blocks tall"
+  "tooltip.skyblocks.big_lava_lamp": "Two blocks tall",
+  "block.skyblocks.brick_hearth": "Brick Hearth",
+  "tooltip.skyblocks.brick_hearth": "2 wide, 2 tall. Right-click: on / off. Dye: flame colour. Sneak + right-click: RGB. Dances to music"
 }

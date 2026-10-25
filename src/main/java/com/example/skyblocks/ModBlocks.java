@@ -101,6 +101,12 @@ public final class ModBlocks {
                     .lightLevel(state -> state.getValue(WallFireBlock.LIT) ? 13 : 0)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
 
+    /** A classic brick hearth, 2 wide and 2 tall (BrickHearthBlock, client/WallFireRenderer). */
+    public static final DeferredBlock<BrickHearthBlock> BRICK_HEARTH = BLOCKS.registerBlock("brick_hearth", BrickHearthBlock::new,
+            BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.STONE).noOcclusion().requiresCorrectToolForDrops()
+                    .lightLevel(state -> state.getValue(BrickHearthBlock.LIT) ? 15 : 0)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BROWN));
+
     /** A neon sign: your own glowing text on a clear panel (NeonSignBlock, client/NeonSignRenderer). */
     public static final DeferredBlock<NeonSignBlock> NEON_SIGN = BLOCKS.registerBlock("neon_sign", NeonSignBlock::new,
             BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS).noOcclusion().noCollission().lightLevel(state -> 8)

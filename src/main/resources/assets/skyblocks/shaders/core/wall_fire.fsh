@@ -3,7 +3,9 @@
 // Shadered+'s wall fire (our own code): behind glass, a row of white stones and a long ribbon of flame dancing over
 // them - nearly white at the base, the flame's colour above, dark tips; taller with the music's beat.
 
-in vec2 uv;
+in vec2 uvIn;
+vec2 uv;     // (uvIn, without the free-flames flag)
+float cut;   // free flames (the hearth): no back, no bed, see-through round the flames
 in vec4 vColor;
 
 uniform float FireTime;
@@ -39,6 +41,8 @@ vec2 flame(float s, float fh, float t, float seed) {
 }
 
 void main() {
+    cut = uvIn.y > 5.0 ? 1.0 : 0.0;
+    uv = vec2(uvIn.x, uvIn.y - 10.0 * cut);
     float s = uv.x;
     float h = (uv.y - 4.3 / 16.0) / (7.4 / 16.0); // 0 at the bottom of the opening .. 1 at the top
     float on = vColor.a > 0.5 ? 1.0 : 0.0;
@@ -65,7 +69,7 @@ void main() {
     }
 
     // the bed: chunks of fire glass in front of the flames' base - facets catching the light
-    if (h < bedTop + 0.04) {
+    if (cut < 0.5 && h < bedTop + 0.04) {
         vec2 q = vec2(s * 15.0, h * 15.0 * 7.4 / 16.0 * 1.5);
         vec2 id = floor(q), fq = fract(q);
         float d1 = 9.0, d2 = 9.0;
@@ -95,6 +99,14 @@ void main() {
     }
 
     // the glass: a faint slanted reflection, a little brighter towards the top
+    if (cut > 0.5) {
+        float a = clamp(max(col.r, max(col.g, col.b)) * 2.4 - 0.75, 0.0, 1.0);
+        if (a < 0.02) {
+            discard;
+        }
+        fragColor = vec4(col, a);
+        return;
+    }
     col += vec3(0.06 + 0.03 * h) * smoothstep(0.06, 0.0, abs(fract(s * 0.35 + uv.y * 0.8) - 0.5) - 0.2);
     fragColor = vec4(col, 1.0);
 }

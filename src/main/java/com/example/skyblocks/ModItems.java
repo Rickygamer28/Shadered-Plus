@@ -58,6 +58,7 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> LAVA_LAMP = ITEMS.registerSimpleBlockItem("lava_lamp", ModBlocks.LAVA_LAMP);
     public static final DeferredItem<BlockItem> BIG_LAVA_LAMP = ITEMS.registerSimpleBlockItem("big_lava_lamp", ModBlocks.BIG_LAVA_LAMP);
     public static final DeferredItem<BlockItem> WALL_FIRE = ITEMS.registerSimpleBlockItem("wall_fire", ModBlocks.WALL_FIRE);
+    public static final DeferredItem<BlockItem> BRICK_HEARTH = ITEMS.registerSimpleBlockItem("brick_hearth", ModBlocks.BRICK_HEARTH);
     public static final DeferredItem<BlockItem> NEON_SIGN = ITEMS.registerSimpleBlockItem("neon_sign", ModBlocks.NEON_SIGN);
 
     public static final DeferredItem<BlockItem> INFINITY_MIRROR = ITEMS.registerSimpleBlockItem("infinity_mirror", ModBlocks.INFINITY_MIRROR);

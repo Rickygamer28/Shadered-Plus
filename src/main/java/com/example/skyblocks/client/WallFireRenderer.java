@@ -56,6 +56,20 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
                         .setWriteMaskState(COLOR_DEPTH_WRITE)
                         .setCullState(CULL)
                         .createCompositeState(false));
+        /** Free flames (the hearth): see-through round the flames, drawn after the solid blocks. */
+        static final RenderType FREE = create("skyblocks_hearth_fire", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 4096,
+                false, true, CompositeState.builder()
+                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setTexturingState(new TexturingStateShard("skyblocks_hearth_fire_time", () -> {
+                            if (shader != null) {
+                                shader.safeGetUniform("FireTime").set(LavaLampRenderer.seconds());
+                                shader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.2F, 1.0F));
+                            }
+                        }, () -> {}))
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .setWriteMaskState(COLOR_WRITE)
+                        .setCullState(NO_CULL)
+                        .createCompositeState(false));
 
         private Types() {
             super("", DefaultVertexFormat.POSITION, VertexFormat.Mode.QUADS, 0, false, false, () -> {}, () -> {});
@@ -63,6 +77,28 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
     }
 
     public WallFireRenderer(BlockEntityRendererProvider.Context context) {}
+
+    /** A quad facing -z (north) from xa (its left as seen from the north) to xb; uv across sa..sb, up ua..ub. */
+    private static void quad(VertexConsumer vc, Matrix4f m, float xa, float xb, float y0, float y1, float z, float sa, float sb,
+                             float ua, float ub, int r, int g, int b, int a) {
+        vc.addVertex(m, xa, y0, z).setColor(r, g, b, a).setUv(sa, ua);
+        vc.addVertex(m, xb, y0, z).setColor(r, g, b, a).setUv(sb, ua);
+        vc.addVertex(m, xb, y1, z).setColor(r, g, b, a).setUv(sb, ub);
+        vc.addVertex(m, xa, y1, z).setColor(r, g, b, a).setUv(sa, ub);
+    }
+
+    /** A quad in the plane x = x, from za (its left as seen from outside) to zb. */
+    private static void side(VertexConsumer vc, Matrix4f m, float x, float za, float zb, float y0, float y1, float sa, float sb,
+                             float ua, float ub, int r, int g, int b, int a) {
+        vc.addVertex(m, x, y0, za).setColor(r, g, b, a).setUv(sa, ua);
+        vc.addVertex(m, x, y0, zb).setColor(r, g, b, a).setUv(sb, ua);
+        vc.addVertex(m, x, y1, zb).setColor(r, g, b, a).setUv(sb, ub);
+        vc.addVertex(m, x, y1, za).setColor(r, g, b, a).setUv(sa, ub);
+    }
+
+    public net.minecraft.world.phys.AABB getRenderBoundingBox(GlowColourBlockEntity be) {
+        return new net.minecraft.world.phys.AABB(be.getBlockPos()).inflate(1.0);
+    }
 
     @Override
     public void render(GlowColourBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
@@ -83,26 +119,38 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
             default -> 0.0F;
         }));
         poseStack.translate(-0.5, 0.0, -0.5);
-        // in the north-facing frame: the glass at z = 9.2/16 between the steel lips, the opening between the end caps
-        float x0 = state.getValue(WallFireBlock.RIGHT) ? 0.0F : 1.0F / 16.0F;
-        float x1 = state.getValue(WallFireBlock.LEFT) ? 1.0F : 15.0F / 16.0F;
-        float y0 = 4.3F / 16.0F, y1 = 11.7F / 16.0F, z = 9.2F / 16.0F;
-        // along the strip in the world (the same for every fire in a row)
         BlockPos p = be.getBlockPos();
-        float base = switch (facing) {
+        // along the fire in the world (the same for every fire in a row)
+        float base = (switch (facing) {
             case NORTH -> p.getX();
             case SOUTH -> -p.getX() - 1;
             case EAST -> p.getZ();
             default -> -p.getZ() - 1;
-        };
-        float s0 = (base % 4096) + x0, s1 = (base % 4096) + x1;
+        }) % 4096;
         Matrix4f m = poseStack.last().pose();
+        if (state.getBlock() instanceof com.example.skyblocks.BrickHearthBlock) {
+            if (lit) { // two sheets of flame over the logs, the back one a little different
+                VertexConsumer vc = buffers.getBuffer(Types.FREE);
+                for (float z : new float[] {12.6F / 16.0F, 11.0F / 16.0F}) {
+                    float s0 = base + z * 3.0F, s1 = s0 + 2.2F;
+                    quad(vc, m, 26.0F / 16.0F, 6.0F / 16.0F, 5.0F / 16.0F, 18.0F / 16.0F, z, s1, s0, 10.0F + 4.6F / 16.0F, 10.0F + 11.0F / 16.0F, r, g, b, a);
+                }
+            }
+            poseStack.popPose();
+            return;
+        }
+        // the glass box: the front glass between the end posts; the side glass at the ends of a row
+        boolean left = state.getValue(WallFireBlock.LEFT), right = state.getValue(WallFireBlock.RIGHT);
+        float x0 = right ? 0.0F : 0.5F / 16.0F, x1 = left ? 1.0F : 15.5F / 16.0F;
+        float y0 = 5.6F / 16.0F, y1 = 13.4F / 16.0F, u0 = 4.3F / 16.0F, u1 = 11.7F / 16.0F;
         VertexConsumer vc = buffers.getBuffer(Types.FIRE);
-        // facing north (towards -z): seen from the north, x grows to the left
-        vc.addVertex(m, x1, y0, z).setColor(r, g, b, a).setUv(s1, y0);
-        vc.addVertex(m, x0, y0, z).setColor(r, g, b, a).setUv(s0, y0);
-        vc.addVertex(m, x0, y1, z).setColor(r, g, b, a).setUv(s0, y1);
-        vc.addVertex(m, x1, y1, z).setColor(r, g, b, a).setUv(s1, y1);
+        quad(vc, m, x1, x0, y0, y1, 8.15F / 16.0F, base + x1, base + x0, u0, u1, r, g, b, a);
+        if (!left) { // (facing out to the left: +x)
+            side(vc, m, 15.85F / 16.0F, 15.4F / 16.0F, 8.6F / 16.0F, y0, y1, base + 1.0F, base + 1.4F, u0, u1, r, g, b, a);
+        }
+        if (!right) {
+            side(vc, m, 0.15F / 16.0F, 8.6F / 16.0F, 15.4F / 16.0F, y0, y1, base - 0.4F, base, u0, u1, r, g, b, a);
+        }
         poseStack.popPose();
     }
 }

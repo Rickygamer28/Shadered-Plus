@@ -1,0 +1,29 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1.0,
+      "bonus_rolls": 0.0,
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        },
+        {
+          "condition": "minecraft:block_state_property",
+          "block": "skyblocks:brick_hearth",
+          "properties": {
+            "half": "lower",
+            "left": "false"
+          }
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "skyblocks:brick_hearth"
+        }
+      ]
+    }
+  ],
+  "random_sequence": "skyblocks:blocks/brick_hearth"
+}
