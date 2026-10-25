@@ -100,6 +100,40 @@ public class WallFireBlock extends BaseEntityBlock {
         return dir.getAxis().isHorizontal() ? connected(state, level, pos) : state;
     }
 
+    /** This fire and every one joined to it in its row (the whole long fire). */
+    private List<BlockPos> row(Level level, BlockPos pos, BlockState state) {
+        Direction f = state.getValue(FACING);
+        List<BlockPos> out = new java.util.ArrayList<>();
+        out.add(pos);
+        for (Direction d : new Direction[] {f.getClockWise(), f.getCounterClockWise()}) {
+            BlockPos p = pos.relative(d);
+            for (int i = 0; i < 64 && joins(level.getBlockState(p), f); i++) {
+                out.add(p);
+                p = p.relative(d);
+            }
+        }
+        return out;
+    }
+
+    /** A new fire added to a row takes the row's colour, RGB and on / off. */
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable net.minecraft.world.entity.LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (level.isClientSide || !(level.getBlockEntity(pos) instanceof GlowColourBlockEntity be)) {
+            return;
+        }
+        Direction f = state.getValue(FACING);
+        for (Direction d : new Direction[] {f.getClockWise(), f.getCounterClockWise()}) {
+            BlockState o = level.getBlockState(pos.relative(d));
+            if (joins(o, f) && level.getBlockEntity(pos.relative(d)) instanceof GlowColourBlockEntity other) {
+                be.setColour(other.colour());
+                be.setRgb(other.rgb());
+                level.setBlock(pos, level.getBlockState(pos).setValue(LIT, o.getValue(LIT)), Block.UPDATE_ALL);
+                return;
+            }
+        }
+    }
+
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
                                               InteractionHand hand, BlockHitResult hit) {
@@ -107,7 +141,11 @@ public class WallFireBlock extends BaseEntityBlock {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
         if (!level.isClientSide) {
-            be.setColour(dye.getDyeColor().getTextureDiffuseColor());
+            for (BlockPos p : row(level, pos, state)) { // (the whole long fire takes the colour)
+                if (level.getBlockEntity(p) instanceof GlowColourBlockEntity other) {
+                    other.setColour(dye.getDyeColor().getTextureDiffuseColor());
+                }
+            }
             if (!player.getAbilities().instabuild) {
                 stack.shrink(1);
             }
@@ -121,12 +159,21 @@ public class WallFireBlock extends BaseEntityBlock {
         if (!level.isClientSide) {
             if (player.isShiftKeyDown()) {
                 if (level.getBlockEntity(pos) instanceof GlowColourBlockEntity be) {
-                    be.setRgb(!be.rgb());
-                    player.displayClientMessage(Component.translatable(be.rgb() ? "message.skyblocks.rgb_on" : "message.skyblocks.rgb_off")
+                    boolean rgb = !be.rgb();
+                    for (BlockPos p : row(level, pos, state)) {
+                        if (level.getBlockEntity(p) instanceof GlowColourBlockEntity other) {
+                            other.setRgb(rgb);
+                        }
+                    }
+                    player.displayClientMessage(Component.translatable(rgb ? "message.skyblocks.rgb_on" : "message.skyblocks.rgb_off")
                             .withStyle(ChatFormatting.LIGHT_PURPLE), true);
                 }
             } else {
-                level.setBlock(pos, state.cycle(LIT), Block.UPDATE_ALL);
+                boolean lit = !state.getValue(LIT);
+                for (BlockPos p : row(level, pos, state)) {
+                    BlockState o = level.getBlockState(p);
+                    level.setBlock(p, o.setValue(LIT, lit), Block.UPDATE_ALL);
+                }
                 level.playSound(null, pos, state.getValue(LIT) ? SoundEvents.FIRE_EXTINGUISH : SoundEvents.FLINTANDSTEEL_USE,
                         SoundSource.BLOCKS, 0.5F, 1.0F);
             }

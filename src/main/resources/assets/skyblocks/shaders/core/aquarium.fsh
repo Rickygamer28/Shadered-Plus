@@ -1105,6 +1105,22 @@ float fishSDF(int kind, Species sp, vec3 p, float wave, float flap, float pulse,
  * A decoration on the bottom (p: from its base, y up, in its own units). 0 rock, 1 shell, 2 starfish, 3 castle,
  * 4 coral, 5 treasure chest, 6 sea anemone, 7 old vase.
  */
+// the clam's parts: lower shell, upper shell (opened round the hinge), flesh, pearl
+vec4 clamParts(vec3 p, float t) {
+    float open = 0.28 + 0.24 * sin(t * 0.45);
+    float rim = 0.005 * sin(atan(p.z, p.x + 0.11) * 12.0);
+    float lowOut = sdEllipsoid(p - vec3(0.0, 0.04, 0.0), vec3(0.12, 0.045, 0.09));
+    float low = max(abs(lowOut + 0.006) - 0.006, p.y - 0.04 - rim);
+    vec3 h = p - vec3(-0.11, 0.04, 0.0);
+    h.xy = mat2(cos(open), sin(open), -sin(open), cos(open)) * h.xy;
+    float rimU = 0.005 * sin(atan(h.z, h.x) * 12.0);
+    float upOut = sdEllipsoid(h - vec3(0.11, 0.0, 0.0), vec3(0.12, 0.038, 0.09));
+    float up = max(abs(upOut + 0.006) - 0.006, -h.y + rimU);
+    float flesh = sdEllipsoid(p - vec3(0.0, 0.024, 0.0), vec3(0.092, 0.012, 0.068));
+    float pearl = length(p - vec3(0.025, 0.052, 0.0)) - 0.017;
+    return vec4(low, up, flesh, pearl);
+}
+
 float decoSDF(int type, vec3 p, float t) {
     if (type == 8) { // a sunken ship: a broken, tilted wooden hull half in the sand, its mast snapped
         vec3 s = p;
@@ -1137,16 +1153,9 @@ float decoSDF(int type, vec3 p, float t) {
         d = min(d, length(vec2(length(p.zy - vec2(0.0, 0.16)) - 0.035, abs(p.x) - 0.118)) - 0.009);
         return max(d, -p.y);
     }
-    if (type == 11) { // a giant clam, opening and closing: wavy shells, a blue mantle inside, a pearl
-        float open = 0.22 + 0.2 * sin(t * 0.45);
-        float rim = 0.006 * sin(atan(p.z, p.x + 0.11) * 10.0);
-        float low = max(sdEllipsoid(p - vec3(0.0, 0.035, 0.0), vec3(0.12, 0.045, 0.09)) - rim, p.y - 0.035);
-        vec3 h = p - vec3(-0.11, 0.035, 0.0);
-        h.xy = mat2(cos(open), sin(open), -sin(open), cos(open)) * h.xy;
-        float up = max(sdEllipsoid(h - vec3(0.11, 0.0, 0.0), vec3(0.12, 0.04, 0.09)) - rim, -h.y);
-        float mantle = sdEllipsoid(p - vec3(0.0, 0.04, 0.0), vec3(0.1, 0.018, 0.074));
-        float pearl = length(p - vec3(0.025, 0.06, 0.0)) - 0.017;
-        return max(min(min(low, up), min(mantle, pearl)), -p.y);
+    if (type == 11) { // a clam opening and closing: two thin wavy shells hinged at the back, pearly inside, soft flesh, a pearl
+        vec4 c = clamParts(p, t);
+        return max(min(min(c.x, c.y), min(c.z, c.w)), -p.y);
     }
     if (type == 0) {
         float d = sdEllipsoid(p - vec3(0.0, 0.07, 0.0), vec3(0.2, 0.13, 0.16));
@@ -1212,13 +1221,20 @@ vec3 decoColour(int type, vec3 p, vec3 n, float rnd) {
         }
         return mix(vec3(0.78, 0.56, 0.22), vec3(0.3, 0.55, 0.42), smoothstep(0.55, 0.75, fbm(p.xz * 18.0 + p.y * 9.0)) * 0.7);
     }
-    if (type == 11) { // white wavy shells, a bright blue-purple speckled mantle, a white pearl
-        if (length(p - vec3(0.025, 0.06, 0.0)) < 0.02) return vec3(0.98, 0.96, 0.95);
-        if (length(vec2(p.x / 0.1, p.z / 0.074)) < 0.92 && abs(p.y - 0.04) < 0.02) {
-            vec3 m = mix(vec3(0.1, 0.35, 0.95), vec3(0.55, 0.2, 0.85), fbm(p.xz * 30.0 + rnd * 4.0));
-            return mix(m, vec3(0.3, 0.95, 0.85), spot(p.xz * 90.0, 0.15) * 0.7) * 1.2;
+    if (type == 11) { // the clam: ridged cream-pink shells outside, pearly (nacre) inside, pink flesh, a white pearl
+        vec4 c = clamParts(p, gTime);
+        float m = min(min(c.x, c.y), min(c.z, c.w));
+        if (m == c.w) return vec3(0.97, 0.95, 0.96) + vec3(0.25) * pow(max(n.y, 0.0), 12.0);
+        if (m == c.z) return mix(vec3(0.95, 0.62, 0.58), vec3(1.0, 0.78, 0.72), 0.5 + 0.5 * sin(atan(p.z, p.x) * 14.0 + length(p.xz) * 60.0));
+        bool upper = m == c.y;
+        vec3 centre = upper ? vec3(0.0, 0.08, 0.0) : vec3(0.0, 0.04, 0.0);
+        bool inside = dot(n, p - centre) < 0.0;
+        if (inside) { // nacre: pearly white with a soft rainbow sheen
+            float sh = 0.5 + 0.5 * sin(dot(n, vec3(5.0, 7.0, 3.0)) + length(p.xz) * 40.0);
+            return mix(vec3(0.95, 0.93, 0.95), mix(vec3(1.0, 0.85, 0.9), vec3(0.8, 0.9, 1.0), sh), 0.35);
         }
-        return vec3(0.9, 0.88, 0.82) * (0.85 + 0.15 * sin(atan(p.z, p.x + 0.11) * 10.0));
+        float ridge = 0.5 + 0.5 * sin(atan(p.z, p.x + 0.11) * 12.0);
+        return mix(vec3(0.85, 0.78, 0.7), vec3(0.98, 0.85, 0.82), ridge) * (0.9 + 0.1 * fbm(p.xz * 40.0));
     }
     float speck = hash22(floor(p.xz * 60.0) + floor(p.y * 60.0)).x;
     if (type == 0) {
@@ -1528,6 +1544,7 @@ void main() {
     }
 
     // ---- decorations on the bottom (placed on the CPU, from the tank's floor) ----
+    gTime = t;
     bool deco = false;
     vec3 decoCol = vec3(0.0);
     int decoCount = int(DecoCount + 0.5);
@@ -1721,8 +1738,33 @@ void main() {
 
     // ---- night: the tank's lights dimmed to a deep blue; what glows still glows ----
     if (Night > 0.0) {
-        col *= mix(vec3(1.0), vec3(0.22, 0.3, 0.5), Night);
-        if (!deco) col += glow * Night * exp(-max(hitT - tEnter, 0.0) * 0.25);
+        float seen = max(hitT - tEnter, 0.0);
+        col *= mix(vec3(1.0), vec3(0.12, 0.17, 0.34), Night);
+        // faint moonlight coming down from the surface, rippling
+        col += vec3(0.08, 0.13, 0.26) * Night * caustics(entry.xz * 0.7 + vec2(0.0, t * 0.05), t * 0.6) * 0.5;
+        // glowing plankton drifting in the water, twinkling
+        float spark = 0.0;
+        for (int k = 0; k < 8; k++) {
+            float dd = 0.2 + float(k) * 0.45;
+            if (dd > seen) {
+                break;
+            }
+            vec3 sp = entry + rd * dd + vec3(0.0, -t * 0.04, 0.0);
+            vec3 cell = floor(sp * 5.0);
+            vec2 h1 = hash22(cell.xy + cell.z * 7.13);
+            vec2 h2 = hash22(cell.zx + 3.71);
+            if (h2.y > 0.86) {
+                vec3 cp = (cell + 0.2 + 0.6 * vec3(h1, h2.x)) / 5.0 + vec3(0.0, t * 0.04, 0.0);
+                vec3 w = cp - entry;
+                float along = dot(w, rd);
+                float dist = length(w - rd * along);
+                if (along > 0.0 && along < seen) {
+                    spark += smoothstep(0.018, 0.0, dist) * (0.55 + 0.45 * sin(t * 2.5 + h1.x * 40.0));
+                }
+            }
+        }
+        col += vec3(0.25, 0.85, 1.0) * min(spark, 1.5) * Night;
+        if (!deco) col += glow * Night * exp(-seen * 0.25);
     }
 
     // ---- the frame round the tank's edges ----

@@ -80,10 +80,15 @@ public class GlowColourBlockEntity extends BlockEntity {
 
     /** The colour to show now (RGB mode: cycling, each block a little different). */
     public static int shown(GlowColourBlockEntity be, double seconds) {
+        return shown(be, seconds, true);
+    }
+
+    /** (eachOwn false: every block in step, like a long wall fire.) */
+    public static int shown(GlowColourBlockEntity be, double seconds, boolean eachOwn) {
         if (!be.rgb) {
             return be.colour;
         }
-        float hue = (float) ((seconds * 0.07 + (be.worldPosition.hashCode() & 255) / 255.0) % 1.0);
+        float hue = (float) ((seconds * 0.07 + (eachOwn ? (be.worldPosition.hashCode() & 255) / 255.0 : 0.0)) % 1.0);
         return net.minecraft.util.Mth.hsvToRgb(hue, 0.85F, 1.0F);
     }
 }

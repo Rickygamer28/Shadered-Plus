@@ -58,6 +58,11 @@ public class WaterCausticsBlock extends BaseEntityBlock {
                 && state.getRenderShape() == RenderShape.MODEL && state.isSolidRender(level, pos);
     }
 
+    /** Whether this block can go in (the rain glass also takes see-through full blocks: glass, ice...). */
+    protected boolean holds(BlockState state, Level level, BlockPos pos) {
+        return canHold(state, level, pos);
+    }
+
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
                                               InteractionHand hand, BlockHitResult hit) {
@@ -65,7 +70,7 @@ public class WaterCausticsBlock extends BaseEntityBlock {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
         boolean sky = ShaderedSkyItems.sky(stack) != null; // a Shadered sky block: that sky under the water
-        if (!sky && !(stack.getItem() instanceof BlockItem item && canHold(item.getBlock().defaultBlockState(), level, pos))) {
+        if (!sky && !(stack.getItem() instanceof BlockItem item && holds(item.getBlock().defaultBlockState(), level, pos))) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
         if (ItemStack.isSameItemSameComponents(be.held(), stack)) {

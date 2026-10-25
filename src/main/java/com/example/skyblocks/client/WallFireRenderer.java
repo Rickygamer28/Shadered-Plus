@@ -72,7 +72,7 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         }
         Direction facing = state.getValue(WallFireBlock.FACING);
         boolean lit = state.getValue(WallFireBlock.LIT);
-        int c = GlowColourBlockEntity.shown(be, LavaLampRenderer.seconds());
+        int c = GlowColourBlockEntity.shown(be, LavaLampRenderer.seconds(), false);
         int r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255, a = lit ? 255 : 0;
         poseStack.pushPose();
         poseStack.translate(0.5, 0.0, 0.5);

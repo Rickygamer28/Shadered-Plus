@@ -27,6 +27,13 @@ public class RainGlassBlock extends WaterCausticsBlock {
     }
 
     @Override
+    protected boolean holds(net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
+        return !(state.getBlock() instanceof WaterCausticsBlock) && !state.hasBlockEntity()
+                && state.getRenderShape() == net.minecraft.world.level.block.RenderShape.MODEL
+                && net.minecraft.world.level.block.Block.isShapeFullBlock(state.getShape(level, pos));
+    }
+
+    @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.skyblocks.rain_glass").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.skyblocks.water_caustics_clear").withStyle(ChatFormatting.GRAY));

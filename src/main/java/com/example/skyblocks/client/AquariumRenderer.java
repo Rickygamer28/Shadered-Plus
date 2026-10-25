@@ -299,7 +299,7 @@ public final class AquariumRenderer {
             return 0.0;
         }
         double d = (mc.level.getDayTime() % 24000L) + mc.getTimer().getGameTimeDeltaPartialTick(false);
-        return smooth(12300.0, 13800.0, d) * (1.0 - smooth(22300.0, 23800.0, d));
+        return smooth(12000.0, 13000.0, d) * (1.0 - smooth(22800.0, 23700.0, d)); // (dark by 13000, light again by sunrise)
     }
 
     /** Per tank: its own clock for the fish (running slower at night, when they rest), and when last moved on. */
