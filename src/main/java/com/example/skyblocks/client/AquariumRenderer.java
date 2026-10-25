@@ -193,6 +193,7 @@ public final class AquariumRenderer {
         RenderSystem.polygonOffset(-2.0F, -20.0F); // over the blocks' own faces
         try {
             shader.safeGetUniform("Time").set(seconds);
+            shader.safeGetUniform("Night").set((float) night());
             shader.safeGetUniform("Eye").set(eyeOffset.x, eyeOffset.y, eyeOffset.z);
             RenderSystem.setShader(() -> shader);
             for (Floor floor : floors) {
@@ -288,6 +289,22 @@ public final class AquariumRenderer {
         return k * k * (3.0 - 2.0 * k);
     }
 
+    /**
+     * How much it is night (0..1) for the tanks: the hours after sunset to sunrise, in a world with a day; 0 when night
+     * mode is off in the aquarium menu.
+     */
+    static double night() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || !AquariumSettings.nightMode() || mc.level.dimensionType().hasFixedTime()) {
+            return 0.0;
+        }
+        double d = (mc.level.getDayTime() % 24000L) + mc.getTimer().getGameTimeDeltaPartialTick(false);
+        return smooth(12300.0, 13800.0, d) * (1.0 - smooth(22300.0, 23800.0, d));
+    }
+
+    /** Per tank: its own clock for the fish (running slower at night, when they rest), and when last moved on. */
+    private static final Map<Long, double[]> FISH_CLOCK = new HashMap<>();
+
     /** Per tank (by its corner): the fish's dodging offsets and how fast they're changing, and when last moved. */
     private static final Map<Long, double[]> DODGE = new HashMap<>();
 
@@ -296,8 +313,26 @@ public final class AquariumRenderer {
      * (bursts and glides, rising and sinking), schools following their leader, leaning and bending into turns, and
      * easing out of each other's way (the smaller one moving more) instead of swimming through each other.
      */
-    private static void fishFrame(Floor floor, double t) {
+    private static void fishFrame(Floor floor, double tReal) {
         java.util.Arrays.fill(FISH_DATA, 0.0F);
+        // the fish's clock: slower at night (they rest, low in the tank)
+        double night = night();
+        long ck = floor.min.asLong() * 13L + floor.fishCount;
+        double[] clock = FISH_CLOCK.get(ck);
+        if (clock == null) {
+            if (FISH_CLOCK.size() > 256) {
+                FISH_CLOCK.clear();
+            }
+            clock = new double[] {tReal, tReal};
+            FISH_CLOCK.put(ck, clock);
+        }
+        double step = tReal - clock[0];
+        if (step < 0.0 || step > 1.0) {
+            step = 0.0; // (a jump: carry on from here)
+        }
+        clock[0] = tReal;
+        clock[1] += step * (1.0 - 0.6 * night);
+        double t = clock[1];
         float[] r = floor.rnd;
         int n = floor.fishCount;
         double[] px = new double[n], py = new double[n], pz = new double[n], vxs = new double[n], vys = new double[n], vzs = new double[n];
@@ -382,6 +417,9 @@ public final class AquariumRenderer {
                 cy += 0.015 * Math.sin(t * 1.3 + fi);
                 cz += 0.03 * Math.cos(t * 1.5 + fi * 1.3);
             }
+            if (night > 0.0 && (kind < 10 || kind == 11 || kind == 14 || kind == 17)) {
+                cy += (my - ry - cy) * 0.65 * night; // (resting low at night)
+            }
             double yRoom = Math.max(qy - tallH * size - 0.04, 0.02);
             px[i] = cx + ox;
             py[i] = clampD(cy + oy + bob, my - yRoom, my + yRoom);
@@ -417,14 +455,14 @@ public final class AquariumRenderer {
                 DODGE.clear();
             }
             st = new double[n * 6 + 1];
-            st[n * 6] = t;
+            st[n * 6] = tReal;
             DODGE.put(key, st);
         }
-        double dt = clampD(t - st[n * 6], 0.0, 0.1);
-        if (t < st[n * 6] - 1.0) {
+        double dt = clampD(tReal - st[n * 6], 0.0, 0.1);
+        if (tReal < st[n * 6] - 1.0) {
             java.util.Arrays.fill(st, 0.0); // (time went backwards: start over)
         }
-        st[n * 6] = t;
+        st[n * 6] = tReal;
         double[] dodgeV = new double[n * 3];
         System.arraycopy(st, n * 3, dodgeV, 0, n * 3); // (drawn again this frame: as it was)
         if (dt > 0.0) {

@@ -77,8 +77,18 @@ public class AquariumScreen extends Screen {
                 .bounds(left() + 12, y, 76, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.aquarium_all_off"), b -> setAll(false))
                 .bounds(left() + 96, y, 76, 20).build());
+        addRenderableWidget(Button.builder(nightLabel(), b -> {
+            AquariumSettings.setNightMode(!AquariumSettings.nightMode());
+            b.setMessage(nightLabel());
+        }).bounds(left() + 180, y, 116, 20).tooltip(Tooltip.create(Component.translatable("screen.skyblocks.aquarium_night_tip"))).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
                 .bounds(left() + PANEL_W - 88, y, 76, 20).build());
+    }
+
+    private static Component nightLabel() {
+        boolean on = AquariumSettings.nightMode();
+        return Component.translatable("screen.skyblocks.aquarium_night")
+                .append(Component.literal(on ? ": On" : ": Off").withStyle(on ? ChatFormatting.GREEN : ChatFormatting.RED));
     }
 
     private void setAll(boolean on) {

@@ -31,6 +31,7 @@ uniform float Full;    // 1: the whole box is water (a box-shaped tank, or too b
 uniform sampler2D FishTex; // per fish, 4 texels (worked out on the CPU each frame): (middle, size), (forward, species), (up, swim wave), (tail beat, turn bend, jellyfish squeeze, -)
 uniform float FishCount;
 uniform float Ocean;
+uniform float Night;   // 0 day .. 1 night: the tank lights dimmed, the jellyfish glowing
 // decorations: (x, y, z of its base, type + 8 * (turn + 16 * size * 10))
 uniform vec4 Deco0;
 uniform vec4 Deco1;
@@ -1266,6 +1267,7 @@ void main() {
     // ---- the fish ----
     int count = int(FishCount + 0.5);
     vec3 fishCol = vec3(0.0);
+    vec3 glow = vec3(0.0); // (light a fish gives off itself: the jellyfish at night)
     bool fish = false;
     float fishAlpha = 1.0;
     vec3 edgeCol = vec3(0.0);
@@ -1451,6 +1453,7 @@ void main() {
                 fish = true;
                 fishCol = shade;
                 fishAlpha = alpha;
+                glow = kind == 15 ? base * (1.3 + 0.5 * pulse) * alpha : kind == 3 && part == 0 && abs(q.y - 0.12) < 0.13 ? vec3(0.1, 0.6, 0.8) : vec3(0.0);
             } else { // (a soft edge: laid over whatever is behind, once that is known)
                 edgeT = tf;
                 edgeCol = shade;
@@ -1649,6 +1652,12 @@ void main() {
     // looking down through the top: the surface ripples catch the light
     if (faceN.y < -0.5) { // (a top face: faceN points into the tank, down)
         col += vec3(0.8, 0.95, 1.0) * caustics(entry.xz * 1.6 + vec2(t * 0.1, 0.0), t * 1.6) * 0.18;
+    }
+
+    // ---- night: the tank's lights dimmed to a deep blue; what glows still glows ----
+    if (Night > 0.0) {
+        col *= mix(vec3(1.0), vec3(0.22, 0.3, 0.5), Night);
+        if (!deco) col += glow * Night * exp(-max(hitT - tEnter, 0.0) * 0.25);
     }
 
     // ---- the frame round the tank's edges ----

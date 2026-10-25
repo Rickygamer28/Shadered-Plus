@@ -18,6 +18,7 @@ public final class AquariumSettings {
             "ocean_sunfish", "basking_shark", "hermit_crab", "crab", "stingray", "octopus", "lobster", "shrimp"};
     private static final boolean[] ENABLED = new boolean[NAMES.length];
     private static boolean loaded;
+    private static boolean nightMode = true;
 
     private AquariumSettings() {}
 
@@ -41,6 +42,7 @@ public final class AquariumSettings {
             for (int i = 0; i < NAMES.length; i++) {
                 ENABLED[i] = !"false".equalsIgnoreCase(p.getProperty(NAMES[i], "true").trim());
             }
+            nightMode = !"false".equalsIgnoreCase(p.getProperty("night_mode", "true").trim());
         } catch (IOException | IllegalArgumentException ignored) {
             // (a broken file: everything on)
         }
@@ -51,10 +53,28 @@ public final class AquariumSettings {
         return kind >= 0 && kind < ENABLED.length && ENABLED[kind];
     }
 
+    /** Whether the tanks go dark at night (their lights dimmed, jellyfish glowing, fish resting). */
+    public static boolean nightMode() {
+        load();
+        return nightMode;
+    }
+
+    public static void setNightMode(boolean on) {
+        load();
+        nightMode = on;
+        save();
+    }
+
     public static void set(int kind, boolean on) {
         load();
         ENABLED[kind] = on;
+        save();
+        AquariumRenderer.settingsChanged();
+    }
+
+    private static void save() {
         Properties p = new Properties();
+        p.setProperty("night_mode", Boolean.toString(nightMode));
         for (int i = 0; i < NAMES.length; i++) {
             p.setProperty(NAMES[i], Boolean.toString(ENABLED[i]));
         }
@@ -63,6 +83,5 @@ public final class AquariumSettings {
         } catch (IOException ignored) {
             // (can't save: it still applies until the game closes)
         }
-        AquariumRenderer.settingsChanged();
     }
 }

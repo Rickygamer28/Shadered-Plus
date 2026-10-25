@@ -158,5 +158,7 @@
   "fish.skyblocks.shrimp": "Shrimp",
   "screen.skyblocks.aquarium_shared": "Also in the other aquarium (one setting for both)",
   "block.skyblocks.rain_glass": "Rain Glass",
-  "tooltip.skyblocks.rain_glass": "Right-click with a block or a sky block to see it behind the wet glass"
+  "tooltip.skyblocks.rain_glass": "Right-click with a block or a sky block to see it behind the wet glass",
+  "screen.skyblocks.aquarium_night": "Night Mode",
+  "screen.skyblocks.aquarium_night_tip": "At night the tank lights dim, jellyfish glow and fish rest near the bottom"
 }
