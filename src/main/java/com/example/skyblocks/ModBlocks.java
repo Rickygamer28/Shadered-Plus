@@ -93,6 +93,11 @@ public final class ModBlocks {
                     .lightLevel(state -> state.getValue(WallFireBlock.LIT) ? 13 : 0)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
 
+    /** A neon sign: your own glowing text on a clear panel (NeonSignBlock, client/NeonSignRenderer). */
+    public static final DeferredBlock<NeonSignBlock> NEON_SIGN = BLOCKS.registerBlock("neon_sign", NeonSignBlock::new,
+            BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS).noOcclusion().noCollission().lightLevel(state -> 8)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PINK));
+
     /** An infinity mirror: a tunnel of LED rings going on forever (InfinityMirrorBlock, client/InfinityMirrorRenderer). */
     public static final DeferredBlock<InfinityMirrorBlock> INFINITY_MIRROR = BLOCKS.registerBlock("infinity_mirror",
             InfinityMirrorBlock::new, BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS)

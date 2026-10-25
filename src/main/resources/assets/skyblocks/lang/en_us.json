@@ -166,5 +166,15 @@
   "message.skyblocks.rgb_on": "RGB: on",
   "message.skyblocks.rgb_off": "RGB: off",
   "block.skyblocks.wall_fire": "Wall Fire",
-  "tooltip.skyblocks.wall_fire": "Joins side by side. Right-click: on / off. Dye: flame colour. Sneak + right-click: RGB. Dances to music"
+  "tooltip.skyblocks.wall_fire": "Joins side by side. Right-click: on / off. Dye: flame colour. Sneak + right-click: RGB. Dances to music",
+  "block.skyblocks.neon_sign": "Neon Sign",
+  "tooltip.skyblocks.neon_sign": "Right-click to write your text and pick its colour, glow and size",
+  "screen.skyblocks.neon_sign": "Neon Sign",
+  "screen.skyblocks.neon_text": "Text",
+  "screen.skyblocks.neon_size": "Size",
+  "screen.skyblocks.neon_hint": "Use | for a new line (up to 3 lines)",
+  "screen.skyblocks.neon_mode_steady": "Glow: Steady",
+  "screen.skyblocks.neon_mode_flicker": "Glow: Flicker",
+  "screen.skyblocks.neon_mode_pulse": "Glow: Pulse",
+  "screen.skyblocks.neon_mode_rainbow": "Glow: Rainbow"
 }

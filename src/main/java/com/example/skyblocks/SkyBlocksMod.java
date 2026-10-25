@@ -57,6 +57,7 @@ public class SkyBlocksMod {
         event.accept(ModItems.RAIN_GLASS.get());
         event.accept(ModItems.LAVA_LAMP.get());
         event.accept(ModItems.WALL_FIRE.get());
+        event.accept(ModItems.NEON_SIGN.get());
         event.accept(ModItems.DANCE_FLOOR.get());
         event.accept(ModItems.DISCO_BALL.get());
         event.accept(ModItems.SPEAKER.get());
@@ -72,6 +73,7 @@ public class SkyBlocksMod {
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
         event.registrar("1").playToServer(ScanIslandPayload.TYPE, ScanIslandPayload.STREAM_CODEC, ScanIslandPayload::handle)
                 .playToServer(FogAreaPayload.TYPE, FogAreaPayload.STREAM_CODEC, FogAreaPayload::handle)
+                .playToServer(NeonSignPayload.TYPE, NeonSignPayload.STREAM_CODEC, NeonSignPayload::handle)
                 .playToClient(IslandMobsPayload.TYPE, IslandMobsPayload.STREAM_CODEC, IslandMobsPayload::handle)
                 .playToClient(com.example.skyblocks.portal.PortalSkiesPayload.TYPE,
                         com.example.skyblocks.portal.PortalSkiesPayload.STREAM_CODEC,

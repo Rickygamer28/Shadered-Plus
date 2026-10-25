@@ -31,6 +31,9 @@ public final class ModBlockEntities {
     public static final Supplier<BlockEntityType<GlowColourBlockEntity>> WALL_FIRE = TYPES.register("wall_fire",
             () -> BlockEntityType.Builder.of(GlowColourBlockEntity::wallFire, ModBlocks.WALL_FIRE.get()).build(null));
 
+    public static final Supplier<BlockEntityType<NeonSignBlockEntity>> NEON_SIGN = TYPES.register("neon_sign",
+            () -> BlockEntityType.Builder.of(NeonSignBlockEntity::new, ModBlocks.NEON_SIGN.get()).build(null));
+
     public static final Supplier<BlockEntityType<WaterCausticsBlockEntity>> WATER_CAUSTICS = TYPES.register("water_caustics",
             () -> BlockEntityType.Builder.of(WaterCausticsBlockEntity::new, ModBlocks.WATER_CAUSTICS.get(), ModBlocks.RAIN_GLASS.get()).build(null));
 
