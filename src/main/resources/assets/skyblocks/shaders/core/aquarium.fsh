@@ -345,7 +345,6 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
         if (anal) return vec3(0.6, 0.6, 0.62);
         vec3 c = mix(vec3(0.86, 0.89, 0.92), vec3(0.35, 0.45, 0.62), smoothstep(-0.05, 0.15, q.y));
         c = mix(c, vec3(0.04, 0.07, 0.16), smoothstep(0.3, 0.5, q.y));
-        if (q.x < -0.45 && q.x > -0.92 && abs(q.z) < 0.3 && fract(q.x * 14.0) < 0.45) c = vec3(0.95, 0.85, 0.3);
         return c;
     }
     if (kind == 12) { // manta ray: speckled dark brown on top, white underneath, pale-tipped head fins
@@ -357,10 +356,10 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
     if (kind == 13) { // green sea turtle: red-brown shell with streaked plates, cream-netted scaly skin
         if (part == 0) {
             if (q.y < -0.25) return vec3(0.9, 0.84, 0.66);
-            vec2 sv = fract(q.xz * vec2(2.2, 2.6)) - 0.5;
-            float streak = 0.5 + 0.5 * sin(atan(sv.y, sv.x) * 9.0 + rnd * 5.0);
-            vec3 c = mix(vec3(0.5, 0.22, 0.1), vec3(0.68, 0.4, 0.2), streak * 0.6);
-            return max(abs(sv.x), abs(sv.y)) > 0.44 ? vec3(0.85, 0.72, 0.52) : c;
+            float e = cellEdge(q.xz * vec2(2.0, 2.4) + rnd * 3.0);
+            float streak = 0.5 + 0.5 * sin(q.x * 31.0 + sin(q.z * 9.0) * 3.0);
+            vec3 c = mix(vec3(0.48, 0.21, 0.09), vec3(0.7, 0.42, 0.2), streak * 0.5 + smoothstep(0.0, 0.5, e) * 0.3);
+            return mix(vec3(0.82, 0.68, 0.48), c, smoothstep(0.03, 0.08, e));
         }
         if (q.y < -0.4) return vec3(0.9, 0.85, 0.7);
         return cellEdge(vec2(q.x * 4.0, q.z * 4.0 + q.y * 3.0)) < 0.15 ? vec3(0.9, 0.84, 0.68) : vec3(0.45, 0.22, 0.12);
@@ -398,14 +397,17 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
         upper = mix(upper, vec3(0.88, 0.87, 0.84), spot(q.xy * vec2(11.0, 13.0), 0.12) * smoothstep(0.2, -0.3, q.x));
         return mix(vec3(0.9, 0.88, 0.83), upper, smoothstep(-0.2, 0.15, q.y));
     }
-    if (kind == 19) { // basking shark: mottled grey-brown, its huge mouth gaping (white gill rakers), long gill slits
-        vec3 c = mix(vec3(0.62, 0.6, 0.57), vec3(0.42, 0.4, 0.38), smoothstep(-0.4, 0.3, q.y));
-        if (part > 0) return c * 0.85;
-        c *= 0.9 + 0.1 * sin(q.x * 40.0 + sin(q.y * 20.0) * 3.0);
-        float m = length((q.xy - vec2(0.95, -0.25)) / vec2(0.22, 0.32));
-        if (m < 1.0) return fract(q.x * 22.0) < 0.4 ? vec3(0.85, 0.83, 0.8) : vec3(0.2, 0.1, 0.1);
-        if (m < 1.12) return vec3(0.8, 0.6, 0.58);
-        if (q.x > 0.05 && q.x < 0.55 && fract((q.x - 0.05) * 10.0) < 0.15 && abs(q.y) < 0.85) c *= 0.5;
+    if (kind == 19) { // basking shark: grey-brown, faintly blotched; inside its gaping mouth, white gill rakers
+        vec3 c = mix(vec3(0.6, 0.58, 0.55), vec3(0.4, 0.38, 0.36), smoothstep(-0.4, 0.3, q.y));
+        if (part > 0) return c * 0.88;
+        float m = length((q - vec3(0.78, -0.3, 0.0)) / vec3(0.3, 0.4, 0.45));
+        if (m < 1.03 && q.x > 0.45) { // (the inside of the mouth)
+            if (q.x < 0.7) return fract(q.z * 7.0 + 0.5) < 0.45 ? vec3(0.88, 0.86, 0.82) : vec3(0.14, 0.07, 0.07);
+            return mix(vec3(0.62, 0.42, 0.42), vec3(0.3, 0.15, 0.15), smoothstep(0.95, 0.75, q.x));
+        }
+        c = mix(c, c * 1.12, spot(q.xy * vec2(7.0, 9.0) + rnd * 4.0, 0.3) * 0.7);
+        float gx = q.x - 0.12 + 0.06 * q.y * q.y; // five long, curving gill slits round the head
+        if (gx > 0.0 && gx < 0.4 && fract(gx * 12.5) < 0.07 && abs(q.y) < 0.8) c *= 0.62;
         return c;
     }
     // sardine: dark blue-green back, bright silver sides, golden tail and back fin
@@ -562,12 +564,12 @@ vec4 fishShape(int kind) {
     if (kind == 7) return vec4(0.5, 0.5, 0.0, 0.0);
     if (kind == 8) return vec4(0.62, 0.5, 0.0, 0.4);
     if (kind == 9) return vec4(0.5, 0.6, 0.0, 0.8);
-    if (kind == 10) return vec4(0.62, 0.35, 2.0, 0.35);
+    if (kind == 10) return vec4(0.6, 0.6, 2.0, 0.35);
     if (kind == 11) return vec4(0.55, 0.35, 1.0, 0.5);
     if (kind == 14) return vec4(0.55, 0.55, 0.0, 0.7);
     if (kind == 16) return vec4(0.6, 0.4, 3.0, 0.0);
     if (kind == 18) return vec4(0.45, 0.7, 0.0, 1.7);
-    if (kind == 19) return vec4(0.6, 0.35, 2.0, 0.35);
+    if (kind == 19) return vec4(0.58, 0.7, 2.0, 0.35);
     return vec4(0.55, 0.4, 1.0, 0.5);
 }
 
@@ -598,7 +600,7 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
     }
     vec3 mc = vec3(L * 1.0, -H * 0.12, 0.0), mr = vec3(L * 0.08, H * 0.05, W * 0.7);
     if (kind == 14) mr = vec3(L * 0.12, H * 0.1, W * 0.8); // (the grouper's big mouth)
-    if (kind == 19) { mc = vec3(L * 0.95, -H * 0.25, 0.0); mr = vec3(L * 0.2, H * 0.3, W * 0.7); } // (gaping)
+    if (kind == 19) { mc = vec3(L * 0.78, -H * 0.3, 0.0); mr = vec3(L * 0.3, H * 0.4, W * 0.45); } // (gaping wide)
     body = max(body, -sdEllipsoid(p - mc, mr));
     float res = body, best = body;
     ptype = 0;
@@ -885,7 +887,7 @@ void main() {
         // its own stretch of water (worked out on the CPU from the tank's shape), made to fit in it
         vec3 middle = fishData(i * 2).xyz, reach = fishData(i * 2 + 1).xyz;
         float extent = max(sp.body.x + sp.tail.x * 1.6, max(sp.body.z, sp.fin.z));
-        float size = (Ocean > 0.5 ? 0.75 : 0.65) + 0.5 * hash11(fi * 3.1);
+        float size = (Ocean > 0.5 ? 1.0 : 0.85) + 0.55 * hash11(fi * 3.1);
         if (kind == 18) size *= 1.9; // the sunfish is a giant (still made to fit the water it has)
         size = min(size, max(min(reach.x, reach.z) - 0.08, 0.1) / extent);
         float tallH = sp.body.y + (kind == 15 ? sp.tail.y * 2.0 : 0.0) + (kind == 18 ? 0.8 : 0.7) * max(sp.fin.y, sp.body.y * 0.42 * fishShape(kind).w) + (kind == 4 ? sp.body.y * 0.8 : 0.0);
@@ -974,8 +976,8 @@ void main() {
                 else if (eyeD < 0.07) base = vec3(0.02);                       // pupil
                 else if (eyeD < 0.115) base = eyeRing(kind);                    // ring
             }
-            if (part >= 1 && kind != 13 && kind != 15) {
-                base *= 0.82 + 0.18 * step(0.45, fract(q.x * 7.0 + q.y * 2.0)); // (fin rays)
+            if (part >= 1 && kind != 13 && kind != 15 && kind != 10 && kind != 16 && kind != 19 && kind != 12) {
+                base *= 0.88 + 0.12 * smoothstep(0.2, 0.5, abs(fract(q.x * 7.0 + q.y * 2.0) - 0.5) * 2.0); // (fin rays)
                 base = mix(base, vec3(1.0), 0.12);
             }
             if (part == 0 && kind != 12 && kind != 13 && kind != 15 && kind != 10 && kind != 16 && kind != 19 && kind != 18) {
