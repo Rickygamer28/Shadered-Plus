@@ -397,18 +397,15 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
         upper = mix(upper, vec3(0.88, 0.87, 0.84), spot(q.xy * vec2(11.0, 13.0), 0.12) * smoothstep(0.2, -0.3, q.x));
         return mix(vec3(0.9, 0.88, 0.83), upper, smoothstep(-0.2, 0.15, q.y));
     }
-    if (kind == 19) { // basking shark: grey-brown, faintly blotched; inside its gaping mouth, white gill rakers
-        vec3 c = mix(vec3(0.6, 0.58, 0.55), vec3(0.4, 0.38, 0.36), smoothstep(-0.4, 0.3, q.y));
-        if (part > 0) return c * 0.88;
-        float m = length((q - vec3(0.78, -0.3, 0.0)) / vec3(0.3, 0.4, 0.45));
-        if (m < 1.03 && q.x > 0.45) { // (the inside of the mouth)
-            if (q.x < 0.7) return fract(q.z * 7.0 + 0.5) < 0.45 ? vec3(0.88, 0.86, 0.82) : vec3(0.14, 0.07, 0.07);
-            return mix(vec3(0.62, 0.42, 0.42), vec3(0.3, 0.15, 0.15), smoothstep(0.95, 0.75, q.x));
-        }
-        c = mix(c, c * 1.12, spot(q.xy * vec2(7.0, 9.0) + rnd * 4.0, 0.3) * 0.7);
-        float gx = q.x - 0.12 + 0.06 * q.y * q.y; // five long, curving gill slits round the head
-        if (gx > 0.0 && gx < 0.4 && fract(gx * 12.5) < 0.07 && abs(q.y) < 0.8) c *= 0.62;
-        return c;
+    if (kind == 19) { // basking shark: dark grey-brown, faintly blotched, paler underneath; inside its mouth, white gill rakers
+        if (q.z > 8.5) return fract((q.z - 9.0) / 0.4 * 6.0 + 0.5) < 0.5 ? vec3(0.9, 0.88, 0.84) : vec3(0.1, 0.05, 0.05);
+        if (q.z > 6.5) return fract(q.x * 30.0) < 0.3 ? vec3(0.62, 0.52, 0.5) : vec3(0.32, 0.18, 0.18);
+        vec3 c = mix(vec3(0.55, 0.52, 0.49), vec3(0.32, 0.3, 0.28), smoothstep(-0.5, 0.3, q.y));
+        if (part > 0) return c * 0.92;
+        c = mix(c, c * 1.15, spot(q.xy * vec2(6.0, 8.0) + rnd * 4.0, 0.32) * 0.6);
+        float gx = q.x - 0.1 + 0.06 * q.y * q.y;
+        if (gx > -0.01 && gx < 0.31 && fract(gx / 0.075 + 0.07) < 0.14 && abs(q.y) < 0.8) c *= 0.55; // (gill slits)
+        return mix(c, vec3(0.62, 0.6, 0.57), smoothstep(0.85, 1.0, q.x) * 0.5); // (a paler snout)
     }
     // sardine: dark blue-green back, bright silver sides, golden tail and back fin
     if (tail || dorsal) return vec3(0.85, 0.78, 0.5);
@@ -589,6 +586,25 @@ float gFinSway = 0.0; // the sunfish sweeping its tall fins side to side (it swi
 float gMouth = 0.5;   // breathing: the mouth opening and closing
 float gTime = 0.0;
 
+// the body alone (no fins), as in fishBody: for the basking shark's lower jaw, worked out a second time turned down
+float trunkAt(int kind, Species sp, vec4 sh, vec3 p) {
+    float L = sp.body.x, H = sp.body.y, W = sp.body.z;
+    float s = clamp((p.x + L) / (2.0 * L), 0.0, 1.0);
+    float u = (s - sh.x) / (s < sh.x ? sh.x : 1.0 - sh.x);
+    float sb = sh.x - 0.06;
+    float ub = (s - sb) / (s < sb ? sb : 1.0 - sb);
+    float profT = pow(max(1.0 - u * u, 0.0), sh.y);
+    float profB = pow(max(1.0 - ub * ub, 0.0), sh.y * 1.15);
+    float root = smoothstep(0.3, 0.0, s) * 0.22;
+    float hT = H * max(profT, root) + 0.002, hB = H * max(profB, root) + 0.002;
+    float w = W * max(profT, root * 0.55) + 0.002;
+    float py = p.y + 0.12 * H * smoothstep(0.55, 1.0, s);
+    float h = py > 0.0 ? hT : hB;
+    float yy = clamp(py / h, -1.0, 1.0);
+    float wl = w * (1.0 - 0.28 * yy * yy);
+    return max((length(vec2(py / h, p.z / wl)) - 1.0) * min(h, wl), abs(p.x) - L);
+}
+
 float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int ptype, out vec3 q) {
     float L = sp.body.x, H = sp.body.y, W = sp.body.z;
     vec4 sh = fishShape(kind);
@@ -620,6 +636,27 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
     float yy = clamp(py / h, -1.0, 1.0);
     float wl = kind == 7 ? w : w * (1.0 - 0.28 * yy * yy); // (narrowing to a ridge along the back and belly)
     float body = max((length(vec2(py / h, p.z / wl)) - 1.0) * min(h, wl), abs(p.x) - L);
+    float mouthFace = 0.0; // (the basking shark: 1 inside its open mouth, 2 its gill rakers at the back)
+    if (kind == 19) { // its huge mouth hanging open: the lower jaw turned down from a hinge behind the eye
+        float yJ = -0.2 * H, hx = 0.3 * L, ang = 0.3;
+        float upper = max(body, yJ - p.y);
+        vec2 dq = vec2(p.x - hx, p.y - yJ);
+        vec3 pr = vec3(hx + dq.x * cos(ang) - dq.y * sin(ang), yJ + dq.x * sin(ang) + dq.y * cos(ang), p.z);
+        float jawT = trunkAt(kind, sp, sh, pr);
+        float lower = max(jawT, pr.y - yJ);
+        float throat = max(abs(p.x - 0.42 * L) - 0.012 * L, body); // (the back of the mouth, filling the gap)
+        float jaws = min(upper, lower);
+        if (throat < jaws) mouthFace = 2.0;
+        else if (upper < lower ? yJ - p.y > body : pr.y - yJ > jawT) mouthFace = 1.0;
+        body = min(jaws, throat);
+    }
+    if (kind == 19 || kind == 10) { // gill slits, cut into the skin
+        for (int k = 0; k < 5; k++) {
+            float xk = kind == 19 ? L * (0.1 + 0.075 * float(k)) : L * (0.27 + 0.05 * float(k));
+            float slab = max(abs(p.x - xk + 0.06 * L * (p.y / H) * (p.y / H)) - 0.005 * L, abs(p.y) - (kind == 19 ? 0.8 : 0.35) * H);
+            body = max(body, min(-slab, body + 0.025 * H));
+        }
+    }
     // eyes, bulging a little, and a mouth (breathing)
     float se = 0.81;
     float ue = (se - sh.x) / (1.0 - sh.x);
@@ -631,12 +668,12 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
     }
     vec3 mc = vec3(L * 1.0, -H * 0.12, 0.0), mr = vec3(L * 0.08, H * 0.05 * (0.5 + gMouth), W * 0.7);
     if (kind == 14) mr = vec3(L * 0.12, H * 0.1 * (0.6 + 0.8 * gMouth), W * 0.8); // (the grouper's big mouth)
-    if (kind == 19) { mc = vec3(L * 0.78, -H * 0.3, 0.0); mr = vec3(L * 0.3, H * 0.4, W * 0.45); } // (gaping wide)
     if (kind == 10 || kind == 16) mr.y = H * 0.04;
-    body = max(body, -sdEllipsoid(p - mc, mr));
+    if (kind != 19) body = max(body, -sdEllipsoid(p - mc, mr));
     float res = body, best = body;
     ptype = 0;
     q = p / sp.body;
+    if (mouthFace > 0.5) q.z = (mouthFace > 1.5 ? 9.0 : 7.0) + 0.4 * clamp(p.z / W, -1.0, 1.0);
     // tail fin, behind the tail root
     float tl = sp.tail.x * 2.0, th = sp.tail.y, thick = max(sp.tail.z, 0.004);
     float xt = -L * 0.92 - p.x;
@@ -663,7 +700,7 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
     }
     // the fin along the back and one underneath: swept back (sharks' and the dolphin's strongly), rippling as it
     // swims (the sunfish's sweeping side to side)
-    float sweep = bony ? 0.35 : 0.9;
+    float sweep = bony ? 0.35 : kind == 18 ? 0.1 : 0.9;
     if (sp.fin.x > 0.0) {
         float fx1 = L * 0.3, fx0 = fx1 - sp.fin.x * 2.2;
         float lift = max(py - hT * 0.92, 0.0);
@@ -671,8 +708,8 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
         float kx = clamp((xs - fx0) / (fx1 - fx0), 0.0, 1.0);
         float dh = sp.fin.y * pow(max(sin(kx * 3.1416), 0.0), 0.7) * (1.25 - 0.5 * kx) * (bony ? 1.0 - 0.07 * abs(sin(kx * 22.0)) : 1.0);
         float up = clamp(lift / max(dh, 0.001), 0.0, 1.0);
-        float zf = p.z - (kind == 18 ? gFinSway * sp.fin.y * 0.6 : sp.fin.y * 0.06 * gBeat * sin(wave * 1.3 - kx * 6.0)) * up;
-        float dorsal = max(max(max(py - (hT * 0.92 + dh), hT * 0.55 - py), max(fx0 - xs, xs - fx1)) * 0.55, abs(zf) - sp.fin.z * (1.0 - 0.6 * up));
+        float zf = p.z - (kind == 18 ? gFinSway * sp.fin.y * 0.35 : sp.fin.y * 0.06 * gBeat * sin(wave * 1.3 - kx * 6.0)) * up;
+        float dorsal = max(max(max(py - (hT * 0.92 + dh), hT * 0.55 - py), max(fx0 - xs, xs - fx1)) * 0.55, (abs(zf) - sp.fin.z * (1.0 - 0.6 * up)) * 0.8);
         res = smin(res, dorsal, 0.04 * L);
         if (dorsal < best) {
             best = dorsal; ptype = 2;
@@ -686,8 +723,8 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
         float kx = clamp((xs - ax0) / (ax1 - ax0), 0.0, 1.0);
         float dh = H * 0.35 * sh.w * pow(max(sin(kx * 3.1416), 0.0), 0.7) * (1.2 - 0.4 * kx) * (bony ? 1.0 - 0.07 * abs(sin(kx * 18.0)) : 1.0);
         float down = clamp(lift / max(dh, 0.001), 0.0, 1.0);
-        float zf = p.z - (kind == 18 ? -gFinSway * H * 0.35 * sh.w * 0.6 : H * 0.02 * gBeat * sin(wave * 1.3 - kx * 6.0 + 1.0)) * down;
-        float anal = max(max(max(-py - (hB * 0.92 + dh), hB * 0.55 + py), max(ax0 - xs, xs - ax1)) * 0.55, abs(zf) - max(sp.fin.z, 0.006) * (1.0 - 0.6 * down));
+        float zf = p.z - (kind == 18 ? -gFinSway * H * 0.35 * sh.w * 0.35 : H * 0.02 * gBeat * sin(wave * 1.3 - kx * 6.0 + 1.0)) * down;
+        float anal = max(max(max(-py - (hB * 0.92 + dh), hB * 0.55 + py), max(ax0 - xs, xs - ax1)) * 0.55, (abs(zf) - max(sp.fin.z, 0.006) * (1.0 - 0.6 * down)) * 0.8);
         res = smin(res, anal, 0.04 * L);
         if (anal < best) {
             best = anal; ptype = 2;
