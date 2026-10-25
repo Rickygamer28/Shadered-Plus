@@ -11,7 +11,7 @@ import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /** Neon sign menu -> server: its text, colour, glow and size. */
-public record NeonSignPayload(BlockPos pos, String text, int colour, int mode, int size) implements CustomPacketPayload {
+public record NeonSignPayload(BlockPos pos, String text, int colour, int mode, int size, int background) implements CustomPacketPayload {
     public static final Type<NeonSignPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "neon_sign"));
 
     public static final StreamCodec<ByteBuf, NeonSignPayload> STREAM_CODEC = StreamCodec.composite(
@@ -20,6 +20,7 @@ public record NeonSignPayload(BlockPos pos, String text, int colour, int mode, i
             ByteBufCodecs.INT, NeonSignPayload::colour,
             ByteBufCodecs.VAR_INT, NeonSignPayload::mode,
             ByteBufCodecs.VAR_INT, NeonSignPayload::size,
+            ByteBufCodecs.INT, NeonSignPayload::background,
             NeonSignPayload::new);
 
     @Override
@@ -34,6 +35,13 @@ public record NeonSignPayload(BlockPos pos, String text, int colour, int mode, i
                     && player.distanceToSqr(payload.pos().getCenter()) <= 8 * 8
                     && level.getBlockEntity(payload.pos()) instanceof NeonSignBlockEntity sign) {
                 sign.setAll(payload.text(), payload.colour(), payload.mode(), payload.size());
+                if (sign.background() != (payload.background() & 0xFFFFFF)) {
+                    for (BlockPos p : NeonSignBlock.panel(level, payload.pos())) {
+                        if (level.getBlockEntity(p) instanceof NeonSignBlockEntity other) {
+                            other.setBackground(payload.background());
+                        }
+                    }
+                }
             }
         });
     }

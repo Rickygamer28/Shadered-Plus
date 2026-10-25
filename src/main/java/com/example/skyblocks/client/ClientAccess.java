@@ -29,7 +29,7 @@ public final class ClientAccess {
     public static void openNeonSign(net.minecraft.core.BlockPos pos) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.level.getBlockEntity(pos) instanceof com.example.skyblocks.NeonSignBlockEntity sign) {
-            mc.setScreen(new NeonSignScreen(pos, sign.text(), sign.colour(), sign.mode(), sign.size()));
+            mc.setScreen(new NeonSignScreen(pos, sign.text(), sign.colour(), sign.mode(), sign.size(), sign.background()));
         }
     }
 

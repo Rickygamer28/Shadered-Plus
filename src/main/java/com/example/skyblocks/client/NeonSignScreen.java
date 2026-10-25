@@ -17,21 +17,22 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 public class NeonSignScreen extends Screen {
     private static final int PANEL_W = 236;
-    private static final int PANEL_H = 168;
+    private static final int PANEL_H = 214;
     private static final String[] MODES = {"steady", "flicker", "pulse", "rainbow"};
 
     private final BlockPos pos;
     private String text;
-    private int colour, mode, size;
+    private int colour, mode, size, background;
     private EditBox box;
 
-    public NeonSignScreen(BlockPos pos, String text, int colour, int mode, int size) {
+    public NeonSignScreen(BlockPos pos, String text, int colour, int mode, int size, int background) {
         super(Component.translatable("screen.skyblocks.neon_sign"));
         this.pos = pos;
         this.text = text;
         this.colour = colour;
         this.mode = mode;
         this.size = size;
+        this.background = background;
     }
 
     private int left() {
@@ -71,6 +72,31 @@ public class NeonSignScreen extends Screen {
                 }
             });
         }
+        // the panel's colour: smoky (the default), clear, or any of the 16 colours (darkened, so the tubes still stand out)
+        int[] bgs = new int[18];
+        bgs[0] = NeonSignBlockEntity.DEFAULT_BACKGROUND;
+        bgs[1] = 0xFFFFFF;
+        for (int i = 0; i < 16; i++) {
+            int c = dyes[i].getTextureDiffuseColor();
+            bgs[i + 2] = (((c >> 16) & 255) * 3 / 5 << 16) | (((c >> 8) & 255) * 3 / 5 << 8) | ((c & 255) * 3 / 5);
+        }
+        for (int i = 0; i < bgs.length; i++) {
+            final int c = bgs[i];
+            int x = left() + 12 + (i % 9) * 24, y = top() + 140 + (i / 9) * 22;
+            addRenderableWidget(new Button(x, y, 21, 19, Component.empty(), b -> {
+                background = c;
+                send();
+            }, s -> Component.literal("background")) {
+                @Override
+                protected void renderWidget(GuiGraphics g, int mx, int my, float pt) {
+                    super.renderWidget(g, mx, my, pt);
+                    g.fill(getX() + 4, getY() + 4, getX() + width - 4, getY() + height - 4, 0xFF000000 | c);
+                    if (background == c) {
+                        g.renderOutline(getX() + 2, getY() + 2, width - 4, height - 4, 0xFFFFFFFF);
+                    }
+                }
+            });
+        }
         addRenderableWidget(Button.builder(modeLabel(), b -> {
             mode = (mode + 1) % NeonSignBlockEntity.MODES;
             b.setMessage(modeLabel());
@@ -93,7 +119,7 @@ public class NeonSignScreen extends Screen {
     }
 
     private void send() {
-        PacketDistributor.sendToServer(new NeonSignPayload(pos, text, colour, mode, size));
+        PacketDistributor.sendToServer(new NeonSignPayload(pos, text, colour, mode, size, background));
     }
 
     @Override
@@ -107,7 +133,8 @@ public class NeonSignScreen extends Screen {
         graphics.drawCenteredString(font, title, left() + PANEL_W / 2, top() + 9, 0xFFFFFF);
         graphics.drawCenteredString(font, Component.literal(Integer.toString(size)), left() + 192, top() + 108, 0xFFFFFF);
         graphics.drawString(font, Component.translatable("screen.skyblocks.neon_size"), left() + 124, top() + 108, 0xA0A0A0);
-        graphics.drawString(font, Component.translatable("screen.skyblocks.neon_hint"), left() + 12, top() + 130, 0x808080);
+        graphics.drawString(font, Component.translatable("screen.skyblocks.neon_hint"), left() + 12, top() + 126, 0x808080);
+        graphics.drawString(font, Component.translatable("screen.skyblocks.neon_background"), left() + 12, top() + 186, 0xA0A0A0);
     }
 
     @Override

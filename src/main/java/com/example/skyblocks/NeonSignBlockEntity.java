@@ -19,6 +19,9 @@ public class NeonSignBlockEntity extends BlockEntity {
     private int colour = 0xFF3FD0;
     private int mode = STEADY;
     private int size = 2;
+    /** The panel's colour (the whole joined panel shares it). */
+    private int background = DEFAULT_BACKGROUND;
+    public static final int DEFAULT_BACKGROUND = 0x30303A;
 
     public NeonSignBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.NEON_SIGN.get(), pos, state);
@@ -28,6 +31,15 @@ public class NeonSignBlockEntity extends BlockEntity {
     public int colour() { return colour; }
     public int mode() { return mode; }
     public int size() { return size; }
+    public int background() { return background; }
+
+    public void setBackground(int colour) {
+        background = colour & 0xFFFFFF;
+        setChanged();
+        if (level != null) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+        }
+    }
 
     public void setAll(String text, int colour, int mode, int size) {
         String t = text == null ? "" : text;
@@ -48,6 +60,7 @@ public class NeonSignBlockEntity extends BlockEntity {
         tag.putInt("colour", colour);
         tag.putInt("mode", mode);
         tag.putInt("size", size);
+        tag.putInt("background", background);
     }
 
     @Override
@@ -58,6 +71,11 @@ public class NeonSignBlockEntity extends BlockEntity {
             colour = tag.getInt("colour") & 0xFFFFFF;
             mode = Math.floorMod(tag.getInt("mode"), MODES);
             size = Math.max(1, Math.min(MAX_SIZE, tag.getInt("size")));
+            int before = background;
+            background = tag.contains("background") ? tag.getInt("background") & 0xFFFFFF : DEFAULT_BACKGROUND;
+            if (level != null && level.isClientSide && before != background) {
+                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_IMMEDIATE); // (redraw the panel's colour)
+            }
         }
     }
 

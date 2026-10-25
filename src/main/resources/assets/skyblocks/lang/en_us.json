@@ -168,7 +168,7 @@
   "block.skyblocks.wall_fire": "Wall Fire",
   "tooltip.skyblocks.wall_fire": "Joins side by side. Right-click: on / off. Dye: flame colour. Sneak + right-click: RGB. Dances to music",
   "block.skyblocks.neon_sign": "Neon Sign",
-  "tooltip.skyblocks.neon_sign": "Right-click to write your text and pick its colour, glow and size",
+  "tooltip.skyblocks.neon_sign": "Right-click: text, colour, glow, size, background. Signs side by side or stacked join into one panel",
   "screen.skyblocks.neon_sign": "Neon Sign",
   "screen.skyblocks.neon_text": "Text",
   "screen.skyblocks.neon_size": "Size",
@@ -176,5 +176,6 @@
   "screen.skyblocks.neon_mode_steady": "Glow: Steady",
   "screen.skyblocks.neon_mode_flicker": "Glow: Flicker",
   "screen.skyblocks.neon_mode_pulse": "Glow: Pulse",
-  "screen.skyblocks.neon_mode_rainbow": "Glow: Rainbow"
+  "screen.skyblocks.neon_mode_rainbow": "Glow: Rainbow",
+  "screen.skyblocks.neon_background": "Background (the whole joined panel)"
 }

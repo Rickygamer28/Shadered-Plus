@@ -200,6 +200,9 @@ public final class ClientSetup {
     /** Tinted blocks under the water (grass, leaves...) keep their colour. */
     @SubscribeEvent
     public static void causticsColours(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Block event) {
+        event.register((state, level, pos, tint) -> level != null && pos != null
+                && level.getBlockEntity(pos) instanceof com.example.skyblocks.NeonSignBlockEntity sign ? sign.background() : com.example.skyblocks.NeonSignBlockEntity.DEFAULT_BACKGROUND,
+                com.example.skyblocks.ModBlocks.NEON_SIGN.get());
         event.register((state, level, pos, tint) -> {
             if (level != null && pos != null && level.getBlockEntity(pos) instanceof com.example.skyblocks.WaterCausticsBlockEntity be
                     && be.inside() != null) {
