@@ -265,7 +265,7 @@ public final class AquariumRenderer {
             {0.8F, 0.17F, 0.17F, 0.12F, 0.04F, 0.28F, 0.15F, 0.18F, 0.03F, 1.1F, 0.0F},
             {0.12F, 0.035F, 0.025F, 0.04F, 0.035F, 0.006F, 0.0F, 0.0F, 0.0F, 1.5F, 0.5F},
             {0.5F, 0.42F, 0.12F, 0.05F, 0.4F, 0.02F, 0.14F, 0.6F, 0.03F, 0.35F, 1.7F},
-            {1.25F, 0.3F, 0.27F, 0.32F, 0.45F, 0.04F, 0.2F, 0.38F, 0.045F, 0.45F, 0.35F},
+            {1.25F, 0.3F, 0.27F, 0.22F, 0.4F, 0.04F, 0.2F, 0.38F, 0.045F, 0.45F, 0.35F},
     };
 
     private static final float[] FISH_DATA = new float[MAX_FISH * 16];
@@ -431,23 +431,31 @@ public final class AquariumRenderer {
                     near[j] = true;
                 }
             }
-            double out = 1.0 - Math.exp(-dt * 4.0), back = 1.0 - Math.exp(-dt * 0.6);
+            double ease = 1.0 - Math.exp(-dt * 2.5);
             for (int i = 0; i < n; i++) {
                 for (int k = 0; k < 3; k++) {
+                    // one smooth pull: out of the way while too close, back to its own path otherwise (no switching
+                    // between the two, which made it jitter at the edge)
                     double before = st[i * 3 + k];
-                    double now = near[i] ? before + push[i * 3 + k] * out : before * (1.0 - back);
+                    double now = before + (push[i * 3 + k] * 3.0 - before * 0.5) * dt;
                     double base = k == 0 ? px[i] : k == 1 ? py[i] : pz[i];
                     now = clampD(base + now, lo[i * 3 + k], hi[i * 3 + k]) - base; // (staying in its water)
                     st[i * 3 + k] = now;
-                    dodgeV[i * 3 + k] = (now - before) / dt;
-                    st[n * 3 + i * 3 + k] = dodgeV[i * 3 + k];
+                    double sv = st[n * 3 + i * 3 + k]; // (how fast it's dodging, smoothed: for which way it faces)
+                    sv += ((now - before) / dt - sv) * ease;
+                    st[n * 3 + i * 3 + k] = sv;
+                    dodgeV[i * 3 + k] = sv;
                 }
             }
         }
         // ---- heading (along its path plus any dodging: it turns away as it dodges), leaning into turns ----
         for (int i = 0; i < n; i++) {
             int kind = floor.kinds[i];
-            double vx = vxs[i] + dodgeV[i * 3], vy = vys[i] + dodgeV[i * 3 + 1], vz = vzs[i] + dodgeV[i * 3 + 2];
+            // (the dodge only turns it partway: never more than about a third of the way round, so it doesn't spin)
+            double pv = Math.sqrt(vxs[i] * vxs[i] + vys[i] * vys[i] + vzs[i] * vzs[i]);
+            double dv = Math.sqrt(dodgeV[i * 3] * dodgeV[i * 3] + dodgeV[i * 3 + 1] * dodgeV[i * 3 + 1] + dodgeV[i * 3 + 2] * dodgeV[i * 3 + 2]);
+            double dk = dv > 0.6 * pv ? 0.6 * pv / dv : 1.0;
+            double vx = vxs[i] + dodgeV[i * 3] * dk, vy = vys[i] + dodgeV[i * 3 + 1] * dk, vz = vzs[i] + dodgeV[i * 3 + 2] * dk;
             double hl = Math.sqrt(vx * vx + vz * vz);
             double hx = hl > 1.0e-6 ? vx / hl : 1.0, hz = hl > 1.0e-6 ? vz / hl : 0.0;
             double fyv = clampD(vy / Math.max(hl, 1.0e-4), -0.45, 0.45);

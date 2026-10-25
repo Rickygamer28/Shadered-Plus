@@ -142,7 +142,7 @@ Species species(int k) {
     if (k == 15) return Species(vec3(0.25, 0.18, 0.25), vec3(0.06, 0.4, 0.06), vec3(0.0), 0.25);
     if (k == 16) return Species(vec3(0.8, 0.17, 0.17), vec3(0.12, 0.04, 0.28), vec3(0.15, 0.18, 0.03), 1.1);
     if (k == 18) return Species(vec3(0.5, 0.42, 0.12), vec3(0.05, 0.4, 0.02), vec3(0.14, 0.6, 0.03), 0.35); // ocean sunfish
-    if (k == 19) return Species(vec3(1.25, 0.3, 0.27), vec3(0.32, 0.45, 0.04), vec3(0.2, 0.38, 0.045), 0.45); // basking shark
+    if (k == 19) return Species(vec3(1.25, 0.3, 0.27), vec3(0.22, 0.4, 0.04), vec3(0.2, 0.38, 0.045), 0.45); // basking shark
     return Species(vec3(0.12, 0.035, 0.025), vec3(0.04, 0.035, 0.006), vec3(0.0), 1.5);
 }
 
@@ -433,7 +433,7 @@ Part fishPart(int kind, Species sp, int j, float swing, float flap) {
         if (j == 0) return Part(vec3(0.0), b, 0.0, 0.0, 0);
         if (j == 1) return Part(vec3(b.x + tl.x * 0.4, 0.0, 0.0), tl, 0.0, 0.0, 1);
         if (j == 2 || j == 3) { float s = j == 2 ? 1.0 : -1.0;
-            return Part(vec3(b.x * 0.35, -b.y * 0.15 + b.y * 0.5 * swing, s * b.z * 0.95), vec3(fn.x, fn.y, fn.z * 0.55), s * (0.5 + 0.3 * swing), -0.25 * swing, 1); }
+            return Part(vec3(b.x * 0.35, -b.y * 0.15 + b.y * 0.5 * swing, s * b.z * 0.95), vec3(fn.x * 0.7, fn.y, fn.z * 0.62), s * (0.5 + 0.3 * swing), -0.25 * swing, 1); }
         if (j == 4 || j == 5) { float s = j == 4 ? 1.0 : -1.0;
             return Part(vec3(-b.x * 0.7, -b.y * 0.2, s * b.z * 0.7), vec3(fn.x * 0.6, fn.y, fn.z * 0.25), -s * (0.7 + 0.15 * swing), 0.0, 1); }
         return Part(vec3(0.0), vec3(0.0), 0.0, 0.0, 0);
@@ -846,6 +846,9 @@ float fishSDF(int kind, Species sp, vec3 p, float wave, float flap, float pulse,
             float hy = clamp(lq.y, -r.y, r.y);
             float rad = r.x * (0.35 + 0.65 * (hy + r.y) / (2.0 * r.y));
             d = length(vec2(length(vec2(lq.x, lq.z * (j <= 4 ? 2.0 : 1.0))), lq.y - hy)) - rad;
+        } else if (kind == 13 && j >= 2) { // a flipper: long, narrowing to a point at its tip (not a round paddle)
+            float along = clamp(abs(lq.z) / r.z, 0.0, 1.0);
+            d = sdEllipsoid(vec3(lq.x / (1.0 - 0.6 * along), lq.y, lq.z), r) * 0.55;
         } else if (kind == 13 && j == 0) { // the shell: domed on top, flatter underneath
             d = sdEllipsoid(lq, vec3(r.x, lq.y > 0.0 ? r.y : r.y * 0.55, r.z));
         } else {
