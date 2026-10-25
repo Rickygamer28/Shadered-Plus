@@ -131,8 +131,10 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         if (state.getBlock() instanceof com.example.skyblocks.BrickHearthBlock) {
             if (lit) { // two sheets of flame over the logs, the back one a little different
                 VertexConsumer vc = buffers.getBuffer(Types.FREE);
+                int k = 0;
                 for (float z : new float[] {12.6F / 16.0F, 11.0F / 16.0F}) {
-                    float s0 = base + z * 3.0F, s1 = s0 + 2.2F;
+                    // across: 0..2.2 (the shader fades the ends) plus a multiple of 8 for each sheet and hearth
+                    float s0 = 8.0F * ((((int) base) & 63) * 2 + k++), s1 = s0 + 2.2F;
                     quad(vc, m, 26.0F / 16.0F, 6.0F / 16.0F, 5.0F / 16.0F, 18.0F / 16.0F, z, s1, s0, 10.0F + 4.6F / 16.0F, 10.0F + 11.0F / 16.0F, r, g, b, a);
                 }
             }

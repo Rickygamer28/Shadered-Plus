@@ -101,6 +101,8 @@ void main() {
     // the glass: a faint slanted reflection, a little brighter towards the top
     if (cut > 0.5) {
         float a = clamp(max(col.r, max(col.g, col.b)) * 2.4 - 0.75, 0.0, 1.0);
+        float loc = mod(s, 8.0);
+        a *= smoothstep(0.0, 0.35, loc) * smoothstep(2.2, 1.85, loc); // (soft at the sides of the hearth)
         if (a < 0.02) {
             discard;
         }
