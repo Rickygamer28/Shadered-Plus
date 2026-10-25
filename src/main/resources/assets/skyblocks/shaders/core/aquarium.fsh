@@ -398,8 +398,12 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
         return mix(vec3(0.9, 0.88, 0.83), upper, smoothstep(-0.2, 0.15, q.y));
     }
     if (kind == 19) { // basking shark: dark grey-brown, faintly blotched, paler underneath; inside its mouth, white gill rakers
-        if (q.z > 8.5) return fract((q.z - 9.0) / 0.4 * 6.0 + 0.5) < 0.5 ? vec3(0.9, 0.88, 0.84) : vec3(0.1, 0.05, 0.05);
-        if (q.z > 6.5) return fract(q.x * 30.0) < 0.3 ? vec3(0.62, 0.52, 0.5) : vec3(0.32, 0.18, 0.18);
+        if (q.z > 6.5) { // inside the mouth: rows of white gill rakers deep in the throat, a dark pink lining, pale lips
+            float z = (q.z - 7.0) / 0.4;
+            if (q.x < 0.62) return fract(z * 5.0 + 0.5) < 0.55 ? mix(vec3(0.92, 0.9, 0.86), vec3(0.6, 0.55, 0.52), smoothstep(0.62, 0.4, q.x)) : vec3(0.08, 0.03, 0.03);
+            if (q.x > 1.02) return vec3(0.82, 0.68, 0.66);
+            return mix(vec3(0.3, 0.15, 0.15), vec3(0.55, 0.38, 0.38), smoothstep(0.62, 1.0, q.x)) * (0.85 + 0.15 * step(0.5, fract(z * 5.0 + 0.5)));
+        }
         vec3 c = mix(vec3(0.55, 0.52, 0.49), vec3(0.32, 0.3, 0.28), smoothstep(-0.5, 0.3, q.y));
         if (part > 0) return c * 0.92;
         c *= 0.94 + 0.08 * sin(q.x * 9.0 + sin(q.y * 7.0 + rnd * 6.0) * 2.0) * sin(q.y * 6.0 + q.x * 4.0); // (soft mottling)
@@ -642,26 +646,14 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
     float wl = kind == 7 ? w : w * (1.0 - 0.28 * yy * yy); // (narrowing to a ridge along the back and belly)
     float body = max((length(vec2(py / h, p.z / wl)) - 1.0) * min(h, wl), abs(p.x) - L);
     float mouthFace = 0.0; // (the basking shark: 1 inside its open mouth, 2 its gill rakers at the back)
-    if (kind == 19) { // its huge mouth hanging open: the lower jaw turned down from a hinge behind the eye
-        float yJ = -0.18 * H, hx = 0.3 * L, ang = 0.36;
-        float cutU = min(yJ - p.y, p.x - hx); // (only ahead of the hinge)
-        float upper = max(body, cutU);
-        vec2 dq = vec2(p.x - hx, p.y - yJ);
-        vec3 pr = vec3(hx + dq.x * cos(ang) - dq.y * sin(ang), yJ + dq.x * sin(ang) + dq.y * cos(ang), p.z);
-        float jawT = trunkAt(kind, sp, sh, pr);
-        float cutL = max(pr.y - yJ, hx - pr.x);
-        float lower = max(jawT, cutL);
-        float throat = max(abs(p.x - 0.42 * L) - 0.012 * L, body); // (the back of the mouth, filling the gap)
-        float jaws = min(upper, lower);
-        if (throat < jaws) mouthFace = 2.0;
-        else if (upper < lower ? cutU > body : cutL > jawT) mouthFace = 1.0;
-        body = min(jaws, throat);
-    }
-    if (kind == 19) { // the pointed, conical snout, jutting out over the mouth
-        float se0 = sdEllipsoid(p - vec3(L * 0.86, -0.02 * H, 0.0), vec3(L * 0.2, H * 0.36, W * 0.4));
-        float snout = max(se0, -0.18 * H - p.y); // (its underside: the roof of the mouth)
-        if (snout < body) mouthFace = -0.18 * H - p.y > se0 ? 1.0 : 0.0;
-        body = smin(body, snout, 0.05 * H);
+    if (kind == 19) { // feeding: the pointed snout on top, under it the huge round mouth wide open, the throat ballooning
+        float snout = sdEllipsoid(p - vec3(L * 0.86, -0.02 * H, 0.0), vec3(L * 0.2, H * 0.36, W * 0.4));
+        float bag = sdEllipsoid(p - vec3(L * 0.7, -0.35 * H, 0.0), vec3(L * 0.45, H * 0.62, W * 0.95));
+        body = smin(smin(body, snout, 0.06 * H), bag, 0.12 * H);
+        // the inside: a deep cave, its round opening at the front
+        float cave = sdEllipsoid(p - vec3(L * 0.8, -0.36 * H, 0.0), vec3(L * 0.47, H * 0.5, W * 0.8));
+        if (-cave > body) mouthFace = 1.0;
+        body = max(body, -cave);
     }
     if (kind == 19 || kind == 10) { // gill slits, cut into the skin
         for (int k = 0; k < 5; k++) {
