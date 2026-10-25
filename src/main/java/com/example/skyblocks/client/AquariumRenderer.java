@@ -615,8 +615,12 @@ public final class AquariumRenderer {
             }
             castle |= type == 3;
             chest |= type == 5;
-            float size = floor.ocean ? 1.3F + random.nextFloat() * 1.1F : 0.7F + random.nextFloat() * 0.6F;
+            // (the ocean tank's decorations big only in big tanks: in a small one, sized like the normal tank's)
+            float roomy = Math.max(0.0F, Math.min(1.0F, (Math.min(floor.sizeX, floor.sizeZ) - 1.0F) / 5.0F));
+            float rs = random.nextFloat();
+            float size = floor.ocean ? (0.7F + rs * 0.6F) * (1.0F - roomy) + (1.3F + rs * 1.1F) * roomy : 0.7F + rs * 0.6F;
             size = Math.min(size, floor.sizeY * 2.0F); // (fits under the surface)
+            size = Math.min(size, 0.5F * Math.min(floor.sizeX, floor.sizeZ) + 0.4F); // (and isn't wider than the tank)
             int sizeQ = Math.max(1, Math.min(60, Math.round(size * 10.0F)));
             int turn = random.nextInt(16);
             int k = floor.decorCount++;
