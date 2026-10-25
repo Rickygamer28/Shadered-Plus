@@ -1007,7 +1007,7 @@ void main() {
     float edgeA = 0.0, edgeT = 1.0e9;
     float pixA = max(length(fwidth(rd)), 1.0e-5); // (how wide a pixel is, as an angle)
     vec3 rot = ro - BoxMin;
-    for (int i = 0; i < 32; i++) {
+    for (int i = 0; i < 48; i++) {
         if (i >= count) {
             break;
         }

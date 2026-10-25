@@ -73,7 +73,7 @@ public final class AquariumRenderer {
 
     private static final int OCC_VECS = 16;
     private static final int MAX_BITS = OCC_VECS * 4 * 24;
-    private static final int MAX_FISH = 32;
+    private static final int MAX_FISH = 48;
     private static final int MAX_DECOR = 24;
 
     static ShaderInstance shader;
@@ -487,7 +487,7 @@ public final class AquariumRenderer {
         java.util.List<BlockPos> water = new ArrayList<>(floor.blocks);
         water.sort(java.util.Comparator.comparingLong(BlockPos::asLong));
         java.util.Random random = new java.util.Random(floor.min.asLong() * 31L + water.size());
-        floor.fishCount = Math.max(3, Math.min(MAX_FISH, (int) (water.size() * (floor.ocean ? 0.8F : 2.4F))));
+        floor.fishCount = Math.max(4, Math.min(floor.ocean ? 32 : MAX_FISH, (int) (water.size() * (floor.ocean ? 0.8F : 3.2F))));
         for (int i = 0; i < floor.fishCount; i++) {
             BlockPos start = water.get(random.nextInt(water.size()));
             int[] lo = {start.getX(), start.getY(), start.getZ()}, hi = {start.getX(), start.getY(), start.getZ()};
