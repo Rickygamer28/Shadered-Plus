@@ -48,6 +48,8 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
                         .setShaderState(new ShaderStateShard(() -> shader))
                         .setTexturingState(new TexturingStateShard("skyblocks_wall_fire_time", () -> {
                             if (shader != null) {
+                                net.minecraft.world.phys.Vec3 cam = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+                                shader.safeGetUniform("CamPos").set((float) cam.x, (float) cam.y, (float) cam.z);
                                 shader.safeGetUniform("FireTime").set(LavaLampRenderer.seconds());
                                 shader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.2F, 1.0F));
                             }
@@ -62,11 +64,20 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
                         .setShaderState(new ShaderStateShard(() -> shader))
                         .setTexturingState(new TexturingStateShard("skyblocks_hearth_fire_time", () -> {
                             if (shader != null) {
+                                net.minecraft.world.phys.Vec3 cam = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+                                shader.safeGetUniform("CamPos").set((float) cam.x, (float) cam.y, (float) cam.z);
                                 shader.safeGetUniform("FireTime").set(LavaLampRenderer.seconds());
                                 shader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.2F, 1.0F));
                             }
                         }, () -> {}))
-                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .setTransparencyState(new TransparencyStateShard("skyblocks_premultiplied", () -> {
+                            com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+                            com.mojang.blaze3d.systems.RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.ONE,
+                                    com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+                        }, () -> {
+                            com.mojang.blaze3d.systems.RenderSystem.disableBlend();
+                            com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
+                        }))
                         .setWriteMaskState(COLOR_WRITE)
                         .setCullState(NO_CULL)
                         .createCompositeState(false));
@@ -78,22 +89,23 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
 
     public WallFireRenderer(BlockEntityRendererProvider.Context context) {}
 
-    /** A quad facing -z (north) from xa (its left as seen from the north) to xb; uv across sa..sb, up ua..ub. */
-    private static void quad(VertexConsumer vc, Matrix4f m, float xa, float xb, float y0, float y1, float z, float sa, float sb,
-                             float ua, float ub, int r, int g, int b, int a) {
-        vc.addVertex(m, xa, y0, z).setColor(r, g, b, a).setUv(sa, ua);
-        vc.addVertex(m, xb, y0, z).setColor(r, g, b, a).setUv(sb, ua);
-        vc.addVertex(m, xb, y1, z).setColor(r, g, b, a).setUv(sb, ub);
-        vc.addVertex(m, xa, y1, z).setColor(r, g, b, a).setUv(sa, ub);
+    /** A quad facing -z (north) from xa (its left as seen from the north) to xb; uv across sa..sb, up = the height + flags. */
+    private static void quad(RenderType type, MultiBufferSource buffers, Matrix4f m, float xa, float xb, float y0, float y1, float z,
+                             float sa, float sb, float flags, int r, int g, int b, int a) {
+        VertexConsumer vc = buffers.getBuffer(type);
+        vc.addVertex(m, xa, y0, z).setColor(r, g, b, a).setUv(sa, y0 + flags);
+        vc.addVertex(m, xb, y0, z).setColor(r, g, b, a).setUv(sb, y0 + flags);
+        vc.addVertex(m, xb, y1, z).setColor(r, g, b, a).setUv(sb, y1 + flags);
+        vc.addVertex(m, xa, y1, z).setColor(r, g, b, a).setUv(sa, y1 + flags);
     }
 
     /** A quad in the plane x = x, from za (its left as seen from outside) to zb. */
     private static void side(VertexConsumer vc, Matrix4f m, float x, float za, float zb, float y0, float y1, float sa, float sb,
-                             float ua, float ub, int r, int g, int b, int a) {
-        vc.addVertex(m, x, y0, za).setColor(r, g, b, a).setUv(sa, ua);
-        vc.addVertex(m, x, y0, zb).setColor(r, g, b, a).setUv(sb, ua);
-        vc.addVertex(m, x, y1, zb).setColor(r, g, b, a).setUv(sb, ub);
-        vc.addVertex(m, x, y1, za).setColor(r, g, b, a).setUv(sa, ub);
+                             float flags, int r, int g, int b, int a) {
+        vc.addVertex(m, x, y0, za).setColor(r, g, b, a).setUv(sa, y0 + flags);
+        vc.addVertex(m, x, y0, zb).setColor(r, g, b, a).setUv(sb, y0 + flags);
+        vc.addVertex(m, x, y1, zb).setColor(r, g, b, a).setUv(sb, y1 + flags);
+        vc.addVertex(m, x, y1, za).setColor(r, g, b, a).setUv(sa, y1 + flags);
     }
 
     public net.minecraft.world.phys.AABB getRenderBoundingBox(GlowColourBlockEntity be) {
@@ -128,30 +140,36 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
             default -> -p.getZ() - 1;
         }) % 4096;
         Matrix4f m = poseStack.last().pose();
+        // the shader's frame: alpha = facing * 64 + on * 32 + 16; uv = (along the fire, height in the block + 10 * flags)
+        int fi = switch (facing) {
+            case EAST -> 1;
+            case SOUTH -> 2;
+            case WEST -> 3;
+            default -> 0;
+        };
+        a = fi * 64 + (lit ? 32 : 0) + 16;
         if (state.getBlock() instanceof com.example.skyblocks.BrickHearthBlock) {
-            if (lit) { // two sheets of flame over the logs, the back one a little different
-                VertexConsumer vc = buffers.getBuffer(Types.FREE);
-                int k = 0;
-                for (float z : new float[] {12.6F / 16.0F, 11.0F / 16.0F}) {
-                    // across: 0..2.2 (the shader fades the ends) plus a multiple of 8 for each sheet and hearth
-                    float s0 = 8.0F * ((((int) base) & 63) * 2 + k++), s1 = s0 + 2.2F;
-                    quad(vc, m, 26.0F / 16.0F, 6.0F / 16.0F, 5.0F / 16.0F, 18.0F / 16.0F, z, s1, s0, 10.0F + 4.6F / 16.0F, 10.0F + 11.0F / 16.0F, r, g, b, a);
-                }
+            if (lit) { // the opening: the flames are marched behind it, among the logs
+                quad(Types.FREE, buffers, m, 26.0F / 16.0F, 6.0F / 16.0F, 4.2F / 16.0F, 21.7F / 16.0F, 4.6F / 16.0F,
+                        26.0F / 16.0F, 6.0F / 16.0F, 10.0F, r, g, b, a);
             }
             poseStack.popPose();
             return;
         }
         // the glass box: the front glass between the end posts; the side glass at the ends of a row
         boolean left = state.getValue(WallFireBlock.LEFT), right = state.getValue(WallFireBlock.RIGHT);
+        float flags = 10.0F * ((left ? 0 : 2) + (right ? 0 : 4));
         float x0 = right ? 0.0F : 0.5F / 16.0F, x1 = left ? 1.0F : 15.5F / 16.0F;
-        float y0 = 5.6F / 16.0F, y1 = 13.4F / 16.0F, u0 = 4.3F / 16.0F, u1 = 11.7F / 16.0F;
+        float y0 = 5.6F / 16.0F, y1 = 13.4F / 16.0F;
+        quad(Types.FIRE, buffers, m, x1, x0, y0, y1, 8.15F / 16.0F, base + x1, base + x0, flags, r, g, b, a);
         VertexConsumer vc = buffers.getBuffer(Types.FIRE);
-        quad(vc, m, x1, x0, y0, y1, 8.15F / 16.0F, base + x1, base + x0, u0, u1, r, g, b, a);
         if (!left) { // (facing out to the left: +x)
-            side(vc, m, 15.85F / 16.0F, 15.4F / 16.0F, 8.6F / 16.0F, y0, y1, base + 1.0F, base + 1.4F, u0, u1, r, g, b, a);
+            float sx = base + 15.85F / 16.0F;
+            side(vc, m, 15.85F / 16.0F, 15.4F / 16.0F, 8.6F / 16.0F, y0, y1, sx, sx, flags, r, g, b, a);
         }
         if (!right) {
-            side(vc, m, 0.15F / 16.0F, 8.6F / 16.0F, 15.4F / 16.0F, y0, y1, base - 0.4F, base, u0, u1, r, g, b, a);
+            float sx = base + 0.15F / 16.0F;
+            side(vc, m, 0.15F / 16.0F, 8.6F / 16.0F, 15.4F / 16.0F, y0, y1, sx, sx, flags, r, g, b, a);
         }
         poseStack.popPose();
     }
