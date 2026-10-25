@@ -191,3 +191,7 @@
   wave, beat, bend, jelly squeeze) is computed in Java once per frame per tank (AquariumRenderer.fishFrame, SPECIES
   table must match the shader's species()/fishShape().w) and uploaded as an RGBA32F texture FishTex (4 texels per
   fish). The Fish0-63 uniforms are gone. Each regular fish also gets a tight local box test before ray marching.
+- Aquarium fish choice (25 Oct): AquariumRenderer.chooseFish - budget = water * (1.4 normal / 0.6 ocean), COST per
+  kind, WEIGHT, CAP per kind scaled by 10/enabledKinds, tankNeeds(kind) minimum tank width/height (giants only in big
+  tanks), max 48 normal / 20 ocean, at least 1. Sneak + right-click an aquarium: AquariumScreen toggles kinds;
+  client/AquariumSettings saves config/skyblocks-aquarium.properties (client-only: fish are only drawn there).
