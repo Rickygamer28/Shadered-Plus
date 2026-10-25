@@ -156,5 +156,7 @@
   "fish.skyblocks.octopus": "Octopus",
   "fish.skyblocks.lobster": "Lobster",
   "fish.skyblocks.shrimp": "Shrimp",
-  "screen.skyblocks.aquarium_shared": "Also in the other aquarium (one setting for both)"
+  "screen.skyblocks.aquarium_shared": "Also in the other aquarium (one setting for both)",
+  "block.skyblocks.rain_glass": "Rain Glass",
+  "tooltip.skyblocks.rain_glass": "Right-click with a block or a sky block to see it behind the wet glass"
 }

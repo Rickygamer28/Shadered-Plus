@@ -77,6 +77,10 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()
                     .mapColor(net.minecraft.world.level.material.MapColor.DIAMOND));
 
+    /** Rain glass: rain running down a window, over any block put behind it (RainGlassBlock). */
+    public static final DeferredBlock<RainGlassBlock> RAIN_GLASS = BLOCKS.registerBlock("rain_glass", RainGlassBlock::new,
+            BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS).mapColor(net.minecraft.world.level.material.MapColor.COLOR_LIGHT_BLUE));
+
     /** An infinity mirror: a tunnel of LED rings going on forever (InfinityMirrorBlock, client/InfinityMirrorRenderer). */
     public static final DeferredBlock<InfinityMirrorBlock> INFINITY_MIRROR = BLOCKS.registerBlock("infinity_mirror",
             InfinityMirrorBlock::new, BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS)

@@ -54,6 +54,7 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> DISCO_BALL = ITEMS.registerSimpleBlockItem("disco_ball", ModBlocks.DISCO_BALL);
 
     public static final DeferredItem<BlockItem> WATER_CAUSTICS = ITEMS.registerSimpleBlockItem("water_caustics", ModBlocks.WATER_CAUSTICS);
+    public static final DeferredItem<BlockItem> RAIN_GLASS = ITEMS.registerSimpleBlockItem("rain_glass", ModBlocks.RAIN_GLASS);
 
     public static final DeferredItem<BlockItem> INFINITY_MIRROR = ITEMS.registerSimpleBlockItem("infinity_mirror", ModBlocks.INFINITY_MIRROR);
 

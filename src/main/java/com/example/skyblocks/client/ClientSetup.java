@@ -150,11 +150,16 @@ public final class ClientSetup {
             net.minecraft.client.resources.model.ModelResourceLocation.standalone(
                     net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "block/water_caustics_overlay"));
 
+    private static final net.minecraft.client.resources.model.ModelResourceLocation RAIN_OVERLAY =
+            net.minecraft.client.resources.model.ModelResourceLocation.standalone(
+                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "block/rain_glass_overlay"));
+
     @SubscribeEvent
     public static void registerModels(net.neoforged.neoforge.client.event.ModelEvent.RegisterAdditional event) {
         event.register(BUCKET_MODEL);
         event.register(LIQUID_MODEL);
         event.register(CAUSTICS_OVERLAY);
+        event.register(RAIN_OVERLAY);
     }
 
     /** The water caustics block's model also draws the block put under its water (client/WaterCausticsModel). */
@@ -170,6 +175,16 @@ public final class ClientSetup {
             net.minecraft.client.resources.model.BakedModel water = models.get(key);
             if (water != null) {
                 models.put(key, new WaterCausticsModel(water, overlay));
+            }
+        }
+        net.minecraft.client.resources.model.BakedModel rain = models.get(RAIN_OVERLAY);
+        if (rain != null) { // (rain glass: the same, with the rain textures)
+            for (net.minecraft.world.level.block.state.BlockState state : com.example.skyblocks.ModBlocks.RAIN_GLASS.get().getStateDefinition().getPossibleStates()) {
+                var key = net.minecraft.client.renderer.block.BlockModelShaper.stateToModelLocation(state);
+                net.minecraft.client.resources.model.BakedModel glass = models.get(key);
+                if (glass != null) {
+                    models.put(key, new WaterCausticsModel(glass, rain));
+                }
             }
         }
     }
@@ -188,7 +203,7 @@ public final class ClientSetup {
                 return Minecraft.getInstance().getBlockColors().getColor(be.inside(), level, pos, tint);
             }
             return -1;
-        }, com.example.skyblocks.ModBlocks.WATER_CAUSTICS.get());
+        }, com.example.skyblocks.ModBlocks.WATER_CAUSTICS.get(), com.example.skyblocks.ModBlocks.RAIN_GLASS.get());
     }
 
     /** A sky added by another mod has no model files of ours: give its bucket and liquid the shared models. */
