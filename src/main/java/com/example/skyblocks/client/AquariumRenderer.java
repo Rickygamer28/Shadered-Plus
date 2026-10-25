@@ -62,6 +62,9 @@ public final class AquariumRenderer {
         /** Per fish: the middle of the stretch of water it swims in (x, y, z) and how far it reaches each way (x, y, z). */
         final float[] fish = new float[MAX_FISH * 8];
         int fishCount;
+        /** Per fish: its species, and its own random numbers (size, speed, 3 path phases, depth, jellyfish beat, 3 school offsets). */
+        final int[] kinds = new int[MAX_FISH];
+        final float[] rnd = new float[MAX_FISH * 10];
         boolean ocean;
         /** Per decoration: its base (x, y, z, tank coordinates) and type + 8 * (turn + 16 * size * 10). */
         final float[] decor = new float[MAX_DECOR * 4];
@@ -236,16 +239,198 @@ public final class AquariumRenderer {
         }
     }
 
+
+    // ---- the fish's movement: worked out here once a frame (not again for every pixel), handed to the shader as a
+    // small float texture: per fish 4 texels: (middle x, y, z, size), (forward x, y, z, species), (up x, y, z, swim
+    // wave), (tail beat, turn bend, jellyfish squeeze, 0) ----
+
+    /** Each species (as in the shader): body radii, tail radii, fin radii, speed, belly fin size. */
+    private static final float[][] SPECIES = {
+            {0.16F, 0.075F, 0.035F, 0.06F, 0.065F, 0.01F, 0.07F, 0.03F, 0.008F, 1.0F, 0.6F},
+            {0.16F, 0.09F, 0.03F, 0.06F, 0.07F, 0.01F, 0.12F, 0.03F, 0.008F, 1.0F, 0.8F},
+            {0.13F, 0.11F, 0.03F, 0.05F, 0.06F, 0.01F, 0.11F, 0.08F, 0.008F, 0.9F, 1.8F},
+            {0.11F, 0.04F, 0.025F, 0.04F, 0.04F, 0.008F, 0.0F, 0.0F, 0.0F, 1.4F, 0.7F},
+            {0.11F, 0.13F, 0.025F, 0.05F, 0.08F, 0.008F, 0.06F, 0.15F, 0.008F, 0.6F, 2.6F},
+            {0.13F, 0.09F, 0.065F, 0.09F, 0.09F, 0.012F, 0.06F, 0.04F, 0.008F, 0.7F, 0.6F},
+            {0.12F, 0.05F, 0.03F, 0.13F, 0.17F, 0.008F, 0.11F, 0.11F, 0.008F, 0.6F, 3.5F},
+            {0.14F, 0.085F, 0.08F, 0.045F, 0.05F, 0.006F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F},
+            {0.08F, 0.03F, 0.02F, 0.085F, 0.075F, 0.006F, 0.04F, 0.035F, 0.005F, 1.3F, 0.4F},
+            {0.12F, 0.13F, 0.025F, 0.04F, 0.05F, 0.008F, 0.11F, 0.035F, 0.008F, 0.6F, 0.8F},
+            {0.9F, 0.18F, 0.16F, 0.25F, 0.3F, 0.03F, 0.18F, 0.22F, 0.03F, 0.8F, 0.35F},
+            {0.45F, 0.13F, 0.11F, 0.12F, 0.18F, 0.02F, 0.08F, 0.1F, 0.02F, 1.3F, 0.5F},
+            {0.35F, 0.05F, 0.75F, 0.35F, 0.015F, 0.015F, 0.0F, 0.0F, 0.0F, 0.6F, 0.5F},
+            {0.4F, 0.16F, 0.33F, 0.12F, 0.08F, 0.09F, 0.18F, 0.03F, 0.55F, 0.5F, 0.5F},
+            {0.55F, 0.25F, 0.2F, 0.15F, 0.2F, 0.03F, 0.3F, 0.08F, 0.02F, 0.5F, 0.7F},
+            {0.25F, 0.18F, 0.25F, 0.06F, 0.4F, 0.06F, 0.0F, 0.0F, 0.0F, 0.25F, 0.5F},
+            {0.8F, 0.17F, 0.17F, 0.12F, 0.04F, 0.28F, 0.15F, 0.18F, 0.03F, 1.1F, 0.0F},
+            {0.12F, 0.035F, 0.025F, 0.04F, 0.035F, 0.006F, 0.0F, 0.0F, 0.0F, 1.5F, 0.5F},
+            {0.5F, 0.42F, 0.12F, 0.05F, 0.4F, 0.02F, 0.14F, 0.6F, 0.03F, 0.35F, 1.7F},
+            {1.25F, 0.3F, 0.27F, 0.32F, 0.45F, 0.04F, 0.2F, 0.38F, 0.045F, 0.45F, 0.35F},
+    };
+
+    private static final float[] FISH_DATA = new float[MAX_FISH * 16];
+    private static final java.nio.FloatBuffer FISH_BUF = org.lwjgl.BufferUtils.createFloatBuffer(MAX_FISH * 16);
+    private static int fishTex = -1;
+
+    /** 0-9 the normal tank; the ocean: more sardines and tuna than sharks. */
+    private static int pickKind(boolean ocean, float r) {
+        if (!ocean) {
+            return Math.min(9, (int) (r * 10.0F));
+        }
+        return r < 0.09F ? 10 : r < 0.21F ? 11 : r < 0.28F ? 12 : r < 0.38F ? 13 : r < 0.47F ? 14 : r < 0.56F ? 15
+                : r < 0.63F ? 16 : r < 0.70F ? 18 : r < 0.76F ? 19 : 17;
+    }
+
+    private static double clampD(double v, double lo, double hi) {
+        return Math.max(lo, Math.min(hi, v));
+    }
+
+    private static double smooth(double a, double b, double x) {
+        double k = clampD((x - a) / (b - a), 0.0, 1.0);
+        return k * k * (3.0 - 2.0 * k);
+    }
+
+    /**
+     * Where every fish of this tank is this moment, which way it faces, how it swims: wandering loops round its water
+     * (bursts and glides, rising and sinking), schools following their leader, leaning and bending into turns.
+     */
+    private static void fishFrame(Floor floor, double t) {
+        java.util.Arrays.fill(FISH_DATA, 0.0F);
+        float[] r = floor.rnd;
+        for (int i = 0; i < floor.fishCount; i++) {
+            int kind = floor.kinds[i];
+            float[] sp = SPECIES[kind];
+            double bx = sp[0], by = sp[1], bz = sp[2], tx = sp[3], ty = sp[4], fy = sp[7], fz = sp[8];
+            boolean school = kind == 3 || kind == 17;
+            int lead = i;
+            if (school) {
+                for (int j = 0; j < i; j++) {
+                    if (floor.kinds[j] == kind) {
+                        lead = j;
+                        break;
+                    }
+                }
+            }
+            double mx = floor.fish[lead * 8], my = floor.fish[lead * 8 + 1], mz = floor.fish[lead * 8 + 2];
+            double qx = floor.fish[lead * 8 + 4], qy = floor.fish[lead * 8 + 5], qz = floor.fish[lead * 8 + 6];
+            double ox = 0.0, oy = 0.0, oz = 0.0;
+            if (lead < i) {
+                double k = clampD(Math.min(qx, qz) * 0.3, 0.06, 0.55);
+                ox = r[i * 10 + 7] * k;
+                oy = r[i * 10 + 8] * 0.45 * k;
+                oz = r[i * 10 + 9] * k;
+            }
+            double extent = Math.max(bx + tx * 1.6, Math.max(bz, fz));
+            double size = (floor.ocean ? 0.75 : 0.65) + 0.5 * r[i * 10];
+            if (kind == 18) {
+                size *= 1.9;
+            }
+            size = Math.min(size, Math.max(Math.min(qx - Math.abs(ox), qz - Math.abs(oz)) - 0.08, 0.1) / extent);
+            double tallH = by + (kind == 15 ? ty * 2.0 : 0.0) + (kind == 18 ? 0.8 : 0.7) * Math.max(fy, by * 0.42 * sp[10]) + (kind == 4 ? by * 0.8 : 0.0);
+            size = Math.min(size, Math.max(qy - Math.abs(oy) - 0.05, 0.1) / Math.max(tallH, 0.05));
+            double speed = (0.25 + 0.35 * r[lead * 10 + 1]) * sp[9];
+            double rx = Math.max(qx - Math.abs(ox) - (extent * size + 0.06), 0.02);
+            double ry = Math.max(qy - Math.abs(oy) - (tallH * size + 0.04), 0.02);
+            double rz = Math.max(qz - Math.abs(oz) - (extent * size + 0.06), 0.02);
+            double p0 = r[lead * 10 + 2] * Math.PI * 2.0, p1 = r[lead * 10 + 3] * Math.PI * 2.0, p2 = r[lead * 10 + 4] * Math.PI * 2.0;
+            double level = my + (r[lead * 10 + 5] * 2.0 - 1.0) * ry * 0.6;
+            // the path, and how fast and which way it's going along it (exactly, not from differences)
+            double sn = Math.sin(0.7 * t + p2), cs = Math.cos(0.7 * t + p2);
+            double a = speed * (t + 0.45 * sn / 0.7), da = speed * (1.0 + 0.45 * cs), dda = -speed * 0.315 * sn;
+            double x = 0.78 * Math.sin(a + p0) + 0.22 * Math.sin(2.3 * a + p1);
+            double x1 = 0.78 * Math.cos(a + p0) + 0.506 * Math.cos(2.3 * a + p1);
+            double x2 = -0.78 * Math.sin(a + p0) - 1.1638 * Math.sin(2.3 * a + p1);
+            double z = 0.78 * Math.sin(0.73 * a + p1) + 0.22 * Math.sin(1.9 * a + p0 + 1.0);
+            double z1 = 0.5694 * Math.cos(0.73 * a + p1) + 0.418 * Math.cos(1.9 * a + p0 + 1.0);
+            double z2 = -0.415662 * Math.sin(0.73 * a + p1) - 0.7942 * Math.sin(1.9 * a + p0 + 1.0);
+            double ky = kind == 15 ? 0.0 : ry * 0.4;
+            double y = level + ky * Math.sin(0.31 * a + p2);
+            double y1 = ky * 0.31 * Math.cos(0.31 * a + p2);
+            double vx = rx * x1 * da, vy = y1 * da, vz = rz * z1 * da;
+            double ax = rx * (x2 * da * da + x1 * dda), az = rz * (z2 * da * da + z1 * dda);
+            double cx = mx + rx * x, cy = clampD(y, my - ry, my + ry), cz = mz + rz * z;
+            // jellyfish: squeeze (quickly) and relax (slowly), rising a little with each squeeze
+            double jph = t * 0.4 + r[i * 10 + 6];
+            jph -= Math.floor(jph);
+            double squeeze = smooth(0.0, 0.12, jph) * (1.0 - smooth(0.12, 0.9, jph));
+            double fi = i;
+            double bob = kind == 15 ? 0.25 * Math.sin(t * 0.6 + fi) + 0.05 * squeeze : 0.03 * Math.sin(t * 0.7 + fi);
+            if (school) {
+                cx += 0.03 * Math.sin(t * 1.7 + fi * 2.1);
+                cy += 0.015 * Math.sin(t * 1.3 + fi);
+                cz += 0.03 * Math.cos(t * 1.5 + fi * 1.3);
+            }
+            cx += ox;
+            cy += oy + bob;
+            cz += oz;
+            double yRoom = Math.max(qy - tallH * size - 0.04, 0.02);
+            cy = clampD(cy, my - yRoom, my + yRoom);
+            // heading along its path (pitching a little as it rises or sinks, never steeply), leaning into turns
+            double hl = Math.sqrt(vx * vx + vz * vz);
+            double hx = hl > 1.0e-6 ? vx / hl : 1.0, hz = hl > 1.0e-6 ? vz / hl : 0.0;
+            double fyv = clampD(vy / Math.max(hl, 1.0e-4), -0.45, 0.45);
+            double fl = Math.sqrt(1.0 + fyv * fyv);
+            double fx = hx / fl, fwy = fyv / fl, fwz = hz / fl;
+            double sx = -hz, sz = hx; // (sideways, level)
+            double curve = (ax * sx + az * sz) / (hl * hl + 0.002);
+            double bank = clampD(curve * 0.25, -0.4, 0.4) * (kind == 12 ? 2.0 : 1.0);
+            double ux = -sz * fwy + sx * bank, uy = sz * fx - sx * fwz, uz = sx * fwy + sz * bank; // cross(side, fwd) + side * bank
+            double ul = Math.sqrt(ux * ux + uy * uy + uz * uz);
+            ux /= ul;
+            uy /= ul;
+            uz /= ul;
+            if (kind == 15) {
+                fx = 1.0; fwy = 0.0; fwz = 0.0;
+                ux = 0.0; uy = 1.0; uz = 0.0;
+            }
+            double burst = 1.0 + 0.45 * cs;
+            double beatK = (7.0 + 4.0 * speed) / Math.max(size * extent * 4.0, 1.0);
+            double wave = beatK * (0.35 * t + 0.65 * (t + 0.45 * sn / 0.7)) + fi * 2.0;
+            wave %= Math.PI * 2.0 * 1000.0; // (kept small: whole turns don't change anything)
+            double beat = 0.55 + 0.45 * burst / 1.45;
+            double bend = kind == 15 ? 0.0 : clampD(curve * size, -0.6 / bx, 0.6 / bx);
+            int o = i * 16;
+            FISH_DATA[o] = (float) cx; FISH_DATA[o + 1] = (float) cy; FISH_DATA[o + 2] = (float) cz; FISH_DATA[o + 3] = (float) size;
+            FISH_DATA[o + 4] = (float) fx; FISH_DATA[o + 5] = (float) fwy; FISH_DATA[o + 6] = (float) fwz; FISH_DATA[o + 7] = kind;
+            FISH_DATA[o + 8] = (float) ux; FISH_DATA[o + 9] = (float) uy; FISH_DATA[o + 10] = (float) uz; FISH_DATA[o + 11] = (float) wave;
+            FISH_DATA[o + 12] = (float) beat; FISH_DATA[o + 13] = (float) bend; FISH_DATA[o + 14] = (float) squeeze;
+        }
+    }
+
+    /** This tank's fish, this moment, into the fish texture. */
+    private static void uploadFish(Floor floor) {
+        Minecraft mc = Minecraft.getInstance();
+        long gameTime = mc.level == null ? 0L : mc.level.getGameTime();
+        double t = ((gameTime % 1_728_000L) + mc.getTimer().getGameTimeDeltaPartialTick(false)) / 20.0;
+        fishFrame(floor, t);
+        if (fishTex < 0) {
+            fishTex = com.mojang.blaze3d.platform.TextureUtil.generateTextureId();
+            com.mojang.blaze3d.platform.GlStateManager._bindTexture(fishTex);
+            com.mojang.blaze3d.platform.GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
+            com.mojang.blaze3d.platform.GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
+            com.mojang.blaze3d.platform.GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, org.lwjgl.opengl.GL12.GL_CLAMP_TO_EDGE);
+            com.mojang.blaze3d.platform.GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, org.lwjgl.opengl.GL12.GL_CLAMP_TO_EDGE);
+        } else {
+            com.mojang.blaze3d.platform.GlStateManager._bindTexture(fishTex);
+        }
+        FISH_BUF.clear();
+        FISH_BUF.put(FISH_DATA);
+        FISH_BUF.flip();
+        com.mojang.blaze3d.platform.GlStateManager._pixelStore(GL11.GL_UNPACK_ROW_LENGTH, 0);
+        com.mojang.blaze3d.platform.GlStateManager._pixelStore(GL11.GL_UNPACK_SKIP_PIXELS, 0);
+        com.mojang.blaze3d.platform.GlStateManager._pixelStore(GL11.GL_UNPACK_SKIP_ROWS, 0);
+        com.mojang.blaze3d.platform.GlStateManager._pixelStore(GL11.GL_UNPACK_ALIGNMENT, 4);
+        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, org.lwjgl.opengl.GL30.GL_RGBA32F, 4, MAX_FISH, 0, GL11.GL_RGBA, GL11.GL_FLOAT, FISH_BUF);
+    }
+
     private static void setShape(Floor floor) {
         float[] o = floor.occupancy;
         for (int v = 0; v < OCC_VECS; v++) {
             shader.safeGetUniform("Occ" + v).set(o[v * 4], o[v * 4 + 1], o[v * 4 + 2], o[v * 4 + 3]);
         }
         shader.safeGetUniform("Full").set(floor.full ? 1.0F : 0.0F);
-        float[] f = floor.fish;
-        for (int v = 0; v < MAX_FISH * 2; v++) {
-            shader.safeGetUniform("Fish" + v).set(f[v * 4], f[v * 4 + 1], f[v * 4 + 2], f[v * 4 + 3]);
-        }
+        uploadFish(floor);
+        shader.setSampler("FishTex", fishTex);
         shader.safeGetUniform("FishCount").set((float) floor.fishCount);
         shader.safeGetUniform("Ocean").set(floor.ocean ? 1.0F : 0.0F);
         float[] d = floor.decor;
@@ -331,6 +516,10 @@ public final class AquariumRenderer {
                     lo = nlo;
                     hi = nhi;
                 }
+            }
+            floor.kinds[i] = pickKind(floor.ocean, random.nextFloat());
+            for (int k = 0; k < 10; k++) {
+                floor.rnd[i * 10 + k] = k >= 7 ? random.nextFloat() * 2.0F - 1.0F : random.nextFloat();
             }
             for (int k = 0; k < 3; k++) {
                 int min = k == 0 ? floor.min.getX() : k == 1 ? floor.min.getY() : floor.min.getZ();
