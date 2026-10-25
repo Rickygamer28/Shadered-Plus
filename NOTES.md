@@ -187,3 +187,7 @@
 - Aquarium fish colours/shapes redone from the user's photos (fishColour per species; fins tagged by q.z: 0 back,
   -1 under, 2 side, 3 angelfish filament). New species 19 basking shark (ocean, gaping mouth). Eyes sized per
   species (eyeScale) and painted where the bulge is. Sunfish ×1.9 size.
+- Aquarium speed-up (25 Oct): fish motion (kind, school, size, swim path with exact derivatives, heading/bank,
+  wave, beat, bend, jelly squeeze) is computed in Java once per frame per tank (AquariumRenderer.fishFrame, SPECIES
+  table must match the shader's species()/fishShape().w) and uploaded as an RGBA32F texture FishTex (4 texels per
+  fish). The Fish0-63 uniforms are gone. Each regular fish also gets a tight local box test before ray marching.
