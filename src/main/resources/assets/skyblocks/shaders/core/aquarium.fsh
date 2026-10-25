@@ -588,7 +588,10 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
     float prof = pow(max(1.0 - u * u, 0.0), sh.y);
     float root = smoothstep(0.3, 0.0, s) * (kind == 18 ? 0.75 : 0.22); // (the sunfish ends as if cut off)
     float h = H * max(prof, root) + 0.002, w = W * max(prof, root * 0.8) + 0.002;
-    float body = max((length(vec2(p.y / h, p.z / w)) - 1.0) * min(h, w), abs(p.x) - L);
+    float yy = clamp(p.y / h, -1.0, 1.0);
+    float wl = kind == 7 ? w : w * (1.0 - 0.28 * yy * yy);
+    float body = max((length(vec2(p.y / h, p.z / wl)) - 1.0) * min(h, wl), abs(p.x) - L);
+    bool bony = kind != 10 && kind != 16 && kind != 19 && kind != 18;
     // eyes, bulging a little, and a small mouth
     float se = 0.81;
     float ue = (se - sh.x) / (1.0 - sh.x);
@@ -622,7 +625,8 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
     } else {
         outer = span * (0.25 + 0.75 * sqrt(max(sin(kt * 1.5708), 0.0))); // a rounded fan
     }
-    float tail = max(max(max(across - outer, inner - across), max(-xt, xt - tl)) * 0.7, sideways - thick);
+    float tlr = tl * (bony ? 1.0 - 0.05 * abs(sin(across / max(span, 0.001) * 14.0)) : 1.0);
+    float tail = max(max(max(across - outer, inner - across), max(-xt, xt - tlr)) * 0.7, sideways - thick * (1.0 - 0.6 * kt));
     res = smin(res, tail, 0.05 * L);
     if (tail < best) {
         best = tail; ptype = 1;
@@ -632,8 +636,9 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
     if (sp.fin.x > 0.0) {
         float fx1 = L * 0.3, fx0 = fx1 - sp.fin.x * 2.2;
         float kx = clamp((p.x - fx0) / (fx1 - fx0), 0.0, 1.0);
-        float dh = sp.fin.y * pow(max(sin(kx * 3.1416), 0.0), 0.7) * (1.25 - 0.5 * kx);
-        float dorsal = max(max(max(p.y - (h * 0.92 + dh), h * 0.55 - p.y), max(fx0 - p.x, p.x - fx1)) * 0.7, abs(p.z) - sp.fin.z);
+        float dh = sp.fin.y * pow(max(sin(kx * 3.1416), 0.0), 0.7) * (1.25 - 0.5 * kx) * (bony ? 1.0 - 0.07 * abs(sin(kx * 22.0)) : 1.0);
+        float up = clamp((p.y - h * 0.92) / max(dh, 0.001), 0.0, 1.0);
+        float dorsal = max(max(max(p.y - (h * 0.92 + dh), h * 0.55 - p.y), max(fx0 - p.x, p.x - fx1)) * 0.7, abs(p.z) - sp.fin.z * (1.0 - 0.6 * up));
         res = smin(res, dorsal, 0.04 * L);
         if (dorsal < best) {
             best = dorsal; ptype = 2;
@@ -643,8 +648,9 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
     if (sh.w > 0.0) {
         float ax1 = -L * 0.05, ax0 = -L * 0.65;
         float kx = clamp((p.x - ax0) / (ax1 - ax0), 0.0, 1.0);
-        float dh = H * 0.35 * sh.w * pow(max(sin(kx * 3.1416), 0.0), 0.7) * (1.2 - 0.4 * kx);
-        float anal = max(max(max(-p.y - (h * 0.92 + dh), h * 0.55 + p.y), max(ax0 - p.x, p.x - ax1)) * 0.7, abs(p.z) - max(sp.fin.z, 0.006));
+        float dh = H * 0.35 * sh.w * pow(max(sin(kx * 3.1416), 0.0), 0.7) * (1.2 - 0.4 * kx) * (bony ? 1.0 - 0.07 * abs(sin(kx * 18.0)) : 1.0);
+        float down = clamp((-p.y - h * 0.92) / max(dh, 0.001), 0.0, 1.0);
+        float anal = max(max(max(-p.y - (h * 0.92 + dh), h * 0.55 + p.y), max(ax0 - p.x, p.x - ax1)) * 0.7, abs(p.z) - max(sp.fin.z, 0.006) * (1.0 - 0.6 * down));
         res = smin(res, anal, 0.04 * L);
         if (anal < best) {
             best = anal; ptype = 2;
@@ -876,6 +882,9 @@ void main() {
     vec3 fishCol = vec3(0.0);
     bool fish = false;
     float fishAlpha = 1.0;
+    vec3 edgeCol = vec3(0.0);
+    float edgeA = 0.0, edgeT = 1.0e9;
+    float pixA = max(length(fwidth(rd)), 1.0e-5); // (how wide a pixel is, as an angle)
     vec3 rot = ro - BoxMin;
     for (int i = 0; i < 32; i++) {
         if (i >= count) {
@@ -887,7 +896,7 @@ void main() {
         // its own stretch of water (worked out on the CPU from the tank's shape), made to fit in it
         vec3 middle = fishData(i * 2).xyz, reach = fishData(i * 2 + 1).xyz;
         float extent = max(sp.body.x + sp.tail.x * 1.6, max(sp.body.z, sp.fin.z));
-        float size = (Ocean > 0.5 ? 1.0 : 0.85) + 0.55 * hash11(fi * 3.1);
+        float size = (Ocean > 0.5 ? 0.75 : 0.65) + 0.5 * hash11(fi * 3.1);
         if (kind == 18) size *= 1.9; // the sunfish is a giant (still made to fit the water it has)
         size = min(size, max(min(reach.x, reach.z) - 0.08, 0.1) / extent);
         float tallH = sp.body.y + (kind == 15 ? sp.tail.y * 2.0 : 0.0) + (kind == 18 ? 0.8 : 0.7) * max(sp.fin.y, sp.body.y * 0.42 * fishShape(kind).w) + (kind == 4 ? sp.body.y * 0.8 : 0.0);
@@ -932,68 +941,116 @@ void main() {
         int part_ = 0;
         vec3 q = vec3(0.0);
         float tm = t0;
-        for (int s = 0; s < 64; s++) {
+        float bestR = 1.0e9, bestT = -1.0; // (how close the ray passes, in pixels: for smooth edges)
+        for (int s = 0; s < 96; s++) {
             float d = fishSDF(kind, sp, lo + ld * (tm / size), wave, flap, pulse, part_, q) * size;
-            if (d < 0.0012) {
+            float px = pixA * tm;
+            if (d < max(0.0004, 0.12 * px)) {
                 tf = tm;
                 break;
             }
-            tm += max(d * 0.6, 0.0012);
+            if (d / px < bestR) {
+                bestR = d / px;
+                bestT = tm;
+            }
+            tm += max(d * 0.6, 0.0003 + 0.08 * px);
             if (tm > t1) {
                 break;
             }
         }
-        if (tf < 0.0) {
-            continue;
+        float cover = 1.0;
+        if (tf < 0.0) { // missed: but if it passed within a pixel, part of this pixel is fish (a soft edge)
+            if (bestT < 0.0 || bestR > 1.0 || bestT >= edgeT) {
+                continue;
+            }
+            cover = 1.0 - smoothstep(0.12, 1.0, bestR);
+            if (cover < 0.03) {
+                continue;
+            }
+            tf = bestT;
+            float unused = fishSDF(kind, sp, lo + ld * (tf / size), wave, flap, pulse, part_, q);
         }
         vec3 pl = lo + ld * (tf / size);
-        vec2 e = vec2(0.003, -0.003);
+        float ee = max(0.0007, 0.008 * min(sp.body.x, sp.body.y));
+        vec2 e = vec2(ee, -ee);
         int dummyT;
         vec3 dummyQ;
         vec3 g = e.xyy * fishSDF(kind, sp, pl + e.xyy, wave, flap, pulse, dummyT, dummyQ)
                + e.yyx * fishSDF(kind, sp, pl + e.yyx, wave, flap, pulse, dummyT, dummyQ)
                + e.yxy * fishSDF(kind, sp, pl + e.yxy, wave, flap, pulse, dummyT, dummyQ)
                + e.xxx * fishSDF(kind, sp, pl + e.xxx, wave, flap, pulse, dummyT, dummyQ);
+        vec3 nl = normalize(g);
         vec3 n = normalize(F * g.x + U * g.y + S * g.z);
         int part = part_;
-        if (tf > 0.0 && tf > tEnter - 0.01 && tf < hitT) {
-            hitT = tf;
-            fish = true;
+        if (tf > tEnter - 0.01 && tf < hitT) {
+            // shade in the creases (where fins meet the body, under the gill cover): ambient occlusion
+            float occ = 0.0;
+            for (int k = 1; k <= 3; k++) {
+                float hk = 0.12 * sp.body.y * float(k);
+                occ += max(hk - fishSDF(kind, sp, pl + nl * hk, wave, flap, pulse, dummyT, dummyQ), 0.0) / hk / float(k);
+            }
+            float ao = clamp(1.0 - 0.55 * occ, 0.35, 1.0);
             float rnd = hash11(fi * 13.3);
             vec3 base = fishColour(kind, q, part, rnd);
+            bool isEye = false;
             // the eye
             bool eyed = kind != 12 && kind != 15 && kind != 13;
             if (kind == 13 && part == 1 && abs(q.z) > 0.55) {
                 float eyeD = length(vec2((q.x - 0.45) * 1.2, q.y - 0.2));
-                if (eyeD < 0.13) base = vec3(0.02);
+                if (eyeD < 0.13) { base = vec3(0.02); isEye = true; }
                 else if (eyeD < 0.19) base = vec3(0.6, 0.45, 0.2);
             }
             if (eyed && part == 0 && abs(q.z) > 0.55) { // (where the eye bulges out)
                 float er = sp.body.y * eyeScale(kind);
                 vec2 ev = vec2((q.x - 0.62) * sp.body.x, (q.y - 0.22) * sp.body.y) / er;
                 float eyeD = length(ev);
-                if (length(ev - vec2(0.025, 0.035)) < 0.025) base = vec3(0.95); // (glint)
-                else if (eyeD < 0.07) base = vec3(0.02);                       // pupil
-                else if (eyeD < 0.115) base = eyeRing(kind);                    // ring
+                if (eyeD < 0.115) {
+                    isEye = true;
+                    base = eyeD < 0.07 ? vec3(0.015) : mix(eyeRing(kind), eyeRing(kind) * 0.6, smoothstep(0.09, 0.115, eyeD));
+                } else if (eyeD < 0.13) {
+                    base *= 0.6; // (a dark rim round the eye)
+                }
             }
             if (part >= 1 && kind != 13 && kind != 15 && kind != 10 && kind != 16 && kind != 19 && kind != 12) {
                 base *= 0.88 + 0.12 * smoothstep(0.2, 0.5, abs(fract(q.x * 7.0 + q.y * 2.0) - 0.5) * 2.0); // (fin rays)
-                base = mix(base, vec3(1.0), 0.12);
+                base = mix(base, vec3(1.0), 0.1);
             }
-            if (part == 0 && kind != 12 && kind != 13 && kind != 15 && kind != 10 && kind != 16 && kind != 19 && kind != 18) {
-                vec2 sc = vec2(q.x * 14.0, q.y * 9.0 + 0.5 * floor(q.x * 14.0));
-                base *= 0.93 + 0.07 * smoothstep(0.2, 0.45, length(fract(sc) - 0.5)); // (faint scales)
-                if (abs(q.x - 0.5) < 0.03 && abs(q.y) < 0.7) base *= 0.75;          // (gill line)
+            if (part == 0 && !isEye && kind != 12 && kind != 13 && kind != 15 && kind != 10 && kind != 16 && kind != 19 && kind != 18) {
+                vec2 sc = vec2(q.x * 16.0, q.y * 10.0 + 0.5 * floor(q.x * 16.0));
+                vec2 sf = fract(sc) - 0.5;
+                base *= 0.92 + 0.08 * smoothstep(0.25, 0.5, length(sf + vec2(0.35, 0.0))); // (overlapping scales)
+                float gx = q.x - (0.44 - 0.1 * q.y * q.y);
+                if (gx > 0.0 && gx < 0.03 && abs(q.y) < 0.75) base *= 0.78;              // (the gill cover's edge)
+                if (kind != 7 && q.x < 0.42 && abs(q.y - 0.18 + 0.12 * q.x * q.x) < 0.012) base *= 0.9; // (lateral line)
             }
-            base *= mix(0.8, 1.12, clamp(n.y * 0.5 + 0.5, 0.0, 1.0)); // (darker underneath)
             vec3 p = rot + rd * tf;
-            float light = 0.45 + 0.55 * max(n.y, 0.0) + 0.25 * max(dot(n, -rd), 0.0);
-            float caust = caustics(p.xz, t) * max(n.y, 0.0) * (p.y / BoxSize.y);
-            fishCol = base * light + vec3(0.6, 0.9, 1.0) * caust * 0.5;
+            vec3 sun = normalize(vec3(0.3, 1.0, 0.2));
+            float diff = clamp(dot(n, sun) * 0.5 + 0.5, 0.0, 1.0);
+            vec3 amb = mix(vec3(0.24, 0.34, 0.45), vec3(0.6, 0.76, 0.88), n.y * 0.5 + 0.5);
+            float through = part >= 1 && kind != 13 ? max(-dot(n, sun), 0.0) * 0.35 + 0.2 * max(dot(rd, sun), 0.0) : 0.0; // (thin fins let light through)
+            vec3 shade = base * (amb * 0.85 + vec3(1.0, 0.97, 0.9) * diff * 0.8 + 0.18 * max(dot(n, -rd), 0.0) + through) * ao;
+            vec3 hv = normalize(sun - rd);
             bool silver = kind == 3 || kind == 11 || kind == 17 || kind == 4;
-            fishCol += vec3(1.0) * pow(max(dot(reflect(rd, n), vec3(0.0, 1.0, 0.0)), 0.0), silver ? 16.0 : 24.0) * (kind == 13 ? 0.15 : silver ? 0.7 : 0.4);
-            fishCol += vec3(0.5, 0.8, 1.0) * pow(1.0 - max(dot(n, -rd), 0.0), 3.0) * 0.25; // (light round the edges, from the water)
-            fishAlpha = kind == 15 ? 0.55 : 1.0; // (the jellyfish is see-through)
+            float shin = silver ? 60.0 : kind == 13 ? 12.0 : 40.0;
+            shade += vec3(1.0) * pow(max(dot(n, hv), 0.0), shin) * (silver ? 0.85 : kind == 13 ? 0.12 : 0.4) * ao; // (wet, shiny skin)
+            if (isEye) {
+                shade += vec3(1.0) * pow(max(dot(n, hv), 0.0), 150.0) * 1.5; // (a glossy eye)
+                shade += vec3(1.0) * pow(max(dot(reflect(rd, n), vec3(0.0, 1.0, 0.0)), 0.0), 80.0) * 0.8;
+            }
+            float caust = caustics(p.xz, t) * max(n.y, 0.0) * (p.y / BoxSize.y);
+            shade += vec3(0.6, 0.9, 1.0) * caust * 0.45 * ao;
+            shade += vec3(0.5, 0.8, 1.0) * pow(1.0 - max(dot(n, -rd), 0.0), 3.0) * 0.22; // (light round the edges, from the water)
+            float alpha = (kind == 15 ? 0.55 : 1.0) * cover; // (the jellyfish is see-through)
+            if (cover > 0.99) {
+                hitT = tf;
+                fish = true;
+                fishCol = shade;
+                fishAlpha = alpha;
+            } else { // (a soft edge: laid over whatever is behind, once that is known)
+                edgeT = tf;
+                edgeCol = shade;
+                edgeA = alpha;
+            }
         }
     }
 
@@ -1057,6 +1114,20 @@ void main() {
         hitT = td;
     }
 
+    // the soft edge of a fish, over whatever is behind it
+    if (edgeA > 0.0 && edgeT < hitT) {
+        if (deco) {
+            decoCol = mix(decoCol, edgeCol, edgeA);
+        } else if (fish) {
+            fishCol = mix(fishCol, edgeCol, edgeA);
+        } else {
+            fish = true;
+            fishCol = edgeCol;
+            fishAlpha = edgeA;
+            hitT = edgeT;
+        }
+    }
+
     // ---- bubbles from a bubbler in one corner ----
     vec2 bubbler = vec2(0.3, 0.3) + vec2(hash11(41.0), hash11(43.0)) * max(BoxSize.xz - 0.6, vec2(0.0));
     vec3 bubbleCol = vec3(0.0);
@@ -1079,11 +1150,13 @@ void main() {
     }
 
     // ---- what the ray reaches: a fish, or the sand / back glass / surface ----
+    float fishT = hitT;
     if (deco) {
         col = decoCol;
     } else if (fish && fishAlpha > 0.99) {
         col = fishCol;
     } else {
+        hitT = tExit;
         vec3 p = hitPos;
         bool onSand = entry.y < 0.12 && entry.y > 0.0;
         if (onSand) {
@@ -1139,6 +1212,7 @@ void main() {
     }
     if (fish && fishAlpha <= 0.99) {
         col = mix(col, fishCol, fishAlpha);
+        hitT = mix(hitT, fishT, fishAlpha);
     }
     if (bubbleT < hitT) {
         col = mix(col, bubbleCol, 0.7);
