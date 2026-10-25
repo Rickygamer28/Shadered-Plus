@@ -1216,7 +1216,13 @@ void main() {
     vec3 tMax = (vec3(cell) + max(stepDir, 0.0) - pos) / rd;
     float leave = 0.0;
     int exitAxis = 1;
-    for (int i = 0; i < 64; i++) {
+    // (air inside the tank's box - a glass tunnel or room built through it - is seen through: the ray crosses it and
+    // carries on into the water beyond; the gaps are remembered, for no fog in them)
+    bool inAir = false;
+    float airStart = 0.0, gap0 = -1.0, gap1 = -1.0, gap2 = -1.0, gap3 = -1.0, airTotal = 0.0;
+    ivec3 airCell = cell;
+    int airAxis = 1;
+    for (int i = 0; i < 96; i++) {
         if (tMax.x < tMax.y && tMax.x < tMax.z) {
             leave = tMax.x; cell.x += int(stepDir.x); tMax.x += tDelta.x; exitAxis = 0;
         } else if (tMax.y < tMax.z) {
@@ -1224,9 +1230,30 @@ void main() {
         } else {
             leave = tMax.z; cell.z += int(stepDir.z); tMax.z += tDelta.z; exitAxis = 2;
         }
-        if (!water(cell)) {
+        if (water(cell)) {
+            if (inAir) { // (back into water across the tunnel)
+                inAir = false;
+                if (gap0 < 0.0) { gap0 = tEnter + airStart; gap1 = tEnter + leave; }
+                else if (gap2 < 0.0) { gap2 = tEnter + airStart; gap3 = tEnter + leave; }
+                airTotal += leave - airStart;
+            }
+            continue;
+        }
+        bool insideBox = all(greaterThanEqual(cell, ivec3(0))) && all(lessThan(cell, ivec3(BoxSize + 0.5)));
+        if (!insideBox) {
             break;
         }
+        if (!inAir) {
+            inAir = true;
+            airStart = leave;
+            airCell = cell;
+            airAxis = exitAxis;
+        }
+    }
+    if (inAir) { // (the air opens out of the tank: stop where the water ended - the tunnel's glass)
+        leave = airStart;
+        cell = airCell;
+        exitAxis = airAxis;
     }
     float tExit = tEnter + leave;
 
@@ -1519,7 +1546,8 @@ void main() {
         float b = dot(o, rd), cc = dot(o, o) - br * br, h = b * b - cc;
         if (h > 0.0) {
             float tb2 = -b - sqrt(h);
-            if (tb2 > tEnter && tb2 < bubbleT) {
+            bool inGap = (tb2 > gap0 && tb2 < gap1) || (tb2 > gap2 && tb2 < gap3);
+            if (tb2 > tEnter && tb2 < bubbleT && !inGap) {
                 bubbleT = tb2;
                 vec3 bn = normalize(o + rd * tb2);
                 bubbleCol = vec3(0.8, 0.95, 1.0) * (0.25 + 0.75 * pow(1.0 - abs(dot(bn, rd)), 2.0));
@@ -1607,6 +1635,12 @@ void main() {
 
     // ---- the water between: deeper colour with distance, lighter near the top, a soft shimmer ----
     float travel = max(hitT - tEnter, 0.0);
+    // (no fog across the tunnels' air; a faint glassy tint for each tunnel seen through)
+    float crossed = 0.0;
+    if (gap0 >= 0.0 && hitT > gap0) { travel -= min(hitT, gap1) - gap0; crossed += 1.0; }
+    if (gap2 >= 0.0 && hitT > gap2) { travel -= min(hitT, gap3) - gap2; crossed += 1.0; }
+    travel = max(travel, 0.0);
+    col = mix(col, vec3(0.6, 0.8, 0.88), 0.07 * crossed);
     vec3 waterCol = Ocean > 0.5 ? mix(vec3(0.0, 0.1, 0.24), vec3(0.05, 0.38, 0.58), clamp(entry.y / BoxSize.y, 0.0, 1.0))
                                 : mix(vec3(0.02, 0.2, 0.32), vec3(0.15, 0.55, 0.62), clamp(entry.y / BoxSize.y, 0.0, 1.0));
     col = mix(col, waterCol, 1.0 - exp(-travel * (Ocean > 0.5 ? 0.22 : 0.3)));

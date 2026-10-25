@@ -267,12 +267,12 @@ public final class AquariumRenderer {
             {0.5F, 0.42F, 0.12F, 0.05F, 0.4F, 0.02F, 0.14F, 0.6F, 0.03F, 0.35F, 1.7F},
             {1.25F, 0.3F, 0.27F, 0.22F, 0.4F, 0.04F, 0.2F, 0.38F, 0.045F, 0.45F, 0.35F},
             // the bottom creatures: how far they reach (forward/back, up, sideways), speed
-            {0.15F, 0.13F, 0.11F, 0, 0, 0, 0, 0, 0, 0.5F, 0},
-            {0.16F, 0.09F, 0.17F, 0, 0, 0, 0, 0, 0, 1.0F, 0},
-            {0.63F, 0.08F, 0.31F, 0, 0, 0, 0, 0, 0, 0.8F, 0},
-            {0.17F, 0.13F, 0.17F, 0, 0, 0, 0, 0, 0, 0.5F, 0},
-            {0.38F, 0.1F, 0.17F, 0, 0, 0, 0, 0, 0, 0.4F, 0},
-            {0.13F, 0.08F, 0.06F, 0, 0, 0, 0, 0, 0, 0.8F, 0},
+            {0.15F, 0.13F, 0.11F, 0, 0, 0, 0, 0, 0, 0.22F, 0},
+            {0.16F, 0.09F, 0.17F, 0, 0, 0, 0, 0, 0, 0.45F, 0},
+            {0.63F, 0.08F, 0.31F, 0, 0, 0, 0, 0, 0, 0.4F, 0},
+            {0.17F, 0.13F, 0.17F, 0, 0, 0, 0, 0, 0, 0.22F, 0},
+            {0.38F, 0.1F, 0.17F, 0, 0, 0, 0, 0, 0, 0.18F, 0},
+            {0.13F, 0.08F, 0.06F, 0, 0, 0, 0, 0, 0, 0.35F, 0},
     };
 
     private static final float[] FISH_DATA = new float[MAX_FISH * 16];
@@ -455,6 +455,30 @@ public final class AquariumRenderer {
                     if (floor.kinds[j] >= 20) push[j * 3 + 1] = 0.0;
                     near[i] = true;
                     near[j] = true;
+                }
+            }
+            // the bottom creatures walk round the decorations (rocks, castle, chest...), not through them
+            for (int i = 0; i < n; i++) {
+                if (floor.kinds[i] < 20) {
+                    continue;
+                }
+                for (int d = 0; d < floor.decorCount; d++) {
+                    int pk = Math.round(floor.decor[d * 4 + 3]);
+                    double sz = (pk / 128) / 10.0;
+                    int type = pk % 8;
+                    double dr = sz * (type == 0 || type == 3 ? 0.24 : type == 5 ? 0.17 : 0.11) + 0.02;
+                    double dx = px[i] + st[i * 3] - floor.decor[d * 4], dz = pz[i] + st[i * 3 + 2] - floor.decor[d * 4 + 2];
+                    double m = rad[i] * 0.8 + dr;
+                    double d2 = dx * dx + dz * dz;
+                    if (d2 >= m * m) {
+                        continue;
+                    }
+                    double dd = Math.sqrt(d2);
+                    if (dd < 1.0e-5) { dx = 1.0; dz = 0.0; dd = 1.0; } else { dx /= dd; dz /= dd; }
+                    double over = m - dd;
+                    push[i * 3] += dx * over * 1.5;
+                    push[i * 3 + 2] += dz * over * 1.5;
+                    near[i] = true;
                 }
             }
             double ease = 1.0 - Math.exp(-dt * 2.5);
