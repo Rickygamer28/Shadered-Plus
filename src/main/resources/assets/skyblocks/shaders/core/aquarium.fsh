@@ -639,15 +639,17 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
     float mouthFace = 0.0; // (the basking shark: 1 inside its open mouth, 2 its gill rakers at the back)
     if (kind == 19) { // its huge mouth hanging open: the lower jaw turned down from a hinge behind the eye
         float yJ = -0.2 * H, hx = 0.3 * L, ang = 0.3;
-        float upper = max(body, yJ - p.y);
+        float cutU = min(yJ - p.y, p.x - hx); // (only ahead of the hinge)
+        float upper = max(body, cutU);
         vec2 dq = vec2(p.x - hx, p.y - yJ);
         vec3 pr = vec3(hx + dq.x * cos(ang) - dq.y * sin(ang), yJ + dq.x * sin(ang) + dq.y * cos(ang), p.z);
         float jawT = trunkAt(kind, sp, sh, pr);
-        float lower = max(jawT, pr.y - yJ);
+        float cutL = max(pr.y - yJ, hx - pr.x);
+        float lower = max(jawT, cutL);
         float throat = max(abs(p.x - 0.42 * L) - 0.012 * L, body); // (the back of the mouth, filling the gap)
         float jaws = min(upper, lower);
         if (throat < jaws) mouthFace = 2.0;
-        else if (upper < lower ? yJ - p.y > body : pr.y - yJ > jawT) mouthFace = 1.0;
+        else if (upper < lower ? cutU > body : cutL > jawT) mouthFace = 1.0;
         body = min(jaws, throat);
     }
     if (kind == 19 || kind == 10) { // gill slits, cut into the skin
