@@ -272,15 +272,6 @@ public final class AquariumRenderer {
     private static final java.nio.FloatBuffer FISH_BUF = org.lwjgl.BufferUtils.createFloatBuffer(MAX_FISH * 16);
     private static int fishTex = -1;
 
-    /** 0-9 the normal tank; the ocean: more sardines and tuna than sharks. */
-    private static int pickKind(boolean ocean, float r) {
-        if (!ocean) {
-            return Math.min(9, (int) (r * 10.0F));
-        }
-        return r < 0.09F ? 10 : r < 0.21F ? 11 : r < 0.28F ? 12 : r < 0.38F ? 13 : r < 0.47F ? 14 : r < 0.56F ? 15
-                : r < 0.63F ? 16 : r < 0.70F ? 18 : r < 0.76F ? 19 : 17;
-    }
-
     private static double clampD(double v, double lo, double hi) {
         return Math.max(lo, Math.min(hi, v));
     }
@@ -483,14 +474,97 @@ public final class AquariumRenderer {
      * Gives each fish a stretch of the tank to swim in: from a random spot of water, a box grown as far as the water
      * goes (so in an L-shaped tank no fish swims into the corner that isn't there).
      */
+    // ---- which fish a tank gets: a share of water for each by its size (more fish the bigger the tank, never
+    // crowded), big animals only in tanks big enough for them, a limit on each kind (higher when fewer kinds are on) ----
+
+    /** How much water (blocks) each kind needs. */
+    private static final float[] COST = {0.8F, 1.0F, 1.0F, 0.45F, 1.2F, 1.0F, 0.9F, 1.2F, 0.5F, 1.2F,
+            14.0F, 6.0F, 10.0F, 6.0F, 8.0F, 4.0F, 10.0F, 1.2F, 16.0F, 30.0F};
+    /** How often each kind is picked, against the others. */
+    private static final float[] WEIGHT = {1, 1, 1, 1.3F, 1, 1, 1, 0.8F, 1.2F, 1,
+            0.9F, 1.2F, 0.7F, 1.0F, 0.9F, 0.9F, 0.7F, 2.4F, 0.7F, 0.6F};
+    /** Most of each kind in one tank (with every kind on). */
+    private static final int[] CAP = {8, 6, 6, 16, 4, 8, 4, 3, 12, 4,
+            3, 6, 3, 4, 3, 5, 3, 16, 2, 2};
+
+    /** The smallest tank a kind appears in: how wide (both ways) and how tall, in blocks. */
+    static int[] tankNeeds(int kind) {
+        return switch (kind) {
+            case 19 -> new int[] {6, 3};
+            case 18 -> new int[] {4, 3};
+            case 10 -> new int[] {5, 2};
+            case 12, 16 -> new int[] {4, 2};
+            case 14 -> new int[] {3, 2};
+            case 11, 13 -> new int[] {2, 1};
+            case 15 -> new int[] {1, 2};
+            default -> new int[] {1, 1};
+        };
+    }
+
+    /** The settings changed: pick the tanks' fish again. */
+    static void settingsChanged() {
+        dirty = true;
+    }
+
+    private static List<Integer> chooseFish(Floor floor, int water, java.util.Random random) {
+        int first = floor.ocean ? 10 : 0;
+        List<Integer> allowed = new ArrayList<>();
+        int enabled = 0;
+        for (int k = first; k < first + 10; k++) {
+            if (!AquariumSettings.enabled(k)) {
+                continue;
+            }
+            enabled++;
+            int[] need = tankNeeds(k);
+            if (Math.min(floor.sizeX, floor.sizeZ) >= need[0] && floor.sizeY >= need[1]) {
+                allowed.add(k);
+            }
+        }
+        List<Integer> out = new ArrayList<>();
+        if (allowed.isEmpty()) {
+            return out;
+        }
+        float scale = 10.0F / Math.max(enabled, 1); // (fewer kinds on: more of each allowed)
+        float budget = water * (floor.ocean ? 0.6F : 1.4F);
+        int max = floor.ocean ? 20 : MAX_FISH;
+        int[] count = new int[20];
+        for (int tries = 0; tries < 400 && out.size() < max; tries++) {
+            float total = 0.0F;
+            for (int k : allowed) {
+                if (count[k] < Math.ceil(CAP[k] * scale) && COST[k] <= budget) total += WEIGHT[k];
+            }
+            if (total <= 0.0F) {
+                break;
+            }
+            float pick = random.nextFloat() * total;
+            for (int k : allowed) {
+                if (count[k] < Math.ceil(CAP[k] * scale) && COST[k] <= budget) {
+                    pick -= WEIGHT[k];
+                    if (pick <= 0.0F) {
+                        out.add(k);
+                        count[k]++;
+                        budget -= COST[k];
+                        break;
+                    }
+                }
+            }
+        }
+        if (out.isEmpty()) { // (a tiny tank: still one, the smallest kind that's on)
+            int best = allowed.get(0);
+            for (int k : allowed) {
+                if (COST[k] < COST[best]) best = k;
+            }
+            out.add(best);
+        }
+        return out;
+    }
+
     private static void placeFish(Floor floor) {
         java.util.List<BlockPos> water = new ArrayList<>(floor.blocks);
         water.sort(java.util.Comparator.comparingLong(BlockPos::asLong));
         java.util.Random random = new java.util.Random(floor.min.asLong() * 31L + water.size());
-        // more fish the bigger the tank, but not crowded: a couple in a tiny tank; the big ocean fish need far more room
-        floor.fishCount = floor.ocean
-                ? Math.max(1, Math.min(18, Math.round(water.size() * 0.12F)))
-                : Math.max(2, Math.min(MAX_FISH, Math.round(1.0F + water.size() * 1.4F)));
+        List<Integer> chosen = chooseFish(floor, water.size(), random);
+        floor.fishCount = chosen.size();
         for (int i = 0; i < floor.fishCount; i++) {
             BlockPos start = water.get(random.nextInt(water.size()));
             int[] lo = {start.getX(), start.getY(), start.getZ()}, hi = {start.getX(), start.getY(), start.getZ()};
@@ -520,7 +594,7 @@ public final class AquariumRenderer {
                     hi = nhi;
                 }
             }
-            floor.kinds[i] = pickKind(floor.ocean, random.nextFloat());
+            floor.kinds[i] = chosen.get(i);
             for (int k = 0; k < 10; k++) {
                 floor.rnd[i * 10 + k] = k >= 7 ? random.nextFloat() * 2.0F - 1.0F : random.nextFloat();
             }

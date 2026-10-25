@@ -22,5 +22,9 @@ public final class ClientAccess {
         }
     }
 
+    public static void openAquarium(boolean ocean) {
+        Minecraft.getInstance().setScreen(new AquariumScreen(ocean));
+    }
+
     private ClientAccess() {}
 }
