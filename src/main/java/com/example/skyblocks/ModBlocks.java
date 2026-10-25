@@ -89,6 +89,12 @@ public final class ModBlocks {
                     .lightLevel(state -> state.getValue(LavaLampBlock.LIT) ? 12 : 0)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_ORANGE));
 
+    /** The big lava lamp: two blocks tall (BigLavaLampBlock). */
+    public static final DeferredBlock<BigLavaLampBlock> BIG_LAVA_LAMP = BLOCKS.registerBlock("big_lava_lamp", BigLavaLampBlock::new,
+            BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.GLASS).noOcclusion()
+                    .lightLevel(state -> state.getValue(LavaLampBlock.LIT) ? 14 : 0)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_ORANGE));
+
     /** A modern wall fire: a glass-fronted ribbon of flame, joining side by side (WallFireBlock, client/WallFireRenderer). */
     public static final DeferredBlock<WallFireBlock> WALL_FIRE = BLOCKS.registerBlock("wall_fire", WallFireBlock::new,
             BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion()

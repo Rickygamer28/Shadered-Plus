@@ -26,7 +26,7 @@ public final class ModBlockEntities {
                     ModBlocks.ISLAND_PAINTING.get()).build(null));
 
     public static final Supplier<BlockEntityType<GlowColourBlockEntity>> LAVA_LAMP = TYPES.register("lava_lamp",
-            () -> BlockEntityType.Builder.of(GlowColourBlockEntity::lavaLamp, ModBlocks.LAVA_LAMP.get()).build(null));
+            () -> BlockEntityType.Builder.of(GlowColourBlockEntity::lavaLamp, ModBlocks.LAVA_LAMP.get(), ModBlocks.BIG_LAVA_LAMP.get()).build(null));
 
     public static final Supplier<BlockEntityType<GlowColourBlockEntity>> WALL_FIRE = TYPES.register("wall_fire",
             () -> BlockEntityType.Builder.of(GlowColourBlockEntity::wallFire, ModBlocks.WALL_FIRE.get()).build(null));

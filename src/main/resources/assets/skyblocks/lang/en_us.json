@@ -177,5 +177,7 @@
   "screen.skyblocks.neon_mode_flicker": "Glow: Flicker",
   "screen.skyblocks.neon_mode_pulse": "Glow: Pulse",
   "screen.skyblocks.neon_mode_rainbow": "Glow: Rainbow",
-  "screen.skyblocks.neon_background": "Background (the whole joined panel)"
+  "screen.skyblocks.neon_background": "Background (the whole joined panel)",
+  "block.skyblocks.big_lava_lamp": "Big Lava Lamp",
+  "tooltip.skyblocks.big_lava_lamp": "Two blocks tall"
 }

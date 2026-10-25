@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "half=lower,lit=true": {
+      "model": "skyblocks:block/big_lava_lamp_lower"
+    },
+    "half=lower,lit=false": {
+      "model": "skyblocks:block/big_lava_lamp_lower"
+    },
+    "half=upper,lit=true": {
+      "model": "skyblocks:block/big_lava_lamp_upper"
+    },
+    "half=upper,lit=false": {
+      "model": "skyblocks:block/big_lava_lamp_upper"
+    }
+  }
+}

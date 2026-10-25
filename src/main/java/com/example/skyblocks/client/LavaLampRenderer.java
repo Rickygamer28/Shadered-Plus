@@ -35,7 +35,7 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         @SubscribeEvent
         public static void register(RegisterShadersEvent event) throws java.io.IOException {
             event.registerShader(new ShaderInstance(event.getResourceProvider(),
-                    ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "lava_lamp"), DefaultVertexFormat.POSITION_COLOR), s -> shader = s);
+                    ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "lava_lamp"), DefaultVertexFormat.POSITION_TEX_COLOR), s -> shader = s);
         }
     }
 
@@ -47,7 +47,7 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
     }
 
     abstract static class Types extends RenderType {
-        static final RenderType LAMP = create("skyblocks_lava_lamp", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 4096,
+        static final RenderType LAMP = create("skyblocks_lava_lamp", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 4096,
                 false, false, CompositeState.builder()
                         .setShaderState(new ShaderStateShard(() -> shader))
                         .setTexturingState(new TexturingStateShard("skyblocks_lava_lamp_camera", () -> {
@@ -78,11 +78,25 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         int c = GlowColourBlockEntity.shown(be, seconds());
         int r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255, a = on ? 255 : 40;
         VertexConsumer vc = buffers.getBuffer(Types.LAMP);
-        box(vc, poseStack.last().pose(), 0.325F, 0.305F, 0.325F, 0.675F, 0.805F, 0.675F, r, g, b, a);
+        if (be.getBlockState().getBlock() instanceof com.example.skyblocks.BigLavaLampBlock) {
+            // the big lamp: the same lamp stretched (see the shader), its glass from 0.55 to 1.62 blocks up
+            box(vc, poseStack.last().pose(), 0.5F - 0.175F * BIG_H, 0.305F * BIG_V + BIG_Y, 0.5F - 0.175F * BIG_H,
+                    0.5F + 0.175F * BIG_H, 0.805F * BIG_V + BIG_Y, 0.5F + 0.175F * BIG_H, r, g, b, a, 1.0F);
+        } else {
+            box(vc, poseStack.last().pose(), 0.325F, 0.305F, 0.325F, 0.675F, 0.805F, 0.675F, r, g, b, a, 0.0F);
+        }
+    }
+
+    /** The big lamp: the small one's shape scaled across, up, and moved up (the same numbers as the shader's). */
+    static final float BIG_H = 1.55F, BIG_V = 2.2F, BIG_Y = -0.143F;
+
+    public net.minecraft.world.phys.AABB getRenderBoundingBox(GlowColourBlockEntity be) {
+        net.minecraft.core.BlockPos p = be.getBlockPos();
+        return new net.minecraft.world.phys.AABB(p.getX(), p.getY(), p.getZ(), p.getX() + 1, p.getY() + 2, p.getZ() + 1);
     }
 
     /** A box's six faces, facing out. */
-    static void box(VertexConsumer vc, Matrix4f m, float x0, float y0, float z0, float x1, float y1, float z1, int r, int g, int b, int a) {
+    static void box(VertexConsumer vc, Matrix4f m, float x0, float y0, float z0, float x1, float y1, float z1, int r, int g, int b, int a, float big) {
         float[][] f = {
                 {x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1}, // south
                 {x1, y0, z0, x0, y0, z0, x0, y1, z0, x1, y1, z0}, // north
@@ -93,7 +107,8 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         };
         for (float[] q : f) {
             for (int v = 0; v < 4; v++) {
-                vc.addVertex(m, q[v * 3], q[v * 3 + 1], q[v * 3 + 2]).setColor(r, g, b, a);
+                // uv: (big or not, the height in the lamp's block - to find the block it stands on)
+                vc.addVertex(m, q[v * 3], q[v * 3 + 1], q[v * 3 + 2]).setUv(big, q[v * 3 + 1]).setColor(r, g, b, a);
             }
         }
     }

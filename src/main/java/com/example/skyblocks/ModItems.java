@@ -56,6 +56,7 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> WATER_CAUSTICS = ITEMS.registerSimpleBlockItem("water_caustics", ModBlocks.WATER_CAUSTICS);
     public static final DeferredItem<BlockItem> RAIN_GLASS = ITEMS.registerSimpleBlockItem("rain_glass", ModBlocks.RAIN_GLASS);
     public static final DeferredItem<BlockItem> LAVA_LAMP = ITEMS.registerSimpleBlockItem("lava_lamp", ModBlocks.LAVA_LAMP);
+    public static final DeferredItem<BlockItem> BIG_LAVA_LAMP = ITEMS.registerSimpleBlockItem("big_lava_lamp", ModBlocks.BIG_LAVA_LAMP);
     public static final DeferredItem<BlockItem> WALL_FIRE = ITEMS.registerSimpleBlockItem("wall_fire", ModBlocks.WALL_FIRE);
     public static final DeferredItem<BlockItem> NEON_SIGN = ITEMS.registerSimpleBlockItem("neon_sign", ModBlocks.NEON_SIGN);
 
