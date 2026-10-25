@@ -402,7 +402,7 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
         if (q.z > 6.5) return fract(q.x * 30.0) < 0.3 ? vec3(0.62, 0.52, 0.5) : vec3(0.32, 0.18, 0.18);
         vec3 c = mix(vec3(0.55, 0.52, 0.49), vec3(0.32, 0.3, 0.28), smoothstep(-0.5, 0.3, q.y));
         if (part > 0) return c * 0.92;
-        c = mix(c, c * 1.15, spot(q.xy * vec2(6.0, 8.0) + rnd * 4.0, 0.32) * 0.6);
+        c *= 0.94 + 0.08 * sin(q.x * 9.0 + sin(q.y * 7.0 + rnd * 6.0) * 2.0) * sin(q.y * 6.0 + q.x * 4.0); // (soft mottling)
         float gx = q.x + 0.1 * q.y * q.y;
         if (gx > -0.01 && gx < 0.27 && fract(gx / 0.065 + 0.08) < 0.16 && abs(q.y) < 0.95) c *= 0.6; // (gill slits)
         return mix(c, vec3(0.62, 0.6, 0.57), smoothstep(0.85, 1.0, q.x) * 0.5); // (a paler snout)
@@ -657,6 +657,12 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
         else if (upper < lower ? cutU > body : cutL > jawT) mouthFace = 1.0;
         body = min(jaws, throat);
     }
+    if (kind == 19) { // the pointed, conical snout, jutting out over the mouth
+        float se0 = sdEllipsoid(p - vec3(L * 0.86, -0.02 * H, 0.0), vec3(L * 0.2, H * 0.36, W * 0.4));
+        float snout = max(se0, -0.18 * H - p.y); // (its underside: the roof of the mouth)
+        if (snout < body) mouthFace = -0.18 * H - p.y > se0 ? 1.0 : 0.0;
+        body = smin(body, snout, 0.05 * H);
+    }
     if (kind == 19 || kind == 10) { // gill slits, cut into the skin
         for (int k = 0; k < 5; k++) {
             float xk = kind == 19 ? L * (0.0 + 0.065 * float(k)) : L * (0.27 + 0.05 * float(k));
@@ -707,7 +713,7 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
     }
     // the fin along the back and one underneath: swept back (sharks' and the dolphin's strongly), rippling as it
     // swims (the sunfish's sweeping side to side)
-    float sweep = bony ? 0.35 : kind == 18 ? 0.1 : 0.9;
+    float sweep = bony ? 0.35 : kind == 18 ? 0.1 : kind == 19 ? 0.45 : 0.9;
     if (sp.fin.x > 0.0) {
         float fx1 = L * 0.3, fx0 = fx1 - sp.fin.x * 2.2;
         float lift = max(py - hT * 0.92, 0.0);
@@ -717,8 +723,9 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
         float dh = sp.fin.y * 1.0 * finShape(kx, 0.5, rag, 22.0);
         float slope = sp.fin.y * (finShape(min(kx + 0.02, 1.0), 0.5, rag, 22.0) - finShape(max(kx - 0.02, 0.0), 0.5, rag, 22.0)) / (0.04 * (fx1 - fx0));
         float up = clamp(lift / max(dh, 0.001), 0.0, 1.0);
-        float zf = p.z - (kind == 18 ? gFinSway * sp.fin.y * 0.35 : sp.fin.y * 0.06 * gBeat * sin(wave * 1.3 - kx * 6.0)) * up;
-        float dorsal = max(max(max((py - (hT * 0.92 + dh)) / sqrt(1.0 + slope * slope), hT * 0.55 - py), max(fx0 - xs, xs - fx1)) * 0.55, (abs(zf) - sp.fin.z * (1.0 - 0.6 * up)) * 0.8);
+        float upS = clamp(lift / sp.fin.y, 0.0, 1.0); // (smooth: over the fin's full height)
+        float zf = p.z - (kind == 18 ? gFinSway * sp.fin.y * 0.3 : sp.fin.y * 0.06 * gBeat * sin(wave * 1.3 - kx * 6.0)) * upS * upS;
+        float dorsal = max(max(max((py - (hT * 0.92 + dh)) / sqrt(1.0 + slope * slope), hT * 0.55 - py), max(fx0 - xs, xs - fx1)) * 0.55, (abs(zf) - sp.fin.z * (1.0 - 0.6 * upS)) * 0.8);
         res = smin(res, dorsal, 0.04 * L);
         if (dorsal < best) {
             best = dorsal; ptype = 2;
@@ -734,8 +741,9 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
         float dh = H * 0.35 * sh.w * finShape(kx, 0.4, rag, 18.0);
         float slope = H * 0.35 * sh.w * (finShape(min(kx + 0.02, 1.0), 0.4, rag, 18.0) - finShape(max(kx - 0.02, 0.0), 0.4, rag, 18.0)) / (0.04 * (ax1 - ax0));
         float down = clamp(lift / max(dh, 0.001), 0.0, 1.0);
-        float zf = p.z - (kind == 18 ? -gFinSway * H * 0.35 * sh.w * 0.35 : H * 0.02 * gBeat * sin(wave * 1.3 - kx * 6.0 + 1.0)) * down;
-        float anal = max(max(max((-py - (hB * 0.92 + dh)) / sqrt(1.0 + slope * slope), hB * 0.55 + py), max(ax0 - xs, xs - ax1)) * 0.55, (abs(zf) - max(sp.fin.z, 0.006) * (1.0 - 0.6 * down)) * 0.8);
+        float downS = clamp(lift / (H * 0.35 * sh.w), 0.0, 1.0);
+        float zf = p.z - (kind == 18 ? -gFinSway * H * 0.35 * sh.w * 0.3 : H * 0.02 * gBeat * sin(wave * 1.3 - kx * 6.0 + 1.0)) * downS * downS;
+        float anal = max(max(max((-py - (hB * 0.92 + dh)) / sqrt(1.0 + slope * slope), hB * 0.55 + py), max(ax0 - xs, xs - ax1)) * 0.55, (abs(zf) - max(sp.fin.z, 0.006) * (1.0 - 0.6 * downS)) * 0.8);
         res = smin(res, anal, 0.04 * L);
         if (anal < best) {
             best = anal; ptype = 2;
