@@ -322,18 +322,18 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
     if (kind == 7) { // porcupine pufferfish: pale cream, dense small black spots, a greyer band low on its side,
                      // a white belly, pink lips, see-through yellowish fins with black spots
         if (part > 0) {
-            vec3 f = vec3(0.82, 0.8, 0.52) * (1.0 - 0.75 * spot(q.xy * vec2(6.0, 5.0) + rnd * 3.0, 0.16));
-            return mix(vec3(0.9, 0.86, 0.72), f, smoothstep(0.0, 0.35, abs(q.y) + (1.0 - abs(q.x)) * 0.1)); // (paler at the base)
+            vec3 f = vec3(0.95, 0.82, 0.35) * (1.0 - 0.75 * spot(q.xy * vec2(6.0, 5.0) + rnd * 3.0, 0.16));
+            return mix(vec3(1.0, 0.88, 0.45), f, smoothstep(0.0, 0.35, abs(q.y) + (1.0 - abs(q.x)) * 0.1)); // (paler at the base)
         }
         if (q.x > 1.1) return vec3(0.92, 0.58, 0.56) * (0.9 + 0.1 * fbm(vec2(q.z * 9.0, 1.0))); // (lips)
         float ang = atan(q.y, q.z);
         vec2 uv = vec2(q.x * 0.14, ang * 0.08) / 0.0105;
         float dots = spot(uv + rnd * 7.0, 0.13 + 0.12 * vnoise(uv * 0.3)) + spot(uv * 1.6 + 3.3, 0.1) * 0.8;
-        vec3 c = mix(vec3(0.68, 0.66, 0.56), vec3(0.9, 0.88, 0.78), smoothstep(0.75, 0.2, q.y)); // (greyer on top)
-        c = mix(c, vec3(0.5, 0.48, 0.42), smoothstep(0.12, 0.0, abs(q.y + 0.38)) * 0.7);         // (the band low on its side)
+        vec3 c = mix(vec3(0.82, 0.66, 0.2), vec3(1.0, 0.84, 0.28), smoothstep(0.75, 0.2, q.y)); // (deeper yellow on top)
+        c = mix(c, vec3(0.66, 0.52, 0.18), smoothstep(0.12, 0.0, abs(q.y + 0.38)) * 0.7);        // (the band low on its side)
         float belly = smoothstep(-0.42, -0.55, q.y);
         c *= 1.0 - 0.88 * min(dots, 1.0) * (1.0 - belly) * smoothstep(0.98, 0.85, q.x);
-        c = mix(c, vec3(0.96, 0.95, 0.9), belly);
+        c = mix(c, vec3(1.0, 0.93, 0.62), belly);
         return c * (0.95 + 0.08 * fbm(q.xy * 5.0));
     }
     if (kind == 8) { // guppy: silver-green front, deep blue back half, a big orange tail with black blotches
