@@ -195,3 +195,10 @@
   kind, WEIGHT, CAP per kind scaled by 10/enabledKinds, tankNeeds(kind) minimum tank width/height (giants only in big
   tanks), max 48 normal / 20 ocean, at least 1. Sneak + right-click an aquarium: AquariumScreen toggles kinds;
   client/AquariumSettings saves config/skyblocks-aquarium.properties (client-only: fish are only drawn there).
+- 25 Oct: aquarium night mode (Night uniform, FISH_CLOCK slows the fish's time, rest low; AquariumSettings
+  night_mode), decorations 8 ship / 9 anchor / 10 diver helmet / 11 clam (decor packing now type + 16*(turn + 16*size)).
+  New blocks: rain_glass (RainGlassBlock extends WaterCausticsBlock, shares its BE type and model wrapper, textures
+  from tools/make_rain_glass.py), lava_lamp (GlowColourBlockEntity, LavaLampRenderer + shaders/core/lava_lamp: BER box,
+  RenderType with own ShaderInstance, CamPos/LampTime set in a TexturingStateShard), wall_fire (WallFireBlock
+  LEFT/RIGHT joins, multipart model, WallFireRenderer + shaders/core/wall_fire, UV = world position along the strip),
+  neon_sign (NeonSignBlockEntity text/colour/mode/size, NeonSignPayload, NeonSignScreen, NeonSignRenderer font glow).
