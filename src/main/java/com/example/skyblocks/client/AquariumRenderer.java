@@ -525,25 +525,33 @@ public final class AquariumRenderer {
             return out;
         }
         float scale = 10.0F / Math.max(enabled, 1); // (fewer kinds on: more of each allowed)
-        float budget = water * (floor.ocean ? 0.6F : 1.4F);
-        int max = floor.ocean ? 20 : MAX_FISH;
+        float[] budget = {water * (floor.ocean ? 0.9F : 2.0F)};
+        int maxSlots = floor.ocean ? 30 : 40; // (a school counts as one)
         int[] count = new int[20];
-        for (int tries = 0; tries < 400 && out.size() < max; tries++) {
+        int[] slots = {0};
+        // first one of every kind that's on and fits this tank (in a random order, while there's room), so none go missing
+        List<Integer> order = new ArrayList<>(allowed);
+        java.util.Collections.shuffle(order, random);
+        for (int k : order) {
+            if (COST[k] <= budget[0] && out.size() < MAX_FISH && slots[0] < maxSlots) {
+                addFish(out, count, budget, slots, k, scale, random);
+            }
+        }
+        // then fill up by the water left
+        for (int tries = 0; tries < 400 && out.size() < MAX_FISH && slots[0] < maxSlots; tries++) {
             float total = 0.0F;
             for (int k : allowed) {
-                if (count[k] < Math.ceil(CAP[k] * scale) && COST[k] <= budget) total += WEIGHT[k];
+                if (count[k] < Math.ceil(CAP[k] * scale) && COST[k] <= budget[0]) total += WEIGHT[k];
             }
             if (total <= 0.0F) {
                 break;
             }
             float pick = random.nextFloat() * total;
             for (int k : allowed) {
-                if (count[k] < Math.ceil(CAP[k] * scale) && COST[k] <= budget) {
+                if (count[k] < Math.ceil(CAP[k] * scale) && COST[k] <= budget[0]) {
                     pick -= WEIGHT[k];
                     if (pick <= 0.0F) {
-                        out.add(k);
-                        count[k]++;
-                        budget -= COST[k];
+                        addFish(out, count, budget, slots, k, scale, random);
                         break;
                     }
                 }
@@ -557,6 +565,21 @@ public final class AquariumRenderer {
             out.add(best);
         }
         return out;
+    }
+
+    /** One fish of this kind - or, for neon tetras and sardines, a whole little school (one slot). */
+    private static void addFish(List<Integer> out, int[] count, float[] budget, int[] slots, int k, float scale, java.util.Random random) {
+        int n = 1;
+        if (k == 3 || k == 17) {
+            int room = (int) Math.ceil(CAP[k] * scale) - count[k];
+            n = Math.max(1, Math.min(Math.min(room, MAX_FISH - out.size()), Math.min(4 + random.nextInt(5), (int) (budget[0] / COST[k]))));
+        }
+        for (int m = 0; m < n; m++) {
+            out.add(k);
+        }
+        count[k] += n;
+        budget[0] -= COST[k] * n;
+        slots[0]++;
     }
 
     private static void placeFish(Floor floor) {
