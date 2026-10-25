@@ -195,7 +195,7 @@ Species species(int k) {
     if (k == 4) return Species(vec3(0.11, 0.13, 0.025), vec3(0.05, 0.08, 0.008), vec3(0.06, 0.15, 0.008), 0.6);
     if (k == 5) return Species(vec3(0.13, 0.09, 0.065), vec3(0.09, 0.09, 0.012), vec3(0.06, 0.04, 0.008), 0.7);
     if (k == 6) return Species(vec3(0.12, 0.05, 0.03), vec3(0.13, 0.17, 0.008), vec3(0.11, 0.11, 0.008), 0.6);
-    if (k == 7) return Species(vec3(0.12, 0.1, 0.1), vec3(0.04, 0.04, 0.01), vec3(0.0), 0.5);
+    if (k == 7) return Species(vec3(0.14, 0.085, 0.08), vec3(0.045, 0.05, 0.006), vec3(0.0), 0.5);
     if (k == 8) return Species(vec3(0.08, 0.03, 0.02), vec3(0.085, 0.075, 0.006), vec3(0.04, 0.035, 0.005), 1.3);
     if (k == 9) return Species(vec3(0.12, 0.13, 0.025), vec3(0.04, 0.05, 0.008), vec3(0.11, 0.035, 0.008), 0.6);
     if (k == 10) return Species(vec3(0.9, 0.18, 0.16), vec3(0.25, 0.3, 0.03), vec3(0.18, 0.22, 0.03), 0.8);
@@ -319,13 +319,22 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
         c = mix(c, c * 1.3, smoothstep(0.55, 0.8, fbm(q.xy * 6.0 + rnd * 7.0)) * 0.5);
         return mix(c, vec3(0.95, 0.85, 0.85), smoothstep(0.85, 1.0, away) * 0.7);
     }
-    if (kind == 7) { // pufferfish: cream with small black spots, white belly, pink lips, spotted yellowish fins
-        if (part > 0) return vec3(0.8, 0.8, 0.55) * (1.0 - 0.6 * spot(q.xy * 9.0, 0.15));
-        if (q.y < -0.38) return vec3(0.96, 0.95, 0.9);
-        if (q.x > 0.9 && abs(q.y + 0.12) < 0.1) return vec3(0.9, 0.55, 0.55);
-        vec3 c = mix(vec3(0.55, 0.52, 0.42), vec3(0.9, 0.88, 0.78), smoothstep(-0.38, -0.1, q.y));
-        vec2 sp2 = vec2(q.x * 9.0, (q.y + abs(q.z)) * 7.0);
-        return c * (1.0 - 0.9 * spot(sp2, 0.09 + 0.08 * vnoise(sp2 * 0.37))) * (0.94 + 0.1 * fbm(q.xy * 5.0));
+    if (kind == 7) { // porcupine pufferfish: pale cream, dense small black spots, a greyer band low on its side,
+                     // a white belly, pink lips, see-through yellowish fins with black spots
+        if (part > 0) {
+            vec3 f = vec3(0.82, 0.8, 0.52) * (1.0 - 0.75 * spot(q.xy * vec2(6.0, 5.0) + rnd * 3.0, 0.16));
+            return mix(vec3(0.9, 0.86, 0.72), f, smoothstep(0.0, 0.35, abs(q.y) + (1.0 - abs(q.x)) * 0.1)); // (paler at the base)
+        }
+        if (q.x > 1.1) return vec3(0.92, 0.58, 0.56) * (0.9 + 0.1 * fbm(vec2(q.z * 9.0, 1.0))); // (lips)
+        float ang = atan(q.y, q.z);
+        vec2 uv = vec2(q.x * 0.14, ang * 0.08) / 0.0105;
+        float dots = spot(uv + rnd * 7.0, 0.13 + 0.12 * vnoise(uv * 0.3)) + spot(uv * 1.6 + 3.3, 0.1) * 0.8;
+        vec3 c = mix(vec3(0.68, 0.66, 0.56), vec3(0.9, 0.88, 0.78), smoothstep(0.75, 0.2, q.y)); // (greyer on top)
+        c = mix(c, vec3(0.5, 0.48, 0.42), smoothstep(0.12, 0.0, abs(q.y + 0.38)) * 0.7);         // (the band low on its side)
+        float belly = smoothstep(-0.42, -0.55, q.y);
+        c *= 1.0 - 0.88 * min(dots, 1.0) * (1.0 - belly) * smoothstep(0.98, 0.85, q.x);
+        c = mix(c, vec3(0.96, 0.95, 0.9), belly);
+        return c * (0.95 + 0.08 * fbm(q.xy * 5.0));
     }
     if (kind == 8) { // guppy: silver-green front, deep blue back half, a big orange tail with black blotches
         if (part > 0) {
@@ -446,6 +455,11 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
 }
 
 // how big a fish's eye is, against the usual
+// where a fish's eye is (along it, nose = 1; up it, in body heights)
+vec2 eyeAt(int kind) {
+    return kind == 7 ? vec2(0.5, 0.32) : vec2(0.62, 0.22);
+}
+
 float eyeScale(int kind) {
     return kind == 7 ? 1.3 : kind == 18 ? 1.25 : kind == 3 || kind == 17 ? 1.2 : kind == 19 ? 0.6 : kind == 10 ? 0.8 : 1.0;
 }
@@ -593,7 +607,7 @@ vec4 fishShape(int kind) {
     if (kind == 4) return vec4(0.5, 0.55, 1.0, 2.6);
     if (kind == 5) return vec4(0.55, 0.55, 1.0, 0.6);
     if (kind == 6) return vec4(0.62, 0.5, 0.0, 3.5);
-    if (kind == 7) return vec4(0.5, 0.5, 0.0, 0.0);
+    if (kind == 7) return vec4(0.6, 0.38, 0.0, 0.0);
     if (kind == 8) return vec4(0.62, 0.5, 0.0, 0.4);
     if (kind == 9) return vec4(0.5, 0.6, 0.0, 0.8);
     if (kind == 10) return vec4(0.6, 0.6, 2.0, 0.35);
@@ -690,17 +704,19 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
         }
     }
     // eyes, bulging a little, and a mouth (breathing)
-    float se = 0.81;
+    vec2 ea = eyeAt(kind);
+    float se = (ea.x + 1.0) * 0.5;
     float ue = (se - sh.x) / (1.0 - sh.x);
     float we = W * pow(max(1.0 - ue * ue, 0.0), sh.y);
     float eyeR = H * 0.13 * eyeScale(kind);
-    float eye = length(vec3(p.x - L * 0.62, p.y - H * 0.22, abs(p.z) - we * 0.8)) - eyeR;
+    float eye = length(vec3(p.x - L * ea.x, p.y - H * ea.y, abs(p.z) - we * (kind == 7 ? 0.72 : 0.8))) - eyeR;
     if (kind != 10 && kind != 16 && kind != 19) {
         body = smin(body, eye, eyeR * 0.7);
     }
     vec3 mc = vec3(L * 1.0, -H * 0.12, 0.0), mr = vec3(L * 0.08, H * 0.05 * (0.5 + gMouth), W * 0.7);
     if (kind == 14) mr = vec3(L * 0.12, H * 0.1 * (0.6 + 0.8 * gMouth), W * 0.8); // (the grouper's big mouth)
     if (kind == 10 || kind == 16) mr.y = H * 0.04;
+    if (kind == 7) { mc = vec3(L * 1.05, -H * 0.16, 0.0); mr = vec3(L * 0.05, H * 0.035 * (0.5 + gMouth), W * 0.14); } // (a small round mouth)
     if (kind != 19) body = max(body, -sdEllipsoid(p - mc, mr));
     float res = body, best = body;
     ptype = 0;
@@ -783,7 +799,38 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
         }
     }
     // side fins, paddling (sharks' stiff and swept back)
-    if (kind != 8) {
+    if (kind == 7) { // pufferfish
+        // thick pouting lips round the mouth
+        float lips = sdEllipsoid(p - vec3(L * 0.97, -H * 0.16, 0.0), vec3(L * 0.07, H * 0.11, W * 0.24));
+        res = smin(res, max(lips, -sdEllipsoid(p - mc, mr)), 0.04 * H);
+        if (lips < best) { best = lips; ptype = 0; q = vec3(1.2, -0.16, p.z / W); } // (q.x 1.2: the lips)
+        // short spines lying flat all over it (the porcupine pufferfish)
+        float ang = atan(py, p.z);
+        vec2 sg = vec2(p.x / L * 7.0, ang * 2.6);
+        sg.y += 0.5 * floor(sg.x);
+        float spike = max(1.0 - length(fract(sg) - 0.5) * 3.2, 0.0);
+        res -= 0.035 * H * spike * spike * smoothstep(1.0, 0.6, abs(p.x / L)) * step(abs(p.x / L), 0.95);
+        // its big side fins: upright fans just behind the eyes, whirring
+        vec3 pp = vec3(p.x - L * 0.18, py + H * 0.05, abs(p.z) - W * 0.8);
+        float a = 0.55 + 0.35 * sin(gTime * 9.0 + wave * 0.3);
+        vec3 lq = vec3(pp.x * cos(a) - pp.z * sin(a), pp.y, pp.x * sin(a) + pp.z * cos(a));
+        lq.x += L * 0.12;
+        float pect = sdEllipsoid(lq, vec3(L * 0.15, H * 0.34, W * 0.06));
+        res = smin(res, pect, 0.02 * L);
+        if (pect < best) { best = pect; ptype = 2; q = vec3(-lq.x / (L * 0.15), lq.y / (H * 0.34), 2.0); }
+        // small rounded fins on its back and underneath, far back near the tail
+        for (int k = 0; k < 2; k++) {
+            float sg2 = k == 0 ? 1.0 : -1.0;
+            vec3 fp = vec3(p.x + L * 0.62, py * sg2 - H * 0.5, p.z);
+            float tilt = 0.6 + 0.12 * sin(wave * 1.3 + float(k));
+            vec3 fq = vec3(fp.x * cos(tilt) - fp.y * sin(tilt), fp.x * sin(tilt) + fp.y * cos(tilt), fp.z);
+            fq.y -= H * 0.18;
+            float fin = sdEllipsoid(fq, vec3(L * 0.13, H * 0.3, W * 0.05));
+            res = smin(res, fin, 0.02 * L);
+            if (fin < best) { best = fin; ptype = 2; q = vec3(fq.x / (L * 0.13), sg2 * clamp(fq.y / (H * 0.3) * 0.5 + 0.5, 0.0, 1.0), k == 0 ? 0.0 : -1.0); }
+        }
+    }
+    if (kind != 8 && kind != 7) {
         float big = kind == 10 || kind == 16 || kind == 19 ? 1.7 : 1.0;
         vec3 pp = vec3(p.x - L * 0.3, py + H * 0.35, abs(p.z) - W * 0.85);
         float a = big > 1.5 ? 1.0 + 0.06 * flap : 0.7 + 0.3 * flap;
@@ -1223,7 +1270,7 @@ void main() {
             }
             if (eyed && part == 0 && abs(q.z) > 0.55) { // (where the eye bulges out)
                 float er = sp.body.y * eyeScale(kind);
-                vec2 ev = vec2((q.x - 0.62) * sp.body.x, (q.y - 0.22) * sp.body.y) / er;
+                vec2 ev = vec2((q.x - eyeAt(kind).x) * sp.body.x, (q.y - eyeAt(kind).y) * sp.body.y) / er;
                 float eyeD = length(ev);
                 if (eyeD < 0.115) {
                     isEye = true;
@@ -1249,7 +1296,7 @@ void main() {
                 float strength = kind == 5 ? 0.2 : kind == 17 ? 0.16 : kind == 7 ? 0.0 : kind == 11 ? 0.05 : 0.09;
                 base *= 1.0 - strength * (rim * 0.7 + (sv - 0.5) * 0.4); // (overlapping scales)
                 float gx = q.x - (0.44 - 0.1 * q.y * q.y);
-                if (gx > 0.0 && gx < 0.03 && abs(q.y) < 0.75) base *= 0.78;              // (the gill cover's edge)
+                if (kind != 7 && gx > 0.0 && gx < 0.03 && abs(q.y) < 0.75) base *= 0.78;              // (the gill cover's edge)
                 if (kind != 7 && q.x < 0.42 && abs(q.y - 0.18 + 0.12 * q.x * q.x) < 0.012) base *= 0.9; // (lateral line)
             }
             vec3 p = rot + rd * tf;
