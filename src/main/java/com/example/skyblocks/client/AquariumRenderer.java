@@ -281,14 +281,22 @@ public final class AquariumRenderer {
         return k * k * (3.0 - 2.0 * k);
     }
 
+    /** Per tank (by its corner): the fish's dodging offsets and how fast they're changing, and when last moved. */
+    private static final Map<Long, double[]> DODGE = new HashMap<>();
+
     /**
      * Where every fish of this tank is this moment, which way it faces, how it swims: wandering loops round its water
-     * (bursts and glides, rising and sinking), schools following their leader, leaning and bending into turns.
+     * (bursts and glides, rising and sinking), schools following their leader, leaning and bending into turns, and
+     * easing out of each other's way (the smaller one moving more) instead of swimming through each other.
      */
     private static void fishFrame(Floor floor, double t) {
         java.util.Arrays.fill(FISH_DATA, 0.0F);
         float[] r = floor.rnd;
-        for (int i = 0; i < floor.fishCount; i++) {
+        int n = floor.fishCount;
+        double[] px = new double[n], py = new double[n], pz = new double[n], vxs = new double[n], vys = new double[n], vzs = new double[n];
+        double[] axs = new double[n], azs = new double[n], sizes = new double[n], rad = new double[n], waves = new double[n], beats = new double[n];
+        double[] squeezes = new double[n], lo = new double[n * 3], hi = new double[n * 3];
+        for (int i = 0; i < n; i++) {
             int kind = floor.kinds[i];
             float[] sp = SPECIES[kind];
             double bx = sp[0], by = sp[1], bz = sp[2], tx = sp[3], ty = sp[4], fy = sp[7], fz = sp[8];
@@ -312,7 +320,11 @@ public final class AquariumRenderer {
                 oz = r[i * 10 + 9] * k;
             }
             double extent = Math.max(bx + tx * 1.6, Math.max(bz, fz));
-            double size = (floor.ocean ? 0.75 : 0.65) + 0.5 * r[i * 10];
+            // size: mostly middling, now and then a small young one or a big old one (schools more even, the big
+            // animals varying most); always made to fit the water it has
+            double u = r[i * 10] * 2.0 - 1.0;
+            double spread = school ? 0.35 : kind == 10 || kind == 12 || kind == 13 || kind == 14 || kind == 18 || kind == 19 ? 1.0 : 0.9;
+            double size = (floor.ocean ? 1.0 : 0.9) * (1.0 + spread * 0.5 * u * Math.abs(u));
             if (kind == 18) {
                 size *= 1.9;
             }
@@ -337,8 +349,11 @@ public final class AquariumRenderer {
             double ky = kind == 15 ? 0.0 : ry * 0.4;
             double y = level + ky * Math.sin(0.31 * a + p2);
             double y1 = ky * 0.31 * Math.cos(0.31 * a + p2);
-            double vx = rx * x1 * da, vy = y1 * da, vz = rz * z1 * da;
-            double ax = rx * (x2 * da * da + x1 * dda), az = rz * (z2 * da * da + z1 * dda);
+            vxs[i] = rx * x1 * da;
+            vys[i] = y1 * da;
+            vzs[i] = rz * z1 * da;
+            axs[i] = rx * (x2 * da * da + x1 * dda);
+            azs[i] = rz * (z2 * da * da + z1 * dda);
             double cx = mx + rx * x, cy = clampD(y, my - ry, my + ry), cz = mz + rz * z;
             // jellyfish: squeeze (quickly) and relax (slowly), rising a little with each squeeze
             double jph = t * 0.4 + r[i * 10 + 6];
@@ -351,19 +366,95 @@ public final class AquariumRenderer {
                 cy += 0.015 * Math.sin(t * 1.3 + fi);
                 cz += 0.03 * Math.cos(t * 1.5 + fi * 1.3);
             }
-            cx += ox;
-            cy += oy + bob;
-            cz += oz;
             double yRoom = Math.max(qy - tallH * size - 0.04, 0.02);
-            cy = clampD(cy, my - yRoom, my + yRoom);
-            // heading along its path (pitching a little as it rises or sinks, never steeply), leaning into turns
+            px[i] = cx + ox;
+            py[i] = clampD(cy + oy + bob, my - yRoom, my + yRoom);
+            pz[i] = cz + oz;
+            // where it may go (dodging included): inside its water
+            double xRoom = Math.max(qx - extent * size - 0.04, 0.02), zRoom = Math.max(qz - extent * size - 0.04, 0.02);
+            lo[i * 3] = mx - xRoom; hi[i * 3] = mx + xRoom;
+            lo[i * 3 + 1] = my - yRoom; hi[i * 3 + 1] = my + yRoom;
+            lo[i * 3 + 2] = mz - zRoom; hi[i * 3 + 2] = mz + zRoom;
+            sizes[i] = size;
+            rad[i] = size * Math.max(0.55 * (bx + tx * 1.6), Math.max(0.6 * tallH, bz));
+            double burst = 1.0 + 0.45 * cs;
+            double beatK = (7.0 + 4.0 * speed) / Math.max(size * extent * 4.0, 1.0);
+            double wave = beatK * (0.35 * t + 0.65 * (t + 0.45 * sn / 0.7)) + fi * 2.0;
+            waves[i] = wave % (Math.PI * 2.0 * 1000.0); // (kept small: whole turns don't change anything)
+            beats[i] = 0.55 + 0.45 * burst / 1.45;
+            squeezes[i] = squeeze;
+        }
+        // ---- keeping out of each other's way: each fish eases away from any it's too close to (the smaller one
+        // moving more), and drifts back to its own path once clear ----
+        long key = floor.min.asLong() * 31L + n * 7L + (floor.ocean ? 1L : 0L);
+        double[] st = DODGE.get(key);
+        if (st == null || st.length != n * 6 + 1) {
+            if (DODGE.size() > 256) {
+                DODGE.clear();
+            }
+            st = new double[n * 6 + 1];
+            st[n * 6] = t;
+            DODGE.put(key, st);
+        }
+        double dt = clampD(t - st[n * 6], 0.0, 0.1);
+        if (t < st[n * 6] - 1.0) {
+            java.util.Arrays.fill(st, 0.0); // (time went backwards: start over)
+        }
+        st[n * 6] = t;
+        double[] dodgeV = new double[n * 3];
+        System.arraycopy(st, n * 3, dodgeV, 0, n * 3); // (drawn again this frame: as it was)
+        if (dt > 0.0) {
+            double[] push = new double[n * 3];
+            boolean[] near = new boolean[n];
+            for (int i = 0; i < n; i++) {
+                for (int j = i + 1; j < n; j++) {
+                    double dx = px[i] + st[i * 3] - px[j] - st[j * 3];
+                    double dy = py[i] + st[i * 3 + 1] - py[j] - st[j * 3 + 1];
+                    double dz = pz[i] + st[i * 3 + 2] - pz[j] - st[j * 3 + 2];
+                    double m = (rad[i] + rad[j]) * 1.1;
+                    double d2 = dx * dx + dy * dy + dz * dz;
+                    if (d2 >= m * m) {
+                        continue;
+                    }
+                    double d = Math.sqrt(d2);
+                    if (d < 1.0e-5) {
+                        dx = 0.0; dy = i < j ? 1.0 : -1.0; dz = 0.0; d = 1.0;
+                    } else {
+                        dx /= d; dy /= d; dz /= d;
+                    }
+                    double over = m - Math.min(d, m);
+                    double ri = rad[i] * rad[i], rj = rad[j] * rad[j];
+                    double wi = rj / (ri + rj), wj = ri / (ri + rj); // (the smaller one moves more)
+                    push[i * 3] += dx * over * wi; push[i * 3 + 1] += dy * over * wi * 0.8; push[i * 3 + 2] += dz * over * wi;
+                    push[j * 3] -= dx * over * wj; push[j * 3 + 1] -= dy * over * wj * 0.8; push[j * 3 + 2] -= dz * over * wj;
+                    near[i] = true;
+                    near[j] = true;
+                }
+            }
+            double out = 1.0 - Math.exp(-dt * 4.0), back = 1.0 - Math.exp(-dt * 0.6);
+            for (int i = 0; i < n; i++) {
+                for (int k = 0; k < 3; k++) {
+                    double before = st[i * 3 + k];
+                    double now = near[i] ? before + push[i * 3 + k] * out : before * (1.0 - back);
+                    double base = k == 0 ? px[i] : k == 1 ? py[i] : pz[i];
+                    now = clampD(base + now, lo[i * 3 + k], hi[i * 3 + k]) - base; // (staying in its water)
+                    st[i * 3 + k] = now;
+                    dodgeV[i * 3 + k] = (now - before) / dt;
+                    st[n * 3 + i * 3 + k] = dodgeV[i * 3 + k];
+                }
+            }
+        }
+        // ---- heading (along its path plus any dodging: it turns away as it dodges), leaning into turns ----
+        for (int i = 0; i < n; i++) {
+            int kind = floor.kinds[i];
+            double vx = vxs[i] + dodgeV[i * 3], vy = vys[i] + dodgeV[i * 3 + 1], vz = vzs[i] + dodgeV[i * 3 + 2];
             double hl = Math.sqrt(vx * vx + vz * vz);
             double hx = hl > 1.0e-6 ? vx / hl : 1.0, hz = hl > 1.0e-6 ? vz / hl : 0.0;
             double fyv = clampD(vy / Math.max(hl, 1.0e-4), -0.45, 0.45);
             double fl = Math.sqrt(1.0 + fyv * fyv);
             double fx = hx / fl, fwy = fyv / fl, fwz = hz / fl;
             double sx = -hz, sz = hx; // (sideways, level)
-            double curve = (ax * sx + az * sz) / (hl * hl + 0.002);
+            double curve = (axs[i] * sx + azs[i] * sz) / (hl * hl + 0.002);
             double bank = clampD(curve * 0.25, -0.4, 0.4) * (kind == 12 ? 2.0 : 1.0);
             double ux = -sz * fwy + sx * bank, uy = sz * fx - sx * fwz, uz = sx * fwy + sz * bank; // cross(side, fwd) + side * bank
             double ul = Math.sqrt(ux * ux + uy * uy + uz * uz);
@@ -374,17 +465,14 @@ public final class AquariumRenderer {
                 fx = 1.0; fwy = 0.0; fwz = 0.0;
                 ux = 0.0; uy = 1.0; uz = 0.0;
             }
-            double burst = 1.0 + 0.45 * cs;
-            double beatK = (7.0 + 4.0 * speed) / Math.max(size * extent * 4.0, 1.0);
-            double wave = beatK * (0.35 * t + 0.65 * (t + 0.45 * sn / 0.7)) + fi * 2.0;
-            wave %= Math.PI * 2.0 * 1000.0; // (kept small: whole turns don't change anything)
-            double beat = 0.55 + 0.45 * burst / 1.45;
-            double bend = kind == 15 ? 0.0 : clampD(curve * size, -0.6 / bx, 0.6 / bx);
+            double bx = SPECIES[kind][0];
+            double bend = kind == 15 ? 0.0 : clampD(curve * sizes[i], -0.6 / bx, 0.6 / bx);
             int o = i * 16;
-            FISH_DATA[o] = (float) cx; FISH_DATA[o + 1] = (float) cy; FISH_DATA[o + 2] = (float) cz; FISH_DATA[o + 3] = (float) size;
+            FISH_DATA[o] = (float) (px[i] + st[i * 3]); FISH_DATA[o + 1] = (float) (py[i] + st[i * 3 + 1]); FISH_DATA[o + 2] = (float) (pz[i] + st[i * 3 + 2]);
+            FISH_DATA[o + 3] = (float) sizes[i];
             FISH_DATA[o + 4] = (float) fx; FISH_DATA[o + 5] = (float) fwy; FISH_DATA[o + 6] = (float) fwz; FISH_DATA[o + 7] = kind;
-            FISH_DATA[o + 8] = (float) ux; FISH_DATA[o + 9] = (float) uy; FISH_DATA[o + 10] = (float) uz; FISH_DATA[o + 11] = (float) wave;
-            FISH_DATA[o + 12] = (float) beat; FISH_DATA[o + 13] = (float) bend; FISH_DATA[o + 14] = (float) squeeze;
+            FISH_DATA[o + 8] = (float) ux; FISH_DATA[o + 9] = (float) uy; FISH_DATA[o + 10] = (float) uz; FISH_DATA[o + 11] = (float) waves[i];
+            FISH_DATA[o + 12] = (float) beats[i]; FISH_DATA[o + 13] = (float) bend; FISH_DATA[o + 14] = (float) squeezes[i];
         }
     }
 
