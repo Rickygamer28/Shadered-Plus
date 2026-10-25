@@ -160,5 +160,9 @@
   "block.skyblocks.rain_glass": "Rain Glass",
   "tooltip.skyblocks.rain_glass": "Right-click with a block or a sky block to see it behind the wet glass",
   "screen.skyblocks.aquarium_night": "Night Mode",
-  "screen.skyblocks.aquarium_night_tip": "At night the tank lights dim, jellyfish glow and fish rest near the bottom"
+  "screen.skyblocks.aquarium_night_tip": "At night the tank lights dim, jellyfish glow and fish rest near the bottom",
+  "block.skyblocks.lava_lamp": "Lava Lamp",
+  "tooltip.skyblocks.lava_lamp": "Right-click: on / off. With a dye: wax colour. Sneak + right-click: RGB",
+  "message.skyblocks.rgb_on": "RGB: on",
+  "message.skyblocks.rgb_off": "RGB: off"
 }

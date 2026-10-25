@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "lit=true": {
+      "model": "skyblocks:block/lava_lamp"
+    },
+    "lit=false": {
+      "model": "skyblocks:block/lava_lamp"
+    }
+  }
+}

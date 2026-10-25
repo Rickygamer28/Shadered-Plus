@@ -25,6 +25,9 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(SkyIslandBlockEntity::new, ModBlocks.SKY_ISLAND.get(),
                     ModBlocks.ISLAND_PAINTING.get()).build(null));
 
+    public static final Supplier<BlockEntityType<GlowColourBlockEntity>> LAVA_LAMP = TYPES.register("lava_lamp",
+            () -> BlockEntityType.Builder.of(GlowColourBlockEntity::lavaLamp, ModBlocks.LAVA_LAMP.get()).build(null));
+
     public static final Supplier<BlockEntityType<WaterCausticsBlockEntity>> WATER_CAUSTICS = TYPES.register("water_caustics",
             () -> BlockEntityType.Builder.of(WaterCausticsBlockEntity::new, ModBlocks.WATER_CAUSTICS.get(), ModBlocks.RAIN_GLASS.get()).build(null));
 
