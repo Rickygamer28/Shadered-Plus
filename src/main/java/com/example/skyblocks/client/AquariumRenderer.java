@@ -502,9 +502,9 @@ public final class AquariumRenderer {
                 }
                 for (int d = 0; d < floor.decorCount; d++) {
                     int pk = Math.round(floor.decor[d * 4 + 3]);
-                    double sz = (pk / 128) / 10.0;
-                    int type = pk % 8;
-                    double dr = sz * (type == 0 || type == 3 ? 0.24 : type == 5 ? 0.17 : 0.11) + 0.02;
+                    double sz = (pk / 256) / 10.0;
+                    int type = pk % 16;
+                    double dr = sz * (type == 8 ? 0.42 : type == 0 || type == 3 ? 0.24 : type == 5 || type == 10 ? 0.17 : 0.12) + 0.02;
                     double dx = px[i] + st[i * 3] - floor.decor[d * 4], dz = pz[i] + st[i * 3 + 2] - floor.decor[d * 4 + 2];
                     double m = rad[i] * 0.8 + dr;
                     double d2 = dx * dx + dz * dz;
@@ -640,7 +640,7 @@ public final class AquariumRenderer {
         bottom.sort(java.util.Comparator.comparingLong(BlockPos::asLong));
         java.util.Random random = new java.util.Random(floor.min.asLong() * 17L + bottom.size() * 7L + 3L);
         int count = Math.max(2, Math.min(MAX_DECOR, (int) (bottom.size() * (floor.ocean ? 0.45F : 0.6F))));
-        boolean castle = false, chest = false;
+        boolean castle = false, chest = false, ship = false, anchor = false, helmet = false;
         floor.decorCount = 0;
         for (int i = 0; i < count; i++) {
             BlockPos cell = bottom.get(random.nextInt(bottom.size()));
@@ -651,8 +651,17 @@ public final class AquariumRenderer {
             } else {
                 type = r < 0.3F ? 0 : r < 0.45F ? 1 : r < 0.57F ? 2 : r < 0.65F && !castle ? 3 : r < 0.8F ? 4 : r < 0.9F ? 7 : 6;
             }
+            // now and then something special instead: a sunken ship (big tanks), an anchor, a diver's helmet, a clam
+            float r2 = random.nextFloat();
+            if (r2 < 0.07F && !ship && Math.min(floor.sizeX, floor.sizeZ) >= (floor.ocean ? 4 : 3)) type = 8;
+            else if (r2 < 0.13F && !anchor) type = 9;
+            else if (r2 < 0.19F && !helmet) type = 10;
+            else if (r2 < 0.29F) type = 11;
             castle |= type == 3;
             chest |= type == 5;
+            ship |= type == 8;
+            anchor |= type == 9;
+            helmet |= type == 10;
             // (the ocean tank's decorations big only in big tanks: in a small one, sized like the normal tank's)
             float roomy = Math.max(0.0F, Math.min(1.0F, (Math.min(floor.sizeX, floor.sizeZ) - 1.0F) / 5.0F));
             float rs = random.nextFloat();
@@ -665,7 +674,7 @@ public final class AquariumRenderer {
             floor.decor[k * 4] = cell.getX() - floor.min.getX() + 0.2F + random.nextFloat() * 0.6F;
             floor.decor[k * 4 + 1] = cell.getY() - floor.min.getY() + (cell.getY() == floor.min.getY() ? 0.12F : 0.0F);
             floor.decor[k * 4 + 2] = cell.getZ() - floor.min.getZ() + 0.2F + random.nextFloat() * 0.6F;
-            floor.decor[k * 4 + 3] = type + 8 * (turn + 16 * sizeQ);
+            floor.decor[k * 4 + 3] = type + 16 * (turn + 16 * sizeQ);
         }
     }
 

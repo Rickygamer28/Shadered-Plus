@@ -1106,6 +1106,48 @@ float fishSDF(int kind, Species sp, vec3 p, float wave, float flap, float pulse,
  * 4 coral, 5 treasure chest, 6 sea anemone, 7 old vase.
  */
 float decoSDF(int type, vec3 p, float t) {
+    if (type == 8) { // a sunken ship: a broken, tilted wooden hull half in the sand, its mast snapped
+        vec3 s = p;
+        s.xy = mat2(0.985, -0.174, 0.174, 0.985) * s.xy;
+        s.yz = mat2(0.94, -0.34, 0.34, 0.94) * s.yz;
+        float hull = max(sdEllipsoid(s - vec3(0.0, 0.06, 0.0), vec3(0.45, 0.16, 0.16)), s.y - 0.12);
+        hull = max(hull, -sdEllipsoid(s - vec3(0.0, 0.11, 0.0), vec3(0.41, 0.14, 0.13)));
+        hull = max(hull, -sdEllipsoid(s - vec3(0.1, 0.05, 0.16), vec3(0.08, 0.06, 0.05))); // (a hole in its side)
+        hull = min(hull, sdBox(s - vec3(-0.33, 0.13, 0.0), vec3(0.08, 0.07, 0.11)));          // (the cabin at the back)
+        float mast = sdCapsule(s, vec3(0.05, 0.05, 0.0), vec3(-0.02, 0.42, 0.04), 0.018);
+        mast = min(mast, sdCapsule(s, vec3(-0.012, 0.31, -0.13), vec3(0.0, 0.29, 0.15), 0.01));
+        return max(min(hull, mast), -p.y);
+    }
+    if (type == 9) { // an old anchor, leaning: shank, ring, crossbar, curved arms with flukes
+        vec3 a = p;
+        a.xy = mat2(0.94, 0.34, -0.34, 0.94) * a.xy;
+        float d = sdCapsule(a, vec3(0.0, 0.03, 0.0), vec3(0.0, 0.34, 0.0), 0.016);
+        d = min(d, length(vec2(length(a.xy - vec2(0.0, 0.385)) - 0.035, a.z)) - 0.01);
+        d = min(d, sdCapsule(a, vec3(0.0, 0.3, -0.09), vec3(0.0, 0.3, 0.09), 0.012));
+        vec2 q2 = a.xy - vec2(0.0, 0.14);
+        d = min(d, max(length(vec2(length(q2) - 0.11, a.z)) - 0.014, q2.y));
+        vec3 f = vec3(abs(a.x) - 0.105, a.y - 0.165, a.z);
+        d = min(d, sdEllipsoid(f, vec3(0.03, 0.04, 0.008)));
+        return max(d, -p.y);
+    }
+    if (type == 10) { // a diver's helmet: a brass dome on its collar, round windows
+        float d = sdEllipsoid(p - vec3(0.0, 0.15, 0.0), vec3(0.13, 0.14, 0.13));
+        d = min(d, max(length(p.xz) - 0.15, abs(p.y - 0.035) - 0.035) - 0.006);
+        d = min(d, length(vec2(length(p.xy - vec2(0.0, 0.15)) - 0.055, p.z - 0.122)) - 0.012);
+        d = min(d, length(vec2(length(p.zy - vec2(0.0, 0.16)) - 0.035, abs(p.x) - 0.118)) - 0.009);
+        return max(d, -p.y);
+    }
+    if (type == 11) { // a giant clam, opening and closing: wavy shells, a blue mantle inside, a pearl
+        float open = 0.22 + 0.2 * sin(t * 0.45);
+        float rim = 0.006 * sin(atan(p.z, p.x + 0.11) * 10.0);
+        float low = max(sdEllipsoid(p - vec3(0.0, 0.035, 0.0), vec3(0.12, 0.045, 0.09)) - rim, p.y - 0.035);
+        vec3 h = p - vec3(-0.11, 0.035, 0.0);
+        h.xy = mat2(cos(open), sin(open), -sin(open), cos(open)) * h.xy;
+        float up = max(sdEllipsoid(h - vec3(0.11, 0.0, 0.0), vec3(0.12, 0.04, 0.09)) - rim, -h.y);
+        float mantle = sdEllipsoid(p - vec3(0.0, 0.04, 0.0), vec3(0.1, 0.018, 0.074));
+        float pearl = length(p - vec3(0.025, 0.06, 0.0)) - 0.017;
+        return max(min(min(low, up), min(mantle, pearl)), -p.y);
+    }
     if (type == 0) {
         float d = sdEllipsoid(p - vec3(0.0, 0.07, 0.0), vec3(0.2, 0.13, 0.16));
         d = smin(d, sdEllipsoid(p - vec3(0.13, 0.04, 0.07), vec3(0.12, 0.08, 0.1)), 0.05);
@@ -1155,6 +1197,29 @@ float decoSDF(int type, vec3 p, float t) {
 }
 
 vec3 decoColour(int type, vec3 p, vec3 n, float rnd) {
+    if (type == 8) { // old dark wood, planked, mossy on top
+        vec3 c = vec3(0.32, 0.22, 0.14) * (0.8 + 0.3 * step(0.15, fract(p.y * 28.0 + p.x * 2.0))) * (0.85 + 0.3 * fbm(p.xz * 20.0));
+        if (p.y > 0.2) c = vec3(0.45, 0.35, 0.22) * (0.85 + 0.2 * fbm(p.xy * 30.0)); // (the mast)
+        return mix(c, vec3(0.22, 0.38, 0.16), smoothstep(0.55, 0.9, n.y) * 0.6 * fbm(p.xz * 12.0 + 3.0));
+    }
+    if (type == 9) { // rusty iron
+        float r = fbm(p.xy * 25.0 + p.z * 10.0);
+        return mix(vec3(0.2, 0.17, 0.16), vec3(0.6, 0.3, 0.12), smoothstep(0.4, 0.7, r));
+    }
+    if (type == 10) { // brass with green patches; dark glass windows
+        if ((p.z > 0.1 && length(p.xy - vec2(0.0, 0.15)) < 0.046) || (abs(p.x) > 0.1 && length(p.zy - vec2(0.0, 0.16)) < 0.028)) {
+            return vec3(0.05, 0.08, 0.1) + vec3(0.4) * pow(max(n.y, 0.0), 8.0);
+        }
+        return mix(vec3(0.78, 0.56, 0.22), vec3(0.3, 0.55, 0.42), smoothstep(0.55, 0.75, fbm(p.xz * 18.0 + p.y * 9.0)) * 0.7);
+    }
+    if (type == 11) { // white wavy shells, a bright blue-purple speckled mantle, a white pearl
+        if (length(p - vec3(0.025, 0.06, 0.0)) < 0.02) return vec3(0.98, 0.96, 0.95);
+        if (length(vec2(p.x / 0.1, p.z / 0.074)) < 0.92 && abs(p.y - 0.04) < 0.02) {
+            vec3 m = mix(vec3(0.1, 0.35, 0.95), vec3(0.55, 0.2, 0.85), fbm(p.xz * 30.0 + rnd * 4.0));
+            return mix(m, vec3(0.3, 0.95, 0.85), spot(p.xz * 90.0, 0.15) * 0.7) * 1.2;
+        }
+        return vec3(0.9, 0.88, 0.82) * (0.85 + 0.15 * sin(atan(p.z, p.x + 0.11) * 10.0));
+    }
     float speck = hash22(floor(p.xz * 60.0) + floor(p.y * 60.0)).x;
     if (type == 0) {
         vec3 c = mix(vec3(0.45, 0.43, 0.39), vec3(0.3, 0.28, 0.25), speck * 0.7 + rnd * 0.3);
@@ -1472,11 +1537,11 @@ void main() {
         }
         vec4 dd = decoData(k);
         int pk = int(dd.w + 0.5);
-        int type = pk - (pk / 8) * 8;
-        float ang = float((pk / 8) - (pk / 128) * 16) * 0.3927;
-        float sz = float(pk / 128) / 10.0;
+        int type = pk - (pk / 16) * 16;
+        float ang = float((pk / 16) - (pk / 256) * 16) * 0.3927;
+        float sz = float(pk / 256) / 10.0;
         vec3 base = dd.xyz;
-        float rad = 0.5 * sz;
+        float rad = (type == 8 ? 0.7 : 0.5) * sz;
         vec3 oc = rot - (base + vec3(0.0, 0.2 * sz, 0.0));
         float bq = dot(oc, rd), cq = dot(oc, oc) - rad * rad;
         float disc = bq * bq - cq;
