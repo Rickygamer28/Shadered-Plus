@@ -72,10 +72,10 @@ public class WallFireBlock extends BaseEntityBlock {
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return switch (state.getValue(FACING)) {
-            case SOUTH -> Block.box(0, 3, 0, 16, 13, 6);
-            case EAST -> Block.box(0, 3, 0, 6, 13, 16);
-            case WEST -> Block.box(10, 3, 0, 16, 13, 16);
-            default -> Block.box(0, 3, 10, 16, 13, 16);
+            case SOUTH -> Block.box(0, 1, 0, 16, 15, 7.3);
+            case EAST -> Block.box(0, 1, 0, 7.3, 15, 16);
+            case WEST -> Block.box(8.7, 1, 0, 16, 15, 16);
+            default -> Block.box(0, 1, 8.7, 16, 15, 16);
         };
     }
 

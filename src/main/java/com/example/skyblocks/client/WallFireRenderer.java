@@ -83,10 +83,10 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
             default -> 0.0F;
         }));
         poseStack.translate(-0.5, 0.0, -0.5);
-        // in the north-facing frame: the front at z = 10/16, the opening between the ends of the frame
+        // in the north-facing frame: the glass at z = 9.2/16 between the steel lips, the opening between the end caps
         float x0 = state.getValue(WallFireBlock.RIGHT) ? 0.0F : 1.0F / 16.0F;
         float x1 = state.getValue(WallFireBlock.LEFT) ? 1.0F : 15.0F / 16.0F;
-        float y0 = 4.5F / 16.0F, y1 = 12.0F / 16.0F, z = 10.05F / 16.0F;
+        float y0 = 4.3F / 16.0F, y1 = 11.7F / 16.0F, z = 9.2F / 16.0F;
         // along the strip in the world (the same for every fire in a row)
         BlockPos p = be.getBlockPos();
         float base = switch (facing) {
