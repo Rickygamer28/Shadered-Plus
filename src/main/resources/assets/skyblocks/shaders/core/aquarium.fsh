@@ -1740,9 +1740,7 @@ void main() {
     // ---- night: the tank's lights dimmed to a deep blue; what glows still glows ----
     if (Night > 0.0) {
         float seen = max(hitT - tEnter, 0.0);
-        col *= mix(vec3(1.0), vec3(0.12, 0.17, 0.34), Night);
-        // faint moonlight coming down from the surface, rippling
-        col += vec3(0.08, 0.13, 0.26) * Night * caustics(entry.xz * 0.7 + vec2(0.0, t * 0.05), t * 0.6) * 0.5;
+        col *= mix(vec3(1.0), vec3(0.24, 0.3, 0.5), Night); // (dim, but you can still see in)
         // glowing plankton drifting in the water, twinkling
         float spark = 0.0;
         for (int k = 0; k < 8; k++) {
@@ -1754,17 +1752,17 @@ void main() {
             vec3 cell = floor(sp * 5.0);
             vec2 h1 = hash22(cell.xy + cell.z * 7.13);
             vec2 h2 = hash22(cell.zx + 3.71);
-            if (h2.y > 0.86) {
+            if (h2.y > 0.95) {
                 vec3 cp = (cell + 0.2 + 0.6 * vec3(h1, h2.x)) / 5.0 + vec3(0.0, t * 0.04, 0.0);
                 vec3 w = cp - entry;
                 float along = dot(w, rd);
                 float dist = length(w - rd * along);
                 if (along > 0.0 && along < seen) {
-                    spark += smoothstep(0.018, 0.0, dist) * (0.55 + 0.45 * sin(t * 2.5 + h1.x * 40.0));
+                    spark += smoothstep(0.008, 0.0, dist) * (0.4 + 0.4 * sin(t * 2.5 + h1.x * 40.0));
                 }
             }
         }
-        col += vec3(0.25, 0.85, 1.0) * min(spark, 1.5) * Night;
+        col += vec3(0.25, 0.85, 1.0) * min(spark, 1.0) * 0.7 * Night;
         if (!deco) col += glow * Night * exp(-seen * 0.25);
     }
 
