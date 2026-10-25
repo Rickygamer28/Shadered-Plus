@@ -332,7 +332,7 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
         vec3 c = mix(vec3(0.82, 0.66, 0.2), vec3(1.0, 0.84, 0.28), smoothstep(0.75, 0.2, q.y)); // (deeper yellow on top)
         c = mix(c, vec3(0.66, 0.52, 0.18), smoothstep(0.12, 0.0, abs(q.y + 0.38)) * 0.7);        // (the band low on its side)
         float belly = smoothstep(-0.42, -0.55, q.y);
-        c *= 1.0 - 0.88 * min(dots, 1.0) * (1.0 - belly) * smoothstep(0.98, 0.85, q.x);
+        c *= 1.0 - 0.88 * min(dots, 1.0) * (1.0 - belly) * smoothstep(1.02, 0.92, q.x);
         c = mix(c, vec3(1.0, 0.93, 0.62), belly);
         return c * (0.95 + 0.08 * fbm(q.xy * 5.0));
     }
@@ -607,7 +607,7 @@ vec4 fishShape(int kind) {
     if (kind == 4) return vec4(0.5, 0.55, 1.0, 2.6);
     if (kind == 5) return vec4(0.55, 0.55, 1.0, 0.6);
     if (kind == 6) return vec4(0.62, 0.5, 0.0, 3.5);
-    if (kind == 7) return vec4(0.6, 0.38, 0.0, 0.0);
+    if (kind == 7) return vec4(0.58, 0.52, 0.0, 0.0);
     if (kind == 8) return vec4(0.62, 0.5, 0.0, 0.4);
     if (kind == 9) return vec4(0.5, 0.6, 0.0, 0.8);
     if (kind == 10) return vec4(0.6, 0.6, 2.0, 0.35);
@@ -809,7 +809,7 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
         vec2 sg = vec2(p.x / L * 7.0, ang * 2.6);
         sg.y += 0.5 * floor(sg.x);
         float spike = max(1.0 - length(fract(sg) - 0.5) * 3.2, 0.0);
-        res -= 0.035 * H * spike * spike * smoothstep(1.0, 0.6, abs(p.x / L)) * step(abs(p.x / L), 0.95);
+        res -= 0.035 * H * spike * spike * smoothstep(0.98, 0.7, abs(p.x / L));
         // its big side fins: upright fans just behind the eyes, whirring
         vec3 pp = vec3(p.x - L * 0.18, py + H * 0.05, abs(p.z) - W * 0.8);
         float a = 0.55 + 0.35 * sin(gTime * 9.0 + wave * 0.3);
