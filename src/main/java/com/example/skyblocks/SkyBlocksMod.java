@@ -56,6 +56,7 @@ public class SkyBlocksMod {
         event.accept(ModItems.WATER_CAUSTICS.get());
         event.accept(ModItems.RAIN_GLASS.get());
         event.accept(ModItems.LAVA_LAMP.get());
+        event.accept(ModItems.WALL_FIRE.get());
         event.accept(ModItems.DANCE_FLOOR.get());
         event.accept(ModItems.DISCO_BALL.get());
         event.accept(ModItems.SPEAKER.get());
