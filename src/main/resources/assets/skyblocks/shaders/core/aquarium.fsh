@@ -443,7 +443,9 @@ struct Part {
     int type;
 };
 
-const int PARTS = 9;
+float gPulse = 0.0; // (a jellyfish's squeeze, 0..1)
+
+const int PARTS = 13;
 
 // part j of a fish of this kind (radii scaled by the species, not yet by the fish's size); swing: tail beat (-1..1)
 Part fishPart(int kind, Species sp, int j, float swing, float flap) {
@@ -458,12 +460,14 @@ Part fishPart(int kind, Species sp, int j, float swing, float flap) {
             return Part(vec3(-b.x * 0.7, -b.y * 0.2, s * b.z * 0.7), vec3(fn.x * 0.6, fn.y, fn.z * 0.25), -s * (0.7 + 0.15 * swing), 0.0, 1); }
         return Part(vec3(0.0), vec3(0.0), 0.0, 0.0, 0);
     }
-    if (kind == 15) { // jellyfish: dome and four wavy tentacles
+    if (kind == 15) { // jellyfish: a hollow dome, four frilly arms from its middle, eight thin tentacles from its rim
+        float sq = 1.0 - 0.15 * gPulse, st = 1.0 + 0.12 * gPulse; // (following the bell as it squeezes)
         if (j == 0) return Part(vec3(0.0), b, 0.0, 0.0, 0);
-        if (j <= 4) { float a = float(j) * 1.5708;
-            return Part(vec3(b.x * 0.45 * cos(a) + 0.03 * swing, -b.y - tl.y * 0.7, b.z * 0.45 * sin(a)), tl, 0.0, 0.08 * swing * (float(j) - 2.5), 1); }
-        { float a = float(j) * 1.5708 + 0.785; // long thin tentacles from the rim
-            return Part(vec3(b.x * 0.85 * cos(a) + 0.05 * swing, -b.y - tl.y * 0.95, b.z * 0.85 * sin(a)), vec3(0.018, tl.y * 1.15, 0.018), 0.0, 0.1 * swing * (float(j) - 6.5), 2); }
+        if (j <= 4) { float a = float(j) * 1.5708 + 0.4;
+            return Part(vec3(b.x * 0.16 * cos(a) * sq, 0.05 * b.y * st - tl.y, b.z * 0.16 * sin(a) * sq), tl, 0.0, 0.0, 1); }
+        { float a = float(j - 5) * 0.7854 + 0.39;
+            vec3 r = vec3(0.02, tl.y * 1.15, 0.02);
+            return Part(vec3(b.x * 0.84 * cos(a) * sq, -0.5 * b.y * st - r.y, b.z * 0.84 * sin(a) * sq), r, 0.0, 0.0, 2); }
     }
     if (kind == 12) { // manta ray: wide body, long thin tail, two head fins
         if (j == 0) return Part(vec3(0.0), b, 0.0, 0.0, 0);
@@ -754,10 +758,11 @@ float fishSDF(int kind, Species sp, vec3 p, float wave, float flap, float pulse,
     if (kind == 13) {
         p.z -= 0.5 * gBend * p.x * p.x;
     }
-    if (kind == 15) { // the jellyfish's arms and tentacles trailing, swaying in slow waves
-        float below = max(-p.y - sp.body.y * 0.3, 0.0);
-        p.x += 0.08 * below * sin(gTime * 1.4 + p.y * 5.0 + wave * 0.1);
-        p.z += 0.07 * below * cos(gTime * 1.1 + p.y * 4.0);
+    if (kind == 15) { // the jellyfish's arms and tentacles trailing, swaying in slow waves running down them
+        float below = max(-p.y - sp.body.y * 0.5, 0.0);
+        float bend = below * below * 0.6 + below * 0.04;
+        p.x += bend * sin(gTime * 1.3 + p.y * 4.5 + wave * 0.2);
+        p.z += bend * 0.8 * cos(gTime * 1.05 + p.y * 3.8 + wave * 0.15);
     }
     float swing = kind == 12 || kind == 15 ? sin(wave) : kind == 13 ? flap : 0.0;
     float res = 1.0e9, best = 1.0e9;
@@ -778,7 +783,11 @@ float fishSDF(int kind, Species sp, vec3 p, float wave, float flap, float pulse,
         float d;
         if (kind == 15 && j == 0) { // the bell: a hollow dome, squeezing in quickly then slowly relaxing
             vec3 rb = r * vec3(1.0 - 0.15 * pulse, 1.0 + 0.12 * pulse, 1.0 - 0.15 * pulse);
-            d = max(sdEllipsoid(lq, rb), -sdEllipsoid(lq + vec3(0.0, rb.y * 0.35, 0.0), rb * vec3(0.88, 0.85, 0.88)));
+            d = max(sdEllipsoid(lq, rb), -sdEllipsoid(lq + vec3(0.0, rb.y * 0.6, 0.0), rb * vec3(0.85, 0.75, 0.85)));
+        } else if (kind == 15) { // an arm or tentacle: a strand from its top, thinning to its end
+            float hy = clamp(lq.y, -r.y, r.y);
+            float rad = r.x * (0.35 + 0.65 * (hy + r.y) / (2.0 * r.y));
+            d = length(vec2(length(vec2(lq.x, lq.z * (j <= 4 ? 2.0 : 1.0))), lq.y - hy)) - rad;
         } else if (kind == 13 && j == 0) { // the shell: domed on top, flatter underneath
             d = sdEllipsoid(lq, vec3(r.x, lq.y > 0.0 ? r.y : r.y * 0.55, r.z));
         } else {
@@ -915,11 +924,22 @@ bool water(ivec3 c) {
 
 // where a fish is at time tt: wandering loops round its water (two speeds mixed, so never quite the same loop),
 // speeding up and gliding by turns, slowly rising and sinking
-vec3 swimPath(vec3 middle, vec3 range, float level, float speed, vec3 ph, float tt, bool drift) {
-    float a = speed * (tt + 0.45 * sin(0.7 * tt + ph.z) / 0.7);
+vec3 swimPath(vec3 middle, vec3 range, float level, float speed, vec3 ph, float tt, bool drift, out vec3 vel, out vec3 acc) {
+    float sn = sin(0.7 * tt + ph.z), cs = cos(0.7 * tt + ph.z);
+    float a = speed * (tt + 0.45 * sn / 0.7);
+    float da = speed * (1.0 + 0.45 * cs), dda = -speed * 0.315 * sn;
     float x = 0.78 * sin(a + ph.x) + 0.22 * sin(2.3 * a + ph.y);
+    float x1 = 0.78 * cos(a + ph.x) + 0.506 * cos(2.3 * a + ph.y);
+    float x2 = -0.78 * sin(a + ph.x) - 1.1638 * sin(2.3 * a + ph.y);
     float z = 0.78 * sin(0.73 * a + ph.y) + 0.22 * sin(1.9 * a + ph.x + 1.0);
-    float y = level + (drift ? 0.0 : range.y * 0.4 * sin(0.31 * a + ph.z));
+    float z1 = 0.5694 * cos(0.73 * a + ph.y) + 0.418 * cos(1.9 * a + ph.x + 1.0);
+    float z2 = -0.415662 * sin(0.73 * a + ph.y) - 0.7942 * sin(1.9 * a + ph.x + 1.0);
+    float ky = drift ? 0.0 : range.y * 0.4;
+    float y = level + ky * sin(0.31 * a + ph.z);
+    float y1 = ky * 0.31 * cos(0.31 * a + ph.z), y2 = -ky * 0.0961 * sin(0.31 * a + ph.z);
+    vec3 d1 = vec3(range.x * x1, y1, range.z * z1), d2 = vec3(range.x * x2, y2, range.z * z2);
+    vel = d1 * da;
+    acc = d2 * da * da + d1 * dda;
     return vec3(middle.x + range.x * x, clamp(y, middle.y - range.y, middle.y + range.y), middle.z + range.z * z);
 }
 
@@ -1011,9 +1031,8 @@ void main() {
         vec3 phs = vec3(hash11(lead), hash11(lead + 9.0), hash11(lead * 3.7)) * 6.2831;
         float level = middle.y + (hash11(lead * 2.3) * 2.0 - 1.0) * range.y * 0.6;
         bool drift = kind == 15;
-        vec3 cPrev = swimPath(middle, range, level, speed, phs, t - 0.2, drift);
-        vec3 cNow = swimPath(middle, range, level, speed, phs, t, drift);
-        vec3 cNext = swimPath(middle, range, level, speed, phs, t + 0.2, drift);
+        vec3 vel, acc;
+        vec3 cNow = swimPath(middle, range, level, speed, phs, t, drift, vel, acc);
         // jellyfish: squeeze (quickly) and relax (slowly), rising a little with each squeeze
         float jph = fract(t * 0.4 + hash11(fi * 5.3));
         float squeeze = smoothstep(0.0, 0.12, jph) * (1.0 - smoothstep(0.12, 0.9, jph));
@@ -1023,12 +1042,11 @@ void main() {
         float yRoom = max(reach.y - tallH * size - 0.04, 0.02);
         c.y = clamp(c.y, middle.y - yRoom, middle.y + yRoom);
         // heading along its path (pitching a little as it rises or sinks), leaning into turns
-        vec3 vel = (cNext - cPrev) / 0.4, acc = (cNext + cPrev - 2.0 * cNow) / 0.04;
-        float spd = length(vel);
-        vec3 fwd = normalize(vel + vec3(1.0e-4, 0.0, 0.0));
-        fwd = normalize(vec3(fwd.x, clamp(fwd.y, -0.45, 0.45), fwd.z));
-        vec3 side0 = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
-        float curve = dot(acc, side0) / max(spd * spd, 1.0e-4); // (1 / the turn's radius)
+        float hl = length(vel.xz);
+        vec2 hd = hl > 1.0e-6 ? vel.xz / hl : vec2(1.0, 0.0);
+        vec3 fwd = normalize(vec3(hd.x, clamp(vel.y / max(hl, 1.0e-4), -0.45, 0.45), hd.y)); // (never steeper than that)
+        vec3 side0 = vec3(-hd.y, 0.0, hd.x);
+        float curve = dot(acc.xz, side0.xz) / (hl * hl + 0.002); // (1 / the turn's radius)
         float bank = clamp(curve * 0.25, -0.4, 0.4) * (kind == 12 ? 2.0 : 1.0);
         vec3 up = normalize(cross(side0, fwd) + side0 * bank);
         if (kind == 15) { // the jellyfish just drifts, upright
@@ -1045,6 +1063,7 @@ void main() {
         gFinSway = sin(t * 1.6 + fi);
         gMouth = 0.5 + 0.5 * sin(t * (2.0 + hash11(fi * 2.2)) + fi * 1.7);
         gTime = t;
+        gPulse = squeeze;
         // (a quick test first: does the ray pass near this fish at all?)
         float tallest = sp.body.y + max(sp.fin.y * 1.3, sp.body.y * 0.45 * fishShape(kind).w) + (kind == 4 ? sp.body.y : 0.0);
         float reachAll = size * max(sp.body.x * 1.3 + sp.tail.x * 2.2 + max(sp.body.z, sp.fin.z) + sp.tail.y * (kind == 15 ? 2.2 : 0.6),
