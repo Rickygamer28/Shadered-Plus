@@ -79,7 +79,9 @@ public final class ModBlocks {
 
     /** Rain glass: rain running down a window, over any block put behind it (RainGlassBlock). */
     public static final DeferredBlock<RainGlassBlock> RAIN_GLASS = BLOCKS.registerBlock("rain_glass", RainGlassBlock::new,
-            BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS).mapColor(net.minecraft.world.level.material.MapColor.COLOR_LIGHT_BLUE));
+            BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS).noOcclusion()
+                    .isViewBlocking((s, l, p) -> false).isSuffocating((s, l, p) -> false)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_LIGHT_BLUE));
 
     /** A lava lamp: glowing wax rising and sinking in a glass (LavaLampBlock, client/LavaLampRenderer). */
     public static final DeferredBlock<LavaLampBlock> LAVA_LAMP = BLOCKS.registerBlock("lava_lamp", LavaLampBlock::new,

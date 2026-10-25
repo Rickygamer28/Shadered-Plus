@@ -19,26 +19,6 @@
       ],
       "shade": false,
       "faces": {
-        "down": {
-          "texture": "#overlay",
-          "cullface": "down",
-          "uv": [
-            0,
-            0,
-            16,
-            16
-          ]
-        },
-        "up": {
-          "texture": "#overlay",
-          "cullface": "up",
-          "uv": [
-            0,
-            0,
-            16,
-            16
-          ]
-        },
         "north": {
           "texture": "#overlay",
           "cullface": "north",

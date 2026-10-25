@@ -33,6 +33,25 @@ public class RainGlassBlock extends WaterCausticsBlock {
                 && net.minecraft.world.level.block.Block.isShapeFullBlock(state.getShape(level, pos));
     }
 
+    /**
+     * See-through like glass: it doesn't hide the faces next to it (a glass behind it showed a hole down to the sky), and
+     * the faces between two rain glass blocks are left out, like glass.
+     */
+    @Override
+    protected boolean skipRendering(net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.block.state.BlockState next, net.minecraft.core.Direction dir) {
+        return next.is(this) || super.skipRendering(state, next, dir);
+    }
+
+    @Override
+    protected float getShadeBrightness(net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.BlockGetter level, net.minecraft.core.BlockPos pos) {
+        return 1.0F;
+    }
+
+    @Override
+    protected boolean propagatesSkylightDown(net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.BlockGetter level, net.minecraft.core.BlockPos pos) {
+        return true;
+    }
+
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.skyblocks.rain_glass").withStyle(ChatFormatting.GRAY));
