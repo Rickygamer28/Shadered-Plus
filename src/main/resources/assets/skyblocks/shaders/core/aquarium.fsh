@@ -982,61 +982,6 @@ vec3 swimPath(vec3 middle, vec3 range, float level, float speed, vec3 ph, float 
     return vec3(middle.x + range.x * x, clamp(y, middle.y - range.y, middle.y + range.y), middle.z + range.z * z);
 }
 
-// where fish i is this moment (the same as worked out in main's loop) and how much room it takes up: for keeping
-// the fish clear of each other
-vec3 fishPlace(int i, float t, out float rad) {
-    float fi = float(i);
-    int kind = pickKind(hash11(fi * 7.7));
-    Species sp = species(kind);
-    // its own stretch of water (worked out on the CPU from the tank's shape), made to fit in it
-    vec3 middle = fishData(i * 2).xyz, reach = fishData(i * 2 + 1).xyz;
-    // neon tetras and sardines swim in schools: each follows the first of its kind, a little off to one side
-    float lead = fi;
-    bool school = kind == 3 || kind == 17;
-    vec3 off = vec3(0.0);
-    if (school) {
-        for (int j = 0; j < 32; j++) {
-            if (j >= i) {
-                break;
-            }
-            if (pickKind(hash11(float(j) * 7.7)) == kind) {
-                lead = float(j);
-                break;
-            }
-        }
-        int li = int(lead + 0.5);
-        middle = fishData(li * 2).xyz;
-        reach = fishData(li * 2 + 1).xyz;
-        if (li < i) {
-            vec3 rr = vec3(hash11(fi * 1.7), hash11(fi * 2.9), hash11(fi * 4.3)) * 2.0 - 1.0;
-            off = rr * vec3(1.0, 0.45, 1.0) * clamp(min(reach.x, reach.z) * 0.3, 0.06, 0.55);
-        }
-    }
-    float extent = max(sp.body.x + sp.tail.x * 1.6, max(sp.body.z, sp.fin.z));
-    float size = (Ocean > 0.5 ? 0.75 : 0.65) + 0.5 * hash11(fi * 3.1);
-    if (kind == 18) size *= 1.9; // the sunfish is a giant (still made to fit the water it has)
-    size = min(size, max(min(reach.x - abs(off.x), reach.z - abs(off.z)) - 0.08, 0.1) / extent);
-    float tallH = sp.body.y + (kind == 15 ? sp.tail.y * 2.0 : 0.0) + (kind == 18 ? 0.8 : 0.7) * max(sp.fin.y, sp.body.y * 0.42 * fishShape(kind).w) + (kind == 4 ? sp.body.y * 0.8 : 0.0);
-    size = min(size, max(reach.y - abs(off.y) - 0.05, 0.1) / max(tallH, 0.05));
-    float speed = (0.25 + 0.35 * hash11(lead * 5.7)) * sp.speed;
-    vec3 range = max(reach - abs(off) - vec3(extent * size + 0.06, tallH * size + 0.04, extent * size + 0.06), vec3(0.02));
-    vec3 phs = vec3(hash11(lead), hash11(lead + 9.0), hash11(lead * 3.7)) * 6.2831;
-    float level = middle.y + (hash11(lead * 2.3) * 2.0 - 1.0) * range.y * 0.6;
-    bool drift = kind == 15;
-    vec3 vel, acc;
-    vec3 cNow = swimPath(middle, range, level, speed, phs, t, drift, vel, acc);
-    // jellyfish: squeeze (quickly) and relax (slowly), rising a little with each squeeze
-    float jph = fract(t * 0.4 + hash11(fi * 5.3));
-    float squeeze = smoothstep(0.0, 0.12, jph) * (1.0 - smoothstep(0.12, 0.9, jph));
-    float bob = kind == 15 ? 0.25 * sin(t * 0.6 + fi) + 0.05 * squeeze : 0.03 * sin(t * 0.7 + fi);
-    vec3 wob = school ? vec3(0.03 * sin(t * 1.7 + fi * 2.1), 0.015 * sin(t * 1.3 + fi), 0.03 * cos(t * 1.5 + fi * 1.3)) : vec3(0.0);
-    vec3 c = cNow + off + wob + vec3(0.0, bob, 0.0);
-    float yRoom = max(reach.y - tallH * size - 0.04, 0.02);
-    c.y = clamp(c.y, middle.y - yRoom, middle.y + yRoom);
-    rad = size * max(0.75 * (sp.body.x + sp.tail.x * 1.4), max(0.6 * tallH, sp.body.z));
-    return c;
-}
-
 void main() {
     vec3 ro = Eye;
     vec3 rd = normalize(fragPos - Eye);
@@ -1083,16 +1028,6 @@ void main() {
     float edgeA = 0.0, edgeT = 1.0e9;
     float pixA = max(length(fwidth(rd)), 1.0e-5); // (how wide a pixel is, as an angle)
     vec3 rot = ro - BoxMin;
-    vec3 cen[32];
-    float rad[32];
-    for (int i = 0; i < 32; i++) {
-        if (i >= count) {
-            break;
-        }
-        float r;
-        cen[i] = fishPlace(i, t, r);
-        rad[i] = r;
-    }
     for (int i = 0; i < 32; i++) {
         if (i >= count) {
             break;
@@ -1144,25 +1079,6 @@ void main() {
         vec3 wob = school ? vec3(0.03 * sin(t * 1.7 + fi * 2.1), 0.015 * sin(t * 1.3 + fi), 0.03 * cos(t * 1.5 + fi * 1.3)) : vec3(0.0);
         vec3 c = cNow + off + wob + vec3(0.0, bob, 0.0);
         float yRoom = max(reach.y - tallH * size - 0.04, 0.02);
-        c.y = clamp(c.y, middle.y - yRoom, middle.y + yRoom);
-        // keeping clear of the others: sliding round them rather than through (the smaller one moving more)
-        vec3 push = vec3(0.0);
-        for (int j = 0; j < 32; j++) {
-            if (j >= count) {
-                break;
-            }
-            if (j == i) {
-                continue;
-            }
-            vec3 dd = cen[i] - cen[j];
-            float mr = rad[i] + rad[j], dl = length(dd);
-            if (dl < mr) {
-                push += (dl > 1.0e-4 ? dd / dl : vec3(0.0, i < j ? 1.0 : -1.0, 0.0)) * (mr - dl) * rad[j] / mr;
-            }
-        }
-        c += push;
-        vec2 xzRoom = max(reach.xz - extent * size - 0.04, vec2(0.02));
-        c.xz = clamp(c.xz, middle.xz - xzRoom, middle.xz + xzRoom);
         c.y = clamp(c.y, middle.y - yRoom, middle.y + yRoom);
         // heading along its path (pitching a little as it rises or sinks), leaning into turns
         float hl = length(vel.xz);
