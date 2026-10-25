@@ -149,5 +149,12 @@
   "screen.skyblocks.aquarium_needs": "Only in tanks at least %s x %s wide and %s tall",
   "screen.skyblocks.aquarium_hint": "Tanks fill up with the ones left on",
   "tooltip.skyblocks.aquarium": "Touching blocks make one tank. Sneak + right-click: choose which fish",
-  "tooltip.skyblocks.ocean_aquarium": "For big tanks: sea animals. Sneak + right-click: choose which ones"
+  "tooltip.skyblocks.ocean_aquarium": "For big tanks: sea animals. Sneak + right-click: choose which ones",
+  "fish.skyblocks.hermit_crab": "Hermit Crab",
+  "fish.skyblocks.crab": "Crab",
+  "fish.skyblocks.stingray": "Stingray",
+  "fish.skyblocks.octopus": "Octopus",
+  "fish.skyblocks.lobster": "Lobster",
+  "fish.skyblocks.shrimp": "Shrimp",
+  "screen.skyblocks.aquarium_shared": "Also in the other aquarium (one setting for both)"
 }

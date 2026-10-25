@@ -143,6 +143,13 @@ Species species(int k) {
     if (k == 16) return Species(vec3(0.8, 0.17, 0.17), vec3(0.12, 0.04, 0.28), vec3(0.15, 0.18, 0.03), 1.1);
     if (k == 18) return Species(vec3(0.5, 0.42, 0.12), vec3(0.05, 0.4, 0.02), vec3(0.14, 0.6, 0.03), 0.35); // ocean sunfish
     if (k == 19) return Species(vec3(1.25, 0.3, 0.27), vec3(0.22, 0.4, 0.04), vec3(0.2, 0.38, 0.045), 0.45); // basking shark
+    // the bottom creatures: how far they reach (forward/back, up, sideways), for the quick tests
+    if (k == 20) return Species(vec3(0.15, 0.13, 0.11), vec3(0.0), vec3(0.0), 0.5);  // hermit crab
+    if (k == 21) return Species(vec3(0.16, 0.09, 0.17), vec3(0.0), vec3(0.0), 1.0);  // crab
+    if (k == 22) return Species(vec3(0.63, 0.08, 0.31), vec3(0.0), vec3(0.0), 0.8);  // stingray
+    if (k == 23) return Species(vec3(0.17, 0.13, 0.17), vec3(0.0), vec3(0.0), 0.5);  // octopus
+    if (k == 24) return Species(vec3(0.38, 0.1, 0.17), vec3(0.0), vec3(0.0), 0.4);   // lobster
+    if (k == 25) return Species(vec3(0.13, 0.08, 0.06), vec3(0.0), vec3(0.0), 0.8);  // shrimp
     return Species(vec3(0.12, 0.035, 0.025), vec3(0.04, 0.035, 0.006), vec3(0.0), 1.5);
 }
 
@@ -185,7 +192,12 @@ float spot(vec2 p, float r) {
 // 1 tail (the turtle's head and flippers; the jellyfish's arms), 2 fin (the jellyfish's tentacles); on the fins
 // q.y is the height out from the body and q.z says which: 0 the back's, -1 underneath, 2 a side fin, 3 a filament);
 // rnd: this fish's own random number (colour variants). Each matched to a photo of the real fish.
+vec3 critterColour(int kind, vec3 p, int part, float rnd);
+
 vec3 fishColour(int kind, vec3 q, int part, float rnd) {
+    if (kind >= 20) {
+        return critterColour(kind, q, part, rnd);
+    }
     bool tail = part == 1, fin = part == 2;
     bool anal = fin && q.z < -0.5, pect = fin && q.z > 1.5 && q.z < 2.5, fil = fin && q.z > 2.5;
     bool dorsal = fin && !anal && !pect && !fil;
@@ -803,7 +815,230 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
     return res;
 }
 
+// ---- the creatures on the bottom: 20 hermit crab, 21 crab, 22 stingray, 23 (blue-ringed) octopus, 24 lobster,
+// 25 (fire) shrimp. In their own frame: origin on the sand under them, x forward, y up, z sideways. Parts (for their
+// colours): 0 body, 1 legs / claws / arms / tail, 2 eyes, 3 pale bits (eye stalks, a shrimp's legs and feelers),
+// 4 the hermit crab's shell, 5 feelers ----
+
+float gWalk = 0.0; // (how far it has walked: its legs step with it)
+
+float sdTaper(vec3 p, vec3 a, vec3 b, float ra, float rb) {
+    vec3 pa = p - a, ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h) - mix(ra, rb, h);
+}
+
+void addPart(inout float res, inout float best, inout int ptype, float d, int id, float k) {
+    res = k > 0.0 ? smin(res, d, k) : min(res, d);
+    if (d < best) {
+        best = d;
+        ptype = id;
+    }
+}
+
+// a jointed walking leg (hip, knee, foot), stepping: lifted and swung forward in turn
+void addLeg(inout float res, inout float best, inout int ptype, vec3 p, vec3 hip, vec3 knee, vec3 foot, float r, float phase,
+            vec3 swingDir, float stride, int id) {
+    float lift = max(sin(phase), 0.0);
+    vec3 f = foot + vec3(0.0, lift * stride * 0.9, 0.0) + swingDir * cos(phase) * stride;
+    vec3 k = knee + vec3(0.0, lift * stride * 0.6, 0.0) + swingDir * cos(phase) * stride * 0.5;
+    addPart(res, best, ptype, sdTaper(p, hip, k, r, r * 0.85), id, 0.0);
+    addPart(res, best, ptype, sdTaper(p, k, f, r * 0.85, r * 0.4), id, 0.0);
+}
+
+float critterSDF(int kind, vec3 p, float wave, out int ptype, out vec3 q) {
+    q = p;
+    ptype = 0;
+    float res = 1.0e9, best = 1.0e9;
+    float stepPh = gWalk * 6.2831;
+    vec3 sp = vec3(p.x, p.y, abs(p.z));
+    float sgn = p.z < 0.0 ? 1.0 : -1.0; // (the two sides step in turn)
+    if (kind == 21) { // crab: wide dark shell, red legs, two red claws, eyes on short stalks; walks sideways
+        addPart(res, best, ptype, sdEllipsoid(p - vec3(0.0, 0.05, 0.0), vec3(0.058, 0.026, 0.084)), 0, 0.0);
+        addPart(res, best, ptype, sdEllipsoid(p - vec3(0.0, 0.04, 0.0), vec3(0.05, 0.022, 0.07)), 1, 0.01); // (underside)
+        addPart(res, best, ptype, sdTaper(sp, vec3(0.045, 0.055, 0.02), vec3(0.056, 0.07, 0.023), 0.004, 0.0035), 1, 0.003);
+        addPart(res, best, ptype, length(sp - vec3(0.057, 0.074, 0.023)) - 0.0075, 2, 0.0);
+        float open = 0.5 + 0.5 * sin(wave * 0.5 + (p.z > 0.0 ? 0.0 : 2.0));
+        addPart(res, best, ptype, sdTaper(sp, vec3(0.035, 0.042, 0.06), vec3(0.075, 0.038, 0.085), 0.011, 0.009), 1, 0.004);
+        addPart(res, best, ptype, sdEllipsoid(sp - vec3(0.098, 0.034, 0.078), vec3(0.03, 0.017, 0.017)), 1, 0.006);
+        addPart(res, best, ptype, sdTaper(sp, vec3(0.12, 0.04, 0.074), vec3(0.152, 0.038, 0.066), 0.007, 0.0015), 1, 0.002);
+        addPart(res, best, ptype, sdTaper(sp, vec3(0.12, 0.027, 0.074), vec3(0.15, 0.027 - 0.018 * open, 0.067), 0.006, 0.0015), 1, 0.002);
+        for (int k = 0; k < 4; k++) {
+            float x = 0.028 - float(k) * 0.022;
+            addLeg(res, best, ptype, sp, vec3(x, 0.04, 0.066), vec3(x - 0.006 * float(k), 0.072, 0.112),
+                   vec3(x - 0.014 * float(k), 0.0, 0.148), 0.0065, stepPh + float(k) * 1.57 + sgn * 1.57, vec3(0.0, 0.0, 1.0), 0.014, 1);
+        }
+    } else if (kind == 20) { // hermit crab: a ridged cream shell, orange body, big black eyes on white stalks, a big claw
+        vec3 sc = p - vec3(-0.035, 0.068, 0.0);
+        float rock = 0.06 * sin(stepPh * 0.5);
+        sc.xy = mat2(cos(rock), -sin(rock), sin(rock), cos(rock)) * sc.xy;
+        float shell = sdEllipsoid(sc, vec3(0.066, 0.06, 0.055));
+        shell -= 0.0035 * sin(atan(sc.y, sc.x) * 4.0 + sc.z * 60.0); // (spiral ridges)
+        addPart(res, best, ptype, shell, 4, 0.0);
+        addPart(res, best, ptype, sdEllipsoid(p - vec3(0.028, 0.045, 0.0), vec3(0.036, 0.03, 0.034)), 0, 0.012);
+        addPart(res, best, ptype, sdTaper(sp, vec3(0.05, 0.058, 0.01), vec3(0.068, 0.09, 0.015), 0.0055, 0.005), 3, 0.004);
+        addPart(res, best, ptype, sdEllipsoid(sp - vec3(0.071, 0.1, 0.016), vec3(0.009, 0.013, 0.008)), 2, 0.002);
+        float aw = 0.15 * sin(wave * 0.8 + p.z * 40.0);
+        addPart(res, best, ptype, sdTaper(sp, vec3(0.062, 0.06, 0.006), vec3(0.1, 0.07 + aw * 0.1, 0.02), 0.0028, 0.002), 5, 0.0);
+        addPart(res, best, ptype, sdTaper(sp, vec3(0.1, 0.07 + aw * 0.1, 0.02), vec3(0.14, 0.02, 0.045 + aw * 0.05), 0.002, 0.0012), 5, 0.0);
+        // the big claw (left) and the small one
+        addPart(res, best, ptype, sdEllipsoid(p - vec3(0.078, 0.034, 0.03), vec3(0.034, 0.03, 0.017)), 1, 0.008);
+        addPart(res, best, ptype, sdEllipsoid(p - vec3(0.074, 0.03, -0.03), vec3(0.024, 0.02, 0.012)), 1, 0.008);
+        for (int k = 0; k < 2; k++) {
+            float x = 0.04 - float(k) * 0.022;
+            addLeg(res, best, ptype, sp, vec3(x, 0.04, 0.03), vec3(x + 0.025, 0.062, 0.075),
+                   vec3(x + 0.03, 0.0, 0.1), 0.0085, stepPh + float(k) * 3.14 + sgn * 1.57, vec3(1.0, 0.0, 0.0), 0.012, 1);
+        }
+    } else if (kind == 22) { // stingray: a flat rounded disc, its edges rippling, eyes on top, a long thin tail
+        vec3 d = p - vec3(0.0, 0.03, 0.0);
+        float zr = clamp(abs(d.z) / 0.27, 0.0, 1.2);
+        d.y -= 0.028 * zr * zr * sin(wave - d.x * 14.0);
+        d.x += 0.07 * zr * zr;
+        addPart(res, best, ptype, sdEllipsoid(d, vec3(0.25, 0.032, 0.27)), 0, 0.0);
+        addPart(res, best, ptype, length(sp - vec3(0.085, 0.056, 0.045)) - 0.013, 2, 0.01);
+        float sway = 0.04 * sin(wave * 0.4);
+        vec3 t1 = vec3(-0.43, 0.034, sway * 0.5), t2 = vec3(-0.62, 0.03, sway);
+        addPart(res, best, ptype, sdTaper(p, vec3(-0.22, 0.035, 0.0), t1, 0.016, 0.008), 1, 0.02);
+        addPart(res, best, ptype, sdTaper(p, t1, t2, 0.008, 0.002), 1, 0.0);
+        addPart(res, best, ptype, sdEllipsoid(p - vec3(-0.31, 0.05, sway * 0.2), vec3(0.03, 0.014, 0.004)), 1, 0.006);
+    } else if (kind == 23) { // blue-ringed octopus: a round head and body, eight arms crawling, curling at the tips
+        vec3 m = p - vec3(-0.03, 0.08, 0.0);
+        m.xy = mat2(0.82, -0.57, 0.57, 0.82) * m.xy;
+        addPart(res, best, ptype, sdEllipsoid(m, vec3(0.042, 0.05, 0.036)), 0, 0.0);
+        addPart(res, best, ptype, sdEllipsoid(p - vec3(0.006, 0.045, 0.0), vec3(0.03, 0.028, 0.032)), 0, 0.02);
+        addPart(res, best, ptype, length(sp - vec3(0.02, 0.062, 0.025)) - 0.0095, 2, 0.006);
+        for (int k = 0; k < 8; k++) {
+            float th = (float(k) + 0.5) * 0.7854;
+            vec3 dir = vec3(cos(th), 0.0, sin(th)), perp = vec3(-sin(th), 0.0, cos(th));
+            vec3 prev = vec3(0.005, 0.035, 0.0) + dir * 0.015;
+            float rPrev = 0.012;
+            for (int j = 1; j <= 4; j++) {
+                float s = float(j) / 4.0;
+                float curl = 0.03 * s * s * sin(wave * 0.8 + float(k) * 1.3 + s * 4.0 + stepPh * 0.5);
+                vec3 pt = vec3(0.005, 0.0, 0.0) + dir * (0.015 + s * 0.13) + perp * curl;
+                pt.y = 0.035 * (1.0 - s) + 0.004 + 0.02 * s * s * max(sin(wave * 0.6 + float(k) * 2.1), 0.0);
+                float r = mix(0.012, 0.0022, s);
+                addPart(res, best, ptype, sdTaper(p, prev, pt, rPrev, r), 1, j == 1 ? 0.012 : 0.0);
+                prev = pt;
+                rPrev = r;
+            }
+        }
+    } else if (kind == 24) { // lobster: a long shell, a segmented tail ending in a fan, two big claws, long feelers
+        addPart(res, best, ptype, sdEllipsoid(p - vec3(0.04, 0.055, 0.0), vec3(0.085, 0.034, 0.037)), 0, 0.0);
+        addPart(res, best, ptype, sdTaper(p, vec3(0.115, 0.06, 0.0), vec3(0.15, 0.064, 0.0), 0.008, 0.0015), 0, 0.004);
+        for (int k = 0; k < 6; k++) {
+            float fk = float(k);
+            addPart(res, best, ptype, sdEllipsoid(p - vec3(-0.055 - fk * 0.033, 0.05 - fk * 0.003, 0.0),
+                                                  vec3(0.021, 0.031 - fk * 0.0025, 0.034 - fk * 0.003)), 0, 0.003);
+        }
+        for (int j = 0; j < 5; j++) { // the tail fan
+            float a = (float(j) - 2.0) * 0.38 + 0.08 * sin(wave * 0.6);
+            vec3 c = vec3(-0.25 - 0.03 * cos(a), 0.034, 0.03 * sin(a));
+            vec3 l = p - c;
+            l.xz = mat2(cos(a), sin(a), -sin(a), cos(a)) * l.xz;
+            addPart(res, best, ptype, sdEllipsoid(l, vec3(0.034, 0.005, 0.015)), 0, 0.004);
+        }
+        float big = p.z > 0.0 ? 1.12 : 0.9;
+        float open = 0.5 + 0.5 * sin(wave * 0.4 + (p.z > 0.0 ? 0.0 : 1.7));
+        addPart(res, best, ptype, sdTaper(sp, vec3(0.1, 0.045, 0.03), vec3(0.15, 0.045, 0.075), 0.012, 0.011), 1, 0.005);
+        addPart(res, best, ptype, sdTaper(sp, vec3(0.15, 0.045, 0.075), vec3(0.19, 0.04, 0.077), 0.011, 0.012), 1, 0.005);
+        addPart(res, best, ptype, sdEllipsoid(sp - vec3(0.235, 0.04, 0.077), vec3(0.055, 0.02, 0.03) * big), 1, 0.008);
+        addPart(res, best, ptype, sdTaper(sp, vec3(0.28, 0.046, 0.072), vec3(0.335, 0.046, 0.062), 0.011 * big, 0.003), 1, 0.003);
+        addPart(res, best, ptype, sdTaper(sp, vec3(0.28, 0.034, 0.072), vec3(0.33, 0.034 - 0.022 * open, 0.064), 0.009 * big, 0.003), 1, 0.003);
+        for (int k = 0; k < 4; k++) {
+            float x = 0.07 - float(k) * 0.024;
+            addLeg(res, best, ptype, sp, vec3(x, 0.035, 0.03), vec3(x - 0.01, 0.062, 0.078),
+                   vec3(x - 0.02 - 0.01 * float(k), 0.0, 0.104), 0.0055, stepPh + float(k) * 1.57 + sgn * 1.57, vec3(1.0, 0.0, 0.0), 0.012, 1);
+        }
+        addPart(res, best, ptype, length(sp - vec3(0.11, 0.07, 0.016)) - 0.006, 2, 0.0);
+        float aw = 0.02 * sin(wave * 0.7 + p.z * 30.0);
+        vec3 a1 = vec3(0.25, 0.09, 0.07 + aw), a2 = vec3(0.37, 0.06 + aw, 0.13 + aw);
+        addPart(res, best, ptype, sdTaper(sp, vec3(0.13, 0.06, 0.012), a1, 0.0035, 0.0025), 5, 0.0);
+        addPart(res, best, ptype, sdTaper(sp, a1, a2, 0.0025, 0.0012), 5, 0.0);
+    } else { // fire shrimp: bright red, white spots, a curved tail, long white legs and feelers
+        addPart(res, best, ptype, sdEllipsoid(p - vec3(0.015, 0.042, 0.0), vec3(0.028, 0.018, 0.014)), 0, 0.0);
+        addPart(res, best, ptype, sdTaper(p, vec3(0.04, 0.047, 0.0), vec3(0.056, 0.05, 0.0), 0.003, 0.001), 0, 0.002);
+        for (int k = 0; k < 5; k++) {
+            float fk = float(k);
+            addPart(res, best, ptype, sdEllipsoid(p - vec3(-0.012 - fk * 0.011, 0.042 - fk * 0.004 - fk * fk * 0.0009, 0.0),
+                                                  vec3(0.009, 0.016 - fk * 0.0018, 0.012 - fk * 0.0015)), 0, 0.003);
+        }
+        vec3 tf = p - vec3(-0.072, 0.02, 0.0);
+        tf.xy = mat2(0.8, 0.6, -0.6, 0.8) * tf.xy;
+        addPart(res, best, ptype, sdEllipsoid(tf, vec3(0.012, 0.0035, 0.011)), 0, 0.003);
+        addPart(res, best, ptype, length(sp - vec3(0.038, 0.052, 0.007)) - 0.0042, 2, 0.0);
+        addPart(res, best, ptype, sdTaper(sp, vec3(0.03, 0.032, 0.008), vec3(0.058, 0.026, 0.013), 0.0032, 0.0018), 0, 0.0);
+        for (int k = 0; k < 5; k++) {
+            float x = 0.024 - float(k) * 0.009;
+            addLeg(res, best, ptype, sp, vec3(x, 0.03, 0.007), vec3(x + 0.002, 0.037, 0.02),
+                   vec3(x - 0.004, 0.0, 0.026), 0.0018, stepPh * 1.5 + float(k) * 1.26 + sgn * 1.57, vec3(1.0, 0.0, 0.0), 0.005, 3);
+        }
+        float aw = 0.01 * sin(wave * 1.1 + p.z * 50.0);
+        vec3 a1 = vec3(0.08, 0.07, 0.02 + aw), a2 = vec3(0.12, 0.052 + aw, 0.036);
+        addPart(res, best, ptype, sdTaper(sp, vec3(0.042, 0.05, 0.004), a1, 0.0013, 0.001), 3, 0.0);
+        addPart(res, best, ptype, sdTaper(sp, a1, a2, 0.001, 0.0008), 3, 0.0);
+    }
+    return res;
+}
+
+vec3 critterColour(int kind, vec3 p, int part, float rnd) {
+    if (part == 2) return vec3(0.02); // (eyes)
+    if (kind == 21) { // crab
+        if (part == 0) {
+            float rim = length(vec2(p.x / 0.058, p.z / 0.084));
+            vec3 c = mix(vec3(0.13, 0.09, 0.07), vec3(0.75, 0.15, 0.08), smoothstep(0.88, 0.97, rim));
+            return mix(c, vec3(0.7, 0.62, 0.5), spot(p.xz * 140.0 + rnd * 9.0, 0.08) * 0.6);
+        }
+        float tip = smoothstep(0.13, 0.15, p.x);
+        return mix(vec3(0.88, 0.16, 0.07), vec3(1.0, 0.55, 0.15), tip * 0.8 + 0.25 * step(0.5, fract(length(p.xz) * 60.0)) * 0.3);
+    }
+    if (kind == 20) { // hermit crab
+        if (part == 4) {
+            float ridge = 0.5 + 0.5 * sin(atan(p.y - 0.068, p.x + 0.035) * 4.0 + p.z * 60.0);
+            vec3 c = mix(vec3(0.82, 0.8, 0.7), vec3(0.95, 0.93, 0.86), ridge);
+            c = mix(c, vec3(0.6, 0.66, 0.45), smoothstep(0.55, 0.75, fbm(p.xz * 40.0)) * 0.5);
+            return c * (1.0 - 0.6 * spot(p.xy * 260.0 + p.z * 90.0, 0.07));
+        }
+        if (part == 3) return vec3(0.95, 0.92, 0.85);
+        if (part == 5) return vec3(1.0, 0.42, 0.12);
+        vec3 c = mix(vec3(1.0, 0.85, 0.65), vec3(1.0, 0.42, 0.15), smoothstep(0.02, 0.05, p.y));
+        return mix(c, vec3(1.0, 0.95, 0.88), spot(vec2(p.x, p.y + p.z) * 220.0, 0.12) * 0.8);
+    }
+    if (kind == 22) { // stingray
+        if (p.y < 0.026 && part == 0) return vec3(0.9, 0.88, 0.85);
+        vec3 c = mix(vec3(0.58, 0.56, 0.52), vec3(0.68, 0.66, 0.62), fbm(p.xz * 12.0 + rnd * 5.0));
+        return part == 1 ? c * 0.85 : mix(c, c * 1.1, smoothstep(0.8, 1.0, length(vec2(p.x / 0.25, p.z / 0.27))));
+    }
+    if (kind == 23) { // blue-ringed octopus: cream-yellow, ochre patches each ringed in electric blue edged black
+        vec2 uv = part == 1 ? vec2(length(p.xz) * 45.0, atan(p.z, p.x) * 3.0) : vec2(p.x * 70.0 + p.y * 30.0, p.z * 70.0 + p.y * 50.0);
+        vec2 cell = floor(uv);
+        vec2 o = hash22(cell) * 0.4 + 0.3;
+        float d = length(fract(uv) - o);
+        vec3 c = mix(vec3(0.85, 0.75, 0.5), vec3(0.95, 0.9, 0.75), fbm(uv * 0.3));
+        if (d < 0.22) c = vec3(0.6, 0.45, 0.25);                       // (the patch)
+        else if (d < 0.27) c = vec3(0.05, 0.04, 0.06);                 // (black edge)
+        else if (d < 0.35) c = vec3(0.15, 0.45, 1.0) * 1.5;            // (blue ring)
+        else if (d < 0.39) c = vec3(0.05, 0.04, 0.06);
+        return c;
+    }
+    if (kind == 24) { // lobster: red, speckled darker, claw tips dark
+        vec3 c = vec3(0.78, 0.2, 0.1) * (0.85 + 0.25 * fbm(p.xz * 60.0));
+        c *= 1.0 - 0.35 * spot(p.xz * 180.0 + p.y * 40.0, 0.12);
+        if (part == 1) c = mix(c, vec3(0.2, 0.06, 0.05), smoothstep(0.22, 0.3, p.x) * 0.7);
+        if (part == 5) c = vec3(0.6, 0.15, 0.1);
+        return mix(c, c * 1.2 + 0.05, smoothstep(0.03, 0.0, p.y)); // (paler underneath)
+    }
+    // fire shrimp
+    if (part == 3) return vec3(0.95, 0.94, 0.92);
+    vec3 c = vec3(1.0, 0.3, 0.08);
+    if (part == 0 && p.x > -0.012) c = mix(c, vec3(1.0), spot(vec2(p.x, p.y + p.z) * 160.0 + rnd * 4.0, 0.12));
+    return c;
+}
+
 float fishSDF(int kind, Species sp, vec3 p, float wave, float flap, float pulse, out int ptype, out vec3 q) {
+    if (kind >= 20) {
+        return critterSDF(kind, p, wave, ptype, q);
+    }
     if (kind != 12 && kind != 13 && kind != 15) {
         return fishBody(kind, sp, p, wave, flap, ptype, q);
     }
@@ -1032,9 +1267,10 @@ void main() {
         gMouth = 0.5 + 0.5 * sin(t * (2.0 + hash11(fi * 2.2)) + fi * 1.7);
         gTime = t;
         gPulse = squeeze;
+        gWalk = f3.w;
         // (a quick test first: does the ray pass near this fish at all?)
         float tallest = sp.body.y + max(sp.fin.y * 1.3, sp.body.y * 0.45 * fishShape(kind).w) + (kind == 4 ? sp.body.y : 0.0);
-        float reachAll = size * max(sp.body.x * 1.3 + sp.tail.x * 2.2 + max(sp.body.z, sp.fin.z) + sp.tail.y * (kind == 15 ? 2.2 : 0.6),
+        float reachAll = kind >= 20 ? size * (length(sp.body) + 0.02) : size * max(sp.body.x * 1.3 + sp.tail.x * 2.2 + max(sp.body.z, sp.fin.z) + sp.tail.y * (kind == 15 ? 2.2 : 0.6),
                 length(vec2(sp.body.x + sp.tail.x * 2.0, tallest)) + 0.02);
         vec3 oc = rot - c;
         float bq = dot(oc, rd), cq = dot(oc, oc) - reachAll * reachAll;
@@ -1049,7 +1285,7 @@ void main() {
         vec3 F = fwd, U = up, S = side;
         vec3 lo = vec3(dot(oc, F), dot(oc, U), dot(oc, S)) / size;
         vec3 ld = vec3(dot(rd, F), dot(rd, U), dot(rd, S));
-        if (kind != 12 && kind != 13 && kind != 15) { // a much tighter box round it, in its own frame: far less tracing
+        if (kind != 12 && kind != 13 && kind != 15 && kind < 20) { // a much tighter box round it, in its own frame: far less tracing
             float L = sp.body.x;
             float xb = -(0.92 * L + 2.3 * sp.tail.x) - 0.01, xf = 1.2 * L;
             float bigP = kind == 10 || kind == 16 || kind == 19 ? 1.7 : 1.0;
@@ -1123,7 +1359,7 @@ void main() {
             vec3 base = fishColour(kind, q, part, rnd);
             bool isEye = false;
             // the eye
-            bool eyed = kind != 12 && kind != 15 && kind != 13;
+            bool eyed = kind != 12 && kind != 15 && kind != 13 && kind < 20;
             if (kind == 13 && part == 1 && abs(q.z) > 0.55) {
                 float eyeD = length(vec2((q.x - 0.45) * 1.2, q.y - 0.2));
                 if (eyeD < 0.13) { base = vec3(0.02); isEye = true; }
@@ -1140,14 +1376,14 @@ void main() {
                     base *= 0.6; // (a dark rim round the eye)
                 }
             }
-            if (part >= 1 && kind != 13 && kind != 15 && kind != 10 && kind != 16 && kind != 19 && kind != 12) {
+            if (part >= 1 && kind < 20 && kind != 13 && kind != 15 && kind != 10 && kind != 16 && kind != 19 && kind != 12) {
                 float rc = part == 1 ? q.y * 8.0 : q.x * 10.0; // (rays run along a tail, up a fin)
                 float ray = 1.0 - smoothstep(0.0, 0.25, abs(fract(rc) - 0.5) - 0.2);
                 base *= 0.84 + 0.16 * (1.0 - ray);
                 float edge = part == 1 ? 0.5 - 0.5 * q.x : abs(q.y);
                 base = mix(base, base * 1.15 + vec3(0.05, 0.08, 0.1), smoothstep(0.5, 1.0, edge) * 0.5);
             }
-            if (part == 0 && !isEye && kind != 12 && kind != 13 && kind != 15 && kind != 10 && kind != 16 && kind != 19 && kind != 18) {
+            if (part == 0 && !isEye && kind < 20 && kind != 12 && kind != 13 && kind != 15 && kind != 10 && kind != 16 && kind != 19 && kind != 18) {
                 float ss = sp.body.y * (kind == 5 || kind == 17 ? 0.13 : 0.1);
                 vec2 sc = vec2(-q.x * sp.body.x, q.y * sp.body.y) / ss;
                 sc.y += 0.5 * floor(sc.x);
@@ -1164,7 +1400,7 @@ void main() {
             vec3 sun = normalize(vec3(0.3, 1.0, 0.2));
             float diff = clamp(dot(n, sun) * 0.5 + 0.5, 0.0, 1.0);
             vec3 amb = mix(vec3(0.24, 0.34, 0.45), vec3(0.6, 0.76, 0.88), n.y * 0.5 + 0.5);
-            float through = part >= 1 && kind != 13 ? max(-dot(n, sun), 0.0) * 0.35 + 0.2 * max(dot(rd, sun), 0.0) : 0.0; // (thin fins let light through)
+            float through = part >= 1 && kind != 13 && kind < 20 ? max(-dot(n, sun), 0.0) * 0.35 + 0.2 * max(dot(rd, sun), 0.0) : 0.0; // (thin fins let light through)
             float irid = part != 0 ? 0.0 : kind == 3 || kind == 17 ? 0.28 : kind == 6 || kind == 8 ? 0.25 : kind == 11 ? 0.2 : kind == 4 ? 0.12 : kind == 1 ? 0.1 : 0.0;
             if (irid > 0.0) {
                 float fa = 1.0 - max(dot(n, -rd), 0.0);

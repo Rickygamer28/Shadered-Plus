@@ -8,12 +8,14 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 /**
- * The aquarium's menu (sneak + right-click): turn each kind of fish on or off for every aquarium of this type
- * (normal or ocean). The tanks fill up with the kinds left on; big animals only in tanks big enough for them.
+ * The aquarium's menu (sneak + right-click): turn each kind of fish and bottom creature on or off for every aquarium
+ * of this type (normal or ocean). The tanks fill up with the kinds left on; big animals only in tanks big enough.
  */
 public class AquariumScreen extends Screen {
-    private static final int PANEL_W = 272;
-    private static final int PANEL_H = 196;
+    private static final int COLS = 3;
+    private static final int BTN_W = 124;
+    private static final int PANEL_W = COLS * (BTN_W + 4) + 20;
+    private static final int PANEL_H = 214;
 
     private final boolean ocean;
 
@@ -30,23 +32,43 @@ public class AquariumScreen extends Screen {
         return (height - PANEL_H) / 2;
     }
 
-    private int first() {
-        return ocean ? 10 : 0;
+    private int[] kinds() {
+        return ocean ? AquariumRenderer.OCEAN_KINDS : AquariumRenderer.NORMAL_KINDS;
+    }
+
+    private static boolean shared(int kind) {
+        for (int k : AquariumRenderer.NORMAL_KINDS) {
+            if (k == kind) {
+                for (int o : AquariumRenderer.OCEAN_KINDS) {
+                    if (o == kind) return true;
+                }
+            }
+        }
+        return false;
     }
 
     @Override
     protected void init() {
         clearWidgets();
-        for (int n = 0; n < 10; n++) {
-            final int kind = first() + n;
-            int x = left() + 12 + (n % 2) * 128, y = top() + 26 + (n / 2) * 24;
+        int[] kinds = kinds();
+        for (int n = 0; n < kinds.length; n++) {
+            final int kind = kinds[n];
+            int x = left() + 12 + (n % COLS) * (BTN_W + 4), y = top() + 24 + (n / COLS) * 23;
             Button b = Button.builder(label(kind), btn -> {
                 AquariumSettings.set(kind, !AquariumSettings.enabled(kind));
                 btn.setMessage(label(kind));
-            }).bounds(x, y, 120, 20).build();
+            }).bounds(x, y, BTN_W, 20).build();
             int[] need = AquariumRenderer.tankNeeds(kind);
+            Component tip = null;
             if (need[0] > 1 || need[1] > 1) {
-                b.setTooltip(Tooltip.create(Component.translatable("screen.skyblocks.aquarium_needs", need[0], need[0], need[1])));
+                tip = Component.translatable("screen.skyblocks.aquarium_needs", need[0], need[0], need[1]);
+            }
+            if (shared(kind)) {
+                Component s = Component.translatable("screen.skyblocks.aquarium_shared");
+                tip = tip == null ? s : Component.empty().append(tip).append("\n").append(s);
+            }
+            if (tip != null) {
+                b.setTooltip(Tooltip.create(tip));
             }
             addRenderableWidget(b);
         }
@@ -60,8 +82,8 @@ public class AquariumScreen extends Screen {
     }
 
     private void setAll(boolean on) {
-        for (int n = 0; n < 10; n++) {
-            AquariumSettings.set(first() + n, on);
+        for (int k : kinds()) {
+            AquariumSettings.set(k, on);
         }
         init();
     }
@@ -81,7 +103,7 @@ public class AquariumScreen extends Screen {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(font, title, left() + PANEL_W / 2, top() + 9, 0xFFFFFF);
-        graphics.drawCenteredString(font, Component.translatable("screen.skyblocks.aquarium_hint"), left() + PANEL_W / 2, top() + 148, 0xA0A0A0);
+        graphics.drawCenteredString(font, Component.translatable("screen.skyblocks.aquarium_hint"), left() + PANEL_W / 2, top() + PANEL_H - 44, 0xA0A0A0);
     }
 
     @Override
