@@ -1233,10 +1233,10 @@ void main() {
                 }
             }
             if (part >= 1 && kind != 13 && kind != 15 && kind != 10 && kind != 16 && kind != 19 && kind != 12) {
-                float rc = tail ? q.y * 8.0 : q.x * 10.0; // (rays run along a tail, up a fin)
+                float rc = part == 1 ? q.y * 8.0 : q.x * 10.0; // (rays run along a tail, up a fin)
                 float ray = 1.0 - smoothstep(0.0, 0.25, abs(fract(rc) - 0.5) - 0.2);
                 base *= 0.84 + 0.16 * (1.0 - ray);
-                float edge = tail ? 0.5 - 0.5 * q.x : abs(q.y);
+                float edge = part == 1 ? 0.5 - 0.5 * q.x : abs(q.y);
                 base = mix(base, base * 1.15 + vec3(0.05, 0.08, 0.1), smoothstep(0.5, 1.0, edge) * 0.5);
             }
             if (part == 0 && !isEye && kind != 12 && kind != 13 && kind != 15 && kind != 10 && kind != 16 && kind != 19 && kind != 18) {
