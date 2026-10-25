@@ -534,7 +534,7 @@ public final class AquariumRenderer {
     private static void placeDecor(Floor floor) {
         java.util.List<BlockPos> bottom = new ArrayList<>();
         for (BlockPos b : floor.blocks) {
-            if (!floor.blocks.contains(b.below())) {
+            if (b.getY() == floor.min.getY()) { // (only on the real bottom, never on top of a corridor built through it)
                 bottom.add(b);
             }
         }

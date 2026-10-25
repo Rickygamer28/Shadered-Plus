@@ -1313,7 +1313,15 @@ void main() {
             }
         }
         bool down = exitAxis == 1 && rd.y < 0.0, up = exitAxis == 1 && rd.y > 0.0;
-        if (down || onSand) {
+        // the water ends inside the tank's box (a glass corridor or room built into the tank): glass, looking out into
+        // the air - no sand, no seaweed (only the real bottom and the outer walls have those)
+        bool inner = all(greaterThanEqual(cell, ivec3(0))) && all(lessThan(cell, ivec3(BoxSize + 0.5)));
+        if (inner && !onSand) {
+            vec2 gp = exitAxis == 0 ? p.zy : exitAxis == 1 ? p.xz : p.xy;
+            col = mix(vec3(0.32, 0.5, 0.58), vec3(0.5, 0.68, 0.74), clamp(p.y / BoxSize.y, 0.0, 1.0));
+            col += vec3(0.5, 0.75, 0.85) * caustics(gp * 1.2, t) * 0.18;                       // (light rippling on it)
+            col += vec3(0.6, 0.8, 0.9) * 0.12 * smoothstep(0.6, 1.0, sin(gp.x * 2.0 + gp.y * 3.0 + 1.3)); // (a sheen on the glass)
+        } else if (down || onSand) {
             // sand with pebbles, lit by the moving light patterns
             // a fine, lighter grain (no dark patches: they looked like shadows)
             float pebble = 0.94 + 0.1 * hash22(floor(p.xz * 30.0)).x;
