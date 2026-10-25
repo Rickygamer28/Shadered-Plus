@@ -66,7 +66,7 @@ void main() {
 
     // the bed: chunks of fire glass in front of the flames' base - facets catching the light
     if (h < bedTop + 0.04) {
-        vec2 q = vec2(s * 9.0, h * 9.0 * 7.4 / 16.0 * 1.6);
+        vec2 q = vec2(s * 15.0, h * 15.0 * 7.4 / 16.0 * 1.5);
         vec2 id = floor(q), fq = fract(q);
         float d1 = 9.0, d2 = 9.0;
         vec2 cell = vec2(0.0);
@@ -85,11 +85,11 @@ void main() {
             float edge = smoothstep(0.08, 0.0, d2 - d1);            // (the facet edges)
             float facet = 0.4 + 0.6 * rh.x;                           // (each facet turned its own way)
             float glow = on * (0.35 + 0.65 * clamp(h / top, 0.0, 1.0)) * flick;
-            vec3 glassCol = mix(vec3(0.1, 0.11, 0.13), mix(fc, vec3(1.0), 0.25), 0.25 + 0.5 * rh.y);
-            vec3 bed = glassCol * facet * (0.25 + 0.75 * glow) + fc * glow * 0.35 * rh.x;
-            bed += (mix(fc, vec3(1.0), 0.6) * on + 0.15) * edge * (0.25 + 0.6 * rh.y) * flick;
+            vec3 glassCol = mix(vec3(0.05, 0.055, 0.07), mix(fc, vec3(1.0), 0.15), 0.1 + 0.35 * rh.y * rh.y);
+            vec3 bed = glassCol * facet * (0.35 + 0.65 * glow) + fc * glow * 0.22 * rh.x * rh.x;
+            bed += (mix(fc, vec3(1.0), 0.5) * on + 0.1) * edge * (0.15 + 0.5 * rh.y) * flick;
             float spark = step(0.985, hash22(cell + floor(t * 3.0 + rh.x * 7.0)).x) * on;
-            bed += vec3(1.0, 0.95, 0.85) * spark * 0.8;
+            bed += mix(fc, vec3(1.0), 0.7) * spark * 0.7;
             col = bed;
         }
     }
