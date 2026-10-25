@@ -228,6 +228,17 @@ float cellEdge(vec2 p) {
     return f2 - f1;
 }
 
+// smooth random variation (0..1), and a few layers of it (finer and finer): blotches, mottling, uneven colour
+float vnoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash22(i).x, hash22(i + vec2(1.0, 0.0)).x, f.x), mix(hash22(i + vec2(0.0, 1.0)).x, hash22(i + vec2(1.0, 1.0)).x, f.x), f.y);
+}
+
+float fbm(vec2 p) {
+    return 0.5 * vnoise(p) + 0.3 * vnoise(p * 2.03 + 7.1) + 0.2 * vnoise(p * 4.1 + 3.3);
+}
+
 // 1 inside a round spot (one per cell, placed at random), 0 elsewhere
 float spot(vec2 p, float r) {
     vec2 o = hash22(floor(p)) * 0.5 + 0.25;
@@ -244,19 +255,20 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
     bool dorsal = fin && !anal && !pect && !fil;
     float tk = 0.5 - 0.5 * q.x; // along the tail: 0 at its root, 1 at its tip
     if (kind == 0) { // clownfish: orange, three white bands edged black, black-rimmed fins
-        vec3 o = vec3(1.0, 0.42, 0.03);
+        vec3 o = mix(vec3(1.0, 0.56, 0.12), vec3(0.95, 0.35, 0.02), smoothstep(-0.5, 0.6, q.y)) * (0.93 + 0.12 * fbm(q.xy * 7.0));
         if (part == 0) {
+            float wob = (fbm(q.xy * vec2(5.0, 7.0) + rnd * 3.0) - 0.5) * 0.05;
             float b1 = abs(q.x - 0.4 + 0.1 * q.y * q.y) - 0.08;  // behind the eye, curving
             float b2 = abs(q.x + 0.1 - 0.12 * q.y) - 0.11;        // the middle, leaning forward at the top
             float b3 = abs(q.x + 0.86) - 0.06;                     // at the tail root
-            float b = min(b1, min(b2, b3));
-            return b < 0.0 ? vec3(0.97) : b < 0.035 ? vec3(0.03) : o;
+            float b = min(b1, min(b2, b3)) + wob;
+            return b < 0.0 ? vec3(0.97) * (0.95 + 0.05 * fbm(q.xy * 12.0)) : b < 0.035 ? vec3(0.03) : o;
         }
         float edge = tail ? smoothstep(0.8, 0.88, tk) : pect ? smoothstep(0.62, 0.78, abs(q.x)) : smoothstep(0.72, 0.84, abs(q.y));
         return mix(o, vec3(0.03), edge);
     }
     if (kind == 1) { // blue tang: royal blue, the black "palette" mark with a blue window, yellow tail
-        vec3 blue = vec3(0.08, 0.3, 0.95), black = vec3(0.02, 0.03, 0.08), yellow = vec3(1.0, 0.85, 0.08);
+        vec3 blue = vec3(0.08, 0.3, 0.95) * (0.85 + 0.25 * fbm(q.xy * 8.0 + rnd * 5.0)), black = vec3(0.02, 0.03, 0.08), yellow = vec3(1.0, 0.85, 0.08);
         if (tail) return abs(q.y) > 0.78 ? black : yellow;
         if (pect) return yellow;
         if (dorsal) return q.y > 0.72 ? blue : black;
@@ -270,7 +282,8 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
         vec3 y = vec3(1.0, 0.86, 0.05);
         if (part > 0) return y * 0.95;
         if (q.x < -0.84 && abs(q.y) < 0.08) return vec3(0.95);
-        return mix(y, vec3(0.78, 0.9, 0.15), smoothstep(-0.1, -0.6, q.y) * 0.6);
+        y *= 0.95 + 0.05 * sin(q.y * 45.0 + sin(q.x * 8.0) * 2.0);
+        return mix(y, vec3(0.78, 0.9, 0.15), smoothstep(-0.1, -0.6, q.y) * 0.6) * (0.94 + 0.1 * fbm(q.xy * 6.0));
     }
     if (kind == 3) { // neon tetra: glowing blue line, red rear belly, silvery, see-through fins
         if (part > 0) return tail && tk < 0.2 && abs(q.y) < 0.3 ? vec3(0.9, 0.2, 0.2) : vec3(0.55, 0.65, 0.85);
@@ -294,15 +307,16 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
         if (part > 0) return vec3(1.0, 0.52, 0.1);
         vec3 c = mix(vec3(1.0, 0.68, 0.15), vec3(0.95, 0.42, 0.04), smoothstep(0.1, 0.7, q.y));
         c = mix(c, vec3(1.0, 0.82, 0.45), smoothstep(-0.1, -0.7, q.y));
-        return mix(c, vec3(1.0, 0.38, 0.08), smoothstep(0.55, 0.9, q.x) * 0.6);
+        return mix(c, vec3(1.0, 0.38, 0.08), smoothstep(0.55, 0.9, q.x) * 0.6) * (0.88 + 0.2 * fbm(q.xy * 5.0 + rnd * 4.0));
     }
     if (kind == 6) { // betta: blue body, reddish head, huge fins blue at the base going red, pale tips
         vec3 blue = vec3(0.2, 0.25, 0.95), red = vec3(0.9, 0.12, 0.08);
         if (rnd > 0.6) { blue = rnd > 0.8 ? vec3(0.1, 0.15, 0.85) : vec3(0.55, 0.1, 0.75); red = blue * 1.3 + 0.05; }
-        if (part == 0) return mix(blue * 0.95, vec3(0.55, 0.15, 0.25), smoothstep(0.45, 0.7, q.x));
+        if (part == 0) return mix(blue * (0.8 + 0.35 * fbm(q.xy * 9.0)), vec3(0.55, 0.15, 0.25), smoothstep(0.45, 0.7, q.x));
         float away = tail ? tk : pect ? 0.3 : abs(q.y);
         vec3 c = mix(blue, red, smoothstep(0.1, 0.45, away));
-        c *= 0.85 + 0.15 * sin(tail ? q.y * 25.0 : q.x * 25.0); // (streaks)
+        c *= 0.8 + 0.2 * sin((tail ? q.y : q.x) * 25.0 + fbm(q.xy * 4.0) * 3.0); // (streaks)
+        c = mix(c, c * 1.3, smoothstep(0.55, 0.8, fbm(q.xy * 6.0 + rnd * 7.0)) * 0.5);
         return mix(c, vec3(0.95, 0.85, 0.85), smoothstep(0.85, 1.0, away) * 0.7);
     }
     if (kind == 7) { // pufferfish: cream with small black spots, white belly, pink lips, spotted yellowish fins
@@ -310,12 +324,15 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
         if (q.y < -0.38) return vec3(0.96, 0.95, 0.9);
         if (q.x > 0.9 && abs(q.y + 0.12) < 0.1) return vec3(0.9, 0.55, 0.55);
         vec3 c = mix(vec3(0.55, 0.52, 0.42), vec3(0.9, 0.88, 0.78), smoothstep(-0.38, -0.1, q.y));
-        return c * (1.0 - 0.9 * spot(vec2(q.x * 9.0, (q.y + abs(q.z)) * 7.0), 0.14));
+        vec2 sp2 = vec2(q.x * 9.0, (q.y + abs(q.z)) * 7.0);
+        return c * (1.0 - 0.9 * spot(sp2, 0.09 + 0.08 * vnoise(sp2 * 0.37))) * (0.94 + 0.1 * fbm(q.xy * 5.0));
     }
     if (kind == 8) { // guppy: silver-green front, deep blue back half, a big orange tail with black blotches
         if (part > 0) {
             vec3 c = rnd < 0.5 ? vec3(1.0, 0.45, 0.1) : hue(rnd) * 1.05;
-            if (sin(q.x * 13.0 + sin(q.y * 8.0) * 2.0) * sin(q.y * 10.0 + q.x * 5.0) > 0.35) c = vec3(0.05);
+            float bl = fbm(q.xy * vec2(5.0, 7.0) + rnd * 9.0);
+            c = mix(c, vec3(0.04), smoothstep(0.55, 0.6, bl));
+            c = mix(c, c * 1.25 + 0.05, smoothstep(0.3, 0.2, bl) * 0.6);
             return tail ? mix(c, vec3(0.8, 0.78, 0.75), smoothstep(0.85, 1.0, tk)) : c;
         }
         vec3 c = mix(vec3(0.12, 0.2, 0.55), vec3(0.62, 0.75, 0.78), smoothstep(-0.2, 0.4, q.x));
@@ -326,13 +343,15 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
         vec3 cream = vec3(0.98, 0.92, 0.85), red = vec3(0.9, 0.22, 0.08);
         if (tail) return vec3(0.85, 0.86, 0.82);
         if (fin) return fract(q.x * 9.0) < 0.35 || abs(q.y) > 0.8 ? red : cream;
-        vec3 c = cellEdge(q.xy * vec2(4.0, 5.0) + rnd * 7.0) < 0.12 ? red : cream;
+        float ce = cellEdge(q.xy * vec2(4.0, 5.0) + rnd * 7.0 + (vec2(fbm(q.xy * 6.0), fbm(q.yx * 6.0 + 3.0)) - 0.5) * 0.5);
+        vec3 c = mix(red * (0.85 + 0.2 * fbm(q.xy * 9.0)), cream, smoothstep(0.09, 0.14, ce));
         return q.x > 0.62 ? mix(c, vec3(1.0, 0.7, 0.45), 0.6) : c;
     }
     if (kind == 10) { // mako shark: metallic blue-grey above, a sharp white belly, gill slits
         vec3 top = vec3(0.3, 0.4, 0.56), belly = vec3(0.93, 0.94, 0.96);
         if (part > 0) return top * (dorsal ? 0.8 : 0.9);
-        float line = -0.15 + 0.1 * q.x;
+        top *= 0.9 + 0.14 * fbm(q.xy * vec2(10.0, 6.0) + rnd * 4.0);
+        float line = -0.15 + 0.1 * q.x + (fbm(q.xy * vec2(6.0, 3.0)) - 0.5) * 0.1;
         vec3 c = mix(belly, top, smoothstep(line - 0.06, line + 0.06, q.y));
         if (q.x > 0.25 && q.x < 0.5 && fract((q.x - 0.25) * 20.0) < 0.2 && abs(q.y + 0.05) < 0.35) c *= 0.6;
         if (q.x > 0.72 && abs(q.y + 0.38 - (q.x - 0.72) * 0.4) < 0.035) c = vec3(0.15, 0.1, 0.1); // (mouth)
@@ -345,13 +364,16 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
         if (anal) return vec3(0.6, 0.6, 0.62);
         vec3 c = mix(vec3(0.86, 0.89, 0.92), vec3(0.35, 0.45, 0.62), smoothstep(-0.05, 0.15, q.y));
         c = mix(c, vec3(0.04, 0.07, 0.16), smoothstep(0.3, 0.5, q.y));
+        if (q.y < 0.0) c *= 0.94 + 0.06 * step(0.5, fract(q.x * 16.0 + q.y * 3.0 + fbm(q.xy * 5.0)));
         return c;
     }
     if (kind == 12) { // manta ray: speckled dark brown on top, white underneath, pale-tipped head fins
         vec3 top = vec3(0.17, 0.14, 0.11);
         if (part == 2) return mix(top, vec3(0.88, 0.85, 0.72), smoothstep(0.0, 0.6, q.x));
-        if (part == 0 && q.y < 0.0) return vec3(0.9, 0.9, 0.92);
-        return mix(top, vec3(0.6), step(0.9, hash22(floor(q.xz * 40.0)).x) * 0.6);
+        if (part == 0 && q.y < 0.0) return vec3(0.9, 0.9, 0.92) * (1.0 - 0.75 * spot(q.xz * 6.0 + rnd * 5.0, 0.1 + 0.08 * vnoise(q.xz * 3.0)));
+        vec3 c = mix(top, vec3(0.6), step(0.9, hash22(floor(q.xz * 40.0)).x) * 0.6);
+        if (part == 0) c = mix(c, vec3(0.78, 0.78, 0.76), smoothstep(0.12, 0.04, abs(q.x - 0.35 + abs(q.z) * 0.7) - 0.05 * fbm(q.xz * 8.0)) * step(0.12, abs(q.z)) * step(abs(q.z), 0.6)); // (shoulder marks)
+        return c * (0.9 + 0.15 * fbm(q.xz * 7.0));
     }
     if (kind == 13) { // green sea turtle: red-brown shell with streaked plates, cream-netted scaly skin
         if (part == 0) {
@@ -359,7 +381,7 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
             float e = cellEdge(q.xz * vec2(2.0, 2.4) + rnd * 3.0);
             float streak = 0.5 + 0.5 * sin(q.x * 31.0 + sin(q.z * 9.0) * 3.0);
             vec3 c = mix(vec3(0.48, 0.21, 0.09), vec3(0.7, 0.42, 0.2), streak * 0.5 + smoothstep(0.0, 0.5, e) * 0.3);
-            return mix(vec3(0.82, 0.68, 0.48), c, smoothstep(0.03, 0.08, e));
+            return mix(vec3(0.82, 0.68, 0.48), c * (0.85 + 0.25 * fbm(q.xz * 9.0 + rnd * 3.0)), smoothstep(0.03, 0.08, e));
         }
         if (q.y < -0.4) return vec3(0.9, 0.85, 0.7);
         return cellEdge(vec2(q.x * 4.0, q.z * 4.0 + q.y * 3.0)) < 0.15 ? vec3(0.9, 0.84, 0.68) : vec3(0.45, 0.22, 0.12);
@@ -370,6 +392,7 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
             return mix(vec3(0.24, 0.26, 0.3), vec3(0.7, 0.62, 0.3), spot(q.xy * 10.0, 0.18) * edge);
         }
         vec3 base = mix(vec3(0.42, 0.47, 0.54), vec3(0.32, 0.36, 0.42), smoothstep(-0.2, 0.6, q.y));
+        base = mix(base, base * 0.7, smoothstep(0.5, 0.65, fbm(q.xy * vec2(5.0, 4.0) + rnd * 5.0)));
         return mix(base, vec3(0.86, 0.88, 0.9), spot(q.xy * vec2(9.0, 7.0) + rnd * 3.0, 0.13) * smoothstep(-0.3, 0.3, q.x) * 0.85);
     }
     if (kind == 15) { // jellyfish: mostly sea nettles (orange, dark stripes), some pink-purple ones
@@ -378,6 +401,7 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
         if (part == 2) return nettle ? vec3(1.0, 0.55, 0.45) : vec3(0.95, 0.6, 0.95);
         vec3 bell = nettle ? vec3(1.0, 0.55, 0.22) : mix(vec3(1.0, 0.45, 0.85), vec3(0.6, 0.4, 1.0), rnd);
         if (nettle && q.y > -0.3 && abs(fract(atan(q.z, q.x) * 2.546) - 0.5) < 0.1) bell = vec3(0.5, 0.1, 0.07);
+        bell *= 0.9 + 0.2 * fbm(vec2(atan(q.z, q.x) * 3.0, q.y * 4.0));
         return mix(bell, vec3(1.0, 0.9, 0.85), smoothstep(-0.2, -0.7, q.y)) * 1.15;
     }
     if (kind == 16) { // dolphin: dark grey back, lighter sides, pale belly, a smile
@@ -386,6 +410,8 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
         vec3 c = mix(vec3(0.86, 0.86, 0.88), vec3(0.55, 0.58, 0.63), smoothstep(-0.55, -0.25, q.y));
         c = mix(c, dark, smoothstep(0.1, 0.5, q.y));
         if (q.x > 0.78 && abs(q.y + 0.12 + (q.x - 0.78) * 0.3) < 0.025) c *= 0.55;
+        c *= 0.95 + 0.08 * fbm(q.xy * vec2(3.0, 9.0) + rnd * 6.0);
+        if (abs(fract(q.x * 6.0 + q.y * 9.0 + rnd * 3.0) - 0.5) < 0.012 && vnoise(q.xy * 4.0 + rnd) > 0.7) c *= 1.12; // (old scratches)
         return c;
     }
     if (kind == 18) { // ocean sunfish: brownish grey, brown mottling round the head, white specks behind, pale below
@@ -415,6 +441,7 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
     if (tail || dorsal) return vec3(0.85, 0.78, 0.5);
     if (fin) return vec3(0.85, 0.85, 0.82);
     vec3 c = mix(vec3(0.86, 0.88, 0.92), vec3(0.16, 0.27, 0.38), smoothstep(0.1, 0.4, q.y));
+    if (q.x > -0.5 && q.x < 0.4) c *= 1.0 - 0.55 * spot(vec2(q.x * 6.0 + rnd * 3.0, (q.y - 0.12) * 5.0 + 0.5), 0.2);
     return q.x > 0.45 && q.x < 0.62 && abs(q.y) < 0.5 ? mix(c, vec3(0.8, 0.7, 0.45), 0.35) : c;
 }
 
@@ -1200,19 +1227,27 @@ void main() {
                 float eyeD = length(ev);
                 if (eyeD < 0.115) {
                     isEye = true;
-                    base = eyeD < 0.07 ? vec3(0.015) : mix(eyeRing(kind), eyeRing(kind) * 0.6, smoothstep(0.09, 0.115, eyeD));
+                    base = eyeD < 0.07 ? vec3(0.015) : mix(eyeRing(kind), eyeRing(kind) * 0.6, smoothstep(0.09, 0.115, eyeD)) * (0.85 + 0.15 * sin(atan(ev.y, ev.x) * 14.0));
                 } else if (eyeD < 0.13) {
                     base *= 0.6; // (a dark rim round the eye)
                 }
             }
             if (part >= 1 && kind != 13 && kind != 15 && kind != 10 && kind != 16 && kind != 19 && kind != 12) {
-                base *= 0.88 + 0.12 * smoothstep(0.2, 0.5, abs(fract(q.x * 7.0 + q.y * 2.0) - 0.5) * 2.0); // (fin rays)
-                base = mix(base, vec3(1.0), 0.1);
+                float rc = tail ? q.y * 8.0 : q.x * 10.0; // (rays run along a tail, up a fin)
+                float ray = 1.0 - smoothstep(0.0, 0.25, abs(fract(rc) - 0.5) - 0.2);
+                base *= 0.84 + 0.16 * (1.0 - ray);
+                float edge = tail ? 0.5 - 0.5 * q.x : abs(q.y);
+                base = mix(base, base * 1.15 + vec3(0.05, 0.08, 0.1), smoothstep(0.5, 1.0, edge) * 0.5);
             }
             if (part == 0 && !isEye && kind != 12 && kind != 13 && kind != 15 && kind != 10 && kind != 16 && kind != 19 && kind != 18) {
-                vec2 sc = vec2(q.x * 16.0, q.y * 10.0 + 0.5 * floor(q.x * 16.0));
+                float ss = sp.body.y * (kind == 5 || kind == 17 ? 0.13 : 0.1);
+                vec2 sc = vec2(-q.x * sp.body.x, q.y * sp.body.y) / ss;
+                sc.y += 0.5 * floor(sc.x);
                 vec2 sf = fract(sc) - 0.5;
-                base *= 0.92 + 0.08 * smoothstep(0.25, 0.5, length(sf + vec2(0.35, 0.0))); // (overlapping scales)
+                float rim = smoothstep(0.32, 0.5, length(sf - vec2(0.45, 0.0)));
+                float sv = hash22(floor(sc)).x;
+                float strength = kind == 5 ? 0.2 : kind == 17 ? 0.16 : kind == 7 ? 0.0 : kind == 11 ? 0.05 : 0.09;
+                base *= 1.0 - strength * (rim * 0.7 + (sv - 0.5) * 0.4); // (overlapping scales)
                 float gx = q.x - (0.44 - 0.1 * q.y * q.y);
                 if (gx > 0.0 && gx < 0.03 && abs(q.y) < 0.75) base *= 0.78;              // (the gill cover's edge)
                 if (kind != 7 && q.x < 0.42 && abs(q.y - 0.18 + 0.12 * q.x * q.x) < 0.012) base *= 0.9; // (lateral line)
@@ -1222,6 +1257,11 @@ void main() {
             float diff = clamp(dot(n, sun) * 0.5 + 0.5, 0.0, 1.0);
             vec3 amb = mix(vec3(0.24, 0.34, 0.45), vec3(0.6, 0.76, 0.88), n.y * 0.5 + 0.5);
             float through = part >= 1 && kind != 13 ? max(-dot(n, sun), 0.0) * 0.35 + 0.2 * max(dot(rd, sun), 0.0) : 0.0; // (thin fins let light through)
+            float irid = part != 0 ? 0.0 : kind == 3 || kind == 17 ? 0.28 : kind == 6 || kind == 8 ? 0.25 : kind == 11 ? 0.2 : kind == 4 ? 0.12 : kind == 1 ? 0.1 : 0.0;
+            if (irid > 0.0) {
+                float fa = 1.0 - max(dot(n, -rd), 0.0);
+                base = mix(base, base + hue(fa * 0.9 + q.x * 0.25 + 0.45) * 0.5, irid * (0.4 + 0.6 * fa));
+            }
             vec3 shade = base * (amb * 0.85 + vec3(1.0, 0.97, 0.9) * diff * 0.8 + 0.18 * max(dot(n, -rd), 0.0) + through) * ao;
             vec3 hv = normalize(sun - rd);
             bool silver = kind == 3 || kind == 11 || kind == 17 || kind == 4;
