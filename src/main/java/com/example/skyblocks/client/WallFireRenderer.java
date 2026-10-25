@@ -38,12 +38,12 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         @SubscribeEvent
         public static void register(RegisterShadersEvent event) throws java.io.IOException {
             event.registerShader(new ShaderInstance(event.getResourceProvider(),
-                    ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "wall_fire"), DefaultVertexFormat.POSITION_COLOR_TEX), s -> shader = s);
+                    ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "wall_fire"), DefaultVertexFormat.POSITION_TEX_COLOR), s -> shader = s);
         }
     }
 
     abstract static class Types extends RenderType {
-        static final RenderType FIRE = create("skyblocks_wall_fire", DefaultVertexFormat.POSITION_COLOR_TEX, VertexFormat.Mode.QUADS, 4096,
+        static final RenderType FIRE = create("skyblocks_wall_fire", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 4096,
                 false, false, CompositeState.builder()
                         .setShaderState(new ShaderStateShard(() -> shader))
                         .setTexturingState(new TexturingStateShard("skyblocks_wall_fire_time", () -> {
