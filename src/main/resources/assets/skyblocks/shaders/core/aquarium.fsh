@@ -812,7 +812,7 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
         res -= 0.035 * H * spike * spike * smoothstep(0.98, 0.7, abs(p.x / L));
         // its big side fins: upright fans just behind the eyes, whirring
         vec3 pp = vec3(p.x - L * 0.18, py + H * 0.05, abs(p.z) - W * 0.8);
-        float a = 0.55 + 0.35 * sin(gTime * 9.0 + wave * 0.3);
+        float a = 1.0 + 0.3 * sin(gTime * 9.0 + wave * 0.3); // (standing well out from its side, never flat against it)
         vec3 lq = vec3(pp.x * cos(a) - pp.z * sin(a), pp.y, pp.x * sin(a) + pp.z * cos(a));
         lq.x += L * 0.12;
         float pect = sdEllipsoid(lq, vec3(L * 0.15, H * 0.34, W * 0.06));
