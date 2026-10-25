@@ -1107,7 +1107,8 @@ float fishSDF(int kind, Species sp, vec3 p, float wave, float flap, float pulse,
  */
 // the clam's parts: lower shell, upper shell (opened round the hinge), flesh, pearl
 vec4 clamParts(vec3 p, float t) {
-    float open = 0.28 + 0.24 * sin(t * 0.45);
+    p.y -= 0.012; // (sitting on the sand, not sunk into it)
+    float open = 0.38 + 0.2 * sin(t * 0.45); // (never quite shut: the top shell doesn't cut into the bottom one)
     float rim = 0.005 * sin(atan(p.z, p.x + 0.11) * 12.0);
     float lowOut = sdEllipsoid(p - vec3(0.0, 0.04, 0.0), vec3(0.12, 0.045, 0.09));
     float low = max(abs(lowOut + 0.006) - 0.006, p.y - 0.04 - rim);
