@@ -3,21 +3,22 @@
   "render_type": "minecraft:translucent",
   "textures": {
     "glass": "minecraft:block/glass",
-    "water": "minecraft:block/water_still",
+    "water": "skyblocks:block/vanilla_aquarium_water",
     "sand": "minecraft:block/sand",
-    "particle": "minecraft:block/glass"
+    "particle": "minecraft:block/glass",
+    "surface": "skyblocks:block/vanilla_aquarium_surface"
   },
   "elements": [
     {
       "from": [
-        0.05,
+        0,
         0,
         0.05
       ],
       "to": [
-        15.95,
+        16,
         14,
-        15.95
+        0.05
       ],
       "faces": {
         "north": {
@@ -28,9 +29,22 @@
             16,
             16
           ],
-          "cullface": "north",
-          "tintindex": 0
-        },
+          "cullface": "north"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        0,
+        15.95
+      ],
+      "to": [
+        16,
+        14,
+        15.95
+      ],
+      "faces": {
         "south": {
           "texture": "#water",
           "uv": [
@@ -39,20 +53,22 @@
             16,
             16
           ],
-          "cullface": "south",
-          "tintindex": 0
-        },
-        "east": {
-          "texture": "#water",
-          "uv": [
-            0,
-            2,
-            16,
-            16
-          ],
-          "cullface": "east",
-          "tintindex": 0
-        },
+          "cullface": "south"
+        }
+      }
+    },
+    {
+      "from": [
+        0.05,
+        0,
+        0
+      ],
+      "to": [
+        0.05,
+        14,
+        16
+      ],
+      "faces": {
         "west": {
           "texture": "#water",
           "uv": [
@@ -61,45 +77,67 @@
             16,
             16
           ],
-          "cullface": "west",
-          "tintindex": 0
+          "cullface": "west"
         }
       }
     },
     {
       "from": [
-        0.05,
-        14,
-        0.05
+        15.95,
+        0,
+        0
       ],
       "to": [
         15.95,
         14,
-        15.95
+        16
+      ],
+      "faces": {
+        "east": {
+          "texture": "#water",
+          "uv": [
+            0,
+            2,
+            16,
+            16
+          ],
+          "cullface": "east"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        14,
+        0
+      ],
+      "to": [
+        16,
+        14,
+        16
       ],
       "faces": {
         "up": {
-          "texture": "#water",
+          "texture": "#surface",
           "uv": [
             0,
             0,
             16,
             16
-          ],
-          "tintindex": 0
+          ]
         }
       }
     },
     {
       "from": [
-        0.05,
         0,
-        0.05
+        0,
+        0
       ],
       "to": [
-        15.95,
+        16,
         2,
-        15.95
+        16
       ],
       "faces": {
         "north": {

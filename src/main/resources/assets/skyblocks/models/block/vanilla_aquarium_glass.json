@@ -3,9 +3,10 @@
   "render_type": "minecraft:translucent",
   "textures": {
     "glass": "minecraft:block/glass",
-    "water": "minecraft:block/water_still",
+    "water": "skyblocks:block/vanilla_aquarium_water",
     "sand": "minecraft:block/sand",
-    "particle": "minecraft:block/glass"
+    "particle": "minecraft:block/glass",
+    "surface": "skyblocks:block/vanilla_aquarium_surface"
   },
   "elements": []
 }

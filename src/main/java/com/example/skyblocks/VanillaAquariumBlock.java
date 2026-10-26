@@ -24,7 +24,10 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
  * pufferfish, axolotls, tadpoles; the ocean one dolphins, sea turtles, squid and glow squid too, and coral).
  */
 public class VanillaAquariumBlock extends TransparentBlock {
-    /** More of the same tank above (no water surface here) / below (no sand here). */
+    /**
+     * UP: more of the same tank's water above - right above, or past a tunnel of air through the tank - so no surface
+     * here, the water goes right up. DOWN: no sand here (more tank below, or air: the roof of a tunnel).
+     */
     public static final BooleanProperty UP = BlockStateProperties.UP;
     public static final BooleanProperty DOWN = BlockStateProperties.DOWN;
 
@@ -45,18 +48,60 @@ public class VanillaAquariumBlock extends TransparentBlock {
         builder.add(UP, DOWN);
     }
 
+    /** Is there more of this tank's water above (right above, or over a tunnel of air)? */
+    private boolean waterAbove(net.minecraft.world.level.BlockGetter level, BlockPos pos) {
+        for (int i = 1; i <= 16; i++) {
+            BlockState s = level.getBlockState(pos.above(i));
+            if (s.is(this)) return true;
+            if (!s.isAir()) return false;
+        }
+        return false;
+    }
+
+    /** No sand here: more tank below, or nothing solid (air: the roof of a tunnel through it). */
+    private boolean noSand(net.minecraft.world.level.BlockGetter level, BlockPos pos) {
+        BlockState below = level.getBlockState(pos.below());
+        return below.is(this) || !below.isSolidRender(level, pos.below());
+    }
+
+    private BlockState shaped(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos) {
+        return state.setValue(UP, waterAbove(level, pos)).setValue(DOWN, noSand(level, pos));
+    }
+
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        Level level = context.getLevel();
-        BlockPos pos = context.getClickedPos();
-        return defaultBlockState().setValue(UP, level.getBlockState(pos.above()).is(this)).setValue(DOWN, level.getBlockState(pos.below()).is(this));
+        return shaped(defaultBlockState(), context.getLevel(), context.getClickedPos());
     }
 
     @Override
     protected BlockState updateShape(BlockState state, Direction dir, BlockState next, LevelAccessor level, BlockPos pos, BlockPos nextPos) {
-        if (dir == Direction.UP) return state.setValue(UP, next.is(this));
-        if (dir == Direction.DOWN) return state.setValue(DOWN, next.is(this));
-        return state;
+        return dir.getAxis() == Direction.Axis.Y ? shaped(state, level, pos) : state;
+    }
+
+    /** The tank under a tunnel of air (not touching this block) also changes when this is put or taken away. */
+    private void refreshBelow(Level level, BlockPos pos) {
+        for (int i = 1; i <= 16; i++) {
+            BlockPos q = pos.below(i);
+            BlockState s = level.getBlockState(q);
+            if (s.is(this)) {
+                BlockState now = shaped(s, level, q);
+                if (now != s) level.setBlock(q, now, Block.UPDATE_CLIENTS);
+                return;
+            }
+            if (!s.isAir()) return;
+        }
+    }
+
+    @Override
+    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moving) {
+        super.onPlace(state, level, pos, old, moving);
+        if (!old.is(this)) refreshBelow(level, pos);
+    }
+
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState now, boolean moving) {
+        super.onRemove(state, level, pos, now, moving);
+        if (!now.is(this)) refreshBelow(level, pos);
     }
 
     @Override

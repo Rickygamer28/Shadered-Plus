@@ -236,6 +236,7 @@ public final class VanillaAquariumRenderer {
     private static void scan(ClientLevel level, int centerX, int centerZ) {
         TANKS.clear();
         Map<BlockPos, Block> tiles = new HashMap<>();
+        Set<BlockPos> sandy = new java.util.HashSet<>(); // (the blocks with sand: on the real bottom, not over a tunnel)
         for (int dx = -SCAN_RADIUS; dx <= SCAN_RADIUS; dx++) {
             for (int dz = -SCAN_RADIUS; dz <= SCAN_RADIUS; dz++) {
                 LevelChunk chunk = level.getChunkSource().getChunk(centerX + dx, centerZ + dz, false);
@@ -255,7 +256,9 @@ public final class VanillaAquariumRenderer {
                             for (int x = 0; x < 16; x++) {
                                 BlockState s = section.getBlockState(x, y, z);
                                 if (s.getBlock() instanceof VanillaAquariumBlock) {
-                                    tiles.put(new BlockPos(baseX + x, baseY + y, baseZ + z), s.getBlock());
+                                    BlockPos bp = new BlockPos(baseX + x, baseY + y, baseZ + z);
+                                    tiles.put(bp, s.getBlock());
+                                    if (!s.getValue(VanillaAquariumBlock.DOWN)) sandy.add(bp);
                                 }
                             }
                         }
@@ -283,7 +286,7 @@ public final class VanillaAquariumRenderer {
                     }
                 }
             }
-            TANKS.add(tank(blocks, ((VanillaAquariumBlock) kind).ocean()));
+            TANKS.add(tank(blocks, ((VanillaAquariumBlock) kind).ocean(), sandy));
         }
     }
 
@@ -318,7 +321,7 @@ public final class VanillaAquariumRenderer {
         return b;
     }
 
-    private static Tank tank(List<BlockPos> blocks, boolean ocean) {
+    private static Tank tank(List<BlockPos> blocks, boolean ocean, Set<BlockPos> sandy) {
         Set<BlockPos> in = new java.util.HashSet<>(blocks);
         BlockPos min = blocks.get(0);
         double cx = 0, cy = 0, cz = 0;
@@ -340,6 +343,8 @@ public final class VanillaAquariumRenderer {
             int[] b = grow(in, blocks.get(random.nextInt(blocks.size())));
             if (volume(b) > volume(main)) main = b;
         }
+        List<BlockPos> sandList = new ArrayList<>();
+        for (BlockPos p : blocks) if (sandy.contains(p)) sandList.add(p);
         // the animals: as many as the tank has room for
         List<Animal> animals = new ArrayList<>();
         float budget = Math.min(blocks.size() * 1.1F, ocean ? 120.0F : 40.0F);
@@ -352,7 +357,13 @@ public final class VanillaAquariumRenderer {
             if (cost(kind) > budget + 0.3F || count.getOrDefault(kind, 0) >= cap(kind)) {
                 continue;
             }
-            int[] box = grow(in, blocks.get(random.nextInt(blocks.size())));
+            // (the ones on the bottom start from a block with sand: walking on the real bottom, not a tunnel's roof)
+            boolean low = kind == AXOLOTL || (kind >= CUSTOM && !AquaModels.MOVES[kind - CUSTOM].equals("swim") && !AquaModels.MOVES[kind - CUSTOM].equals("drift"));
+            List<BlockPos> seeds = low && !sandList.isEmpty() ? sandList : blocks;
+            int[] box = grow(in, seeds.get(random.nextInt(seeds.size())));
+            if (!fits(box, kind) && low) {
+                continue;
+            }
             if (!fits(box, kind)) {
                 box = main;
                 if (!fits(box, kind)) {
@@ -375,7 +386,7 @@ public final class VanillaAquariumRenderer {
         // the plants on the bottom
         List<Plant> plants = new ArrayList<>();
         for (BlockPos p : blocks) {
-            if (in.contains(p.below()) || random.nextFloat() > 0.45F) {
+            if (!sandy.contains(p) || random.nextFloat() > 0.45F) { // (plants only in the sand)
                 continue;
             }
             int above = 0;
