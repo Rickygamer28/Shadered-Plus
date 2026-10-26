@@ -11,6 +11,9 @@ in vec3 wray;
 in vec2 uv;
 in vec4 vColor;
 in vec3 vpos;
+flat in ivec2 vShape;
+
+uniform sampler2D Sampler0; // (the ponds' shapes: KoiPondData)
 
 uniform mat4 ModelViewMat;
 uniform mat4 ProjMat;
@@ -42,9 +45,31 @@ float layerY(int L) {
     return SURF - (L == 0 ? 3.0 : L == 1 ? 5.5 : 8.0) / 16.0;
 }
 
-// the pond this block is part of (its whole rectangle, in world blocks) and how many koi live in it: set in main()
+// the pond this block is part of (the rectangle round it, in world blocks), the rectangles it is made of (any shape
+// of pond: the koi each keep to one of them; the first is the biggest), its size in blocks, which of the eight blocks
+// round this one are pond too, and how many koi live in it: set in main()
 vec2 pondLo, pondHi;
+vec4 pondRect[8];
+int pondRects;
+float pondBlocks;
+int pondRound;
+vec2 cell0;
 int pondFish;
+
+// is this block (x, z) part of the pond?
+bool isPond(vec2 cell) {
+    vec2 d = cell - cell0;
+    if (d == vec2(0.0)) return true;
+    if (max(abs(d.x), abs(d.y)) < 1.5) {
+        int bit = d.y == 0.0 ? (d.x < 0.0 ? 0 : 1) : d.x == 0.0 ? (d.y < 0.0 ? 2 : 3) : d.y < 0.0 ? (d.x < 0.0 ? 4 : 5) : (d.x < 0.0 ? 6 : 7);
+        return (pondRound & (1 << bit)) != 0;
+    }
+    for (int r = 0; r < 8; r++) {
+        if (r >= pondRects) break;
+        if (all(greaterThanEqual(cell, pondRect[r].xy)) && all(lessThan(cell, pondRect[r].zw))) return true;
+    }
+    return false;
+}
 
 // koi i of the pond: (its depth layer, its kind 0..4, its size, a seed)
 vec4 koiOf(int i) {
@@ -56,8 +81,18 @@ vec4 koiOf(int i) {
 void koiPath(int i, float size, float t, out vec2 pos, out vec2 dir) {
     vec2 h = hash22(pondLo * 2.1 + pondHi * 0.3 + float(i) * 5.37 + 21.3), h2 = hash22(pondLo * 0.9 + float(i) * 9.11 + 4.4);
     float reach = 0.42 * size;                       // (head to tail fin, from where it is)
-    vec2 lo = pondLo + 0.125 + reach, hi = pondHi - 0.125 - reach;
-    vec2 mid = (pondLo + pondHi) * 0.5;
+    // which part of the pond it keeps to (the bigger the part, the more koi in it)
+    float pick = hash22(pondLo * 0.53 + float(i) * 2.71 + 8.8).x * pondBlocks;
+    vec4 part = pondRect[0];
+    for (int r = 0; r < 8; r++) {
+        if (r >= pondRects) break;
+        vec2 rs = pondRect[r].zw - pondRect[r].xy;
+        part = pondRect[r];
+        pick -= rs.x * rs.y;
+        if (pick < 0.0) break;
+    }
+    vec2 lo = part.xy + 0.125 + reach, hi = part.zw - 0.125 - reach;
+    vec2 mid = (part.xy + part.zw) * 0.5;
     lo = min(lo, mid);
     hi = max(hi, mid);
     vec2 hs = (hi - lo) * 0.5;
@@ -158,6 +193,7 @@ uvec3 padKey(vec2 cell, int k) {
 // is a frog on this pad now: its kind, size and which way it faces, and its hop (1 sitting; 0..1 hopping on from the
 // water; 0..-1 hopping off). At most one frog to a block (on its first pad); each stays a minute or so, then hops off,
 // and a while later another may come - never two at once.
+float gFrogTe; // (how far into its visit the last frog asked about is: seconds)
 bool frogOn(vec2 cell, int k, float t, out vec3 info, out float hop) {
     info = vec3(0.0);
     hop = 0.0;
@@ -169,6 +205,7 @@ bool frogOn(vec2 cell, int k, float t, out vec3 info, out float hop) {
     float phase = t / 75.0 + hf.x * 13.0;
     uint epoch = uint(int(floor(phase)));
     float te = fract(phase) * 75.0;
+    gFrogTe = te;
     vec2 he = vec2(u01(hashu(key + uvec3(0u, 0u, 200000u + epoch))), u01(hashu(key + uvec3(0u, 0u, 500000u + epoch))));
     info = vec3(floor(he.y * 3.0), 0.62 + 0.16 * hf.x, he.x * 6.2832); // (z: which way it faces, on its pad)
     hop = te < 6.0 ? te - 5.0 : te > 70.0 ? -(te - 70.0) : 1.0;
@@ -228,7 +265,7 @@ vec4 frogHit(vec3 p0, vec3 rd, float t, float light) {
     for (int j = -1; j <= 1; j++) {
         for (int i = -1; i <= 1; i++) {
             vec2 cell = c0 + vec2(i, j);
-            if (any(lessThan(cell, pondLo)) || any(greaterThanEqual(cell, pondHi))) continue; // (only the pond's own pads)
+            if (!isPond(cell)) continue; // (only the pond's own pads)
             for (int k = 0; k < 2; k++) {
                 vec2 c, h, h2;
                 float r;
@@ -244,7 +281,14 @@ vec4 frogHit(vec3 p0, vec3 rd, float t, float light) {
                 vec2 ab = p0.xz - pTop.xz;
                 float w = clamp(dot(c - pTop.xz, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
                 if (length(pTop.xz + ab * w - c) > 0.32) continue;
-                float ca = cos(pang + info.z), sa = sin(pang + info.z); // (turning with its pad)
+                // which way it faces: out to the open water (the middle of its block - never the stone round it), so
+                // it hops off into the water and comes from it: leaping on facing the pad, it turns round once there
+                float te = gFrogTe;
+                vec2 toMid = cell + 0.5 - c;
+                float aIn = dot(toMid, toMid) > 1e-4 ? -atan(toMid.x, toMid.y) : info.z;
+                float sway = pang - (h2.x * 6.28 + t * 0.02); // (the frog shifting round, its pad turning with it)
+                float face = te < 6.0 ? aIn + 3.1416 : aIn + 3.1416 * (1.0 - smoothstep(6.0, 7.2, te)) + sway;
+                float ca = cos(face), sa = sin(face);
                 float sc = 16.0 / info.y;
                 vec3 ro = vec3(pTop.x - c.x, pTop.y - SURF, pTop.z - c.y) * sc;
                 vec3 rr = rd;
@@ -323,8 +367,8 @@ vec4 padAt(vec2 q, float t) {
 // a wandering path over the pond (like the koi's), its own speed
 void wander(float seed, float reach, float speed, float t, out vec2 pos, out vec2 dir) {
     vec2 h = hash22(pondLo * 1.7 + pondHi * 0.9 + seed), h2 = hash22(pondLo * 0.3 + seed * 3.1 + 2.2);
-    vec2 lo = pondLo + 0.125 + reach, hi = pondHi - 0.125 - reach;
-    vec2 mid = (pondLo + pondHi) * 0.5;
+    vec2 lo = pondRect[0].xy + 0.125 + reach, hi = pondRect[0].zw - 0.125 - reach; // (the pond's biggest part)
+    vec2 mid = (pondRect[0].xy + pondRect[0].zw) * 0.5;
     lo = min(lo, mid);
     hi = max(hi, mid);
     vec2 hs = (hi - lo) * 0.5;
@@ -343,7 +387,7 @@ bool duckHere(int d, float t, out float height, out float ahead, out float sprea
     float ph = t / 140.0 + hash22(pondLo + pondHi * 1.3).x * 7.0;
     float e = floor(ph), te = fract(ph) * 140.0;
     vec2 h = hash22(pondLo * 0.71 + pondHi * 0.37 + e * 3.3 + float(d) * 17.0);
-    vec2 size = pondHi - pondLo;
+    vec2 size = pondRect[0].zw - pondRect[0].xy;
     bool visit = hash22(pondLo * 0.71 + pondHi * 0.37 + e * 3.3).x < 0.55 && (d == 0 || size.x * size.y >= 8.0);
     kind = step(0.5, h.y);
     float tin = 8.0 + float(d) * 1.5, tout = 108.0 - float(d) * 2.0;
@@ -467,7 +511,7 @@ vec4 duckHit(vec3 p0, vec3 rd, float t, float light, out float ripple) {
 float turtleHere(float t) {
     float ph = t / 190.0 + hash22(pondLo * 2.3 + pondHi).y * 5.0;
     float e = floor(ph), te = fract(ph) * 190.0;
-    vec2 size = pondHi - pondLo;
+    vec2 size = pondRect[0].zw - pondRect[0].xy;
     if (hash22(pondLo * 1.9 + pondHi * 0.4 + e * 5.7).x > 0.5 || size.x * size.y < 4.0) return 0.0;
     return smoothstep(10.0, 15.0, te) * (1.0 - smoothstep(155.0, 160.0, te));
 }
@@ -542,29 +586,43 @@ void main() {
     if (rd.y > -0.002) {
         discard;
     }
-    vec2 cell0 = floor(entry.xz); // (the block this is drawn for)
+    cell0 = floor(entry.xz); // (the block this is drawn for)
     // the whole pond's rectangle (how far it reaches from this block each way, packed into the colour) and its koi
     int rectBits = int(vColor.r * 255.0 + 0.5) | (int(vColor.g * 255.0 + 0.5) << 8) | (int(vColor.b * 255.0 + 0.5) << 16);
     pondLo = cell0 - vec2(float(rectBits & 63), float((rectBits >> 12) & 63));
     pondHi = cell0 + vec2(float((rectBits >> 6) & 63), float((rectBits >> 18) & 63)) + 1.0;
-    vec2 size = pondHi - pondLo;
-    pondFish = clamp(int(size.x * size.y * 0.45 + 0.75), 1, 24);
-    // the box over the water (the pond's whole rectangle, inside its rim, from the water up). Every pixel is drawn
-    // once, where the view LEAVES the box (worked out from where it is, not from which way the face points): the
-    // ray then starts where it came into the box - or at the eye, when that's inside it (standing on the pond)
-    vec3 bLo = vec3(pondLo.x + 0.125, SURF, pondLo.y + 0.125), bHi = vec3(pondHi.x - 0.125, TOP, pondHi.y - 0.125);
-    vec3 probe = entry + rd * 0.01;
-    bool leaving = any(lessThan(probe, bLo)) || any(greaterThan(probe, bHi));
+    // its shape (KoiPondData's row for it) and the blocks round this one
+    int word = (vShape.x & 65535) | ((vShape.y & 65535) << 16);
+    int row = word & 255;
+    pondRound = (word >> 8) & 255;
+    vec4 head = texelFetch(Sampler0, ivec2(0, row), 0) * 255.0 + 0.5;
+    pondRects = clamp(int(head.r), 1, 8);
+    pondBlocks = max(floor(head.g) + 256.0 * floor(head.b), 1.0);
+    for (int r = 0; r < 8; r++) {
+        vec4 q = floor(texelFetch(Sampler0, ivec2(1 + r, row), 0) * 255.0 + 0.5);
+        pondRect[r] = vec4(pondLo + q.xz, pondLo + q.yw + 1.0); // (its west-north and east-south corners)
+    }
+    if (head.r < 0.75) { // (not known yet: the rectangle round it)
+        pondRects = 1;
+        pondRect[0] = vec4(pondLo, pondHi);
+        pondBlocks = (pondHi.x - pondLo.x) * (pondHi.y - pondLo.y);
+    }
+    pondFish = clamp(int(pondBlocks * 0.45 + 0.75), 1, 24);
+    // the box over the water (from the water up, over each pond block, its sides only where the pond ends - any
+    // shape of pond). Every pixel is drawn once, where the view LEAVES it, worked out from which face this is (the
+    // face's own slope on screen) and which way that face looks out - not from its winding; the ray starts at the eye
+    vec3 fn = cross(dFdx(entry), dFdy(entry));
+    vec2 local = entry.xz - cell0;
+    vec3 outward = abs(fn.y) >= max(abs(fn.x), abs(fn.z)) ? vec3(0.0, entry.y > 0.5 * (SURF + TOP) ? 1.0 : -1.0, 0.0)
+            : abs(fn.x) > abs(fn.z) ? vec3(local.x > 0.5 ? 1.0 : -1.0, 0.0, 0.0)
+            : vec3(0.0, 0.0, local.y > 0.5 ? 1.0 : -1.0);
+    bool leaving = dot(rd, outward) > 0.0;
     vec3 start;
     if (ProjMat[2][3] < -0.5) {
         if (!leaving) {
             discard;
         }
-        vec3 eyeW = entry - wray;
-        vec3 inv = 1.0 / vec3(abs(rd.x) < 1e-6 ? 1e-6 : rd.x, abs(rd.y) < 1e-6 ? -1e-6 : rd.y, abs(rd.z) < 1e-6 ? 1e-6 : rd.z);
-        vec3 ta = (bLo - eyeW) * inv, tb = (bHi - eyeW) * inv;
-        vec3 tn = min(ta, tb);
-        start = eyeW + rd * max(max(max(tn.x, tn.y), tn.z), 0.0);
+        start = entry - wray; // (the eye: nothing between it and the box)
     } else {
         if (leaving) {
             discard; // (a flat view, as in a picture: drawn where the view comes in)
@@ -593,11 +651,14 @@ void main() {
         gl_FragDepth = depthOf(gHit, entry);
         return;
     }
-    // no water there (the view passes over the rim to beyond the pond): nothing to draw
-    vec2 wlo = pondLo + 2.0 / 16.0, whi = pondHi - 2.0 / 16.0;
-    if (any(lessThan(p0.xz, wlo)) || any(greaterThan(p0.xz, whi))) {
+    // no water there (the view leaves by a side, over the rim to beyond the pond): nothing to draw. Water is seen
+    // where the view leaves by the bottom (on the water itself)
+    if (ProjMat[2][3] < -0.5 ? outward.y > -0.5 : !isPond(floor(p0.xz))) {
         discard;
     }
+    // the stone sides round this block (where the pond ends; where it carries on, at the far side of the pond)
+    vec2 wlo = vec2((pondRound & 1) != 0 ? pondLo.x + 0.125 : cell0.x + 0.125, (pondRound & 4) != 0 ? pondLo.y + 0.125 : cell0.y + 0.125);
+    vec2 whi = vec2((pondRound & 2) != 0 ? pondHi.x - 0.125 : cell0.x + 0.875, (pondRound & 8) != 0 ? pondHi.y - 0.125 : cell0.y + 0.875);
     gl_FragDepth = depthOf(p0, entry);
     // a lily pad here: it floats on top
     vec4 pad = padAt(p0.xz, t);

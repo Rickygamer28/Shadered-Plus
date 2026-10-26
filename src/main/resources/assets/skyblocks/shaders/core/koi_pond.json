@@ -1,7 +1,9 @@
 {
     "vertex": "skyblocks:koi_pond",
     "fragment": "skyblocks:koi_pond",
-    "samplers": [],
+    "samplers": [
+        { "name": "Sampler0" }
+    ],
     "uniforms": [
         {
             "name": "ModelViewMat",
