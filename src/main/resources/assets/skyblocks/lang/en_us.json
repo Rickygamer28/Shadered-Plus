@@ -192,5 +192,12 @@
   "tooltip.skyblocks.koi_pond": "Koi and lily pads. Ponds side by side join into one",
   "message.skyblocks.visualizer_bars": "Bars",
   "message.skyblocks.visualizer_middle": "Bars from the middle",
-  "message.skyblocks.visualizer_spectrum": "Spectrum"
+  "message.skyblocks.visualizer_spectrum": "Spectrum",
+  "block.skyblocks.warp_block": "Warp Block",
+  "block.skyblocks.rift": "Rift",
+  "block.skyblocks.static_block": "Static Block",
+  "tooltip.skyblocks.warp_block": "A window into another dimension",
+  "tooltip.skyblocks.rift": "A crack in reality, shimmering at its edges",
+  "tooltip.skyblocks.static_block": "TV static",
+  "tooltip.skyblocks.fx_dye": "Dye: tint. Sneak + right-click: its own colours"
 }
