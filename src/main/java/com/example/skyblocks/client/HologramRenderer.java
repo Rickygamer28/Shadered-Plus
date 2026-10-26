@@ -217,9 +217,9 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
             if (type.format() == DefaultVertexFormat.BLOCK) { // (a block model drawn as an item part: on the block atlas)
                 RenderType h = Types.holo(TextureAtlas.LOCATION_BLOCKS);
                 used.add(h);
-                AtlasGuard g = new AtlasGuard(new WithOverlay(buffers.getBuffer(h)), own);
-                guards.add(g);
-                return g;
+                AtlasGuard guard = new AtlasGuard(new WithOverlay(buffers.getBuffer(h)), own);
+                guards.add(guard);
+                return guard;
             }
             if (type.format() != DefaultVertexFormat.NEW_ENTITY) {
                 return NOTHING;
@@ -230,14 +230,14 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
             if (tex.isPresent() && !tex.get().equals(TextureAtlas.LOCATION_BLOCKS)) {
                 return buffers.getBuffer(h); // (its own texture: as it is)
             }
-            AtlasGuard g = new AtlasGuard(buffers.getBuffer(h), own);
-            guards.add(g);
-            return g;
+            AtlasGuard guard = new AtlasGuard(buffers.getBuffer(h), own);
+            guards.add(guard);
+            return guard;
         };
         Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.FIXED, 0xF000F0, OverlayTexture.NO_OVERLAY,
                 poseStack, holo, be.getLevel(), (int) be.getBlockPos().asLong());
-        for (AtlasGuard g : guards) {
-            g.flush();
+        for (AtlasGuard guard : guards) {
+            guard.flush();
         }
         poseStack.popPose();
         if (buffers instanceof MultiBufferSource.BufferSource source) {

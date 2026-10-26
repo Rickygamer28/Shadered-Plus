@@ -1829,6 +1829,18 @@ void main() {
         if (!insideBox) {
             break;
         }
+        // (only a roofed space - a tunnel or room built into the tank, the water over it - is seen across; open air
+        // beside or under some part of the tank (an arch, an L) is the world's, not the tank's: the view stops there)
+        bool roofed = water(cell + ivec3(0, 1, 0)) || water(cell + ivec3(0, 2, 0)) || water(cell + ivec3(0, 3, 0));
+        if (!roofed || (inAir && leave - airStart > 6.0)) {
+            if (!inAir) {
+                inAir = true;
+                airStart = leave;
+                airCell = cell;
+                airAxis = exitAxis;
+            }
+            break;
+        }
         if (!inAir) {
             inAir = true;
             airStart = leave;
