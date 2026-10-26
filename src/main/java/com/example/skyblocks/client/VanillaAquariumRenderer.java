@@ -147,7 +147,11 @@ public final class VanillaAquariumRenderer {
     private record Plant(BlockState state, double x, double y, double z, float width, float height, int turn) {}
 
     /** frames: the dark frame round the tank's edges (like the aquariums'), 4 corners (x, y, z) a strip; light: at which block each is. */
-    private record Tank(List<Animal> animals, List<Plant> plants, double cx, double cy, double cz, float[] frames, long[] frameLight) {}
+    private record Tank(List<Animal> animals, List<Plant> plants, double cx, double cy, double cz, float[] frames, long[] frameLight,
+                        List<Ornament> ornaments) {}
+
+    /** A decoration of its own (a blocky model: AquaModels): which, where (its base), turned how, how big, its own clock. */
+    private record Ornament(String name, double x, double y, double z, float yaw, float scale, float phase) {}
 
     private static final List<Tank> TANKS = new ArrayList<>();
     private static final Map<Long, float[]> TANK_FACES = new HashMap<>();
@@ -220,6 +224,9 @@ public final class VanillaAquariumRenderer {
                 }
                 for (Plant p : tank.plants()) {
                     plant(level, p, poseStack, buffers);
+                }
+                for (Ornament o : tank.ornaments()) {
+                    ornament(level, o, t, poseStack, buffers);
                 }
                 for (int i = 0; i < tank.animals().size(); i++) {
                     animal(level, tank.animals().get(i), i, t, poseStack, buffers);
@@ -388,10 +395,19 @@ public final class VanillaAquariumRenderer {
                 count.merge(kind, 1, Integer::sum);
             }
         }
-        // the plants on the bottom
+        // the plants and the decorations on the bottom
         List<Plant> plants = new ArrayList<>();
+        List<Ornament> ornaments = new ArrayList<>();
+        Set<String> made = new java.util.HashSet<>(); // (the one-of-a-kind ones already in this tank)
         for (BlockPos p : blocks) {
-            if (!sandy.contains(p) || random.nextFloat() > 0.45F) { // (plants only in the sand)
+            if (!sandy.contains(p)) { // (plants and decorations only on the sand)
+                continue;
+            }
+            float pick = random.nextFloat();
+            if (pick > 0.45F) {
+                if (pick < 0.68F) {
+                    decorate(p, ocean, random, plants, ornaments, made, sandList.size());
+                }
                 continue;
             }
             int above = 0;
@@ -457,7 +473,7 @@ public final class VanillaAquariumRenderer {
             System.arraycopy(strips.get(i), 0, frames, i * 12, 12);
             frameLight[i] = lights.get(i);
         }
-        return new Tank(animals, plants, cx, cy, cz, frames, frameLight);
+        return new Tank(animals, plants, cx, cy, cz, frames, frameLight, ornaments);
     }
 
     /** A strip of frame on the face of block p towards side, along its edge towards e, w wide (4 corners: x, y, z). */
@@ -493,6 +509,89 @@ public final class VanillaAquariumRenderer {
 
     private static void setAbs(float[] q, Direction d, float v) {
         q[d.getAxis().ordinal()] = v;
+    }
+
+    /**
+     * A decoration on this block's sand, Minecraft-style: rocks, a castle or a sunken ship (little blocks of the game's
+     * own), a decorated pot, a chest, coral; or one of its own models (an anchor, a diver's helmet, a clam, a starfish,
+     * a scallop, a sea anemone).
+     */
+    private static void decorate(BlockPos p, boolean ocean, Random random, List<Plant> plants, List<Ornament> ornaments, Set<String> made, int sand) {
+        double x = p.getX() + 0.5 + (random.nextFloat() - 0.5) * 0.3, y = p.getY() + 2.0 / 16.0, z = p.getZ() + 0.5 + (random.nextFloat() - 0.5) * 0.3;
+        int turn = random.nextInt(4);
+        String[] kinds = ocean
+                ? new String[] {"rocks", "rocks", "coral", "coral", "anemone", "anemone", "chest", "scallop", "starfish", "starfish", "vase", "ship", "anchor", "diving_helmet", "clam", "clam"}
+                : new String[] {"rocks", "rocks", "rocks", "scallop", "scallop", "starfish", "starfish", "castle", "coral", "anemone", "anemone", "vase", "anchor", "diving_helmet", "clam", "ship"};
+        String kind = kinds[random.nextInt(kinds.length)];
+        boolean once = kind.equals("castle") || kind.equals("ship") || kind.equals("chest") || kind.equals("anchor") || kind.equals("diving_helmet");
+        if ((once && made.contains(kind)) || (kind.equals("ship") && sand < 6)) {
+            kind = "rocks";
+        }
+        made.add(kind);
+        switch (kind) {
+            case "rocks" -> {
+                Block[] stones = {Blocks.COBBLESTONE, Blocks.MOSSY_COBBLESTONE, Blocks.ANDESITE, Blocks.STONE, Blocks.TUFF};
+                int n = 1 + random.nextInt(3);
+                for (int i = 0; i < n; i++) {
+                    float sz = 0.16F + random.nextFloat() * 0.18F;
+                    plants.add(new Plant(stones[random.nextInt(stones.length)].defaultBlockState(), x + (random.nextFloat() - 0.5) * 0.35, y - 0.03,
+                            z + (random.nextFloat() - 0.5) * 0.35, sz, sz * (0.7F + random.nextFloat() * 0.4F), random.nextInt(4)));
+                }
+            }
+            case "coral" -> {
+                Block[] blocks = {Blocks.BRAIN_CORAL_BLOCK, Blocks.TUBE_CORAL_BLOCK, Blocks.FIRE_CORAL_BLOCK, Blocks.HORN_CORAL_BLOCK, Blocks.BUBBLE_CORAL_BLOCK};
+                Block[] fans = {Blocks.BRAIN_CORAL, Blocks.TUBE_CORAL, Blocks.FIRE_CORAL, Blocks.HORN_CORAL, Blocks.BUBBLE_CORAL};
+                int c = random.nextInt(blocks.length);
+                plants.add(new Plant(blocks[c].defaultBlockState(), x, y - 0.02, z, 0.26F, 0.22F, turn));
+                plants.add(new Plant(fans[c].defaultBlockState(), x, y + 0.2, z, 0.4F, 0.4F, turn));
+            }
+            case "vase" -> plants.add(new Plant(Blocks.DECORATED_POT.defaultBlockState(), x, y - 0.02, z, 0.42F, 0.42F, turn));
+            case "chest" -> plants.add(new Plant(Blocks.CHEST.defaultBlockState(), x, y - 0.04, z, 0.48F, 0.48F, turn));
+            case "castle" -> {
+                // a little castle of stone bricks: four towers, walls between, a keep with a flag (each "block" 0.2)
+                float u = 0.2F;
+                int[][] towers = {{0, 0}, {2, 0}, {0, 2}, {2, 2}};
+                for (int[] t : towers) {
+                    for (int h = 0; h < 2; h++) piece(plants, Blocks.STONE_BRICKS.defaultBlockState(), x, y, z, turn, t[0], h, t[1], u);
+                    piece(plants, Blocks.STONE_BRICK_WALL.defaultBlockState(), x, y, z, turn, t[0], 2, t[1], u);
+                }
+                for (int[] w : new int[][] {{1, 0}, {0, 1}, {2, 1}, {1, 2}}) {
+                    piece(plants, Blocks.MOSSY_STONE_BRICKS.defaultBlockState(), x, y, z, turn, w[0], 0, w[1], u);
+                }
+                for (int h = 0; h < 3; h++) piece(plants, Blocks.STONE_BRICKS.defaultBlockState(), x, y, z, turn, 1, h, 1, u);
+                piece(plants, Blocks.OAK_FENCE.defaultBlockState(), x, y, z, turn, 1, 3, 1, u);
+                piece(plants, Blocks.RED_WOOL.defaultBlockState(), x, y, z, turn, 1.3, 3.5, 1, u * 0.5F);
+            }
+            case "ship" -> {
+                // a little sunken wooden ship, half in the sand: its hull, a broken side, the mast, a cabin at the back
+                float u = 0.2F;
+                double sy = y - 0.1;
+                for (int k = 0; k < 6; k++) {
+                    piece(plants, Blocks.OAK_PLANKS.defaultBlockState(), x, sy, z, turn, 1, 0, k - 2.5, u);
+                    if (k > 0 && k < 5) {
+                        piece(plants, Blocks.SPRUCE_PLANKS.defaultBlockState(), x, sy, z, turn, 0, 1, k - 2.5, u);
+                        if (k != 3) piece(plants, Blocks.SPRUCE_PLANKS.defaultBlockState(), x, sy, z, turn, 2, 1, k - 2.5, u); // (a hole in its side)
+                    }
+                }
+                for (int h = 1; h < 5; h++) piece(plants, Blocks.OAK_FENCE.defaultBlockState(), x, sy, z, turn, 1, h, -0.5, u);
+                piece(plants, Blocks.WHITE_WOOL.defaultBlockState(), x, sy, z, turn, 1, 3.3, -0.2, u * 0.7F); // (a torn sail)
+                for (int i = 0; i < 3; i++) piece(plants, Blocks.DARK_OAK_PLANKS.defaultBlockState(), x, sy, z, turn, i, 1, 2.5, u);
+                piece(plants, Blocks.DARK_OAK_SLAB.defaultBlockState(), x, sy, z, turn, 1, 2, 2.5, u);
+            }
+            default -> { // one of its own models
+                int i = java.util.Arrays.asList(AquaModels.NAMES).indexOf(kind);
+                float size = 0.85F + 0.3F * random.nextFloat();
+                ornaments.add(new Ornament(kind, x, y, z, random.nextFloat() * 360.0F, AquaModels.SCALES[i] * size, random.nextFloat() * 20.0F));
+            }
+        }
+    }
+
+    /** One little block of a structure: at (i, h, k) of its little grid (each u big), the structure turned round (x, z). */
+    private static void piece(List<Plant> plants, BlockState state, double x, double y, double z, int turn, double i, double h, double k, float u) {
+        double ox = (i - 1) * u, oz = k * u - u;
+        double rx = switch (turn) { case 1 -> -oz; case 2 -> -ox; case 3 -> oz; default -> ox; };
+        double rz = switch (turn) { case 1 -> ox; case 2 -> -oz; case 3 -> -ox; default -> oz; };
+        plants.add(new Plant(state, x + rx, y + h * u, z + rz, u, u, turn));
     }
 
     private static int volume(int[] b) {
@@ -737,6 +836,32 @@ public final class VanillaAquariumRenderer {
         poseStack.translate(0.0F, -1.501F, 0.0F);
         RenderType type = RenderType.entityTranslucent(texture); // (the fins a little see-through)
         m.render(poseStack, buffers.getBuffer(type), light, OverlayTexture.NO_OVERLAY, underwater(0xFFFFFFFF));
+        poseStack.popPose();
+    }
+
+    /** One of the decorations of its own (the anemone swaying, the clam opening and shutting now and then). */
+    private static void ornament(ClientLevel level, Ornament o, float t, PoseStack poseStack, MultiBufferSource buffers) {
+        ModelPart m = ownModel(o.name());
+        ModelPart body = m.hasChild("body") ? m.getChild("body") : m;
+        float tt = t + o.phase();
+        for (int k = 0; k < 16; k++) {
+            if (!body.hasChild("tentacle" + k)) break;
+            ModelPart te = body.getChild("tentacle" + k);
+            te.xRot = te.getInitialPose().xRot + 0.18F * (float) Math.sin(tt * 1.4 + k * 0.7);
+            te.zRot = te.getInitialPose().zRot + 0.18F * (float) Math.cos(tt * 1.1 + k * 0.9);
+        }
+        if (body.hasChild("lid")) {
+            float open = (float) Mth.clamp(Math.sin(tt * 0.35) * 2.0 + 0.6, 0.0, 1.0); // (open most of the time, shutting now and then)
+            body.getChild("lid").xRot = -0.15F - 0.85F * open;
+        }
+        int light = LevelRenderer.getLightColor(level, BlockPos.containing(o.x(), o.y() + 0.2, o.z()));
+        ResourceLocation texture = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "textures/entity/aqua/" + o.name() + ".png");
+        poseStack.pushPose();
+        poseStack.translate(o.x(), o.y(), o.z());
+        poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - o.yaw()));
+        poseStack.scale(-o.scale(), -o.scale(), o.scale());
+        poseStack.translate(0.0F, -1.501F, 0.0F);
+        m.render(poseStack, buffers.getBuffer(RenderType.entityCutoutNoCull(texture)), light, OverlayTexture.NO_OVERLAY, underwater(0xFFFFFFFF));
         poseStack.popPose();
     }
 

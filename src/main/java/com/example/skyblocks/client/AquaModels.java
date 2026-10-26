@@ -13,11 +13,11 @@ import net.minecraft.client.model.geom.builders.PartDefinition;
  */
 final class AquaModels {
     /** Every one, and how big to draw it (its length in the aquariums over its length in the model). */
-    static final String[] NAMES = {"clownfish", "blue_tang", "yellow_tang", "neon_tetra", "angelfish", "goldfish", "betta", "guppy", "discus", "shark", "tuna", "manta_ray", "grouper", "jellyfish", "sardine", "ocean_sunfish", "basking_shark", "hermit_crab", "crab", "stingray", "octopus", "lobster", "shrimp"};
-    static final float[] SCALES = {0.388571F, 0.36F, 0.369231F, 0.32F, 0.48F, 0.393846F, 0.4096F, 0.336842F, 0.4F, 0.72F, 0.571429F, 0.738462F, 0.651852F, 0.8F, 0.384F, 0.838095F, 0.84898F, 0.538947F, 0.523636F, 0.695652F, 1.03529F, 0.315152F, 0.1536F};
+    static final String[] NAMES = {"clownfish", "blue_tang", "yellow_tang", "neon_tetra", "angelfish", "goldfish", "betta", "guppy", "discus", "shark", "tuna", "manta_ray", "grouper", "jellyfish", "sardine", "ocean_sunfish", "basking_shark", "hermit_crab", "crab", "stingray", "octopus", "lobster", "shrimp", "anchor", "diving_helmet", "clam", "starfish", "scallop", "anemone"};
+    static final float[] SCALES = {0.388571F, 0.36F, 0.369231F, 0.32F, 0.48F, 0.393846F, 0.4096F, 0.336842F, 0.4F, 0.72F, 0.571429F, 0.738462F, 0.651852F, 0.8F, 0.384F, 0.838095F, 0.84898F, 0.538947F, 0.523636F, 0.695652F, 1.03529F, 0.315152F, 0.1536F, 4.4F, 0.8F, 0.654545F, 0.568889F, 0.497778F, 1.06667F};
     /** How each gets about (swim, drift, glide near the bottom, crawl on it), and how far it reaches from its middle (blocks). */
-    static final String[] MOVES = {"swim", "swim", "swim", "swim", "swim", "swim", "swim", "swim", "swim", "swim", "swim", "swim", "swim", "drift", "swim", "swim", "swim", "crawl", "crawl", "glide", "crawl", "crawl", "crawl"};
-    static final float[] REACH = {0.17F, 0.18F, 0.15F, 0.1F, 0.15F, 0.16F, 0.16F, 0.1F, 0.15F, 0.9F, 0.5F, 0.6F, 0.55F, 0.25F, 0.12F, 0.55F, 1.3F, 0.16F, 0.18F, 0.5F, 0.275F, 0.325F, 0.12F};
+    static final String[] MOVES = {"swim", "swim", "swim", "swim", "swim", "swim", "swim", "swim", "swim", "swim", "swim", "swim", "swim", "drift", "swim", "swim", "swim", "crawl", "crawl", "glide", "crawl", "crawl", "crawl", "decor", "decor", "decor", "decor", "decor", "sway"};
+    static final float[] REACH = {0.17F, 0.18F, 0.15F, 0.1F, 0.15F, 0.16F, 0.16F, 0.1F, 0.15F, 0.9F, 0.5F, 0.6F, 0.55F, 0.25F, 0.12F, 0.55F, 1.3F, 0.16F, 0.18F, 0.5F, 0.275F, 0.325F, 0.12F, 0.275F, 0.3F, 0.225F, 0.16F, 0.14F, 0.2F};
 
     private AquaModels() {}
 
@@ -46,6 +46,12 @@ final class AquaModels {
             case "octopus" -> octopus();
             case "lobster" -> lobster();
             case "shrimp" -> shrimp();
+            case "anchor" -> anchor();
+            case "diving_helmet" -> divingHelmet();
+            case "clam" -> clam();
+            case "starfish" -> starfish();
+            case "scallop" -> scallop();
+            case "anemone" -> anemone();
             default -> throw new IllegalArgumentException(name);
         };
     }
@@ -361,6 +367,78 @@ final class AquaModels {
         parts.put("", mesh.getRoot());
         part(parts, "body", "", CubeListBuilder.create().texOffs(40, 0).addBox(-1.5F, -6F, -4F, 3F, 3F, 5F).texOffs(56, 0).addBox(-1F, -6F, -6F, 2F, 2F, 2F).texOffs(32, 11).addBox(-0.5F, -6.5F, -8F, 1F, 1F, 2F).texOffs(0, 0).addBox(-0.5F, -6F, -16F, 0F, 1F, 10F).texOffs(20, 0).addBox(0.5F, -6F, -16F, 0F, 1F, 10F).texOffs(52, 11).addBox(-1.5F, -3F, -3F, 3F, 3F, 0F).texOffs(58, 11).addBox(-1.5F, -3F, -1.8F, 3F, 3F, 0F).texOffs(0, 15).addBox(-1.5F, -3F, -0.6F, 3F, 3F, 0F).texOffs(6, 15).addBox(-1.5F, -3F, 0.6F, 3F, 3F, 0F), PartPose.offsetAndRotation(0F, 24F, 0F, 0F, 0F, 0F));
         part(parts, "tail", "body", CubeListBuilder.create().texOffs(0, 11).addBox(-1F, -1F, 0F, 2F, 2F, 2F).texOffs(8, 11).addBox(-1F, -1F, 1.5F, 2F, 2F, 2F).texOffs(16, 11).addBox(-1F, -1F, 3F, 2F, 2F, 2F).texOffs(24, 11).addBox(-1F, -1F, 4.5F, 2F, 2F, 2F).texOffs(38, 11).addBox(-2F, 0.5F, 6F, 4F, 0F, 3F), PartPose.offsetAndRotation(0F, -5F, 1F, 0.5F, 0F, 0F));
+        return LayerDefinition.create(mesh, 64, 32).bakeRoot();
+    }
+
+    /** anchor: 0.55 blocks long, 2 px in the model. */
+    static ModelPart anchor() {
+        MeshDefinition mesh = new MeshDefinition();
+        java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
+        parts.put("", mesh.getRoot());
+        part(parts, "body", "", CubeListBuilder.create().texOffs(0, 0).addBox(-0.5F, -13F, -0.5F, 1F, 12F, 1F).texOffs(28, 0).addBox(-3F, -11F, -0.5F, 6F, 1F, 1F).texOffs(42, 0).addBox(-1.5F, -16F, -0.5F, 3F, 1F, 1F).texOffs(50, 0).addBox(-1.5F, -14F, -0.5F, 3F, 1F, 1F).texOffs(58, 0).addBox(-1.5F, -15F, -0.5F, 1F, 1F, 1F).texOffs(0, 13).addBox(0.5F, -15F, -0.5F, 1F, 1F, 1F).texOffs(4, 13).addBox(-4F, -2F, -0.5F, 8F, 1F, 1F).texOffs(20, 0).addBox(-5F, -4F, -0.5F, 1F, 2F, 1F).texOffs(24, 0).addBox(4F, -4F, -0.5F, 1F, 2F, 1F).texOffs(4, 0).addBox(-6F, -6F, -1F, 2F, 2F, 2F).texOffs(12, 0).addBox(4F, -6F, -1F, 2F, 2F, 2F), PartPose.offsetAndRotation(0F, 24F, 0F, 0F, 0F, 0.35F));
+        return LayerDefinition.create(mesh, 64, 32).bakeRoot();
+    }
+
+    /** diving_helmet: 0.6 blocks long, 12 px in the model. */
+    static ModelPart divingHelmet() {
+        MeshDefinition mesh = new MeshDefinition();
+        java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
+        parts.put("", mesh.getRoot());
+        part(parts, "body", "", CubeListBuilder.create().texOffs(0, 0).addBox(-6F, -3F, -6F, 12F, 3F, 12F).texOffs(0, 15).addBox(-5F, -6F, -5F, 10F, 3F, 10F).texOffs(0, 28).addBox(-5F, -9F, -5F, 10F, 3F, 10F).texOffs(0, 41).addBox(-4F, -11F, -4F, 8F, 2F, 8F).texOffs(32, 41).addBox(-3F, -12F, -3F, 6F, 1F, 6F).texOffs(0, 51).addBox(-2.5F, -9F, -5.5F, 5F, 5F, 1F).texOffs(12, 51).addBox(-5.5F, -8F, -1.5F, 1F, 3F, 3F).texOffs(20, 51).addBox(4.5F, -8F, -1.5F, 1F, 3F, 3F), PartPose.offsetAndRotation(0F, 24F, 0F, 0F, 0F, 0.12F));
+        return LayerDefinition.create(mesh, 64, 64).bakeRoot();
+    }
+
+    /** clam: 0.45 blocks long, 11 px in the model. */
+    static ModelPart clam() {
+        MeshDefinition mesh = new MeshDefinition();
+        java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
+        parts.put("", mesh.getRoot());
+        part(parts, "body", "", CubeListBuilder.create().texOffs(0, 0).addBox(-4F, -2F, -4F, 8F, 2F, 7F).texOffs(30, 9).addBox(-3F, -2F, -5F, 6F, 2F, 1F).texOffs(0, 9).addBox(-3F, -3F, -3F, 6F, 1F, 5F).texOffs(22, 9).addBox(-1F, -5F, -1.5F, 2F, 2F, 2F), PartPose.offsetAndRotation(0F, 24F, 0F, 0F, 0F, 0F));
+        part(parts, "lid", "body", CubeListBuilder.create().texOffs(30, 0).addBox(-4F, -2F, -7F, 8F, 2F, 7F).texOffs(44, 9).addBox(-3F, -2F, -8F, 6F, 2F, 1F), PartPose.offsetAndRotation(0F, -2F, 3F, -1F, 0F, 0F));
+        return LayerDefinition.create(mesh, 64, 32).bakeRoot();
+    }
+
+    /** starfish: 0.32 blocks long, 9 px in the model. */
+    static ModelPart starfish() {
+        MeshDefinition mesh = new MeshDefinition();
+        java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
+        parts.put("", mesh.getRoot());
+        part(parts, "body", "", CubeListBuilder.create().texOffs(0, 0).addBox(-2F, -2F, -2F, 4F, 2F, 4F), PartPose.offsetAndRotation(0F, 24F, 0F, 0F, 0F, 0F));
+        part(parts, "arm0", "body", CubeListBuilder.create().texOffs(16, 0).addBox(-1F, -1F, 1F, 2F, 1F, 4F).texOffs(12, 6).addBox(-0.5F, -1F, 5F, 1F, 1F, 2F), PartPose.offsetAndRotation(0F, -1F, 0F, 0F, 0F, 0F));
+        part(parts, "arm1", "body", CubeListBuilder.create().texOffs(28, 0).addBox(-1F, -1F, 1F, 2F, 1F, 4F).texOffs(18, 6).addBox(-0.5F, -1F, 5F, 1F, 1F, 2F), PartPose.offsetAndRotation(0F, -1F, 0F, 0F, 1.25664F, 0F));
+        part(parts, "arm2", "body", CubeListBuilder.create().texOffs(40, 0).addBox(-1F, -1F, 1F, 2F, 1F, 4F).texOffs(24, 6).addBox(-0.5F, -1F, 5F, 1F, 1F, 2F), PartPose.offsetAndRotation(0F, -1F, 0F, 0F, 2.51327F, 0F));
+        part(parts, "arm3", "body", CubeListBuilder.create().texOffs(52, 0).addBox(-1F, -1F, 1F, 2F, 1F, 4F).texOffs(30, 6).addBox(-0.5F, -1F, 5F, 1F, 1F, 2F), PartPose.offsetAndRotation(0F, -1F, 0F, 0F, 3.76991F, 0F));
+        part(parts, "arm4", "body", CubeListBuilder.create().texOffs(0, 6).addBox(-1F, -1F, 1F, 2F, 1F, 4F).texOffs(36, 6).addBox(-0.5F, -1F, 5F, 1F, 1F, 2F), PartPose.offsetAndRotation(0F, -1F, 0F, 0F, 5.02655F, 0F));
+        return LayerDefinition.create(mesh, 64, 32).bakeRoot();
+    }
+
+    /** scallop: 0.28 blocks long, 9 px in the model. */
+    static ModelPart scallop() {
+        MeshDefinition mesh = new MeshDefinition();
+        java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
+        parts.put("", mesh.getRoot());
+        part(parts, "body", "", CubeListBuilder.create().texOffs(0, 0).addBox(-1F, -1F, -4F, 2F, 1F, 2F).texOffs(8, 0).addBox(-2F, -1.25F, -2F, 4F, 1F, 2F).texOffs(20, 0).addBox(-3F, -1.5F, 0F, 6F, 1F, 2F).texOffs(36, 0).addBox(-3.5F, -1.75F, 2F, 7F, 1F, 2F).texOffs(54, 0).addBox(-2F, -1F, -5F, 4F, 1F, 1F), PartPose.offsetAndRotation(0F, 24F, 0F, 0.25F, 0F, 0F));
+        return LayerDefinition.create(mesh, 64, 32).bakeRoot();
+    }
+
+    /** anemone: 0.4 blocks long, 6 px in the model. */
+    static ModelPart anemone() {
+        MeshDefinition mesh = new MeshDefinition();
+        java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
+        parts.put("", mesh.getRoot());
+        part(parts, "body", "", CubeListBuilder.create().texOffs(0, 0).addBox(-2.5F, -4F, -2.5F, 5F, 4F, 5F).texOffs(20, 0).addBox(-3F, -5F, -3F, 6F, 1F, 6F), PartPose.offsetAndRotation(0F, 24F, 0F, 0F, 0F, 0F));
+        part(parts, "tentacle0", "body", CubeListBuilder.create().texOffs(44, 0).addBox(-0.5F, -6F, -0.5F, 1F, 6F, 1F), PartPose.offsetAndRotation(1F, -5F, 0F, -0F, 0F, 0.25F));
+        part(parts, "tentacle1", "body", CubeListBuilder.create().texOffs(48, 0).addBox(-0.5F, -6F, -0.5F, 1F, 6F, 1F), PartPose.offsetAndRotation(6.12323e-17F, -5F, 1F, -0.25F, 0F, 1.53081e-17F));
+        part(parts, "tentacle2", "body", CubeListBuilder.create().texOffs(52, 0).addBox(-0.5F, -6F, -0.5F, 1F, 6F, 1F), PartPose.offsetAndRotation(-1F, -5F, 1.22465e-16F, -3.06162e-17F, 0F, -0.25F));
+        part(parts, "tentacle3", "body", CubeListBuilder.create().texOffs(56, 0).addBox(-0.5F, -6F, -0.5F, 1F, 6F, 1F), PartPose.offsetAndRotation(-1.83697e-16F, -5F, -1F, 0.25F, 0F, -4.59243e-17F));
+        part(parts, "tentacle4", "body", CubeListBuilder.create().texOffs(60, 0).addBox(-0.5F, -5F, -0.5F, 1F, 5F, 1F), PartPose.offsetAndRotation(2.39476F, -5F, 1.01249F, -0.272593F, 0F, 0.644743F));
+        part(parts, "tentacle5", "body", CubeListBuilder.create().texOffs(0, 9).addBox(-0.5F, -5F, -0.5F, 1F, 5F, 1F), PartPose.offsetAndRotation(0.977413F, -5F, 2.40929F, -0.648654F, 0F, 0.26315F));
+        part(parts, "tentacle6", "body", CubeListBuilder.create().texOffs(4, 9).addBox(-0.5F, -5F, -0.5F, 1F, 5F, 1F), PartPose.offsetAndRotation(-1.01249F, -5F, 2.39476F, -0.644743F, 0F, -0.272593F));
+        part(parts, "tentacle7", "body", CubeListBuilder.create().texOffs(8, 9).addBox(-0.5F, -5F, -0.5F, 1F, 5F, 1F), PartPose.offsetAndRotation(-2.40929F, -5F, 0.977413F, -0.26315F, 0F, -0.648654F));
+        part(parts, "tentacle8", "body", CubeListBuilder.create().texOffs(12, 9).addBox(-0.5F, -5F, -0.5F, 1F, 5F, 1F), PartPose.offsetAndRotation(-2.39476F, -5F, -1.01249F, 0.272593F, 0F, -0.644743F));
+        part(parts, "tentacle9", "body", CubeListBuilder.create().texOffs(16, 9).addBox(-0.5F, -5F, -0.5F, 1F, 5F, 1F), PartPose.offsetAndRotation(-0.977413F, -5F, -2.40929F, 0.648654F, 0F, -0.26315F));
+        part(parts, "tentacle10", "body", CubeListBuilder.create().texOffs(20, 9).addBox(-0.5F, -5F, -0.5F, 1F, 5F, 1F), PartPose.offsetAndRotation(1.01249F, -5F, -2.39476F, 0.644743F, 0F, 0.272593F));
+        part(parts, "tentacle11", "body", CubeListBuilder.create().texOffs(24, 9).addBox(-0.5F, -5F, -0.5F, 1F, 5F, 1F), PartPose.offsetAndRotation(2.40929F, -5F, -0.977413F, 0.26315F, 0F, 0.648654F));
         return LayerDefinition.create(mesh, 64, 32).bakeRoot();
     }
 }
