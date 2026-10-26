@@ -24,6 +24,7 @@ const float SURF = 14.5 / 16.0;
 const float FLOOR = 1.0 / 16.0;
 const float TOP = 2.5; // (the top of the box drawn over the water, well above the rim: ducks flying in and off fit in it)
 vec3 gHit; // (where a duck or frog was hit)
+vec3 gStart; // (where the ray starts: on the box, or at the eye inside it)
 const vec3 SUN = vec3(0.35, 1.0, 0.2);
 
 vec2 hash22(vec2 p) {
@@ -222,6 +223,7 @@ vec4 frogHit(vec3 p0, vec3 rd, float t, float light) {
     }
     float up = 0.42;
     vec3 pTop = p0 - rd * (up / -rd.y);
+    if (pTop.y > gStart.y) pTop = gStart; // (nothing behind the eye)
     vec2 c0 = floor(p0.xz);
     for (int j = -1; j <= 1; j++) {
         for (int i = -1; i <= 1; i++) {
@@ -406,6 +408,7 @@ vec4 duckHit(vec3 p0, vec3 rd, float t, float light, out float ripple) {
         float base = SURF + height + bob;
         float up = 0.4 + height;
         vec3 pTop = p0 - rd * (up / -rd.y);
+        if (pTop.y > gStart.y) pTop = gStart; // (nothing behind the eye)
         vec2 ab = p0.xz - pTop.xz;
         float w = clamp(dot(pos - pTop.xz, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
         if (length(pTop.xz + ab * w - pos) > 0.36) continue;
@@ -539,14 +542,24 @@ void main() {
     if (rd.y > -0.002) {
         discard;
     }
-    vec3 p0 = entry + rd * ((SURF - entry.y) / rd.y); // (where it meets the water)
-    vec2 cell0 = floor(entry.xz - 1e-4); // (the block this is drawn for)
+    vec2 cell0 = floor(entry.xz); // (the block this is drawn for)
     // the whole pond's rectangle (how far it reaches from this block each way, packed into the colour) and its koi
     int rectBits = int(vColor.r * 255.0 + 0.5) | (int(vColor.g * 255.0 + 0.5) << 8) | (int(vColor.b * 255.0 + 0.5) << 16);
     pondLo = cell0 - vec2(float(rectBits & 63), float((rectBits >> 12) & 63));
     pondHi = cell0 + vec2(float((rectBits >> 6) & 63), float((rectBits >> 18) & 63)) + 1.0;
     vec2 size = pondHi - pondLo;
     pondFish = clamp(int(size.x * size.y * 0.45 + 0.75), 1, 24);
+    // where the ray starts: where it comes into the box over the water - or, standing on the pond with the eye
+    // inside that box, at the eye itself (every face is then where the view leaves the box, the water face included)
+    vec3 eyeW = entry - wray;
+    bool inside = ProjMat[2][3] < -0.5 && eyeW.y > SURF && eyeW.y < TOP
+            && all(greaterThan(eyeW.xz, pondLo + 0.125)) && all(lessThan(eyeW.xz, pondHi - 0.125));
+    if (!inside && !gl_FrontFacing) {
+        discard; // (the far side of the box: already drawn where the view came in)
+    }
+    vec3 start = inside ? eyeW : entry;
+    vec3 p0 = start + rd * ((SURF - start.y) / rd.y); // (where it meets the water)
+    gStart = start;
     float light = 0.18 + 0.82 * day;
 
     // a frog sitting on a lily pad, in front of this point

@@ -14,6 +14,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -54,7 +55,7 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
                         }, () -> {}))
                         .setTransparencyState(NO_TRANSPARENCY)
                         .setWriteMaskState(COLOR_DEPTH_WRITE)
-                        .setCullState(CULL)
+                        .setCullState(NO_CULL) // (both sides: from inside it too, standing on the pond)
                         .createCompositeState(false));
 
         private Types() {
@@ -131,6 +132,11 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
         v(vc, m, x0, y1, z1, bx, bz, cr, cg, cb, 255);
         v(vc, m, x1, y1, z1, bx, bz, cr, cg, cb, 255);
         v(vc, m, x1, y1, z0, bx, bz, cr, cg, cb, 255);
+        // and its bottom, on the water (seen from inside the box, standing on the pond: where the view meets the water)
+        v(vc, m, x0, y0, z0, bx, bz, cr, cg, cb, 0);
+        v(vc, m, x1, y0, z0, bx, bz, cr, cg, cb, 0);
+        v(vc, m, x1, y0, z1, bx, bz, cr, cg, cb, 0);
+        v(vc, m, x0, y0, z1, bx, bz, cr, cg, cb, 0);
         if (!n) {
             v(vc, m, x1, y0, z0, bx, bz, cr, cg, cb, 0); v(vc, m, x0, y0, z0, bx, bz, cr, cg, cb, 0);
             v(vc, m, x0, y1, z0, bx, bz, cr, cg, cb, 255); v(vc, m, x1, y1, z0, bx, bz, cr, cg, cb, 255);
@@ -150,6 +156,7 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
     }
 
     private static void v(VertexConsumer vc, Matrix4f m, float x, float y, float z, float bx, float bz, int r, int g, int b, int a) {
-        vc.addVertex(m, x, y, z).setUv(bx + x, bz + z).setColor(r, g, b, a);
+        // (the UV kept a hair inside the block, so the shader always knows which block an edge pixel belongs to)
+        vc.addVertex(m, x, y, z).setUv(bx + Mth.clamp(x, 0.001F, 0.999F), bz + Mth.clamp(z, 0.001F, 0.999F)).setColor(r, g, b, a);
     }
 }
