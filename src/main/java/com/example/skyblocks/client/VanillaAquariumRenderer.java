@@ -282,7 +282,7 @@ public final class VanillaAquariumRenderer {
             }
             case 5 -> pieces.add(new Piece(Blocks.CHEST.defaultBlockState(), x, y - 0.04, z, 0.45F * sz, 0.45F * sz, turn));
             case 7 -> pieces.add(new Piece(Blocks.DECORATED_POT.defaultBlockState(), x, y - 0.02, z, 0.4F * sz, 0.4F * sz, turn));
-            case 8 -> ship(pieces, x, y - 0.1 * sz, z, turn, 0.2F * sz);
+            case 8 -> ship(pieces, x, y, z, yaw, 0.1F * sz);
             case 12 -> { // seagrass: a little clump
                 int n = 2 + random.nextInt(2);
                 for (int i = 0; i < n; i++) {
@@ -308,8 +308,12 @@ public final class VanillaAquariumRenderer {
         }
     }
 
-    /** A little block of the game's own: its base at (x, y, z), w wide, h tall, turned by quarters. */
-    private record Piece(BlockState state, double x, double y, double z, float w, float h, int turn) {}
+    /** A little block of the game's own: the middle of its base at (x, y, z), its size each way, turned (any way). */
+    private record Piece(BlockState state, double x, double y, double z, float sx, float sy, float sz, Quaternionf rot) {
+        Piece(BlockState state, double x, double y, double z, float w, float h, int turn) {
+            this(state, x, y, z, w, h, w, Axis.YP.rotationDegrees(90.0F * turn));
+        }
+    }
 
     /** One little block of a structure: at (i, h, k) of its little grid (each u big), the structure turned round (x, z). */
     private static void at(List<Piece> pieces, BlockState state, double x, double y, double z, int turn, double i, double h, double k, float u) {
@@ -333,26 +337,62 @@ public final class VanillaAquariumRenderer {
         at(pieces, Blocks.RED_WOOL.defaultBlockState(), x, y, z, turn, 1.3, 3.5, 1, u * 0.5F);
     }
 
-    /** A little sunken wooden ship, half in the sand: its hull, a hole in its side, the mast and a torn sail, a cabin. */
-    private static void ship(List<Piece> pieces, double x, double y, double z, int turn, float u) {
-        for (int k = 0; k < 6; k++) {
-            at(pieces, Blocks.OAK_PLANKS.defaultBlockState(), x, y, z, turn, 1, 0, k - 2.5, u);
-            if (k > 0 && k < 5) {
-                at(pieces, Blocks.SPRUCE_PLANKS.defaultBlockState(), x, y, z, turn, 0, 1, k - 2.5, u);
-                if (k != 3) at(pieces, Blocks.SPRUCE_PLANKS.defaultBlockState(), x, y, z, turn, 2, 1, k - 2.5, u);
+    /**
+     * A sunken wooden ship, half in the sand and listing over: a dark keel and a pointed bow, planked sides (a hole
+     * broken in one), its deck partly gone, broken railings, a cabin at the stern with a window, the mast with its
+     * yard and a torn sail. Built in its own little grid (i across, h up, k along: the bow towards +k, each u big),
+     * then turned, tipped and sunk as one.
+     */
+    private static void ship(List<Piece> pieces, double x, double y, double z, float yaw, float u) {
+        Quaternionf rot = Axis.YP.rotationDegrees(180.0F - yaw).mul(Axis.ZP.rotation(0.32F)).mul(Axis.XP.rotation(-0.1F));
+        double sink = 0.7 * u;
+        java.util.function.BiConsumer<BlockState, double[]> put = (state, q) -> { // q: i, h, k, and its size across, up, along
+            org.joml.Vector3f v = new org.joml.Vector3f((float) (q[0] * u), (float) (q[1] * u), (float) (q[2] * u));
+            rot.transform(v);
+            pieces.add(new Piece(state, x + v.x, y - sink + v.y, z + v.z, (float) (q[3] * u), (float) (q[4] * u), (float) (q[5] * u), rot));
+        };
+        BlockState keel = Blocks.DARK_OAK_PLANKS.defaultBlockState(), plank = Blocks.SPRUCE_PLANKS.defaultBlockState(),
+                deck = Blocks.OAK_SLAB.defaultBlockState(), rail = Blocks.OAK_FENCE.defaultBlockState(), dark = Blocks.DARK_OAK_PLANKS.defaultBlockState();
+        BlockState bow = Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(net.minecraft.world.level.block.StairBlock.FACING, net.minecraft.core.Direction.NORTH);
+        // the bottom: the keel all along, the hull three wide in the middle, a pointed bow
+        for (int k = -3; k <= 3; k++) put.accept(keel, new double[] {0, 0, k, 1, 1, 1});
+        for (int k = -2; k <= 2; k++) {
+            put.accept(keel, new double[] {-1, 0, k, 1, 1, 1});
+            put.accept(keel, new double[] {1, 0, k, 1, 1, 1});
+        }
+        put.accept(bow, new double[] {0, 0, 4, 1, 1, 1});
+        put.accept(bow, new double[] {0, 1, 4, 1, 1, 1});
+        // the sides (a hole broken in the right one), the deck (some of it gone)
+        for (int k = -3; k <= 3; k++) {
+            put.accept(plank, new double[] {-1, 1, k, 1, 1, 1});
+            if (k != 0 && k != 1) put.accept(plank, new double[] {1, 1, k, 1, 1, 1});
+            if (k > -2 && k != 1) put.accept(deck, new double[] {0, 1, k, 1, 1, 1});
+        }
+        // broken railings along the sides
+        for (int k = -1; k <= 3; k++) {
+            if (k != 1) put.accept(rail, new double[] {-1, 2, k, 1, 1, 1});
+            if (k == -1 || k == 3) put.accept(rail, new double[] {1, 2, k, 1, 1, 1});
+        }
+        // the cabin at the stern, its roof and a dark window
+        for (int k = -3; k <= -2; k++) {
+            for (int i = -1; i <= 1; i++) {
+                put.accept(dark, new double[] {i, 2, k, 1, 1, 1});
+                put.accept(Blocks.DARK_OAK_SLAB.defaultBlockState(), new double[] {i, 3, k, 1, 1, 1});
             }
         }
-        for (int h = 1; h < 5; h++) at(pieces, Blocks.OAK_FENCE.defaultBlockState(), x, y, z, turn, 1, h, -0.5, u);
-        at(pieces, Blocks.WHITE_WOOL.defaultBlockState(), x, y, z, turn, 1, 3.3, -0.2, u * 0.7F);
-        for (int i = 0; i < 3; i++) at(pieces, Blocks.DARK_OAK_PLANKS.defaultBlockState(), x, y, z, turn, i, 1, 2.5, u);
-        at(pieces, Blocks.DARK_OAK_SLAB.defaultBlockState(), x, y, z, turn, 1, 2, 2.5, u);
+        put.accept(Blocks.BLACK_CONCRETE.defaultBlockState(), new double[] {0, 2.25, -1.45, 0.5, 0.5, 0.1});
+        // the mast, its yard across, and what's left of the sail
+        for (int h = 2; h <= 6; h++) put.accept(rail, new double[] {0, h, 1, 1, 1, 1});
+        put.accept(Blocks.STRIPPED_OAK_LOG.defaultBlockState(), new double[] {0, 5.6, 1, 3.6, 0.3, 0.3});
+        put.accept(Blocks.WHITE_WOOL.defaultBlockState(), new double[] {0, 4.3, 1.25, 3.0, 1.3, 0.1});
+        put.accept(Blocks.WHITE_WOOL.defaultBlockState(), new double[] {-0.6, 3.2, 1.25, 1.7, 1.1, 0.1});
     }
 
     private static void piece(ClientLevel level, Piece p, PoseStack poseStack, MultiBufferSource buffers) {
         poseStack.pushPose();
         poseStack.translate(p.x(), p.y(), p.z());
-        poseStack.mulPose(Axis.YP.rotationDegrees(90.0F * p.turn()));
-        poseStack.scale(p.w(), p.h(), p.w());
+        poseStack.mulPose(p.rot());
+        poseStack.scale(p.sx(), p.sy(), p.sz());
         poseStack.translate(-0.5, 0.0, -0.5);
         int light = LevelRenderer.getLightColor(level, BlockPos.containing(p.x(), p.y() + 0.3, p.z()));
         Minecraft.getInstance().getBlockRenderer().renderSingleBlock(p.state(), poseStack, buffers, light, OverlayTexture.NO_OVERLAY);

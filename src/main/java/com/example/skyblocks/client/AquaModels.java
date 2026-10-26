@@ -14,7 +14,7 @@ import net.minecraft.client.model.geom.builders.PartDefinition;
 final class AquaModels {
     /** Every one, and how big to draw it (its length in the aquariums over its length in the model). */
     static final String[] NAMES = {"clownfish", "blue_tang", "yellow_tang", "neon_tetra", "angelfish", "goldfish", "betta", "guppy", "discus", "shark", "tuna", "manta_ray", "grouper", "jellyfish", "sardine", "ocean_sunfish", "basking_shark", "hermit_crab", "crab", "stingray", "octopus", "lobster", "shrimp", "anchor", "diving_helmet", "clam", "starfish", "scallop", "anemone"};
-    static final float[] SCALES = {0.388571F, 0.36F, 0.369231F, 0.32F, 0.48F, 0.393846F, 0.4096F, 0.336842F, 0.4F, 0.72F, 0.571429F, 0.738462F, 0.651852F, 0.8F, 0.384F, 0.838095F, 0.84898F, 0.538947F, 0.523636F, 0.695652F, 1.03529F, 0.315152F, 0.1536F, 4.4F, 0.8F, 0.654545F, 0.568889F, 0.497778F, 1.06667F};
+    static final float[] SCALES = {0.302222F, 0.288F, 0.3F, 0.228571F, 0.342857F, 0.269474F, 0.301176F, 0.246154F, 0.32F, 0.587755F, 0.470588F, 0.548571F, 0.55F, 0.8F, 0.274286F, 0.733333F, 0.705085F, 0.4096F, 0.397241F, 0.533333F, 0.580623F, 0.305882F, 0.147692F, 0.586667F, 0.8F, 0.9F, 0.568889F, 0.497778F, 0.581818F};
     /** How each gets about (swim, drift, glide near the bottom, crawl on it), and how far it reaches from its middle (blocks). */
     static final String[] MOVES = {"swim", "swim", "swim", "swim", "swim", "swim", "swim", "swim", "swim", "swim", "swim", "swim", "swim", "drift", "swim", "swim", "swim", "crawl", "crawl", "glide", "crawl", "crawl", "crawl", "decor", "decor", "decor", "decor", "decor", "sway"};
     static final float[] REACH = {0.17F, 0.18F, 0.15F, 0.1F, 0.15F, 0.16F, 0.16F, 0.1F, 0.15F, 0.9F, 0.5F, 0.6F, 0.55F, 0.25F, 0.12F, 0.55F, 1.3F, 0.16F, 0.18F, 0.5F, 0.275F, 0.325F, 0.12F, 0.275F, 0.3F, 0.225F, 0.16F, 0.14F, 0.2F};
@@ -63,7 +63,7 @@ final class AquaModels {
         parts.put(name, parts.get(parent).addOrReplaceChild(name, cubes, pose));
     }
 
-    /** clownfish: 0.34 blocks long, 14.0 px in the model. */
+    /** clownfish: 0.34 blocks long, 18.0 px in the model. */
     static ModelPart clownfish() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -75,7 +75,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 32).bakeRoot();
     }
 
-    /** blue_tang: 0.36 blocks long, 16.0 px in the model. */
+    /** blue_tang: 0.36 blocks long, 20.0 px in the model. */
     static ModelPart blueTang() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -87,7 +87,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 32).bakeRoot();
     }
 
-    /** yellow_tang: 0.3 blocks long, 13.0 px in the model. */
+    /** yellow_tang: 0.3 blocks long, 16.0 px in the model. */
     static ModelPart yellowTang() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -99,7 +99,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 32).bakeRoot();
     }
 
-    /** neon_tetra: 0.2 blocks long, 10.0 px in the model. */
+    /** neon_tetra: 0.2 blocks long, 14.0 px in the model. */
     static ModelPart neonTetra() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -111,7 +111,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 32).bakeRoot();
     }
 
-    /** angelfish: 0.3 blocks long, 10.0 px in the model. */
+    /** angelfish: 0.3 blocks long, 14.0 px in the model. */
     static ModelPart angelfish() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -123,7 +123,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 32).bakeRoot();
     }
 
-    /** goldfish: 0.32 blocks long, 13.0 px in the model. */
+    /** goldfish: 0.32 blocks long, 19.0 px in the model. */
     static ModelPart goldfish() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -135,7 +135,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 32).bakeRoot();
     }
 
-    /** betta: 0.32 blocks long, 12.5 px in the model. */
+    /** betta: 0.32 blocks long, 17.0 px in the model. */
     static ModelPart betta() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -147,7 +147,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 32).bakeRoot();
     }
 
-    /** guppy: 0.2 blocks long, 9.5 px in the model. */
+    /** guppy: 0.2 blocks long, 13.0 px in the model. */
     static ModelPart guppy() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -159,7 +159,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 32).bakeRoot();
     }
 
-    /** discus: 0.3 blocks long, 12.0 px in the model. */
+    /** discus: 0.3 blocks long, 15.0 px in the model. */
     static ModelPart discus() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -171,7 +171,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 32).bakeRoot();
     }
 
-    /** shark: 1.8 blocks long, 40.0 px in the model. */
+    /** shark: 1.8 blocks long, 49.0 px in the model. */
     static ModelPart shark() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -181,7 +181,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 128).bakeRoot();
     }
 
-    /** tuna: 1 blocks long, 28.0 px in the model. */
+    /** tuna: 1 blocks long, 34.0 px in the model. */
     static ModelPart tuna() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -193,7 +193,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 64).bakeRoot();
     }
 
-    /** manta_ray: 1.2 blocks long, 26 px in the model. */
+    /** manta_ray: 1.2 blocks long, 35.0 px in the model. */
     static ModelPart mantaRay() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -205,7 +205,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 128).bakeRoot();
     }
 
-    /** grouper: 1.1 blocks long, 27.0 px in the model. */
+    /** grouper: 1.1 blocks long, 32.0 px in the model. */
     static ModelPart grouper() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -238,7 +238,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 64).bakeRoot();
     }
 
-    /** sardine: 0.24 blocks long, 10.0 px in the model. */
+    /** sardine: 0.24 blocks long, 14.0 px in the model. */
     static ModelPart sardine() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -250,7 +250,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 32).bakeRoot();
     }
 
-    /** ocean_sunfish: 1.1 blocks long, 21 px in the model. */
+    /** ocean_sunfish: 1.1 blocks long, 24.0 px in the model. */
     static ModelPart oceanSunfish() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -262,7 +262,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 64).bakeRoot();
     }
 
-    /** basking_shark: 2.6 blocks long, 49.0 px in the model. */
+    /** basking_shark: 2.6 blocks long, 59.0 px in the model. */
     static ModelPart baskingShark() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -272,7 +272,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 128, 128).bakeRoot();
     }
 
-    /** hermit_crab: 0.32 blocks long, 9.5 px in the model. */
+    /** hermit_crab: 0.32 blocks long, 12.5 px in the model. */
     static ModelPart hermitCrab() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -287,7 +287,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 32).bakeRoot();
     }
 
-    /** crab: 0.36 blocks long, 11.0 px in the model. */
+    /** crab: 0.36 blocks long, 14.5 px in the model. */
     static ModelPart crab() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -306,7 +306,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 32).bakeRoot();
     }
 
-    /** stingray: 1 blocks long, 23 px in the model. */
+    /** stingray: 1 blocks long, 30.0 px in the model. */
     static ModelPart stingray() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -318,7 +318,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 64).bakeRoot();
     }
 
-    /** octopus: 0.55 blocks long, 8.5 px in the model. */
+    /** octopus: 0.55 blocks long, 15.156146471250732 px in the model. */
     static ModelPart octopus() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -343,7 +343,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 64).bakeRoot();
     }
 
-    /** lobster: 0.65 blocks long, 33 px in the model. */
+    /** lobster: 0.65 blocks long, 34.0 px in the model. */
     static ModelPart lobster() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -363,7 +363,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 64).bakeRoot();
     }
 
-    /** shrimp: 0.24 blocks long, 25 px in the model. */
+    /** shrimp: 0.24 blocks long, 26.0 px in the model. */
     static ModelPart shrimp() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -373,7 +373,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 32).bakeRoot();
     }
 
-    /** anchor: 0.55 blocks long, 2 px in the model. */
+    /** anchor: 0.55 blocks long, 15.0 px in the model. */
     static ModelPart anchor() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -382,7 +382,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 32).bakeRoot();
     }
 
-    /** diving_helmet: 0.6 blocks long, 12 px in the model. */
+    /** diving_helmet: 0.6 blocks long, 12.0 px in the model. */
     static ModelPart divingHelmet() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -391,7 +391,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 64).bakeRoot();
     }
 
-    /** clam: 0.45 blocks long, 11 px in the model. */
+    /** clam: 0.45 blocks long, 8.0 px in the model. */
     static ModelPart clam() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -401,7 +401,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 32).bakeRoot();
     }
 
-    /** starfish: 0.32 blocks long, 9 px in the model. */
+    /** starfish: 0.32 blocks long, 9.0 px in the model. */
     static ModelPart starfish() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -415,7 +415,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 32).bakeRoot();
     }
 
-    /** scallop: 0.28 blocks long, 9 px in the model. */
+    /** scallop: 0.28 blocks long, 9.0 px in the model. */
     static ModelPart scallop() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
@@ -424,7 +424,7 @@ final class AquaModels {
         return LayerDefinition.create(mesh, 64, 32).bakeRoot();
     }
 
-    /** anemone: 0.4 blocks long, 6 px in the model. */
+    /** anemone: 0.4 blocks long, 11.0 px in the model. */
     static ModelPart anemone() {
         MeshDefinition mesh = new MeshDefinition();
         java.util.Map<String, PartDefinition> parts = new java.util.HashMap<>();
