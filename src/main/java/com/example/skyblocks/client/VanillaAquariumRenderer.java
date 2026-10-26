@@ -110,19 +110,23 @@ public final class VanillaAquariumRenderer {
             RenderSystem.applyModelViewMatrix();
             MultiBufferSource.BufferSource buffers = Minecraft.getInstance().renderBuffers().bufferSource();
             boolean night = AquariumRenderer.night() > 0.5;
-            for (AquariumRenderer.VanillaJob job : jobs) {
+            Matrix4f view = new Matrix4f(event.getModelViewMatrix());
+            // each tank in turn, the farthest first: its water, its fish and decorations into it, then its depth (so a
+            // nearer tank's water covers a farther one's fish, as glass in front would)
+            List<AquariumRenderer.VanillaJob> order = new ArrayList<>(jobs);
+            order.sort((a, b) -> Double.compare(b.centre().distanceToSqr(cam), a.centre().distanceToSqr(cam)));
+            for (AquariumRenderer.VanillaJob job : order) {
+                AquariumRenderer.drawPicture(job, view);
                 for (int d = 0; d < job.decorCount(); d++) {
                     decoration(level, job, d, poseStack, buffers);
                 }
                 for (int i = 0; i < job.fishCount(); i++) {
                     creature(level, job, i, night, poseStack, buffers);
                 }
-            }
-            buffers.endBatch();
-            // the tanks' depth (the water's picture was drawn without it, so their fish could go into it)
-            for (AquariumRenderer.VanillaJob job : jobs) {
+                buffers.endBatch();
                 depth(job.faces(), poseStack);
             }
+            jobs.clear();
             modelView.popMatrix();
             RenderSystem.applyModelViewMatrix();
         }
@@ -184,10 +188,18 @@ public final class VanillaAquariumRenderer {
         ModelPart m = own(name);
         ModelPart body = m.hasChild("body") ? m.getChild("body") : m;
         // its moving parts, from the aquariums' own swimming: the tail beating, the side fins, the wings, the legs
-        if (body.hasChild("tail")) {
-            ModelPart tail = body.getChild("tail");
-            if (crawler) tail.xRot = 0.15F * Mth.sin(walk);
-            else tail.yRot = 0.5F * beat * Mth.sin(wave) + bend * 0.15F;
+        // (a wave down its body: the front swings a little one way, the back half after it, the tail last and most)
+        ModelPart rear = body.hasChild("rear") ? body.getChild("rear") : null;
+        ModelPart tailHolder = rear != null ? rear : body;
+        float big = sp[0] > 0.4F ? 0.6F : 1.0F; // (the big ones: slower, gentler)
+        if (rear != null && !crawler) {
+            body.yRot = -0.07F * beat * big * Mth.sin(wave);
+            rear.yRot = 0.28F * beat * big * Mth.sin(wave - 0.9F) + bend * 0.12F;
+        }
+        if (tailHolder.hasChild("tail")) {
+            ModelPart tail = tailHolder.getChild("tail");
+            if (crawler) tail.xRot = tail.getInitialPose().xRot + 0.15F * Mth.sin(walk);
+            else tail.yRot = 0.5F * beat * big * Mth.sin(wave - 1.8F) + bend * 0.12F;
         }
         if (body.hasChild("right_fin")) body.getChild("right_fin").yRot = -0.6F - 0.3F * Mth.sin(wave * 0.7F);
         if (body.hasChild("left_fin")) body.getChild("left_fin").yRot = 0.6F + 0.3F * Mth.sin(wave * 0.7F);
@@ -261,40 +273,59 @@ public final class VanillaAquariumRenderer {
         int turn = Math.round(turn16 / 4.0F) % 4;
         float yaw = turn16 * 22.5F;
         Random random = new Random(job.min().asLong() * 7L + d * 131L);
+        float t = LavaLampRenderer.seconds();
         List<Piece> pieces = new ArrayList<>();
         switch (type) {
-            case 0 -> { // rocks
+            case 0 -> { // rocks: a big one and two small ones by it (as the aquariums' own: about 0.45 across)
                 Block[] stones = {Blocks.COBBLESTONE, Blocks.MOSSY_COBBLESTONE, Blocks.ANDESITE, Blocks.STONE, Blocks.TUFF};
-                int n = 1 + random.nextInt(3);
-                for (int i = 0; i < n; i++) {
-                    float s = (0.16F + random.nextFloat() * 0.18F) * sz;
-                    pieces.add(new Piece(stones[random.nextInt(stones.length)].defaultBlockState(), x + (random.nextFloat() - 0.5) * 0.3 * sz, y - 0.03,
-                            z + (random.nextFloat() - 0.5) * 0.3 * sz, s, s * (0.7F + random.nextFloat() * 0.4F), random.nextInt(4)));
+                Block stone = stones[random.nextInt(stones.length)];
+                double ca = Math.cos(Math.toRadians(yaw)), sa = Math.sin(Math.toRadians(yaw));
+                double[][] at = {{0, 0, 0.3, 0.22}, {0.14, 0.07, 0.17, 0.13}, {-0.12, -0.08, 0.16, 0.12}};
+                for (double[] r : at) {
+                    double ox = (r[0] * ca - r[1] * sa) * sz, oz = (r[0] * sa + r[1] * ca) * sz;
+                    pieces.add(new Piece(random.nextFloat() < 0.4F ? Blocks.MOSSY_COBBLESTONE.defaultBlockState() : stone.defaultBlockState(),
+                            x + ox, y - 0.02 * sz, z + oz, (float) r[2] * sz, (float) r[3] * sz, (float) r[2] * sz * 0.85F,
+                            Axis.YP.rotationDegrees(yaw + random.nextFloat() * 40.0F)));
                 }
             }
-            case 3 -> castle(pieces, x, y, z, turn, 0.2F * sz);
+            case 3 -> castle(pieces, x, y, z, turn, 0.11F * sz);
             case 4 -> { // coral: a coral block with a coral on it
                 Block[] blocks = {Blocks.BRAIN_CORAL_BLOCK, Blocks.TUBE_CORAL_BLOCK, Blocks.FIRE_CORAL_BLOCK, Blocks.HORN_CORAL_BLOCK, Blocks.BUBBLE_CORAL_BLOCK};
                 Block[] fans = {Blocks.BRAIN_CORAL, Blocks.TUBE_CORAL, Blocks.FIRE_CORAL, Blocks.HORN_CORAL, Blocks.BUBBLE_CORAL};
                 int c = random.nextInt(blocks.length);
-                pieces.add(new Piece(blocks[c].defaultBlockState(), x, y - 0.02, z, 0.26F * sz, 0.22F * sz, turn));
-                pieces.add(new Piece(fans[c].defaultBlockState(), x, y + 0.2 * sz, z, 0.4F * sz, 0.4F * sz, turn));
+                pieces.add(new Piece(blocks[c].defaultBlockState(), x, y - 0.01 * sz, z, 0.15F * sz, 0.1F * sz, turn));
+                pieces.add(new Piece(fans[c].defaultBlockState(), x, y + 0.09 * sz, z, 0.24F * sz, 0.24F * sz, turn));
             }
-            case 5 -> pieces.add(new Piece(Blocks.CHEST.defaultBlockState(), x, y - 0.04, z, 0.45F * sz, 0.45F * sz, turn));
-            case 7 -> pieces.add(new Piece(Blocks.DECORATED_POT.defaultBlockState(), x, y - 0.02, z, 0.4F * sz, 0.4F * sz, turn));
+            case 5 -> pieces.add(new Piece(Blocks.CHEST.defaultBlockState(), x, y - 0.01 * sz, z, 0.32F * sz, 0.27F * sz, 0.32F * sz,
+                    Axis.YP.rotationDegrees(180.0F - yaw)));
+            case 7 -> pieces.add(new Piece(Blocks.DECORATED_POT.defaultBlockState(), x, y - 0.01 * sz, z, 0.3F * sz, 0.33F * sz, 0.3F * sz,
+                    Axis.YP.rotationDegrees(180.0F - yaw)));
             case 8 -> ship(pieces, x, y, z, yaw, 0.1F * sz);
-            case 12 -> { // seagrass: a little clump
-                int n = 2 + random.nextInt(2);
+            case 12 -> { // seagrass: a little clump (as tall as the aquariums' own), swaying
+                int n = 3 + random.nextInt(2);
                 for (int i = 0; i < n; i++) {
-                    float s = (0.45F + random.nextFloat() * 0.25F) * sz;
-                    pieces.add(new Piece(Blocks.SEAGRASS.defaultBlockState(), x + (random.nextFloat() - 0.5) * 0.25 * sz, y,
-                            z + (random.nextFloat() - 0.5) * 0.25 * sz, s, s, random.nextInt(4)));
+                    float s = (0.3F + random.nextFloat() * 0.25F) * sz;
+                    float sway = 0.14F * Mth.sin(t * 1.2F + i * 1.7F + d);
+                    pieces.add(new Piece(Blocks.SEAGRASS.defaultBlockState(), x + (random.nextFloat() - 0.5) * 0.16 * sz, y,
+                            z + (random.nextFloat() - 0.5) * 0.16 * sz, s * 0.8F, s, s * 0.8F,
+                            Axis.YP.rotationDegrees(random.nextFloat() * 360.0F).mul(Axis.ZP.rotation(sway))));
                 }
             }
-            case 13 -> { // kelp: up most of the water (its size is its height)
-                int n = Math.max(1, Math.round(sz / 0.9F));
+            case 13 -> { // kelp: up most of the water (its size its height; never on up through a tunnel's air), swaying more higher up
+                BlockPos base = BlockPos.containing(x, y, z);
+                int room = 0;
+                while (room < 24 && job.blocks().contains(base.above(room + 1))) room++;
+                float height = Math.min(sz, room + 0.75F);
+                int n = Math.max(1, Math.round(height / 0.9F));
+                double px = x, py = y, pz = z;
+                double dx = Math.cos(Math.toRadians(yaw)), dz = Math.sin(Math.toRadians(yaw));
                 for (int k = 0; k < n; k++) {
-                    pieces.add(new Piece(k == n - 1 ? Blocks.KELP.defaultBlockState() : Blocks.KELP_PLANT.defaultBlockState(), x, y + k * 0.9, z, 0.7F, 0.9F, turn));
+                    float lean = (k + 1) * 0.045F * Mth.sin(t * 0.6F + d) + 0.03F * Mth.sin(t * 1.1F + k);
+                    Quaternionf rot = Axis.YP.rotationDegrees(90.0F - yaw).mul(Axis.XP.rotation(lean));
+                    pieces.add(new Piece(k == n - 1 ? Blocks.KELP.defaultBlockState() : Blocks.KELP_PLANT.defaultBlockState(), px, py, pz, 0.7F, 0.9F, 0.7F, rot));
+                    px += dx * Math.sin(lean) * 0.9;
+                    pz += dz * Math.sin(lean) * 0.9;
+                    py += Math.cos(lean) * 0.9;
                 }
             }
             default -> { // one of its own models
@@ -382,10 +413,10 @@ public final class VanillaAquariumRenderer {
         }
         put.accept(Blocks.BLACK_CONCRETE.defaultBlockState(), new double[] {0, 2.25, -1.45, 0.5, 0.5, 0.1});
         // the mast, its yard across, and what's left of the sail
-        for (int h = 2; h <= 6; h++) put.accept(rail, new double[] {0, h, 1, 1, 1, 1});
-        put.accept(Blocks.STRIPPED_OAK_LOG.defaultBlockState(), new double[] {0, 5.6, 1, 3.6, 0.3, 0.3});
-        put.accept(Blocks.WHITE_WOOL.defaultBlockState(), new double[] {0, 4.3, 1.25, 3.0, 1.3, 0.1});
-        put.accept(Blocks.WHITE_WOOL.defaultBlockState(), new double[] {-0.6, 3.2, 1.25, 1.7, 1.1, 0.1});
+        for (int h = 2; h <= 4; h++) put.accept(rail, new double[] {0, h, 1, 1, 1, 1});
+        put.accept(Blocks.STRIPPED_OAK_LOG.defaultBlockState(), new double[] {0, 4.4, 1, 3.4, 0.3, 0.3});
+        put.accept(Blocks.WHITE_WOOL.defaultBlockState(), new double[] {0, 3.4, 1.25, 2.8, 1.0, 0.1});
+        put.accept(Blocks.WHITE_WOOL.defaultBlockState(), new double[] {-0.6, 2.6, 1.25, 1.6, 0.8, 0.1});
     }
 
     private static void piece(ClientLevel level, Piece p, PoseStack poseStack, MultiBufferSource buffers) {

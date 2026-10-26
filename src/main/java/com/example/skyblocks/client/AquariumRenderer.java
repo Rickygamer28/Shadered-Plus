@@ -88,7 +88,52 @@ public final class AquariumRenderer {
      * from its corner), its decorations (4 each, as the shader has them) and its outside faces (4 corners each, in the
      * world).
      */
-    public record VanillaJob(BlockPos min, boolean ocean, float[] fish, int fishCount, float[] decor, int decorCount, float[] faces) {}
+    public record VanillaJob(BlockPos min, boolean ocean, float[] fish, int fishCount, float[] decor, int decorCount, float[] faces,
+                             Set<BlockPos> blocks, Vec3 centre, Runnable picture) {}
+
+    /**
+     * Draws a vanilla tank's water (its picture: as an aquarium's, without its own fish or decorations, nor its depth)
+     * now - each tank in turn, the farthest first, then its fish and its depth (so a nearer tank covers a farther
+     * one's fish).
+     */
+    static void drawPicture(VanillaJob job, Matrix4f view) {
+        if (shader == null || job.picture() == null) {
+            return;
+        }
+        Matrix4fStackScope scope = new Matrix4fStackScope(view);
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthFunc(GL11.GL_LEQUAL);
+        RenderSystem.depthMask(false);
+        RenderSystem.disableBlend();
+        RenderSystem.disableCull();
+        RenderSystem.enablePolygonOffset();
+        RenderSystem.polygonOffset(-2.0F, -20.0F);
+        try {
+            RenderSystem.setShader(() -> shader);
+            job.picture().run();
+        } finally {
+            RenderSystem.polygonOffset(0.0F, 0.0F);
+            RenderSystem.disablePolygonOffset();
+            RenderSystem.enableCull();
+            RenderSystem.depthMask(true);
+            scope.close();
+        }
+    }
+
+    /** The model-view set to view while open. */
+    private static final class Matrix4fStackScope implements AutoCloseable {
+        Matrix4fStackScope(Matrix4f view) {
+            RenderSystem.getModelViewStack().pushMatrix();
+            RenderSystem.getModelViewStack().set(view);
+            RenderSystem.applyModelViewMatrix();
+        }
+
+        @Override
+        public void close() {
+            RenderSystem.getModelViewStack().popMatrix();
+            RenderSystem.applyModelViewMatrix();
+        }
+    }
 
     static final List<VanillaJob> VANILLA_JOBS = new ArrayList<>();
     private static boolean dirty = true;
@@ -232,9 +277,22 @@ public final class AquariumRenderer {
                 shader.safeGetUniform("BoxSize").set((float) floor.sizeX, (float) floor.sizeY, (float) floor.sizeZ);
                 shader.safeGetUniform("Seed").set(seed);
                 setShape(floor);
-                if (floor.vanilla && writeDepth) { // (its fish as worked out just now, for the models)
+                if (floor.vanilla && writeDepth) { // (its fish as worked out just now, for the models; its water drawn with them)
+                    Runnable picture = () -> {
+                        shader.safeGetUniform("BoxMin").set(mx, my, mz);
+                        shader.safeGetUniform("BoxSize").set((float) floor.sizeX, (float) floor.sizeY, (float) floor.sizeZ);
+                        shader.safeGetUniform("Seed").set(seed);
+                        setShapeOnly(floor);
+                        MeshData later = mesh(floor, shown, cam); // (built when drawn: the builder is shared)
+                        if (later != null) {
+                            BufferUploader.drawWithShader(later);
+                        }
+                    };
                     VANILLA_JOBS.add(new VanillaJob(floor.min, floor.ocean, java.util.Arrays.copyOf(FISH_DATA, floor.fishCount * 16), floor.fishCount,
-                            java.util.Arrays.copyOf(floor.decor, floor.decorCount * 4), floor.decorCount, faceCorners(floor)));
+                            java.util.Arrays.copyOf(floor.decor, floor.decorCount * 4), floor.decorCount, faceCorners(floor), floor.blocks,
+                            new Vec3(floor.min.getX() + floor.sizeX * 0.5, floor.min.getY() + floor.sizeY * 0.5, floor.min.getZ() + floor.sizeZ * 0.5),
+                            picture));
+                    continue;
                 }
                 MeshData mesh = mesh(floor, shown, cam);
                 RenderSystem.depthMask(writeDepth && !floor.vanilla); // (a vanilla tank: its own fish go into the picture next, then its depth)
@@ -627,6 +685,18 @@ public final class AquariumRenderer {
         com.mojang.blaze3d.platform.GlStateManager._pixelStore(GL11.GL_UNPACK_SKIP_ROWS, 0);
         com.mojang.blaze3d.platform.GlStateManager._pixelStore(GL11.GL_UNPACK_ALIGNMENT, 4);
         GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, org.lwjgl.opengl.GL30.GL_RGBA32F, 4, MAX_FISH, 0, GL11.GL_RGBA, GL11.GL_FLOAT, FISH_BUF);
+    }
+
+    /** As setShape, without working the fish out again (a vanilla tank's water, drawn after its fish were). */
+    private static void setShapeOnly(Floor floor) {
+        float[] o = floor.occupancy;
+        for (int v = 0; v < OCC_VECS; v++) {
+            shader.safeGetUniform("Occ" + v).set(o[v * 4], o[v * 4 + 1], o[v * 4 + 2], o[v * 4 + 3]);
+        }
+        shader.safeGetUniform("Full").set(floor.full ? 1.0F : 0.0F);
+        shader.safeGetUniform("FishCount").set(0.0F);
+        shader.safeGetUniform("Ocean").set(floor.ocean ? 1.0F : 0.0F);
+        shader.safeGetUniform("DecoCount").set(0.0F);
     }
 
     private static void setShape(Floor floor) {
