@@ -172,7 +172,14 @@ final class VanillaPondRenderer {
         float px = m + (1.0F - 2.0F * m) * hx + 0.02F * Mth.sin(t * 0.07F + hy * 9.0F);
         float pz = m + (1.0F - 2.0F * m) * hz + 0.02F * Mth.cos(t * 0.05F + hx * 7.0F);
         float ang = KoiPondBlock.u01(KoiPondBlock.hashu(x, z, 40 + k)) * 6.2832F + t * 0.02F;
-        return new float[] {px, pz, r, ang};
+        // a frog sitting on it shifts round now and then, and the pad turns with it (as in the koi pond)
+        float sway = 0.0F;
+        double te = k == 0 ? KoiPondBlock.frogTime(pos, t) : -1.0;
+        if (te >= 0.0) {
+            float sit = (float) Math.max(0.0, Math.min(1.0, te < 6.0 ? te - 5.0 : te > 70.0 ? 71.0 - te : 1.0));
+            sway = 0.5F * Mth.sin(t * 0.3F + hy * 9.0F) * sit * sit;
+        }
+        return new float[] {px, pz, r, ang + sway, sway};
     }
 
     private void lilyPad(float[] pad, PoseStack poseStack, MultiBufferSource buffers, int light, boolean flower) {
@@ -228,25 +235,23 @@ final class VanillaPondRenderer {
         float wx = pad[0] + mx * hop, wz = pad[1] + mz * hop;
         float x = pad[0], z = pad[1], y = SURF + 0.005F;
         float turn = 0.0F; // (0 facing the water .. 1 facing the pad: turning round once it's on)
-        float sway = 0.5F * Mth.sin(t * 0.3F + pad[2] * 40.0F) * 0.4F;
+        float sway = pad[4]; // (turning with its pad)
         if (te < 6.0) { // leaping on
             float u = (float) (te - 5.0);
             x = wx + (pad[0] - wx) * u;
             z = wz + (pad[1] - wz) * u;
             y = SURF - 0.14F * (1.0F - u) * (1.0F - u) + 0.3F * u * (1.0F - u);
             turn = 1.0F;
-            sway = 0.0F;
         } else if (te < 7.2) {
             float u = (float) ((te - 6.0) / 1.2);
             turn = 1.0F - u * u * (3.0F - 2.0F * u);
-            sway *= u;
         } else if (te > 70.0) { // hopping off
             float u = (float) (te - 70.0);
             x = pad[0] + (wx - pad[0]) * u;
             z = pad[1] + (wz - pad[1]) * u;
             y = SURF + 0.3F * u * (1.0F - u) - 0.14F * u * u;
         }
-        float yaw = yawOf(mx, mz) + 180.0F * turn + (float) Math.toDegrees(sway);
+        float yaw = yawOf(mx, mz) + 180.0F * turn - (float) Math.toDegrees(sway); // (the pad's turn, the same way round)
         model(poseStack, buffers, frog, FROGS[kind], x, y, z, yaw, scale, light, 0xFFFFFFFF, false);
     }
 
