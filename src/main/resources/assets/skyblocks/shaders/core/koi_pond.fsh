@@ -84,6 +84,7 @@ float pondBlocks;
 int pondRound;
 vec2 cell0;
 int pondFish;
+int pondStones; // (stepping stones: on this block (bit 0), on the eight round it (bits 1-8, as pondRound))
 
 // is this block (x, z) part of the pond?
 bool isPond(vec2 cell) {
@@ -96,6 +97,17 @@ bool isPond(vec2 cell) {
     for (int r = 0; r < 8; r++) {
         if (r >= pondRects) break;
         if (all(greaterThanEqual(cell, pondRect[r].xy)) && all(lessThan(cell, pondRect[r].zw))) return true;
+    }
+    return false;
+}
+
+// is there a stepping stone on this block (this one or one next to it)? Frogs sit on it.
+bool stoneAt(vec2 cell) {
+    vec2 d = cell - cell0;
+    if (d == vec2(0.0)) return (pondStones & 1) != 0;
+    if (max(abs(d.x), abs(d.y)) < 1.5) {
+        int bit = d.y == 0.0 ? (d.x < 0.0 ? 0 : 1) : d.x == 0.0 ? (d.y < 0.0 ? 2 : 3) : d.y < 0.0 ? (d.x < 0.0 ? 4 : 5) : (d.x < 0.0 ? 6 : 7);
+        return (pondStones & (2 << bit)) != 0;
     }
     return false;
 }
@@ -223,7 +235,7 @@ uvec3 padKey(vec2 cell, int k) {
 // water; 0..-1 hopping off). At most one frog to a block (on its first pad); each stays a minute or so, then hops off,
 // and a while later another may come - never two at once.
 float gFrogTe; // (how far into its visit the last frog asked about is: seconds)
-bool frogOn(vec2 cell, int k, float t, out vec3 info, out float hop) {
+bool frogOn(vec2 cell, int k, float t, bool stone, out vec3 info, out float hop) {
     info = vec3(0.0);
     hop = 0.0;
     if (k != 0) {
@@ -238,7 +250,7 @@ bool frogOn(vec2 cell, int k, float t, out vec3 info, out float hop) {
     vec2 he = vec2(u01(hashu(key + uvec3(0u, 0u, 200000u + epoch))), u01(hashu(key + uvec3(0u, 0u, 500000u + epoch))));
     info = vec3(floor(he.y * 3.0), 0.62 + 0.16 * hf.x, he.x * 6.2832); // (z: which way it faces, on its pad)
     hop = te < 6.0 ? te - 5.0 : te > 70.0 ? -(te - 70.0) : 1.0;
-    return hf.y < 0.55 && he.x < 0.6 && te > 5.0 && te < 71.0;
+    return (stone || hf.y < 0.55) && he.x < 0.6 && te > 5.0 && te < 71.0; // (a stepping stone: frogs like it more)
 }
 
 // lily pad k of a cell: is there one, where, how big, and which way it is turned (a frog sitting on it turns with it)
@@ -252,7 +264,7 @@ bool padParams(vec2 cell, int k, float t, out vec2 c, out float r, out vec2 h, o
     ang = h2.x * 6.28 + t * 0.02;
     vec3 info;
     float hop;
-    if (r >= 0.09 && frogOn(cell, k, t, info, hop)) {
+    if (r >= 0.09 && !stoneAt(cell) && frogOn(cell, k, t, false, info, hop)) {
         float sit = clamp(hop >= 0.0 ? hop : 1.0 + hop, 0.0, 1.0); // (eases in as it lands, out as it leaves)
         ang += 0.5 * sin(t * 0.3 + h2.y * 9.0) * sit * sit; // (the frog shifting round, the pad turning under it)
     }
@@ -301,7 +313,14 @@ vec4 frogHit(vec3 p0, vec3 rd, float t, float light) {
                 vec3 info;
                 float hop;
                 float pang;
-                if (!padParams(cell, k, t, c, r, h, h2, pang) || r < 0.09 || !frogOn(cell, k, t, info, hop)) continue;
+                float seat = SURF;
+                if (stoneAt(cell)) { // (on the stepping stone there, in the middle of the block, not a lily pad)
+                    if (k != 0 || !frogOn(cell, 0, t, true, info, hop)) continue;
+                    c = cell + 0.5;
+                    h2 = hash22(cell * 3.1);
+                    pang = h2.x * 6.28 + t * 0.02;
+                    seat = 1.0 + 2.0 / 16.0;
+                } else if (!padParams(cell, k, t, c, r, h, h2, pang) || r < 0.09 || !frogOn(cell, k, t, false, info, hop)) continue;
                 // hopping on: a leap up out of the water onto the pad; hopping off: a leap forward into the water
                 float u = hop > 0.0 ? 1.0 - hop : -hop;
                 vec3 off = hop >= 1.0 ? vec3(0.0) : hop > 0.0 ? vec3(0.0, 8.0 * u * (1.0 - u) - 3.0 * u * u, -2.5 * u)
@@ -319,7 +338,7 @@ vec4 frogHit(vec3 p0, vec3 rd, float t, float light) {
                 float face = te < 6.0 ? aIn + 3.1416 : aIn + 3.1416 * (1.0 - smoothstep(6.0, 7.2, te)) + sway;
                 float ca = cos(face), sa = sin(face);
                 float sc = 16.0 / info.y;
-                vec3 ro = vec3(pTop.x - c.x, pTop.y - SURF, pTop.z - c.y) * sc;
+                vec3 ro = vec3(pTop.x - c.x, pTop.y - seat, pTop.z - c.y) * sc;
                 vec3 rr = rd;
                 ro.xz = mat2(ca, -sa, sa, ca) * ro.xz;
                 rr.xz = mat2(ca, -sa, sa, ca) * rr.xz;
@@ -377,7 +396,7 @@ vec4 padAt(vec2 q, float t) {
                 col *= 0.8 + 0.2 * smoothstep(r, r * 0.85, dist);
                 vec3 info;
                 float hop;
-                if (r >= 0.09 && frogOn(cell, k, t, info, hop) && hop >= 1.0) {
+                if (r >= 0.09 && !stoneAt(cell) && frogOn(cell, k, t, false, info, hop) && hop >= 1.0) {
                     col *= 0.55 + 0.45 * smoothstep(0.06 * info.y, 0.16 * info.y, dist); // (the frog's shadow)
                 } else if (h.y > 0.72 && dist < r * 0.32) { // a water-lily flower
                     float petals = 0.5 + 0.5 * cos(atan(d.y, d.x) * 8.0);
@@ -624,6 +643,7 @@ void main() {
     int word = (vShape.x & 65535) | ((vShape.y & 65535) << 16);
     int row = word & 255;
     pondRound = (word >> 8) & 255;
+    pondStones = (word >> 16) & 511;
     vec4 head = texelFetch(Sampler0, ivec2(0, row), 0) * 255.0 + 0.5;
     pondRects = clamp(int(head.r), 1, 8);
     pondBlocks = max(floor(head.g) + 256.0 * floor(head.b), 1.0);

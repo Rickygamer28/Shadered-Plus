@@ -52,6 +52,7 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.VISUALIZER.get(), VisualizerRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.HOLOGRAM.get(), HologramRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.JELLYFISH_TANK.get(), JellyTankRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.POND_WATERFALL.get(), PondWaterfallRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.KOI_POND.get(), KoiPondRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.NEON_SIGN.get(), NeonSignRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.FOG_MACHINE.get(), FogMachineRenderer::new);

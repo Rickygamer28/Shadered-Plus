@@ -17,7 +17,7 @@ public final class AquariumSettings {
     public static final String[] NAMES = {"clownfish", "blue_tang", "yellow_tang", "neon_tetra", "angelfish", "goldfish", "betta",
             "pufferfish", "guppy", "discus", "shark", "tuna", "manta_ray", "sea_turtle", "grouper", "jellyfish", "dolphin", "sardine",
             "ocean_sunfish", "basking_shark", "hermit_crab", "crab", "stingray", "octopus", "lobster", "shrimp",
-            "cod", "salmon", "tropical_fish", "tadpole", "squid", "glow_squid", "axolotl"};
+            "cod", "salmon", "tropical_fish", "tadpole", "squid", "glow_squid", "axolotl", "anglerfish", "lanternfish"};
     private static final boolean[] ENABLED = new boolean[NAMES.length];
     private static boolean loaded;
     private static boolean nightMode = true;

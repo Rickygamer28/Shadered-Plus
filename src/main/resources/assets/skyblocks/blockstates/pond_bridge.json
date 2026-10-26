@@ -1,0 +1,25 @@
+{
+  "variants": {
+    "axis=x,rise=0": {
+      "model": "skyblocks:block/pond_bridge_0",
+      "y": 90
+    },
+    "axis=x,rise=1": {
+      "model": "skyblocks:block/pond_bridge_1",
+      "y": 90
+    },
+    "axis=x,rise=2": {
+      "model": "skyblocks:block/pond_bridge_2",
+      "y": 90
+    },
+    "axis=z,rise=0": {
+      "model": "skyblocks:block/pond_bridge_0"
+    },
+    "axis=z,rise=1": {
+      "model": "skyblocks:block/pond_bridge_1"
+    },
+    "axis=z,rise=2": {
+      "model": "skyblocks:block/pond_bridge_2"
+    }
+  }
+}

@@ -33,6 +33,7 @@ uniform float FishCount;
 uniform float Ocean;
 uniform float Night;   // 0 day .. 1 night: the tank lights dimmed, the jellyfish glowing
 uniform float Light;   // the tank's light: 0 daylight, 1 moonlight, 2 sunset, 3 reef
+uniform float Deep;    // 1: the deep sea aquarium (always dark; no plants, no sunlight; its creatures glow)
 // decorations: (x, y, z of its base, type + 8 * (turn + 16 * size * 10))
 uniform vec4 Deco0;
 uniform vec4 Deco1;
@@ -180,6 +181,9 @@ Species species(int k) {
     if (k == 29) return Species(vec3(0.05, 0.04, 0.036), vec3(0.095, 0.036, 0.004), vec3(0.0), 1.0);             // tadpole
     if (k == 30 || k == 31) return Species(vec3(0.3, 0.07, 0.07), vec3(0.13, 0.0, 0.0), vec3(0.0), 0.7);         // squid, glow squid
     if (k == 32) return Species(vec3(0.25, 0.1, 0.1), vec3(0.0), vec3(0.0), 0.6);                                 // axolotl (on the bottom)
+    // the deep sea's
+    if (k == 33) return Species(vec3(0.13, 0.1, 0.09), vec3(0.045, 0.05, 0.006), vec3(0.04, 0.03, 0.006), 0.3);    // anglerfish
+    if (k == 34) return Species(vec3(0.09, 0.03, 0.02), vec3(0.035, 0.035, 0.005), vec3(0.04, 0.02, 0.005), 1.3);  // lanternfish
     return Species(vec3(0.12, 0.035, 0.025), vec3(0.04, 0.035, 0.006), vec3(0.0), 1.5);
 }
 
@@ -257,6 +261,17 @@ float spot(vec2 p, float r) {
 // q.y is the height out from the body and q.z says which: 0 the back's, -1 underneath, 2 a side fin, 3 a filament);
 // rnd: this fish's own random number (colour variants). Each matched to a photo of the real fish.
 vec3 critterColour(int kind, vec3 p, int part, float rnd);
+
+// a lanternfish's lights: small round glowing spots in two rows along its belly and lower side (0..1)
+float photophores(vec3 q) {
+    float m = 0.0;
+    for (int r = 0; r < 2; r++) {
+        float y0 = r == 0 ? -0.42 : -0.72;
+        vec2 d = vec2((fract(q.x * 6.5 + float(r) * 0.5) - 0.5) / 6.5, q.y - y0);
+        if (q.x > -0.8 && q.x < 0.75) m = max(m, smoothstep(0.075, 0.045, length(d * vec2(1.0, 0.85))));
+    }
+    return m;
+}
 vec3 squidColour(int kind, vec3 p, int part, float rnd);
 
 vec3 fishColour(int kind, vec3 q, int part, float rnd) {
@@ -420,6 +435,11 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
         base = mix(base, base * 0.7, smoothstep(0.5, 0.65, fbm(q.xy * vec2(5.0, 4.0) + rnd * 5.0)));
         return mix(base, vec3(0.86, 0.88, 0.9), spot(q.xy * vec2(9.0, 7.0) + rnd * 3.0, 0.13) * smoothstep(-0.3, 0.3, q.x) * 0.85);
     }
+    if (kind == 15 && Deep > 0.5) { // the deep sea's: a deep red crown jellyfish, a ring of blue lights round its rim
+        if (part > 0) return vec3(0.6, 0.12, 0.15);
+        float rim = smoothstep(0.25, 0.0, abs(q.y + 0.15)) * step(0.5, fract(atan(q.z, q.x) * 2.546));
+        return mix(vec3(0.5, 0.04, 0.08) * (0.8 + 0.4 * fbm(q.xz * 5.0)), vec3(0.3, 0.6, 1.0), rim);
+    }
     if (kind == 15) { // jellyfish: mostly sea nettles (orange, dark stripes), some pink-purple ones
         bool nettle = rnd < 0.6;
         if (part == 1) return nettle ? vec3(0.98, 0.9, 0.86) : vec3(0.9, 0.75, 1.0);
@@ -522,6 +542,20 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
         vec3 c = mix(vec3(0.45, 0.38, 0.27), vec3(0.17, 0.14, 0.1), smoothstep(-0.55, 0.2, q.y));
         return mix(c, vec3(0.78, 0.64, 0.3), spot(q.xy * 8.0 + q.z * 4.0 + rnd * 4.0, 0.12) * 0.7);
     }
+    if (kind == 33) { // anglerfish: near black, rough mottled skin, a dark mouth, glassy teeth, its lure's bulb glowing
+        if (part == 3) return vec3(0.75, 1.0, 1.0);
+        if (part == 4) return vec3(0.82, 0.84, 0.8);
+        if (part == 0 && q.z > 6.5) return vec3(0.16, 0.03, 0.05); // (inside its mouth: dark red)
+        vec3 c = mix(vec3(0.07, 0.05, 0.05), vec3(0.2, 0.15, 0.12), fbm(q.xy * 6.0 + q.z * 3.0 + rnd * 5.0));
+        c *= 0.85 + 0.3 * vnoise(q.xy * 22.0 + q.z * 9.0); // (warty)
+        if (part > 0) return c * 1.2;
+        return mix(c, c * 1.5 + 0.03, smoothstep(-0.3, -0.75, q.y));
+    }
+    if (kind == 34) { // lanternfish: dark blue-black back, silvery sides, rows of glowing blue lights along the belly
+        if (part > 0) return vec3(0.25, 0.28, 0.34);
+        vec3 c = mix(vec3(0.62, 0.66, 0.72), vec3(0.08, 0.1, 0.18), smoothstep(-0.1, 0.35, q.y));
+        return mix(c, vec3(0.5, 0.85, 1.0), photophores(q));
+    }
     // sardine: dark blue-green back, bright silver sides, golden tail and back fin
     if (tail || dorsal) return vec3(0.85, 0.78, 0.5);
     if (fin) return vec3(0.85, 0.85, 0.82);
@@ -537,7 +571,7 @@ vec2 eyeAt(int kind) {
 }
 
 float eyeScale(int kind) {
-    return kind == 7 ? 1.3 : kind == 29 ? 1.45 : kind == 28 ? 1.1 : kind == 18 ? 1.25 : kind == 3 || kind == 17 ? 1.2 : kind == 19 ? 0.6 : kind == 10 ? 0.8 : 1.0;
+    return kind == 7 ? 1.3 : kind == 33 ? 0.55 : kind == 34 ? 1.45 : kind == 29 ? 1.45 : kind == 28 ? 1.1 : kind == 18 ? 1.25 : kind == 3 || kind == 17 ? 1.2 : kind == 19 ? 0.6 : kind == 10 ? 0.8 : 1.0;
 }
 
 // the ring round a fish's pupil
@@ -697,6 +731,8 @@ vec4 fishShape(int kind) {
     if (kind == 27) return vec4(0.55, 0.42, 1.0, 0.5);
     if (kind == 28) return vec4(0.5, 0.5, 0.0, 0.9);
     if (kind == 29) return vec4(0.72, 0.9, 4.0, 0.0); // (4: a tadpole's tail, a long leaf of fin round a muscle)
+    if (kind == 33) return vec4(0.66, 0.95, 0.0, 0.35);
+    if (kind == 34) return vec4(0.6, 0.55, 1.0, 0.5);
     return vec4(0.55, 0.4, 1.0, 0.5);
 }
 
@@ -729,6 +765,11 @@ float trunkAt(int kind, Species sp, vec4 sh, vec3 p) {
     float yy = clamp(py / h, -1.0, 1.0);
     float wl = w * (1.0 - 0.28 * yy * yy);
     return max((length(vec2(py / h, p.z / wl)) - 1.0) * min(h, wl), abs(p.x) - L);
+}
+
+// where an anglerfish's lure bulb is (in its own frame), bobbing
+vec3 anglerLure(float L, float H) {
+    return vec3(L * 1.22 + 0.01 * sin(gTime * 1.3), H * 1.5 + 0.012 * sin(gTime * 1.9), 0.012 * sin(gTime * 1.1));
 }
 
 // a fin's height along it (kx: 0 its back end .. 1 its front), as a share of its full height
@@ -817,6 +858,12 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
     if (kind == 14) mr = vec3(L * 0.12, H * 0.1 * (0.6 + 0.8 * gMouth), W * 0.8); // (the grouper's big mouth)
     if (kind == 10 || kind == 16) mr.y = H * 0.04;
     if (kind == 7) { mc = vec3(L * 1.05, -H * 0.16, 0.0); mr = vec3(L * 0.05, H * 0.035 * (0.5 + gMouth), W * 0.14); } // (a small round mouth)
+    if (kind == 33) { // the anglerfish: a huge mouth, gaping slowly, its lower jaw jutting out
+        body = smin(body, sdEllipsoid(p - vec3(L * 0.8, -H * 0.45, 0.0), vec3(L * 0.36, H * 0.32, W * 0.78)), 0.25 * H);
+        mc = vec3(L * 0.92, -H * 0.16, 0.0); // (a wide gape, cut back along both sides: seen from the side too)
+        mr = vec3(L * 0.5, H * 0.2 * (0.8 + 0.4 * gMouth), W * 0.85);
+    }
+    if (kind == 33 && -sdEllipsoid(p - mc, mr) > body) mouthFace = 1.0; // (inside its mouth)
     if (kind != 19) body = max(body, -sdEllipsoid(p - mc, mr));
     float res = body, best = body;
     ptype = 0;
@@ -962,6 +1009,33 @@ float fishBody(int kind, Species sp, vec3 p, float wave, float flap, out int pty
             best = pelv; ptype = 2;
             q = vec3(lq.x / (L * 0.13), 0.0, 2.0);
         }
+    }
+    if (kind == 33) {
+        // needle teeth round its mouth: the lower ones pointing up, the upper ones down
+        float teeth = 1.0e9;
+        if (p.x > L * 0.4) { // (both sides at once: the teeth are the same each side)
+            vec3 pt = vec3(p.x, p.y, abs(p.z));
+            float open = 0.8 + 0.4 * gMouth;
+            for (int k = 0; k < 5; k++) {
+                float u = float(k) / 4.0;
+                float xt = L * (0.55 + 0.45 * u);
+                float zt = W * 0.62 * (1.0 - 0.55 * u * u) + 0.002;
+                vec3 lo1 = vec3(xt, -H * (0.16 + 0.2 * open), zt), up1 = vec3(xt - L * 0.03, -H * (0.16 - 0.2 * open), zt);
+                float len = H * (0.18 + 0.12 * u);
+                teeth = min(teeth, sdTaper(pt, lo1, lo1 + vec3(L * 0.02, len, -0.004), 0.0042, 0.0006));
+                teeth = min(teeth, sdTaper(pt, up1, up1 - vec3(-L * 0.02, len * 0.8, 0.004), 0.0038, 0.0006));
+            }
+        }
+        res = min(res, teeth);
+        if (teeth < best) { best = teeth; ptype = 4; q = vec3(0.0); }
+        // its lure: a stalk from the top of its head arching forward, a glowing bulb at the end, bobbing
+        vec3 s0 = vec3(L * 0.45, H * 0.85, 0.0), s1 = vec3(L * 0.85, H * 1.7, 0.0), s2 = anglerLure(L, H);
+        float stalk = min(sdTaper(p, s0, s1, 0.005, 0.0035), sdTaper(p, s1, s2, 0.0035, 0.0025));
+        res = smin(res, stalk, 0.01);
+        if (stalk < best) { best = stalk; ptype = 2; q = vec3(0.0, 0.5, 0.0); }
+        float bulb = length(p - s2) - 0.017;
+        res = min(res, bulb);
+        if (bulb < best) { best = bulb; ptype = 3; q = vec3(0.0); }
     }
     if (kind == 26) { // the cod's barbel, hanging from its chin
         float bar = sdCapsule(p, vec3(L * 0.86, -H * 0.4, 0.0), vec3(L * 0.8 + 0.008 * sin(gTime * 2.0 + wave * 0.1), -H * 0.78, 0.0), 0.0035);
@@ -1779,6 +1853,7 @@ void main() {
     int count = int(FishCount + 0.5);
     vec3 fishCol = vec3(0.0);
     vec3 glow = vec3(0.0); // (light a fish gives off itself: the jellyfish at night)
+    vec3 lureHalo = vec3(0.0); // (the glow round anglerfish's lures, in the water)
     bool fish = false;
     float fishAlpha = 1.0;
     vec3 edgeCol = vec3(0.0);
@@ -1808,8 +1883,18 @@ void main() {
         gTime = t;
         gPulse = squeeze;
         gWalk = f3.w;
+        if (kind == 33) { // an anglerfish's lure: a soft glow in the water round its bulb (seen even where the fish isn't)
+            vec3 lure = anglerLure(sp.body.x, sp.body.y);
+            vec3 lw = c + (fwd * lure.x + up * lure.y + side * lure.z) * size - rot;
+            float along = dot(lw, rd);
+            if (along > tEnter && along < hitT) {
+                float dd = length(lw - rd * along);
+                lureHalo += vec3(0.35, 0.85, 1.0) * exp(-dd * dd / (0.0036 * size * size)) * 0.55;
+            }
+        }
         // (a quick test first: does the ray pass near this fish at all?)
-        float tallest = sp.body.y + max(sp.fin.y * 1.3, sp.body.y * 0.45 * fishShape(kind).w) + (kind == 4 ? sp.body.y : 0.0);
+        float tallest = sp.body.y + max(sp.fin.y * 1.3, sp.body.y * 0.45 * fishShape(kind).w) + (kind == 4 ? sp.body.y : 0.0)
+                + (kind == 33 ? sp.body.y * 0.75 : 0.0); // (the anglerfish's lure)
         float reachAll = isCrawler(kind) ? size * (length(sp.body) + 0.02) : isSquid(kind) ? size * 0.62 : size * max(sp.body.x * 1.3 + sp.tail.x * 2.2 + max(sp.body.z, sp.fin.z) + sp.tail.y * (kind == 15 ? 2.2 : 0.6),
                 length(vec2(sp.body.x + sp.tail.x * 2.0, tallest)) + 0.02);
         vec3 oc = rot - c;
@@ -1827,7 +1912,7 @@ void main() {
         vec3 ld = vec3(dot(rd, F), dot(rd, U), dot(rd, S));
         if (isFish(kind)) { // a much tighter box round it, in its own frame: far less tracing
             float L = sp.body.x;
-            float xb = -(0.92 * L + 2.3 * sp.tail.x) - 0.01, xf = 1.2 * L;
+            float xb = -(0.92 * L + 2.3 * sp.tail.x) - 0.01, xf = (kind == 33 ? 1.45 : 1.2) * L;
             float bigP = kind == 10 || kind == 16 || kind == 19 ? 1.7 : 1.0;
             float zb = max(sp.body.z, 0.85 * sp.body.z + 0.4 * L * bigP) + 0.35 * L + 0.5 * abs(f3.y) * xb * xb + 0.01 + (kind == 18 ? 0.3 * sp.fin.y : 0.0);
             float yb = max(max(tallest, 1.25 * sp.tail.y), kind == 7 ? 1.2 * sp.body.y : 0.0) + (kind == 16 ? 0.3 * L : 0.0) + 0.01;
@@ -1916,7 +2001,7 @@ void main() {
                     base *= 0.6; // (a dark rim round the eye)
                 }
             }
-            if (part >= 1 && isFish(kind) && kind != 10 && kind != 16 && kind != 19 && kind != 29) {
+            if (part >= 1 && part <= 2 && isFish(kind) && kind != 10 && kind != 16 && kind != 19 && kind != 29) {
                 float rc = part == 1 ? q.y * 8.0 : q.x * 10.0; // (rays run along a tail, up a fin)
                 float ray = 1.0 - smoothstep(0.0, 0.25, abs(fract(rc) - 0.5) - 0.2);
                 // (faded out where the rays would be finer than a few pixels: far off they'd shimmer)
@@ -1925,7 +2010,7 @@ void main() {
                 float edge = part == 1 ? 0.5 - 0.5 * q.x : abs(q.y);
                 base = mix(base, base * 1.15 + vec3(0.05, 0.08, 0.1), smoothstep(0.5, 1.0, edge) * 0.5);
             }
-            if (part == 0 && !isEye && isFish(kind) && kind != 10 && kind != 16 && kind != 19 && kind != 18 && kind != 29) {
+            if (part == 0 && !isEye && isFish(kind) && kind != 10 && kind != 16 && kind != 19 && kind != 18 && kind != 29 && kind != 33) {
                 float ss = sp.body.y * (kind == 5 || kind == 17 ? 0.13 : 0.1);
                 vec2 sc = vec2(-q.x * sp.body.x, q.y * sp.body.y) / ss;
                 sc.y += 0.5 * floor(sc.x);
@@ -1961,6 +2046,11 @@ void main() {
             float caust = caustics(p.xz, t) * max(n.y, 0.0) * (p.y / BoxSize.y);
             shade += vec3(0.6, 0.9, 1.0) * caust * 0.45 * ao;
             shade += vec3(0.5, 0.8, 1.0) * pow(1.0 - max(dot(n, -rd), 0.0), 3.0) * 0.22; // (light round the edges, from the water)
+            if (kind == 33) { // (lit blue by its own lure)
+                vec3 lure = anglerLure(sp.body.x, sp.body.y);
+                shade += base * vec3(0.3, 0.75, 0.9) * 1.6 * exp(-length(pl - lure) / 0.07);
+                if (part == 3) shade = vec3(0.8, 1.0, 1.0);
+            }
             float sGlow = kind == 31 ? squidGlow(q, part) * (0.8 + 0.4 * pulse) : 0.0; // (a glow squid's lights, by day too)
             shade += vec3(0.2, 0.95, 0.8) * sGlow * 0.45;
             float alpha = (kind == 15 ? 0.55 : 1.0) * cover; // (the jellyfish is see-through)
@@ -1969,7 +2059,10 @@ void main() {
                 fish = true;
                 fishCol = shade;
                 fishAlpha = alpha;
-                glow = kind == 15 ? base * (1.3 + 0.5 * pulse) * alpha : kind == 31 ? vec3(0.25, 1.0, 0.85) * sGlow * 1.4 : kind == 3 && part == 0 && abs(q.y - 0.12) < 0.13 ? vec3(0.1, 0.6, 0.8) : vec3(0.0);
+                glow = kind == 15 ? (Deep > 0.5 ? vec3(0.25, 0.55, 1.0) * (0.5 + 0.8 * pulse) * alpha : base * (1.3 + 0.5 * pulse) * alpha)
+                     : kind == 33 && part == 3 ? vec3(0.6, 1.0, 1.0) * 2.0
+                     : kind == 34 && part == 0 ? vec3(0.3, 0.65, 1.0) * photophores(q) * 1.6
+                     : kind == 31 ? vec3(0.25, 1.0, 0.85) * sGlow * 1.4 : kind == 3 && part == 0 && abs(q.y - 0.12) < 0.13 ? vec3(0.1, 0.6, 0.8) : vec3(0.0);
             } else { // (a soft edge: laid over whatever is behind, once that is known)
                 edgeT = tf;
                 edgeCol = shade;
@@ -2127,13 +2220,24 @@ void main() {
             float pebble = 0.94 + 0.1 * hash22(floor(p.xz * 30.0)).x;
             col = vec3(0.85, 0.75, 0.52) * pebble * 0.82;
             col += vec3(0.6, 0.85, 1.0) * caustics(p.xz, t) * 0.55;
+            if (Deep > 0.5) { // (the deep sea floor: grey ooze, no sunlight playing on it)
+                col = mix(vec3(0.3, 0.32, 0.36), vec3(0.42, 0.43, 0.46), fbm(p.xz * 9.0)) * pebble;
+            }
         } else if (up) {
             // the underside of the surface: bright, rippling (rings spreading where the bubbles reach it)
             col = vec3(0.35, 0.75, 0.85) + vec3(0.5, 0.8, 0.9) * caustics(p.xz * 1.3, t * 1.4) * 0.6;
             col += vec3(0.6, 0.9, 1.0) * stoneRipple(p.xz, stone0, stone1, t) * 0.35;
+            if (Deep > 0.5) col = vec3(0.02, 0.05, 0.1); // (no light from above down here)
         } else {
             // the back glass: deep water, seaweed swaying on it, darker lower down
             vec2 wall = exitAxis == 0 ? vec2(p.z, p.y) : vec2(p.x, p.y);
+            if (Deep > 0.5) { // the deep sea: dark water on and on, faint glowing specks far off
+                col = mix(vec3(0.0, 0.01, 0.03), vec3(0.01, 0.03, 0.07), p.y / BoxSize.y);
+                vec2 sc = floor(wall * 9.0);
+                vec2 hh = hash22(sc + 3.3);
+                if (hh.x > 0.93) col += vec3(0.2, 0.6, 0.9) * smoothstep(0.12, 0.0, length(fract(wall * 9.0) - 0.5 - (hh - 0.5) * 0.6))
+                                       * (0.5 + 0.5 * sin(t * 1.3 + hh.y * 40.0));
+            } else {
             col = Ocean > 0.5 ? mix(vec3(0.0, 0.08, 0.2), vec3(0.04, 0.3, 0.5), p.y / BoxSize.y)
                               : mix(vec3(0.02, 0.18, 0.3), vec3(0.1, 0.45, 0.55), p.y / BoxSize.y);
             for (int k = 0; k < 3; k++) {
@@ -2159,6 +2263,7 @@ void main() {
                     col = hue(hash11(ci * 3.3) * 0.25 + 0.85) * (0.6 + 0.4 * (1.0 - blob / r));
                 }
             }
+            }
         }
     }
     if (fish && fishAlpha <= 0.99) {
@@ -2183,6 +2288,7 @@ void main() {
     vec3 waterCol = Ocean > 0.5 ? mix(vec3(0.0, 0.1, 0.24), vec3(0.05, 0.38, 0.58), clamp(entry.y / BoxSize.y, 0.0, 1.0))
                                 : mix(vec3(0.02, 0.2, 0.32), vec3(0.15, 0.55, 0.62), clamp(entry.y / BoxSize.y, 0.0, 1.0));
     waterCol = lightWater(clamp(entry.y / BoxSize.y, 0.0, 1.0), waterCol);
+    if (Deep > 0.5) waterCol = mix(vec3(0.0, 0.008, 0.03), vec3(0.0, 0.03, 0.08), clamp(entry.y / BoxSize.y, 0.0, 1.0));
     col = mix(col, waterCol, 1.0 - exp(-travel * (Ocean > 0.5 ? 0.22 : 0.3)));
     col += vec3(0.25, 0.5, 0.55) * 0.08 * (0.5 + 0.5 * sin(entry.x * 4.0 + entry.z * 3.0 + entry.y * 2.0 + t * 1.5));
 
@@ -2209,7 +2315,7 @@ void main() {
             vec3 cell = floor(sp * 5.0);
             vec2 h1 = hash22(cell.xy + cell.z * 7.13);
             vec2 h2 = hash22(cell.zx + 3.71);
-            if (h2.y > 0.95) {
+            if (h2.y > (Deep > 0.5 ? 0.86 : 0.95)) { // (the deep sea thick with it)
                 vec3 cp = (cell + 0.2 + 0.6 * vec3(h1, h2.x)) / 5.0 + vec3(0.0, t * 0.04, 0.0);
                 vec3 w = cp - entry;
                 float along = dot(w, rd);
@@ -2221,6 +2327,7 @@ void main() {
         }
         col += vec3(0.25, 0.85, 1.0) * min(spark, 1.0) * 0.7 * glowing;
         if (!deco) col += glow * glowing * exp(-seen * 0.25);
+        col += lureHalo * glowing;
     }
 
     // ---- the frame round the tank's edges ----

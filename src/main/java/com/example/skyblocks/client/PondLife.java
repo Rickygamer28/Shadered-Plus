@@ -57,6 +57,8 @@ public final class PondLife {
     private static final Map<Long, Seen> PONDS = new HashMap<>();
     private static final Set<Long> VANILLA_WATER = new HashSet<>();
     private static ModelPart dragonfly;
+    /** Where pond waterfalls land this frame: (x, y, z) each. */
+    private static final List<double[]> FALLS = new ArrayList<>();
 
     private PondLife() {}
 
@@ -68,6 +70,11 @@ public final class PondLife {
     /** A vanilla pond block's water was drawn this frame (for its rain rings and the moon on it). */
     static void sawVanillaWater(BlockPos pos) {
         VANILLA_WATER.add(pos.asLong());
+    }
+
+    /** A pond waterfall's water lands here this frame (its foam and rings). */
+    static void sawWaterfall(double x, double y, double z, net.minecraft.core.Direction facing) {
+        FALLS.add(new double[] {x, y, z});
     }
 
     /** 1 by day .. 0 at night, as the ponds take it. */
@@ -99,9 +106,10 @@ public final class PondLife {
                 return;
             }
             ClientLevel level = Minecraft.getInstance().level;
-            if (level == null || (PONDS.isEmpty() && VANILLA_WATER.isEmpty())) {
+            if (level == null || (PONDS.isEmpty() && VANILLA_WATER.isEmpty() && FALLS.isEmpty())) {
                 PONDS.clear();
                 VANILLA_WATER.clear();
+                FALLS.clear();
                 return;
             }
             Vec3 cam = event.getCamera().getPosition();
@@ -129,12 +137,47 @@ public final class PondLife {
                     }
                 }
                 vanillaWater(level, cam, pt, t, day, poseStack, buffers);
+                falls(t, day, poseStack, buffers);
                 buffers.endBatch();
             } finally {
                 modelView.popMatrix();
                 RenderSystem.applyModelViewMatrix();
                 PONDS.clear();
                 VANILLA_WATER.clear();
+                FALLS.clear();
+            }
+        }
+    }
+
+    /** Where a waterfall lands: white foam churning, rings spreading out from it. */
+    private static void falls(float t, float day, PoseStack poseStack, MultiBufferSource buffers) {
+        if (FALLS.isEmpty()) {
+            return;
+        }
+        VertexConsumer foam = buffers.getBuffer(RenderType.eyes(GLOW));
+        VertexConsumer rings = buffers.getBuffer(RenderType.eyes(RIPPLE));
+        float bright = 0.35F + 0.65F * day;
+        for (double[] f : FALLS) {
+            for (int k = 0; k < 5; k++) { // (the foam: a few soft white blobs, bubbling)
+                float a = k * 1.2566F + t * 0.7F;
+                float r = k == 0 ? 0.0F : 0.07F + 0.02F * Mth.sin(t * 5.0F + k);
+                float size = (k == 0 ? 0.2F : 0.11F) * (0.9F + 0.15F * Mth.sin(t * 7.0F + k * 2.0F));
+                poseStack.pushPose();
+                poseStack.translate(f[0] + Mth.cos(a) * r, f[1] + 0.006, f[2] + Mth.sin(a) * r);
+                poseStack.scale(size, 1.0F, size);
+                float w = (k == 0 ? 0.55F : 0.4F) * bright;
+                flat(foam, poseStack.last(), w, w, w, true);
+                poseStack.popPose();
+            }
+            for (int k = 0; k < 3; k++) { // (rings spreading from it)
+                float age = (t * 0.9F + k / 3.0F) % 1.0F;
+                float size = 0.12F + 0.4F * age;
+                float a = (1.0F - age) * (1.0F - age) * 0.35F * bright;
+                poseStack.pushPose();
+                poseStack.translate(f[0], f[1] + 0.005, f[2]);
+                poseStack.scale(size, 1.0F, size);
+                flat(rings, poseStack.last(), a, a, a, true);
+                poseStack.popPose();
             }
         }
     }
@@ -221,7 +264,7 @@ public final class PondLife {
             poseStack.translate(x, y, z);
             poseStack.mulPose(Axis.YP.rotationDegrees(yaw + 180.0F));
             poseStack.mulPose(Axis.XP.rotation(pitch));
-            float scale = 0.4F / 16.0F * (0.85F + 0.3F * h(anchor, 50 + d));
+            float scale = 0.65F / 16.0F * (0.85F + 0.3F * h(anchor, 50 + d)); // (about half a block long)
             poseStack.scale(scale, scale, scale);
             int tint = DRAGONFLY_TINT[(int) (h(anchor, 60 + d) * 3.0F) % 3];
             m.render(poseStack, buffers.getBuffer(RenderType.entityTranslucent(DRAGONFLY)), light, OverlayTexture.NO_OVERLAY, tint);

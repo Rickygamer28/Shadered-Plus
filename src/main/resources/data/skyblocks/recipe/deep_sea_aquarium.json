@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "GIG",
+    "GFG",
+    "GSG"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:tinted_glass"
+    },
+    "I": {
+      "item": "minecraft:glow_ink_sac"
+    },
+    "F": {
+      "item": "minecraft:pufferfish"
+    },
+    "S": {
+      "item": "minecraft:gravel"
+    }
+  },
+  "result": {
+    "id": "skyblocks:deep_sea_aquarium",
+    "count": 8
+  }
+}

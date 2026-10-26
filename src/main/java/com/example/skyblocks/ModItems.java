@@ -51,6 +51,9 @@ public final class ModItems {
 
     public static final DeferredItem<BlockItem> OCEAN_AQUARIUM = ITEMS.registerSimpleBlockItem("ocean_aquarium", ModBlocks.OCEAN_AQUARIUM);
     public static final DeferredItem<BlockItem> VANILLA_AQUARIUM = ITEMS.registerSimpleBlockItem("vanilla_aquarium", ModBlocks.VANILLA_AQUARIUM);
+    public static final DeferredItem<BlockItem> DEEP_SEA_AQUARIUM = ITEMS.registerSimpleBlockItem("deep_sea_aquarium", ModBlocks.DEEP_SEA_AQUARIUM);
+    public static final DeferredItem<BlockItem> AQUARIUM_STAND = ITEMS.registerSimpleBlockItem("aquarium_stand", ModBlocks.AQUARIUM_STAND);
+    public static final DeferredItem<BlockItem> AQUARIUM_LID = ITEMS.registerSimpleBlockItem("aquarium_lid", ModBlocks.AQUARIUM_LID);
     public static final DeferredItem<BlockItem> VANILLA_OCEAN_AQUARIUM = ITEMS.registerSimpleBlockItem("vanilla_ocean_aquarium", ModBlocks.VANILLA_OCEAN_AQUARIUM);
 
     public static final DeferredItem<BlockItem> DISCO_BALL = ITEMS.registerSimpleBlockItem("disco_ball", ModBlocks.DISCO_BALL);
@@ -66,6 +69,9 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> JELLYFISH_TANK = ITEMS.registerSimpleBlockItem("jellyfish_tank", ModBlocks.JELLYFISH_TANK);
     public static final DeferredItem<BlockItem> KOI_POND = ITEMS.registerSimpleBlockItem("koi_pond", ModBlocks.KOI_POND);
     public static final DeferredItem<BlockItem> VANILLA_KOI_POND = ITEMS.registerSimpleBlockItem("vanilla_koi_pond", ModBlocks.VANILLA_KOI_POND);
+    public static final DeferredItem<BlockItem> POND_WATERFALL = ITEMS.registerSimpleBlockItem("pond_waterfall", ModBlocks.POND_WATERFALL);
+    public static final DeferredItem<BlockItem> POND_STEPPING_STONE = ITEMS.registerSimpleBlockItem("pond_stepping_stone", ModBlocks.POND_STEPPING_STONE);
+    public static final DeferredItem<BlockItem> POND_BRIDGE = ITEMS.registerSimpleBlockItem("pond_bridge", ModBlocks.POND_BRIDGE);
     public static final DeferredItem<BlockItem> NEON_SIGN = ITEMS.registerSimpleBlockItem("neon_sign", ModBlocks.NEON_SIGN);
 
     public static final DeferredItem<BlockItem> INFINITY_MIRROR = ITEMS.registerSimpleBlockItem("infinity_mirror", ModBlocks.INFINITY_MIRROR);

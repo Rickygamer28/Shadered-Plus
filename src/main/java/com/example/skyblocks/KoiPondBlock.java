@@ -103,7 +103,12 @@ public class KoiPondBlock extends BaseEntityBlock {
 
     /** Is a frog sitting on this pond block's lily pad now (at most one to a block, coming and going)? */
     public static boolean frogOn(BlockPos pos, double seconds) {
-        double te = frogTime(pos, seconds);
+        return frogOn(pos, seconds, false);
+    }
+
+    /** stone: a stepping stone on this pond block (the frog sits on that). */
+    public static boolean frogOn(BlockPos pos, double seconds, boolean stone) {
+        double te = frogTime(pos, seconds, stone);
         return te > 6.0 && te < 70.0;
     }
 
@@ -112,15 +117,20 @@ public class KoiPondBlock extends BaseEntityBlock {
      * off from 70 to 71), or -1 with no frog here.
      */
     public static double frogTime(BlockPos pos, double seconds) {
+        return frogTime(pos, seconds, false);
+    }
+
+    /** stone: a stepping stone on this pond block (frogs sit on that, lily pad or not). */
+    public static double frogTime(BlockPos pos, double seconds, boolean stone) {
         int cx = Math.floorMod(pos.getX(), 512), cz = Math.floorMod(pos.getZ(), 512);
-        if (!padHere(pos) || 0.08F + 0.07F * u01(hashu(cx, cz, 100)) < 0.09F) {
+        if (!stone && (!padHere(pos) || 0.08F + 0.07F * u01(hashu(cx, cz, 100)) < 0.09F)) {
             return -1.0; // (no pad, or too small for a frog)
         }
         float hx = u01(hashu(cx, cz, 200)), hy = u01(hashu(cx, cz, 300));
         double phase = seconds / 75.0 + hx * 13.0;
         int epoch = (int) Math.floor(phase);
         double te = (phase - epoch) * 75.0;
-        return hy < 0.55F && u01(hashu(cx, cz, 200000 + epoch)) < 0.6F && te > 5.0 && te < 71.0 ? te : -1.0;
+        return (stone || hy < 0.55F) && u01(hashu(cx, cz, 200000 + epoch)) < 0.6F && te > 5.0 && te < 71.0 ? te : -1.0; // (a stone: frogs like it more)
     }
 
     /** Which frog is visiting now (0 orange temperate, 1 green cold, 2 white warm: as in shaders/core/koi_pond). */
@@ -143,7 +153,7 @@ public class KoiPondBlock extends BaseEntityBlock {
         long dayTime = level.getDayTime() % 24000L;
         boolean night = dayTime > 13000L && dayTime < 23000L;
         boolean near = level.getNearestPlayer(pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, 3.5, false) != null;
-        if (frogOn(pos, seconds) && !near && random.nextInt(night ? 70 : 400) == 0) {
+        if (frogOn(pos, seconds, SteppingStoneBlock.on(level, pos)) && !near && random.nextInt(night ? 70 : 400) == 0) {
             level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.95, pos.getZ() + 0.5, net.minecraft.sounds.SoundEvents.FROG_AMBIENT,
                     net.minecraft.sounds.SoundSource.AMBIENT, 0.5F, 0.9F + random.nextFloat() * 0.2F, false);
         }

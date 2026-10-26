@@ -31,6 +31,7 @@ public class AquariumBlock extends TransparentBlock {
     public static final BooleanProperty DOWN = BlockStateProperties.DOWN;
 
     private final boolean ocean;
+    private final boolean deep;
 
     public AquariumBlock(Properties properties) {
         this(properties, false);
@@ -38,8 +39,14 @@ public class AquariumBlock extends TransparentBlock {
 
     /** ocean: the ocean aquarium (big sea animals, for giant tanks). */
     public AquariumBlock(Properties properties, boolean ocean) {
+        this(properties, ocean, false);
+    }
+
+    /** deep: the deep sea aquarium (always dark: anglerfish, lanternfish, glowing jellyfish and squid). */
+    public AquariumBlock(Properties properties, boolean ocean, boolean deep) {
         super(properties);
         this.ocean = ocean;
+        this.deep = deep;
         registerDefaultState(stateDefinition.any().setValue(UP, false).setValue(DOWN, false));
     }
 
@@ -66,20 +73,25 @@ public class AquariumBlock extends TransparentBlock {
         return ocean;
     }
 
+    public boolean deep() {
+        return deep;
+    }
+
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!player.isShiftKeyDown()) {
             return InteractionResult.PASS;
         }
         if (level.isClientSide) { // which fish to show (a setting on this computer: the fish are only drawn there)
-            com.example.skyblocks.client.ClientAccess.openAquarium(ocean); // (client-only class, never loaded on a server)
+            com.example.skyblocks.client.ClientAccess.openAquarium(ocean, deep); // (client-only class, never loaded on a server)
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable(ocean ? "tooltip.skyblocks.ocean_aquarium" : "tooltip.skyblocks.aquarium").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable(deep ? "tooltip.skyblocks.deep_sea_aquarium" : ocean ? "tooltip.skyblocks.ocean_aquarium" : "tooltip.skyblocks.aquarium")
+                .withStyle(ChatFormatting.GRAY));
     }
 
     @Override

@@ -58,6 +58,19 @@ public final class ModBlocks {
             properties -> new AquariumBlock(properties, true),
             BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS).lightLevel(state -> 6));
 
+    /** The deep sea aquarium: always dark, its creatures glowing (anglerfish, lanternfish, jellyfish, glow squid). */
+    public static final DeferredBlock<AquariumBlock> DEEP_SEA_AQUARIUM = BLOCKS.registerBlock("deep_sea_aquarium",
+            properties -> new AquariumBlock(properties, false, true),
+            BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS).lightLevel(state -> 2));
+
+    /** An aquarium stand: a dark wood cabinet for a tank to sit on. */
+    public static final DeferredBlock<AquariumStandBlock> AQUARIUM_STAND = BLOCKS.registerBlock("aquarium_stand", AquariumStandBlock::new,
+            BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.DARK_OAK_PLANKS));
+    /** An aquarium lid: a hood with a lamp over a tank; click it to change the tank's light. */
+    public static final DeferredBlock<AquariumLidBlock> AQUARIUM_LID = BLOCKS.registerBlock("aquarium_lid", AquariumLidBlock::new,
+            BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 10)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+
     /** The aquariums in plain Minecraft style (VanillaAquariumBlock, client/VanillaAquariumRenderer). */
     public static final DeferredBlock<VanillaAquariumBlock> VANILLA_AQUARIUM = BLOCKS.registerBlock("vanilla_aquarium",
             properties -> new VanillaAquariumBlock(properties, false),
@@ -133,6 +146,19 @@ public final class ModBlocks {
     public static final DeferredBlock<KoiPondBlock> VANILLA_KOI_POND = BLOCKS.registerBlock("vanilla_koi_pond", KoiPondBlock::new,
             BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.STONE).noOcclusion()
                     .mapColor(net.minecraft.world.level.material.MapColor.WATER));
+
+    /** A stone waterfall pouring into a koi pond (PondWaterfallBlock, client/PondWaterfallRenderer). */
+    public static final DeferredBlock<PondWaterfallBlock> POND_WATERFALL = BLOCKS.registerBlock("pond_waterfall", PondWaterfallBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.STONE).noOcclusion().requiresCorrectToolForDrops()
+                    .mapColor(net.minecraft.world.level.material.MapColor.STONE));
+    /** A flat stepping stone, for across a koi pond (frogs sit on it). */
+    public static final DeferredBlock<SteppingStoneBlock> POND_STEPPING_STONE = BLOCKS.registerBlock("pond_stepping_stone", SteppingStoneBlock::new,
+            BlockBehaviour.Properties.of().strength(1.0F, 6.0F).sound(SoundType.STONE).noOcclusion().requiresCorrectToolForDrops()
+                    .mapColor(net.minecraft.world.level.material.MapColor.STONE));
+    /** A little arched wooden bridge, for over a koi pond. */
+    public static final DeferredBlock<PondBridgeBlock> POND_BRIDGE = BLOCKS.registerBlock("pond_bridge", PondBridgeBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F, 3.0F).sound(SoundType.WOOD).noOcclusion()
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_RED));
 
     /** A classic brick hearth, 2 wide and 2 tall (BrickHearthBlock, client/WallFireRenderer). */
     public static final DeferredBlock<BrickHearthBlock> BRICK_HEARTH = BLOCKS.registerBlock("brick_hearth", BrickHearthBlock::new,

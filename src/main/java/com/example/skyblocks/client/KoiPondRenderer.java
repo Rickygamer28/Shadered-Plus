@@ -184,16 +184,22 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
         int cr = packed & 255, cg = (packed >> 8) & 255, cb = (packed >> 16) & 255;
         // and in the second texture coordinates: its shape's row in KoiPondData's texture, and which of the eight
         // blocks round this one are pond too (for the frogs: only on the pond's own lily pads)
-        int round = 0;
+        int round = 0, stones = 0;
         if (be.getLevel() != null) {
+            if (com.example.skyblocks.SteppingStoneBlock.on(be.getLevel(), p)) {
+                stones |= 1; // (stepping stones on this block and those round it: frogs sit on them)
+            }
             for (int i = 0; i < 8; i++) {
                 int dx = ROUND[i * 2], dz = ROUND[i * 2 + 1];
                 if (be.getLevel().getBlockState(p.offset(dx, 0, dz)).getBlock() == state.getBlock()) {
                     round |= 1 << i;
+                    if (com.example.skyblocks.SteppingStoneBlock.on(be.getLevel(), p.offset(dx, 0, dz))) {
+                        stones |= 2 << i;
+                    }
                 }
             }
         }
-        int word = pond.row() | round << 8;
+        int word = pond.row() | round << 8 | stones << 16;
         int k0 = word & 0xFFFF, k1 = (word >>> 16) & 0xFFFF;
         Matrix4f m = poseStack.last().pose();
         KoiPondData.ensure();

@@ -64,6 +64,9 @@ public class SkyBlocksMod {
         event.accept(ModItems.JELLYFISH_TANK.get());
         event.accept(ModItems.KOI_POND.get());
         event.accept(ModItems.VANILLA_KOI_POND.get());
+        event.accept(ModItems.POND_WATERFALL.get());
+        event.accept(ModItems.POND_STEPPING_STONE.get());
+        event.accept(ModItems.POND_BRIDGE.get());
         event.accept(ModItems.NEON_SIGN.get());
         event.accept(ModItems.DANCE_FLOOR.get());
         event.accept(ModItems.DISCO_BALL.get());
@@ -71,6 +74,9 @@ public class SkyBlocksMod {
         event.accept(ModItems.FOG_MACHINE.get());
         event.accept(ModItems.AQUARIUM.get());
         event.accept(ModItems.OCEAN_AQUARIUM.get());
+        event.accept(ModItems.DEEP_SEA_AQUARIUM.get());
+        event.accept(ModItems.AQUARIUM_STAND.get());
+        event.accept(ModItems.AQUARIUM_LID.get());
         event.accept(ModItems.VANILLA_AQUARIUM.get());
         event.accept(ModItems.VANILLA_OCEAN_AQUARIUM.get());
         event.accept(ModItems.INFINITY_CUBE.get());

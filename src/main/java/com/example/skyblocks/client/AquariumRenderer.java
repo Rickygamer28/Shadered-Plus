@@ -66,6 +66,8 @@ public final class AquariumRenderer {
         final int[] kinds = new int[MAX_FISH];
         final float[] rnd = new float[MAX_FISH * 10];
         boolean ocean;
+        /** The deep sea aquarium: always dark, its own creatures. */
+        boolean deep;
         /** A vanilla aquarium: only the water, light, sand and frame here (client/VanillaAquariumRenderer puts the game's own fish in it). */
         boolean vanilla;
         /** Per decoration: its base (x, y, z, tank coordinates) and type + 8 * (turn + 16 * size * 10). */
@@ -361,6 +363,9 @@ public final class AquariumRenderer {
             {0.3F, 0.07F, 0.07F, 0.13F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.7F, 0.0F},
             {0.3F, 0.07F, 0.07F, 0.13F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.7F, 0.0F},
             {0.25F, 0.1F, 0.1F, 0, 0, 0, 0, 0, 0, 0.3F, 0},
+            // the deep sea's: anglerfish, lanternfish
+            {0.13F, 0.1F, 0.09F, 0.045F, 0.05F, 0.006F, 0.04F, 0.03F, 0.006F, 0.3F, 0.3F},
+            {0.09F, 0.03F, 0.02F, 0.035F, 0.035F, 0.005F, 0.04F, 0.02F, 0.005F, 1.3F, 0.5F},
     };
 
     /** The creatures that walk on the bottom (not swimming): 20-25, and the axolotl. */
@@ -442,7 +447,7 @@ public final class AquariumRenderer {
             int kind = floor.kinds[i];
             float[] sp = SPECIES[kind];
             double bx = sp[0], by = sp[1], bz = sp[2], tx = sp[3], ty = sp[4], fy = sp[7], fz = sp[8];
-            boolean school = kind == 3 || kind == 17 || kind == 26 || kind == 29;
+            boolean school = kind == 3 || kind == 17 || kind == 26 || kind == 29 || kind == 34;
             int lead = i;
             if (school) {
                 for (int j = 0; j < i; j++) {
@@ -724,6 +729,8 @@ public final class AquariumRenderer {
         shader.safeGetUniform("FishCount").set(0.0F);
         shader.safeGetUniform("Ocean").set(floor.ocean ? 1.0F : 0.0F);
         shader.safeGetUniform("Light").set((float) AquariumSettings.light(floor.ocean));
+        shader.safeGetUniform("Deep").set(0.0F);
+        shader.safeGetUniform("Night").set((float) night());
         shader.safeGetUniform("DecoCount").set(0.0F);
     }
 
@@ -737,7 +744,9 @@ public final class AquariumRenderer {
         shader.setSampler("FishTex", fishTex);
         shader.safeGetUniform("FishCount").set(floor.vanilla ? 0.0F : (float) floor.fishCount); // (a vanilla tank's: drawn as models)
         shader.safeGetUniform("Ocean").set(floor.ocean ? 1.0F : 0.0F);
-        shader.safeGetUniform("Light").set((float) AquariumSettings.light(floor.ocean));
+        shader.safeGetUniform("Light").set(floor.deep ? 0.0F : (float) AquariumSettings.light(floor.ocean));
+        shader.safeGetUniform("Deep").set(floor.deep ? 1.0F : 0.0F);
+        shader.safeGetUniform("Night").set(floor.deep ? 1.0F : (float) night()); // (the deep sea: always night)
         float[] d = floor.decor;
         for (int v = 0; v < MAX_DECOR; v++) {
             shader.safeGetUniform("Deco" + v).set(d[v * 4], d[v * 4 + 1], d[v * 4 + 2], d[v * 4 + 3]);
@@ -762,7 +771,7 @@ public final class AquariumRenderer {
         boolean castle = false, chest = false, ship = false, anchor = false, helmet = false;
         floor.decorCount = 0;
         // an air stone (two in a big tank), its stream of bubbles rising to the surface
-        int stones = bottom.size() >= 12 ? 2 : 1;
+        int stones = floor.deep ? 0 : bottom.size() >= 12 ? 2 : 1; // (none in the deep sea)
         for (int i = 0; i < stones; i++) {
             BlockPos cell = bottom.get(random.nextInt(bottom.size()));
             int k = floor.decorCount++;
@@ -784,6 +793,10 @@ public final class AquariumRenderer {
             // seaweed: tufts of seagrass, and (in a tank two or more tall) kelp reaching up through the water
             float r3 = random.nextFloat();
             boolean kelp = false;
+            if (floor.deep) { // the deep sea: bare rock, and what sank down here (no plants, no coral: no light)
+                type = r < 0.55F ? 0 : r < 0.65F && !chest ? 5 : r < 0.8F ? 11 : 0;
+                r3 = 1.0F;
+            }
             if (r3 < 0.28F) {
                 type = 12;
             } else if (r3 < 0.4F && floor.sizeY >= 2) {
@@ -831,21 +844,29 @@ public final class AquariumRenderer {
     private static final float[] COST = {0.8F, 1.0F, 1.0F, 0.45F, 1.2F, 1.0F, 0.9F, 1.2F, 0.5F, 1.2F,
             14.0F, 6.0F, 10.0F, 6.0F, 8.0F, 4.0F, 10.0F, 1.2F, 16.0F, 30.0F,
             0.6F, 0.7F, 6.0F, 1.0F, 3.0F, 0.3F,
-            3.0F, 2.5F, 0.8F, 0.25F, 8.0F, 8.0F, 1.2F};
+            3.0F, 2.5F, 0.8F, 0.25F, 8.0F, 8.0F, 1.2F,
+            1.5F, 0.35F};
     /** How often each kind is picked, against the others. */
     private static final float[] WEIGHT = {1, 1, 1, 1.3F, 1, 1, 1, 0.8F, 1.2F, 1,
             0.9F, 1.2F, 0.7F, 1.0F, 0.9F, 0.9F, 0.7F, 2.4F, 0.7F, 0.6F,
             0.8F, 0.8F, 0.7F, 0.7F, 0.6F, 1.0F,
-            1.0F, 0.9F, 1.4F, 0.9F, 0.8F, 0.8F, 1.0F};
+            1.0F, 0.9F, 1.4F, 0.9F, 0.8F, 0.8F, 1.0F,
+            1.0F, 1.5F};
     /** Most of each kind in one tank (with every kind on). */
     private static final int[] CAP = {8, 6, 6, 16, 4, 8, 4, 3, 12, 4,
             3, 6, 3, 4, 3, 5, 3, 16, 2, 2,
             3, 3, 2, 2, 2, 4,
-            6, 4, 10, 12, 3, 3, 4};
+            6, 4, 10, 12, 3, 3, 4,
+            3, 16};
 
     /** What each aquarium can have: the normal one's fish and bottom creatures, and the ocean one's. */
     static final int[] NORMAL_KINDS = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 28, 27, 29, 32, 20, 21, 23, 25};
     static final int[] OCEAN_KINDS = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 26, 27, 30, 31, 21, 22, 23, 24, 25};
+    static final int[] DEEP_KINDS = {33, 34, 15, 31};
+
+    private static int[] kindsFor(Floor floor) {
+        return floor.deep ? DEEP_KINDS : floor.ocean ? OCEAN_KINDS : NORMAL_KINDS;
+    }
 
     /** The smallest tank a kind appears in: how wide (both ways) and how tall, in blocks. */
     static int[] tankNeeds(int kind) {
@@ -871,7 +892,7 @@ public final class AquariumRenderer {
     }
 
     private static List<Integer> chooseFish(Floor floor, int water, java.util.Random random) {
-        int[] kinds = floor.ocean ? OCEAN_KINDS : NORMAL_KINDS;
+        int[] kinds = kindsFor(floor);
         List<Integer> allowed = new ArrayList<>();
         int enabled = 0;
         for (int k : kinds) {
@@ -1148,9 +1169,9 @@ public final class AquariumRenderer {
     }
 
     /** Touching blocks -> tanks (in the world, or in an island's own blocks). */
-    /** 0 the aquarium, 1 the ocean one, 2 and 3 their vanilla ones (each kind its own tanks). */
+    /** 0 the aquarium, 1 the ocean one, 2 and 3 their vanilla ones, 4 the deep sea one (each kind its own tanks). */
     private static int kindOf(AquariumBlock tank) {
-        return (tank.ocean() ? 1 : 0) + (tank instanceof com.example.skyblocks.VanillaAquariumBlock ? 2 : 0);
+        return tank.deep() ? 4 : (tank.ocean() ? 1 : 0) + (tank instanceof com.example.skyblocks.VanillaAquariumBlock ? 2 : 0);
     }
 
     private static List<Floor> build(net.minecraft.world.level.BlockGetter level, Map<BlockPos, Integer> tiles) {
@@ -1164,8 +1185,9 @@ public final class AquariumRenderer {
             }
             Floor floor = new Floor();
             int code = tiles.get(start);
-            floor.ocean = (code & 1) != 0;
-            floor.vanilla = code >= 2;
+            floor.ocean = code == 1 || code == 3;
+            floor.vanilla = code == 2 || code == 3;
+            floor.deep = code == 4;
             int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
             int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
             ArrayDeque<BlockPos> queue = new ArrayDeque<>();
@@ -1240,7 +1262,7 @@ public final class AquariumRenderer {
                     BlockPos p = new BlockPos(x, y, z);
                     BlockState state = island.getBlockState(p);
                     if (state.getBlock() instanceof AquariumBlock b) {
-                        tiles.put(p, kindOf(b) & 1); // (on an island: as the aquariums)
+                        tiles.put(p, kindOf(b) == 4 ? 4 : kindOf(b) & 1); // (on an island: as the aquariums)
                     }
                 }
             }

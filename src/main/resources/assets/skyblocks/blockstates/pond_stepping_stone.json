@@ -1,0 +1,21 @@
+{
+  "variants": {
+    "": [
+      {
+        "model": "skyblocks:block/pond_stepping_stone"
+      },
+      {
+        "model": "skyblocks:block/pond_stepping_stone",
+        "y": 90
+      },
+      {
+        "model": "skyblocks:block/pond_stepping_stone",
+        "y": 180
+      },
+      {
+        "model": "skyblocks:block/pond_stepping_stone",
+        "y": 270
+      }
+    ]
+  }
+}

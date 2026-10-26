@@ -22,8 +22,20 @@ public final class ClientAccess {
         }
     }
 
-    public static void openAquarium(boolean ocean) {
-        Minecraft.getInstance().setScreen(new AquariumScreen(ocean));
+    public static void openAquarium(boolean ocean, boolean deep) {
+        Minecraft.getInstance().setScreen(new AquariumScreen(ocean, deep));
+    }
+
+    /** An aquarium lid clicked: the next light for that type of tank, said over the hotbar. */
+    public static void cycleAquariumLight(boolean ocean) {
+        int light = (AquariumSettings.light(ocean) + 1) % AquariumSettings.LIGHTS.length;
+        AquariumSettings.setLight(ocean, light);
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null) {
+            mc.player.displayClientMessage(net.minecraft.network.chat.Component.translatable("screen.skyblocks.aquarium_light").append(": ")
+                    .append(net.minecraft.network.chat.Component.translatable("screen.skyblocks.aquarium_light." + AquariumSettings.LIGHTS[light])
+                            .withStyle(net.minecraft.ChatFormatting.AQUA)), true);
+        }
     }
 
     public static void openNeonSign(net.minecraft.core.BlockPos pos) {

@@ -105,16 +105,20 @@ final class VanillaPondRenderer {
         if (pos.asLong() == pond.anchor()) {
             creatures(pond, pos, poseStack, buffers, light, t);
         }
-        // this block's lily pad, and a frog on it now and then
+        // this block's lily pad, and a frog on it now and then (on a stepping stone instead, if there is one on it)
+        boolean stone = be.getLevel() != null && com.example.skyblocks.SteppingStoneBlock.on(be.getLevel(), pos);
+        if (stone && KoiPondBlock.frogTime(pos, t, true) >= 0.0) {
+            frog(new float[] {0.5F, 0.5F, 0.13F, 0.0F, 0.0F}, pos, poseStack, buffers, light, t, true);
+        }
         for (int k = 0; k < 2; k++) {
             float[] pad = pad(pos, k, t);
             if (pad != null) {
-                boolean frogged = k == 0 && KoiPondBlock.frogTime(pos, t) >= 0.0;
+                boolean frogged = !stone && k == 0 && KoiPondBlock.frogTime(pos, t) >= 0.0;
                 // (the bigger pads flower, as in the koi pond - not while a frog's on it)
                 boolean flower = !frogged && KoiPondBlock.u01(KoiPondBlock.hashu(cx(pos), cz(pos), 100 + k)) > 0.72F;
                 lilyPad(pad, poseStack, buffers, light, flower);
                 if (frogged) {
-                    frog(pad, pos, poseStack, buffers, light, t);
+                    frog(pad, pos, poseStack, buffers, light, t, false);
                 }
             }
         }
@@ -216,8 +220,9 @@ final class VanillaPondRenderer {
      * turns round to face the open water (the middle of its block - never the stone round it), sits a minute, then
      * hops off into the water.
      */
-    private void frog(float[] pad, BlockPos pos, PoseStack poseStack, MultiBufferSource buffers, int light, float t) {
-        double te = KoiPondBlock.frogTime(pos, t);
+    private void frog(float[] pad, BlockPos pos, PoseStack poseStack, MultiBufferSource buffers, int light, float t, boolean stone) {
+        double te = KoiPondBlock.frogTime(pos, t, stone);
+        float seat = stone ? 1.0F + 2.0F / 16.0F : SURF + 0.005F; // (on its stepping stone, or its lily pad)
         if (te < 0.0) {
             return;
         }
@@ -234,14 +239,14 @@ final class VanillaPondRenderer {
         float scale = 2.6F * pad[2]; // (sized to its lily pad: a little frog on a little pad - it fits on it)
         float hop = 0.9F * pad[2]; // (where it jumps to and from in the water: towards the middle of the block)
         float wx = pad[0] + mx * hop, wz = pad[1] + mz * hop;
-        float x = pad[0], z = pad[1], y = SURF + 0.005F;
+        float x = pad[0], z = pad[1], y = seat;
         float turn = 0.0F; // (0 facing the water .. 1 facing the pad: turning round once it's on)
         float sway = pad[4]; // (turning with its pad)
         if (te < 6.0) { // leaping on
             float u = (float) (te - 5.0);
             x = wx + (pad[0] - wx) * u;
             z = wz + (pad[1] - wz) * u;
-            y = SURF - 0.14F * (1.0F - u) * (1.0F - u) + 0.3F * u * (1.0F - u);
+            y = (SURF - 0.14F) + (seat - SURF + 0.14F) * u * u + 0.3F * u * (1.0F - u);
             turn = 1.0F;
         } else if (te < 7.2) {
             float u = (float) ((te - 6.0) / 1.2);
@@ -250,7 +255,7 @@ final class VanillaPondRenderer {
             float u = (float) (te - 70.0);
             x = pad[0] + (wx - pad[0]) * u;
             z = pad[1] + (wz - pad[1]) * u;
-            y = SURF + 0.3F * u * (1.0F - u) - 0.14F * u * u;
+            y = seat + (SURF - 0.14F - seat) * u * u + 0.3F * u * (1.0F - u);
         }
         float yaw = yawOf(mx, mz) + 180.0F * turn - (float) Math.toDegrees(sway); // (the pad's turn, the same way round)
         model(poseStack, buffers, frog, FROGS[kind], x, y, z, yaw, scale, light, 0xFFFFFFFF, false);

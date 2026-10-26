@@ -1,0 +1,165 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "top": "minecraft:block/stone",
+    "side": "minecraft:block/andesite",
+    "moss": "minecraft:block/moss_block",
+    "particle": "minecraft:block/stone"
+  },
+  "elements": [
+    {
+      "from": [
+        3,
+        -2,
+        2
+      ],
+      "to": [
+        13,
+        2,
+        14
+      ],
+      "faces": {
+        "north": {
+          "texture": "#side"
+        },
+        "south": {
+          "texture": "#side"
+        },
+        "east": {
+          "texture": "#side"
+        },
+        "west": {
+          "texture": "#side"
+        },
+        "up": {
+          "texture": "#top"
+        },
+        "down": {
+          "texture": "#side"
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        -2,
+        4
+      ],
+      "to": [
+        14,
+        1.5,
+        12
+      ],
+      "faces": {
+        "north": {
+          "texture": "#side"
+        },
+        "south": {
+          "texture": "#side"
+        },
+        "east": {
+          "texture": "#side"
+        },
+        "west": {
+          "texture": "#side"
+        },
+        "up": {
+          "texture": "#top"
+        },
+        "down": {
+          "texture": "#side"
+        }
+      }
+    },
+    {
+      "from": [
+        4.5,
+        -2,
+        1
+      ],
+      "to": [
+        11.5,
+        1,
+        15
+      ],
+      "faces": {
+        "north": {
+          "texture": "#side"
+        },
+        "south": {
+          "texture": "#side"
+        },
+        "east": {
+          "texture": "#side"
+        },
+        "west": {
+          "texture": "#side"
+        },
+        "up": {
+          "texture": "#top"
+        },
+        "down": {
+          "texture": "#side"
+        }
+      }
+    },
+    {
+      "from": [
+        4,
+        2,
+        5
+      ],
+      "to": [
+        8,
+        2.25,
+        9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#moss"
+        },
+        "south": {
+          "texture": "#moss"
+        },
+        "east": {
+          "texture": "#moss"
+        },
+        "west": {
+          "texture": "#moss"
+        },
+        "up": {
+          "texture": "#moss"
+        }
+      }
+    },
+    {
+      "from": [
+        9,
+        2,
+        9
+      ],
+      "to": [
+        11,
+        2.25,
+        12
+      ],
+      "faces": {
+        "north": {
+          "texture": "#moss"
+        },
+        "south": {
+          "texture": "#moss"
+        },
+        "east": {
+          "texture": "#moss"
+        },
+        "west": {
+          "texture": "#moss"
+        },
+        "up": {
+          "texture": "#moss"
+        }
+      }
+    }
+  ]
+}

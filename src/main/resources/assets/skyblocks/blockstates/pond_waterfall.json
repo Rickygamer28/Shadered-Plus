@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "skyblocks:block/pond_waterfall"
+    },
+    "facing=east": {
+      "model": "skyblocks:block/pond_waterfall",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "skyblocks:block/pond_waterfall",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "skyblocks:block/pond_waterfall",
+      "y": 270
+    }
+  }
+}

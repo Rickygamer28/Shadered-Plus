@@ -17,10 +17,12 @@ public class AquariumScreen extends Screen {
     private static final int PANEL_W = COLS * (BTN_W + 4) + 20;
 
     private final boolean ocean;
+    private final boolean deep;
 
-    public AquariumScreen(boolean ocean) {
-        super(Component.translatable(ocean ? "screen.skyblocks.ocean_aquarium" : "screen.skyblocks.aquarium"));
+    public AquariumScreen(boolean ocean, boolean deep) {
+        super(Component.translatable(deep ? "screen.skyblocks.deep_sea_aquarium" : ocean ? "screen.skyblocks.ocean_aquarium" : "screen.skyblocks.aquarium"));
         this.ocean = ocean;
+        this.deep = deep;
     }
 
     /** As tall as its rows of buttons need (the ocean aquarium has more kinds). */
@@ -37,18 +39,21 @@ public class AquariumScreen extends Screen {
     }
 
     private int[] kinds() {
-        return ocean ? AquariumRenderer.OCEAN_KINDS : AquariumRenderer.NORMAL_KINDS;
+        return deep ? AquariumRenderer.DEEP_KINDS : ocean ? AquariumRenderer.OCEAN_KINDS : AquariumRenderer.NORMAL_KINDS;
     }
 
+    /** Is this kind in more than one type of aquarium (one setting for them all)? */
     private static boolean shared(int kind) {
-        for (int k : AquariumRenderer.NORMAL_KINDS) {
-            if (k == kind) {
-                for (int o : AquariumRenderer.OCEAN_KINDS) {
-                    if (o == kind) return true;
+        int in = 0;
+        for (int[] list : new int[][] {AquariumRenderer.NORMAL_KINDS, AquariumRenderer.OCEAN_KINDS, AquariumRenderer.DEEP_KINDS}) {
+            for (int k : list) {
+                if (k == kind) {
+                    in++;
+                    break;
                 }
             }
         }
-        return false;
+        return in > 1;
     }
 
     @Override
@@ -77,10 +82,12 @@ public class AquariumScreen extends Screen {
             addRenderableWidget(b);
         }
         int y = top() + panelH() - 28;
-        addRenderableWidget(Button.builder(lightLabel(), b -> {
-            AquariumSettings.setLight(ocean, AquariumSettings.light(ocean) + 1);
-            b.setMessage(lightLabel());
-        }).bounds(left() + 12, y - 24, 160, 20).tooltip(Tooltip.create(Component.translatable("screen.skyblocks.aquarium_light_tip"))).build());
+        if (!deep) { // (the deep sea: always dark)
+            addRenderableWidget(Button.builder(lightLabel(), b -> {
+                AquariumSettings.setLight(ocean, AquariumSettings.light(ocean) + 1);
+                b.setMessage(lightLabel());
+            }).bounds(left() + 12, y - 24, 160, 20).tooltip(Tooltip.create(Component.translatable("screen.skyblocks.aquarium_light_tip"))).build());
+        }
         addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.aquarium_all_on"), b -> setAll(true))
                 .bounds(left() + 12, y, 76, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.aquarium_all_off"), b -> setAll(false))
