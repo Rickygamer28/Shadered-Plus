@@ -681,8 +681,7 @@ public final class VanillaAquariumRenderer {
         float squeeze = move.equals("drift") ? 1.0F + 0.08F * (float) Math.sin(t * 2.4 + index) : 1.0F; // (a jellyfish's bell pulsing)
         poseStack.scale(-sc / squeeze, -sc * squeeze, sc / squeeze);
         poseStack.translate(0.0F, -1.501F, 0.0F);
-        RenderType type = move.equals("drift") || name.equals("shrimp") || name.equals("betta") || name.equals("goldfish")
-                ? RenderType.entityTranslucent(texture) : RenderType.entityCutoutNoCull(texture);
+        RenderType type = RenderType.entityTranslucent(texture); // (the fins a little see-through)
         m.render(poseStack, buffers.getBuffer(type), light, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
         poseStack.popPose();
     }
