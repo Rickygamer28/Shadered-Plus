@@ -27,15 +27,33 @@ public class PondModel extends BakedModelWrapper<BakedModel> {
 
     /** A block's look on one side (its own texture for that face). */
     static TextureAtlasSprite faceOf(BlockState state, @Nullable Direction face) {
+        BakedQuad q = quadOf(state, face);
+        return q != null ? q.getSprite() : Minecraft.getInstance().getBlockRenderer().getBlockModel(state).getParticleIcon(ModelData.EMPTY);
+    }
+
+    /** A block's own quad for that side (its texture, and whether it's tinted: grass, leaves...). */
+    @Nullable
+    static BakedQuad quadOf(BlockState state, @Nullable Direction face) {
         BakedModel model = Minecraft.getInstance().getBlockRenderer().getBlockModel(state);
         Direction[] tries = face == null ? new Direction[] {Direction.NORTH, null, Direction.UP} : new Direction[] {face, Direction.NORTH, null, Direction.UP};
         for (Direction d : tries) {
             List<BakedQuad> qs = model.getQuads(state, d, RandomSource.create(42L), ModelData.EMPTY, null);
             if (!qs.isEmpty()) {
-                return qs.get(0).getSprite();
+                return qs.get(0);
             }
         }
-        return model.getParticleIcon(ModelData.EMPTY);
+        return null;
+    }
+
+    /** The tint numbers the pond's own colour handler takes: the rim's block's tint + RIM_TINT, the floor's + FLOOR_TINT. */
+    public static final int RIM_TINT = 100, FLOOR_TINT = 200;
+
+    /** The quad with that block's look: its texture, and (if it has one) its tint, through the pond's colour handler. */
+    private static BakedQuad as(BakedQuad q, BlockState block, int tintBase) {
+        BakedQuad src = quadOf(block, q.getDirection());
+        BakedQuad out = HearthModel.retexture(q, src != null ? src.getSprite() : faceOf(block, q.getDirection()));
+        int tint = src != null && src.getTintIndex() >= 0 ? tintBase + src.getTintIndex() : -1;
+        return new BakedQuad(out.getVertices(), tint, out.getDirection(), out.getSprite(), out.isShade());
     }
 
     @Override
@@ -50,9 +68,9 @@ public class PondModel extends BakedModelWrapper<BakedModel> {
         for (BakedQuad q : quads) {
             ResourceLocation name = q.getSprite().contents().name();
             if (rim != null && name.equals(RIM)) {
-                out.add(HearthModel.retexture(q, faceOf(rim, q.getDirection())));
+                out.add(as(q, rim, RIM_TINT));
             } else if (floor != null && name.equals(FLOOR)) {
-                out.add(HearthModel.retexture(q, faceOf(floor, q.getDirection())));
+                out.add(as(q, floor, FLOOR_TINT));
             } else {
                 out.add(q);
             }

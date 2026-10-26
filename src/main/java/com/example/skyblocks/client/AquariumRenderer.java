@@ -909,7 +909,14 @@ public final class AquariumRenderer {
         if (allowed.isEmpty()) {
             return out;
         }
-        float scale = (float) kinds.length / Math.max(enabled, 1); // (fewer kinds on: more of each allowed)
+        // (fewer kinds on: more of each allowed - but never a tank packed with one kind: at most three times as many)
+        float scale = Math.min((float) kinds.length / Math.max(enabled, 1), 3.0F);
+        // (and the creatures on the bottom only as many as its floor has room for)
+        int bottom = 0;
+        for (BlockPos b : floor.blocks) {
+            if (b.getY() == floor.min.getY()) bottom++;
+        }
+        int[] crawlerRoom = {Math.max(2, (int) (bottom * 0.6F))};
         float[] budget = {water * (floor.ocean ? 0.9F : 2.0F)};
         int maxSlots = floor.ocean ? 30 : 40; // (a school counts as one)
         int[] count = new int[SPECIES.length];
@@ -918,25 +925,27 @@ public final class AquariumRenderer {
         List<Integer> order = new ArrayList<>(allowed);
         java.util.Collections.shuffle(order, random);
         for (int k : order) {
-            if (COST[k] <= budget[0] && out.size() < MAX_FISH && slots[0] < maxSlots) {
+            if (COST[k] <= budget[0] && out.size() < MAX_FISH && slots[0] < maxSlots && (!crawler(k) || crawlerRoom[0] > 0)) {
                 addFish(out, count, budget, slots, k, scale, random);
+                if (crawler(k)) crawlerRoom[0]--;
             }
         }
         // then fill up by the water left
         for (int tries = 0; tries < 400 && out.size() < MAX_FISH && slots[0] < maxSlots; tries++) {
             float total = 0.0F;
             for (int k : allowed) {
-                if (count[k] < Math.ceil(CAP[k] * scale) && COST[k] <= budget[0]) total += WEIGHT[k];
+                if (count[k] < Math.ceil(CAP[k] * scale) && COST[k] <= budget[0] && (!crawler(k) || crawlerRoom[0] > 0)) total += WEIGHT[k];
             }
             if (total <= 0.0F) {
                 break;
             }
             float pick = random.nextFloat() * total;
             for (int k : allowed) {
-                if (count[k] < Math.ceil(CAP[k] * scale) && COST[k] <= budget[0]) {
+                if (count[k] < Math.ceil(CAP[k] * scale) && COST[k] <= budget[0] && (!crawler(k) || crawlerRoom[0] > 0)) {
                     pick -= WEIGHT[k];
                     if (pick <= 0.0F) {
                         addFish(out, count, budget, slots, k, scale, random);
+                        if (crawler(k)) crawlerRoom[0]--;
                         break;
                     }
                 }

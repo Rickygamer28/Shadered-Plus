@@ -271,6 +271,19 @@ public final class ClientSetup {
         event.registerSpriteSet(com.example.skyblocks.ModParticles.FOG.get(), FogParticle.Provider::new);
     }
 
+    /** The vanilla koi pond's rim and floor: the colour of the blocks chosen for them (grass, leaves... as the biome has them). */
+    @SubscribeEvent
+    public static void pondColours(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Block event) {
+        event.register((state, level, pos, tint) -> {
+            if (tint < PondModel.RIM_TINT || level == null || pos == null
+                    || !(level.getBlockEntity(pos) instanceof com.example.skyblocks.KoiPondBlockEntity pond)) {
+                return -1;
+            }
+            net.minecraft.world.level.block.state.BlockState block = tint < PondModel.FLOOR_TINT ? pond.rim() : pond.floor();
+            return block == null ? -1 : event.getBlockColors().getColor(block, level, pos, tint % 100);
+        }, com.example.skyblocks.ModBlocks.VANILLA_KOI_POND.get());
+    }
+
     /** The vanilla aquariums' water: the biome's water colour, as any water. */
     @SubscribeEvent
     public static void aquariumWater(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Block event) {
