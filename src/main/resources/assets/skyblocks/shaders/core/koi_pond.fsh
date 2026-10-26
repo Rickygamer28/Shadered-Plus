@@ -147,14 +147,24 @@ bool padParams(vec2 cell, int k, float t, out vec2 c, out float r, out vec2 h, o
     return h.x >= 0.45;
 }
 
-// is a frog sitting on this pad now (they come and go every minute or so): its kind, size and which way it faces
-bool frogOn(vec2 cell, int k, float t, out vec3 info) {
+// is a frog on this pad now: its kind, size and which way it faces, and its hop (1 sitting; 0..1 hopping on from the
+// water; 0..-1 hopping off). At most one frog to a block (on its first pad); each stays a minute or so, then hops off,
+// and a while later another may come - never two at once.
+bool frogOn(vec2 cell, int k, float t, out vec3 info, out float hop) {
+    info = vec3(0.0);
+    hop = 0.0;
+    if (k != 0) {
+        return false;
+    }
     uvec3 key = padKey(cell, k);
     vec2 hf = vec2(u01(hashu(key + uvec3(0u, 0u, 200u))), u01(hashu(key + uvec3(0u, 0u, 300u))));
-    uint epoch = uint(int(floor(t / 75.0 + hf.x * 13.0)));
+    float phase = t / 75.0 + hf.x * 13.0;
+    uint epoch = uint(int(floor(phase)));
+    float te = fract(phase) * 75.0;
     vec2 he = vec2(u01(hashu(key + uvec3(0u, 0u, 200000u + epoch))), u01(hashu(key + uvec3(0u, 0u, 500000u + epoch))));
     info = vec3(floor(he.y * 3.0), 0.62 + 0.16 * hf.x, he.x * 6.2832 + 0.4 * sin(t * 0.3 + hf.y * 9.0));
-    return hf.y < 0.4 && he.x < 0.6;
+    hop = te < 6.0 ? te - 5.0 : te > 70.0 ? -(te - 70.0) : 1.0;
+    return hf.y < 0.55 && he.x < 0.6 && te > 5.0 && te < 71.0;
 }
 
 float smin(float a, float b, float k) {
@@ -185,7 +195,7 @@ vec4 frogHit(vec3 p0, vec3 rd, float t, float light) {
     if (rd.y > -0.08) {
         return vec4(0.0);
     }
-    float up = 0.19;
+    float up = 0.42;
     vec3 pTop = p0 - rd * (up / -rd.y);
     vec2 c0 = floor(p0.xz);
     for (int j = -1; j <= 1; j++) {
@@ -195,11 +205,16 @@ vec4 frogHit(vec3 p0, vec3 rd, float t, float light) {
                 vec2 c, h, h2;
                 float r;
                 vec3 info;
-                if (!padParams(cell, k, t, c, r, h, h2) || r < 0.09 || !frogOn(cell, k, t, info)) continue;
+                float hop;
+                if (!padParams(cell, k, t, c, r, h, h2) || r < 0.09 || !frogOn(cell, k, t, info, hop)) continue;
+                // hopping on: a leap up out of the water onto the pad; hopping off: a leap forward into the water
+                float u = hop > 0.0 ? 1.0 - hop : -hop;
+                vec3 off = hop >= 1.0 ? vec3(0.0) : hop > 0.0 ? vec3(0.0, 9.0 * u * (1.0 - u) - 3.0 * u * u, -5.0 * u)
+                                                                 : vec3(0.0, 9.0 * u * (1.0 - u) - 3.0 * u * u, 5.0 * u);
                 // close to the ray's way down?
                 vec2 ab = p0.xz - pTop.xz;
-                float u = clamp(dot(c - pTop.xz, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
-                if (length(pTop.xz + ab * u - c) > 0.22) continue;
+                float w = clamp(dot(c - pTop.xz, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
+                if (length(pTop.xz + ab * w - c) > 0.32) continue;
                 float ca = cos(info.z), sa = sin(info.z);
                 float sc = 16.0 / info.y;
                 vec3 ro = vec3(pTop.x - c.x, pTop.y - SURF, pTop.z - c.y) * sc;
@@ -208,7 +223,7 @@ vec4 frogHit(vec3 p0, vec3 rd, float t, float light) {
                 rr.xz = mat2(ca, -sa, sa, ca) * rr.xz;
                 float tm = 0.0, tEnd = length(p0 - pTop) * sc;
                 for (int n = 0; n < 40; n++) {
-                    vec3 q = ro + rr * tm;
+                    vec3 q = ro + rr * tm - off;
                     vec2 f = frogSDF(q, t);
                     if (f.x < 0.02) {
                         vec2 e = vec2(0.03, 0.0);
@@ -258,7 +273,8 @@ vec4 padAt(vec2 q, float t) {
                 col *= 0.85 + 0.15 * sin(a * 12.0); // (veins)
                 col *= 0.8 + 0.2 * smoothstep(r, r * 0.85, dist);
                 vec3 info;
-                if (r >= 0.09 && frogOn(cell, k, t, info)) {
+                float hop;
+                if (r >= 0.09 && frogOn(cell, k, t, info, hop) && hop >= 1.0) {
                     col *= 0.55 + 0.45 * smoothstep(0.06 * info.y, 0.16 * info.y, dist); // (the frog's shadow)
                 } else if (h.y > 0.72 && dist < r * 0.32) { // a water-lily flower
                     float petals = 0.5 + 0.5 * cos(atan(d.y, d.x) * 8.0);

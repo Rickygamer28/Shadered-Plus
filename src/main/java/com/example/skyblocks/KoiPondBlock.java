@@ -101,26 +101,26 @@ public class KoiPondBlock extends BaseEntityBlock {
         return (h & 65535) / 65535.0F;
     }
 
-    /** Is a frog sitting on lily pad k of this pond block now? */
-    public static boolean frogOn(BlockPos pos, int k, double seconds) {
+    /** Is a frog sitting on this pond block's lily pad now (at most one to a block, coming and going)? */
+    public static boolean frogOn(BlockPos pos, double seconds) {
         int cx = Math.floorMod(pos.getX(), 512), cz = Math.floorMod(pos.getZ(), 512);
-        if (u01(hashu(cx, cz, k)) < 0.45F || 0.08F + 0.07F * u01(hashu(cx, cz, k + 100)) < 0.09F) {
+        if (u01(hashu(cx, cz, 0)) < 0.45F || 0.08F + 0.07F * u01(hashu(cx, cz, 100)) < 0.09F) {
             return false; // (no pad, or too small for a frog)
         }
-        float hx = u01(hashu(cx, cz, k + 200)), hy = u01(hashu(cx, cz, k + 300));
-        int epoch = (int) Math.floor(seconds / 75.0 + hx * 13.0);
-        return hy < 0.4F && u01(hashu(cx, cz, k + 200000 + epoch)) < 0.6F;
+        float hx = u01(hashu(cx, cz, 200)), hy = u01(hashu(cx, cz, 300));
+        double phase = seconds / 75.0 + hx * 13.0;
+        int epoch = (int) Math.floor(phase);
+        double te = (phase - epoch) * 75.0;
+        return hy < 0.55F && u01(hashu(cx, cz, 200000 + epoch)) < 0.6F && te > 6.0 && te < 70.0;
     }
 
     /** The frogs on its lily pads croak now and then; a little splash now and then. */
     @Override
     public void animateTick(BlockState state, net.minecraft.world.level.Level level, BlockPos pos, net.minecraft.util.RandomSource random) {
         double seconds = (level.getGameTime() % 72_000L) / 20.0;
-        for (int k = 0; k < 2; k++) {
-            if (frogOn(pos, k, seconds) && random.nextInt(260) == 0) {
-                level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.95, pos.getZ() + 0.5, net.minecraft.sounds.SoundEvents.FROG_AMBIENT,
-                        net.minecraft.sounds.SoundSource.AMBIENT, 0.5F, 0.9F + random.nextFloat() * 0.2F, false);
-            }
+        if (frogOn(pos, seconds) && random.nextInt(260) == 0) { // (only a frog sitting on a lily pad croaks)
+            level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.95, pos.getZ() + 0.5, net.minecraft.sounds.SoundEvents.FROG_AMBIENT,
+                    net.minecraft.sounds.SoundSource.AMBIENT, 0.5F, 0.9F + random.nextFloat() * 0.2F, false);
         }
         if (random.nextInt(900) == 0) {
             level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.9, pos.getZ() + 0.5, net.minecraft.sounds.SoundEvents.FISH_SWIM,
