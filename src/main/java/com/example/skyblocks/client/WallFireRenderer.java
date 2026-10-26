@@ -48,8 +48,6 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
                         .setShaderState(new ShaderStateShard(() -> shader))
                         .setTexturingState(new TexturingStateShard("skyblocks_wall_fire_time", () -> {
                             if (shader != null) {
-                                net.minecraft.world.phys.Vec3 cam = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-                                shader.safeGetUniform("CamPos").set((float) cam.x, (float) cam.y, (float) cam.z);
                                 shader.safeGetUniform("FireTime").set(LavaLampRenderer.seconds());
                                 shader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.2F, 1.0F));
                             }
@@ -64,8 +62,6 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
                         .setShaderState(new ShaderStateShard(() -> shader))
                         .setTexturingState(new TexturingStateShard("skyblocks_hearth_fire_time", () -> {
                             if (shader != null) {
-                                net.minecraft.world.phys.Vec3 cam = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-                                shader.safeGetUniform("CamPos").set((float) cam.x, (float) cam.y, (float) cam.z);
                                 shader.safeGetUniform("FireTime").set(LavaLampRenderer.seconds());
                                 shader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.2F, 1.0F));
                             }
@@ -158,18 +154,18 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         }
         // the glass box: the front glass between the end posts; the side glass at the ends of a row
         boolean left = state.getValue(WallFireBlock.LEFT), right = state.getValue(WallFireBlock.RIGHT);
-        float flags = 10.0F * ((left ? 0 : 2) + (right ? 0 : 4));
+        // (the box sits on the bottom of the block; the shader's frame is 5 px higher, so + 5/16 on the height)
+        float flags = 10.0F * ((left ? 0 : 2) + (right ? 0 : 4)) + 5.0F / 16.0F;
         float x0 = right ? 0.0F : 0.5F / 16.0F, x1 = left ? 1.0F : 15.5F / 16.0F;
-        float y0 = 5.6F / 16.0F, y1 = 13.4F / 16.0F;
+        float y0 = 0.6F / 16.0F, y1 = 8.4F / 16.0F;
         quad(Types.FIRE, buffers, m, x1, x0, y0, y1, 8.15F / 16.0F, base + x1, base + x0, flags, r, g, b, a);
         VertexConsumer vc = buffers.getBuffer(Types.FIRE);
+        // the side glass: uv.x = the block along the fire + how deep (the shader finds its place from that), flagged
         if (!left) { // (facing out to the left: +x)
-            float sx = base + 15.85F / 16.0F;
-            side(vc, m, 15.85F / 16.0F, 15.4F / 16.0F, 8.6F / 16.0F, y0, y1, sx, sx, flags, r, g, b, a);
+            side(vc, m, 15.85F / 16.0F, 15.4F / 16.0F, 8.6F / 16.0F, y0, y1, base + 15.4F / 16.0F, base + 8.6F / 16.0F, flags + 240.0F, r, g, b, a);
         }
         if (!right) {
-            float sx = base + 0.15F / 16.0F;
-            side(vc, m, 0.15F / 16.0F, 8.6F / 16.0F, 15.4F / 16.0F, y0, y1, sx, sx, flags, r, g, b, a);
+            side(vc, m, 0.15F / 16.0F, 8.6F / 16.0F, 15.4F / 16.0F, y0, y1, base + 8.6F / 16.0F, base + 15.4F / 16.0F, flags + 80.0F, r, g, b, a);
         }
         poseStack.popPose();
     }

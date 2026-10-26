@@ -5,13 +5,12 @@
 // flame licking up from the logs (the hearth) - adding up its light and how much it hides what is behind.
 // Everything in px (1/16 block) in the fire's own frame: x along it, y up, z from the front (0) to the back (16).
 
-in vec3 wpos;
+in vec3 wray;
 in vec2 uvIn;
 in vec4 vColor;
 
 uniform float FireTime;
 uniform float Boost;
-uniform vec3 CamPos;
 
 out vec4 fragColor;
 
@@ -89,6 +88,7 @@ void main() {
     int code = int(floor(uvIn.y / 10.0 + 0.001));
     int kind = code & 1;
     bool leftEnd = (code & 2) != 0, rightEnd = (code & 4) != 0;
+    bool side = (code & 8) != 0, leftSide = (code & 16) != 0; // (the glass at an end: uv.x = the block + how deep)
     float ly = uvIn.y - 10.0 * float(code);
     int ia = int(vColor.a * 255.0 + 0.5);
     int facing = ia / 64;
@@ -97,21 +97,23 @@ void main() {
     float t = FireTime;
 
     // into the fire's frame
-    vec3 world = wpos + CamPos;
-    vec3 rw = normalize(wpos);
-    float lz;
+    vec3 rw = normalize(wray);
     vec3 rd;
-    if (facing == 1) { lz = 1.0 - fract(world.x); rd = vec3(rw.z, rw.y, -rw.x); }
-    else if (facing == 2) { lz = 1.0 - fract(world.z); rd = vec3(-rw.x, rw.y, -rw.z); }
-    else if (facing == 3) { lz = fract(world.x); rd = vec3(-rw.z, rw.y, rw.x); }
-    else { lz = fract(world.z); rd = rw; }
-    float sx = kind == 0 ? mod(uvIn.x, 256.0) : uvIn.x;
+    if (facing == 1) rd = vec3(rw.z, rw.y, -rw.x);
+    else if (facing == 2) rd = vec3(-rw.x, rw.y, -rw.z);
+    else if (facing == 3) rd = vec3(-rw.z, rw.y, rw.x);
+    else rd = rw;
+    float lz, s0;
+    if (kind == 1) { lz = 4.6 / 16.0; s0 = uvIn.x; }
+    else if (side) { lz = fract(uvIn.x); s0 = floor(uvIn.x) + (leftSide ? 15.85 : 0.15) / 16.0; }
+    else { lz = 8.15 / 16.0; s0 = uvIn.x; }
+    float sx = kind == 0 ? mod(s0, 256.0) : s0;
     vec3 ro = vec3(sx, ly, lz) * 16.0;
 
     // where the ray leaves the volume
     vec3 lo, hi;
     if (kind == 0) {
-        float b = floor(uvIn.x + 0.0001);
+        float b = floor(s0 + 0.0001);
         lo = vec3(rightEnd ? (mod(b, 256.0) * 16.0 + 0.15) : -1e5, 5.6, 8.0);
         hi = vec3(leftEnd ? (mod(b, 256.0) * 16.0 + 15.85) : 1e5, 13.4, 15.4);
     } else {
@@ -144,9 +146,15 @@ void main() {
         if (kind == 0) {
             // the bed of fire glass on the tray
             float top = 6.3 + 0.7 * noise3(vec3(P.x * 0.7, 0.0, P.z * 0.7));
-            if (P.y < top) {
+            if (P.y < top) { // (found the bed between the last step and this one: home in on its surface, so it's smooth)
+                float ta = max(dt * (float(i) - 1.0 + jitter), 0.0), tb = dt * (float(i) + jitter);
+                for (int k = 0; k < 6; k++) {
+                    float tm = 0.5 * (ta + tb);
+                    vec3 Q = ro + rd * tm;
+                    if (Q.y < 6.3 + 0.7 * noise3(vec3(Q.x * 0.7, 0.0, Q.z * 0.7))) tb = tm; else ta = tm;
+                }
                 bed = true;
-                bp = P;
+                bp = ro + rd * tb;
                 break;
             }
         }
@@ -196,6 +204,6 @@ void main() {
     }
     vec3 col = back * trans + emit;
     // the front glass: a faint slanted reflection
-    col += vec3(0.05 + 0.03 * (ly * 16.0 - 5.6) / 7.8) * smoothstep(0.06, 0.0, abs(fract(uvIn.x * 0.35 + ly * 0.8) - 0.5) - 0.2);
+    col += vec3(0.05 + 0.03 * (ly * 16.0 - 5.6) / 7.8) * smoothstep(0.06, 0.0, abs(fract(s0 * 0.35 + ly * 0.8) - 0.5) - 0.2);
     fragColor = vec4(col, 1.0);
 }

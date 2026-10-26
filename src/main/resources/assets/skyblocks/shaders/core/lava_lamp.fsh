@@ -3,11 +3,12 @@
 // Shadered+'s lava lamp (our own code): the view ray, inside the block, finds the round glass, then the blobs of wax
 // in the liquid - rising from the warm bottom, stretching, merging and breaking up, sinking again. Glowing.
 
-in vec3 wpos;
+in vec3 lp;
+in vec3 lray;
+in float seedIn;
 in vec4 vColor;
 in vec2 uv; // (big lamp or not, the height in the lamp's block)
 
-uniform vec3 CamPos;
 uniform float LampTime;
 
 out vec4 fragColor;
@@ -59,18 +60,15 @@ float wax(vec3 p, float t, float on) {
 }
 
 void main() {
-    vec3 world = wpos + CamPos;
-    vec3 org = floor(world);
-    org.y = floor(world.y - uv.y + 0.5); // (the block the lamp stands in, even for the top of the big lamp)
-    vec3 p0 = world - org;
-    vec3 rd = normalize(wpos);
+    vec3 p0 = lp;
+    vec3 rd = normalize(lray);
     if (uv.x > 0.5) {
         // the big lamp: work in the small lamp's space (stretched across and up; client/LavaLampRenderer's numbers)
         vec3 sc = vec3(1.55, 2.2, 1.55);
         p0 = vec3((p0.x - 0.5) / sc.x + 0.5, (p0.y + 0.143) / sc.y, (p0.z - 0.5) / sc.z + 0.5);
         rd = normalize(rd / sc);
     }
-    float seed = hash1(org);
+    float seed = seedIn;
     float t = LampTime + seed * 137.0;
     float on = vColor.a > 0.5 ? 1.0 : 0.0;
     vec3 wc = vColor.rgb;

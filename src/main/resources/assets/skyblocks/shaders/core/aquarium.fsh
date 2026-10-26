@@ -1105,20 +1105,39 @@ float fishSDF(int kind, Species sp, vec3 p, float wave, float flap, float pulse,
  * A decoration on the bottom (p: from its base, y up, in its own units). 0 rock, 1 shell, 2 starfish, 3 castle,
  * 4 coral, 5 treasure chest, 6 sea anemone, 7 old vase.
  */
-// the clam's parts: lower shell, upper shell (opened round the hinge), flesh, pearl
+// the clam: two ribbed fan-shaped shells hinged at the back (-x), the top one opened up and back so you see its pearly
+// inside, the soft frilled flesh in the bottom one and a pearl on it
+const vec3 CLAM_HINGE = vec3(-0.1, 0.036, 0.0);
+
+// a point in the top shell's frame (the shell turned up round the hinge; its front lifts as it opens)
+vec3 clamTop(vec3 p, float t) {
+    float open = 0.68 + 0.15 * sin(t * 0.45);
+    vec3 h = p - CLAM_HINGE;
+    h.xy = mat2(cos(open), -sin(open), sin(open), cos(open)) * h.xy; // (turned back by -open: into the shell's own frame)
+    return h + CLAM_HINGE;
+}
+
+// one shell (bowl downwards when up < 0, dome upwards when up > 0): its distance, and how far in from its middle
+vec2 clamShell(vec3 p, float up) {
+    vec3 c = p - vec3(0.0, CLAM_HINGE.y, 0.0);
+    float ang = atan(c.z, p.x - CLAM_HINGE.x);                  // (round the hinge: the ribs fan out from it)
+    float rib = abs(sin(ang * 7.0));
+    vec3 r = vec3(0.12, up > 0.0 ? 0.042 : 0.05, 0.1);
+    float e = sdEllipsoid(c - vec3(0.012, 0.0, 0.0), r);
+    float shell = abs(e + 0.0035) - 0.0035 - 0.0022 * rib;      // (thin, ridged)
+    float edge = 0.006 * rib * smoothstep(0.03, 0.1, length(c.xz)); // (a scalloped rim)
+    shell = max(shell, up > 0.0 ? -(c.y - edge * 0.5) : c.y + edge * 0.5 - edge);
+    return vec2(shell, e);
+}
+
 vec4 clamParts(vec3 p, float t) {
     p.y -= 0.012; // (sitting on the sand, not sunk into it)
-    float open = 0.38 + 0.2 * sin(t * 0.45); // (never quite shut: the top shell doesn't cut into the bottom one)
-    float rim = 0.005 * sin(atan(p.z, p.x + 0.11) * 12.0);
-    float lowOut = sdEllipsoid(p - vec3(0.0, 0.04, 0.0), vec3(0.12, 0.045, 0.09));
-    float low = max(abs(lowOut + 0.006) - 0.006, p.y - 0.04 - rim);
-    vec3 h = p - vec3(-0.11, 0.04, 0.0);
-    h.xy = mat2(cos(open), sin(open), -sin(open), cos(open)) * h.xy;
-    float rimU = 0.005 * sin(atan(h.z, h.x) * 12.0);
-    float upOut = sdEllipsoid(h - vec3(0.11, 0.0, 0.0), vec3(0.12, 0.038, 0.09));
-    float up = max(abs(upOut + 0.006) - 0.006, -h.y + rimU);
-    float flesh = sdEllipsoid(p - vec3(0.0, 0.024, 0.0), vec3(0.092, 0.012, 0.068));
-    float pearl = length(p - vec3(0.025, 0.052, 0.0)) - 0.017;
+    float low = clamShell(p, -1.0).x;
+    float up = clamShell(clamTop(p, t), 1.0).x;
+    vec3 f = p - vec3(0.01, 0.028, 0.0);
+    float frill = 0.0025 * sin(atan(f.z, f.x) * 18.0 + 1.3) * smoothstep(0.04, 0.08, length(f.xz));
+    float flesh = sdEllipsoid(f, vec3(0.088, 0.016, 0.072)) - frill;
+    float pearl = length(p - vec3(0.022, 0.058, 0.0)) - 0.016;
     return vec4(low, up, flesh, pearl);
 }
 
@@ -1222,20 +1241,26 @@ vec3 decoColour(int type, vec3 p, vec3 n, float rnd) {
         }
         return mix(vec3(0.78, 0.56, 0.22), vec3(0.3, 0.55, 0.42), smoothstep(0.55, 0.75, fbm(p.xz * 18.0 + p.y * 9.0)) * 0.7);
     }
-    if (type == 11) { // the clam: ridged cream-pink shells outside, pearly (nacre) inside, pink flesh, a white pearl
+    if (type == 11) { // the clam: ribbed cream-pink shells outside, pearly (nacre) inside, soft flesh, a white pearl
         vec4 c = clamParts(p, gTime);
         float m = min(min(c.x, c.y), min(c.z, c.w));
-        if (m == c.w) return vec3(0.97, 0.95, 0.96) + vec3(0.25) * pow(max(n.y, 0.0), 12.0);
-        if (m == c.z) return mix(vec3(0.95, 0.62, 0.58), vec3(1.0, 0.78, 0.72), 0.5 + 0.5 * sin(atan(p.z, p.x) * 14.0 + length(p.xz) * 60.0));
-        bool upper = m == c.y;
-        vec3 centre = upper ? vec3(0.0, 0.08, 0.0) : vec3(0.0, 0.04, 0.0);
-        bool inside = dot(n, p - centre) < 0.0;
-        if (inside) { // nacre: pearly white with a soft rainbow sheen
-            float sh = 0.5 + 0.5 * sin(dot(n, vec3(5.0, 7.0, 3.0)) + length(p.xz) * 40.0);
-            return mix(vec3(0.95, 0.93, 0.95), mix(vec3(1.0, 0.85, 0.9), vec3(0.8, 0.9, 1.0), sh), 0.35);
+        vec3 q = p - vec3(0.0, 0.012, 0.0);
+        if (m == c.w) return vec3(0.97, 0.95, 0.96) + vec3(0.3) * pow(max(n.y, 0.0), 14.0);
+        if (m == c.z) { // the flesh: soft cream-pink, a darker frilled edge
+            float r = length(q.xz - vec2(0.01, 0.0));
+            return mix(vec3(0.98, 0.8, 0.74), vec3(0.85, 0.5, 0.5), smoothstep(0.055, 0.085, r)) * (0.92 + 0.08 * fbm(q.xz * 50.0));
         }
-        float ridge = 0.5 + 0.5 * sin(atan(p.z, p.x + 0.11) * 12.0);
-        return mix(vec3(0.85, 0.78, 0.7), vec3(0.98, 0.85, 0.82), ridge) * (0.9 + 0.1 * fbm(p.xz * 40.0));
+        bool upper = m == c.y;
+        vec3 sp = upper ? clamTop(q, gTime) : q;
+        vec2 sh = clamShell(sp, upper ? 1.0 : -1.0);
+        if (sh.y < -0.0035) { // the inside: nacre, pearly white with a soft rainbow sheen
+            float k = 0.5 + 0.5 * sin(dot(n, vec3(5.0, 7.0, 3.0)) + length(sp.xz) * 50.0);
+            return mix(vec3(0.95, 0.93, 0.96), mix(vec3(1.0, 0.86, 0.92), vec3(0.82, 0.92, 1.0), k), 0.4);
+        }
+        float ang = atan(sp.z, sp.x - CLAM_HINGE.x);
+        float rib = abs(sin(ang * 7.0));
+        float band = 0.5 + 0.5 * sin(length(sp.xz - CLAM_HINGE.xz) * 140.0); // (growth rings)
+        return mix(vec3(0.72, 0.6, 0.52), vec3(0.97, 0.84, 0.78), rib) * (0.88 + 0.12 * band);
     }
     float speck = hash22(floor(p.xz * 60.0) + floor(p.y * 60.0)).x;
     if (type == 0) {

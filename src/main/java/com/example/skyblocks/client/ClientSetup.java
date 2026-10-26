@@ -139,6 +139,19 @@ public final class ClientSetup {
                 return renderer;
             }
         }, ModItems.SKY_ISLAND.get());
+        for (boolean big : new boolean[] {false, true}) {
+            event.registerItem(new IClientItemExtensions() {
+                private LavaLampItemRenderer renderer;
+
+                @Override
+                public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                    if (renderer == null) {
+                        renderer = new LavaLampItemRenderer(big);
+                    }
+                    return renderer;
+                }
+            }, big ? ModItems.BIG_LAVA_LAMP.get() : ModItems.LAVA_LAMP.get());
+        }
     }
 
     /** The shared models of the Sky Liquids (any sky without its own model files falls back to these). */

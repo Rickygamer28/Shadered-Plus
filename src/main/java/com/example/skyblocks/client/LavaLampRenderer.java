@@ -52,9 +52,23 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
                         .setShaderState(new ShaderStateShard(() -> shader))
                         .setTexturingState(new TexturingStateShard("skyblocks_lava_lamp_camera", () -> {
                             if (shader != null) {
-                                Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-                                shader.safeGetUniform("CamPos").set((float) cam.x, (float) cam.y, (float) cam.z);
                                 shader.safeGetUniform("LampTime").set(seconds());
+                                shader.safeGetUniform("ItemMode").set(0.0F);
+                            }
+                        }, () -> {}))
+                        .setTransparencyState(NO_TRANSPARENCY)
+                        .setWriteMaskState(COLOR_DEPTH_WRITE)
+                        .setCullState(CULL)
+                        .createCompositeState(false));
+        /** As an item: drawn at once (LampInv is this one lamp's), see LavaLampItemRenderer. */
+        static final RenderType ITEM = create("skyblocks_lava_lamp_item", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 256,
+                false, false, CompositeState.builder()
+                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setTexturingState(new TexturingStateShard("skyblocks_lava_lamp_item", () -> {
+                            if (shader != null) {
+                                shader.safeGetUniform("LampTime").set(seconds());
+                                shader.safeGetUniform("ItemMode").set(1.0F);
+                                shader.safeGetUniform("LampInv").set(ITEM_INV);
                             }
                         }, () -> {}))
                         .setTransparencyState(NO_TRANSPARENCY)
@@ -81,14 +95,42 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         if (be.getBlockState().getBlock() instanceof com.example.skyblocks.BigLavaLampBlock) {
             // the big lamp: the same lamp stretched (see the shader), its glass from 0.55 to 1.62 blocks up
             box(vc, poseStack.last().pose(), 0.5F - 0.175F * BIG_H, 0.305F * BIG_V + BIG_Y, 0.5F - 0.175F * BIG_H,
-                    0.5F + 0.175F * BIG_H, 0.805F * BIG_V + BIG_Y, 0.5F + 0.175F * BIG_H, r, g, b, a, 1.0F);
+                    0.5F + 0.175F * BIG_H, 0.805F * BIG_V + BIG_Y, 0.5F + 0.175F * BIG_H, r, g, b, a, 1.0F, seed(be));
         } else {
-            box(vc, poseStack.last().pose(), 0.325F, 0.305F, 0.325F, 0.675F, 0.805F, 0.675F, r, g, b, a, 0.0F);
+            box(vc, poseStack.last().pose(), 0.325F, 0.305F, 0.325F, 0.675F, 0.805F, 0.675F, r, g, b, a, 0.0F, seed(be));
         }
+    }
+
+    /** Each lamp's own timing (from where it stands). */
+    private static float seed(GlowColourBlockEntity be) {
+        long h = be.getBlockPos().asLong() * 0x9E3779B97F4A7C15L;
+        return (float) ((h >>> 40) & 0xFFFF) / 65536.0F;
     }
 
     /** The big lamp: the small one's shape scaled across, up, and moved up (the same numbers as the shader's). */
     static final float BIG_H = 1.55F, BIG_V = 2.2F, BIG_Y = -0.143F;
+    /** The item being drawn: from its drawn position back into the lamp's own space. */
+    static final Matrix4f ITEM_INV = new Matrix4f();
+
+    /** A lamp's glass as an item, drawn at once with its own matrix (small or big, wax colour, on). */
+    static void drawItem(PoseStack poseStack, MultiBufferSource buffers, boolean big, int colour) {
+        if (shader == null) {
+            return;
+        }
+        Matrix4f m = poseStack.last().pose();
+        ITEM_INV.set(m).invert();
+        int r = (colour >> 16) & 255, g = (colour >> 8) & 255, b = colour & 255;
+        VertexConsumer vc = buffers.getBuffer(Types.ITEM);
+        if (big) {
+            box(vc, m, 0.5F - 0.175F * BIG_H, 0.305F * BIG_V + BIG_Y, 0.5F - 0.175F * BIG_H,
+                    0.5F + 0.175F * BIG_H, 0.805F * BIG_V + BIG_Y, 0.5F + 0.175F * BIG_H, r, g, b, 255, 1.0F, 0.0F);
+        } else {
+            box(vc, m, 0.325F, 0.305F, 0.325F, 0.675F, 0.805F, 0.675F, r, g, b, 255, 0.0F, 0.0F);
+        }
+        if (buffers instanceof MultiBufferSource.BufferSource source) {
+            source.endBatch(Types.ITEM); // (now, while the matrix is this lamp's)
+        }
+    }
 
     public net.minecraft.world.phys.AABB getRenderBoundingBox(GlowColourBlockEntity be) {
         net.minecraft.core.BlockPos p = be.getBlockPos();
@@ -96,7 +138,7 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
     }
 
     /** A box's six faces, facing out. */
-    static void box(VertexConsumer vc, Matrix4f m, float x0, float y0, float z0, float x1, float y1, float z1, int r, int g, int b, int a, float big) {
+    static void box(VertexConsumer vc, Matrix4f m, float x0, float y0, float z0, float x1, float y1, float z1, int r, int g, int b, int a, float big, float seed) {
         float[][] f = {
                 {x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1}, // south
                 {x1, y0, z0, x0, y0, z0, x0, y1, z0, x1, y1, z0}, // north
@@ -107,8 +149,9 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         };
         for (float[] q : f) {
             for (int v = 0; v < 4; v++) {
-                // uv: (big or not, the height in the lamp's block - to find the block it stands on)
-                vc.addVertex(m, q[v * 3], q[v * 3 + 1], q[v * 3 + 2]).setUv(big, q[v * 3 + 1]).setColor(r, g, b, a);
+                // uv: (which corner of the box + 10 if big, the lamp's seed) - the shader works out where it is from these
+                int corner = (q[v * 3] == x1 ? 1 : 0) + (q[v * 3 + 1] == y1 ? 2 : 0) + (q[v * 3 + 2] == z1 ? 4 : 0);
+                vc.addVertex(m, q[v * 3], q[v * 3 + 1], q[v * 3 + 2]).setUv(corner + 10.0F * big, seed).setColor(r, g, b, a);
             }
         }
     }
