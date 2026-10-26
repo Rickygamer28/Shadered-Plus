@@ -1,6 +1,8 @@
 #version 150
 
-// Shadered+'s koi pond (our own code). The view meets the rippling surface (lily pads float on it; the sky shines
+// Shadered+'s koi pond (our own code). Drawn on a box over the water (up above the rim, so the ducks and frogs on it
+// are never cut off by the stone; the depth of what is seen is written, so the rim still hides what it should).
+// The view meets the rippling surface (lily pads float on it; the sky shines
 // off it at low angles), bends into the water and goes down past koi swimming at three depths to the pebbles or the
 // stone sides, light rippling on them, the fish and pads casting soft shadows. Each block has its own koi (maybe)
 // and lily pads, swimming in loops in it; joined ponds are one water. x, z: world blocks; y: up in the block.
@@ -8,6 +10,10 @@
 in vec3 wray;
 in vec2 uv;
 in vec4 vColor;
+in vec3 vpos;
+
+uniform mat4 ModelViewMat;
+uniform mat4 ProjMat;
 
 uniform float PondTime;
 uniform float Daylight;
@@ -16,6 +22,8 @@ out vec4 fragColor;
 
 const float SURF = 14.5 / 16.0;
 const float FLOOR = 1.0 / 16.0;
+const float TOP = 2.5; // (the top of the box drawn over the water, well above the rim: ducks flying in and off fit in it)
+vec3 gHit; // (where a duck or frog was hit)
 const vec3 SUN = vec3(0.35, 1.0, 0.2);
 
 vec2 hash22(vec2 p) {
@@ -218,6 +226,7 @@ vec4 frogHit(vec3 p0, vec3 rd, float t, float light) {
     for (int j = -1; j <= 1; j++) {
         for (int i = -1; i <= 1; i++) {
             vec2 cell = c0 + vec2(i, j);
+            if (any(lessThan(cell, pondLo)) || any(greaterThanEqual(cell, pondHi))) continue; // (only the pond's own pads)
             for (int k = 0; k < 2; k++) {
                 vec2 c, h, h2;
                 float r;
@@ -260,6 +269,7 @@ vec4 frogHit(vec3 p0, vec3 rd, float t, float light) {
                             if (info.x > 1.5 && noise2(q.xz * 1.6) > 0.68) col *= 0.7; // (spots)
                             col *= lam;
                         }
+                        gHit = pTop + rd * (tm / sc);
                         return vec4(col * light, 1.0);
                     }
                     tm += max(f.x * 0.9, 0.05);
@@ -325,8 +335,9 @@ void wander(float seed, float reach, float speed, float t, out vec2 pos, out vec
     dir = length(v) > 1e-5 ? normalize(v) : vec2(1.0, 0.0);
 }
 
-// duck d (0 or 1): is it here now, and how high above the water (landing / taking off) and its kind
-bool duckHere(int d, float t, out float height, out float kind) {
+// duck d (0 or 1): is it here now; how high above the water and how far ahead of its swimming path (flying in or
+// off); its wings (spread 0 folded .. 1 open, how hard they flap); how big a splash there is; and its kind
+bool duckHere(int d, float t, out float height, out float ahead, out float spread, out float flap, out float splash, out float kind) {
     float ph = t / 140.0 + hash22(pondLo + pondHi * 1.3).x * 7.0;
     float e = floor(ph), te = fract(ph) * 140.0;
     vec2 h = hash22(pondLo * 0.71 + pondHi * 0.37 + e * 3.3 + float(d) * 17.0);
@@ -334,17 +345,40 @@ bool duckHere(int d, float t, out float height, out float kind) {
     bool visit = hash22(pondLo * 0.71 + pondHi * 0.37 + e * 3.3).x < 0.55 && (d == 0 || size.x * size.y >= 8.0);
     kind = step(0.5, h.y);
     float tin = 8.0 + float(d) * 1.5, tout = 108.0 - float(d) * 2.0;
-    height = te < tin + 2.0 ? (tin + 2.0 - te) * 0.45 : te > tout - 2.0 ? (te - tout + 2.0) * 0.45 : 0.0;
+    height = 0.0; ahead = 0.0; spread = 0.0; flap = 0.0; splash = 0.0;
+    if (te < tin + 3.0) { // flying in: down out of the sky, flapping, then a glide, wings folding as it touches down
+        float u = clamp((te - tin) / 3.0, 0.0, 1.0);
+        height = (1.0 - u) * (1.0 - u) * 1.7;
+        ahead = -(1.0 - u) * 0.9;
+        spread = 1.0 - smoothstep(0.82, 1.0, u);
+        flap = u < 0.55 ? 1.0 : 0.15;
+    } else if (te > tout - 3.0) { // flying off: a run across the water flapping hard, then up and away
+        float u = clamp((te - tout + 3.0) / 3.0, 0.0, 1.0);
+        float rise = max(u - 0.4, 0.0) / 0.6;
+        height = 0.02 * step(0.05, u) + rise * rise * 1.9;
+        ahead = u * u * 1.4;
+        spread = smoothstep(0.0, 0.12, u);
+        flap = 1.0;
+    }
+    float since = te - (tin + 2.7); // (the splash as it lands)
+    splash = since > 0.0 ? exp(-since * 1.2) : 0.0;
     return visit && te > tin && te < tout;
 }
 
-float duckSDF(vec3 p, out int mat) {
+float duckSDF(vec3 p, float spread, float flapAngle, out int mat) {
     vec3 q = vec3(abs(p.x), p.y, p.z);
     float d = sdEllipsoid(p - vec3(0.0, 0.7, 0.0), vec3(1.7, 1.25, 2.7));
     d = smin(d, sdEllipsoid(p - vec3(0.0, 1.5, -2.3), vec3(0.9, 0.6, 0.9)), 0.6);
     d = smin(d, sdEllipsoid(p - vec3(0.0, 2.0, 1.6), vec3(0.75, 1.3, 0.75)), 0.5);
     d = smin(d, length(p - vec3(0.0, 3.1, 2.0)) - 1.0, 0.4);
     mat = 0;
+    // the wings: folded along its sides, or spread wide and beating
+    vec3 w = q - mix(vec3(1.35, 1.35, -0.3), vec3(1.1, 1.65, 0.2), spread);
+    float a = flapAngle * spread;
+    w.xy = mat2(cos(a), -sin(a), sin(a), cos(a)) * w.xy;
+    float wing = sdEllipsoid(w - vec3(mix(0.1, 2.3, spread), 0.0, mix(0.0, -0.2, spread)),
+                             vec3(mix(0.32, 2.5, spread), mix(0.62, 0.17, spread), mix(1.9, 1.15, spread)));
+    if (wing < d) { d = min(d, wing); mat = 3; }
     float bill = sdEllipsoid(p - vec3(0.0, 2.85, 3.15), vec3(0.42, 0.2, 0.8));
     if (bill < d) { d = bill; mat = 1; }
     float eye = length(q - vec3(0.72, 3.3, 2.45)) - 0.17;
@@ -352,63 +386,74 @@ float duckSDF(vec3 p, out int mat) {
     return d;
 }
 
-// a duck in front of the surface point: (colour, 0/1); ripple: rings on the water round it
+// a duck in front of the surface point: (colour, 0/1); ripple: rings on the water round it (and its landing splash)
 vec4 duckHit(vec3 p0, vec3 rd, float t, float light, out float ripple) {
     ripple = 0.0;
     vec4 res = vec4(0.0);
     for (int dk = 0; dk < 2; dk++) {
-        float height, kind;
-        if (!duckHere(dk, t, height, kind)) continue;
+        float height, ahead, spread, flap, splash, kind;
+        if (!duckHere(dk, t, height, ahead, spread, flap, splash, kind)) continue;
         vec2 pos, dir;
         wander(40.0 + float(dk) * 11.0, 0.3, 0.07, t, pos, dir);
+        vec2 sitPos = pos;
+        pos += dir * ahead;
         float dist = length(p0.xz - pos);
-        if (height <= 0.0) ripple += sin(dist * 110.0 - t * 5.0) * exp(-dist * 9.0) * 0.06;
-        if (rd.y > -0.04 || res.a > 0.0) continue;
-        float bob = 0.012 * sin(t * 1.7 + float(dk));
+        if (height < 0.05) ripple += sin(dist * 110.0 - t * 5.0) * exp(-dist * 9.0) * 0.06;
+        float sd = length(p0.xz - sitPos);
+        ripple += splash * sin(sd * 70.0 - t * 9.0) * exp(-sd * 5.0) * 0.25; // (the landing splash, spreading)
+        if (rd.y > -0.002 || res.a > 0.0) continue;
+        float bob = height > 0.0 ? 0.0 : 0.012 * sin(t * 1.7 + float(dk));
         float base = SURF + height + bob;
-        float up = 0.32 + height;
+        float up = 0.4 + height;
         vec3 pTop = p0 - rd * (up / -rd.y);
         vec2 ab = p0.xz - pTop.xz;
         float w = clamp(dot(pos - pTop.xz, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
-        if (length(pTop.xz + ab * w - pos) > 0.3) continue;
+        if (length(pTop.xz + ab * w - pos) > 0.36) continue;
         float sc = 16.0 / 0.85;
         vec2 right = vec2(dir.y, -dir.x);
         vec3 ro = vec3(dot(pTop.xz - pos, right), pTop.y - base, dot(pTop.xz - pos, dir)) * sc;
         vec3 rr = vec3(dot(rd.xz, right), rd.y, dot(rd.xz, dir));
+        float flapAngle = flap > 0.5 ? 0.15 + 0.85 * sin(t * 15.0 + float(dk)) : 0.25; // (beating, or held up in a glide)
         float tm = 0.0, tEnd = length(p0 - pTop) * sc;
-        for (int n = 0; n < 48; n++) {
+        for (int n = 0; n < 56; n++) {
             vec3 q = ro + rr * tm;
             int mat;
-            float f = duckSDF(q, mat);
+            float f = duckSDF(q, spread, flapAngle, mat);
             if (f < 0.02) {
                 vec2 e = vec2(0.03, 0.0);
                 int m2;
-                vec3 nn = normalize(vec3(duckSDF(q + e.xyy, m2) - duckSDF(q - e.xyy, m2), duckSDF(q + e.yxy, m2) - duckSDF(q - e.yxy, m2),
-                                         duckSDF(q + e.yyx, m2) - duckSDF(q - e.yyx, m2)));
+                vec3 nn = normalize(vec3(duckSDF(q + e.xyy, spread, flapAngle, m2) - duckSDF(q - e.xyy, spread, flapAngle, m2),
+                                         duckSDF(q + e.yxy, spread, flapAngle, m2) - duckSDF(q - e.yxy, spread, flapAngle, m2),
+                                         duckSDF(q + e.yyx, spread, flapAngle, m2) - duckSDF(q - e.yyx, spread, flapAngle, m2)));
                 vec3 sun = normalize(vec3(dot(SUN.xz, right), SUN.y, dot(SUN.xz, dir)));
                 float lam = 0.45 + 0.55 * max(dot(nn, sun), 0.0);
                 vec3 col;
                 if (mat == 2) {
                     col = vec3(0.03) + vec3(0.8) * pow(max(dot(reflect(rr, nn), sun), 0.0), 30.0);
                 } else if (mat == 1) {
-                    col = kind < 0.5 ? vec3(0.92, 0.78, 0.22) : vec3(0.85, 0.5, 0.15);
+                    col = (kind < 0.5 ? vec3(0.92, 0.78, 0.22) : vec3(0.85, 0.5, 0.15)) * lam;
+                } else if (mat == 3) { // the wings: grey-brown, a blue patch with white edges near the back
+                    col = kind < 0.5 ? vec3(0.5, 0.48, 0.44) : vec3(0.42, 0.31, 0.19);
+                    float along = q.z;
+                    if (abs(along + 0.5) < 0.35 && abs(q.x) > 1.0) col = vec3(0.15, 0.25, 0.75);
                     col *= lam;
-                } else if (kind < 0.5) { // a drake: green head, white collar, chestnut breast, grey sides, a blue wing patch
+                } else if (kind < 0.5) { // a drake: green head, white collar, chestnut breast, grey sides
                     if (q.y > 2.35 && q.z > 1.0) col = vec3(0.05, 0.36, 0.16) + vec3(0.25) * pow(max(dot(reflect(rr, nn), sun), 0.0), 16.0);
                     else if (abs(q.y - 2.2) < 0.13 && q.z > 1.0) col = vec3(0.95);
                     else if (q.z > 0.9 && q.y < 2.3) col = vec3(0.45, 0.22, 0.12);
                     else if (q.z < -1.8) col = q.y > 1.6 ? vec3(0.05) : vec3(0.9);
-                    else col = (abs(q.x) > 1.2 && abs(q.z + 0.6) < 0.5 && q.y > 1.0) ? vec3(0.15, 0.25, 0.7) : vec3(0.62, 0.62, 0.58);
+                    else col = vec3(0.62, 0.62, 0.58);
                     col *= lam;
                 } else { // a hen: mottled browns
                     col = mix(vec3(0.5, 0.37, 0.22), vec3(0.3, 0.2, 0.12), step(0.62, noise2(q.xz * 2.3 + q.y * 1.7)));
                     if (q.y > 2.4 && q.z > 1.0) col = vec3(0.55, 0.42, 0.28);
                     col *= lam;
                 }
+                gHit = pTop + rd * (tm / sc);
                 res = vec4(col * light, 1.0);
                 break;
             }
-            tm += max(f * 0.9, 0.05);
+            tm += max(f * 0.85, 0.05);
             if (tm > tEnd) break;
         }
     }
@@ -479,14 +524,23 @@ float caustics(vec2 p, float t) {
     return pow(0.5 + 0.25 * (a + b), 4.0) * 1.6;
 }
 
+// the depth of a point (world blocks), from where this fragment is on the box (vpos: the same point, as drawn)
+float depthOf(vec3 hit, vec3 entry) {
+    vec4 c = ProjMat * ModelViewMat * vec4(vpos + (hit - entry), 1.0);
+    return clamp(c.z / c.w * 0.5 + 0.5, 0.0, 1.0);
+}
+
 void main() {
     float t = PondTime;
     float day = clamp(Daylight, 0.0, 1.0);
-    int ia = int(vColor.a * 255.0 + 0.5) - 16;
-    bool openN = (ia & 1) != 0, openS = (ia & 2) != 0, openE = (ia & 4) != 0, openW = (ia & 8) != 0;
     vec3 rd = normalize(wray);
-    vec3 p0 = vec3(uv.x, SURF, uv.y);
-    vec2 cell0 = floor(uv);
+    // where the view enters the box over the water (its top, or a side above the rim)
+    vec3 entry = vec3(uv.x, mix(SURF, TOP, vColor.a), uv.y);
+    if (rd.y > -0.002) {
+        discard;
+    }
+    vec3 p0 = entry + rd * ((SURF - entry.y) / rd.y); // (where it meets the water)
+    vec2 cell0 = floor(entry.xz - 1e-4); // (the block this is drawn for)
     // the whole pond's rectangle (how far it reaches from this block each way, packed into the colour) and its koi
     int rectBits = int(vColor.r * 255.0 + 0.5) | (int(vColor.g * 255.0 + 0.5) << 8) | (int(vColor.b * 255.0 + 0.5) << 16);
     pondLo = cell0 - vec2(float(rectBits & 63), float((rectBits >> 12) & 63));
@@ -499,6 +553,7 @@ void main() {
     vec4 frog = frogHit(p0, rd, t, light);
     if (frog.a > 0.0) {
         fragColor = vec4(frog.rgb, 1.0);
+        gl_FragDepth = depthOf(gHit, entry);
         return;
     }
     // a duck (now and then one or two drop in for a while)
@@ -506,8 +561,15 @@ void main() {
     vec4 duck = duckHit(p0, rd, t, light, ripple);
     if (duck.a > 0.0) {
         fragColor = vec4(duck.rgb, 1.0);
+        gl_FragDepth = depthOf(gHit, entry);
         return;
     }
+    // no water there (the view passes over the rim to beyond the pond): nothing to draw
+    vec2 wlo = pondLo + 2.0 / 16.0, whi = pondHi - 2.0 / 16.0;
+    if (any(lessThan(p0.xz, wlo)) || any(greaterThan(p0.xz, whi))) {
+        discard;
+    }
+    gl_FragDepth = depthOf(p0, entry);
     // a lily pad here: it floats on top
     vec4 pad = padAt(p0.xz, t);
     if (pad.a > 0.0) {
@@ -528,11 +590,11 @@ void main() {
     // what the bent ray meets: the stone sides (where no pond carries on), else the bottom
     float tHit = (FLOOR - SURF) / rr.y;
     int what = 0; // 0 bottom, 1 side
-    float wx0 = cell0.x + 2.0 / 16.0, wx1 = cell0.x + 14.0 / 16.0, wz0 = cell0.y + 2.0 / 16.0, wz1 = cell0.y + 14.0 / 16.0;
-    if (!openW && rr.x < 0.0) { float tw = (wx0 - p0.x) / rr.x; if (tw < tHit) { tHit = tw; what = 1; } }
-    if (!openE && rr.x > 0.0) { float tw = (wx1 - p0.x) / rr.x; if (tw < tHit) { tHit = tw; what = 1; } }
-    if (!openN && rr.z < 0.0) { float tw = (wz0 - p0.z) / rr.z; if (tw < tHit) { tHit = tw; what = 1; } }
-    if (!openS && rr.z > 0.0) { float tw = (wz1 - p0.z) / rr.z; if (tw < tHit) { tHit = tw; what = 1; } }
+    // (the pond's stone sides: round its whole rectangle)
+    if (rr.x < 0.0) { float tw = (wlo.x - p0.x) / rr.x; if (tw < tHit) { tHit = tw; what = 1; } }
+    if (rr.x > 0.0) { float tw = (whi.x - p0.x) / rr.x; if (tw < tHit) { tHit = tw; what = 1; } }
+    if (rr.z < 0.0) { float tw = (wlo.y - p0.z) / rr.z; if (tw < tHit) { tHit = tw; what = 1; } }
+    if (rr.z > 0.0) { float tw = (whi.y - p0.z) / rr.z; if (tw < tHit) { tHit = tw; what = 1; } }
     vec3 ph = p0 + rr * tHit;
 
     vec3 water = vec3(0.05, 0.17, 0.15) * light;

@@ -103,6 +103,11 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
     }
 
     @Override
+    public boolean shouldRenderOffScreen(KoiPondBlockEntity be) {
+        return true; // (its box reaches above the block)
+    }
+
+    @Override
     public void render(KoiPondBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
         BlockState state = be.getBlockState();
         if (shader == null || !(state.getBlock() instanceof KoiPondBlock)) {
@@ -111,10 +116,9 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
         boolean n = state.getValue(KoiPondBlock.NORTH), s = state.getValue(KoiPondBlock.SOUTH);
         boolean e = state.getValue(KoiPondBlock.EAST), w = state.getValue(KoiPondBlock.WEST);
         float x0 = w ? 0.0F : 2.0F / 16.0F, x1 = e ? 1.0F : 14.0F / 16.0F, z0 = n ? 0.0F : 2.0F / 16.0F, z1 = s ? 1.0F : 14.0F / 16.0F;
-        float y = 14.5F / 16.0F;
+        float y0 = 14.5F / 16.0F, y1 = 2.5F; // (the water .. well above the rim: ducks flying in and off fit in)
         BlockPos p = be.getBlockPos();
         float bx = Math.floorMod(p.getX(), 512), bz = Math.floorMod(p.getZ(), 512);
-        int a = 16 + (n ? 1 : 0) + (s ? 2 : 0) + (e ? 4 : 0) + (w ? 8 : 0);
         // the whole pond's rectangle, packed into the colour: how far it reaches from here west, east, north, south
         int[] rect = pond(be.getLevel(), p);
         int packed = Math.min(p.getX() - rect[0], 63) | Math.min(rect[1] - p.getX(), 63) << 6
@@ -122,10 +126,30 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
         int cr = packed & 255, cg = (packed >> 8) & 255, cb = (packed >> 16) & 255;
         Matrix4f m = poseStack.last().pose();
         VertexConsumer vc = buffers.getBuffer(Types.WATER);
-        // (facing up)
-        vc.addVertex(m, x0, y, z0).setUv(bx + x0, bz + z0).setColor(cr, cg, cb, a);
-        vc.addVertex(m, x0, y, z1).setUv(bx + x0, bz + z1).setColor(cr, cg, cb, a);
-        vc.addVertex(m, x1, y, z1).setUv(bx + x1, bz + z1).setColor(cr, cg, cb, a);
-        vc.addVertex(m, x1, y, z0).setUv(bx + x1, bz + z0).setColor(cr, cg, cb, a);
+        // a box over the water: its top, and its sides where the pond ends (alpha: how high, for the shader)
+        v(vc, m, x0, y1, z0, bx, bz, cr, cg, cb, 255);
+        v(vc, m, x0, y1, z1, bx, bz, cr, cg, cb, 255);
+        v(vc, m, x1, y1, z1, bx, bz, cr, cg, cb, 255);
+        v(vc, m, x1, y1, z0, bx, bz, cr, cg, cb, 255);
+        if (!n) {
+            v(vc, m, x1, y0, z0, bx, bz, cr, cg, cb, 0); v(vc, m, x0, y0, z0, bx, bz, cr, cg, cb, 0);
+            v(vc, m, x0, y1, z0, bx, bz, cr, cg, cb, 255); v(vc, m, x1, y1, z0, bx, bz, cr, cg, cb, 255);
+        }
+        if (!s) {
+            v(vc, m, x0, y0, z1, bx, bz, cr, cg, cb, 0); v(vc, m, x1, y0, z1, bx, bz, cr, cg, cb, 0);
+            v(vc, m, x1, y1, z1, bx, bz, cr, cg, cb, 255); v(vc, m, x0, y1, z1, bx, bz, cr, cg, cb, 255);
+        }
+        if (!w) {
+            v(vc, m, x0, y0, z0, bx, bz, cr, cg, cb, 0); v(vc, m, x0, y0, z1, bx, bz, cr, cg, cb, 0);
+            v(vc, m, x0, y1, z1, bx, bz, cr, cg, cb, 255); v(vc, m, x0, y1, z0, bx, bz, cr, cg, cb, 255);
+        }
+        if (!e) {
+            v(vc, m, x1, y0, z1, bx, bz, cr, cg, cb, 0); v(vc, m, x1, y0, z0, bx, bz, cr, cg, cb, 0);
+            v(vc, m, x1, y1, z0, bx, bz, cr, cg, cb, 255); v(vc, m, x1, y1, z1, bx, bz, cr, cg, cb, 255);
+        }
+    }
+
+    private static void v(VertexConsumer vc, Matrix4f m, float x, float y, float z, float bx, float bz, int r, int g, int b, int a) {
+        vc.addVertex(m, x, y, z).setUv(bx + x, bz + z).setColor(r, g, b, a);
     }
 }
