@@ -549,15 +549,31 @@ void main() {
     pondHi = cell0 + vec2(float((rectBits >> 6) & 63), float((rectBits >> 18) & 63)) + 1.0;
     vec2 size = pondHi - pondLo;
     pondFish = clamp(int(size.x * size.y * 0.45 + 0.75), 1, 24);
-    // where the ray starts: where it comes into the box over the water - or, standing on the pond with the eye
-    // inside that box, at the eye itself (every face is then where the view leaves the box, the water face included)
-    vec3 eyeW = entry - wray;
-    bool inside = ProjMat[2][3] < -0.5 && eyeW.y > SURF && eyeW.y < TOP
-            && all(greaterThan(eyeW.xz, pondLo + 0.125)) && all(lessThan(eyeW.xz, pondHi - 0.125));
-    if (!inside && !gl_FrontFacing) {
-        discard; // (the far side of the box: already drawn where the view came in)
+    // the box over the water (the pond's whole rectangle, inside its rim, from the water up). Every pixel is drawn
+    // once, where the view LEAVES the box (worked out from where it is, not from which way the face points): the
+    // ray then starts where it came into the box - or at the eye, when that's inside it (standing on the pond)
+    vec3 bLo = vec3(pondLo.x + 0.125, SURF, pondLo.y + 0.125), bHi = vec3(pondHi.x - 0.125, TOP, pondHi.y - 0.125);
+    vec3 probe = entry + rd * 0.01;
+    bool leaving = any(lessThan(probe, bLo)) || any(greaterThan(probe, bHi));
+    vec3 start;
+    if (ProjMat[2][3] < -0.5) {
+        if (!leaving) {
+            discard;
+        }
+        vec3 eyeW = entry - wray;
+        vec3 inv = 1.0 / vec3(abs(rd.x) < 1e-6 ? 1e-6 : rd.x, abs(rd.y) < 1e-6 ? -1e-6 : rd.y, abs(rd.z) < 1e-6 ? 1e-6 : rd.z);
+        vec3 ta = (bLo - eyeW) * inv, tb = (bHi - eyeW) * inv;
+        vec3 tn = min(ta, tb);
+        start = eyeW + rd * max(max(max(tn.x, tn.y), tn.z), 0.0);
+    } else {
+        if (leaving) {
+            discard; // (a flat view, as in a picture: drawn where the view comes in)
+        }
+        start = entry;
     }
-    vec3 start = inside ? eyeW : entry;
+    if (start.y < SURF - 0.001) {
+        discard;
+    }
     vec3 p0 = start + rd * ((SURF - start.y) / rd.y); // (where it meets the water)
     gStart = start;
     float light = 0.18 + 0.82 * day;
