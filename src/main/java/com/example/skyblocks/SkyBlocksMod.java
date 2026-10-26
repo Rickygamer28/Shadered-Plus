@@ -63,6 +63,7 @@ public class SkyBlocksMod {
         event.accept(ModItems.HOLOGRAM_PROJECTOR.get());
         event.accept(ModItems.JELLYFISH_TANK.get());
         event.accept(ModItems.KOI_POND.get());
+        event.accept(ModItems.VANILLA_KOI_POND.get());
         event.accept(ModItems.NEON_SIGN.get());
         event.accept(ModItems.DANCE_FLOOR.get());
         event.accept(ModItems.DISCO_BALL.get());

@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "skyblocks:koi_pond"
+    }
+  ],
+  "result": {
+    "id": "skyblocks:vanilla_koi_pond",
+    "count": 1
+  }
+}

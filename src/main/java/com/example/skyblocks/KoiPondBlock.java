@@ -89,7 +89,7 @@ public class KoiPondBlock extends BaseEntityBlock {
 
     // ---- where the frogs are (the same whole-number hash as shaders/core/koi_pond, so the croaks come from them) ----
 
-    private static int hashu(int x, int y, int z) {
+    public static int hashu(int x, int y, int z) {
         x = x * 1664525 + 1013904223; y = y * 1664525 + 1013904223; z = z * 1664525 + 1013904223;
         x += y * z; y += z * x; z += x * y;
         x ^= x >>> 16; y ^= y >>> 16; z ^= z >>> 16;
@@ -97,21 +97,42 @@ public class KoiPondBlock extends BaseEntityBlock {
         return x ^ y ^ z;
     }
 
-    private static float u01(int h) {
+    public static float u01(int h) {
         return (h & 65535) / 65535.0F;
     }
 
     /** Is a frog sitting on this pond block's lily pad now (at most one to a block, coming and going)? */
     public static boolean frogOn(BlockPos pos, double seconds) {
+        double te = frogTime(pos, seconds);
+        return te > 6.0 && te < 70.0;
+    }
+
+    /**
+     * How far into a frog's visit to this block's lily pad it is now (seconds: hopping on from 5 to 6, sitting, hopping
+     * off from 70 to 71), or -1 with no frog here.
+     */
+    public static double frogTime(BlockPos pos, double seconds) {
         int cx = Math.floorMod(pos.getX(), 512), cz = Math.floorMod(pos.getZ(), 512);
-        if (u01(hashu(cx, cz, 0)) < 0.45F || 0.08F + 0.07F * u01(hashu(cx, cz, 100)) < 0.09F) {
-            return false; // (no pad, or too small for a frog)
+        if (!padHere(pos) || 0.08F + 0.07F * u01(hashu(cx, cz, 100)) < 0.09F) {
+            return -1.0; // (no pad, or too small for a frog)
         }
         float hx = u01(hashu(cx, cz, 200)), hy = u01(hashu(cx, cz, 300));
         double phase = seconds / 75.0 + hx * 13.0;
         int epoch = (int) Math.floor(phase);
         double te = (phase - epoch) * 75.0;
-        return hy < 0.55F && u01(hashu(cx, cz, 200000 + epoch)) < 0.6F && te > 6.0 && te < 70.0;
+        return hy < 0.55F && u01(hashu(cx, cz, 200000 + epoch)) < 0.6F && te > 5.0 && te < 71.0 ? te : -1.0;
+    }
+
+    /** Which frog is visiting now (0 orange temperate, 1 green cold, 2 white warm: as in shaders/core/koi_pond). */
+    public static int frogKind(BlockPos pos, double seconds) {
+        int cx = Math.floorMod(pos.getX(), 512), cz = Math.floorMod(pos.getZ(), 512);
+        int epoch = (int) Math.floor(seconds / 75.0 + u01(hashu(cx, cz, 200)) * 13.0);
+        return Math.min((int) (u01(hashu(cx, cz, 500000 + epoch)) * 3.0F), 2);
+    }
+
+    /** Has this block a (first) lily pad? */
+    public static boolean padHere(BlockPos pos) {
+        return u01(hashu(Math.floorMod(pos.getX(), 512), Math.floorMod(pos.getZ(), 512), 0)) >= 0.45F;
     }
 
     /** The frogs on its lily pads croak now and then; a little splash now and then. */
@@ -136,6 +157,6 @@ public class KoiPondBlock extends BaseEntityBlock {
 
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("tooltip.skyblocks.koi_pond").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable(getDescriptionId().replace("block.", "tooltip.")).withStyle(ChatFormatting.GRAY));
     }
 }

@@ -2,6 +2,7 @@ package com.example.skyblocks.client;
 
 import com.example.skyblocks.KoiPondBlock;
 import com.example.skyblocks.KoiPondBlockEntity;
+import com.example.skyblocks.ModBlocks;
 import com.example.skyblocks.SkyBlocksMod;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -64,29 +65,42 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
         }
     }
 
-    public KoiPondRenderer(BlockEntityRendererProvider.Context context) {}
+    private final VanillaPondRenderer vanilla;
+
+    public KoiPondRenderer(BlockEntityRendererProvider.Context context) {
+        vanilla = new VanillaPondRenderer(context);
+    }
 
     /**
-     * Each pond's rectangle round it (min x, max x, min z, max z) and its row in the shapes texture (KoiPondData: the
-     * rectangles it is made of, which the koi keep to), found once and kept a second (ponds rarely change).
+     * A pond (of one kind: the two never join): the rectangle round it (min x, max x, min z, max z), the rectangles it
+     * is made of (any shape: the koi each keep to one; min x, max x, min z, max z, the biggest first), how many blocks,
+     * the block that draws the koi and visitors for the whole pond (the vanilla one), and its row in KoiPondData's
+     * shapes texture (the shader one).
      */
-    private static final java.util.Map<Long, int[]> PONDS = new java.util.HashMap<>();
+    record Pond(int[] rect, int[][] parts, int blocks, long anchor, int row) {}
+
+    /** Each pond, found once and kept a second (ponds rarely change). */
+    private static final java.util.Map<Long, Pond> PONDS = new java.util.HashMap<>();
     private static long pondsAt;
 
-    private static int[] pond(net.minecraft.world.level.Level level, BlockPos start) {
+    static Pond pond(net.minecraft.world.level.Level level, BlockPos start, net.minecraft.world.level.block.Block kind) {
         long now = System.nanoTime();
         if (now - pondsAt > 1_000_000_000L) {
             PONDS.clear();
             pondsAt = now;
         }
-        int[] known = PONDS.get(start.asLong());
-        if (known != null || level == null) {
-            return known != null ? known : new int[] {start.getX(), start.getX(), start.getZ(), start.getZ(), 0};
+        Pond known = PONDS.get(start.asLong());
+        if (known != null) {
+            return known;
         }
         int[] rect = {start.getX(), start.getX(), start.getZ(), start.getZ()};
+        if (level == null) {
+            return new Pond(rect, new int[][] {rect}, 1, start.asLong(), 0);
+        }
         java.util.List<BlockPos> members = new java.util.ArrayList<>();
         java.util.ArrayDeque<BlockPos> todo = new java.util.ArrayDeque<>(java.util.List.of(start));
         java.util.Set<Long> seen = new java.util.HashSet<>(java.util.List.of(start.asLong()));
+        BlockPos anchor = start;
         while (!todo.isEmpty() && members.size() < 4096) {
             BlockPos q = todo.poll();
             members.add(q);
@@ -94,24 +108,43 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
             rect[1] = Math.max(rect[1], q.getX());
             rect[2] = Math.min(rect[2], q.getZ());
             rect[3] = Math.max(rect[3], q.getZ());
+            if (q.getX() < anchor.getX() || (q.getX() == anchor.getX() && q.getZ() < anchor.getZ())) {
+                anchor = q;
+            }
             for (net.minecraft.core.Direction d : net.minecraft.core.Direction.Plane.HORIZONTAL) {
                 BlockPos n = q.relative(d);
-                if (seen.add(n.asLong()) && level.getBlockState(n).getBlock() instanceof KoiPondBlock) {
+                if (seen.add(n.asLong()) && level.getBlockState(n).getBlock() == kind) {
                     todo.add(n);
                 }
             }
         }
-        // its shape: a few rectangles (the koi each keep to one), in a row of the shapes texture
+        // its shape: a few rectangles
         int w = rect[1] - rect[0] + 1, h = rect[3] - rect[2] + 1;
         boolean[][] in = new boolean[h][w];
         for (BlockPos q : members) {
             in[q.getZ() - rect[2]][q.getX() - rect[0]] = true;
         }
-        int[] all = {rect[0], rect[1], rect[2], rect[3], KoiPondData.row(KoiPondData.cover(in), members.size())};
-        for (BlockPos q : members) {
-            PONDS.put(q.asLong(), all);
+        int[][] local = KoiPondData.cover(in);
+        int[][] parts = new int[Math.max(local.length, 1)][];
+        for (int i = 0; i < local.length; i++) {
+            parts[i] = new int[] {rect[0] + local[i][0], rect[0] + local[i][1], rect[2] + local[i][2], rect[2] + local[i][3]};
         }
-        return all;
+        if (local.length == 0) {
+            parts[0] = rect;
+        }
+        int row = kind == ModBlocks.KOI_POND.get() ? KoiPondData.row(local, members.size()) : 0;
+        Pond pond = new Pond(rect, parts, members.size(), anchor.asLong(), row);
+        for (BlockPos q : members) {
+            PONDS.put(q.asLong(), pond);
+        }
+        return pond;
+    }
+
+    /** What the game checks to see if a pond is in view: the whole pond, and the air over it the ducks fly in. */
+    public net.minecraft.world.phys.AABB getRenderBoundingBox(KoiPondBlockEntity be) {
+        Pond pond = pond(be.getLevel(), be.getBlockPos(), be.getBlockState().getBlock());
+        int y = be.getBlockPos().getY();
+        return new net.minecraft.world.phys.AABB(pond.rect()[0] - 1, y, pond.rect()[2] - 1, pond.rect()[1] + 2, y + 4, pond.rect()[3] + 2);
     }
 
     @Override
@@ -122,6 +155,10 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
     @Override
     public void render(KoiPondBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
         BlockState state = be.getBlockState();
+        if (state.getBlock() == ModBlocks.VANILLA_KOI_POND.get()) {
+            vanilla.render(be, poseStack, buffers, light);
+            return;
+        }
         if (shader == null || !(state.getBlock() instanceof KoiPondBlock)) {
             return;
         }
@@ -132,7 +169,8 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
         BlockPos p = be.getBlockPos();
         float bx = Math.floorMod(p.getX(), 512), bz = Math.floorMod(p.getZ(), 512);
         // the whole pond's rectangle, packed into the colour: how far it reaches from here west, east, north, south
-        int[] rect = pond(be.getLevel(), p);
+        Pond pond = pond(be.getLevel(), p, state.getBlock());
+        int[] rect = pond.rect();
         int packed = Math.min(p.getX() - rect[0], 63) | Math.min(rect[1] - p.getX(), 63) << 6
                 | Math.min(p.getZ() - rect[2], 63) << 12 | Math.min(rect[3] - p.getZ(), 63) << 18;
         int cr = packed & 255, cg = (packed >> 8) & 255, cb = (packed >> 16) & 255;
@@ -142,12 +180,12 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
         if (be.getLevel() != null) {
             for (int i = 0; i < 8; i++) {
                 int dx = ROUND[i * 2], dz = ROUND[i * 2 + 1];
-                if (be.getLevel().getBlockState(p.offset(dx, 0, dz)).getBlock() instanceof KoiPondBlock) {
+                if (be.getLevel().getBlockState(p.offset(dx, 0, dz)).getBlock() == state.getBlock()) {
                     round |= 1 << i;
                 }
             }
         }
-        int word = rect[4] | round << 8;
+        int word = pond.row() | round << 8;
         int k0 = word & 0xFFFF, k1 = (word >>> 16) & 0xFFFF;
         Matrix4f m = poseStack.last().pose();
         KoiPondData.ensure();

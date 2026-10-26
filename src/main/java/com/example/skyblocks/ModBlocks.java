@@ -121,6 +121,10 @@ public final class ModBlocks {
     public static final DeferredBlock<KoiPondBlock> KOI_POND = BLOCKS.registerBlock("koi_pond", KoiPondBlock::new,
             BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.STONE).noOcclusion()
                     .mapColor(net.minecraft.world.level.material.MapColor.WATER));
+    /** The koi pond in plain Minecraft style: the game's own water, lily pads, frogs, tropical fish, a turtle. */
+    public static final DeferredBlock<KoiPondBlock> VANILLA_KOI_POND = BLOCKS.registerBlock("vanilla_koi_pond", KoiPondBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.STONE).noOcclusion()
+                    .mapColor(net.minecraft.world.level.material.MapColor.WATER));
 
     /** A classic brick hearth, 2 wide and 2 tall (BrickHearthBlock, client/WallFireRenderer). */
     public static final DeferredBlock<BrickHearthBlock> BRICK_HEARTH = BLOCKS.registerBlock("brick_hearth", BrickHearthBlock::new,

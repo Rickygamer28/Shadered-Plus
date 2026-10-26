@@ -199,5 +199,7 @@
   "screen.skyblocks.neon_mode_typing": "Glow: Typing",
   "screen.skyblocks.neon_mode_blink": "Glow: Blinking",
   "screen.skyblocks.neon_outline_on": "Outline: On",
-  "screen.skyblocks.neon_outline_off": "Outline: Off"
+  "screen.skyblocks.neon_outline_off": "Outline: Off",
+  "block.skyblocks.vanilla_koi_pond": "Vanilla Koi Pond",
+  "tooltip.skyblocks.vanilla_koi_pond": "A koi pond in plain Minecraft style: tropical fish, frogs on lily pads, the odd duck and turtle. Ponds side by side join into one"
 }

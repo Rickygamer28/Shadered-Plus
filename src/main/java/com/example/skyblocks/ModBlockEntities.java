@@ -37,7 +37,7 @@ public final class ModBlockEntities {
     public static final Supplier<BlockEntityType<GlowColourBlockEntity>> JELLYFISH_TANK = TYPES.register("jellyfish_tank",
             () -> BlockEntityType.Builder.of(GlowColourBlockEntity::jellyTank, ModBlocks.JELLYFISH_TANK.get()).build(null));
     public static final Supplier<BlockEntityType<KoiPondBlockEntity>> KOI_POND = TYPES.register("koi_pond",
-            () -> BlockEntityType.Builder.of(KoiPondBlockEntity::new, ModBlocks.KOI_POND.get()).build(null));
+            () -> BlockEntityType.Builder.of(KoiPondBlockEntity::new, ModBlocks.KOI_POND.get(), ModBlocks.VANILLA_KOI_POND.get()).build(null));
     public static final Supplier<BlockEntityType<BrickHearthBlockEntity>> BRICK_HEARTH = TYPES.register("brick_hearth",
             () -> BlockEntityType.Builder.of(BrickHearthBlockEntity::new, ModBlocks.BRICK_HEARTH.get()).build(null));
 
