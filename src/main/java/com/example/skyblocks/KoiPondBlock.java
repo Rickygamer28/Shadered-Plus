@@ -87,13 +87,42 @@ public class KoiPondBlock extends BaseEntityBlock {
         return dir.getAxis().isHorizontal() ? connected(state, level, pos) : state;
     }
 
-    /** Now and then a croak (the frogs that sit on the lily pads), and a little splash. */
+    // ---- where the frogs are (the same whole-number hash as shaders/core/koi_pond, so the croaks come from them) ----
+
+    private static int hashu(int x, int y, int z) {
+        x = x * 1664525 + 1013904223; y = y * 1664525 + 1013904223; z = z * 1664525 + 1013904223;
+        x += y * z; y += z * x; z += x * y;
+        x ^= x >>> 16; y ^= y >>> 16; z ^= z >>> 16;
+        x += y * z; y += z * x; z += x * y;
+        return x ^ y ^ z;
+    }
+
+    private static float u01(int h) {
+        return (h & 65535) / 65535.0F;
+    }
+
+    /** Is a frog sitting on lily pad k of this pond block now? */
+    public static boolean frogOn(BlockPos pos, int k, double seconds) {
+        int cx = Math.floorMod(pos.getX(), 512), cz = Math.floorMod(pos.getZ(), 512);
+        if (u01(hashu(cx, cz, k)) < 0.45F || 0.08F + 0.07F * u01(hashu(cx, cz, k + 100)) < 0.09F) {
+            return false; // (no pad, or too small for a frog)
+        }
+        float hx = u01(hashu(cx, cz, k + 200)), hy = u01(hashu(cx, cz, k + 300));
+        int epoch = (int) Math.floor(seconds / 75.0 + hx * 13.0);
+        return hy < 0.4F && u01(hashu(cx, cz, k + 200000 + epoch)) < 0.6F;
+    }
+
+    /** The frogs on its lily pads croak now and then; a little splash now and then. */
     @Override
     public void animateTick(BlockState state, net.minecraft.world.level.Level level, BlockPos pos, net.minecraft.util.RandomSource random) {
-        if (random.nextInt(600) == 0) {
-            level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.95, pos.getZ() + 0.5, net.minecraft.sounds.SoundEvents.FROG_AMBIENT,
-                    net.minecraft.sounds.SoundSource.AMBIENT, 0.5F, 0.9F + random.nextFloat() * 0.2F, false);
-        } else if (random.nextInt(900) == 0) {
+        double seconds = (level.getGameTime() % 72_000L) / 20.0;
+        for (int k = 0; k < 2; k++) {
+            if (frogOn(pos, k, seconds) && random.nextInt(260) == 0) {
+                level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.95, pos.getZ() + 0.5, net.minecraft.sounds.SoundEvents.FROG_AMBIENT,
+                        net.minecraft.sounds.SoundSource.AMBIENT, 0.5F, 0.9F + random.nextFloat() * 0.2F, false);
+            }
+        }
+        if (random.nextInt(900) == 0) {
             level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.9, pos.getZ() + 0.5, net.minecraft.sounds.SoundEvents.FISH_SWIM,
                     net.minecraft.sounds.SoundSource.AMBIENT, 0.25F, 1.0F, false);
         }

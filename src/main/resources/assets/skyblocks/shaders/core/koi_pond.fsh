@@ -120,22 +120,41 @@ vec4 koiLayer(vec2 q, int L, float t, bool body) {
     return vec4(0.0);
 }
 
+// a whole-number hash (the same as KoiPondBlock's, so the game knows where the frogs are, for their croaks)
+uint hashu(uvec3 v) {
+    v = v * 1664525u + 1013904223u;
+    v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+    v ^= v >> 16u;
+    v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+    return v.x ^ v.y ^ v.z;
+}
+
+float u01(uint x) {
+    return float(x & 65535u) / 65535.0;
+}
+
+uvec3 padKey(vec2 cell, int k) {
+    return uvec3(uint(int(cell.x)), uint(int(cell.y)), uint(k));
+}
+
 // lily pad k of a cell: is there one, and where / how big / turned
 bool padParams(vec2 cell, int k, float t, out vec2 c, out float r, out vec2 h, out vec2 h2) {
-    h = hash22(cell * 2.3 + float(k) * 9.1 + 0.7);
+    uvec3 key = padKey(cell, k);
+    h = vec2(u01(hashu(key)), u01(hashu(key + uvec3(0u, 0u, 100u))));
     h2 = hash22(cell * 3.1 + float(k) * 4.7);
     c = cell + 0.15 + 0.7 * h2 + 0.02 * vec2(sin(t * 0.07 + h.y * 9.0), cos(t * 0.05 + h.x * 7.0));
     r = 0.08 + 0.07 * h.y;
     return h.x >= 0.45;
 }
 
-// is a frog sitting on this pad now (now and then one hops on for a while): its kind, size and which way it faces
+// is a frog sitting on this pad now (they come and go every minute or so): its kind, size and which way it faces
 bool frogOn(vec2 cell, int k, float t, out vec3 info) {
-    vec2 hf = hash22(cell * 5.3 + float(k) * 2.9 + 1.3);
-    float epoch = floor(t / 75.0 + hf.x * 13.0);
-    vec2 he = hash22(vec2(epoch, hf.y * 97.0 + cell.x * 0.13 + cell.y * 0.71));
+    uvec3 key = padKey(cell, k);
+    vec2 hf = vec2(u01(hashu(key + uvec3(0u, 0u, 200u))), u01(hashu(key + uvec3(0u, 0u, 300u))));
+    uint epoch = uint(int(floor(t / 75.0 + hf.x * 13.0)));
+    vec2 he = vec2(u01(hashu(key + uvec3(0u, 0u, 200000u + epoch))), u01(hashu(key + uvec3(0u, 0u, 500000u + epoch))));
     info = vec3(floor(he.y * 3.0), 0.62 + 0.16 * hf.x, he.x * 6.2832 + 0.4 * sin(t * 0.3 + hf.y * 9.0));
-    return hf.y < 0.16 && he.x < 0.5;
+    return hf.y < 0.4 && he.x < 0.6;
 }
 
 float smin(float a, float b, float k) {
@@ -176,7 +195,7 @@ vec4 frogHit(vec3 p0, vec3 rd, float t, float light) {
                 vec2 c, h, h2;
                 float r;
                 vec3 info;
-                if (!padParams(cell, k, t, c, r, h, h2) || r < 0.11 || !frogOn(cell, k, t, info)) continue;
+                if (!padParams(cell, k, t, c, r, h, h2) || r < 0.09 || !frogOn(cell, k, t, info)) continue;
                 // close to the ray's way down?
                 vec2 ab = p0.xz - pTop.xz;
                 float u = clamp(dot(c - pTop.xz, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
@@ -239,7 +258,7 @@ vec4 padAt(vec2 q, float t) {
                 col *= 0.85 + 0.15 * sin(a * 12.0); // (veins)
                 col *= 0.8 + 0.2 * smoothstep(r, r * 0.85, dist);
                 vec3 info;
-                if (r >= 0.11 && frogOn(cell, k, t, info)) {
+                if (r >= 0.09 && frogOn(cell, k, t, info)) {
                     col *= 0.55 + 0.45 * smoothstep(0.06 * info.y, 0.16 * info.y, dist); // (the frog's shadow)
                 } else if (h.y > 0.72 && dist < r * 0.32) { // a water-lily flower
                     float petals = 0.5 + 0.5 * cos(atan(d.y, d.x) * 8.0);
