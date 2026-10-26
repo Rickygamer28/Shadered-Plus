@@ -320,7 +320,7 @@ void main() {
     vec3 rd = normalize(wray);
     vec3 p0 = vec3(uv.x, SURF, uv.y);
     vec2 cell0 = floor(uv);
-    // the whole pond's rectangle (how far it reaches from this block each way, rectBits in the colour) and its koi
+    // the whole pond's rectangle (how far it reaches from this block each way, packed into the colour) and its koi
     int rectBits = int(vColor.r * 255.0 + 0.5) | (int(vColor.g * 255.0 + 0.5) << 8) | (int(vColor.b * 255.0 + 0.5) << 16);
     pondLo = cell0 - vec2(float(rectBits & 63), float((rectBits >> 12) & 63));
     pondHi = cell0 + vec2(float((rectBits >> 6) & 63), float((rectBits >> 18) & 63)) + 1.0;
