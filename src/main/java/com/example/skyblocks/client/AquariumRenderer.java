@@ -471,6 +471,9 @@ public final class AquariumRenderer {
             if (kind == 18) {
                 size *= 1.9;
             }
+            if (squid(kind) && !floor.vanilla) {
+                size *= 1.4; // (the squid a little bigger in the aquariums)
+            }
             if (crawler && floor.ocean) {
                 size *= kind == 21 ? 1.8 : kind == 23 ? 1.5 : kind == 25 ? 1.4 : 1.0; // (the ocean's are bigger)
             }
