@@ -1,41 +1,7 @@
 {
-  "multipart": [
-    {
-      "apply": {
-        "model": "skyblocks:block/vanilla_aquarium_water_down"
-      }
-    },
-    {
-      "when": {
-        "up": "true"
-      },
-      "apply": {
-        "model": "skyblocks:block/vanilla_aquarium_water"
-      }
-    },
-    {
-      "when": {
-        "up": "true"
-      },
-      "apply": {
-        "model": "skyblocks:block/vanilla_aquarium_water_up"
-      }
-    },
-    {
-      "when": {
-        "up": "false"
-      },
-      "apply": {
-        "model": "skyblocks:block/vanilla_aquarium_water_top"
-      }
-    },
-    {
-      "when": {
-        "down": "false"
-      },
-      "apply": {
-        "model": "skyblocks:block/vanilla_aquarium_sand"
-      }
+  "variants": {
+    "": {
+      "model": "skyblocks:block/vanilla_aquarium_empty"
     }
-  ]
+  }
 }

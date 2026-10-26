@@ -66,6 +66,8 @@ public final class AquariumRenderer {
         final int[] kinds = new int[MAX_FISH];
         final float[] rnd = new float[MAX_FISH * 10];
         boolean ocean;
+        /** A vanilla aquarium: only the water, light, sand and frame here (client/VanillaAquariumRenderer puts the game's own fish in it). */
+        boolean vanilla;
         /** Per decoration: its base (x, y, z, tank coordinates) and type + 8 * (turn + 16 * size * 10). */
         final float[] decor = new float[MAX_DECOR * 4];
         int decorCount;
@@ -219,9 +221,11 @@ public final class AquariumRenderer {
                 shader.safeGetUniform("Seed").set(seed);
                 setShape(floor);
                 MeshData mesh = mesh(floor, shown, cam);
+                RenderSystem.depthMask(writeDepth && !floor.vanilla); // (a vanilla tank: its own fish go into the picture next, then its depth)
                 if (mesh != null) {
                     BufferUploader.drawWithShader(mesh);
                 }
+                RenderSystem.depthMask(writeDepth);
                 shapes.add(() -> {
                     shader.safeGetUniform("BoxMin").set(mx, my, mz);
                     shader.safeGetUniform("BoxSize").set((float) floor.sizeX, (float) floor.sizeY, (float) floor.sizeZ);
@@ -631,6 +635,10 @@ public final class AquariumRenderer {
      * coral, vases, anemones; in the ocean tank bigger, with coral and anemones more often and a treasure chest.
      */
     private static void placeDecor(Floor floor) {
+        if (floor.vanilla) {
+            floor.decorCount = 0;
+            return;
+        }
         java.util.List<BlockPos> bottom = new ArrayList<>();
         for (BlockPos b : floor.blocks) {
             if (b.getY() == floor.min.getY()) { // (only on the real bottom, never on top of a corridor built through it)
@@ -812,6 +820,10 @@ public final class AquariumRenderer {
     }
 
     private static void placeFish(Floor floor) {
+        if (floor.vanilla) {
+            floor.fishCount = 0; // (its fish are the game's own: client/VanillaAquariumRenderer)
+            return;
+        }
         java.util.List<BlockPos> water = new ArrayList<>(floor.blocks);
         water.sort(java.util.Comparator.comparingLong(BlockPos::asLong));
         java.util.Random random = new java.util.Random(floor.min.asLong() * 31L + water.size());
@@ -910,7 +922,7 @@ public final class AquariumRenderer {
 
     private static void scan(ClientLevel level, int centerX, int centerZ) {
         FLOORS.clear();
-        Map<BlockPos, Boolean> tiles = new HashMap<>(); // (true: an ocean aquarium block)
+        Map<BlockPos, Integer> tiles = new HashMap<>(); // (the kind of aquarium block: kindOf)
         for (int dx = -SCAN_RADIUS; dx <= SCAN_RADIUS; dx++) {
             for (int dz = -SCAN_RADIUS; dz <= SCAN_RADIUS; dz++) {
                 LevelChunk chunk = level.getChunkSource().getChunk(centerX + dx, centerZ + dz, false);
@@ -929,7 +941,7 @@ public final class AquariumRenderer {
                         for (int z = 0; z < 16; z++) {
                             for (int x = 0; x < 16; x++) {
                                 if (section.getBlockState(x, y, z).getBlock() instanceof AquariumBlock tank) {
-                                    tiles.put(new BlockPos(baseX + x, baseY + y, baseZ + z), tank.ocean());
+                                    tiles.put(new BlockPos(baseX + x, baseY + y, baseZ + z), kindOf(tank));
                                 }
                             }
                         }
@@ -945,7 +957,12 @@ public final class AquariumRenderer {
     }
 
     /** Touching blocks -> tanks (in the world, or in an island's own blocks). */
-    private static List<Floor> build(net.minecraft.world.level.BlockGetter level, Map<BlockPos, Boolean> tiles) {
+    /** 0 the aquarium, 1 the ocean one, 2 and 3 their vanilla ones (each kind its own tanks). */
+    private static int kindOf(AquariumBlock tank) {
+        return (tank.ocean() ? 1 : 0) + (tank instanceof com.example.skyblocks.VanillaAquariumBlock ? 2 : 0);
+    }
+
+    private static List<Floor> build(net.minecraft.world.level.BlockGetter level, Map<BlockPos, Integer> tiles) {
         List<Floor> out = new ArrayList<>();
         // touching aquarium blocks -> tanks
         Set<BlockPos> done = new HashSet<>();
@@ -955,7 +972,9 @@ public final class AquariumRenderer {
                 continue;
             }
             Floor floor = new Floor();
-            floor.ocean = tiles.get(start);
+            int code = tiles.get(start);
+            floor.ocean = (code & 1) != 0;
+            floor.vanilla = code >= 2;
             int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
             int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
             ArrayDeque<BlockPos> queue = new ArrayDeque<>();
@@ -968,8 +987,8 @@ public final class AquariumRenderer {
                 maxX = Math.max(maxX, p.getX()); maxY = Math.max(maxY, p.getY()); maxZ = Math.max(maxZ, p.getZ());
                 for (Direction d : Direction.values()) {
                     n.setWithOffset(p, d);
-                    Boolean kind = tiles.get(n);
-                    if (kind != null && kind == floor.ocean) { // (the same kind of tank: one tank)
+                    Integer kind = tiles.get(n);
+                    if (kind != null && kind == code) { // (the same kind of tank: one tank)
                         if (!done.contains(n)) {
                             BlockPos next = n.immutable();
                             done.add(next);
@@ -1023,14 +1042,14 @@ public final class AquariumRenderer {
     private static final List<IslandJob> ISLANDS = new ArrayList<>();
 
     public static Island islandSet(net.minecraft.world.level.BlockGetter island, int sizeX, int height, int sizeZ) {
-        Map<BlockPos, Boolean> tiles = new HashMap<>();
+        Map<BlockPos, Integer> tiles = new HashMap<>();
         for (int y = 0; y < height; y++) {
             for (int z = 0; z < sizeZ; z++) {
                 for (int x = 0; x < sizeX; x++) {
                     BlockPos p = new BlockPos(x, y, z);
                     BlockState state = island.getBlockState(p);
                     if (state.getBlock() instanceof AquariumBlock b) {
-                        tiles.put(p, b.ocean());
+                        tiles.put(p, kindOf(b) & 1); // (on an island: as the aquariums)
                     }
                 }
             }

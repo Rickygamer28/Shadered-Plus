@@ -150,6 +150,7 @@ public final class VanillaAquariumRenderer {
     private record Tank(List<Animal> animals, List<Plant> plants, double cx, double cy, double cz, float[] frames, long[] frameLight) {}
 
     private static final List<Tank> TANKS = new ArrayList<>();
+    private static final Map<Long, float[]> TANK_FACES = new HashMap<>();
     private static ClientLevel lastLevel;
     private static long lastScan = Long.MIN_VALUE;
     private static int lastChunkX, lastChunkZ;
@@ -181,7 +182,7 @@ public final class VanillaAquariumRenderer {
     public static final class Events {
         private Events() {}
 
-        @SubscribeEvent
+        @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOW) // (after the aquariums have drawn the water)
         public static void onStage(RenderLevelStageEvent event) {
             if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS || MirrorRenderer.isRenderingReflection()
                     || IrisCompat.renderingShadowPass()) {
@@ -220,12 +221,13 @@ public final class VanillaAquariumRenderer {
                 for (Plant p : tank.plants()) {
                     plant(level, p, poseStack, buffers);
                 }
-                frames(level, tank, poseStack, buffers);
                 for (int i = 0; i < tank.animals().size(); i++) {
                     animal(level, tank.animals().get(i), i, t, poseStack, buffers);
                 }
             }
             buffers.endBatch();
+            // the tanks' depth (the water's picture was drawn without it, so their fish could go into it)
+            depth(cam, poseStack);
             modelView.popMatrix();
             RenderSystem.applyModelViewMatrix();
         }
@@ -235,6 +237,7 @@ public final class VanillaAquariumRenderer {
 
     private static void scan(ClientLevel level, int centerX, int centerZ) {
         TANKS.clear();
+        TANK_FACES.clear();
         Map<BlockPos, Block> tiles = new HashMap<>();
         Set<BlockPos> sandy = new java.util.HashSet<>(); // (the blocks with sand: on the real bottom, not over a tunnel)
         for (int dx = -SCAN_RADIUS; dx <= SCAN_RADIUS; dx++) {
@@ -258,7 +261,9 @@ public final class VanillaAquariumRenderer {
                                 if (s.getBlock() instanceof VanillaAquariumBlock) {
                                     BlockPos bp = new BlockPos(baseX + x, baseY + y, baseZ + z);
                                     tiles.put(bp, s.getBlock());
-                                    if (!s.getValue(VanillaAquariumBlock.DOWN)) sandy.add(bp);
+                                    BlockPos below = bp.below();
+                                    BlockState under = level.getBlockState(below);
+                                    if (!(under.getBlock() instanceof VanillaAquariumBlock) && under.isSolidRender(level, below)) sandy.add(bp);
                                 }
                             }
                         }
@@ -409,6 +414,20 @@ public final class VanillaAquariumRenderer {
                 plants.add(new Plant(Blocks.SEA_PICKLE.defaultBlockState().setValue(SeaPickleBlock.PICKLES, 1 + random.nextInt(3)), x, y, z, 0.8F, 0.8F, turn));
             }
         }
+        // its outside faces (for its depth)
+        List<float[]> outside = new ArrayList<>();
+        for (BlockPos p : blocks) {
+            for (Direction side : Direction.values()) {
+                if (!in.contains(p.relative(side))) {
+                    outside.add(strip(p, side, side == Direction.UP || side == Direction.DOWN ? Direction.NORTH : Direction.UP, 1.0F, 0.0F));
+                }
+            }
+        }
+        float[] faces = new float[outside.size() * 12];
+        for (int i = 0; i < outside.size(); i++) {
+            System.arraycopy(outside.get(i), 0, faces, i * 12, 12);
+        }
+        TANK_FACES.put(min.asLong(), faces);
         // the frame round the tank's edges (as the aquariums have): along every edge of an outside face where the tank
         // ends (not where it carries on, flat or round a corner)
         List<float[]> strips = new ArrayList<>();
@@ -514,6 +533,41 @@ public final class VanillaAquariumRenderer {
     }
 
     // ---- drawing ----
+
+    /** Writes the tanks' outside faces into the depth (nothing to the colour), as the aquariums' own pictures do. */
+    private static void depth(Vec3 cam, PoseStack poseStack) {
+        com.mojang.blaze3d.vertex.BufferBuilder b = com.mojang.blaze3d.vertex.Tesselator.getInstance()
+                .begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION);
+        Matrix4f m = poseStack.last().pose();
+        int n = 0;
+        for (Map.Entry<Long, float[]> e : TANK_FACES.entrySet()) {
+            BlockPos at = BlockPos.of(e.getKey());
+            if (cam.distanceToSqr(at.getX(), at.getY(), at.getZ()) > (RANGE + 32) * (RANGE + 32)) continue;
+            float[] f = e.getValue();
+            for (int i = 0; i < f.length; i += 3) {
+                b.addVertex(m, f[i], f[i + 1], f[i + 2]);
+                n++;
+            }
+        }
+        com.mojang.blaze3d.vertex.MeshData mesh = b.build();
+        if (mesh == null || n == 0) {
+            if (mesh != null) mesh.close();
+            return;
+        }
+        RenderSystem.colorMask(false, false, false, false);
+        RenderSystem.depthMask(true);
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthFunc(org.lwjgl.opengl.GL11.GL_LEQUAL);
+        RenderSystem.disableCull();
+        RenderSystem.enablePolygonOffset();
+        RenderSystem.polygonOffset(-2.0F, -20.0F); // (as the aquariums' pictures: over the blocks' own faces)
+        RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionShader);
+        com.mojang.blaze3d.vertex.BufferUploader.drawWithShader(mesh);
+        RenderSystem.polygonOffset(0.0F, 0.0F);
+        RenderSystem.disablePolygonOffset();
+        RenderSystem.enableCull();
+        RenderSystem.colorMask(true, true, true, true);
+    }
 
     private static final ResourceLocation FRAME = ResourceLocation.withDefaultNamespace("block/white_concrete");
     private static final int FRAME_COLOUR = 0xFF17171A; // (the aquariums' frame: near black)
@@ -682,8 +736,14 @@ public final class VanillaAquariumRenderer {
         poseStack.scale(-sc / squeeze, -sc * squeeze, sc / squeeze);
         poseStack.translate(0.0F, -1.501F, 0.0F);
         RenderType type = RenderType.entityTranslucent(texture); // (the fins a little see-through)
-        m.render(poseStack, buffers.getBuffer(type), light, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
+        m.render(poseStack, buffers.getBuffer(type), light, OverlayTexture.NO_OVERLAY, underwater(0xFFFFFFFF));
         poseStack.popPose();
+    }
+
+    /** A colour as seen through the water (a little blue-green, as the aquariums' water). */
+    private static int underwater(int c) {
+        int r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+        return (c & 0xFF000000) | (r * 200 / 255) << 16 | (g * 228 / 255) << 8 | (b * 238 / 255);
     }
 
     private static void rot(ModelPart m, float yRot, String name) {
@@ -701,7 +761,7 @@ public final class VanillaAquariumRenderer {
         poseStack.mulPose(Axis.XP.rotation(pitch));
         poseStack.scale(-scale, -scale, scale);
         poseStack.translate(0.0F, -1.501F, 0.0F);
-        part.render(poseStack, buffers.getBuffer(RenderType.entityCutoutNoCull(texture)), light, OverlayTexture.NO_OVERLAY, colour);
+        part.render(poseStack, buffers.getBuffer(RenderType.entityCutoutNoCull(texture)), light, OverlayTexture.NO_OVERLAY, underwater(colour));
         poseStack.popPose();
     }
 }

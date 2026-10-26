@@ -23,29 +23,21 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
  * bottom; client/VanillaAquariumRenderer puts the game's own fish and plants in it (tropical fish, cod, salmon,
  * pufferfish, axolotls, tadpoles; the ocean one dolphins, sea turtles, squid and glow squid too, and coral).
  */
-public class VanillaAquariumBlock extends TransparentBlock {
+public class VanillaAquariumBlock extends AquariumBlock {
     /**
+     * (As the aquariums: client/AquariumRenderer draws its water, light, sand and frame - the aquariums' own - and
+     * client/VanillaAquariumRenderer the game's fish and plants in it.)
      * UP: more of the same tank's water above - right above, or past a tunnel of air through the tank - so no surface
      * here, the water goes right up. DOWN: no sand here (more tank below, or air: the roof of a tunnel).
      */
-    public static final BooleanProperty UP = BlockStateProperties.UP;
-    public static final BooleanProperty DOWN = BlockStateProperties.DOWN;
-
-    private final boolean ocean;
-
     public VanillaAquariumBlock(Properties properties, boolean ocean) {
-        super(properties);
-        this.ocean = ocean;
-        registerDefaultState(stateDefinition.any().setValue(UP, false).setValue(DOWN, false));
-    }
-
-    public boolean ocean() {
-        return ocean;
+        super(properties, ocean);
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(UP, DOWN);
+    protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, net.minecraft.world.entity.player.Player player,
+                                                                   net.minecraft.world.phys.BlockHitResult hit) {
+        return net.minecraft.world.InteractionResult.PASS; // (no choosing fish: the game's own)
     }
 
     /** Is there more of this tank's water above (right above, or over a tunnel of air)? */
@@ -104,10 +96,6 @@ public class VanillaAquariumBlock extends TransparentBlock {
         if (!now.is(this)) refreshBelow(level, pos);
     }
 
-    @Override
-    protected boolean skipRendering(BlockState state, BlockState next, Direction side) {
-        return next.is(this) || super.skipRendering(state, next, side); // (one tank: no glass or water between its blocks)
-    }
 
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
