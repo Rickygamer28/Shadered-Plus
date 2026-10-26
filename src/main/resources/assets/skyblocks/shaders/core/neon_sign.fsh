@@ -1354,9 +1354,10 @@ void main() {
     float r = 0.26;
     float core = 1.0 - smoothstep(r * 0.3, r, d);
     float g = max(d - r * 0.5, 0.0);
-    float glow = exp(-g * 2.4) * 0.65 + exp(-g * 0.8) * 0.2;
+    float glow = exp(-g * 2.4) * 1.05 + exp(-g * 0.8) * 0.35;
     vec3 tube = vColor.rgb;
-    float lum = max(tube.r, max(tube.g, tube.b));
-    vec3 col = tube * glow + mix(tube, vec3(lum), 0.6) * core;
+    float rim = (1.0 - smoothstep(r * 0.6, r * 1.25, d)) - core; // (the bright coloured edge of the tube)
+    vec3 hot = mix(tube * 1.5, vec3(1.0), 0.55);                 // (the tube's middle: nearly white-hot)
+    vec3 col = tube * glow + hot * core * 1.5 + tube * 1.4 * max(rim, 0.0);
     fragColor = vec4(col, 1.0);
 }
