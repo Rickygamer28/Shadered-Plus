@@ -122,17 +122,6 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.STONE).noOcclusion()
                     .mapColor(net.minecraft.world.level.material.MapColor.WATER));
 
-    /** Shader effect test blocks (FxBlock, client/FxRenderer). */
-    public static final DeferredBlock<FxBlock.Warp> WARP_BLOCK = BLOCKS.registerBlock("warp_block", FxBlock.Warp::new,
-            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.AMETHYST).lightLevel(state -> 9)
-                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_CYAN));
-    public static final DeferredBlock<FxBlock.Rift> RIFT = BLOCKS.registerBlock("rift", FxBlock.Rift::new,
-            BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.AMETHYST).noOcclusion().noCollission().lightLevel(state -> 5)
-                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
-    public static final DeferredBlock<FxBlock.Static> STATIC_BLOCK = BLOCKS.registerBlock("static_block", FxBlock.Static::new,
-            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).lightLevel(state -> 6)
-                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_GRAY));
-
     /** A classic brick hearth, 2 wide and 2 tall (BrickHearthBlock, client/WallFireRenderer). */
     public static final DeferredBlock<BrickHearthBlock> BRICK_HEARTH = BLOCKS.registerBlock("brick_hearth", BrickHearthBlock::new,
             BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.STONE).noOcclusion().requiresCorrectToolForDrops()

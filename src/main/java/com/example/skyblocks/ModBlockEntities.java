@@ -38,9 +38,6 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(GlowColourBlockEntity::jellyTank, ModBlocks.JELLYFISH_TANK.get()).build(null));
     public static final Supplier<BlockEntityType<KoiPondBlockEntity>> KOI_POND = TYPES.register("koi_pond",
             () -> BlockEntityType.Builder.of(KoiPondBlockEntity::new, ModBlocks.KOI_POND.get()).build(null));
-    public static final Supplier<BlockEntityType<GlowColourBlockEntity>> FX = TYPES.register("fx_block",
-            () -> BlockEntityType.Builder.<GlowColourBlockEntity>of((pos, state) -> new GlowColourBlockEntity(ModBlockEntities.FX.get(), pos, state, 0xFFFFFF),
-                    ModBlocks.WARP_BLOCK.get(), ModBlocks.RIFT.get(), ModBlocks.STATIC_BLOCK.get()).build(null));
     public static final Supplier<BlockEntityType<BrickHearthBlockEntity>> BRICK_HEARTH = TYPES.register("brick_hearth",
             () -> BlockEntityType.Builder.of(BrickHearthBlockEntity::new, ModBlocks.BRICK_HEARTH.get()).build(null));
 

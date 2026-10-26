@@ -53,7 +53,6 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.HOLOGRAM.get(), HologramRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.JELLYFISH_TANK.get(), JellyTankRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.KOI_POND.get(), KoiPondRenderer::new);
-        event.registerBlockEntityRenderer(ModBlockEntities.FX.get(), FxRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.NEON_SIGN.get(), NeonSignRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.FOG_MACHINE.get(), FogMachineRenderer::new);
         BlockEntityRendererProvider<OiiaCatBlockEntity> big = OiiaCatRenderer::new;
