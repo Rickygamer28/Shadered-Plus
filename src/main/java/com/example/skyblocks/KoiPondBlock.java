@@ -149,6 +149,19 @@ public class KoiPondBlock extends BaseEntityBlock {
         }
     }
 
+    /** A vanilla koi pond: its menu (what its rim and floor are made of, for the whole pond). */
+    @Override
+    protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, net.minecraft.world.level.Level level, BlockPos pos,
+                                                                   net.minecraft.world.entity.player.Player player, net.minecraft.world.phys.BlockHitResult hit) {
+        if (this != ModBlocks.VANILLA_KOI_POND.get()) {
+            return net.minecraft.world.InteractionResult.PASS;
+        }
+        if (level.isClientSide) {
+            com.example.skyblocks.client.ClientAccess.openVanillaPond(pos); // (client-only class, never loaded on a server)
+        }
+        return net.minecraft.world.InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {

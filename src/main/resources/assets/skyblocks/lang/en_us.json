@@ -201,5 +201,12 @@
   "screen.skyblocks.neon_outline_on": "Outline: On",
   "screen.skyblocks.neon_outline_off": "Outline: Off",
   "block.skyblocks.vanilla_koi_pond": "Vanilla Koi Pond",
-  "tooltip.skyblocks.vanilla_koi_pond": "A koi pond in plain Minecraft style: tropical fish, frogs on lily pads, the odd duck and turtle. Ponds side by side join into one"
+  "tooltip.skyblocks.vanilla_koi_pond": "A koi pond in plain Minecraft style: tropical fish, frogs on lily pads, the odd duck and turtle. Ponds side by side join into one. Right-click it to choose what its rim and floor are made of",
+  "screen.skyblocks.vanilla_pond": "Vanilla Koi Pond",
+  "screen.skyblocks.pond_rim": "Rim",
+  "screen.skyblocks.pond_floor": "Floor",
+  "screen.skyblocks.pond_default": "Default",
+  "screen.skyblocks.pond_search": "Search blocks...",
+  "screen.skyblocks.pond_rim_now": "Rim: %s",
+  "screen.skyblocks.pond_floor_now": "Floor: %s"
 }

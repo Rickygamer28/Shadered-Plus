@@ -225,6 +225,19 @@ public final class ClientSetup {
         }
     }
 
+    /** The vanilla koi pond's model shows the rim and floor chosen for it (client/PondModel). */
+    @SubscribeEvent
+    public static void pondModel(net.neoforged.neoforge.client.event.ModelEvent.ModifyBakingResult event) {
+        var models = event.getModels();
+        for (net.minecraft.world.level.block.state.BlockState state : com.example.skyblocks.ModBlocks.VANILLA_KOI_POND.get().getStateDefinition().getPossibleStates()) {
+            var key = net.minecraft.client.renderer.block.BlockModelShaper.stateToModelLocation(state);
+            net.minecraft.client.resources.model.BakedModel m = models.get(key);
+            if (m != null) {
+                models.put(key, new PondModel(m));
+            }
+        }
+    }
+
     /** The water caustics block's model also draws the block put under its water (client/WaterCausticsModel). */
     @SubscribeEvent
     public static void causticsModel(net.neoforged.neoforge.client.event.ModelEvent.ModifyBakingResult event) {

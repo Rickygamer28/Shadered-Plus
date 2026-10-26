@@ -33,5 +33,12 @@ public final class ClientAccess {
         }
     }
 
+    public static void openVanillaPond(BlockPos pos) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null && mc.level.getBlockEntity(pos) instanceof com.example.skyblocks.KoiPondBlockEntity pond) {
+            mc.setScreen(new VanillaPondScreen(pos, pond.rim(), pond.floor()));
+        }
+    }
+
     private ClientAccess() {}
 }
