@@ -33,30 +33,42 @@ float layerY(int L) {
     return SURF - (L == 0 ? 3.0 : L == 1 ? 5.5 : 8.0) / 16.0;
 }
 
-// a cell's koi: (is there one: 0/1, its depth layer, its kind 0..4, its size)
-vec4 koiOf(vec2 cell) {
-    vec2 h = hash22(cell + 3.7), k = hash22(cell * 1.7 + 11.1);
-    return vec4(step(0.3, h.x), floor(h.y * 3.0), floor(k.x * 5.0), 0.62 + 0.23 * k.y);
+// the pond this block is part of (its whole rectangle, in world blocks) and how many koi live in it: set in main()
+vec2 pondLo, pondHi;
+int pondFish;
+
+// koi i of the pond: (its depth layer, its kind 0..4, its size, a seed)
+vec4 koiOf(int i) {
+    vec2 h = hash22(pondLo * 1.31 + pondHi * 0.73 + float(i) * 7.17), k = hash22(pondLo * 0.37 + pondHi * 1.9 + float(i) * 3.91 + 11.1);
+    return vec4(floor(h.x * 3.0), floor(k.x * 5.0), 0.72 + 0.4 * k.y, h.y);
 }
 
-// where a cell's koi is and which way it faces
-void koiPath(vec2 cell, float t, out vec2 pos, out vec2 dir) {
-    vec2 h = hash22(cell + 21.3);
-    float sp = (0.22 + 0.18 * h.x) * (h.y < 0.5 ? -1.0 : 1.0);
-    float th = t * sp + h.y * 31.0;
-    vec2 c = cell + 0.5;
-    // (a loop small enough that the whole fish, tail and all, stays clear of the stone rims round the block)
-    pos = c + vec2(cos(th) * 0.12, sin(th) * 0.09 + 0.025 * sin(2.0 * th));
-    vec2 v = vec2(-sin(th) * 0.12, cos(th) * 0.09 + 0.05 * cos(2.0 * th)) * sp;
-    dir = normalize(v + vec2(1e-5));
+// where koi i is and which way it faces: wandering all over the pond in long, lazy curves (never up into the rims)
+void koiPath(int i, float size, float t, out vec2 pos, out vec2 dir) {
+    vec2 h = hash22(pondLo * 2.1 + pondHi * 0.3 + float(i) * 5.37 + 21.3), h2 = hash22(pondLo * 0.9 + float(i) * 9.11 + 4.4);
+    float reach = 0.42 * size;                       // (head to tail fin, from where it is)
+    vec2 lo = pondLo + 0.125 + reach, hi = pondHi - 0.125 - reach;
+    vec2 mid = (pondLo + pondHi) * 0.5;
+    lo = min(lo, mid);
+    hi = max(hi, mid);
+    vec2 hs = (hi - lo) * 0.5;
+    vec2 f = (0.12 + 0.05 * h) / max(hs, vec2(0.6)); // (about the same speed in a big pond as a small one)
+    vec2 ph = h2 * 6.2832;
+    vec2 u = vec2(0.62 * sin(t * f.x + ph.x) + 0.38 * sin(t * f.x * 1.73 + ph.y * 1.3),
+                  0.62 * sin(t * f.y * 1.11 + ph.y) + 0.38 * sin(t * f.y * 1.91 + ph.x * 0.7));
+    vec2 v = vec2(0.62 * f.x * cos(t * f.x + ph.x) + 0.38 * f.x * 1.73 * cos(t * f.x * 1.73 + ph.y * 1.3),
+                  0.62 * f.y * 1.11 * cos(t * f.y * 1.11 + ph.y) + 0.38 * f.y * 1.91 * cos(t * f.y * 1.91 + ph.x * 0.7));
+    pos = lo + hs + hs * u;
+    v *= hs;
+    dir = length(v) > 1e-5 ? normalize(v) : vec2(1.0, 0.0);
 }
 
 // a koi at q (world x, z): (colour, how much it covers); body = only its body (for shadows)
-vec4 koiAt(vec2 q, vec2 cell, float t, bool body) {
-    vec4 info = koiOf(cell);
-    float size = info.w;
+vec4 koiAt(vec2 q, int i, float t, bool body) {
+    vec4 info = koiOf(i);
+    float size = info.z;
     vec2 pos, dir;
-    koiPath(cell, t, pos, dir);
+    koiPath(i, size, t, pos, dir);
     vec2 d = q - pos;
     if (dot(d, d) > 0.09 * size * size) {
         return vec4(0.0);
@@ -68,11 +80,11 @@ vec4 koiAt(vec2 q, vec2 cell, float t, bool body) {
     // the body: a rounded head, widest a third of the way back, tapering to a slim tail stalk
     float bw = s > 0.12 ? 0.17 * sqrt(max(0.0, 1.0 - pow((s - 0.12) / 0.44, 2.0)))
                         : mix(0.17, 0.035, pow(clamp((0.12 - s) / 0.58, 0.0, 1.0), 1.3));
-    vec2 h = hash22(cell + 5.1);
+    vec2 h = vec2(info.w, fract(info.w * 13.7));
     vec2 lp = vec2(s, side);
     if (abs(side) < bw && s > -0.46 && s < 0.56 && bw > 0.0) {
         if (body) return vec4(0.0, 0.0, 0.0, 1.0);
-        float kind = info.z;
+        float kind = info.y;
         float n = noise2(lp * 9.0 + h * 40.0), n2 = noise2(lp * 17.0 + h * 77.0);
         vec3 white = vec3(0.96, 0.94, 0.9), red = vec3(0.86, 0.2, 0.08), black = vec3(0.06, 0.06, 0.07);
         vec3 col;
@@ -106,17 +118,13 @@ vec4 koiAt(vec2 q, vec2 cell, float t, bool body) {
     return vec4(0.0);
 }
 
-// the koi at q in a depth layer (from the nine cells round it)
+// the koi at q in a depth layer
 vec4 koiLayer(vec2 q, int L, float t, bool body) {
-    vec2 c0 = floor(q);
-    for (int j = -1; j <= 1; j++) {
-        for (int i = -1; i <= 1; i++) {
-            vec2 cell = c0 + vec2(i, j);
-            vec4 info = koiOf(cell);
-            if (info.x < 0.5 || int(info.y) != L) continue;
-            vec4 k = koiAt(q, cell, t, body);
-            if (k.a > 0.0) return k;
-        }
+    for (int i = 0; i < 24; i++) {
+        if (i >= pondFish) break;
+        if (int(koiOf(i).x) != L) continue;
+        vec4 k = koiAt(q, i, t, body);
+        if (k.a > 0.0) return k;
     }
     return vec4(0.0);
 }
@@ -312,6 +320,12 @@ void main() {
     vec3 rd = normalize(wray);
     vec3 p0 = vec3(uv.x, SURF, uv.y);
     vec2 cell0 = floor(uv);
+    // the whole pond's rectangle (how far it reaches from this block each way, packed in the colour) and its koi
+    int packed = int(vColor.r * 255.0 + 0.5) | (int(vColor.g * 255.0 + 0.5) << 8) | (int(vColor.b * 255.0 + 0.5) << 16);
+    pondLo = cell0 - vec2(float(packed & 63), float((packed >> 12) & 63));
+    pondHi = cell0 + vec2(float((packed >> 6) & 63), float((packed >> 18) & 63)) + 1.0;
+    vec2 size = pondHi - pondLo;
+    pondFish = clamp(int(size.x * size.y * 0.45 + 0.75), 1, 24);
     float light = 0.18 + 0.82 * day;
 
     // a frog sitting on a lily pad, in front of this point
