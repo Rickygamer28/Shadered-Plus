@@ -410,6 +410,20 @@ public final class InfinityMirrorRenderer {
         shader.safeGetUniform("Rainbow").set(isRainbow(f.color()) ? 1.0F : 0.0F);
         shader.safeGetUniform("Time").set(seconds);
         shader.safeGetUniform("Pull").set(pull);
+        // its shape: which blocks of its rectangle are mirrors (the tunnel follows it, round holes and corners)
+        int w = f.maxU() - f.minU() + 1, h = f.maxV() - f.minV() + 1;
+        boolean full = f.blocks().size() >= w * h || w * h > 8 * 4 * 24;
+        shader.safeGetUniform("Full").set(full ? 1.0F : 0.0F);
+        if (!full) {
+            int[] bits = new int[8 * 4];
+            for (BlockPos pos : f.blocks()) {
+                int i = (InfinitySet.u(pos, f.facing()) - f.minU()) + w * (InfinitySet.v(pos, f.facing()) - f.minV());
+                bits[i / 24] |= 1 << (i % 24);
+            }
+            for (int k = 0; k < 8; k++) {
+                shader.safeGetUniform("Occ" + k).set((float) bits[k * 4], (float) bits[k * 4 + 1], (float) bits[k * 4 + 2], (float) bits[k * 4 + 3]);
+            }
+        }
     }
 
     /** The frame's faces as quads (positions relative to {@code origin}). */

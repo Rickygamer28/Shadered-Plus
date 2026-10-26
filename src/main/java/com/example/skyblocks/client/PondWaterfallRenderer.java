@@ -45,7 +45,15 @@ public class PondWaterfallRenderer implements BlockEntityRenderer<PondWaterfallB
         BlockPos pos = be.getBlockPos();
         Direction facing = be.getBlockState().getValue(PondWaterfallBlock.FACING);
         double land = PondWaterfallBlock.landing(be.getLevel(), pos, facing) - pos.getY();
-        int tint = 0xFF000000 | BiomeColors.getAverageWaterColor(be.getLevel(), pos);
+        // (pouring into a koi pond: the pond's own deep green water; else the biome's water colour, as any water)
+        boolean pond = false;
+        for (int down = 0; down < 4; down++) {
+            if (be.getLevel().getBlockState(pos.relative(facing).below(down)).getBlock() instanceof com.example.skyblocks.KoiPondBlock) {
+                pond = true;
+                break;
+            }
+        }
+        int tint = pond ? 0xFF3C8A78 : 0xFF000000 | BiomeColors.getAverageWaterColor(be.getLevel(), pos);
         TextureAtlasSprite sp = Minecraft.getInstance().getTextureAtlas(TextureAtlas.LOCATION_BLOCKS).apply(FLOW);
         float t = LavaLampRenderer.seconds();
         // (worked out facing north - pouring to -z - then turned round the block's middle)
