@@ -9,7 +9,6 @@ import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
-import net.minecraft.client.renderer.BiomeColors;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.Sheets;
@@ -33,7 +32,10 @@ final class VanillaPondRenderer {
     private static final float SURF = 14.5F / 16.0F;
     private static final ResourceLocation WATER = ResourceLocation.withDefaultNamespace("block/water_still");
     private static final ResourceLocation LILY_PAD = ResourceLocation.withDefaultNamespace("block/lily_pad");
+    private static final ResourceLocation FLOWER_OUTER = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "block/lily_flower_outer");
+    private static final ResourceLocation FLOWER_INNER = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "block/lily_flower_inner");
     private static final int LILY_PAD_COLOUR = 0xFF208030; // (as the game tints lily pads)
+    private static final int WATER_TINT = 0xFF2E7466;
     private static final ResourceLocation[] FROGS = {
         ResourceLocation.withDefaultNamespace("textures/entity/frog/temperate_frog.png"),
         ResourceLocation.withDefaultNamespace("textures/entity/frog/cold_frog.png"),
@@ -104,12 +106,20 @@ final class VanillaPondRenderer {
             creatures(pond, pos, poseStack, buffers, light, t);
         }
         // this block's lily pad, and a frog on it now and then
-        if (KoiPondBlock.padHere(pos)) {
-            lilyPad(pos, poseStack, buffers, light);
-            frog(pond, pos, poseStack, buffers, light, t, n, s, e, w);
+        for (int k = 0; k < 2; k++) {
+            float[] pad = pad(pos, k, t);
+            if (pad != null) {
+                boolean frogged = k == 0 && KoiPondBlock.frogTime(pos, t) >= 0.0;
+                // (the bigger pads flower, as in the koi pond - not while a frog's on it)
+                boolean flower = !frogged && KoiPondBlock.u01(KoiPondBlock.hashu(cx(pos), cz(pos), 100 + k)) > 0.72F;
+                lilyPad(pad, poseStack, buffers, light, flower);
+                if (frogged) {
+                    frog(pad, pos, poseStack, buffers, light, t);
+                }
+            }
         }
         // the water (drawn last of all by the game, so what's under it shows through)
-        int tint = be.getLevel() == null ? 0xFF3F76E4 : 0xFF000000 | BiomeColors.getAverageWaterColor(be.getLevel(), pos);
+        int tint = WATER_TINT; // (the koi pond's own deep green, as the shader pond's)
         TextureAtlasSprite water = sprite(WATER);
         quad(buffers.getBuffer(Sheets.translucentCullBlockSheet()), poseStack.last(), water, x0, z0, x1, z1, SURF, tint, light);
     }
@@ -146,76 +156,98 @@ final class VanillaPondRenderer {
         return Math.floorMod(p.getZ(), 512);
     }
 
-    private void lilyPad(BlockPos pos, PoseStack poseStack, MultiBufferSource buffers, int light) {
+    /**
+     * Lily pad k (0 or 1) of a block, as in the koi pond: is there one (null if not), and {x, z in the block, radius,
+     * how it's turned (radians)} - small, clear of the rims, drifting a little and slowly turning.
+     */
+    private static float[] pad(BlockPos pos, int k, float t) {
+        int x = cx(pos), z = cz(pos);
+        if (KoiPondBlock.u01(KoiPondBlock.hashu(x, z, k)) < 0.45F) {
+            return null;
+        }
+        float hy = KoiPondBlock.u01(KoiPondBlock.hashu(x, z, 100 + k));
+        float r = 0.08F + 0.07F * hy;
+        float m = 0.165F + r;
+        float hx = KoiPondBlock.u01(KoiPondBlock.hashu(x, z, 20 + k)), hz = KoiPondBlock.u01(KoiPondBlock.hashu(x, z, 30 + k));
+        float px = m + (1.0F - 2.0F * m) * hx + 0.02F * Mth.sin(t * 0.07F + hy * 9.0F);
+        float pz = m + (1.0F - 2.0F * m) * hz + 0.02F * Mth.cos(t * 0.05F + hx * 7.0F);
+        float ang = KoiPondBlock.u01(KoiPondBlock.hashu(x, z, 40 + k)) * 6.2832F + t * 0.02F;
+        return new float[] {px, pz, r, ang};
+    }
+
+    private void lilyPad(float[] pad, PoseStack poseStack, MultiBufferSource buffers, int light, boolean flower) {
         poseStack.pushPose();
-        poseStack.translate(0.5F, 0.0F, 0.5F);
-        poseStack.mulPose(Axis.YP.rotationDegrees(90.0F * (KoiPondBlock.hashu(cx(pos), cz(pos), 5) & 3))); // (turned like the game turns them)
-        poseStack.translate(-0.5F, 0.0F, -0.5F);
-        float a = 2.0F / 16.0F, b = 14.0F / 16.0F; // (as big as fits inside the rim)
-        TextureAtlasSprite sp = sprite(LILY_PAD);
+        poseStack.translate(pad[0], 0.0F, pad[1]);
+        poseStack.mulPose(Axis.YP.rotation(pad[3]));
+        float a = -pad[2] * 16.0F / 14.0F, b = -a; // (the pad fills about 14 of the texture's 16 pixels)
         VertexConsumer vc = buffers.getBuffer(Sheets.cutoutBlockSheet());
         PoseStack.Pose pose = poseStack.last();
-        float y = SURF + 0.004F;
-        float u0 = sp.getU0(), u1 = sp.getU1(), v0 = sp.getV0(), v1 = sp.getV1();
-        vertex(vc, pose, a, y, a, u0, v0, LILY_PAD_COLOUR, light, 1.0F);
-        vertex(vc, pose, a, y, b, u0, v1, LILY_PAD_COLOUR, light, 1.0F);
-        vertex(vc, pose, b, y, b, u1, v1, LILY_PAD_COLOUR, light, 1.0F);
-        vertex(vc, pose, b, y, a, u1, v0, LILY_PAD_COLOUR, light, 1.0F);
-        vertex(vc, pose, b, y, a, u1, v0, LILY_PAD_COLOUR, light, -1.0F);
-        vertex(vc, pose, b, y, b, u1, v1, LILY_PAD_COLOUR, light, -1.0F);
-        vertex(vc, pose, a, y, b, u0, v1, LILY_PAD_COLOUR, light, -1.0F);
-        vertex(vc, pose, a, y, a, u0, v0, LILY_PAD_COLOUR, light, -1.0F);
+        square(vc, pose, sprite(LILY_PAD), a, b, SURF + 0.004F, LILY_PAD_COLOUR, light);
+        if (flower) { // a water lily on it: its outer petals, and the inner ones and the middle standing up a little
+            square(vc, pose, sprite(FLOWER_OUTER), a, b, SURF + 0.012F, 0xFFFFFFFF, light);
+            square(vc, pose, sprite(FLOWER_INNER), a, b, SURF + 0.03F, 0xFFFFFFFF, light);
+        }
         poseStack.popPose();
     }
 
+    /** A flat square from (a, a) to (b, b) at height y (both sides), the whole sprite on it. */
+    private static void square(VertexConsumer vc, PoseStack.Pose pose, TextureAtlasSprite sp, float a, float b, float y, int colour, int light) {
+        float u0 = sp.getU0(), u1 = sp.getU1(), v0 = sp.getV0(), v1 = sp.getV1();
+        vertex(vc, pose, a, y, a, u0, v0, colour, light, 1.0F);
+        vertex(vc, pose, a, y, b, u0, v1, colour, light, 1.0F);
+        vertex(vc, pose, b, y, b, u1, v1, colour, light, 1.0F);
+        vertex(vc, pose, b, y, a, u1, v0, colour, light, 1.0F);
+        vertex(vc, pose, b, y, a, u1, v0, colour, light, -1.0F);
+        vertex(vc, pose, b, y, b, u1, v1, colour, light, -1.0F);
+        vertex(vc, pose, a, y, b, u0, v1, colour, light, -1.0F);
+        vertex(vc, pose, a, y, a, u0, v0, colour, light, -1.0F);
+    }
+
     /**
-     * A frog visiting the lily pad: it leaps up out of the water onto it (facing it), turns round to face the open
-     * water, sits a minute, then hops off into the water - always towards the middle of the pond, never at the rim.
+     * A frog visiting the (first) lily pad, as in the koi pond: it leaps up out of the water onto it (facing it),
+     * turns round to face the open water (the middle of its block - never the stone round it), sits a minute, then
+     * hops off into the water.
      */
-    private void frog(KoiPondRenderer.Pond pond, BlockPos pos, PoseStack poseStack, MultiBufferSource buffers, int light, float t,
-                      boolean n, boolean s, boolean e, boolean w) {
+    private void frog(float[] pad, BlockPos pos, PoseStack poseStack, MultiBufferSource buffers, int light, float t) {
         double te = KoiPondBlock.frogTime(pos, t);
         if (te < 0.0) {
             return;
         }
         int kind = KoiPondBlock.frogKind(pos, t);
-        // which way the open water is: towards the middle of the pond (or, in a pond of one block, any way)
-        float mx = (pond.rect()[0] + pond.rect()[1] + 1) * 0.5F - (pos.getX() + 0.5F);
-        float mz = (pond.rect()[2] + pond.rect()[3] + 1) * 0.5F - (pos.getZ() + 0.5F);
+        float mx = 0.5F - pad[0], mz = 0.5F - pad[1];
         float len = (float) Math.sqrt(mx * mx + mz * mz);
-        if (len < 0.3F) {
-            float a = KoiPondBlock.u01(KoiPondBlock.hashu(cx(pos), cz(pos), 9)) * 6.2832F;
-            mx = (float) Math.cos(a);
-            mz = (float) Math.sin(a);
-            len = 1.0F;
+        if (len < 0.01F) {
+            mx = 0.0F;
+            mz = 1.0F;
+        } else {
+            mx /= len;
+            mz /= len;
         }
-        mx /= len;
-        mz /= len;
-        // where it jumps to and from in the water (kept off the stone rims of this block)
-        float hop = 0.42F;
-        float wx = 0.5F + mx * hop, wz = 0.5F + mz * hop;
-        wx = Math.max(w ? -0.2F : 0.24F, Math.min(e ? 1.2F : 0.76F, wx));
-        wz = Math.max(n ? -0.2F : 0.24F, Math.min(s ? 1.2F : 0.76F, wz));
-        float x = 0.5F, z = 0.5F, y = SURF + 0.005F;
-        float faceX = mx, faceZ = mz; // (which way it faces)
+        float frogSize = 0.62F + 0.16F * KoiPondBlock.u01(KoiPondBlock.hashu(cx(pos), cz(pos), 200));
+        float hop = 0.11F * frogSize / 0.7F; // (where it jumps to and from in the water: towards the middle of the block)
+        float wx = pad[0] + mx * hop, wz = pad[1] + mz * hop;
+        float x = pad[0], z = pad[1], y = SURF + 0.005F;
         float turn = 0.0F; // (0 facing the water .. 1 facing the pad: turning round once it's on)
+        float sway = 0.5F * Mth.sin(t * 0.3F + pad[2] * 40.0F) * 0.4F;
         if (te < 6.0) { // leaping on
             float u = (float) (te - 5.0);
-            x = wx + (0.5F - wx) * u;
-            z = wz + (0.5F - wz) * u;
-            y = SURF - 0.3F * (1.0F - u) * (1.0F - u) + 0.55F * u * (1.0F - u);
+            x = wx + (pad[0] - wx) * u;
+            z = wz + (pad[1] - wz) * u;
+            y = SURF - 0.14F * (1.0F - u) * (1.0F - u) + 0.3F * u * (1.0F - u);
             turn = 1.0F;
+            sway = 0.0F;
         } else if (te < 7.2) {
             float u = (float) ((te - 6.0) / 1.2);
             turn = 1.0F - u * u * (3.0F - 2.0F * u);
+            sway *= u;
         } else if (te > 70.0) { // hopping off
             float u = (float) (te - 70.0);
-            x = 0.5F + (wx - 0.5F) * u;
-            z = 0.5F + (wz - 0.5F) * u;
-            y = SURF + 0.55F * u * (1.0F - u) - 0.3F * u * u;
+            x = pad[0] + (wx - pad[0]) * u;
+            z = pad[1] + (wz - pad[1]) * u;
+            y = SURF + 0.3F * u * (1.0F - u) - 0.14F * u * u;
         }
-        float yaw = yawOf(faceX, faceZ) + 180.0F * turn;
-        model(poseStack, buffers, frog, FROGS[kind], x, y, z, yaw, 0.62F, light, 0xFFFFFFFF, false);
+        float yaw = yawOf(mx, mz) + 180.0F * turn + (float) Math.toDegrees(sway);
+        model(poseStack, buffers, frog, FROGS[kind], x, y, z, yaw, 0.34F * frogSize / 0.7F, light, 0xFFFFFFFF, false);
     }
 
     /** The game's yaw (degrees) for facing along (dx, dz). */
@@ -284,9 +316,9 @@ final class VanillaPondRenderer {
             }
             int[] koi = KOI[(int) (u(anchor, 101 + i * 7) * KOI.length) % KOI.length];
             float size = 0.75F + 0.35F * u(anchor, 102 + i * 7);
-            float scale = 1.7F * size * (koi[0] == 1 ? 0.8F : 1.0F);
-            float[] at = wander(anchor, 200 + i * 9, part, 0.36F * size, 0.12F, t);
-            float y = SURF - (i % 3 == 0 ? 3.0F : i % 3 == 1 ? 5.5F : 8.0F) / 16.0F - 0.12F * scale;
+            float scale = 0.8F * size * (koi[0] == 1 ? 0.8F : 1.0F); // (as long as the koi pond's koi)
+            float[] at = wander(anchor, 200 + i * 9, part, 0.3F * size, 0.12F, t);
+            float y = SURF - (i % 3 == 0 ? 3.0F : i % 3 == 1 ? 5.5F : 8.0F) / 16.0F - 0.1F * scale;
             ModelPart body = koi[0] == 0 ? fishA : fishB, pattern = koi[0] == 0 ? fishAPattern : fishBPattern;
             float wag = 0.45F * Mth.sin(t * 6.0F + i * 1.7F);
             for (ModelPart m : new ModelPart[] {body, pattern}) {
@@ -337,7 +369,7 @@ final class VanillaPondRenderer {
             }
             float[] at = wander(anchor, 400 + d * 11, main, 0.3F, 0.07F, t);
             float x = at[0] + at[2] * ahead, z = at[1] + at[3] * ahead;
-            float scale = 0.9F;
+            float scale = 0.5F; // (as big as the koi pond's ducks)
             float bob = height > 0.0F ? 0.0F : 0.012F * Mth.sin(t * 1.7F + d);
             float y = SURF + height + bob - (height > 0.05F ? 0.0F : 4.5F / 16.0F * scale); // (swimming: its legs under the water)
             float wing = flap > 0.0F ? (flap > 0.5F ? 0.2F + 1.0F * (0.5F + 0.5F * Mth.sin(t * 15.0F + d)) : 0.9F) : 0.0F;
@@ -372,7 +404,7 @@ final class VanillaPondRenderer {
         }
         float[] at = wander(anchor, 500, main, 0.3F, 0.05F, t);
         int alpha = (int) (here * 255.0F);
-        model(poseStack, buffers, turtle, TURTLE, at[0] + ox, SURF - 0.62F, at[1] + oz, yawOf(at[2], at[3]), 0.26F, light,
+        model(poseStack, buffers, turtle, TURTLE, at[0] + ox, SURF - 0.6F, at[1] + oz, yawOf(at[2], at[3]), 0.2F, light,
                 alpha << 24 | 0xFFFFFF, true);
     }
 

@@ -2,7 +2,7 @@
   "parent": "minecraft:block/block",
   "textures": {
     "stone": "minecraft:block/mossy_stone_bricks",
-    "floor": "minecraft:block/sand",
+    "floor": "minecraft:block/gravel",
     "particle": "minecraft:block/mossy_stone_bricks",
     "water": "skyblocks:block/vanilla_koi_pond_water"
   },
