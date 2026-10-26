@@ -223,8 +223,8 @@ final class VanillaPondRenderer {
             mx /= len;
             mz /= len;
         }
-        float frogSize = 0.62F + 0.16F * KoiPondBlock.u01(KoiPondBlock.hashu(cx(pos), cz(pos), 200));
-        float hop = 0.11F * frogSize / 0.7F; // (where it jumps to and from in the water: towards the middle of the block)
+        float scale = 2.6F * pad[2]; // (sized to its lily pad: a little frog on a little pad - it fits on it)
+        float hop = 0.9F * pad[2]; // (where it jumps to and from in the water: towards the middle of the block)
         float wx = pad[0] + mx * hop, wz = pad[1] + mz * hop;
         float x = pad[0], z = pad[1], y = SURF + 0.005F;
         float turn = 0.0F; // (0 facing the water .. 1 facing the pad: turning round once it's on)
@@ -247,7 +247,7 @@ final class VanillaPondRenderer {
             y = SURF + 0.3F * u * (1.0F - u) - 0.14F * u * u;
         }
         float yaw = yawOf(mx, mz) + 180.0F * turn + (float) Math.toDegrees(sway);
-        model(poseStack, buffers, frog, FROGS[kind], x, y, z, yaw, 0.34F * frogSize / 0.7F, light, 0xFFFFFFFF, false);
+        model(poseStack, buffers, frog, FROGS[kind], x, y, z, yaw, scale, light, 0xFFFFFFFF, false);
     }
 
     /** The game's yaw (degrees) for facing along (dx, dz). */
