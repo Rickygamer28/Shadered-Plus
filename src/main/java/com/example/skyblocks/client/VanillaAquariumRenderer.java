@@ -557,9 +557,14 @@ public final class VanillaAquariumRenderer {
                 for (int i = 0; i < n; i++) {
                     float s = (0.3F + random.nextFloat() * 0.25F) * sz;
                     float sway = 0.14F * Mth.sin(t * 1.2F + i * 1.7F + d);
-                    pieces.add(new Piece(Blocks.SEAGRASS.defaultBlockState(), x + (random.nextFloat() - 0.5) * 0.16 * sz, y,
-                            z + (random.nextFloat() - 0.5) * 0.16 * sz, s * 0.8F, s, s * 0.8F,
-                            Axis.YP.rotationDegrees(random.nextFloat() * 360.0F).mul(Axis.ZP.rotation(sway))));
+                    double bx = x + (random.nextFloat() - 0.5) * 0.16 * sz, bz = z + (random.nextFloat() - 0.5) * 0.16 * sz;
+                    float spin = random.nextFloat() * 360.0F;
+                    // kept inside the tank: its leaves (out to the corners of its cross, leaning as it sways) short of the
+                    // glass, its top under the water's surface
+                    double side = room(job, bx, y, bz), up = roomAbove(job, bx, y, bz);
+                    s = (float) Math.max(0.05, Math.min(s, Math.min((side - 0.03) / (0.8 * 0.71 + 0.15), up - 0.04)));
+                    pieces.add(new Piece(Blocks.SEAGRASS.defaultBlockState(), bx, y, bz, s * 0.8F, s, s * 0.8F,
+                            Axis.YP.rotationDegrees(spin).mul(Axis.ZP.rotation(sway))));
                 }
             }
             case 13 -> { // kelp: up most of the water (its size its height; never on up through a tunnel's air), swaying more higher up
@@ -588,6 +593,35 @@ public final class VanillaAquariumRenderer {
         for (Piece p : pieces) {
             piece(level, p, poseStack, buffers);
         }
+    }
+
+    /** How far from (x, z) to the tank's glass, round it at this height (in the block it's in, and the ones beside it). */
+    private static double room(AquariumRenderer.VanillaJob job, double x, double y, double z) {
+        BlockPos at = BlockPos.containing(x, y, z);
+        double fx = x - at.getX(), fz = z - at.getZ();
+        double r = 1.0;
+        if (!job.blocks().contains(at.west())) r = Math.min(r, fx);
+        if (!job.blocks().contains(at.east())) r = Math.min(r, 1.0 - fx);
+        if (!job.blocks().contains(at.north())) r = Math.min(r, fz);
+        if (!job.blocks().contains(at.south())) r = Math.min(r, 1.0 - fz);
+        // (and the corners: a diagonal neighbour missing)
+        for (int i = -1; i <= 1; i += 2) {
+            for (int k = -1; k <= 1; k += 2) {
+                if (!job.blocks().contains(at.offset(i, 0, k))) {
+                    double ex = i < 0 ? fx : 1.0 - fx, ez = k < 0 ? fz : 1.0 - fz;
+                    r = Math.min(r, Math.max(ex, ez));
+                }
+            }
+        }
+        return r;
+    }
+
+    /** How far up from (x, y, z) the water goes (to the tank's top, or a tunnel's air). */
+    private static double roomAbove(AquariumRenderer.VanillaJob job, double x, double y, double z) {
+        BlockPos at = BlockPos.containing(x, y, z);
+        int n = 0;
+        while (n < 24 && job.blocks().contains(at.above(n + 1))) n++;
+        return at.getY() + 1 + n - y;
     }
 
     /** A little block of the game's own: the middle of its base at (x, y, z), its size each way, turned (any way). */
