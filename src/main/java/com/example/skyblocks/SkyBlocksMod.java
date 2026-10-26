@@ -59,6 +59,10 @@ public class SkyBlocksMod {
         event.accept(ModItems.BIG_LAVA_LAMP.get());
         event.accept(ModItems.FIRE_TORNADO.get());
         event.accept(ModItems.BRICK_HEARTH.get());
+        event.accept(ModItems.MUSIC_VISUALIZER.get());
+        event.accept(ModItems.HOLOGRAM_PROJECTOR.get());
+        event.accept(ModItems.JELLYFISH_TANK.get());
+        event.accept(ModItems.KOI_POND.get());
         event.accept(ModItems.NEON_SIGN.get());
         event.accept(ModItems.DANCE_FLOOR.get());
         event.accept(ModItems.DISCO_BALL.get());

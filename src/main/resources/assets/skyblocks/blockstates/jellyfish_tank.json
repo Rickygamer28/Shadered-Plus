@@ -1,0 +1,20 @@
+{
+  "multipart": [
+    {
+      "when": {
+        "half": "lower"
+      },
+      "apply": {
+        "model": "skyblocks:block/jellyfish_tank_lower"
+      }
+    },
+    {
+      "when": {
+        "half": "upper"
+      },
+      "apply": {
+        "model": "skyblocks:block/jellyfish_tank_upper"
+      }
+    }
+  ]
+}

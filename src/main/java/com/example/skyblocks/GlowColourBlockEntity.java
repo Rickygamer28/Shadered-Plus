@@ -31,6 +31,16 @@ public class GlowColourBlockEntity extends BlockEntity {
         return new GlowColourBlockEntity(ModBlockEntities.FIRE.get(), pos, state, 0xFF8A1E);
     }
 
+    public static GlowColourBlockEntity visualizer(BlockPos pos, BlockState state) {
+        GlowColourBlockEntity be = new GlowColourBlockEntity(ModBlockEntities.VISUALIZER.get(), pos, state, 0x3FD0FF);
+        be.rgb = true; // (rainbow to start with)
+        return be;
+    }
+
+    public static GlowColourBlockEntity jellyTank(BlockPos pos, BlockState state) {
+        return new GlowColourBlockEntity(ModBlockEntities.JELLYFISH_TANK.get(), pos, state, 0x7FB8FF);
+    }
+
     public int colour() { return colour; }
     public boolean rgb() { return rgb; }
 

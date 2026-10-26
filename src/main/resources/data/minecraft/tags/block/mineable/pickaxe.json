@@ -6,6 +6,10 @@
     "skyblocks:water_caustics",
     "skyblocks:fog_machine",
     "skyblocks:brick_hearth",
-    "skyblocks:fire_tornado"
+    "skyblocks:fire_tornado",
+    "skyblocks:music_visualizer",
+    "skyblocks:hologram_projector",
+    "skyblocks:jellyfish_tank",
+    "skyblocks:koi_pond"
   ]
 }

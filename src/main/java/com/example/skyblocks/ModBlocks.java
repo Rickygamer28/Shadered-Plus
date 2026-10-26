@@ -101,6 +101,27 @@ public final class ModBlocks {
                     .lightLevel(state -> state.getValue(LavaLampBlock.LIT) ? 15 : 0)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
 
+    /** A music visualizer screen (VisualizerBlock, client/VisualizerRenderer). */
+    public static final DeferredBlock<VisualizerBlock> MUSIC_VISUALIZER = BLOCKS.registerBlock("music_visualizer", VisualizerBlock::new,
+            BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 7)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+
+    /** A hologram projector (HologramProjectorBlock, client/HologramRenderer). */
+    public static final DeferredBlock<HologramProjectorBlock> HOLOGRAM_PROJECTOR = BLOCKS.registerBlock("hologram_projector", HologramProjectorBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 6)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_GRAY));
+
+    /** A jellyfish tank, 2 tall (JellyfishTankBlock, client/JellyTankRenderer). */
+    public static final DeferredBlock<JellyfishTankBlock> JELLYFISH_TANK = BLOCKS.registerBlock("jellyfish_tank", JellyfishTankBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.GLASS).noOcclusion()
+                    .lightLevel(state -> state.getValue(LavaLampBlock.LIT) ? 11 : 3)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLUE));
+
+    /** A koi pond (KoiPondBlock, client/KoiPondRenderer). */
+    public static final DeferredBlock<KoiPondBlock> KOI_POND = BLOCKS.registerBlock("koi_pond", KoiPondBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.STONE).noOcclusion()
+                    .mapColor(net.minecraft.world.level.material.MapColor.WATER));
+
     /** A classic brick hearth, 2 wide and 2 tall (BrickHearthBlock, client/WallFireRenderer). */
     public static final DeferredBlock<BrickHearthBlock> BRICK_HEARTH = BLOCKS.registerBlock("brick_hearth", BrickHearthBlock::new,
             BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.STONE).noOcclusion().requiresCorrectToolForDrops()

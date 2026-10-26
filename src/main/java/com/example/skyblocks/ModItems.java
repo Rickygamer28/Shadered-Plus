@@ -59,6 +59,10 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> BIG_LAVA_LAMP = ITEMS.registerSimpleBlockItem("big_lava_lamp", ModBlocks.BIG_LAVA_LAMP);
     public static final DeferredItem<BlockItem> FIRE_TORNADO = ITEMS.registerSimpleBlockItem("fire_tornado", ModBlocks.FIRE_TORNADO);
     public static final DeferredItem<BlockItem> BRICK_HEARTH = ITEMS.registerSimpleBlockItem("brick_hearth", ModBlocks.BRICK_HEARTH);
+    public static final DeferredItem<BlockItem> MUSIC_VISUALIZER = ITEMS.registerSimpleBlockItem("music_visualizer", ModBlocks.MUSIC_VISUALIZER);
+    public static final DeferredItem<BlockItem> HOLOGRAM_PROJECTOR = ITEMS.registerSimpleBlockItem("hologram_projector", ModBlocks.HOLOGRAM_PROJECTOR);
+    public static final DeferredItem<BlockItem> JELLYFISH_TANK = ITEMS.registerSimpleBlockItem("jellyfish_tank", ModBlocks.JELLYFISH_TANK);
+    public static final DeferredItem<BlockItem> KOI_POND = ITEMS.registerSimpleBlockItem("koi_pond", ModBlocks.KOI_POND);
     public static final DeferredItem<BlockItem> NEON_SIGN = ITEMS.registerSimpleBlockItem("neon_sign", ModBlocks.NEON_SIGN);
 
     public static final DeferredItem<BlockItem> INFINITY_MIRROR = ITEMS.registerSimpleBlockItem("infinity_mirror", ModBlocks.INFINITY_MIRROR);

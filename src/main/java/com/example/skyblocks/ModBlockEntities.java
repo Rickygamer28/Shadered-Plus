@@ -30,6 +30,14 @@ public final class ModBlockEntities {
 
     public static final Supplier<BlockEntityType<GlowColourBlockEntity>> FIRE = TYPES.register("fire",
             () -> BlockEntityType.Builder.of(GlowColourBlockEntity::fire, ModBlocks.FIRE_TORNADO.get()).build(null));
+    public static final Supplier<BlockEntityType<GlowColourBlockEntity>> VISUALIZER = TYPES.register("music_visualizer",
+            () -> BlockEntityType.Builder.of(GlowColourBlockEntity::visualizer, ModBlocks.MUSIC_VISUALIZER.get()).build(null));
+    public static final Supplier<BlockEntityType<HologramBlockEntity>> HOLOGRAM = TYPES.register("hologram_projector",
+            () -> BlockEntityType.Builder.of(HologramBlockEntity::new, ModBlocks.HOLOGRAM_PROJECTOR.get()).build(null));
+    public static final Supplier<BlockEntityType<GlowColourBlockEntity>> JELLYFISH_TANK = TYPES.register("jellyfish_tank",
+            () -> BlockEntityType.Builder.of(GlowColourBlockEntity::jellyTank, ModBlocks.JELLYFISH_TANK.get()).build(null));
+    public static final Supplier<BlockEntityType<KoiPondBlockEntity>> KOI_POND = TYPES.register("koi_pond",
+            () -> BlockEntityType.Builder.of(KoiPondBlockEntity::new, ModBlocks.KOI_POND.get()).build(null));
     public static final Supplier<BlockEntityType<BrickHearthBlockEntity>> BRICK_HEARTH = TYPES.register("brick_hearth",
             () -> BlockEntityType.Builder.of(BrickHearthBlockEntity::new, ModBlocks.BRICK_HEARTH.get()).build(null));
 

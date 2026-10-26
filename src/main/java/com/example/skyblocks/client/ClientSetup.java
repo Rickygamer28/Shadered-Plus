@@ -49,6 +49,10 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.LAVA_LAMP.get(), LavaLampRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.FIRE.get(), WallFireRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.BRICK_HEARTH.get(), ClientSetup::hearthRenderer);
+        event.registerBlockEntityRenderer(ModBlockEntities.VISUALIZER.get(), VisualizerRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.HOLOGRAM.get(), HologramRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.JELLYFISH_TANK.get(), JellyTankRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.KOI_POND.get(), KoiPondRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.NEON_SIGN.get(), NeonSignRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.FOG_MACHINE.get(), FogMachineRenderer::new);
         BlockEntityRendererProvider<OiiaCatBlockEntity> big = OiiaCatRenderer::new;
@@ -151,6 +155,17 @@ public final class ClientSetup {
                 return renderer;
             }
         }, ModItems.FIRE_TORNADO.get());
+        event.registerItem(new IClientItemExtensions() {
+            private JellyTankItemRenderer renderer;
+
+            @Override
+            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (renderer == null) {
+                    renderer = new JellyTankItemRenderer();
+                }
+                return renderer;
+            }
+        }, ModItems.JELLYFISH_TANK.get());
         for (boolean big : new boolean[] {false, true}) {
             event.registerItem(new IClientItemExtensions() {
                 private LavaLampItemRenderer renderer;
@@ -245,6 +260,9 @@ public final class ClientSetup {
     /** Tinted blocks under the water (grass, leaves...) keep their colour. */
     @SubscribeEvent
     public static void causticsColours(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Block event) {
+        event.register((state, level, pos, tint) -> level != null && pos != null
+                && level.getBlockEntity(pos) instanceof com.example.skyblocks.HologramBlockEntity holo ? holo.colour() : 0x45E0FF,
+                com.example.skyblocks.ModBlocks.HOLOGRAM_PROJECTOR.get());
         event.register((state, level, pos, tint) -> level != null && pos != null
                 && level.getBlockEntity(pos) instanceof com.example.skyblocks.NeonSignBlockEntity sign ? sign.background() : com.example.skyblocks.NeonSignBlockEntity.DEFAULT_BACKGROUND,
                 com.example.skyblocks.ModBlocks.NEON_SIGN.get());
