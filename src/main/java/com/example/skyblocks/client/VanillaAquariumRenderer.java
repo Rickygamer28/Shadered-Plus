@@ -61,8 +61,63 @@ public final class VanillaAquariumRenderer {
     private static final float[] COST = {0.5F, 0.6F, 0.8F, 0.7F, 1.0F, 0.25F, 2.0F, 2.0F, 3.0F, 5.0F};
     /** Per kind: the tank room it needs (blocks across x/z, and up). */
     private static final int[][] NEEDS = {{1, 1}, {1, 1}, {2, 1}, {1, 1}, {2, 1}, {1, 1}, {2, 2}, {2, 2}, {3, 2}, {4, 2}};
-    private static final int[] NORMAL = {TROPICAL, TROPICAL, TROPICAL, TROPICAL, COD, COD, SALMON, PUFFER, AXOLOTL, TADPOLE, TADPOLE};
-    private static final int[] OCEAN = {TROPICAL, TROPICAL, COD, COD, COD, SALMON, PUFFER, SQUID, GLOW_SQUID, TURTLE, DOLPHIN};
+    private static final int[] NORMAL_GAME = {TROPICAL, TROPICAL, COD, SALMON, PUFFER, AXOLOTL, TADPOLE};
+    private static final int[] OCEAN_GAME = {TROPICAL, COD, COD, SALMON, PUFFER, SQUID, GLOW_SQUID, TURTLE, DOLPHIN};
+    /** The aquariums' own creatures (blocky models: AquaModels): kind CUSTOM + their number there. */
+    private static final int CUSTOM = 100;
+    private static final String[] NORMAL_OWN = {"clownfish", "blue_tang", "yellow_tang", "neon_tetra", "angelfish", "goldfish", "betta", "guppy",
+            "discus", "hermit_crab", "crab", "octopus", "shrimp"};
+    private static final String[] OCEAN_OWN = {"shark", "tuna", "manta_ray", "grouper", "jellyfish", "sardine", "ocean_sunfish", "basking_shark",
+            "crab", "stingray", "octopus", "lobster", "shrimp"};
+    /** Per own creature: how much of a tank's room it takes, the room it needs (across, up), most in one tank, a school of how many. */
+    private static final Map<String, float[]> OWN = new HashMap<>();
+
+    static {
+        Object[][] t = {
+            {"clownfish", 0.8F, 1, 1, 8, 1}, {"blue_tang", 1.0F, 1, 1, 6, 1}, {"yellow_tang", 1.0F, 1, 1, 6, 1}, {"neon_tetra", 0.4F, 1, 1, 16, 5},
+            {"angelfish", 1.2F, 1, 1, 4, 1}, {"goldfish", 1.0F, 1, 1, 8, 1}, {"betta", 0.9F, 1, 1, 2, 1}, {"guppy", 0.4F, 1, 1, 12, 4},
+            {"discus", 1.2F, 1, 1, 4, 1}, {"shark", 14.0F, 5, 2, 3, 1}, {"tuna", 6.0F, 2, 1, 6, 2}, {"manta_ray", 10.0F, 4, 2, 3, 1},
+            {"grouper", 8.0F, 3, 2, 3, 1}, {"jellyfish", 3.0F, 1, 2, 5, 1}, {"sardine", 0.5F, 1, 1, 24, 6}, {"ocean_sunfish", 16.0F, 4, 3, 2, 1},
+            {"basking_shark", 30.0F, 6, 3, 2, 1}, {"hermit_crab", 0.6F, 1, 1, 3, 1}, {"crab", 0.7F, 1, 1, 3, 1}, {"stingray", 6.0F, 3, 1, 2, 1},
+            {"octopus", 1.0F, 1, 1, 2, 1}, {"lobster", 3.0F, 2, 1, 2, 1}, {"shrimp", 0.3F, 1, 1, 4, 2}};
+        for (Object[] r : t) {
+            OWN.put((String) r[0], new float[] {(Float) r[1], (Integer) r[2], (Integer) r[3], (Integer) r[4], (Integer) r[5]});
+        }
+    }
+
+    private static int own(String name) {
+        return CUSTOM + java.util.Arrays.asList(AquaModels.NAMES).indexOf(name);
+    }
+
+    private static String ownName(int kind) {
+        return AquaModels.NAMES[kind - CUSTOM];
+    }
+
+    private static float cost(int kind) {
+        return kind >= CUSTOM ? OWN.get(ownName(kind))[0] : COST[kind];
+    }
+
+    private static int[] needs(int kind) {
+        return kind >= CUSTOM ? new int[] {(int) OWN.get(ownName(kind))[1], (int) OWN.get(ownName(kind))[2]} : NEEDS[kind];
+    }
+
+    private static int cap(int kind) {
+        return kind >= CUSTOM ? (int) OWN.get(ownName(kind))[3] : kind >= TURTLE ? 2 : kind == AXOLOTL ? 3 : 99;
+    }
+
+    private static int school(int kind, Random random) {
+        if (kind >= CUSTOM) {
+            int n = (int) OWN.get(ownName(kind))[4];
+            return n <= 1 ? 1 : n - 1 + random.nextInt(3);
+        }
+        return kind == COD || kind == TADPOLE ? 2 + random.nextInt(3) : 1;
+    }
+
+    private static final Map<String, ModelPart> OWN_MODELS = new HashMap<>();
+
+    private static ModelPart ownModel(String name) {
+        return OWN_MODELS.computeIfAbsent(name, AquaModels::build);
+    }
 
     private static final ResourceLocation COD_TEX = mc("textures/entity/fish/cod.png"), SALMON_TEX = mc("textures/entity/fish/salmon.png"),
             PUFFER_TEX = mc("textures/entity/fish/pufferfish.png"), TADPOLE_TEX = mc("textures/entity/tadpole/tadpole.png"),
@@ -91,7 +146,8 @@ public final class VanillaAquariumRenderer {
     /** A plant on the bottom: what, where (its base), how big, how it's turned. */
     private record Plant(BlockState state, double x, double y, double z, float width, float height, int turn) {}
 
-    private record Tank(List<Animal> animals, List<Plant> plants, double cx, double cy, double cz) {}
+    /** frames: the dark frame round the tank's edges (like the aquariums'), 4 corners (x, y, z) a strip; light: at which block each is. */
+    private record Tank(List<Animal> animals, List<Plant> plants, double cx, double cy, double cz, float[] frames, long[] frameLight) {}
 
     private static final List<Tank> TANKS = new ArrayList<>();
     private static ClientLevel lastLevel;
@@ -164,6 +220,7 @@ public final class VanillaAquariumRenderer {
                 for (Plant p : tank.plants()) {
                     plant(level, p, poseStack, buffers);
                 }
+                frames(level, tank, poseStack, buffers);
                 for (int i = 0; i < tank.animals().size(); i++) {
                     animal(level, tank.animals().get(i), i, t, poseStack, buffers);
                 }
@@ -285,12 +342,14 @@ public final class VanillaAquariumRenderer {
         }
         // the animals: as many as the tank has room for
         List<Animal> animals = new ArrayList<>();
-        float budget = Math.min(blocks.size() * 1.1F, 40.0F);
-        int[] pool = ocean ? OCEAN : NORMAL;
-        int[] count = new int[10];
-        for (int tries = 0; tries < 200 && budget > 0.2F && animals.size() < 40; tries++) {
-            int kind = pool[random.nextInt(pool.length)];
-            if (COST[kind] > budget + 0.3F || (kind >= TURTLE && count[kind] >= 2) || (kind == AXOLOTL && count[kind] >= 3)) {
+        float budget = Math.min(blocks.size() * 1.1F, ocean ? 120.0F : 40.0F);
+        List<Integer> poolList = new ArrayList<>();
+        for (int k : ocean ? OCEAN_GAME : NORMAL_GAME) poolList.add(k);
+        for (String n : ocean ? OCEAN_OWN : NORMAL_OWN) poolList.add(own(n));
+        Map<Integer, Integer> count = new HashMap<>();
+        for (int tries = 0; tries < 300 && budget > 0.2F && animals.size() < 48; tries++) {
+            int kind = poolList.get(random.nextInt(poolList.size()));
+            if (cost(kind) > budget + 0.3F || count.getOrDefault(kind, 0) >= cap(kind)) {
                 continue;
             }
             int[] box = grow(in, blocks.get(random.nextInt(blocks.size())));
@@ -300,7 +359,7 @@ public final class VanillaAquariumRenderer {
                     continue;
                 }
             }
-            int group = kind == COD || kind == TADPOLE ? 2 + random.nextInt(3) : 1; // (cod and tadpoles in little schools)
+            int group = school(kind, random); // (cod, tadpoles, tetras, guppies, sardines... in little schools)
             float[] phase = new float[6];
             for (int k = 0; k < 6; k++) phase[k] = random.nextFloat() * 6.2832F;
             float speed = 0.8F + 0.4F * random.nextFloat();
@@ -309,8 +368,8 @@ public final class VanillaAquariumRenderer {
                 ph[0] += g * 0.35F; // (each a little behind the one before)
                 ph[1] += g * 0.5F;
                 animals.add(animal(kind, box, random, ph, speed));
-                budget -= COST[kind];
-                count[kind]++;
+                budget -= cost(kind);
+                count.merge(kind, 1, Integer::sum);
             }
         }
         // the plants on the bottom
@@ -339,7 +398,71 @@ public final class VanillaAquariumRenderer {
                 plants.add(new Plant(Blocks.SEA_PICKLE.defaultBlockState().setValue(SeaPickleBlock.PICKLES, 1 + random.nextInt(3)), x, y, z, 0.8F, 0.8F, turn));
             }
         }
-        return new Tank(animals, plants, cx, cy, cz);
+        // the frame round the tank's edges (as the aquariums have): along every edge of an outside face where the tank
+        // ends (not where it carries on, flat or round a corner)
+        List<float[]> strips = new ArrayList<>();
+        List<Long> lights = new ArrayList<>();
+        final float W = 1.0F / 16.0F, OUT = 0.0015F;
+        for (BlockPos p : blocks) {
+            for (Direction side : Direction.values()) {
+                if (in.contains(p.relative(side))) {
+                    continue;
+                }
+                for (Direction e : Direction.values()) {
+                    if (e.getAxis() == side.getAxis()) {
+                        continue;
+                    }
+                    BlockPos next = p.relative(e);
+                    if (in.contains(next) && !in.contains(next.relative(side))) {
+                        continue;
+                    }
+                    strips.add(strip(p, side, e, W, OUT));
+                    lights.add(p.relative(side).asLong());
+                }
+            }
+        }
+        float[] frames = new float[strips.size() * 12];
+        long[] frameLight = new long[strips.size()];
+        for (int i = 0; i < strips.size(); i++) {
+            System.arraycopy(strips.get(i), 0, frames, i * 12, 12);
+            frameLight[i] = lights.get(i);
+        }
+        return new Tank(animals, plants, cx, cy, cz, frames, frameLight);
+    }
+
+    /** A strip of frame on the face of block p towards side, along its edge towards e, w wide (4 corners: x, y, z). */
+    private static float[] strip(BlockPos p, Direction side, Direction e, float w, float out) {
+        // the face's plane, and its two directions across
+        Direction a = e, b = null;
+        for (Direction d : Direction.values()) {
+            if (d.getAxis() != side.getAxis() && d.getAxis() != e.getAxis() && d.getAxisDirection() == Direction.AxisDirection.POSITIVE) b = d;
+        }
+        float[] c = new float[12];
+        float[][] corners = new float[4][];
+        // in the face's own coordinates: along e (0 at the edge .. w in), along b (0..1)
+        float[][] uv = {{0, 0}, {0, 1}, {w, 1}, {w, 0}};
+        for (int i = 0; i < 4; i++) {
+            float[] q = {0.5F, 0.5F, 0.5F};
+            set(q, side, 0.5F + out);
+            set(q, a, 0.5F - uv[i][0]);
+            setAbs(q, b, uv[i][1]);
+            corners[i] = q;
+        }
+        for (int i = 0; i < 4; i++) {
+            c[i * 3] = p.getX() + corners[i][0];
+            c[i * 3 + 1] = p.getY() + corners[i][1];
+            c[i * 3 + 2] = p.getZ() + corners[i][2];
+        }
+        return c;
+    }
+
+    /** q's coordinate along d's axis = 0.5 + d's sign * k (k from the middle). */
+    private static void set(float[] q, Direction d, float k) {
+        q[d.getAxis().ordinal()] = 0.5F + d.getAxisDirection().getStep() * k;
+    }
+
+    private static void setAbs(float[] q, Direction d, float v) {
+        q[d.getAxis().ordinal()] = v;
     }
 
     private static int volume(int[] b) {
@@ -348,15 +471,22 @@ public final class VanillaAquariumRenderer {
 
     private static boolean fits(int[] b, int kind) {
         int wx = b[3] - b[0] + 1, h = b[4] - b[1] + 1, wz = b[5] - b[2] + 1;
-        return Math.min(wx, wz) >= NEEDS[kind][0] && Math.max(wx, wz) >= NEEDS[kind][0] && h >= NEEDS[kind][1];
+        int[] need = needs(kind);
+        return Math.min(wx, wz) >= need[0] && h >= need[1];
     }
 
     private static Animal animal(int kind, int[] b, Random random, float[] phase, float speed) {
-        float reach = REACH[kind];
+        float reach = kind >= CUSTOM ? AquaModels.REACH[kind - CUSTOM] : REACH[kind];
+        String move = kind >= CUSTOM ? AquaModels.MOVES[kind - CUSTOM] : "swim";
         double x0 = b[0] + 0.1 + reach, x1 = b[3] + 0.9 - reach;
         double z0 = b[2] + 0.1 + reach, z1 = b[5] + 0.9 - reach;
         double y0 = b[1] + 2.0 / 16.0 + 0.08, y1 = b[4] + 14.0 / 16.0 - 0.18; // (above the sand, under the surface)
-        if (kind == AXOLOTL) {
+        if (move.equals("crawl")) {
+            y0 -= 0.08;
+            y1 = y0; // (walking on the sand)
+        } else if (move.equals("glide")) {
+            y1 = Math.min(y1, y0 + 0.3); // (low over the bottom)
+        } else if (kind == AXOLOTL) {
             y1 = Math.min(y1, y0 + 0.35); // (along the bottom)
         } else if (kind == TURTLE || kind == DOLPHIN || kind == SQUID || kind == GLOW_SQUID) {
             y0 += 0.2;
@@ -367,11 +497,33 @@ public final class VanillaAquariumRenderer {
         if (y0 > y1) y0 = y1 = (y0 + y1) * 0.5;
         DyeColor[] dyes = DyeColor.values();
         return new Animal(kind, random.nextInt(5), random.nextInt(6), 0xFF000000 | dyes[random.nextInt(16)].getTextureDiffuseColor(),
-                0xFF000000 | dyes[random.nextInt(16)].getTextureDiffuseColor(), SCALE[kind] * (0.85F + 0.3F * random.nextFloat()),
+                0xFF000000 | dyes[random.nextInt(16)].getTextureDiffuseColor(),
+                (kind >= CUSTOM ? AquaModels.SCALES[kind - CUSTOM] : SCALE[kind]) * (0.85F + 0.3F * random.nextFloat()),
                 x0, y0, z0, x1, y1, z1, phase, speed);
     }
 
     // ---- drawing ----
+
+    private static final ResourceLocation FRAME = ResourceLocation.withDefaultNamespace("block/white_concrete");
+    private static final int FRAME_COLOUR = 0xFF17171A; // (the aquariums' frame: near black)
+
+    private static void frames(ClientLevel level, Tank tank, PoseStack poseStack, MultiBufferSource buffers) {
+        float[] f = tank.frames();
+        if (f.length == 0) {
+            return;
+        }
+        var sprite = Minecraft.getInstance().getTextureAtlas(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS).apply(FRAME);
+        float u = (sprite.getU0() + sprite.getU1()) * 0.5F, v = (sprite.getV0() + sprite.getV1()) * 0.5F;
+        var vc = buffers.getBuffer(net.minecraft.client.renderer.Sheets.solidBlockSheet());
+        PoseStack.Pose pose = poseStack.last();
+        for (int i = 0; i < f.length / 12; i++) {
+            int light = LevelRenderer.getLightColor(level, BlockPos.of(tank.frameLight()[i]));
+            for (int k : new int[] {0, 1, 2, 3, 3, 2, 1, 0}) { // (both sides: whichever way it's wound)
+                vc.addVertex(pose, f[i * 12 + k * 3], f[i * 12 + k * 3 + 1], f[i * 12 + k * 3 + 2]).setColor(FRAME_COLOUR).setUv(u, v)
+                        .setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 1.0F, 0.0F);
+            }
+        }
+    }
 
     private static void plant(ClientLevel level, Plant p, PoseStack poseStack, MultiBufferSource buffers) {
         poseStack.pushPose();
@@ -387,7 +539,9 @@ public final class VanillaAquariumRenderer {
     private static void animal(ClientLevel level, Animal a, int index, float t, PoseStack poseStack, MultiBufferSource buffers) {
         // where it is on its wandering path (long lazy curves through its stretch of water), and which way it's going
         float[] ph = a.phase();
-        float s = a.speed() * (a.kind() >= SQUID ? 0.6F : a.kind() == AXOLOTL ? 0.5F : 1.0F);
+        String move = a.kind() >= CUSTOM ? AquaModels.MOVES[a.kind() - CUSTOM] : "swim";
+        float s = a.speed() * (move.equals("crawl") ? 0.35F : move.equals("drift") ? 0.3F : a.kind() >= CUSTOM && AquaModels.REACH[a.kind() - CUSTOM] > 0.4F ? 0.6F
+                : a.kind() >= SQUID && a.kind() < CUSTOM ? 0.6F : a.kind() == AXOLOTL ? 0.5F : 1.0F);
         double hx = (a.x1() - a.x0()) * 0.5, hy = (a.y1() - a.y0()) * 0.5, hz = (a.z1() - a.z0()) * 0.5;
         float fx = (float) (0.16 * s / Math.max(hx, 0.5)), fz = (float) (0.16 * s / Math.max(hz, 0.5)), fy = 0.11F * s;
         double ux = 0.62 * Math.sin(t * fx + ph[0]) + 0.38 * Math.sin(t * fx * 1.73 + ph[1]);
@@ -402,6 +556,10 @@ public final class VanillaAquariumRenderer {
         float pitch = (float) Mth.clamp(Math.atan2(vy, Math.max(flat, 1e-4)) * 0.8, -0.4, 0.4);
         int light = LevelRenderer.getLightColor(level, BlockPos.containing(x, y, z));
         float wag = (float) Math.sin(t * 7.0 + index * 1.3);
+        if (a.kind() >= CUSTOM) {
+            own(a, move, index, t, x, y, z, yaw, pitch, light, poseStack, buffers);
+            return;
+        }
         switch (a.kind()) {
             case TROPICAL -> {
                 boolean big = a.look() >= 3;
@@ -463,6 +621,59 @@ public final class VanillaAquariumRenderer {
             default -> {
             }
         }
+    }
+
+    /** One of the aquariums' own creatures (a blocky model), moving as it does. */
+    private static void own(Animal a, String move, int index, float t, double x, double y, double z, float yaw, float pitch, int light,
+                            PoseStack poseStack, MultiBufferSource buffers) {
+        String name = ownName(a.kind());
+        ModelPart m = ownModel(name);
+        float beat = (float) Math.sin(t * 7.0 + index * 1.3);
+        ModelPart body = m.hasChild("body") ? m.getChild("body") : m;
+        if (body.hasChild("tail")) {
+            ModelPart tail = body.getChild("tail");
+            if (move.equals("crawl")) tail.xRot = 0.15F * beat;
+            else tail.yRot = (a.scale() > 1.2F ? 0.25F : 0.45F) * (float) Math.sin(t * (a.scale() > 1.2F ? 3.0 : 7.0) + index);
+        }
+        if (body.hasChild("right_fin")) body.getChild("right_fin").yRot = -0.5F - 0.25F * beat;
+        if (body.hasChild("left_fin")) body.getChild("left_fin").yRot = 0.5F + 0.25F * beat;
+        float flap = (float) Math.sin(t * (move.equals("glide") ? 2.0 : 1.6) + index);
+        if (body.hasChild("right_wing")) body.getChild("right_wing").zRot = 0.35F * flap;
+        if (body.hasChild("left_wing")) body.getChild("left_wing").zRot = -0.35F * flap;
+        for (int k = 0; k < 8; k++) {
+            if (body.hasChild("tentacle" + k)) { // (jellyfish trailing, octopus curling)
+                ModelPart te = body.getChild("tentacle" + k);
+                if (move.equals("drift")) te.xRot = 0.2F * (float) Math.sin(t * 1.8 + k * 1.3 + index);
+                else te.xRot = 0.15F * (float) Math.sin(t * 2.0 + k + index);
+            }
+            for (String side : new String[] {"right", "left"}) {
+                if (body.hasChild(side + "_leg" + k)) { // (walking: the legs stepping in turn)
+                    body.getChild(side + "_leg" + k).xRot = 0.35F * (float) Math.sin(t * 6.0 + k * 2.1 + (side.equals("left") ? 3.14 : 0));
+                }
+            }
+        }
+        for (String side : new String[] {"right", "left"}) {
+            if (body.hasChild(side + "_claw")) body.getChild(side + "_claw").xRot = 0.15F * (float) Math.sin(t * 1.3 + index + (side.equals("left") ? 1.5 : 0));
+        }
+        if (move.equals("drift")) {
+            pitch = 0.0F;
+            yaw = (float) (t * 6.0 + index * 40.0); // (turning slowly as it pulses along)
+        } else if (move.equals("crawl") || move.equals("glide")) {
+            pitch = 0.0F;
+        }
+        ResourceLocation texture = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "textures/entity/aqua/" + name + ".png");
+        poseStack.pushPose();
+        poseStack.translate(x, y, z);
+        poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - yaw));
+        poseStack.mulPose(Axis.XP.rotation(pitch));
+        float sc = a.scale();
+        float squeeze = move.equals("drift") ? 1.0F + 0.08F * (float) Math.sin(t * 2.4 + index) : 1.0F; // (a jellyfish's bell pulsing)
+        poseStack.scale(-sc / squeeze, -sc * squeeze, sc / squeeze);
+        poseStack.translate(0.0F, -1.501F, 0.0F);
+        RenderType type = move.equals("drift") || name.equals("shrimp") || name.equals("betta") || name.equals("goldfish")
+                ? RenderType.entityTranslucent(texture) : RenderType.entityCutoutNoCull(texture);
+        m.render(poseStack, buffers.getBuffer(type), light, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
+        poseStack.popPose();
     }
 
     private static void rot(ModelPart m, float yRot, String name) {
