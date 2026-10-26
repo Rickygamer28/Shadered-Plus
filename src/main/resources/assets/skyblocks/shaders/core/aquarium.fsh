@@ -2221,7 +2221,9 @@ void main() {
         // the water ends inside the tank's box (a glass corridor or room built into the tank): glass, looking out into
         // the air - no sand, no seaweed (only the real bottom and the outer walls have those)
         bool inner = all(greaterThanEqual(cell, ivec3(0))) && all(lessThan(cell, ivec3(BoxSize + 0.5)));
-        if (inner && !onSand) {
+        // (out through a side into air inside the box - beside an arch, an L: the same deep water and back glass as
+        // the tank's outer sides, so every side of it looks alike; only up or down into such air shows plain glass)
+        if (inner && !onSand && exitAxis == 1) {
             vec2 gp = exitAxis == 0 ? p.zy : exitAxis == 1 ? p.xz : p.xy;
             col = mix(vec3(0.32, 0.5, 0.58), vec3(0.5, 0.68, 0.74), clamp(p.y / BoxSize.y, 0.0, 1.0));
             col += vec3(0.5, 0.75, 0.85) * caustics(gp * 1.2, t) * 0.18;                       // (light rippling on it)
