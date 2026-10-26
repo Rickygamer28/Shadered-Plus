@@ -120,6 +120,105 @@ vec4 koiLayer(vec2 q, int L, float t, bool body) {
     return vec4(0.0);
 }
 
+// lily pad k of a cell: is there one, and where / how big / turned
+bool padParams(vec2 cell, int k, float t, out vec2 c, out float r, out vec2 h, out vec2 h2) {
+    h = hash22(cell * 2.3 + float(k) * 9.1 + 0.7);
+    h2 = hash22(cell * 3.1 + float(k) * 4.7);
+    c = cell + 0.15 + 0.7 * h2 + 0.02 * vec2(sin(t * 0.07 + h.y * 9.0), cos(t * 0.05 + h.x * 7.0));
+    r = 0.08 + 0.07 * h.y;
+    return h.x >= 0.45;
+}
+
+// is a frog sitting on this pad now (now and then one hops on for a while): its kind, size and which way it faces
+bool frogOn(vec2 cell, int k, float t, out vec3 info) {
+    vec2 hf = hash22(cell * 5.3 + float(k) * 2.9 + 1.3);
+    float epoch = floor(t / 75.0 + hf.x * 13.0);
+    vec2 he = hash22(vec2(epoch, hf.y * 97.0 + cell.x * 0.13 + cell.y * 0.71));
+    info = vec3(floor(he.y * 3.0), 0.62 + 0.16 * hf.x, he.x * 6.2832 + 0.4 * sin(t * 0.3 + hf.y * 9.0));
+    return hf.y < 0.16 && he.x < 0.5;
+}
+
+float smin(float a, float b, float k) {
+    float h = max(k - abs(a - b), 0.0) / k;
+    return min(a, b) - h * h * k * 0.25;
+}
+
+float sdEllipsoid(vec3 p, vec3 r) {
+    float k0 = length(p / r);
+    float k1 = length(p / (r * r));
+    return k0 * (k0 - 1.0) / max(k1, 1e-6);
+}
+
+// a frog (px, from its feet on the pad; z forward): x = distance, y = what (0 skin, 1 eye)
+vec2 frogSDF(vec3 p, float t) {
+    vec3 q = vec3(abs(p.x), p.y, p.z);
+    float breathe = 1.0 + 0.06 * sin(t * 3.1);
+    float d = sdEllipsoid(p - vec3(0.0, 1.25, -0.3), vec3(1.5, 1.0 * breathe, 2.0));
+    d = smin(d, sdEllipsoid(p - vec3(0.0, 1.45, 1.45), vec3(1.35, 0.78, 1.1)), 0.6);
+    d = smin(d, sdEllipsoid(q - vec3(1.45, 0.6, -0.9), vec3(0.62, 0.55, 1.45)), 0.4);  // (back legs folded)
+    d = smin(d, sdEllipsoid(q - vec3(0.95, 0.35, 1.35), vec3(0.36, 0.38, 0.62)), 0.3); // (front legs)
+    float eye = length(q - vec3(0.72, 2.1, 1.7)) - 0.46;
+    return eye < d ? vec2(eye, 1.0) : vec2(d, 0.0);
+}
+
+// a frog in front of the surface point (the ray passes over it first): (colour, 0/1)
+vec4 frogHit(vec3 p0, vec3 rd, float t, float light) {
+    if (rd.y > -0.08) {
+        return vec4(0.0);
+    }
+    float up = 0.19;
+    vec3 pTop = p0 - rd * (up / -rd.y);
+    vec2 c0 = floor(p0.xz);
+    for (int j = -1; j <= 1; j++) {
+        for (int i = -1; i <= 1; i++) {
+            vec2 cell = c0 + vec2(i, j);
+            for (int k = 0; k < 2; k++) {
+                vec2 c, h, h2;
+                float r;
+                vec3 info;
+                if (!padParams(cell, k, t, c, r, h, h2) || r < 0.11 || !frogOn(cell, k, t, info)) continue;
+                // close to the ray's way down?
+                vec2 ab = p0.xz - pTop.xz;
+                float u = clamp(dot(c - pTop.xz, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
+                if (length(pTop.xz + ab * u - c) > 0.22) continue;
+                float ca = cos(info.z), sa = sin(info.z);
+                float sc = 16.0 / info.y;
+                vec3 ro = vec3(pTop.x - c.x, pTop.y - SURF, pTop.z - c.y) * sc;
+                vec3 rr = rd;
+                ro.xz = mat2(ca, -sa, sa, ca) * ro.xz;
+                rr.xz = mat2(ca, -sa, sa, ca) * rr.xz;
+                float tm = 0.0, tEnd = length(p0 - pTop) * sc;
+                for (int n = 0; n < 40; n++) {
+                    vec3 q = ro + rr * tm;
+                    vec2 f = frogSDF(q, t);
+                    if (f.x < 0.02) {
+                        vec2 e = vec2(0.03, 0.0);
+                        vec3 nn = normalize(vec3(frogSDF(q + e.xyy, t).x - frogSDF(q - e.xyy, t).x, frogSDF(q + e.yxy, t).x - frogSDF(q - e.yxy, t).x,
+                                                 frogSDF(q + e.yyx, t).x - frogSDF(q - e.yyx, t).x));
+                        vec3 sun = normalize(SUN);
+                        sun.xz = mat2(ca, -sa, sa, ca) * sun.xz;
+                        float lam = 0.45 + 0.55 * max(dot(nn, sun), 0.0);
+                        vec3 col;
+                        if (f.y > 0.5) {
+                            col = vec3(0.05, 0.05, 0.06) + vec3(0.9) * pow(max(dot(reflect(rr, nn), sun), 0.0), 30.0);
+                        } else {
+                            vec3 back = info.x < 0.5 ? vec3(0.78, 0.47, 0.24) : info.x < 1.5 ? vec3(0.4, 0.62, 0.3) : vec3(0.86, 0.83, 0.75);
+                            vec3 belly = mix(back, vec3(0.95, 0.9, 0.78), 0.55);
+                            col = mix(belly, back, smoothstep(0.6, 1.4, q.y));
+                            if (info.x > 1.5 && noise2(q.xz * 1.6) > 0.68) col *= 0.7; // (spots)
+                            col *= lam;
+                        }
+                        return vec4(col * light, 1.0);
+                    }
+                    tm += max(f.x * 0.9, 0.05);
+                    if (tm > tEnd) break;
+                }
+            }
+        }
+    }
+    return vec4(0.0);
+}
+
 // a lily pad at q on the surface: (colour, 0/1)
 vec4 padAt(vec2 q, float t) {
     vec2 c0 = floor(q);
@@ -127,11 +226,9 @@ vec4 padAt(vec2 q, float t) {
         for (int i = -1; i <= 1; i++) {
             vec2 cell = c0 + vec2(i, j);
             for (int k = 0; k < 2; k++) {
-                vec2 h = hash22(cell * 2.3 + float(k) * 9.1 + 0.7);
-                if (h.x < 0.45) continue;
-                vec2 h2 = hash22(cell * 3.1 + float(k) * 4.7);
-                vec2 c = cell + 0.15 + 0.7 * h2 + 0.02 * vec2(sin(t * 0.07 + h.y * 9.0), cos(t * 0.05 + h.x * 7.0));
-                float r = 0.08 + 0.07 * h.y;
+                vec2 c, h, h2;
+                float r;
+                if (!padParams(cell, k, t, c, r, h, h2)) continue;
                 vec2 d = q - c;
                 float dist = length(d);
                 if (dist > r) continue;
@@ -141,7 +238,10 @@ vec4 padAt(vec2 q, float t) {
                 vec3 col = mix(vec3(0.14, 0.4, 0.12), vec3(0.3, 0.58, 0.2), noise2(d * 60.0 + h * 9.0) * 0.6 + 0.2);
                 col *= 0.85 + 0.15 * sin(a * 12.0); // (veins)
                 col *= 0.8 + 0.2 * smoothstep(r, r * 0.85, dist);
-                if (h.y > 0.72 && dist < r * 0.32) { // a water-lily flower
+                vec3 info;
+                if (r >= 0.11 && frogOn(cell, k, t, info)) {
+                    col *= 0.55 + 0.45 * smoothstep(0.06 * info.y, 0.16 * info.y, dist); // (the frog's shadow)
+                } else if (h.y > 0.72 && dist < r * 0.32) { // a water-lily flower
                     float petals = 0.5 + 0.5 * cos(atan(d.y, d.x) * 8.0);
                     col = mix(vec3(1.0, 0.55, 0.75), vec3(1.0, 0.92, 0.95), petals * (1.0 - dist / (r * 0.32)));
                     if (dist < r * 0.07) col = vec3(1.0, 0.85, 0.3);
@@ -169,6 +269,12 @@ void main() {
     vec2 cell0 = floor(uv);
     float light = 0.18 + 0.82 * day;
 
+    // a frog sitting on a lily pad, in front of this point
+    vec4 frog = frogHit(p0, rd, t, light);
+    if (frog.a > 0.0) {
+        fragColor = vec4(frog.rgb, 1.0);
+        return;
+    }
     // a lily pad here: it floats on top
     vec4 pad = padAt(p0.xz, t);
     if (pad.a > 0.0) {

@@ -87,6 +87,18 @@ public class KoiPondBlock extends BaseEntityBlock {
         return dir.getAxis().isHorizontal() ? connected(state, level, pos) : state;
     }
 
+    /** Now and then a croak (the frogs that sit on the lily pads), and a little splash. */
+    @Override
+    public void animateTick(BlockState state, net.minecraft.world.level.Level level, BlockPos pos, net.minecraft.util.RandomSource random) {
+        if (random.nextInt(600) == 0) {
+            level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.95, pos.getZ() + 0.5, net.minecraft.sounds.SoundEvents.FROG_AMBIENT,
+                    net.minecraft.sounds.SoundSource.AMBIENT, 0.5F, 0.9F + random.nextFloat() * 0.2F, false);
+        } else if (random.nextInt(900) == 0) {
+            level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.9, pos.getZ() + 0.5, net.minecraft.sounds.SoundEvents.FISH_SWIM,
+                    net.minecraft.sounds.SoundSource.AMBIENT, 0.25F, 1.0F, false);
+        }
+    }
+
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
