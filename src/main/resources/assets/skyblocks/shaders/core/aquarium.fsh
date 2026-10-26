@@ -1141,7 +1141,85 @@ vec4 clamParts(vec3 p, float t) {
     return vec4(low, up, flesh, pearl);
 }
 
+// ---- seaweed: a tuft of seagrass (12), a tall kelp (13) swaying in the water ----
+float gDecoSz = 1.0; // (the decoration's size: for the kelp, its height in blocks)
+
+// one blade of seagrass: a thin ribbon from the sand (h tall, turned to a), leaning over as it rises, swaying
+float grassBlade(vec3 p, float h, float lean, float a, float t, float ph) {
+    vec2 r = mat2(cos(a), -sin(a), sin(a), cos(a)) * p.xz;
+    float k = clamp(p.y / h, 0.0, 1.0);
+    float bend = lean * k * k + 0.05 * sin(t * 1.3 + ph + k * 2.5) * k;
+    float w = 0.026 * (1.0 - 0.75 * k) + 0.004;                    // (wide at the root, to a point)
+    vec2 q = vec2(abs(r.x - bend) - 0.005, abs(r.y) - w);
+    float d2 = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0);
+    return max(d2, max(p.y - h, -p.y)) * 0.8;
+}
+
+float seagrassSDF(vec3 p, float t) {
+    float d = 1e9;
+    for (int i = 0; i < 7; i++) {
+        float fi = float(i);
+        float a = fi * 0.9 + 0.5 * sin(fi * 2.3);                  // (each blade leaning its own way, out from the tuft)
+        vec3 o = vec3(cos(a), 0.0, sin(a)) * 0.05 * (0.4 + 0.6 * fract(fi * 0.618));
+        vec2 out2 = vec2(cos(a), sin(a));
+        vec3 q = p - o;
+        q.xz = vec2(dot(q.xz, out2), dot(q.xz, vec2(-out2.y, out2.x))); // (into the blade's frame: x outwards)
+        d = min(d, grassBlade(q, 0.26 + 0.3 * fract(fi * 0.371 + 0.2), 0.1 + 0.14 * fract(fi * 0.53), 1.5708, t, fi * 1.9));
+    }
+    return d;
+}
+
+// the kelp's stalk: how far it has swayed at height y (blocks), sideways (blocks)
+vec2 kelpSway(float yb, float t) {
+    float k = yb / max(gDecoSz, 0.5);
+    return vec2(0.07 * sin(t * 0.6 + yb * 1.4), 0.05 * sin(t * 0.47 + yb * 1.1 + 1.3)) * k;
+}
+
+// p in its own units (its height 1): s = how much of that a block is
+float kelpSDF(vec3 p, float t, out int part) {
+    float s = 1.0 / max(gDecoSz, 0.5);
+    float yb = p.y / s;
+    vec2 c = kelpSway(yb, t) * s;
+    float stalk = max(length(p.xz - c) - 0.012 * s, max(p.y - 1.0, -p.y));
+    float d = stalk;
+    part = 0;
+    // its leaves: long blades every so often up the stalk, first one side then the other, reaching up and out, a
+    // little air bladder where each joins the stalk (the nearest two: enough for the distance)
+    float leafGap = 0.15;
+    float fi = floor((yb - 0.12) / leafGap + 0.5);
+    for (int j = -1; j <= 1; j++) {
+        float i = fi + float(j);
+        if (i < 0.0) continue;
+        float ly = 0.12 + i * leafGap;
+        if (ly > gDecoSz - 0.12) continue;
+        float a = i * 2.4 + 0.6;
+        vec2 dir = vec2(cos(a), sin(a));
+        vec2 cc = kelpSway(ly, t);
+        vec3 q = vec3(p.x / s - cc.x, yb - ly, p.z / s - cc.y);
+        vec2 r = vec2(dot(q.xz, dir), dot(q.xz, vec2(-dir.y, dir.x)));
+        // (a long wavy blade, rising off the stalk then arching over, rippling along its edge)
+        float along = r.x - 0.03;
+        float lift = 0.32 * along - 0.9 * along * along + 0.015 * sin(t * 0.9 + i + along * 30.0);
+        vec3 lq = vec3(along - 0.1, q.y - 0.03 - lift, r.y + 0.01 * sin(along * 45.0 + t + i));
+        float leaf = sdEllipsoid(lq, vec3(0.12, 0.008, 0.042)) * 0.7;
+        float bladder = length(vec3(r.x - 0.022, q.y - 0.012, r.y)) - 0.016;
+        float lb = min(leaf, bladder) * s;
+        if (lb < d) {
+            d = lb;
+            part = bladder < leaf ? 2 : 1;
+        }
+    }
+    return d;
+}
+
 float decoSDF(int type, vec3 p, float t) {
+    if (type == 12) {
+        return seagrassSDF(p, t);
+    }
+    if (type == 13) {
+        int part;
+        return kelpSDF(p, t, part);
+    }
     if (type == 8) { // a sunken ship: a broken, tilted wooden hull half in the sand, its mast snapped
         vec3 s = p;
         s.xy = mat2(0.985, -0.174, 0.174, 0.985) * s.xy;
@@ -1226,6 +1304,15 @@ float decoSDF(int type, vec3 p, float t) {
 }
 
 vec3 decoColour(int type, vec3 p, vec3 n, float rnd) {
+    if (type == 12) { // seagrass: deep green at the root, lighter to the tips
+        return mix(vec3(0.1, 0.32, 0.14), vec3(0.36, 0.66, 0.3), smoothstep(0.0, 0.5, p.y)) * (0.9 + 0.2 * rnd);
+    }
+    if (type == 13) { // kelp: an olive-brown stalk and leaves, yellowish bladders
+        int part;
+        kelpSDF(p, gTime, part);
+        vec3 leaf = mix(vec3(0.3, 0.34, 0.1), vec3(0.48, 0.5, 0.16), 0.5 + 0.5 * sin(p.y * 40.0));
+        return part == 2 ? vec3(0.62, 0.55, 0.2) : part == 1 ? leaf : vec3(0.26, 0.27, 0.09);
+    }
     if (type == 8) { // old dark wood, planked, mossy on top
         vec3 c = vec3(0.32, 0.22, 0.14) * (0.8 + 0.3 * step(0.15, fract(p.y * 28.0 + p.x * 2.0))) * (0.85 + 0.3 * fbm(p.xz * 20.0));
         if (p.y > 0.2) c = vec3(0.45, 0.35, 0.22) * (0.85 + 0.2 * fbm(p.xy * 30.0)); // (the mast)
@@ -1584,8 +1671,9 @@ void main() {
         float ang = float((pk / 16) - (pk / 256) * 16) * 0.3927;
         float sz = float(pk / 256) / 10.0;
         vec3 base = dd.xyz;
-        float rad = (type == 8 ? 0.7 : 0.5) * sz;
-        vec3 oc = rot - (base + vec3(0.0, 0.2 * sz, 0.0));
+        float rad = (type == 8 ? 0.7 : type == 13 ? 0.56 : 0.5) * sz;
+        vec3 oc = rot - (base + vec3(0.0, (type == 13 ? 0.5 : 0.2) * sz, 0.0));
+        gDecoSz = sz;
         float bq = dot(oc, rd), cq = dot(oc, oc) - rad * rad;
         float disc = bq * bq - cq;
         if (disc < 0.0) {
@@ -1600,7 +1688,9 @@ void main() {
         lo = vec3(ca * lo.x + sa * lo.z, lo.y, -sa * lo.x + ca * lo.z) / sz;
         vec3 ld = vec3(ca * rd.x + sa * rd.z, rd.y, -sa * rd.x + ca * rd.z);
         float tm = t0, td = -1.0;
-        for (int s = 0; s < 40; s++) {
+        int steps = type == 13 ? 72 : type == 12 ? 56 : 40; // (the thin seaweed takes more little steps)
+        for (int s = 0; s < 72; s++) {
+            if (s >= steps) break;
             float d = decoSDF(type, lo + ld * (tm / sz), t) * sz;
             if (d < 0.0012) {
                 td = tm;

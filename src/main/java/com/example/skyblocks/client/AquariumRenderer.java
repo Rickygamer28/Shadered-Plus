@@ -639,7 +639,7 @@ public final class AquariumRenderer {
         }
         bottom.sort(java.util.Comparator.comparingLong(BlockPos::asLong));
         java.util.Random random = new java.util.Random(floor.min.asLong() * 17L + bottom.size() * 7L + 3L);
-        int count = Math.max(2, Math.min(MAX_DECOR, (int) (bottom.size() * (floor.ocean ? 0.45F : 0.6F))));
+        int count = Math.max(3, Math.min(MAX_DECOR, (int) (bottom.size() * (floor.ocean ? 0.6F : 0.8F)))); // (more, with the seaweed)
         boolean castle = false, chest = false, ship = false, anchor = false, helmet = false;
         floor.decorCount = 0;
         for (int i = 0; i < count; i++) {
@@ -650,6 +650,15 @@ public final class AquariumRenderer {
                 type = r < 0.3F ? 0 : r < 0.55F ? 4 : r < 0.7F ? 6 : r < 0.75F && !chest ? 5 : r < 0.85F ? 2 : r < 0.93F ? 1 : 7;
             } else {
                 type = r < 0.3F ? 0 : r < 0.45F ? 1 : r < 0.57F ? 2 : r < 0.65F && !castle ? 3 : r < 0.8F ? 4 : r < 0.9F ? 7 : 6;
+            }
+            // seaweed: tufts of seagrass, and (in a tank two or more tall) kelp reaching up through the water
+            float r3 = random.nextFloat();
+            boolean kelp = false;
+            if (r3 < 0.28F) {
+                type = 12;
+            } else if (r3 < 0.4F && floor.sizeY >= 2) {
+                type = 13;
+                kelp = true;
             }
             // now and then something special instead: a sunken ship (big tanks), an anchor, a diver's helmet, a clam
             float r2 = random.nextFloat();
@@ -668,6 +677,9 @@ public final class AquariumRenderer {
             float size = floor.ocean ? (0.7F + rs * 0.6F) * (1.0F - roomy) + (1.3F + rs * 1.1F) * roomy : 0.7F + rs * 0.6F;
             size = Math.min(size, floor.sizeY * 2.0F); // (fits under the surface)
             size = Math.min(size, 0.5F * Math.min(floor.sizeX, floor.sizeZ) + 0.4F); // (and isn't wider than the tank)
+            if (kelp && type == 13) { // (the kelp's size: its height, most of the way up the water)
+                size = Math.min(6.0F, (floor.sizeY - 0.4F) * (0.55F + 0.4F * random.nextFloat()));
+            }
             int sizeQ = Math.max(1, Math.min(60, Math.round(size * 10.0F)));
             int turn = random.nextInt(16);
             int k = floor.decorCount++;
