@@ -38,13 +38,28 @@ import org.jetbrains.annotations.Nullable;
 public class PondWaterfallBlock extends BaseEntityBlock {
     public static final MapCodec<PondWaterfallBlock> CODEC = simpleCodec(PondWaterfallBlock::new);
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
+    /** Another waterfall on top of this one (facing the same way): this is the rocks under it, the water from above pouring past. */
+    public static final net.minecraft.world.level.block.state.properties.BooleanProperty COLUMN =
+            net.minecraft.world.level.block.state.properties.BooleanProperty.create("column");
+    /** Turned on (right-click to turn it off and on again). */
+    public static final net.minecraft.world.level.block.state.properties.BooleanProperty FLOWING =
+            net.minecraft.world.level.block.state.properties.BooleanProperty.create("flowing");
+    /** A redstone signal: stops it. */
+    public static final net.minecraft.world.level.block.state.properties.BooleanProperty POWERED =
+            net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED;
     private static final VoxelShape[] SHAPES = new VoxelShape[4];
 
     static {
         for (Direction d : Direction.Plane.HORIZONTAL) {
             // (built facing north - pouring towards -z - then turned)
-            SHAPES[d.get2DDataValue()] = Shapes.or(box(d, 0, 0, 0, 16, 12, 7), box(d, 0, 0, 7, 16, 18, 16), box(d, 2, 18, 9, 14, 24, 16));
+            SHAPES[d.get2DDataValue()] = Shapes.or(box(d, 0, 0, 7, 16, 18, 16), box(d, 0, 0, 1, 16, 13, 8), box(d, 4.5, 0, 1, 11.5, 17, 7),
+                    box(d, 1, 18, 8, 15, 28, 16));
         }
+    }
+
+    /** Is water pouring off it now? */
+    public static boolean pouring(BlockState state) {
+        return state.getValue(FLOWING) && !state.getValue(POWERED) && !state.getValue(COLUMN);
     }
 
     private static VoxelShape box(Direction facing, double x0, double y0, double z0, double x1, double y1, double z1) {
@@ -58,7 +73,8 @@ public class PondWaterfallBlock extends BaseEntityBlock {
 
     public PondWaterfallBlock(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
+        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(COLUMN, false).setValue(FLOWING, true)
+                .setValue(POWERED, false));
     }
 
     @Override
@@ -68,7 +84,7 @@ public class PondWaterfallBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
+        builder.add(FACING, COLUMN, FLOWING, POWERED);
     }
 
     @Override
@@ -78,7 +94,7 @@ public class PondWaterfallBlock extends BaseEntityBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPES[state.getValue(FACING).get2DDataValue()];
+        return state.getValue(COLUMN) ? Shapes.block() : SHAPES[state.getValue(FACING).get2DDataValue()];
     }
 
     @Nullable
@@ -91,7 +107,42 @@ public class PondWaterfallBlock extends BaseEntityBlock {
                 break;
             }
         }
-        return defaultBlockState().setValue(FACING, facing);
+        BlockState above = context.getLevel().getBlockState(context.getClickedPos().above());
+        return defaultBlockState().setValue(FACING, facing)
+                .setValue(COLUMN, above.getBlock() instanceof PondWaterfallBlock && above.getValue(FACING) == facing)
+                .setValue(POWERED, context.getLevel().hasNeighborSignal(context.getClickedPos()));
+    }
+
+    @Override
+    protected BlockState updateShape(BlockState state, Direction dir, BlockState next, net.minecraft.world.level.LevelAccessor level, BlockPos pos,
+                                     BlockPos nextPos) {
+        if (dir == Direction.UP) {
+            return state.setValue(COLUMN, next.getBlock() instanceof PondWaterfallBlock && next.getValue(FACING) == state.getValue(FACING));
+        }
+        return state;
+    }
+
+    @Override
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos from, boolean moving) {
+        boolean powered = level.hasNeighborSignal(pos);
+        if (powered != state.getValue(POWERED)) {
+            level.setBlock(pos, state.setValue(POWERED, powered), Block.UPDATE_ALL);
+        }
+    }
+
+    /** Right-click: turn the water off, or on again. */
+    @Override
+    protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, net.minecraft.world.entity.player.Player player,
+                                                                   net.minecraft.world.phys.BlockHitResult hit) {
+        if (state.getValue(COLUMN)) {
+            return net.minecraft.world.InteractionResult.PASS;
+        }
+        boolean on = !state.getValue(FLOWING);
+        level.playSound(player, pos, on ? SoundEvents.BUCKET_EMPTY : SoundEvents.BUCKET_FILL, SoundSource.BLOCKS, 0.6F, 1.0F);
+        if (!level.isClientSide) {
+            level.setBlock(pos, state.setValue(FLOWING, on), Block.UPDATE_ALL);
+        }
+        return net.minecraft.world.InteractionResult.sidedSuccess(level.isClientSide);
     }
 
     @Nullable
@@ -126,9 +177,22 @@ public class PondWaterfallBlock extends BaseEntityBlock {
     /** Splashes where it lands, and its sound. */
     @Override
     public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
+        if (!pouring(state)) {
+            return;
+        }
         Direction facing = state.getValue(FACING);
         double land = landing(level, pos, facing);
         double fx = pos.getX() + 0.5 + facing.getStepX() * 0.84, fz = pos.getZ() + 0.5 + facing.getStepZ() * 0.84;
+        // (where the first drop lands on the ledge, part way down: a splash there too)
+        if (random.nextInt(2) == 0) {
+            double lx = pos.getX() + 0.5 + facing.getStepX() * 0.22, lz = pos.getZ() + 0.5 + facing.getStepZ() * 0.22;
+            level.addParticle(ParticleTypes.SPLASH, lx + (random.nextDouble() - 0.5) * 0.2, pos.getY() + 17.3 / 16.0, lz + (random.nextDouble() - 0.5) * 0.2,
+                    0.0, 0.05, 0.0);
+        }
+        // (a little mist drifting off where it lands)
+        if (random.nextInt(18) == 0) {
+            level.addParticle(ModParticles.FOG.get(), fx, land + 0.05, fz, facing.getStepX() * 0.01, 0.0, facing.getStepZ() * 0.01);
+        }
         for (int i = 0; i < 3; i++) {
             double sx = (random.nextDouble() - 0.5) * 0.3, sz = (random.nextDouble() - 0.5) * 0.3;
             double ax = facing.getAxis() == Direction.Axis.X ? 0.0 : sx, az = facing.getAxis() == Direction.Axis.Z ? 0.0 : sz;
@@ -138,8 +202,10 @@ public class PondWaterfallBlock extends BaseEntityBlock {
         if (random.nextInt(3) == 0) {
             level.addParticle(ParticleTypes.BUBBLE_POP, fx, land + 0.02, fz, (random.nextDouble() - 0.5) * 0.05, 0.02, (random.nextDouble() - 0.5) * 0.05);
         }
-        if (random.nextInt(14) == 0) {
-            level.playLocalSound(fx, land, fz, SoundEvents.WATER_AMBIENT, SoundSource.AMBIENT, 0.35F, 0.8F + random.nextFloat() * 0.3F, false);
+        if (random.nextInt(8) == 0) { // (the louder the further it falls)
+            float drop = (float) (pos.getY() + 1.6 - land);
+            level.playLocalSound(fx, land, fz, SoundEvents.WATER_AMBIENT, SoundSource.AMBIENT, Math.min(0.25F + 0.12F * drop, 0.8F),
+                    0.75F + random.nextFloat() * 0.3F, false);
         }
     }
 
