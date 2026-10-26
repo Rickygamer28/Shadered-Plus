@@ -117,11 +117,24 @@ public final class VanillaAquariumRenderer {
             order.sort((a, b) -> Double.compare(b.centre().distanceToSqr(cam), a.centre().distanceToSqr(cam)));
             for (AquariumRenderer.VanillaJob job : order) {
                 AquariumRenderer.drawPicture(job, view);
-                for (int d = 0; d < job.decorCount(); d++) {
-                    decoration(level, job, d, poseStack, buffers);
-                }
-                for (int i = 0; i < job.fishCount(); i++) {
-                    creature(level, job, i, night, poseStack, buffers);
+                // its fish and decorations, in its water's fog (as the aquariums': the water's colour, deeper the farther in)
+                float fogStart = RenderSystem.getShaderFogStart(), fogEnd = RenderSystem.getShaderFogEnd();
+                float[] fogColour = RenderSystem.getShaderFogColor().clone();
+                com.mojang.blaze3d.shaders.FogShape fogShape = RenderSystem.getShaderFogShape();
+                waterFog(job, cam);
+                try {
+                    for (int d = 0; d < job.decorCount(); d++) {
+                        decoration(level, job, d, poseStack, buffers);
+                    }
+                    for (int i = 0; i < job.fishCount(); i++) {
+                        creature(level, job, i, night, poseStack, buffers);
+                    }
+                    buffers.endBatch();
+                } finally {
+                    RenderSystem.setShaderFogStart(fogStart);
+                    RenderSystem.setShaderFogEnd(fogEnd);
+                    RenderSystem.setShaderFogColor(fogColour[0], fogColour[1], fogColour[2], fogColour[3]);
+                    RenderSystem.setShaderFogShape(fogShape);
                 }
                 frame(job.frames(), poseStack, buffers); // (after its fish: over them where it's in front of them, as the glass's edge)
                 buffers.endBatch();
@@ -131,6 +144,34 @@ public final class VanillaAquariumRenderer {
             modelView.popMatrix();
             RenderSystem.applyModelViewMatrix();
         }
+    }
+
+    /**
+     * The aquariums' water fog for this tank: from where the view goes into it (the nearest of its box), fading to the
+     * water's colour (the aquariums': lighter teal, the ocean's deeper blue; dimmed at night) as the aquariums do.
+     */
+    private static void waterFog(AquariumRenderer.VanillaJob job, Vec3 cam) {
+        Vec3 mn = Vec3.atLowerCornerOf(job.min());
+        Vec3 mx = job.centre().scale(2.0).subtract(mn);
+        double dx = Math.max(Math.max(mn.x - cam.x, cam.x - mx.x), 0.0);
+        double dy = Math.max(Math.max(mn.y - cam.y, cam.y - mx.y), 0.0);
+        double dz = Math.max(Math.max(mn.z - cam.z, cam.z - mx.z), 0.0);
+        float into = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+        float k = job.ocean() ? 0.22F : 0.3F; // (as thick as the aquariums' water)
+        float r, g, b;
+        if (job.ocean()) {
+            r = 0.025F; g = 0.24F; b = 0.41F;
+        } else {
+            r = 0.085F; g = 0.375F; b = 0.47F;
+        }
+        float night = (float) AquariumRenderer.night();
+        r *= 1.0F - 0.76F * night;
+        g *= 1.0F - 0.7F * night;
+        b *= 1.0F - 0.5F * night;
+        RenderSystem.setShaderFogStart(into);
+        RenderSystem.setShaderFogEnd(into + 2.4F / k);
+        RenderSystem.setShaderFogColor(r, g, b, 1.0F);
+        RenderSystem.setShaderFogShape(com.mojang.blaze3d.shaders.FogShape.SPHERE);
     }
 
     // ---- the fish and sea creatures ----
@@ -164,21 +205,33 @@ public final class VanillaAquariumRenderer {
                 m = game("puffer");
                 tex = PUFFER_TEX;
                 modelLength = 4.0F / 16.0F;
-                if (m.hasChild("right_fin")) m.getChild("right_fin").zRot = -0.3F + 0.3F * Mth.sin(wave);
-                if (m.hasChild("left_fin")) m.getChild("left_fin").zRot = 0.3F - 0.3F * Mth.sin(wave);
+                float tt = LavaLampRenderer.seconds() * 6.0F + i; // (its little fins whirring)
+                if (m.hasChild("right_fin")) m.getChild("right_fin").zRot = -0.4F + 0.4F * Mth.sin(tt);
+                if (m.hasChild("left_fin")) m.getChild("left_fin").zRot = 0.4F - 0.4F * Mth.sin(tt);
+                if (m.hasChild("tail_fin")) m.getChild("tail_fin").yRot = 0.4F * Mth.sin(wave);
             } else if (kind == SEA_TURTLE) {
                 m = game("turtle");
                 tex = TURTLE_TEX;
                 modelLength = 1.5F;
-                float paddle = 0.5F * Mth.sin(wave * 0.5F);
-                if (m.hasChild("right_front_leg")) m.getChild("right_front_leg").zRot = paddle;
-                if (m.hasChild("left_front_leg")) m.getChild("left_front_leg").zRot = -paddle;
+                // (its front flippers sweeping down and back together, the back ones steering)
+                float stroke = LavaLampRenderer.seconds() * 1.4F + i;
+                float paddle = 0.6F * Mth.sin(stroke);
+                if (m.hasChild("right_front_leg")) { m.getChild("right_front_leg").zRot = paddle; m.getChild("right_front_leg").yRot = 0.4F * Mth.cos(stroke); }
+                if (m.hasChild("left_front_leg")) { m.getChild("left_front_leg").zRot = -paddle; m.getChild("left_front_leg").yRot = -0.4F * Mth.cos(stroke); }
+                if (m.hasChild("right_hind_leg")) m.getChild("right_hind_leg").yRot = 0.25F * Mth.sin(stroke * 0.5F + 1.0F);
+                if (m.hasChild("left_hind_leg")) m.getChild("left_hind_leg").yRot = -0.25F * Mth.sin(stroke * 0.5F + 1.0F);
             } else {
                 m = game("dolphin");
                 tex = DOLPHIN_TEX;
                 modelLength = 1.9F;
                 ModelPart body = m.hasChild("body") ? m.getChild("body") : m;
-                if (body.hasChild("tail")) body.getChild("tail").xRot = 0.3F * Mth.sin(wave) * beat;
+                // (its flukes beating up and down, the body following through)
+                body.xRot = 0.06F * Mth.sin(wave - 0.6F) * beat;
+                if (body.hasChild("tail")) {
+                    ModelPart tail = body.getChild("tail");
+                    tail.xRot = 0.35F * Mth.sin(wave) * beat;
+                    if (tail.hasChild("tail_fin")) tail.getChild("tail_fin").xRot = 0.3F * Mth.sin(wave - 0.8F) * beat;
+                }
             }
             float scale = length / modelLength;
             draw(poseStack, buffers, m, RenderType.entityCutoutNoCull(tex), x, y, z, fwd, up, scale, 1.0F, light,
@@ -188,60 +241,7 @@ public final class VanillaAquariumRenderer {
         int idx = ownIndex(name);
         ModelPart m = own(name);
         ModelPart body = m.hasChild("body") ? m.getChild("body") : m;
-        // its moving parts, from the aquariums' own swimming: the tail beating, the side fins, the wings, the legs
-        // (a wave down its body: the front swings a little one way, the back half after it, the tail last and most)
-        ModelPart mid = body.hasChild("mid") ? body.getChild("mid") : null;
-        ModelPart rear = mid != null && mid.hasChild("rear") ? mid.getChild("rear") : body.hasChild("rear") ? body.getChild("rear") : null;
-        ModelPart tailHolder = rear != null ? rear : body;
-        float big = sp[0] > 0.4F ? 0.65F : 1.0F; // (the big ones: gentler)
-        float a = beat * big;
-        if (mid != null && !crawler) { // (each part a little after the one before: the wave runs down to the tail, growing)
-            body.yRot = -0.05F * a * Mth.sin(wave);
-            mid.yRot = 0.1F * a * Mth.sin(wave - 0.7F) + bend * 0.08F;
-            if (rear != null) rear.yRot = 0.18F * a * Mth.sin(wave - 1.4F) + bend * 0.1F;
-        }
-        if (tailHolder.hasChild("tail")) {
-            ModelPart tail = tailHolder.getChild("tail");
-            if (crawler) tail.xRot = tail.getInitialPose().xRot + 0.15F * Mth.sin(walk);
-            else tail.yRot = 0.38F * a * Mth.sin(wave - 2.1F) + bend * 0.1F;
-        }
-        // the side fins rowing (out and back, one after the other)
-        if (body.hasChild("right_fin")) {
-            ModelPart fin = body.getChild("right_fin");
-            fin.yRot = fin.getInitialPose().yRot - 0.35F * Mth.sin(wave * 0.6F);
-            fin.zRot = 0.25F * Mth.sin(wave * 0.6F + 0.8F);
-        }
-        if (body.hasChild("left_fin")) {
-            ModelPart fin = body.getChild("left_fin");
-            fin.yRot = fin.getInitialPose().yRot + 0.35F * Mth.sin(wave * 0.6F + 1.2F);
-            fin.zRot = -0.25F * Mth.sin(wave * 0.6F + 2.0F);
-        }
-        // the rays' wings: a slow flap, the tips following after (a ripple out along the wing)
-        float flap = wave * (kind == STINGRAY ? 0.3F : 0.4F), reach = kind == STINGRAY ? 0.18F : 0.4F;
-        for (String side : new String[] {"right_wing", "left_wing"}) {
-            if (body.hasChild(side)) {
-                float sg = side.startsWith("right") ? 1.0F : -1.0F;
-                ModelPart wing = body.getChild(side);
-                wing.zRot = sg * reach * Mth.sin(flap);
-                if (wing.hasChild(side + "_tip")) wing.getChild(side + "_tip").zRot = sg * reach * 0.9F * Mth.sin(flap - 0.9F);
-            }
-        }
-        for (int k = 0; k < 16; k++) {
-            if (body.hasChild("tentacle" + k)) { // (a jellyfish trailing, an octopus curling)
-                ModelPart te = body.getChild("tentacle" + k);
-                te.xRot = te.getInitialPose().xRot + (kind == JELLYFISH ? 0.35F * squeeze + 0.12F * Mth.sin(wave * 0.3F + k)
-                        : 0.15F * Mth.sin(walk * 0.3F + k));
-            }
-            for (String side : new String[] {"right", "left"}) {
-                if (body.hasChild(side + "_leg" + k)) { // (the legs stepping in turn, as far as it has walked)
-                    ModelPart leg = body.getChild(side + "_leg" + k);
-                    leg.xRot = leg.getInitialPose().xRot + 0.35F * Mth.sin(walk + k * 2.1F + (side.equals("left") ? 3.14F : 0.0F));
-                }
-            }
-        }
-        for (String side : new String[] {"right", "left"}) {
-            if (body.hasChild(side + "_claw")) body.getChild(side + "_claw").xRot = 0.12F * Mth.sin(walk * 0.4F + (side.equals("left") ? 1.5F : 0.0F));
-        }
+        animate(body, kind, crawler, sp, wave, beat, bend, squeeze, walk, i);
         float modelLength = (kind == MANTA || kind == STINGRAY || kind == JELLYFISH ? AquaModels.WIDTH_PX[idx] : AquaModels.LENGTH_PX[idx]) / 16.0F;
         if (kind == MANTA || kind == STINGRAY) {
             length = 2.0F * sp[2] * size; // (the rays: as wide as the aquariums' own)
@@ -249,9 +249,110 @@ public final class VanillaAquariumRenderer {
             length = 2.0F * sp[0] * size;
         }
         float scale = length / Math.max(modelLength, 0.05F);
-        float squash = kind == JELLYFISH ? 1.0F - 0.18F * squeeze : 1.0F; // (a jellyfish's bell squeezing)
+        float squash = kind == JELLYFISH ? 1.0F - 0.25F * squeeze : 1.0F; // (a jellyfish's bell squeezing)
         ResourceLocation texture = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "textures/entity/aqua/" + name + ".png");
         draw(poseStack, buffers, m, RenderType.entityCutoutNoCull(texture), x, y, z, fwd, up, scale, squash, light, 0.0);
+    }
+
+    /**
+     * Its moving parts, from the aquariums' own swimming (how far round its tail beat is, how hard, how it's turning;
+     * a jellyfish's squeeze; how far a bottom creature has walked).
+     */
+    private static void animate(ModelPart body, int kind, boolean crawler, float[] sp, float wave, float beat, float bend, float squeeze,
+                                float walk, int index) {
+        float t = LavaLampRenderer.seconds() + index * 1.37F;
+        // a fish: a wave running down its body to the tail, each part after the one before and swinging more; turning,
+        // the whole body curving round the turn
+        ModelPart mid = body.hasChild("mid") ? body.getChild("mid") : null;
+        ModelPart rear = mid != null && mid.hasChild("rear") ? mid.getChild("rear") : null;
+        ModelPart tailHolder = rear != null ? rear : body;
+        float big = sp[0] > 0.6F ? 0.55F : sp[0] > 0.3F ? 0.75F : 1.0F; // (the big ones: a slower, gentler sweep)
+        float a = (0.35F + 0.65F * beat) * big;
+        if (!crawler && kind != JELLYFISH) {
+            body.yRot = -0.07F * a * Mth.sin(wave);
+            if (mid != null) mid.yRot = 0.16F * a * Mth.sin(wave - 0.8F) + bend * 0.1F;
+            if (rear != null) rear.yRot = 0.28F * a * Mth.sin(wave - 1.6F) + bend * 0.12F;
+            if (tailHolder.hasChild("tail")) tailHolder.getChild("tail").yRot = 0.5F * a * Mth.sin(wave - 2.4F) + bend * 0.12F;
+            // the side fins: rowing gently, out and back, the two a little out of step; spread more as it slows
+            for (String side : new String[] {"right_fin", "left_fin"}) {
+                if (!body.hasChild(side)) continue;
+                float sg = side.startsWith("right") ? -1.0F : 1.0F;
+                ModelPart fin = body.getChild(side);
+                float row = Mth.sin(t * 3.2F + (sg > 0 ? 1.1F : 0.0F));
+                fin.yRot = fin.getInitialPose().yRot + sg * (0.25F * (1.0F - beat) + 0.3F * row);
+                fin.zRot = sg * -0.2F * Mth.sin(t * 3.2F + (sg > 0 ? 2.2F : 1.1F));
+            }
+            // the sunfish's tall fins sculling from side to side (how it swims)
+            for (String fin : new String[] {"dorsal_fin", "anal_fin"}) {
+                if (body.hasChild(fin)) body.getChild(fin).zRot = 0.45F * Mth.sin(wave * 0.5F + (fin.startsWith("anal") ? 3.14F : 0.0F));
+            }
+        }
+        // the rays' wings: a slow, deep flap, the tips following after (a ripple out along the wing)
+        boolean stingray = kind == STINGRAY;
+        float flap = stingray ? t * 1.6F : t * 1.1F, reach = stingray ? 0.16F : 0.42F;
+        for (String side : new String[] {"right_wing", "left_wing"}) {
+            if (!body.hasChild(side)) continue;
+            float sg = side.startsWith("right") ? 1.0F : -1.0F;
+            ModelPart wing = body.getChild(side);
+            wing.zRot = sg * reach * Mth.sin(flap);
+            if (wing.hasChild(side + "_tip")) wing.getChild(side + "_tip").zRot = sg * reach * 1.1F * Mth.sin(flap - 1.0F);
+        }
+        if (!crawler && kind != JELLYFISH && body.hasChild("tail") && (kind == MANTA || stingray)) {
+            body.getChild("tail").yRot = 0.15F * Mth.sin(t * 1.3F); // (the whip of a tail trailing, swaying)
+        }
+        // a jellyfish: its tentacles and arms trailing in slow waves, pulled in with each squeeze
+        if (kind == JELLYFISH) {
+            for (int k = 0; k < 8; k++) {
+                for (String n : new String[] {"tentacle" + k, "arm" + k}) {
+                    if (!body.hasChild(n)) continue;
+                    ModelPart te = body.getChild(n);
+                    float slow = n.startsWith("arm") ? 0.7F : 1.0F;
+                    te.xRot = te.getInitialPose().xRot + 0.22F * Mth.sin(t * 1.3F * slow + k * 0.9F) - 0.35F * squeeze;
+                    te.zRot = te.getInitialPose().zRot + 0.18F * Mth.cos(t * 1.05F * slow + k * 1.3F);
+                }
+            }
+        }
+        if (crawler) {
+            // walking: the legs in two sets stepping in turn (each lifted as it swings forward, pushing back on the sand)
+            for (int k = 0; k < 8; k++) {
+                for (String side : new String[] {"right", "left"}) {
+                    String n = side + "_leg" + k;
+                    if (!body.hasChild(n)) continue;
+                    ModelPart leg = body.getChild(n);
+                    float ph = walk + (k % 2) * 3.14F + (side.equals("left") ? 3.14F : 0.0F);
+                    float lift = Math.max(Mth.sin(ph), 0.0F);
+                    float out = Math.signum(leg.getInitialPose().zRot);
+                    leg.yRot = leg.getInitialPose().yRot + 0.35F * Mth.cos(ph);
+                    leg.zRot = leg.getInitialPose().zRot + out * 0.3F * lift;
+                }
+            }
+            // the claws: held up, opening and closing now and then
+            for (String side : new String[] {"right", "left"}) {
+                if (!body.hasChild(side + "_claw")) continue;
+                ModelPart claw = body.getChild(side + "_claw");
+                float pinch = Mth.sin(t * 2.3F + (side.equals("left") ? 1.7F : 0.0F));
+                claw.xRot = claw.getInitialPose().xRot - 0.12F - 0.1F * Math.max(pinch, 0.0F) + 0.05F * Mth.sin(walk * 0.5F);
+                claw.yRot = claw.getInitialPose().yRot + (side.equals("left") ? 0.08F : -0.08F) * Mth.sin(t * 0.9F);
+            }
+            // an octopus's arms curling and uncurling as it creeps, the tips most
+            for (int k = 0; k < 8; k++) {
+                if (!body.hasChild("tentacle" + k)) continue;
+                ModelPart arm = body.getChild("tentacle" + k);
+                float ph = walk * 0.6F + k * 0.8F;
+                arm.xRot = arm.getInitialPose().xRot + 0.15F * Mth.sin(ph);
+                if (arm.hasChild("tip" + k)) {
+                    ModelPart tip = arm.getChild("tip" + k);
+                    tip.xRot = tip.getInitialPose().xRot + 0.35F * Mth.sin(ph - 0.9F) + 0.1F * Mth.sin(t * 1.5F + k);
+                    tip.yRot = tip.getInitialPose().yRot + 0.2F * Mth.sin(t * 0.8F + k * 1.7F);
+                }
+            }
+            // a lobster's or shrimp's tail: tucking and flicking now and then
+            if (body.hasChild("tail")) {
+                ModelPart tail = body.getChild("tail");
+                float flick = (float) Math.pow(Math.max(Mth.sin(t * 0.7F), 0.0F), 8.0);
+                tail.xRot = tail.getInitialPose().xRot + 0.1F * Mth.sin(walk * 0.5F) + 0.45F * flick;
+            }
+        }
     }
 
     /**

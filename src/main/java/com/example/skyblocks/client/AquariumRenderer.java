@@ -289,7 +289,7 @@ public final class AquariumRenderer {
                         }
                     };
                     VANILLA_JOBS.add(new VanillaJob(floor.min, floor.ocean, java.util.Arrays.copyOf(FISH_DATA, floor.fishCount * 16), floor.fishCount,
-                            java.util.Arrays.copyOf(floor.decor, floor.decorCount * 4), floor.decorCount, faceCorners(floor), frameStrips(floor), floor.blocks,
+                            java.util.Arrays.copyOf(floor.decor, floor.decorCount * 4), floor.decorCount, faceCorners(floor), frameStrips(floor, shown), floor.blocks,
                             new Vec3(floor.min.getX() + floor.sizeX * 0.5, floor.min.getY() + floor.sizeY * 0.5, floor.min.getZ() + floor.sizeZ * 0.5),
                             picture));
                     continue;
@@ -1024,10 +1024,10 @@ public final class AquariumRenderer {
      * The dark frame round a tank's edges, as strips (4 corners each, in the world, a hair out from the glass): along
      * every edge of an outside face where the tank ends (as the shader draws it, 0.05 wide).
      */
-    private static float[] frameStrips(Floor floor) {
+    private static float[] frameStrips(Floor floor, List<Face> shown) {
         final float w = 0.05F, out = 0.002F;
         List<float[]> strips = new ArrayList<>();
-        for (Face f : floor.faces) {
+        for (Face f : shown) { // (only the faces turned towards you, as the shader draws it: the back edges are seen through the water, not over it)
             Direction side = f.side();
             Direction du = side.getAxis() == Direction.Axis.X ? Direction.SOUTH : Direction.EAST;
             Direction dv = side.getAxis() == Direction.Axis.Y ? Direction.SOUTH : Direction.UP;
