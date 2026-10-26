@@ -7,15 +7,22 @@
       "conditions": [
         {
           "condition": "minecraft:survives_explosion"
+        },
+        {
+          "condition": "minecraft:block_state_property",
+          "block": "skyblocks:fire_tornado",
+          "properties": {
+            "half": "lower"
+          }
         }
       ],
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "skyblocks:wall_fire"
+          "name": "skyblocks:fire_tornado"
         }
       ]
     }
   ],
-  "random_sequence": "skyblocks:blocks/wall_fire"
+  "random_sequence": "skyblocks:blocks/fire_tornado"
 }

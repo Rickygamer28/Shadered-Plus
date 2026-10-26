@@ -28,8 +28,10 @@ public final class ModBlockEntities {
     public static final Supplier<BlockEntityType<GlowColourBlockEntity>> LAVA_LAMP = TYPES.register("lava_lamp",
             () -> BlockEntityType.Builder.of(GlowColourBlockEntity::lavaLamp, ModBlocks.LAVA_LAMP.get(), ModBlocks.BIG_LAVA_LAMP.get()).build(null));
 
-    public static final Supplier<BlockEntityType<GlowColourBlockEntity>> WALL_FIRE = TYPES.register("wall_fire",
-            () -> BlockEntityType.Builder.of(GlowColourBlockEntity::wallFire, ModBlocks.WALL_FIRE.get(), ModBlocks.BRICK_HEARTH.get()).build(null));
+    public static final Supplier<BlockEntityType<GlowColourBlockEntity>> FIRE = TYPES.register("fire",
+            () -> BlockEntityType.Builder.of(GlowColourBlockEntity::fire, ModBlocks.FIRE_TORNADO.get()).build(null));
+    public static final Supplier<BlockEntityType<BrickHearthBlockEntity>> BRICK_HEARTH = TYPES.register("brick_hearth",
+            () -> BlockEntityType.Builder.of(BrickHearthBlockEntity::new, ModBlocks.BRICK_HEARTH.get()).build(null));
 
     public static final Supplier<BlockEntityType<NeonSignBlockEntity>> NEON_SIGN = TYPES.register("neon_sign",
             () -> BlockEntityType.Builder.of(NeonSignBlockEntity::new, ModBlocks.NEON_SIGN.get()).build(null));

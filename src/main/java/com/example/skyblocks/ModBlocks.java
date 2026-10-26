@@ -95,10 +95,10 @@ public final class ModBlocks {
                     .lightLevel(state -> state.getValue(LavaLampBlock.LIT) ? 14 : 0)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_ORANGE));
 
-    /** A modern wall fire: a glass-fronted ribbon of flame, joining side by side (WallFireBlock, client/WallFireRenderer). */
-    public static final DeferredBlock<WallFireBlock> WALL_FIRE = BLOCKS.registerBlock("wall_fire", WallFireBlock::new,
-            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion()
-                    .lightLevel(state -> state.getValue(WallFireBlock.LIT) ? 13 : 0)
+    /** The fire tornado: a whirl of flame in a tall glass case (FireTornadoBlock, client/WallFireRenderer). */
+    public static final DeferredBlock<FireTornadoBlock> FIRE_TORNADO = BLOCKS.registerBlock("fire_tornado", FireTornadoBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.GLASS).noOcclusion()
+                    .lightLevel(state -> state.getValue(LavaLampBlock.LIT) ? 15 : 0)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
 
     /** A classic brick hearth, 2 wide and 2 tall (BrickHearthBlock, client/WallFireRenderer). */

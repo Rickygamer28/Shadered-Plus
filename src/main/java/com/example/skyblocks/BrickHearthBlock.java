@@ -45,7 +45,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A classic brick hearth, 2 wide and 2 tall: brick surround, mantel, logs on embers and real-looking flames
  * (client/WallFireRenderer). The lower right block (as you face it) is the main one: it keeps the colour and draws the
- * fire; clicking any part works on the hearth. Right-click: on / off; with a dye: flame colour; sneak: RGB.
+ * fire; clicking any part works on the hearth. Right-click: on / off; with a dye: flame colour; sneak: RGB; with
+ * planks or logs: the mantel's wood; with any other full block: the stone.
  */
 public class BrickHearthBlock extends BaseEntityBlock {
     public static final MapCodec<BrickHearthBlock> CODEC = simpleCodec(BrickHearthBlock::new);
@@ -167,6 +168,23 @@ public class BrickHearthBlock extends BaseEntityBlock {
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
                                               InteractionHand hand, BlockHitResult hit) {
+        if (stack.getItem() instanceof net.minecraft.world.item.BlockItem item && !item.getBlock().defaultBlockState().is(this)) {
+            // a block: the hearth's wood (planks, logs) or stone (any full solid block) takes its look
+            BlockState look = item.getBlock().defaultBlockState();
+            boolean isWood = look.is(net.minecraft.tags.BlockTags.PLANKS) || look.is(net.minecraft.tags.BlockTags.LOGS);
+            if (!isWood && !look.isSolidRender(level, pos)) {
+                return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            }
+            if (!level.isClientSide) {
+                for (BlockPos p : parts(state.getValue(FACING), main(state, pos))) {
+                    if (level.getBlockEntity(p) instanceof BrickHearthBlockEntity part) {
+                        part.setMaterials(isWood ? part.stone() : look, isWood ? look : part.wood());
+                    }
+                }
+                level.playSound(null, pos, look.getSoundType().getPlaceSound(), SoundSource.BLOCKS, 1.0F, 0.9F);
+            }
+            return ItemInteractionResult.sidedSuccess(level.isClientSide);
+        }
         if (!(stack.getItem() instanceof DyeItem dye) || !(level.getBlockEntity(main(state, pos)) instanceof GlowColourBlockEntity be)) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
@@ -227,7 +245,7 @@ public class BrickHearthBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return !state.getValue(LEFT) && state.getValue(HALF) == DoubleBlockHalf.LOWER ? GlowColourBlockEntity.wallFire(pos, state) : null;
+        return new BrickHearthBlockEntity(pos, state); // (every part: the materials; the main one also the flame)
     }
 
     @Override

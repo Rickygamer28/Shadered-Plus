@@ -2,7 +2,6 @@ package com.example.skyblocks.client;
 
 import com.example.skyblocks.GlowColourBlockEntity;
 import com.example.skyblocks.SkyBlocksMod;
-import com.example.skyblocks.WallFireBlock;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -13,7 +12,6 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.state.BlockState;
@@ -95,14 +93,6 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         vc.addVertex(m, xa, y1, z).setColor(r, g, b, a).setUv(sa, y1 + flags);
     }
 
-    /** A quad in the plane x = x, from za (its left as seen from outside) to zb. */
-    private static void side(VertexConsumer vc, Matrix4f m, float x, float za, float zb, float y0, float y1, float sa, float sb,
-                             float flags, int r, int g, int b, int a) {
-        vc.addVertex(m, x, y0, za).setColor(r, g, b, a).setUv(sa, y0 + flags);
-        vc.addVertex(m, x, y0, zb).setColor(r, g, b, a).setUv(sb, y0 + flags);
-        vc.addVertex(m, x, y1, zb).setColor(r, g, b, a).setUv(sb, y1 + flags);
-        vc.addVertex(m, x, y1, za).setColor(r, g, b, a).setUv(sa, y1 + flags);
-    }
 
     public net.minecraft.world.phys.AABB getRenderBoundingBox(GlowColourBlockEntity be) {
         return new net.minecraft.world.phys.AABB(be.getBlockPos()).inflate(1.0);
@@ -111,13 +101,36 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
     @Override
     public void render(GlowColourBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
         BlockState state = be.getBlockState();
-        if (shader == null || !state.hasProperty(WallFireBlock.FACING)) {
+        if (shader == null) {
             return;
         }
-        Direction facing = state.getValue(WallFireBlock.FACING);
-        boolean lit = state.getValue(WallFireBlock.LIT);
         int c = GlowColourBlockEntity.shown(be, LavaLampRenderer.seconds(), false);
-        int r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255, a = lit ? 255 : 0;
+        int r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+        Matrix4f m;
+        if (state.getBlock() instanceof com.example.skyblocks.FireTornadoBlock) {
+            if (!state.getValue(com.example.skyblocks.LavaLampBlock.LIT)) {
+                return;
+            }
+            // the whirl's box inside the case: uv = (which corner, the tornado's code), the shader works out the rest
+            m = poseStack.last().pose();
+            VertexConsumer vc = buffers.getBuffer(Types.FREE);
+            float x0 = 2.6F / 16.0F, y0 = 3.3F / 16.0F, z0 = 2.6F / 16.0F, x1 = 13.4F / 16.0F, y1 = 29.0F / 16.0F, z1 = 13.4F / 16.0F;
+            int[][] faces = {{0, 2, 3, 1}, {4, 5, 7, 6}, {0, 4, 6, 2}, {1, 3, 7, 5}, {2, 6, 7, 3}, {0, 1, 5, 4}};
+            for (int[] f : faces) {
+                for (int k : f) {
+                    vc.addVertex(m, (k & 1) != 0 ? x1 : x0, (k & 2) != 0 ? y1 : y0, (k & 4) != 0 ? z1 : z0)
+                            .setColor(r, g, b, 32 + 16).setUv(k, 320.0F);
+                }
+            }
+            return;
+        }
+        if (!state.hasProperty(com.example.skyblocks.BrickHearthBlock.FACING)
+                || state.getValue(com.example.skyblocks.BrickHearthBlock.LEFT)
+                || state.getValue(com.example.skyblocks.BrickHearthBlock.HALF) != net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER
+                || !state.getValue(com.example.skyblocks.BrickHearthBlock.LIT)) {
+            return; // (the hearth: only its main block draws the fire)
+        }
+        Direction facing = state.getValue(com.example.skyblocks.BrickHearthBlock.FACING);
         poseStack.pushPose();
         poseStack.translate(0.5, 0.0, 0.5);
         poseStack.mulPose(Axis.YP.rotationDegrees(switch (facing) {
@@ -127,46 +140,17 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
             default -> 0.0F;
         }));
         poseStack.translate(-0.5, 0.0, -0.5);
-        BlockPos p = be.getBlockPos();
-        // along the fire in the world (the same for every fire in a row)
-        float base = (switch (facing) {
-            case NORTH -> p.getX();
-            case SOUTH -> -p.getX() - 1;
-            case EAST -> p.getZ();
-            default -> -p.getZ() - 1;
-        }) % 4096;
-        Matrix4f m = poseStack.last().pose();
-        // the shader's frame: alpha = facing * 64 + on * 32 + 16; uv = (along the fire, height in the block + 10 * flags)
+        m = poseStack.last().pose();
+        // the shader's frame: alpha = facing * 64 + on * 32 + 16; uv = (across the hearth, height in the block + 10)
         int fi = switch (facing) {
             case EAST -> 1;
             case SOUTH -> 2;
             case WEST -> 3;
             default -> 0;
         };
-        a = fi * 64 + (lit ? 32 : 0) + 16;
-        if (state.getBlock() instanceof com.example.skyblocks.BrickHearthBlock) {
-            if (lit) { // the opening: the flames are marched behind it, among the logs
-                quad(Types.FREE, buffers, m, 26.0F / 16.0F, 6.0F / 16.0F, 4.2F / 16.0F, 21.7F / 16.0F, 4.6F / 16.0F,
-                        26.0F / 16.0F, 6.0F / 16.0F, 10.0F, r, g, b, a);
-            }
-            poseStack.popPose();
-            return;
-        }
-        // the glass box: the front glass between the end posts; the side glass at the ends of a row
-        boolean left = state.getValue(WallFireBlock.LEFT), right = state.getValue(WallFireBlock.RIGHT);
-        // (the box sits on the bottom of the block; the shader's frame is 5 px higher, so + 5/16 on the height)
-        float flags = 10.0F * ((left ? 0 : 2) + (right ? 0 : 4)) + 5.0F / 16.0F;
-        float x0 = right ? 0.0F : 0.5F / 16.0F, x1 = left ? 1.0F : 15.5F / 16.0F;
-        float y0 = 0.6F / 16.0F, y1 = 8.4F / 16.0F;
-        quad(Types.FIRE, buffers, m, x1, x0, y0, y1, 8.15F / 16.0F, base + x1, base + x0, flags, r, g, b, a);
-        VertexConsumer vc = buffers.getBuffer(Types.FIRE);
-        // the side glass: uv.x = the block along the fire + how deep (the shader finds its place from that), flagged
-        if (!left) { // (facing out to the left: +x)
-            side(vc, m, 15.85F / 16.0F, 15.4F / 16.0F, 8.6F / 16.0F, y0, y1, base + 15.4F / 16.0F, base + 8.6F / 16.0F, flags + 240.0F, r, g, b, a);
-        }
-        if (!right) {
-            side(vc, m, 0.15F / 16.0F, 8.6F / 16.0F, 15.4F / 16.0F, y0, y1, base + 8.6F / 16.0F, base + 15.4F / 16.0F, flags + 80.0F, r, g, b, a);
-        }
+        // the opening: the flames are marched behind it, among the logs
+        quad(Types.FREE, buffers, m, 26.0F / 16.0F, 6.0F / 16.0F, 4.2F / 16.0F, 21.7F / 16.0F, 4.6F / 16.0F,
+                26.0F / 16.0F, 6.0F / 16.0F, 10.0F, r, g, b, fi * 64 + 32 + 16);
         poseStack.popPose();
     }
 }

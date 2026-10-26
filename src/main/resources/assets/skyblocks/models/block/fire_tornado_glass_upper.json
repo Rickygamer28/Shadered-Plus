@@ -1,0 +1,145 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "metal": "skyblocks:block/fire_case_metal",
+    "brass": "skyblocks:block/fire_case_brass",
+    "grate": "skyblocks:block/fire_case_grate",
+    "glass": "skyblocks:block/fire_case_glass",
+    "particle": "skyblocks:block/fire_case_metal"
+  },
+  "elements": [
+    {
+      "from": [
+        2.6,
+        0,
+        2.0
+      ],
+      "to": [
+        13.4,
+        13.0,
+        2.0
+      ],
+      "faces": {
+        "north": {
+          "texture": "#glass",
+          "uv": [
+            2.5999999999999996,
+            3.0,
+            13.4,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#glass",
+          "uv": [
+            2.6,
+            3.0,
+            13.4,
+            16
+          ]
+        }
+      },
+      "shade": false
+    },
+    {
+      "from": [
+        2.6,
+        0,
+        14.0
+      ],
+      "to": [
+        13.4,
+        13.0,
+        14.0
+      ],
+      "faces": {
+        "north": {
+          "texture": "#glass",
+          "uv": [
+            2.5999999999999996,
+            3.0,
+            13.4,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#glass",
+          "uv": [
+            2.6,
+            3.0,
+            13.4,
+            16
+          ]
+        }
+      },
+      "shade": false
+    },
+    {
+      "from": [
+        2.0,
+        0,
+        2.6
+      ],
+      "to": [
+        2.0,
+        13.0,
+        13.4
+      ],
+      "faces": {
+        "east": {
+          "texture": "#glass",
+          "uv": [
+            2.6,
+            3.0,
+            13.4,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#glass",
+          "uv": [
+            2.6,
+            3.0,
+            13.4,
+            16
+          ]
+        }
+      },
+      "shade": false
+    },
+    {
+      "from": [
+        14.0,
+        0,
+        2.6
+      ],
+      "to": [
+        14.0,
+        13.0,
+        13.4
+      ],
+      "faces": {
+        "east": {
+          "texture": "#glass",
+          "uv": [
+            2.6,
+            3.0,
+            13.4,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#glass",
+          "uv": [
+            2.6,
+            3.0,
+            13.4,
+            16
+          ]
+        }
+      },
+      "shade": false
+    }
+  ],
+  "render_type": "minecraft:translucent"
+}

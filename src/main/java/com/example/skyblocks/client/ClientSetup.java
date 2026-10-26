@@ -47,7 +47,8 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.DISCO_BALL.get(), DiscoBallRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SPEAKER.get(), SpeakerRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.LAVA_LAMP.get(), LavaLampRenderer::new);
-        event.registerBlockEntityRenderer(ModBlockEntities.WALL_FIRE.get(), WallFireRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.FIRE.get(), WallFireRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.BRICK_HEARTH.get(), ClientSetup::hearthRenderer);
         event.registerBlockEntityRenderer(ModBlockEntities.NEON_SIGN.get(), NeonSignRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.FOG_MACHINE.get(), FogMachineRenderer::new);
         BlockEntityRendererProvider<OiiaCatBlockEntity> big = OiiaCatRenderer::new;
@@ -176,6 +177,26 @@ public final class ClientSetup {
         event.register(LIQUID_MODEL);
         event.register(CAUSTICS_OVERLAY);
         event.register(RAIN_OVERLAY);
+    }
+
+    /** The hearth is a glow-colour block entity too: the fires' renderer draws it. */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static net.minecraft.client.renderer.blockentity.BlockEntityRenderer<com.example.skyblocks.BrickHearthBlockEntity> hearthRenderer(
+            net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider.Context ctx) {
+        return (net.minecraft.client.renderer.blockentity.BlockEntityRenderer) new WallFireRenderer(ctx);
+    }
+
+    /** The brick hearth's model shows the stone and wood chosen for it (client/HearthModel). */
+    @SubscribeEvent
+    public static void hearthModel(net.neoforged.neoforge.client.event.ModelEvent.ModifyBakingResult event) {
+        var models = event.getModels();
+        for (net.minecraft.world.level.block.state.BlockState state : com.example.skyblocks.ModBlocks.BRICK_HEARTH.get().getStateDefinition().getPossibleStates()) {
+            var key = net.minecraft.client.renderer.block.BlockModelShaper.stateToModelLocation(state);
+            net.minecraft.client.resources.model.BakedModel m = models.get(key);
+            if (m != null) {
+                models.put(key, new HearthModel(m));
+            }
+        }
     }
 
     /** The water caustics block's model also draws the block put under its water (client/WaterCausticsModel). */

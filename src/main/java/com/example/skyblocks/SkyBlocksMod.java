@@ -57,7 +57,7 @@ public class SkyBlocksMod {
         event.accept(ModItems.RAIN_GLASS.get());
         event.accept(ModItems.LAVA_LAMP.get());
         event.accept(ModItems.BIG_LAVA_LAMP.get());
-        event.accept(ModItems.WALL_FIRE.get());
+        event.accept(ModItems.FIRE_TORNADO.get());
         event.accept(ModItems.BRICK_HEARTH.get());
         event.accept(ModItems.NEON_SIGN.get());
         event.accept(ModItems.DANCE_FLOOR.get());

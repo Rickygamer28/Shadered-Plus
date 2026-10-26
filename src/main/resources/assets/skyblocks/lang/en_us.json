@@ -165,8 +165,6 @@
   "tooltip.skyblocks.lava_lamp": "Right-click: on / off. With a dye: wax colour. Sneak + right-click: RGB",
   "message.skyblocks.rgb_on": "RGB: on",
   "message.skyblocks.rgb_off": "RGB: off",
-  "block.skyblocks.wall_fire": "Wall Fire",
-  "tooltip.skyblocks.wall_fire": "A floating glass fire box. Joins side by side. Right-click: on / off. Dye: flame colour. Sneak + right-click: RGB. Dances to music",
   "block.skyblocks.neon_sign": "Neon Sign",
   "tooltip.skyblocks.neon_sign": "Right-click: text, colour, glow, size, background. Signs side by side or stacked join into one panel",
   "screen.skyblocks.neon_sign": "Neon Sign",
@@ -181,5 +179,7 @@
   "block.skyblocks.big_lava_lamp": "Big Lava Lamp",
   "tooltip.skyblocks.big_lava_lamp": "Two blocks tall",
   "block.skyblocks.brick_hearth": "Brick Hearth",
-  "tooltip.skyblocks.brick_hearth": "2 wide, 2 tall. Right-click: on / off. Dye: flame colour. Sneak + right-click: RGB. Dances to music"
+  "tooltip.skyblocks.brick_hearth": "2 wide, 2 tall. Right-click: on / off. Dye: flame colour. Sneak + right-click: RGB. Planks or logs: the wood. Any full block: the stone",
+  "block.skyblocks.fire_tornado": "Fire Tornado",
+  "tooltip.skyblocks.fire_tornado": "2 tall. Right-click: on / off. Dye: fire colour. Sneak + right-click: RGB. Whirls to music"
 }

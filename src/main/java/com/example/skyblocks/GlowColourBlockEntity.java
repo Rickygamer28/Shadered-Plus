@@ -10,7 +10,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
-/** A colour (set with a dye) or RGB mode (cycling through the rainbow): the lava lamp's wax, the wall fire's flame. */
+/** A colour (set with a dye) or RGB mode (cycling through the rainbow): the lava lamp's wax, the fires' flames. */
 public class GlowColourBlockEntity extends BlockEntity {
     private int colour;
     private boolean rgb;
@@ -24,8 +24,8 @@ public class GlowColourBlockEntity extends BlockEntity {
         return new GlowColourBlockEntity(ModBlockEntities.LAVA_LAMP.get(), pos, state, 0xFF6A1A);
     }
 
-    public static GlowColourBlockEntity wallFire(BlockPos pos, BlockState state) {
-        return new GlowColourBlockEntity(ModBlockEntities.WALL_FIRE.get(), pos, state, 0xFF8A1E);
+    public static GlowColourBlockEntity fire(BlockPos pos, BlockState state) {
+        return new GlowColourBlockEntity(ModBlockEntities.FIRE.get(), pos, state, 0xFF8A1E);
     }
 
     public int colour() { return colour; }
@@ -83,7 +83,7 @@ public class GlowColourBlockEntity extends BlockEntity {
         return shown(be, seconds, true);
     }
 
-    /** (eachOwn false: every block in step, like a long wall fire.) */
+    /** (eachOwn false: every block in step.) */
     public static int shown(GlowColourBlockEntity be, double seconds, boolean eachOwn) {
         if (!be.rgb) {
             return be.colour;
