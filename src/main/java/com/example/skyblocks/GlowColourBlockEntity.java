@@ -14,6 +14,9 @@ import org.jetbrains.annotations.Nullable;
 public class GlowColourBlockEntity extends BlockEntity {
     private int colour;
     private boolean rgb;
+    /** (Client only: how lit the fire looks now, 0..1, easing on and off; -1 = not yet drawn.) */
+    public float shownLit = -1.0F;
+    public long shownLitTime;
 
     public GlowColourBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state, int defaultColour) {
         super(type, pos, state);

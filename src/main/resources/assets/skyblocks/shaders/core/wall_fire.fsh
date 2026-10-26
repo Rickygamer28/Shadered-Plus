@@ -38,14 +38,14 @@ vec2 hash22(vec2 p) {
 }
 
 // how much fire at P (0..1), and how hot (0..1); kind 1 = the hearth's tongues, 2 = the tornado's whirl
-vec2 fire(vec3 P, float t, int kind) {
+vec2 fire(vec3 P, float t, int kind, float g) { // (g: 0..1 lighting up / dying down)
     if (kind == 2) {
-        float y = P.y - 3.4, hn = y / (23.0 + 3.0 * Boost);
+        float y = P.y - 3.4, hn = y / ((23.0 + 3.0 * Boost) * max(g, 0.04));
         if (y < -0.6 || hn > 1.2) {
             return vec2(0.0);
         }
         vec2 q = P.xz - vec2(8.0);
-        float a = -P.y * 0.35 + t * 6.0;
+        float a = -P.y * 0.35 + t * 6.0 * (0.4 + 0.6 * g); // (spinning up as it lights)
         q = mat2(cos(a), -sin(a), sin(a), cos(a)) * q;
         q += vec2(sin(P.y * 0.2 - t * 1.7), cos(P.y * 0.17 - t * 1.3)) * hn * 1.8;
         float n = fbm3(vec3(q * 0.5, P.y * 0.18 - t * 3.0));
@@ -55,10 +55,11 @@ vec2 fire(vec3 P, float t, int kind) {
         float arms = 0.5 + 0.5 * sin(atan(q.y, q.x) * 3.0 + r * 0.8);
         float d = (1.0 - hn * 0.95) - pow(abs(r - R0 * 0.45) / (R0 * 0.7), 2.0) + (n - 0.5) * 1.0 + (n2 - 0.5) * 0.4 + arms * 0.25 - 0.1;
         d *= smoothstep(-0.6, 0.6, y);
+        d -= (1.0 - g) * 0.35;
         return vec2(smoothstep(0.0, 0.45, d), clamp(d * 1.5 * (1.15 - hn), 0.0, 1.0));
     }
     float base = (P.x > 11.0 && P.x < 21.0) ? 8.2 : 6.4;
-    float H = 10.5 + 2.5 * Boost;
+    float H = (10.5 + 2.5 * Boost) * max(g, 0.04);
     float y = P.y - base;
     float hn = y / H;
     float foot = smoothstep(6.5, 9.0, P.x) * smoothstep(25.5, 23.0, P.x);
@@ -71,6 +72,7 @@ vec2 fire(vec3 P, float t, int kind) {
     float dz = (P.z - 11.4 - (n - 0.5) * 2.8 - sin(P.y * 0.4 - t * 3.0 + P.x * 0.3) * 0.4) / (3.2 * (1.0 - 0.55 * clamp(hn, 0.0, 1.0)));
     float d = tongue - hn - dz * dz * 0.55 + (n - 0.5) * 0.85 + (n2 - 0.5) * 0.3;
     d *= smoothstep(-0.6, 0.4, y); // (a soft start at the logs)
+    d -= (1.0 - g) * 0.35;
     return vec2(smoothstep(0.0, 0.45, d), clamp(d * 1.6 * (1.15 - hn), 0.0, 1.0));
 }
 
@@ -95,10 +97,19 @@ void main() {
     float ly = uvIn.y - 10.0 * float(code);
     int ia = int(vColor.a * 255.0 + 0.5);
     int facing = ia / 64;
-    float on = float((ia / 32) & 1);
     vec3 fc = vColor.rgb;
     float t = FireTime;
-    if (on < 0.5) {
+    // how lit (0..1, eased by client/WallFireRenderer): the tornado's in uv.y, the hearth's in uv.x (4 * 63ths)
+    float g, ux = uvIn.x;
+    if (kind == 2) {
+        g = clamp(ly, 0.0, 1.0);
+    } else {
+        float k = floor(uvIn.x / 4.0);
+        g = k / 63.0;
+        ux = uvIn.x - 4.0 * k;
+    }
+    g = g * g * (3.0 - 2.0 * g);
+    if (kind == 1 && g <= 0.001) {
         discard;
     }
 
@@ -112,10 +123,10 @@ void main() {
     vec3 ro, lo, hi;
     if (kind == 2) {
         ro = lpos;
-        lo = vec3(2.6, 3.3, 2.6);
-        hi = vec3(13.4, 29.0, 13.4);
+        lo = vec3(2.0, 3.3, 2.0);
+        hi = vec3(14.0, 29.0, 14.0);
     } else {
-        ro = vec3(uvIn.x, ly, 4.6 / 16.0) * 16.0;
+        ro = vec3(ux, ly, 4.6 / 16.0) * 16.0;
         lo = vec3(6.3, 4.2, 4.0);
         hi = vec3(25.7, 21.7, 14.0);
     }
@@ -133,22 +144,43 @@ void main() {
     tEnd = min(tEnd, 32.0);
 
     // march
-    int N = kind == 2 ? 56 : 44;
-    float dt = tEnd / float(N);
-    float jitter = hash3(vec3(gl_FragCoord.xy, fract(t) * 7.0));
     vec3 emit = vec3(0.0);
     float trans = 1.0;
-    for (int i = 0; i < N; i++) {
-        vec3 P = ro + rd * (dt * (float(i) + jitter));
-        vec2 f = fire(P, t, kind);
-        if (f.x > 0.001) {
-            emit += trans * fireColour(f.y, fc) * f.x * 0.55 * dt;
-            trans *= exp(-f.x * 0.38 * dt);
-            if (trans < 0.02) {
-                break;
+    if (g > 0.001) {
+        int N = kind == 2 ? 56 : 44;
+        float dt = tEnd / float(N);
+        float jitter = hash3(vec3(gl_FragCoord.xy, fract(t) * 7.0));
+        for (int i = 0; i < N; i++) {
+            vec3 P = ro + rd * (dt * (float(i) + jitter));
+            vec2 f = fire(P, t, kind, g);
+            if (f.x > 0.001) {
+                emit += trans * fireColour(f.y, fc) * f.x * 0.55 * dt;
+                trans *= exp(-f.x * 0.38 * dt);
+                if (trans < 0.02) {
+                    break;
+                }
             }
         }
     }
     // only the flames (what is behind is the world): premultiplied, the bright parts also brighten what's behind
-    fragColor = vec4(emit, 1.0 - trans + dot(emit, vec3(0.1)));
+    vec4 col = vec4(emit, 1.0 - trans + dot(emit, vec3(0.1)));
+    if (kind == 2) {
+        // the case's glass (on the sides, not the top or bottom): clear, a soft sky reflection at grazing angles,
+        // a faint smooth sheen across it, a touch brighter at its edges
+        vec3 n = abs(ro.x - 2.0) < 0.05 ? vec3(-1, 0, 0) : abs(ro.x - 14.0) < 0.05 ? vec3(1, 0, 0)
+               : abs(ro.z - 2.0) < 0.05 ? vec3(0, 0, -1) : abs(ro.z - 14.0) < 0.05 ? vec3(0, 0, 1) : vec3(0.0);
+        if (dot(n, n) > 0.5) {
+            float c = abs(dot(rd, n));
+            float fres = 0.04 + 0.5 * pow(1.0 - c, 4.0);
+            vec3 rf = reflect(rd, n);
+            vec3 sky = mix(vec3(0.35, 0.38, 0.34), vec3(0.85, 0.92, 1.0), smoothstep(-0.2, 0.5, rf.y));
+            float u = n.x != 0.0 ? ro.z : ro.x;
+            float sheen = smoothstep(2.5, 0.0, abs(u * 0.9 + ro.y * 0.45 - 14.0)) * 0.06
+                        + smoothstep(1.0, 0.0, abs(u * 0.9 + ro.y * 0.45 - 18.0)) * 0.035;
+            float edge = smoothstep(1.2, 0.0, min(min(u - 2.6, 13.4 - u), min(ro.y - 3.3, 29.0 - ro.y))) * 0.05;
+            float ga = clamp(fres + sheen + edge, 0.0, 0.6);
+            col = vec4(sky * ga + col.rgb * (1.0 - ga), ga + col.a * (1.0 - ga));
+        }
+    }
+    fragColor = col;
 }

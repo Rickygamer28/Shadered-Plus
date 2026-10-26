@@ -46,6 +46,18 @@ public class FireTornadoBlock extends BigLavaLampBlock {
         return state.getValue(HALF) == DoubleBlockHalf.LOWER ? LOWER : UPPER;
     }
 
+    /** On / off with a whoosh (as well as the lamp's click). */
+    @Override
+    protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, net.minecraft.world.entity.player.Player player,
+                                                                   net.minecraft.world.phys.BlockHitResult hit) {
+        net.minecraft.world.InteractionResult result = super.useWithoutItem(state, level, pos, player, hit);
+        if (!level.isClientSide && !player.isShiftKeyDown()) {
+            boolean lit = state.getValue(LIT); // (as it was: now the other way)
+            level.playSound(null, pos, lit ? SoundEvents.FIRE_EXTINGUISH : SoundEvents.FIRECHARGE_USE, SoundSource.BLOCKS, 0.5F, lit ? 1.2F : 0.8F);
+        }
+        return result;
+    }
+
     @Override
     public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
         if (state.getValue(LIT) && state.getValue(HALF) == DoubleBlockHalf.LOWER && random.nextInt(14) == 0) {

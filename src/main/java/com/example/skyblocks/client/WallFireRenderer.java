@@ -111,14 +111,27 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
 
     static final Matrix4f ITEM_INV = new Matrix4f();
 
+    /** How lit the fire looks now: easing towards on / off (about a second to catch, a bit less to die down). */
+    private static float litShown(GlowColourBlockEntity be, boolean lit) {
+        long now = System.nanoTime();
+        if (be.shownLit < 0.0F) {
+            be.shownLit = lit ? 1.0F : 0.0F;
+        } else {
+            float dt = Math.min((now - be.shownLitTime) / 1.0e9F, 0.25F);
+            be.shownLit = lit ? Math.min(be.shownLit + dt / 1.1F, 1.0F) : Math.max(be.shownLit - dt / 0.8F, 0.0F);
+        }
+        be.shownLitTime = now;
+        return be.shownLit;
+    }
+
     /** The tornado's box of fire (block units), each vertex with its corner (the shader works out where it is). */
-    private static void tornadoBox(VertexConsumer vc, Matrix4f m, int r, int g, int b) {
-        float x0 = 2.6F / 16.0F, y0 = 3.3F / 16.0F, z0 = 2.6F / 16.0F, x1 = 13.4F / 16.0F, y1 = 29.0F / 16.0F, z1 = 13.4F / 16.0F;
+    private static void tornadoBox(VertexConsumer vc, Matrix4f m, int r, int g, int b, float lit) {
+        float x0 = 2.0F / 16.0F, y0 = 3.3F / 16.0F, z0 = 2.0F / 16.0F, x1 = 14.0F / 16.0F, y1 = 29.0F / 16.0F, z1 = 14.0F / 16.0F;
         int[][] faces = {{0, 2, 3, 1}, {4, 5, 7, 6}, {0, 4, 6, 2}, {1, 3, 7, 5}, {2, 6, 7, 3}, {0, 1, 5, 4}};
         for (int[] f : faces) {
             for (int k : f) {
                 vc.addVertex(m, (k & 1) != 0 ? x1 : x0, (k & 2) != 0 ? y1 : y0, (k & 4) != 0 ? z1 : z0)
-                        .setColor(r, g, b, 32 + 16).setUv(k, 320.0F);
+                        .setColor(r, g, b, 32 + 16).setUv(k, 320.0F + lit); // (+ how lit, 0..1)
             }
         }
     }
@@ -130,7 +143,7 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         }
         Matrix4f m = poseStack.last().pose();
         ITEM_INV.set(m).invert();
-        tornadoBox(buffers.getBuffer(Types.ITEM), m, (colour >> 16) & 255, (colour >> 8) & 255, colour & 255);
+        tornadoBox(buffers.getBuffer(Types.ITEM), m, (colour >> 16) & 255, (colour >> 8) & 255, colour & 255, 1.0F);
         if (buffers instanceof MultiBufferSource.BufferSource source) {
             source.endBatch(Types.ITEM);
         }
@@ -161,20 +174,21 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         int r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
         Matrix4f m;
         if (state.getBlock() instanceof com.example.skyblocks.FireTornadoBlock) {
-            if (!state.getValue(com.example.skyblocks.LavaLampBlock.LIT)) {
-                return;
-            }
-            // the whirl's box inside the case
+            // the whirl's box inside the case (and its glass, drawn even when off)
             m = poseStack.last().pose();
-            tornadoBox(buffers.getBuffer(Types.FREE), m, r, g, b);
+            tornadoBox(buffers.getBuffer(Types.FREE), m, r, g, b, litShown(be, state.getValue(com.example.skyblocks.LavaLampBlock.LIT)));
             return;
         }
         if (!state.hasProperty(com.example.skyblocks.BrickHearthBlock.FACING)
                 || state.getValue(com.example.skyblocks.BrickHearthBlock.LEFT)
-                || state.getValue(com.example.skyblocks.BrickHearthBlock.HALF) != net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER
-                || !state.getValue(com.example.skyblocks.BrickHearthBlock.LIT)) {
+                || state.getValue(com.example.skyblocks.BrickHearthBlock.HALF) != net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER) {
             return; // (the hearth: only its main block draws the fire)
         }
+        float lit = litShown(be, state.getValue(com.example.skyblocks.BrickHearthBlock.LIT));
+        if (lit <= 0.0F) {
+            return;
+        }
+        float k = 4.0F * Math.round(lit * 63.0F); // (how lit, in 63ths, carried in uv.x as 4 * that)
         Direction facing = state.getValue(com.example.skyblocks.BrickHearthBlock.FACING);
         poseStack.pushPose();
         poseStack.translate(0.5, 0.0, 0.5);
@@ -195,7 +209,7 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         };
         // the opening: the flames are marched behind it, among the logs
         quad(Types.FREE, buffers, m, 26.0F / 16.0F, 6.0F / 16.0F, 4.2F / 16.0F, 21.7F / 16.0F, 4.6F / 16.0F,
-                26.0F / 16.0F, 6.0F / 16.0F, 10.0F, r, g, b, fi * 64 + 32 + 16);
+                k + 26.0F / 16.0F, k + 6.0F / 16.0F, 10.0F, r, g, b, fi * 64 + 32 + 16);
         poseStack.popPose();
     }
 }

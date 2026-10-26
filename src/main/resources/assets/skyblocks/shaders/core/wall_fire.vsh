@@ -26,5 +26,5 @@ void main() {
     vec3 dir = ProjMat[2][3] < -0.5 ? Position - (iv * vec4(0.0, 0.0, 0.0, 1.0)).xyz : (iv * vec4(0.0, 0.0, -1.0, 0.0)).xyz;
     wray = ItemMode < 0.5 ? dir : (LampInv * vec4(dir, 0.0)).xyz;
     int corner = int(UV0.x + 0.5) & 7;
-    lpos = mix(vec3(2.6, 3.3, 2.6), vec3(13.4, 29.0, 13.4), vec3(float(corner & 1), float((corner >> 1) & 1), float((corner >> 2) & 1)));
+    lpos = mix(vec3(2.0, 3.3, 2.0), vec3(14.0, 29.0, 14.0), vec3(float(corner & 1), float((corner >> 1) & 1), float((corner >> 2) & 1)));
 }

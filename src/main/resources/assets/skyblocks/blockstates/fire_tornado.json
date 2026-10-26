@@ -10,26 +10,10 @@
     },
     {
       "when": {
-        "half": "lower"
-      },
-      "apply": {
-        "model": "skyblocks:block/fire_tornado_glass_lower"
-      }
-    },
-    {
-      "when": {
         "half": "upper"
       },
       "apply": {
         "model": "skyblocks:block/fire_tornado_upper"
-      }
-    },
-    {
-      "when": {
-        "half": "upper"
-      },
-      "apply": {
-        "model": "skyblocks:block/fire_tornado_glass_upper"
       }
     }
   ]
