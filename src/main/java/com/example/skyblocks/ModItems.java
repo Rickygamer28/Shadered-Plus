@@ -50,6 +50,8 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> AQUARIUM = ITEMS.registerSimpleBlockItem("aquarium", ModBlocks.AQUARIUM);
 
     public static final DeferredItem<BlockItem> OCEAN_AQUARIUM = ITEMS.registerSimpleBlockItem("ocean_aquarium", ModBlocks.OCEAN_AQUARIUM);
+    public static final DeferredItem<BlockItem> VANILLA_AQUARIUM = ITEMS.registerSimpleBlockItem("vanilla_aquarium", ModBlocks.VANILLA_AQUARIUM);
+    public static final DeferredItem<BlockItem> VANILLA_OCEAN_AQUARIUM = ITEMS.registerSimpleBlockItem("vanilla_ocean_aquarium", ModBlocks.VANILLA_OCEAN_AQUARIUM);
 
     public static final DeferredItem<BlockItem> DISCO_BALL = ITEMS.registerSimpleBlockItem("disco_ball", ModBlocks.DISCO_BALL);
 

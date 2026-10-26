@@ -270,6 +270,19 @@ public final class ClientSetup {
         event.registerSpriteSet(com.example.skyblocks.ModParticles.FOG.get(), FogParticle.Provider::new);
     }
 
+    /** The vanilla aquariums' water: the biome's water colour, as any water. */
+    @SubscribeEvent
+    public static void aquariumWater(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Block event) {
+        event.register((state, level, pos, tint) -> level != null && pos != null ? net.minecraft.client.renderer.BiomeColors.getAverageWaterColor(level, pos) : 0x3F76E4,
+                com.example.skyblocks.ModBlocks.VANILLA_AQUARIUM.get(), com.example.skyblocks.ModBlocks.VANILLA_OCEAN_AQUARIUM.get());
+    }
+
+    @SubscribeEvent
+    public static void aquariumWaterItem(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Item event) {
+        event.register((stack, tint) -> tint == 0 ? 0xFF3F76E4 : 0xFFFFFFFF,
+                com.example.skyblocks.ModItems.VANILLA_AQUARIUM.get(), com.example.skyblocks.ModItems.VANILLA_OCEAN_AQUARIUM.get());
+    }
+
     /** Tinted blocks under the water (grass, leaves...) keep their colour. */
     @SubscribeEvent
     public static void causticsColours(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Block event) {

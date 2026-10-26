@@ -71,6 +71,8 @@ public class SkyBlocksMod {
         event.accept(ModItems.FOG_MACHINE.get());
         event.accept(ModItems.AQUARIUM.get());
         event.accept(ModItems.OCEAN_AQUARIUM.get());
+        event.accept(ModItems.VANILLA_AQUARIUM.get());
+        event.accept(ModItems.VANILLA_OCEAN_AQUARIUM.get());
         event.accept(ModItems.INFINITY_CUBE.get());
         for (ModFluids.SkyLiquid liquid : ModFluids.ALL) {
             event.accept(liquid.bucket.get());

@@ -208,5 +208,9 @@
   "screen.skyblocks.pond_default": "Default",
   "screen.skyblocks.pond_search": "Search blocks...",
   "screen.skyblocks.pond_rim_now": "Rim: %s",
-  "screen.skyblocks.pond_floor_now": "Floor: %s"
+  "screen.skyblocks.pond_floor_now": "Floor: %s",
+  "block.skyblocks.vanilla_aquarium": "Vanilla Aquarium",
+  "block.skyblocks.vanilla_ocean_aquarium": "Vanilla Ocean Aquarium",
+  "tooltip.skyblocks.vanilla_aquarium": "An aquarium in plain Minecraft style: tropical fish, cod, salmon, pufferfish, axolotls, tadpoles, seagrass and kelp. Touching blocks make one tank",
+  "tooltip.skyblocks.vanilla_ocean_aquarium": "For big tanks, in plain Minecraft style: dolphins, sea turtles, squid, glow squid, fish and coral. Touching blocks make one tank"
 }
