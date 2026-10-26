@@ -1876,7 +1876,9 @@ void main() {
             if (part >= 1 && isFish(kind) && kind != 10 && kind != 16 && kind != 19 && kind != 29) {
                 float rc = part == 1 ? q.y * 8.0 : q.x * 10.0; // (rays run along a tail, up a fin)
                 float ray = 1.0 - smoothstep(0.0, 0.25, abs(fract(rc) - 0.5) - 0.2);
-                base *= 0.84 + 0.16 * (1.0 - ray);
+                // (faded out where the rays would be finer than a few pixels: far off they'd shimmer)
+                float per = (part == 1 ? sp.tail.y * 0.25 : sp.body.x * 0.1) * size;
+                base *= 1.0 - 0.16 * ray * smoothstep(2.0, 5.0, per / (pixA * tf));
                 float edge = part == 1 ? 0.5 - 0.5 * q.x : abs(q.y);
                 base = mix(base, base * 1.15 + vec3(0.05, 0.08, 0.1), smoothstep(0.5, 1.0, edge) * 0.5);
             }
@@ -1888,6 +1890,7 @@ void main() {
                 float rim = smoothstep(0.32, 0.5, length(sf - vec2(0.45, 0.0)));
                 float sv = hash22(floor(sc)).x;
                 float strength = kind == 5 ? 0.2 : kind == 17 ? 0.16 : kind == 7 ? 0.0 : kind == 11 ? 0.05 : kind == 26 ? 0.12 : 0.09;
+                strength *= smoothstep(1.5, 4.0, ss * size / (pixA * tf)); // (fading where too fine to see: no shimmer)
                 base *= 1.0 - strength * (rim * 0.7 + (sv - 0.5) * 0.4); // (overlapping scales)
                 float gx = q.x - (0.44 - 0.1 * q.y * q.y);
                 if (kind != 7 && gx > 0.0 && gx < 0.03 && abs(q.y) < 0.75) base *= 0.78;              // (the gill cover's edge)
