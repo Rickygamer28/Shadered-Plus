@@ -34,12 +34,6 @@ public class VanillaAquariumBlock extends AquariumBlock {
         super(properties, ocean);
     }
 
-    @Override
-    protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, net.minecraft.world.entity.player.Player player,
-                                                                   net.minecraft.world.phys.BlockHitResult hit) {
-        return net.minecraft.world.InteractionResult.PASS; // (no choosing fish: the game's own)
-    }
-
     /** Is there more of this tank's water above (right above, or over a tunnel of air)? */
     private boolean waterAbove(net.minecraft.world.level.BlockGetter level, BlockPos pos) {
         for (int i = 1; i <= 16; i++) {

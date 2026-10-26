@@ -80,6 +80,17 @@ public final class AquariumRenderer {
 
     static ShaderInstance shader;
     private static final List<Floor> FLOORS = new ArrayList<>();
+
+    /**
+     * A vanilla tank seen this frame (client/VanillaAquariumRenderer draws its fish and decorations as Minecraft-style
+     * models): its corner, whether it's the ocean one, its fish as the aquariums work them out (16 numbers each:
+     * middle, size, forward, kind, up, swim wave, tail beat, turn bend, jellyfish squeeze, steps walked; in the tank,
+     * from its corner), its decorations (4 each, as the shader has them) and its outside faces (4 corners each, in the
+     * world).
+     */
+    public record VanillaJob(BlockPos min, boolean ocean, float[] fish, int fishCount, float[] decor, int decorCount, float[] faces) {}
+
+    static final List<VanillaJob> VANILLA_JOBS = new ArrayList<>();
     private static boolean dirty = true;
     private static ClientLevel lastLevel;
     private static long lastScan;
@@ -119,6 +130,7 @@ public final class AquariumRenderer {
                     || IrisCompat.renderingShadowPass()) {
                 return;
             }
+            VANILLA_JOBS.clear();
             ClientLevel level = Minecraft.getInstance().level;
             if (level == null || shader == null) {
                 return;
@@ -220,6 +232,10 @@ public final class AquariumRenderer {
                 shader.safeGetUniform("BoxSize").set((float) floor.sizeX, (float) floor.sizeY, (float) floor.sizeZ);
                 shader.safeGetUniform("Seed").set(seed);
                 setShape(floor);
+                if (floor.vanilla && writeDepth) { // (its fish as worked out just now, for the models)
+                    VANILLA_JOBS.add(new VanillaJob(floor.min, floor.ocean, java.util.Arrays.copyOf(FISH_DATA, floor.fishCount * 16), floor.fishCount,
+                            java.util.Arrays.copyOf(floor.decor, floor.decorCount * 4), floor.decorCount, faceCorners(floor)));
+                }
                 MeshData mesh = mesh(floor, shown, cam);
                 RenderSystem.depthMask(writeDepth && !floor.vanilla); // (a vanilla tank: its own fish go into the picture next, then its depth)
                 if (mesh != null) {
@@ -621,13 +637,13 @@ public final class AquariumRenderer {
         shader.safeGetUniform("Full").set(floor.full ? 1.0F : 0.0F);
         uploadFish(floor);
         shader.setSampler("FishTex", fishTex);
-        shader.safeGetUniform("FishCount").set((float) floor.fishCount);
+        shader.safeGetUniform("FishCount").set(floor.vanilla ? 0.0F : (float) floor.fishCount); // (a vanilla tank's: drawn as models)
         shader.safeGetUniform("Ocean").set(floor.ocean ? 1.0F : 0.0F);
         float[] d = floor.decor;
         for (int v = 0; v < MAX_DECOR; v++) {
             shader.safeGetUniform("Deco" + v).set(d[v * 4], d[v * 4 + 1], d[v * 4 + 2], d[v * 4 + 3]);
         }
-        shader.safeGetUniform("DecoCount").set((float) floor.decorCount);
+        shader.safeGetUniform("DecoCount").set(floor.vanilla ? 0.0F : (float) floor.decorCount);
     }
 
     /**
@@ -635,10 +651,6 @@ public final class AquariumRenderer {
      * coral, vases, anemones; in the ocean tank bigger, with coral and anemones more often and a treasure chest.
      */
     private static void placeDecor(Floor floor) {
-        if (floor.vanilla) {
-            floor.decorCount = 0;
-            return;
-        }
         java.util.List<BlockPos> bottom = new ArrayList<>();
         for (BlockPos b : floor.blocks) {
             if (b.getY() == floor.min.getY()) { // (only on the real bottom, never on top of a corridor built through it)
@@ -820,10 +832,6 @@ public final class AquariumRenderer {
     }
 
     private static void placeFish(Floor floor) {
-        if (floor.vanilla) {
-            floor.fishCount = 0; // (its fish are the game's own: client/VanillaAquariumRenderer)
-            return;
-        }
         java.util.List<BlockPos> water = new ArrayList<>(floor.blocks);
         water.sort(java.util.Comparator.comparingLong(BlockPos::asLong));
         java.util.Random random = new java.util.Random(floor.min.asLong() * 31L + water.size());
@@ -912,6 +920,34 @@ public final class AquariumRenderer {
             }
         }
         return b.build();
+    }
+
+    /** A tank's outside faces: 4 corners (x, y, z, in the world) each. */
+    private static float[] faceCorners(Floor floor) {
+        float[] out = new float[floor.faces.size() * 12];
+        int k = 0;
+        for (Face f : floor.faces) {
+            int x = f.pos().getX(), y = f.pos().getY(), z = f.pos().getZ();
+            int[][] corners = switch (f.side()) {
+                case UP -> new int[][] {{x, y + 1, z}, {x, y + 1, z + 1}, {x + 1, y + 1, z + 1}, {x + 1, y + 1, z}};
+                case DOWN -> new int[][] {{x, y, z}, {x + 1, y, z}, {x + 1, y, z + 1}, {x, y, z + 1}};
+                case NORTH -> new int[][] {{x + 1, y, z}, {x, y, z}, {x, y + 1, z}, {x + 1, y + 1, z}};
+                case SOUTH -> new int[][] {{x, y, z + 1}, {x + 1, y, z + 1}, {x + 1, y + 1, z + 1}, {x, y + 1, z + 1}};
+                case WEST -> new int[][] {{x, y, z}, {x, y, z + 1}, {x, y + 1, z + 1}, {x, y + 1, z}};
+                case EAST -> new int[][] {{x + 1, y, z + 1}, {x + 1, y, z}, {x + 1, y + 1, z}, {x + 1, y + 1, z + 1}};
+            };
+            for (int[] c : corners) {
+                out[k++] = c[0];
+                out[k++] = c[1];
+                out[k++] = c[2];
+            }
+        }
+        return out;
+    }
+
+    /** Each kind's body (as the shader's): half its length, its tail's length; for sizing the vanilla tanks' models. */
+    static float[] species(int kind) {
+        return SPECIES[kind];
     }
 
     /** Whether the edge of this face towards {@code d} is an edge of the tank (not where it carries on, flat or round a corner). */
