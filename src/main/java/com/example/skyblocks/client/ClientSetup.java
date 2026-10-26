@@ -140,6 +140,17 @@ public final class ClientSetup {
                 return renderer;
             }
         }, ModItems.SKY_ISLAND.get());
+        event.registerItem(new IClientItemExtensions() {
+            private FireTornadoItemRenderer renderer;
+
+            @Override
+            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (renderer == null) {
+                    renderer = new FireTornadoItemRenderer();
+                }
+                return renderer;
+            }
+        }, ModItems.FIRE_TORNADO.get());
         for (boolean big : new boolean[] {false, true}) {
             event.registerItem(new IClientItemExtensions() {
                 private LavaLampItemRenderer renderer;

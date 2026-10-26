@@ -47,6 +47,7 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
                         .setTexturingState(new TexturingStateShard("skyblocks_wall_fire_time", () -> {
                             if (shader != null) {
                                 shader.safeGetUniform("FireTime").set(LavaLampRenderer.seconds());
+                                shader.safeGetUniform("ItemMode").set(0.0F);
                                 shader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.2F, 1.0F));
                             }
                         }, () -> {}))
@@ -61,10 +62,35 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
                         .setTexturingState(new TexturingStateShard("skyblocks_hearth_fire_time", () -> {
                             if (shader != null) {
                                 shader.safeGetUniform("FireTime").set(LavaLampRenderer.seconds());
+                                shader.safeGetUniform("ItemMode").set(0.0F);
                                 shader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.2F, 1.0F));
                             }
                         }, () -> {}))
                         .setTransparencyState(new TransparencyStateShard("skyblocks_premultiplied", () -> {
+                            com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+                            com.mojang.blaze3d.systems.RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.ONE,
+                                    com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+                        }, () -> {
+                            com.mojang.blaze3d.systems.RenderSystem.disableBlend();
+                            com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
+                        }))
+                        .setWriteMaskState(COLOR_WRITE)
+                        .setCullState(NO_CULL)
+                        .createCompositeState(false));
+
+        /** The fire tornado as an item: drawn at once with its own matrix (see drawTornadoItem). */
+        static final RenderType ITEM = create("skyblocks_fire_item", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 256,
+                false, false, CompositeState.builder()
+                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setTexturingState(new TexturingStateShard("skyblocks_fire_item", () -> {
+                            if (shader != null) {
+                                shader.safeGetUniform("FireTime").set(LavaLampRenderer.seconds());
+                                shader.safeGetUniform("Boost").set(0.0F);
+                                shader.safeGetUniform("ItemMode").set(1.0F);
+                                shader.safeGetUniform("LampInv").set(ITEM_INV);
+                            }
+                        }, () -> {}))
+                        .setTransparencyState(new TransparencyStateShard("skyblocks_premultiplied_item", () -> {
                             com.mojang.blaze3d.systems.RenderSystem.enableBlend();
                             com.mojang.blaze3d.systems.RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.ONE,
                                     com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
@@ -82,6 +108,33 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
     }
 
     public WallFireRenderer(BlockEntityRendererProvider.Context context) {}
+
+    static final Matrix4f ITEM_INV = new Matrix4f();
+
+    /** The tornado's box of fire (block units), each vertex with its corner (the shader works out where it is). */
+    private static void tornadoBox(VertexConsumer vc, Matrix4f m, int r, int g, int b) {
+        float x0 = 2.6F / 16.0F, y0 = 3.3F / 16.0F, z0 = 2.6F / 16.0F, x1 = 13.4F / 16.0F, y1 = 29.0F / 16.0F, z1 = 13.4F / 16.0F;
+        int[][] faces = {{0, 2, 3, 1}, {4, 5, 7, 6}, {0, 4, 6, 2}, {1, 3, 7, 5}, {2, 6, 7, 3}, {0, 1, 5, 4}};
+        for (int[] f : faces) {
+            for (int k : f) {
+                vc.addVertex(m, (k & 1) != 0 ? x1 : x0, (k & 2) != 0 ? y1 : y0, (k & 4) != 0 ? z1 : z0)
+                        .setColor(r, g, b, 32 + 16).setUv(k, 320.0F);
+            }
+        }
+    }
+
+    /** The fire tornado as an item: its whirl of fire, drawn now with this item's matrix. */
+    static void drawTornadoItem(PoseStack poseStack, MultiBufferSource buffers, int colour) {
+        if (shader == null) {
+            return;
+        }
+        Matrix4f m = poseStack.last().pose();
+        ITEM_INV.set(m).invert();
+        tornadoBox(buffers.getBuffer(Types.ITEM), m, (colour >> 16) & 255, (colour >> 8) & 255, colour & 255);
+        if (buffers instanceof MultiBufferSource.BufferSource source) {
+            source.endBatch(Types.ITEM);
+        }
+    }
 
     /** A quad facing -z (north) from xa (its left as seen from the north) to xb; uv across sa..sb, up = the height + flags. */
     private static void quad(RenderType type, MultiBufferSource buffers, Matrix4f m, float xa, float xb, float y0, float y1, float z,
@@ -111,17 +164,9 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
             if (!state.getValue(com.example.skyblocks.LavaLampBlock.LIT)) {
                 return;
             }
-            // the whirl's box inside the case: uv = (which corner, the tornado's code), the shader works out the rest
+            // the whirl's box inside the case
             m = poseStack.last().pose();
-            VertexConsumer vc = buffers.getBuffer(Types.FREE);
-            float x0 = 2.6F / 16.0F, y0 = 3.3F / 16.0F, z0 = 2.6F / 16.0F, x1 = 13.4F / 16.0F, y1 = 29.0F / 16.0F, z1 = 13.4F / 16.0F;
-            int[][] faces = {{0, 2, 3, 1}, {4, 5, 7, 6}, {0, 4, 6, 2}, {1, 3, 7, 5}, {2, 6, 7, 3}, {0, 1, 5, 4}};
-            for (int[] f : faces) {
-                for (int k : f) {
-                    vc.addVertex(m, (k & 1) != 0 ? x1 : x0, (k & 2) != 0 ? y1 : y0, (k & 4) != 0 ? z1 : z0)
-                            .setColor(r, g, b, 32 + 16).setUv(k, 320.0F);
-                }
-            }
+            tornadoBox(buffers.getBuffer(Types.FREE), m, r, g, b);
             return;
         }
         if (!state.hasProperty(com.example.skyblocks.BrickHearthBlock.FACING)
