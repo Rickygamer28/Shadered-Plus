@@ -67,6 +67,7 @@ public class KoiPondBlockEntity extends BlockEntity {
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = super.getUpdateTag(registries);
         saveAdditional(tag, registries);
+        tag.putBoolean("pond", true); // (never empty: the game skips an empty update, so going back to the defaults wouldn't show)
         return tag;
     }
 
