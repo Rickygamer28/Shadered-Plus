@@ -27,7 +27,7 @@ import org.joml.Matrix4f;
 /**
  * The music visualizer's screen: one quad per block, its texture coordinates running 0..1 across and up the whole
  * joined screen, drawn by shaders/core/visualizer from the music's 16 bands and their last seconds (MusicReactor).
- * Vertex colour: the colour (black = rainbow); alpha: look * 64 + how many blocks wide.
+ * Vertex colour: the colour (black = rainbow); alpha: look * 32. UV: 0..1 across / up, plus 2 * blocks wide / high.
  */
 public class VisualizerRenderer implements BlockEntityRenderer<GlowColourBlockEntity> {
     static ShaderInstance shader;
@@ -96,12 +96,12 @@ public class VisualizerRenderer implements BlockEntityRenderer<GlowColourBlockEn
         // where in the joined screen (from its left as you face it, and its bottom)
         int left = count(level, pos, facing.getClockWise(), facing), right = count(level, pos, facing.getCounterClockWise(), facing);
         int below = count(level, pos, Direction.DOWN, facing), above = count(level, pos, Direction.UP, facing);
-        int w = Math.min(left + 1 + right, 63), h = below + 1 + above;
+        int w = Math.min(left + 1 + right, 64), h = Math.min(below + 1 + above, 64);
         int c = be.rgb() ? 0 : be.colour();
         if (c == 0 && !be.rgb()) {
             c = 0x010101;
         }
-        int r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255, a = state.getValue(VisualizerBlock.MODE) * 64 + w;
+        int r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255, a = state.getValue(VisualizerBlock.MODE) * 32;
         poseStack.pushPose();
         poseStack.translate(0.5, 0.0, 0.5);
         poseStack.mulPose(Axis.YP.rotationDegrees(switch (facing) {
@@ -116,8 +116,9 @@ public class VisualizerRenderer implements BlockEntityRenderer<GlowColourBlockEn
         float x0 = state.getValue(VisualizerBlock.RIGHT) ? 0.0F : 1.0F / 16.0F, x1 = state.getValue(VisualizerBlock.LEFT) ? 1.0F : 15.0F / 16.0F;
         float y0 = state.getValue(VisualizerBlock.DOWN) ? 0.0F : 1.0F / 16.0F, y1 = state.getValue(VisualizerBlock.UP) ? 1.0F : 15.0F / 16.0F;
         float z = 13.95F / 16.0F;
-        float u0 = (left + (1.0F - x1)) / w, u1 = (left + (1.0F - x0)) / w;
-        float v0 = (below + y0) / h, v1 = (below + y1) / h;
+        // uv: 0..1 across / up the whole screen, plus 2 * its width / height in blocks (the shader takes them apart)
+        float u0 = (left + (1.0F - x1)) / w + 2 * w, u1 = (left + (1.0F - x0)) / w + 2 * w;
+        float v0 = (below + y0) / h + 2 * h, v1 = (below + y1) / h + 2 * h;
         VertexConsumer vc = buffers.getBuffer(Types.SCREEN);
         vc.addVertex(m, x1, y0, z).setUv(u0, v0).setColor(r, g, b, a);
         vc.addVertex(m, x0, y0, z).setUv(u1, v0).setColor(r, g, b, a);

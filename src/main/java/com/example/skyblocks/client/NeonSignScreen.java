@@ -17,12 +17,13 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 public class NeonSignScreen extends Screen {
     private static final int PANEL_W = 236;
-    private static final int PANEL_H = 214;
-    private static final String[] MODES = {"steady", "flicker", "pulse", "rainbow"};
+    private static final int PANEL_H = 238;
+    private static final String[] MODES = {"steady", "flicker", "pulse", "rainbow", "scroll", "typing", "blink"};
 
     private final BlockPos pos;
     private String text;
     private int colour, mode, size, background;
+    private boolean outline;
     private EditBox box;
 
     public NeonSignScreen(BlockPos pos, String text, int colour, int mode, int size, int background) {
@@ -30,7 +31,8 @@ public class NeonSignScreen extends Screen {
         this.pos = pos;
         this.text = text;
         this.colour = colour;
-        this.mode = mode;
+        this.outline = (mode & NeonSignBlockEntity.OUTLINE_BIT) != 0;
+        this.mode = mode & (NeonSignBlockEntity.OUTLINE_BIT - 1);
         this.size = size;
         this.background = background;
     }
@@ -110,8 +112,17 @@ public class NeonSignScreen extends Screen {
             size = Math.min(NeonSignBlockEntity.MAX_SIZE, size + 1);
             send();
         }).bounds(left() + 204, top() + 102, 20, 20).build());
+        addRenderableWidget(Button.builder(outlineLabel(), b -> {
+            outline = !outline;
+            b.setMessage(outlineLabel());
+            send();
+        }).bounds(left() + 12, top() + PANEL_H - 28, 120, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
                 .bounds(left() + PANEL_W - 88, top() + PANEL_H - 28, 76, 20).build());
+    }
+
+    private Component outlineLabel() {
+        return Component.translatable(outline ? "screen.skyblocks.neon_outline_on" : "screen.skyblocks.neon_outline_off");
     }
 
     private Component modeLabel() {
@@ -119,7 +130,7 @@ public class NeonSignScreen extends Screen {
     }
 
     private void send() {
-        PacketDistributor.sendToServer(new NeonSignPayload(pos, text, colour, mode, size, background));
+        PacketDistributor.sendToServer(new NeonSignPayload(pos, text, colour, mode | (outline ? NeonSignBlockEntity.OUTLINE_BIT : 0), size, background));
     }
 
     @Override

@@ -1350,7 +1350,7 @@ float neonGlyph(int c, vec2 p) {
 
 void main() {
     int c = int(vColor.a * 255.0 + 0.5);
-    float d = neonGlyph(c, uv);
+    float d = c == 1 ? length(vec2(max(abs(uv.x) - 1.0, 0.0), uv.y)) : neonGlyph(c, uv); // (1: a dash of the outline)
     float r = 0.26;
     float core = 1.0 - smoothstep(r * 0.3, r, d);
     float g = max(d - r * 0.5, 0.0);

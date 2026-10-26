@@ -1,7 +1,8 @@
 #version 150
 
 // Shadered+'s music visualizer (our own code): the music's 16 bands (bass to treble) as glowing LED bars with
-// falling peak caps, as bars mirrored from the middle, or as a scrolling spectrum; gently breathing when it's quiet.
+// falling peak caps, as bars mirrored from the middle, as a scrolling spectrum, as a ring of bars round a pulsing
+// circle, or as glowing waves; gently breathing when it's quiet.
 
 in vec2 uv;
 in vec4 vColor;
@@ -48,11 +49,13 @@ vec3 hue(float h) {
 
 void main() {
     int ia = int(vColor.a * 255.0 + 0.5);
-    int mode = ia / 64;
-    float w = max(float(ia - mode * 64), 1.0);
+    int mode = ia / 32;
+    float w = floor(uv.x / 2.0), hgt = floor(uv.y / 2.0);
+    vec2 p = vec2(uv.x - 2.0 * w, uv.y - 2.0 * hgt);
+    w = max(w, 1.0);
+    hgt = max(hgt, 1.0);
     bool rainbow = dot(vColor.rgb, vec3(1.0)) < 0.004;
     float t = VisTime;
-    vec2 p = uv;
     // the screen: nearly black glass with a faint grid
     vec3 col = vec3(0.012, 0.014, 0.02);
     vec2 grid = abs(fract(p * vec2(w * 8.0, 24.0)) - 0.5);
@@ -65,6 +68,42 @@ void main() {
         vec3 base = rainbow ? hue(p.y * 0.8 + t * 0.03) : vColor.rgb;
         vec3 heat = v < 0.5 ? base * v * 2.0 : mix(base, vec3(1.0), (v - 0.5) * 1.4);
         col += heat * 1.2;
+    } else if (mode == 3) {
+        // a ring of bars round a circle that swells with the bass (bass at the top, treble at the bottom, both sides)
+        vec2 q = (p - 0.5) * vec2(w, hgt);
+        float R = 0.5 * min(w, hgt);
+        float r = length(q) / R;
+        float ang = atan(q.x, q.y);                       // (0 at the top)
+        float f = abs(ang) / 3.14159;
+        float n = 40.0;
+        float i = floor(f * n);
+        float within = fract(f * n);
+        float fb = (i + 0.5) / n;
+        float v = level(fb, t);
+        float bass = level(0.03, t);
+        float r0 = 0.34 + 0.06 * bass;
+        vec3 base = rainbow ? hue(fb * 0.85 + t * 0.05) : vColor.rgb;
+        float bar = step(0.18, within) * step(within, 0.82);
+        if (r > r0 + 0.02 && r < r0 + 0.02 + v * 0.6) {
+            col = mix(col, mix(base, vec3(1.0), smoothstep(0.3, 0.6, r - r0) * 0.5) * 1.3, bar);
+        }
+        float ring = 1.0 - smoothstep(0.0, 0.025, abs(r - r0));
+        vec3 ringCol = rainbow ? hue(t * 0.05) : vColor.rgb;
+        col += mix(ringCol, vec3(1.0), 0.4) * ring * (0.7 + 0.8 * bass);
+        col += ringCol * 0.18 * exp(-max(r0 - r, 0.0) * 12.0) * step(r, r0) * bass; // (a glow inside the circle)
+    } else if (mode == 4) {
+        // glowing waves: bass, middle and treble as three lines rippling across the screen
+        vec2 q = p * vec2(w, hgt);
+        for (int k = 0; k < 3; k++) {
+            float fk = float(k);
+            float amp = level(fk * 0.4 + 0.05, t) * hgt * 0.32;
+            float freq = (1.2 + fk * 1.3) * 2.094; // (waves per block)
+            float yk = hgt * (0.5 + (fk - 1.0) * 0.12)
+                     + amp * sin(q.x * freq - t * (1.5 + fk)) * (0.6 + 0.4 * sin(q.x * freq * 0.37 + t * 0.7 + fk));
+            float d = abs(q.y - yk);
+            vec3 base = rainbow ? hue(fk * 0.33 + q.x * 0.05 / w + t * 0.05) : mix(vColor.rgb, vec3(1.0), fk * 0.2);
+            col += base * (1.0 - smoothstep(0.0, 0.03, d)) * 1.2 + base * 0.35 * exp(-d * 9.0);
+        }
     } else {
         float n = min(w * 6.0, 96.0);
         float fx = p.x;
@@ -90,7 +129,6 @@ void main() {
         float cap = bar * (1.0 - smoothstep(0.0, 0.018, abs(y - pk - 0.02)));
         col += mix(base, vec3(1.0), 0.5) * cap * 1.2;
         col += base * bar * 0.35 * exp(-max(y - v, 0.0) * 22.0) * step(v, y);
-        // a soft reflection-like glow under the screen's bottom edge
         col += base * 0.05 * exp(-y * 6.0) * v;
     }
     fragColor = vec4(col, 1.0);

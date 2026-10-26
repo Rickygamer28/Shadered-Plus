@@ -306,6 +306,173 @@ vec4 padAt(vec2 q, float t) {
     return vec4(0.0);
 }
 
+// ---- visitors: now and then a duck or two drops in for a while, or a turtle swims through ----
+
+// a wandering path over the pond (like the koi's), its own speed
+void wander(float seed, float reach, float speed, float t, out vec2 pos, out vec2 dir) {
+    vec2 h = hash22(pondLo * 1.7 + pondHi * 0.9 + seed), h2 = hash22(pondLo * 0.3 + seed * 3.1 + 2.2);
+    vec2 lo = pondLo + 0.125 + reach, hi = pondHi - 0.125 - reach;
+    vec2 mid = (pondLo + pondHi) * 0.5;
+    lo = min(lo, mid);
+    hi = max(hi, mid);
+    vec2 hs = (hi - lo) * 0.5;
+    vec2 f = (speed + 0.03 * h) / max(hs, vec2(0.6));
+    vec2 ph = h2 * 6.2832;
+    vec2 u = vec2(0.62 * sin(t * f.x + ph.x) + 0.38 * sin(t * f.x * 1.61 + ph.y), 0.62 * sin(t * f.y * 1.13 + ph.y) + 0.38 * sin(t * f.y * 1.87 + ph.x));
+    vec2 v = vec2(0.62 * f.x * cos(t * f.x + ph.x) + 0.38 * f.x * 1.61 * cos(t * f.x * 1.61 + ph.y),
+                  0.62 * f.y * 1.13 * cos(t * f.y * 1.13 + ph.y) + 0.38 * f.y * 1.87 * cos(t * f.y * 1.87 + ph.x)) * hs;
+    pos = lo + hs + hs * u;
+    dir = length(v) > 1e-5 ? normalize(v) : vec2(1.0, 0.0);
+}
+
+// duck d (0 or 1): is it here now, and how high above the water (landing / taking off) and its kind
+bool duckHere(int d, float t, out float height, out float kind) {
+    float ph = t / 140.0 + hash22(pondLo + pondHi * 1.3).x * 7.0;
+    float e = floor(ph), te = fract(ph) * 140.0;
+    vec2 h = hash22(pondLo * 0.71 + pondHi * 0.37 + e * 3.3 + float(d) * 17.0);
+    vec2 size = pondHi - pondLo;
+    bool visit = hash22(pondLo * 0.71 + pondHi * 0.37 + e * 3.3).x < 0.55 && (d == 0 || size.x * size.y >= 8.0);
+    kind = step(0.5, h.y);
+    float tin = 8.0 + float(d) * 1.5, tout = 108.0 - float(d) * 2.0;
+    height = te < tin + 2.0 ? (tin + 2.0 - te) * 0.45 : te > tout - 2.0 ? (te - tout + 2.0) * 0.45 : 0.0;
+    return visit && te > tin && te < tout;
+}
+
+float duckSDF(vec3 p, out int mat) {
+    vec3 q = vec3(abs(p.x), p.y, p.z);
+    float d = sdEllipsoid(p - vec3(0.0, 0.7, 0.0), vec3(1.7, 1.25, 2.7));
+    d = smin(d, sdEllipsoid(p - vec3(0.0, 1.5, -2.3), vec3(0.9, 0.6, 0.9)), 0.6);
+    d = smin(d, sdEllipsoid(p - vec3(0.0, 2.0, 1.6), vec3(0.75, 1.3, 0.75)), 0.5);
+    d = smin(d, length(p - vec3(0.0, 3.1, 2.0)) - 1.0, 0.4);
+    mat = 0;
+    float bill = sdEllipsoid(p - vec3(0.0, 2.85, 3.15), vec3(0.42, 0.2, 0.8));
+    if (bill < d) { d = bill; mat = 1; }
+    float eye = length(q - vec3(0.72, 3.3, 2.45)) - 0.17;
+    if (eye < d) { d = eye; mat = 2; }
+    return d;
+}
+
+// a duck in front of the surface point: (colour, 0/1); ripple: rings on the water round it
+vec4 duckHit(vec3 p0, vec3 rd, float t, float light, out float ripple) {
+    ripple = 0.0;
+    vec4 res = vec4(0.0);
+    for (int dk = 0; dk < 2; dk++) {
+        float height, kind;
+        if (!duckHere(dk, t, height, kind)) continue;
+        vec2 pos, dir;
+        wander(40.0 + float(dk) * 11.0, 0.3, 0.07, t, pos, dir);
+        float dist = length(p0.xz - pos);
+        if (height <= 0.0) ripple += sin(dist * 110.0 - t * 5.0) * exp(-dist * 9.0) * 0.06;
+        if (rd.y > -0.04 || res.a > 0.0) continue;
+        float bob = 0.012 * sin(t * 1.7 + float(dk));
+        float base = SURF + height + bob;
+        float up = 0.32 + height;
+        vec3 pTop = p0 - rd * (up / -rd.y);
+        vec2 ab = p0.xz - pTop.xz;
+        float w = clamp(dot(pos - pTop.xz, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
+        if (length(pTop.xz + ab * w - pos) > 0.3) continue;
+        float sc = 16.0 / 0.85;
+        vec2 right = vec2(dir.y, -dir.x);
+        vec3 ro = vec3(dot(pTop.xz - pos, right), pTop.y - base, dot(pTop.xz - pos, dir)) * sc;
+        vec3 rr = vec3(dot(rd.xz, right), rd.y, dot(rd.xz, dir));
+        float tm = 0.0, tEnd = length(p0 - pTop) * sc;
+        for (int n = 0; n < 48; n++) {
+            vec3 q = ro + rr * tm;
+            int mat;
+            float f = duckSDF(q, mat);
+            if (f < 0.02) {
+                vec2 e = vec2(0.03, 0.0);
+                int m2;
+                vec3 nn = normalize(vec3(duckSDF(q + e.xyy, m2) - duckSDF(q - e.xyy, m2), duckSDF(q + e.yxy, m2) - duckSDF(q - e.yxy, m2),
+                                         duckSDF(q + e.yyx, m2) - duckSDF(q - e.yyx, m2)));
+                vec3 sun = normalize(vec3(dot(SUN.xz, right), SUN.y, dot(SUN.xz, dir)));
+                float lam = 0.45 + 0.55 * max(dot(nn, sun), 0.0);
+                vec3 col;
+                if (mat == 2) {
+                    col = vec3(0.03) + vec3(0.8) * pow(max(dot(reflect(rr, nn), sun), 0.0), 30.0);
+                } else if (mat == 1) {
+                    col = kind < 0.5 ? vec3(0.92, 0.78, 0.22) : vec3(0.85, 0.5, 0.15);
+                    col *= lam;
+                } else if (kind < 0.5) { // a drake: green head, white collar, chestnut breast, grey sides, a blue wing patch
+                    if (q.y > 2.35 && q.z > 1.0) col = vec3(0.05, 0.36, 0.16) + vec3(0.25) * pow(max(dot(reflect(rr, nn), sun), 0.0), 16.0);
+                    else if (abs(q.y - 2.2) < 0.13 && q.z > 1.0) col = vec3(0.95);
+                    else if (q.z > 0.9 && q.y < 2.3) col = vec3(0.45, 0.22, 0.12);
+                    else if (q.z < -1.8) col = q.y > 1.6 ? vec3(0.05) : vec3(0.9);
+                    else col = (abs(q.x) > 1.2 && abs(q.z + 0.6) < 0.5 && q.y > 1.0) ? vec3(0.15, 0.25, 0.7) : vec3(0.62, 0.62, 0.58);
+                    col *= lam;
+                } else { // a hen: mottled browns
+                    col = mix(vec3(0.5, 0.37, 0.22), vec3(0.3, 0.2, 0.12), step(0.62, noise2(q.xz * 2.3 + q.y * 1.7)));
+                    if (q.y > 2.4 && q.z > 1.0) col = vec3(0.55, 0.42, 0.28);
+                    col *= lam;
+                }
+                res = vec4(col * light, 1.0);
+                break;
+            }
+            tm += max(f * 0.9, 0.05);
+            if (tm > tEnd) break;
+        }
+    }
+    return res;
+}
+
+// the turtle: is it here now (how much: it fades in from the murk and away again)
+float turtleHere(float t) {
+    float ph = t / 190.0 + hash22(pondLo * 2.3 + pondHi).y * 5.0;
+    float e = floor(ph), te = fract(ph) * 190.0;
+    vec2 size = pondHi - pondLo;
+    if (hash22(pondLo * 1.9 + pondHi * 0.4 + e * 5.7).x > 0.5 || size.x * size.y < 4.0) return 0.0;
+    return smoothstep(10.0, 15.0, te) * (1.0 - smoothstep(155.0, 160.0, te));
+}
+
+// a turtle at q (world x, z), swimming in the middle layer: (colour, how much it covers)
+vec4 turtleAt(vec2 q, float t, bool body) {
+    float here = turtleHere(t);
+    if (here <= 0.0) return vec4(0.0);
+    vec2 pos, dir;
+    wander(77.0, 0.28, 0.05, t, pos, dir);
+    vec2 d = q - pos;
+    if (dot(d, d) > 0.09) return vec4(0.0);
+    float s = dot(d, dir), side = dot(d, vec2(-dir.y, dir.x));
+    vec3 skin = vec3(0.42, 0.48, 0.3);
+    // the shell
+    vec2 e = vec2(s / 0.15, side / 0.115);
+    float r = dot(e, e);
+    if (r < 1.0) {
+        if (body) return vec4(0.0, 0.0, 0.0, here);
+        vec2 g = vec2(s, side) * 32.0;
+        vec2 id = floor(g), fq = fract(g);
+        float d1 = 9.0, d2 = 9.0;
+        for (int j = -1; j <= 1; j++) {
+            for (int i = -1; i <= 1; i++) {
+                vec2 o = vec2(i, j);
+                float dd = length(fq - (o + 0.5 + 0.3 * (hash22(id + o) - 0.5)));
+                if (dd < d1) { d2 = d1; d1 = dd; } else if (dd < d2) { d2 = dd; }
+            }
+        }
+        vec3 col = mix(vec3(0.24, 0.28, 0.13), vec3(0.38, 0.4, 0.2), 0.5 + 0.5 * noise2(g * 0.4));
+        col *= 0.65 + 0.35 * smoothstep(0.0, 0.15, d2 - d1);          // (the scutes' seams)
+        col = mix(col, vec3(0.55, 0.5, 0.3), smoothstep(0.75, 1.0, r)); // (a paler rim)
+        col *= 0.75 + 0.25 * (1.0 - r);
+        return vec4(col, here);
+    }
+    // the head
+    if (length(vec2((s - 0.19) / 0.05, side / 0.034)) < 1.0) return body ? vec4(0.0, 0.0, 0.0, here) : vec4(skin * (side * side < 0.0002 ? 1.1 : 1.0), here);
+    if (body) return vec4(0.0);
+    // flippers, paddling: the front pair long and sweeping, the back pair small
+    float stroke = sin(t * 2.4);
+    for (int k = 0; k < 2; k++) {
+        float sgn = k == 0 ? 1.0 : -1.0;
+        vec2 f = vec2(s - 0.07, side * sgn - 0.11);
+        float a = 0.5 + 0.55 * stroke;
+        f = mat2(cos(a), sin(a), -sin(a), cos(a)) * f;
+        if (length(vec2((f.x + 0.0) / 0.035, (f.y - 0.05) / 0.08)) < 1.0) return vec4(skin * 0.9, here);
+        vec2 b = vec2(s + 0.12, side * sgn - 0.085);
+        if (length(vec2(b.x / 0.035, b.y / 0.045)) < 1.0) return vec4(skin * 0.85, here);
+    }
+    if (length(vec2((s + 0.17) / 0.04, side / 0.015)) < 1.0) return vec4(skin * 0.85, here);
+    return vec4(0.0);
+}
+
 float caustics(vec2 p, float t) {
     float a = sin(p.x * 31.0 + t * 0.9 + 2.0 * sin(p.y * 17.0 + t * 1.3));
     float b = sin(p.y * 29.0 - t * 0.8 + 2.0 * sin(p.x * 13.0 - t * 1.1));
@@ -332,6 +499,13 @@ void main() {
     vec4 frog = frogHit(p0, rd, t, light);
     if (frog.a > 0.0) {
         fragColor = vec4(frog.rgb, 1.0);
+        return;
+    }
+    // a duck (now and then one or two drop in for a while)
+    float ripple;
+    vec4 duck = duckHit(p0, rd, t, light, ripple);
+    if (duck.a > 0.0) {
+        fragColor = vec4(duck.rgb, 1.0);
         return;
     }
     // a lily pad here: it floats on top
@@ -386,6 +560,7 @@ void main() {
         for (int L = 0; L < 3; L++) {
             vec2 sp = ph.xz + SUN.xz * (layerY(L) - ph.y);
             if (koiLayer(sp, L, t, true).a > 0.0) sh *= 0.62;
+            if (L == 1) sh *= 1.0 - 0.4 * turtleAt(sp, t, true).a;
         }
         if (padAt(ph.xz + SUN.xz * (SURF - ph.y), t).a > 0.0) sh *= 0.5;
         bg *= sh * light;
@@ -406,7 +581,8 @@ void main() {
         float tl = (layerY(L) - SURF) / rr.y;
         if (tl > tHit) break;
         vec2 q = p0.xz + rr.xz * tl;
-        vec4 k = koiLayer(q, L, t, false);
+        vec4 k = L == 1 ? turtleAt(q, t, false) : vec4(0.0);
+        if (k.a <= 0.0) k = koiLayer(q, L, t, false);
         if (k.a > 0.0) {
             vec3 kc = mix(k.rgb * light, water, 1.0 - exp(-tl * 2.6));
             acc += (1.0 - accA) * k.a * kc;
@@ -423,5 +599,6 @@ void main() {
                    smoothstep(0.0, 0.8, rf.y));
     vec3 col = mix(under, sky, fres);
     col += vec3(1.0, 0.95, 0.85) * pow(max(dot(rf, normalize(SUN)), 0.0), 160.0) * day * 0.7;
+    col += vec3(0.8, 0.9, 0.9) * ripple * light; // (rings round a swimming duck)
     fragColor = vec4(col, 1.0);
 }

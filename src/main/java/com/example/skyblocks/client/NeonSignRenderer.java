@@ -91,8 +91,50 @@ public class NeonSignRenderer implements BlockEntityRenderer<NeonSignBlockEntity
                 yield (float) (stutter && h < 0.45 ? 0.12 + 0.3 * h : 1.0);
             }
             case NeonSignBlockEntity.PULSE -> (float) (0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * 2.2 + seed)));
+            case NeonSignBlockEntity.BLINK -> (float) (0.06 + 0.94 * smooth(-0.15, 0.15, Math.sin(t * 3.0 + seed)));
             default -> 1.0F;
         };
+    }
+
+    private static double smooth(double a, double b, double x) {
+        double k = Math.max(0.0, Math.min(1.0, (x - a) / (b - a)));
+        return k * k * (3.0 - 2.0 * k);
+    }
+
+    /** How many signs facing the same way carry on from this one in a direction (the joined panel's reach). */
+    private static int reach(NeonSignBlockEntity sign, Direction d) {
+        var level = sign.getLevel();
+        if (level == null) {
+            return 0;
+        }
+        Direction f = sign.getBlockState().getValue(NeonSignBlock.FACING);
+        int n = 0;
+        net.minecraft.core.BlockPos p = sign.getBlockPos().relative(d);
+        while (n < 32) {
+            var st = level.getBlockState(p);
+            if (!(st.getBlock() instanceof NeonSignBlock) || st.getValue(NeonSignBlock.FACING) != f) {
+                break;
+            }
+            n++;
+            p = p.relative(d);
+        }
+        return n;
+    }
+
+    /** A rounded dash of tube (code 1 in the shader), from its middle (cx, cy), along x or along y. */
+    private static void dash(VertexConsumer vc, Matrix4f m, float cx, float cy, boolean vertical, int r, int g, int b) {
+        float L = 1.0F + MARGIN, M = MARGIN;
+        if (!vertical) {
+            vc.addVertex(m, cx - L, cy - M, 0.0F).setUv(-L, -M).setColor(r, g, b, 1);
+            vc.addVertex(m, cx + L, cy - M, 0.0F).setUv(L, -M).setColor(r, g, b, 1);
+            vc.addVertex(m, cx + L, cy + M, 0.0F).setUv(L, M).setColor(r, g, b, 1);
+            vc.addVertex(m, cx - L, cy + M, 0.0F).setUv(-L, M).setColor(r, g, b, 1);
+        } else {
+            vc.addVertex(m, cx - M, cy - L, 0.0F).setUv(-L, -M).setColor(r, g, b, 1);
+            vc.addVertex(m, cx + M, cy - L, 0.0F).setUv(-L, M).setColor(r, g, b, 1);
+            vc.addVertex(m, cx + M, cy + L, 0.0F).setUv(L, M).setColor(r, g, b, 1);
+            vc.addVertex(m, cx - M, cy + L, 0.0F).setUv(L, -M).setColor(r, g, b, 1);
+        }
     }
 
     @Override
@@ -119,25 +161,89 @@ public class NeonSignRenderer implements BlockEntityRenderer<NeonSignBlockEntity
         poseStack.scale(u, u, u);
         Matrix4f m = poseStack.last().pose();
         VertexConsumer vc = buffers.getBuffer(Types.NEON);
+        int mode = sign.mode();
         float total = lines.length * LINE;
+        float widest = 0.0F;
+        int chars = 0;
+        for (String line : lines) {
+            widest = Math.max(widest, lineWidth(line));
+            chars += line.length();
+        }
+        // scrolling: the text runs right to left across the whole row of joined signs (fading in and out at its ends)
+        boolean scroll = mode == NeonSignBlockEntity.SCROLL;
+        float winL = -(reach(sign, facing.getClockWise()) + 0.47F) / u, winR = (reach(sign, facing.getCounterClockWise()) + 0.47F) / u;
+        float shift = 0.0F;
+        if (scroll) {
+            float span = widest + (winR - winL) + 6.0F;
+            shift = (float) (winR + 3.0F + widest * 0.5F - (t * 9.0) % span);
+        }
+        // typing: the letters come on one at a time, stay a while, blink twice, and it starts again
+        int shown = Integer.MAX_VALUE;
+        float typeBright = 1.0F;
+        if (mode == NeonSignBlockEntity.TYPING) {
+            double per = 0.14, hold = 2.6, cycle = chars * per + hold + 1.2;
+            double ph = t % cycle;
+            shown = (int) Math.floor(ph / per);
+            if (ph > chars * per + hold) {
+                typeBright = Math.sin((ph - chars * per - hold) * Math.PI * 2.0 / 0.6) > 0.0 ? 1.0F : 0.08F;
+            }
+        }
+        int index = 0;
         for (int li = 0; li < lines.length; li++) {
             String line = lines[li];
-            float x = -lineWidth(line) * 0.5F;
+            float x = -lineWidth(line) * 0.5F + shift;
             float base = total * 0.5F - (li + 1) * LINE + 2.5F; // (each line's baseline, the block centred)
-            for (int ci = 0; ci < line.length(); ci++) {
+            for (int ci = 0; ci < line.length(); ci++, index++) {
                 char c = line.charAt(ci);
                 float w = width(c);
-                if (c != ' ' && c < 128) {
+                if (c != ' ' && c < 128 && index < shown) {
                     int col = sign.colour();
-                    if (sign.mode() == NeonSignBlockEntity.RAINBOW) {
+                    if (mode == NeonSignBlockEntity.RAINBOW) {
                         col = Mth.hsvToRgb((float) ((t * 0.12 + (li * 7 + ci) * 0.06) % 1.0), 0.9F, 1.0F);
                     }
-                    int r = (int) (((col >> 16) & 255) * bright), g = (int) (((col >> 8) & 255) * bright), b = (int) ((col & 255) * bright);
-                    float gw = w - GAP;
-                    float x0 = -MARGIN, x1 = gw + MARGIN, y0 = -2.0F - MARGIN, y1 = 6.5F + MARGIN;
-                    quad(vc, m, x + x0, base + y0, x + x1, base + y1, x0, y0, x1, y1, r, g, b, c);
+                    float k = bright * typeBright;
+                    if (scroll) {
+                        float mid = x + w * 0.5F;
+                        k *= (float) (smooth(winL, winL + 4.0, mid) * smooth(winR, winR - 4.0, mid));
+                    }
+                    if (k > 0.01F) {
+                        int r = (int) (((col >> 16) & 255) * k), g = (int) (((col >> 8) & 255) * k), b = (int) ((col & 255) * k);
+                        float gw = w - GAP;
+                        float x0 = -MARGIN, x1 = gw + MARGIN, y0 = -2.0F - MARGIN, y1 = 6.5F + MARGIN;
+                        quad(vc, m, x + x0, base + y0, x + x1, base + y1, x0, y0, x1, y1, r, g, b, c);
+                    }
                 }
                 x += w;
+            }
+        }
+        // the outline: a frame of tube dashes round the text, lights chasing round it like a marquee
+        if (sign.outline()) {
+            float hw = scroll ? (winR - winL) * 0.5F - 1.5F : widest * 0.5F + 3.5F;
+            float cxm = scroll ? (winR + winL) * 0.5F : 0.0F;
+            float hh = total * 0.5F + 2.2F;
+            float step = 3.2F;
+            int nx = Math.max(1, Math.round(2 * hw / step)), ny = Math.max(1, Math.round(2 * hh / step));
+            float sx = 2 * hw / nx, sy = 2 * hh / ny;
+            int col0 = sign.colour();
+            int k = 0;
+            int chase = (int) Math.floor(t * 7.0);
+            int perim = 2 * (nx + ny);
+            for (int side = 0; side < 4; side++) {
+                int n = side % 2 == 0 ? nx : ny;
+                for (int i = 0; i < n; i++, k++) {
+                    float x, y;
+                    boolean vertical = side % 2 == 1;
+                    switch (side) {
+                        case 0 -> { x = cxm - hw + (i + 0.5F) * sx; y = hh; }
+                        case 1 -> { x = cxm + hw; y = hh - (i + 0.5F) * sy; }
+                        case 2 -> { x = cxm + hw - (i + 0.5F) * sx; y = -hh; }
+                        default -> { x = cxm - hw; y = -hh + (i + 0.5F) * sy; }
+                    }
+                    int col = mode == NeonSignBlockEntity.RAINBOW ? Mth.hsvToRgb((float) ((t * 0.12 + k / (float) perim) % 1.0), 0.9F, 1.0F) : col0;
+                    float lit = Math.floorMod(k - chase, 3) == 0 ? 1.0F : 0.28F;
+                    float kk = lit * (mode == NeonSignBlockEntity.TYPING ? 1.0F : bright);
+                    dash(vc, m, x, y, vertical, (int) (((col >> 16) & 255) * kk), (int) (((col >> 8) & 255) * kk), (int) ((col & 255) * kk));
+                }
             }
         }
         poseStack.popPose();
@@ -153,6 +259,6 @@ public class NeonSignRenderer implements BlockEntityRenderer<NeonSignBlockEntity
 
     @Override
     public boolean shouldRenderOffScreen(NeonSignBlockEntity sign) {
-        return sign.size() > 2; // (big text reaches past its block)
+        return sign.size() > 2 || sign.outline() || sign.mode() == NeonSignBlockEntity.SCROLL; // (reaching past its block)
     }
 }

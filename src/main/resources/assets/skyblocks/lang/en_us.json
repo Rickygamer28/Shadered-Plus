@@ -186,11 +186,18 @@
   "block.skyblocks.hologram_projector": "Hologram Projector",
   "block.skyblocks.jellyfish_tank": "Jellyfish Tank",
   "block.skyblocks.koi_pond": "Koi Pond",
-  "tooltip.skyblocks.visualizer": "Dances to music nearby. Join screens side by side and stacked. Right-click: next look. Dye: colour. Sneak + right-click: rainbow",
+  "tooltip.skyblocks.visualizer": "Dances to music nearby. Join screens side by side and stacked. Right-click: next look (5). Dye: colour. Sneak + right-click: rainbow",
   "tooltip.skyblocks.hologram_projector": "Right-click with any item to project it. Empty hand: clear. Sneak + right-click: size. Dye: colour",
   "tooltip.skyblocks.jellyfish_tank": "2 tall. Right-click: light on / off. Dye: jellyfish colour. Sneak + right-click: RGB",
   "tooltip.skyblocks.koi_pond": "Koi and lily pads. Ponds side by side join into one",
   "message.skyblocks.visualizer_bars": "Bars",
   "message.skyblocks.visualizer_middle": "Bars from the middle",
-  "message.skyblocks.visualizer_spectrum": "Spectrum"
+  "message.skyblocks.visualizer_spectrum": "Spectrum",
+  "message.skyblocks.visualizer_circle": "Ring",
+  "message.skyblocks.visualizer_waves": "Waves",
+  "screen.skyblocks.neon_mode_scroll": "Glow: Scrolling",
+  "screen.skyblocks.neon_mode_typing": "Glow: Typing",
+  "screen.skyblocks.neon_mode_blink": "Glow: Blinking",
+  "screen.skyblocks.neon_outline_on": "Outline: On",
+  "screen.skyblocks.neon_outline_off": "Outline: Off"
 }

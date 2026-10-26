@@ -42,7 +42,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A music visualizer: a screen on the wall dancing to the music playing nearby (client/MusicReactor). Screens side
  * by side and stacked join into one big screen. Right-click: the next look (bars, bars from the middle, a scrolling
- * spectrum); with a dye: its colour; sneak + right-click: rainbow. Drawn by client/VisualizerRenderer.
+ * spectrum, a ring of bars, glowing waves); with a dye: its colour; sneak + right-click: rainbow. Drawn by client/VisualizerRenderer.
  */
 public class VisualizerBlock extends BaseEntityBlock {
     public static final MapCodec<VisualizerBlock> CODEC = simpleCodec(VisualizerBlock::new);
@@ -51,8 +51,8 @@ public class VisualizerBlock extends BaseEntityBlock {
     public static final BooleanProperty RIGHT = BooleanProperty.create("right");
     public static final BooleanProperty UP = BooleanProperty.create("up");
     public static final BooleanProperty DOWN = BooleanProperty.create("down");
-    public static final IntegerProperty MODE = IntegerProperty.create("mode", 0, 2);
-    private static final String[] MODES = {"bars", "middle", "spectrum"};
+    public static final IntegerProperty MODE = IntegerProperty.create("mode", 0, 4);
+    private static final String[] MODES = {"bars", "middle", "spectrum", "circle", "waves"};
 
     public VisualizerBlock(Properties properties) {
         super(properties);
@@ -193,7 +193,7 @@ public class VisualizerBlock extends BaseEntityBlock {
                 }
                 player.displayClientMessage(Component.translatable("message.skyblocks.rgb_on").withStyle(ChatFormatting.LIGHT_PURPLE), true);
             } else {
-                int mode = (state.getValue(MODE) + 1) % 3;
+                int mode = (state.getValue(MODE) + 1) % MODES.length;
                 for (BlockPos p : all) {
                     level.setBlock(p, level.getBlockState(p).setValue(MODE, mode), Block.UPDATE_CLIENTS);
                 }

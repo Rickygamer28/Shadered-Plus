@@ -12,12 +12,15 @@ import org.jetbrains.annotations.Nullable;
 /** A neon sign's text ('|' starts a new line), colour, how it glows (steady, flicker, pulse, rainbow) and its size. */
 public class NeonSignBlockEntity extends BlockEntity {
     public static final int MAX_LENGTH = 40;
-    public static final int STEADY = 0, FLICKER = 1, PULSE = 2, RAINBOW = 3, MODES = 4;
+    public static final int STEADY = 0, FLICKER = 1, PULSE = 2, RAINBOW = 3, SCROLL = 4, TYPING = 5, BLINK = 6, MODES = 7;
+    /** (In the packet: the mode plus this when the chasing outline is on.) */
+    public static final int OUTLINE_BIT = 16;
     public static final int MAX_SIZE = 6;
 
     private String text = "OPEN";
     private int colour = 0xFF3FD0;
     private int mode = STEADY;
+    private boolean outline;
     private int size = 2;
     /** The panel's colour (the whole joined panel shares it). */
     private int background = DEFAULT_BACKGROUND;
@@ -30,6 +33,7 @@ public class NeonSignBlockEntity extends BlockEntity {
     public String text() { return text; }
     public int colour() { return colour; }
     public int mode() { return mode; }
+    public boolean outline() { return outline; }
     public int size() { return size; }
     public int background() { return background; }
 
@@ -45,7 +49,8 @@ public class NeonSignBlockEntity extends BlockEntity {
         String t = text == null ? "" : text;
         this.text = t.length() > MAX_LENGTH ? t.substring(0, MAX_LENGTH) : t;
         this.colour = colour & 0xFFFFFF;
-        this.mode = Math.floorMod(mode, MODES);
+        this.outline = (mode & OUTLINE_BIT) != 0;
+        this.mode = Math.floorMod(mode & (OUTLINE_BIT - 1), MODES);
         this.size = Math.max(1, Math.min(MAX_SIZE, size));
         setChanged();
         if (level != null) {
@@ -59,6 +64,7 @@ public class NeonSignBlockEntity extends BlockEntity {
         tag.putString("text", text);
         tag.putInt("colour", colour);
         tag.putInt("mode", mode);
+        tag.putBoolean("outline", outline);
         tag.putInt("size", size);
         tag.putInt("background", background);
     }
@@ -70,6 +76,7 @@ public class NeonSignBlockEntity extends BlockEntity {
             text = tag.getString("text");
             colour = tag.getInt("colour") & 0xFFFFFF;
             mode = Math.floorMod(tag.getInt("mode"), MODES);
+            outline = tag.getBoolean("outline");
             size = Math.max(1, Math.min(MAX_SIZE, tag.getInt("size")));
             int before = background;
             background = tag.contains("background") ? tag.getInt("background") & 0xFFFFFF : DEFAULT_BACKGROUND;
