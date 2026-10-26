@@ -15,7 +15,6 @@ public class AquariumScreen extends Screen {
     private static final int COLS = 3;
     private static final int BTN_W = 124;
     private static final int PANEL_W = COLS * (BTN_W + 4) + 20;
-    private static final int PANEL_H = 214;
 
     private final boolean ocean;
 
@@ -24,12 +23,17 @@ public class AquariumScreen extends Screen {
         this.ocean = ocean;
     }
 
+    /** As tall as its rows of buttons need (the ocean aquarium has more kinds). */
+    private int panelH() {
+        return 24 + (kinds().length + COLS - 1) / COLS * 23 + 75;
+    }
+
     private int left() {
         return (width - PANEL_W) / 2;
     }
 
     private int top() {
-        return (height - PANEL_H) / 2;
+        return (height - panelH()) / 2;
     }
 
     private int[] kinds() {
@@ -72,7 +76,7 @@ public class AquariumScreen extends Screen {
             }
             addRenderableWidget(b);
         }
-        int y = top() + PANEL_H - 28;
+        int y = top() + panelH() - 28;
         addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.aquarium_all_on"), b -> setAll(true))
                 .bounds(left() + 12, y, 76, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.aquarium_all_off"), b -> setAll(false))
@@ -106,14 +110,14 @@ public class AquariumScreen extends Screen {
 
     @Override
     public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.fill(left(), top(), left() + PANEL_W, top() + PANEL_H, 0xC0101018);
+        graphics.fill(left(), top(), left() + PANEL_W, top() + panelH(), 0xC0101018);
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(font, title, left() + PANEL_W / 2, top() + 9, 0xFFFFFF);
-        graphics.drawCenteredString(font, Component.translatable("screen.skyblocks.aquarium_hint"), left() + PANEL_W / 2, top() + PANEL_H - 44, 0xA0A0A0);
+        graphics.drawCenteredString(font, Component.translatable("screen.skyblocks.aquarium_hint"), left() + PANEL_W / 2, top() + panelH() - 44, 0xA0A0A0);
     }
 
     @Override

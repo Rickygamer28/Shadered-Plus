@@ -46,8 +46,13 @@ public final class VanillaAquariumRenderer {
     /** Each kind of the aquariums' creatures (0-25): its blocky model, or null for the game's own. */
     private static final String[] MODEL = {"clownfish", "blue_tang", "yellow_tang", "neon_tetra", "angelfish", "goldfish", "betta", null,
             "guppy", "discus", "shark", "tuna", "manta_ray", null, "grouper", "jellyfish", null, "sardine", "ocean_sunfish", "basking_shark",
-            "hermit_crab", "crab", "stingray", "octopus", "lobster", "shrimp"};
+            "hermit_crab", "crab", "stingray", "octopus", "lobster", "shrimp", null, null, null, null, null, null, null};
     private static final int PUFFERFISH = 7, SEA_TURTLE = 13, DOLPHIN = 16, MANTA = 12, JELLYFISH = 15, STINGRAY = 22;
+    private static final int COD = 26, SALMON = 27, TROPICAL = 28, TADPOLE = 29, SQUID = 30, GLOW_SQUID = 31, AXOLOTL = 32;
+    private static final String[] AXOLOTL_TEX = {"lucy", "wild", "gold", "cyan", "blue"};
+    /** The sixteen dye colours (a tropical fish's body and pattern colours). */
+    private static final int[] DYES = {0xF9FFFE, 0xF9801D, 0xC74EBD, 0x3AB3DA, 0xFED83D, 0x80C71F, 0xF38BAA, 0x474F52,
+            0x9D9D97, 0x169C9C, 0x8932B8, 0x3C44AA, 0x835432, 0x5E7C16, 0xB02E26, 0x1D1D21};
 
     private static final ResourceLocation PUFFER_TEX = mc("textures/entity/fish/pufferfish.png"),
             TURTLE_TEX = mc("textures/entity/turtle/big_sea_turtle.png"), DOLPHIN_TEX = mc("textures/entity/dolphin.png");
@@ -65,7 +70,11 @@ public final class VanillaAquariumRenderer {
         if (models == null) {
             models = new HashMap<>();
             var set = Minecraft.getInstance().getEntityModels();
-            Object[][] layers = {{"puffer", ModelLayers.PUFFERFISH_SMALL}, {"turtle", ModelLayers.TURTLE}, {"dolphin", ModelLayers.DOLPHIN}};
+            Object[][] layers = {{"puffer", ModelLayers.PUFFERFISH_SMALL}, {"turtle", ModelLayers.TURTLE}, {"dolphin", ModelLayers.DOLPHIN},
+                    {"cod", ModelLayers.COD}, {"salmon", ModelLayers.SALMON}, {"tropical_a", ModelLayers.TROPICAL_FISH_SMALL},
+                    {"tropical_b", ModelLayers.TROPICAL_FISH_LARGE}, {"tropical_a_pattern", ModelLayers.TROPICAL_FISH_SMALL_PATTERN},
+                    {"tropical_b_pattern", ModelLayers.TROPICAL_FISH_LARGE_PATTERN}, {"tadpole", ModelLayers.TADPOLE},
+                    {"squid", ModelLayers.SQUID}, {"glow_squid", ModelLayers.GLOW_SQUID}, {"axolotl", ModelLayers.AXOLOTL}};
             for (Object[] l : layers) {
                 models.put((String) l[0], set.bakeLayer((ModelLayerLocation) l[1]));
             }
@@ -189,14 +198,18 @@ public final class VanillaAquariumRenderer {
         Vec3 fwd = new Vec3(f[o + 4], f[o + 5], f[o + 6]), up = new Vec3(f[o + 8], f[o + 9], f[o + 10]);
         float wave = f[o + 11], beat = f[o + 12], bend = f[o + 13], squeeze = f[o + 14], walk = f[o + 15];
         float[] sp = AquariumRenderer.species(kind);
-        boolean crawler = kind >= 20;
+        boolean crawler = AquariumRenderer.crawler(kind);
         int light = LevelRenderer.getLightColor(level, BlockPos.containing(x, y, z));
-        if (kind == JELLYFISH && night) {
+        if (kind == JELLYFISH && night || kind == GLOW_SQUID) {
             light = LightTexture.FULL_BRIGHT; // (glowing in the dark)
         }
         // how big: as long as the aquariums' own (its body and tail), as wide for the rays, the bell for a jellyfish
         float length = crawler ? 2.0F * Math.max(sp[0], sp[2]) * size : (2.0F * sp[0] + 1.6F * sp[3]) * size;
         String name = MODEL[kind];
+        if (kind >= COD) {
+            mob(job, i, kind, x, y, z, fwd, up, size, sp, wave, beat, squeeze, walk, light, poseStack, buffers);
+            return;
+        }
         if (name == null) { // the game's own: pufferfish, sea turtle, dolphin
             ModelPart m;
             ResourceLocation tex;
@@ -235,7 +248,7 @@ public final class VanillaAquariumRenderer {
             }
             float scale = length / modelLength;
             draw(poseStack, buffers, m, RenderType.entityCutoutNoCull(tex), x, y, z, fwd, up, scale, 1.0F, light,
-                    kind == SEA_TURTLE ? 0.15 : kind == DOLPHIN ? 0.3 : 0.08);
+                    kind == SEA_TURTLE ? 0.15 : kind == DOLPHIN ? 0.3 : 0.08, 0.0, 0xFFFFFFFF);
             return;
         }
         int idx = ownIndex(name);
@@ -251,7 +264,122 @@ public final class VanillaAquariumRenderer {
         float scale = length / Math.max(modelLength, 0.05F);
         float squash = kind == JELLYFISH ? 1.0F - 0.25F * squeeze : 1.0F; // (a jellyfish's bell squeezing)
         ResourceLocation texture = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "textures/entity/aqua/" + name + ".png");
-        draw(poseStack, buffers, m, RenderType.entityCutoutNoCull(texture), x, y, z, fwd, up, scale, squash, light, 0.0);
+        draw(poseStack, buffers, m, RenderType.entityCutoutNoCull(texture), x, y, z, fwd, up, scale, squash, light, 0.0, 0.0, 0xFFFFFFFF);
+    }
+
+    /** The game's own models for its water mobs: cod, salmon, tropical fish (its two shapes, six patterns, sixteen colours), tadpole, squid, glow squid and axolotl (its five colours). */
+    private static void mob(AquariumRenderer.VanillaJob job, int i, int kind, double x, double y, double z, Vec3 fwd, Vec3 up, float size,
+                            float[] sp, float wave, float beat, float squeeze, float walk, int light, PoseStack poseStack, MultiBufferSource buffers) {
+        Random rnd = new Random(job.min().asLong() * 31L + i * 7919L + kind);
+        float t = LavaLampRenderer.seconds() + i * 1.37F;
+        float a = 0.35F + 0.65F * beat;
+        float length = AquariumRenderer.crawler(kind) ? 2.0F * Math.max(sp[0], sp[2]) * size : (2.0F * sp[0] + 1.6F * sp[3]) * size;
+        switch (kind) {
+            case COD -> {
+                ModelPart m = game("cod");
+                tail(m, "tail_fin", 0.55F * a * Mth.sin(wave - 1.2F));
+                fins(m, t, 0.25F);
+                draw(poseStack, buffers, m, RenderType.entityCutoutNoCull(mc("textures/entity/fish/cod.png")), x, y, z, fwd, up,
+                        length / (15.0F / 16.0F), 1.0F, light, 0.125, 3.5, 0xFFFFFFFF);
+            }
+            case SALMON -> {
+                ModelPart m = game("salmon");
+                if (m.hasChild("body_back")) {
+                    ModelPart back = m.getChild("body_back");
+                    back.yRot = 0.32F * a * Mth.sin(wave - 0.9F);
+                    tail(back, "back_fin", 0.4F * a * Mth.sin(wave - 1.8F));
+                }
+                m.yRot = -0.06F * a * Mth.sin(wave);
+                fins(m, t, 0.25F);
+                draw(poseStack, buffers, m, RenderType.entityCutoutNoCull(mc("textures/entity/fish/salmon.png")), x, y, z, fwd, up,
+                        length / (25.0F / 16.0F), 1.0F, light, 0.25, 9.5, 0xFFFFFFFF);
+            }
+            case TROPICAL -> {
+                boolean big = rnd.nextBoolean();
+                int pattern = 1 + rnd.nextInt(6), bodyC = rnd.nextInt(16), patC = rnd.nextInt(16);
+                if (patC == bodyC) patC = (patC + 5) % 16;
+                String shape = big ? "b" : "a";
+                float scale = length / ((big ? 11.0F : 10.0F) / 16.0F);
+                double lift = big ? 0.31 : 0.125, centre = big ? 2.5 : 2.0;
+                for (String layer : new String[] {"tropical_" + shape, "tropical_" + shape + "_pattern"}) {
+                    ModelPart m = game(layer);
+                    tail(m, "tail", 0.6F * a * Mth.sin(wave - 1.0F));
+                    fins(m, t, 0.3F);
+                    boolean pat = layer.endsWith("pattern");
+                    ResourceLocation tex = mc("textures/entity/fish/tropical_" + shape + (pat ? "_pattern_" + pattern : "") + ".png");
+                    draw(poseStack, buffers, m, RenderType.entityCutoutNoCull(tex), x, y, z, fwd, up, scale, 1.0F, light, lift, centre,
+                            0xFF000000 | DYES[pat ? patC : bodyC]);
+                }
+            }
+            case TADPOLE -> {
+                ModelPart m = game("tadpole");
+                tail(m, "tail", 0.75F * a * Mth.sin(wave * 1.4F - 1.0F));
+                m.yRot = -0.12F * a * Mth.sin(wave * 1.4F);
+                draw(poseStack, buffers, m, RenderType.entityCutoutNoCull(mc("textures/entity/tadpole/tadpole.png")), x, y, z, fwd, up,
+                        length / (10.0F / 16.0F), 1.0F, light, 0.125, 2.0, 0xFFFFFFFF);
+            }
+            case SQUID, GLOW_SQUID -> {
+                // standing on end: its body (the mantle) forward, the tentacles trailing behind; squeezed as it surges,
+                // the tentacles drawn together, then spreading and rippling as it glides
+                ModelPart m = game(kind == SQUID ? "squid" : "glow_squid");
+                if (m.hasChild("body")) {
+                    ModelPart body = m.getChild("body");
+                    body.xScale = body.zScale = 1.0F - 0.14F * squeeze;
+                    body.yScale = 1.0F + 0.06F * squeeze;
+                }
+                for (int k = 0; k < 8; k++) {
+                    if (!m.hasChild("tentacle" + k)) continue;
+                    m.getChild("tentacle" + k).xRot = 0.08F + 0.62F * (1.0F - squeeze) + 0.08F * Mth.sin(t * 2.2F + k * 0.8F);
+                }
+                float scale = length / (33.0F / 16.0F);
+                Vec3 f = fwd.lengthSqr() < 1.0e-8 ? new Vec3(1, 0, 0) : fwd.normalize();
+                Vec3 o = f.scale(-0.47 * scale); // (the model's middle on the squid's)
+                String tex = kind == SQUID ? "textures/entity/squid/squid.png" : "textures/entity/squid/glow_squid.png";
+                draw(poseStack, buffers, m, RenderType.entityCutoutNoCull(mc(tex)), x + o.x, y + o.y, z + o.z, up, f, scale, 1.0F, light,
+                        0.0, 0.0, 0xFFFFFFFF);
+            }
+            default -> { // the axolotl: waddling on the sand, its body swaying, its tail sweeping, its gills waving
+                int v = rnd.nextInt(100);
+                String colour = AXOLOTL_TEX[v < 30 ? 0 : v < 55 ? 1 : v < 75 ? 2 : v < 98 ? 3 : 4];
+                ModelPart m = game("axolotl");
+                ModelPart body = m.hasChild("body") ? m.getChild("body") : m;
+                body.yRot = 0.12F * Mth.sin(walk);
+                for (String leg : new String[] {"right_front_leg", "left_front_leg", "right_hind_leg", "left_hind_leg"}) {
+                    if (!body.hasChild(leg)) continue;
+                    ModelPart l = body.getChild(leg);
+                    boolean right = leg.startsWith("right");
+                    float ph = walk + (leg.contains("front") == right ? 0.0F : 3.14F);
+                    l.xRot = 0.7F * Mth.sin(ph);
+                    l.yRot = 0.0F;
+                    l.zRot = (right ? 1.0F : -1.0F) * (0.95F - 0.25F * Math.max(Mth.cos(ph), 0.0F));
+                }
+                if (body.hasChild("tail")) body.getChild("tail").yRot = -0.2F * Mth.sin(walk) + 0.25F * Mth.sin(wave * 0.6F);
+                if (body.hasChild("head")) {
+                    ModelPart head = body.getChild("head");
+                    head.yRot = -0.1F * Mth.sin(walk);
+                    if (head.hasChild("top_gills")) head.getChild("top_gills").xRot = -0.15F + 0.2F * Mth.sin(t * 2.4F);
+                    if (head.hasChild("left_gills")) head.getChild("left_gills").yRot = 0.3F + 0.25F * Mth.sin(t * 2.4F + 1.0F);
+                    if (head.hasChild("right_gills")) head.getChild("right_gills").yRot = -0.3F - 0.25F * Mth.sin(t * 2.4F + 1.0F);
+                }
+                draw(poseStack, buffers, m, RenderType.entityCutoutNoCull(mc("textures/entity/axolotl/axolotl_" + colour + ".png")), x, y, z,
+                        fwd, up, length / (27.0F / 16.0F), 1.0F, light, -0.04, 4.5, 0xFFFFFFFF);
+            }
+        }
+    }
+
+    /** A game model's tail part, swinging. */
+    private static void tail(ModelPart parent, String name, float yRot) {
+        if (parent.hasChild(name)) parent.getChild(name).yRot = yRot;
+    }
+
+    /** A game fish's side fins, fluttering (round their own resting angle). */
+    private static void fins(ModelPart m, float t, float amount) {
+        for (String side : new String[] {"right_fin", "left_fin"}) {
+            if (!m.hasChild(side)) continue;
+            ModelPart fin = m.getChild(side);
+            float sg = side.startsWith("right") ? 1.0F : -1.0F;
+            fin.zRot = fin.getInitialPose().zRot + sg * amount * Mth.sin(t * 4.0F + (sg > 0 ? 0.0F : 1.3F));
+        }
     }
 
     /**
@@ -357,10 +485,11 @@ public final class VanillaAquariumRenderer {
 
     /**
      * A model at (x, y, z) facing fwd with its top towards up (as the aquariums' fish lean into their turns), at that
-     * size (as the game draws mobs). lift: how far (in the model's blocks) its middle is above its origin.
+     * size (as the game draws mobs). lift: how far (in the model's blocks) its middle is above its origin; centre: how
+     * far (in its pixels) its middle is behind its origin; colour: its tint.
      */
     private static void draw(PoseStack poseStack, MultiBufferSource buffers, ModelPart part, RenderType type, double x, double y, double z,
-                             Vec3 fwd, Vec3 up, float scale, float squash, int light, double lift) {
+                             Vec3 fwd, Vec3 up, float scale, float squash, int light, double lift, double centre, int colour) {
         poseStack.pushPose();
         poseStack.translate(x, y - lift * scale, z);
         // turned so its front (-z) faces fwd and its top (+y, after the game's flip) faces up
@@ -373,8 +502,8 @@ public final class VanillaAquariumRenderer {
                 (float) back.x, (float) back.y, (float) back.z);
         poseStack.mulPose(new Quaternionf().setFromNormalized(r));
         poseStack.scale(-scale, -scale * squash, scale);
-        poseStack.translate(0.0F, -1.5F, 0.0F);
-        part.render(poseStack, buffers.getBuffer(type), light, OverlayTexture.NO_OVERLAY, underwater(0xFFFFFFFF));
+        poseStack.translate(0.0F, -1.5F, (float) (-centre / 16.0)); // (its middle, along it, on the fish's)
+        part.render(poseStack, buffers.getBuffer(type), light, OverlayTexture.NO_OVERLAY, underwater(colour));
         poseStack.popPose();
     }
 

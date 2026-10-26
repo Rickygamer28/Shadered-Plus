@@ -10,12 +10,14 @@ import net.neoforged.fml.loading.FMLPaths;
 
 /**
  * Which kinds of fish the aquariums show (sneak + right-click an aquarium to choose), kept in
- * config/skyblocks-aquarium.properties on this computer. 0-9 the normal aquarium's fish, 10-19 the ocean aquarium's, 20-25 the creatures on the bottom.
+ * config/skyblocks-aquarium.properties on this computer. 0-9 the normal aquarium's fish, 10-19 the ocean aquarium's, 20-25 the creatures on the bottom,
+ * 26-32 the game's own water mobs (cod, salmon, tropical fish, tadpole, squid, glow squid, axolotl).
  */
 public final class AquariumSettings {
     public static final String[] NAMES = {"clownfish", "blue_tang", "yellow_tang", "neon_tetra", "angelfish", "goldfish", "betta",
             "pufferfish", "guppy", "discus", "shark", "tuna", "manta_ray", "sea_turtle", "grouper", "jellyfish", "dolphin", "sardine",
-            "ocean_sunfish", "basking_shark", "hermit_crab", "crab", "stingray", "octopus", "lobster", "shrimp"};
+            "ocean_sunfish", "basking_shark", "hermit_crab", "crab", "stingray", "octopus", "lobster", "shrimp",
+            "cod", "salmon", "tropical_fish", "tadpole", "squid", "glow_squid", "axolotl"};
     private static final boolean[] ENABLED = new boolean[NAMES.length];
     private static boolean loaded;
     private static boolean nightMode = true;

@@ -352,7 +352,28 @@ public final class AquariumRenderer {
             {0.17F, 0.13F, 0.17F, 0, 0, 0, 0, 0, 0, 0.22F, 0},
             {0.38F, 0.1F, 0.17F, 0, 0, 0, 0, 0, 0, 0.18F, 0},
             {0.13F, 0.08F, 0.06F, 0, 0, 0, 0, 0, 0, 0.35F, 0},
+            // the game's own water mobs: cod, salmon, tropical fish, tadpole; squid and glow squid (mantle, arms);
+            // the axolotl (on the bottom: how far it reaches)
+            {0.26F, 0.07F, 0.05F, 0.07F, 0.08F, 0.008F, 0.15F, 0.05F, 0.008F, 0.8F, 0.6F},
+            {0.25F, 0.075F, 0.05F, 0.08F, 0.1F, 0.009F, 0.08F, 0.07F, 0.008F, 1.1F, 0.5F},
+            {0.12F, 0.085F, 0.03F, 0.05F, 0.065F, 0.008F, 0.1F, 0.06F, 0.008F, 0.9F, 0.9F},
+            {0.05F, 0.04F, 0.036F, 0.095F, 0.036F, 0.004F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F},
+            {0.3F, 0.07F, 0.07F, 0.13F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.7F, 0.0F},
+            {0.3F, 0.07F, 0.07F, 0.13F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.7F, 0.0F},
+            {0.25F, 0.1F, 0.1F, 0, 0, 0, 0, 0, 0, 0.3F, 0},
     };
+
+    /** The creatures that walk on the bottom (not swimming): 20-25, and the axolotl. */
+    static boolean crawler(int kind) {
+        return kind >= 20 && kind <= 25 || kind == AXOLOTL;
+    }
+
+    static final int AXOLOTL = 32;
+
+    /** The squid and glow squid: jetting along mantle first, their arms trailing. */
+    static boolean squid(int kind) {
+        return kind == 30 || kind == 31;
+    }
 
     private static final float[] FISH_DATA = new float[MAX_FISH * 16];
     private static final java.nio.FloatBuffer FISH_BUF = org.lwjgl.BufferUtils.createFloatBuffer(MAX_FISH * 16);
@@ -421,7 +442,7 @@ public final class AquariumRenderer {
             int kind = floor.kinds[i];
             float[] sp = SPECIES[kind];
             double bx = sp[0], by = sp[1], bz = sp[2], tx = sp[3], ty = sp[4], fy = sp[7], fz = sp[8];
-            boolean school = kind == 3 || kind == 17;
+            boolean school = kind == 3 || kind == 17 || kind == 26 || kind == 29;
             int lead = i;
             if (school) {
                 for (int j = 0; j < i; j++) {
@@ -440,7 +461,7 @@ public final class AquariumRenderer {
                 oy = r[i * 10 + 8] * 0.45 * k;
                 oz = r[i * 10 + 9] * k;
             }
-            boolean crawler = kind >= 20;
+            boolean crawler = crawler(kind);
             double extent = crawler ? Math.max(bx, bz) : Math.max(bx + tx * 1.6, Math.max(bz, fz));
             // size: mostly middling, now and then a small young one or a big old one (schools more even, the big
             // animals varying most); always made to fit the water it has
@@ -467,7 +488,7 @@ public final class AquariumRenderer {
             double level = my + (r[lead * 10 + 5] * 2.0 - 1.0) * ry * 0.6;
             // the path, and how fast and which way it's going along it (exactly, not from differences)
             double sn = Math.sin(0.7 * t + p2), cs = Math.cos(0.7 * t + p2);
-            double halt = crawler ? 0.93 : 0.45; // (how much it slows between bursts: the bottom creatures stop and go)
+            double halt = crawler ? 0.93 : squid(kind) ? 0.85 : 0.45; // (how much it slows between bursts: the bottom creatures stop and go)
             double a = speed * (t + halt * sn / 0.7), da = speed * (1.0 + halt * cs), dda = -speed * halt * 0.7 * sn;
             double x = 0.78 * Math.sin(a + p0) + 0.22 * Math.sin(2.3 * a + p1);
             double x1 = 0.78 * Math.cos(a + p0) + 0.506 * Math.cos(2.3 * a + p1);
@@ -488,6 +509,9 @@ public final class AquariumRenderer {
             double jph = t * 0.4 + r[i * 10 + 6];
             jph -= Math.floor(jph);
             double squeeze = smooth(0.0, 0.12, jph) * (1.0 - smooth(0.12, 0.9, jph));
+            if (squid(kind)) { // a squid: its mantle squeezed hard just as it surges forward, filling again as it glides
+                squeeze = Math.pow(0.5 + 0.5 * Math.cos(0.7 * t + p2 + 0.5), 3.0);
+            }
             double fi = i;
             double bob = kind == 15 ? 0.25 * Math.sin(t * 0.6 + fi) + 0.05 * squeeze : 0.03 * Math.sin(t * 0.7 + fi);
             if (school) {
@@ -495,7 +519,7 @@ public final class AquariumRenderer {
                 cy += 0.015 * Math.sin(t * 1.3 + fi);
                 cz += 0.03 * Math.cos(t * 1.5 + fi * 1.3);
             }
-            if (night > 0.0 && (kind < 10 || kind == 11 || kind == 14 || kind == 17)) {
+            if (night > 0.0 && (kind < 10 || kind == 11 || kind == 14 || kind == 17 || kind >= 26 && kind <= 29)) {
                 cy += (my - ry - cy) * 0.65 * night; // (resting low at night)
             }
             double yRoom = Math.max(qy - tallH * size - 0.04, 0.02);
@@ -567,15 +591,15 @@ public final class AquariumRenderer {
                     double wi = rj / (ri + rj), wj = ri / (ri + rj); // (the smaller one moves more)
                     push[i * 3] += dx * over * wi; push[i * 3 + 1] += dy * over * wi * 0.8; push[i * 3 + 2] += dz * over * wi;
                     push[j * 3] -= dx * over * wj; push[j * 3 + 1] -= dy * over * wj * 0.8; push[j * 3 + 2] -= dz * over * wj;
-                    if (floor.kinds[i] >= 20) push[i * 3 + 1] = 0.0; // (the bottom creatures stay on the sand)
-                    if (floor.kinds[j] >= 20) push[j * 3 + 1] = 0.0;
+                    if (crawler(floor.kinds[i])) push[i * 3 + 1] = 0.0; // (the bottom creatures stay on the sand)
+                    if (crawler(floor.kinds[j])) push[j * 3 + 1] = 0.0;
                     near[i] = true;
                     near[j] = true;
                 }
             }
             // the bottom creatures walk round the decorations (rocks, castle, chest...), not through them
             for (int i = 0; i < n; i++) {
-                if (floor.kinds[i] < 20) {
+                if (!crawler(floor.kinds[i])) {
                     continue;
                 }
                 for (int d = 0; d < floor.decorCount; d++) {
@@ -639,7 +663,7 @@ public final class AquariumRenderer {
                 fx = 1.0; fwy = 0.0; fwz = 0.0;
                 ux = 0.0; uy = 1.0; uz = 0.0;
             }
-            if (kind >= 20) { // the bottom creatures stay level; a crab faces across the way it walks (sideways)
+            if (crawler(kind)) { // the bottom creatures stay level; a crab faces across the way it walks (sideways)
                 fx = hx; fwy = 0.0; fwz = hz;
                 if (kind == 21) {
                     double pa = t * 0.05 + floor.rnd[i * 10 + 4] * 6.0;
@@ -650,7 +674,7 @@ public final class AquariumRenderer {
                 ux = 0.0; uy = 1.0; uz = 0.0;
             }
             double bx = SPECIES[kind][0];
-            double bend = kind == 15 || kind >= 20 ? 0.0 : clampD(curve * sizes[i], -0.6 / bx, 0.6 / bx);
+            double bend = kind == 15 || crawler(kind) || squid(kind) ? 0.0 : clampD(curve * sizes[i], -0.6 / bx, 0.6 / bx);
             int o = i * 16;
             FISH_DATA[o] = (float) (px[i] + st[i * 3]); FISH_DATA[o + 1] = (float) (py[i] + st[i * 3 + 1]); FISH_DATA[o + 2] = (float) (pz[i] + st[i * 3 + 2]);
             FISH_DATA[o + 3] = (float) sizes[i];
@@ -790,19 +814,22 @@ public final class AquariumRenderer {
     /** How much water (blocks) each kind needs. */
     private static final float[] COST = {0.8F, 1.0F, 1.0F, 0.45F, 1.2F, 1.0F, 0.9F, 1.2F, 0.5F, 1.2F,
             14.0F, 6.0F, 10.0F, 6.0F, 8.0F, 4.0F, 10.0F, 1.2F, 16.0F, 30.0F,
-            0.6F, 0.7F, 6.0F, 1.0F, 3.0F, 0.3F};
+            0.6F, 0.7F, 6.0F, 1.0F, 3.0F, 0.3F,
+            3.0F, 2.5F, 0.8F, 0.25F, 8.0F, 8.0F, 1.2F};
     /** How often each kind is picked, against the others. */
     private static final float[] WEIGHT = {1, 1, 1, 1.3F, 1, 1, 1, 0.8F, 1.2F, 1,
             0.9F, 1.2F, 0.7F, 1.0F, 0.9F, 0.9F, 0.7F, 2.4F, 0.7F, 0.6F,
-            0.8F, 0.8F, 0.7F, 0.7F, 0.6F, 1.0F};
+            0.8F, 0.8F, 0.7F, 0.7F, 0.6F, 1.0F,
+            1.0F, 0.9F, 1.4F, 0.9F, 0.8F, 0.8F, 1.0F};
     /** Most of each kind in one tank (with every kind on). */
     private static final int[] CAP = {8, 6, 6, 16, 4, 8, 4, 3, 12, 4,
             3, 6, 3, 4, 3, 5, 3, 16, 2, 2,
-            3, 3, 2, 2, 2, 4};
+            3, 3, 2, 2, 2, 4,
+            6, 4, 10, 12, 3, 3, 4};
 
     /** What each aquarium can have: the normal one's fish and bottom creatures, and the ocean one's. */
-    static final int[] NORMAL_KINDS = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 20, 21, 23, 25};
-    static final int[] OCEAN_KINDS = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 24, 25};
+    static final int[] NORMAL_KINDS = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 28, 27, 29, 32, 20, 21, 23, 25};
+    static final int[] OCEAN_KINDS = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 26, 27, 30, 31, 21, 22, 23, 24, 25};
 
     /** The smallest tank a kind appears in: how wide (both ways) and how tall, in blocks. */
     static int[] tankNeeds(int kind) {
@@ -815,6 +842,8 @@ public final class AquariumRenderer {
             case 11, 13 -> new int[] {2, 1};
             case 15 -> new int[] {1, 2};
             case 22 -> new int[] {3, 1};
+            case 30, 31 -> new int[] {3, 2};
+            case 26, 27 -> new int[] {2, 1};
             case 24 -> new int[] {2, 1};
             default -> new int[] {1, 1};
         };
@@ -914,7 +943,7 @@ public final class AquariumRenderer {
             }
         }
         for (int i = 0; i < floor.fishCount; i++) {
-            boolean crawler = chosen.get(i) >= 20; // (walks on the sand: only the bottom layer, grown sideways)
+            boolean crawler = crawler(chosen.get(i)); // (walks on the sand: only the bottom layer, grown sideways)
             BlockPos start = crawler ? floorCells.get(random.nextInt(floorCells.size())) : water.get(random.nextInt(water.size()));
             int[] lo = {start.getX(), start.getY(), start.getZ()}, hi = {start.getX(), start.getY(), start.getZ()};
             int[] limit = floor.ocean ? new int[] {24, 10, 24} : new int[] {12, 6, 12};
