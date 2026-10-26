@@ -36,7 +36,7 @@ float layerY(int L) {
 // a cell's koi: (is there one: 0/1, its depth layer, its kind 0..4, its size)
 vec4 koiOf(vec2 cell) {
     vec2 h = hash22(cell + 3.7), k = hash22(cell * 1.7 + 11.1);
-    return vec4(step(0.3, h.x), floor(h.y * 3.0), floor(k.x * 5.0), 0.8 + 0.45 * k.y);
+    return vec4(step(0.3, h.x), floor(h.y * 3.0), floor(k.x * 5.0), 0.62 + 0.23 * k.y);
 }
 
 // where a cell's koi is and which way it faces
@@ -45,8 +45,9 @@ void koiPath(vec2 cell, float t, out vec2 pos, out vec2 dir) {
     float sp = (0.22 + 0.18 * h.x) * (h.y < 0.5 ? -1.0 : 1.0);
     float th = t * sp + h.y * 31.0;
     vec2 c = cell + 0.5;
-    pos = c + vec2(cos(th) * 0.2, sin(th) * 0.15 + 0.04 * sin(2.0 * th));
-    vec2 v = vec2(-sin(th) * 0.2, cos(th) * 0.15 + 0.08 * cos(2.0 * th)) * sp;
+    // (a loop small enough that the whole fish, tail and all, stays clear of the stone rims round the block)
+    pos = c + vec2(cos(th) * 0.12, sin(th) * 0.09 + 0.025 * sin(2.0 * th));
+    vec2 v = vec2(-sin(th) * 0.12, cos(th) * 0.09 + 0.05 * cos(2.0 * th)) * sp;
     dir = normalize(v + vec2(1e-5));
 }
 
@@ -162,8 +163,9 @@ bool padParams(vec2 cell, int k, float t, out vec2 c, out float r, out vec2 h, o
     uvec3 key = padKey(cell, k);
     h = vec2(u01(hashu(key)), u01(hashu(key + uvec3(0u, 0u, 100u))));
     h2 = hash22(cell * 3.1 + float(k) * 4.7);
-    c = cell + 0.15 + 0.7 * h2 + 0.02 * vec2(sin(t * 0.07 + h.y * 9.0), cos(t * 0.05 + h.x * 7.0));
     r = 0.08 + 0.07 * h.y;
+    float m = 0.165 + r; // (clear of the stone rims round the block, whichever sides they're on)
+    c = cell + m + (1.0 - 2.0 * m) * h2 + 0.02 * vec2(sin(t * 0.07 + h.y * 9.0), cos(t * 0.05 + h.x * 7.0));
     ang = h2.x * 6.28 + t * 0.02;
     vec3 info;
     float hop;
@@ -217,8 +219,8 @@ vec4 frogHit(vec3 p0, vec3 rd, float t, float light) {
                 if (!padParams(cell, k, t, c, r, h, h2, pang) || r < 0.09 || !frogOn(cell, k, t, info, hop)) continue;
                 // hopping on: a leap up out of the water onto the pad; hopping off: a leap forward into the water
                 float u = hop > 0.0 ? 1.0 - hop : -hop;
-                vec3 off = hop >= 1.0 ? vec3(0.0) : hop > 0.0 ? vec3(0.0, 9.0 * u * (1.0 - u) - 3.0 * u * u, -5.0 * u)
-                                                                 : vec3(0.0, 9.0 * u * (1.0 - u) - 3.0 * u * u, 5.0 * u);
+                vec3 off = hop >= 1.0 ? vec3(0.0) : hop > 0.0 ? vec3(0.0, 8.0 * u * (1.0 - u) - 3.0 * u * u, -2.5 * u)
+                                                                 : vec3(0.0, 8.0 * u * (1.0 - u) - 3.0 * u * u, 2.5 * u);
                 // close to the ray's way down?
                 vec2 ab = p0.xz - pTop.xz;
                 float w = clamp(dot(c - pTop.xz, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
@@ -406,6 +408,6 @@ void main() {
     vec3 sky = mix(mix(vec3(0.02, 0.03, 0.07), vec3(0.45, 0.62, 0.85), day), mix(vec3(0.05, 0.06, 0.12), vec3(0.75, 0.86, 1.0), day),
                    smoothstep(0.0, 0.8, rf.y));
     vec3 col = mix(under, sky, fres);
-    col += vec3(1.0, 0.95, 0.85) * pow(max(dot(rf, normalize(SUN)), 0.0), 220.0) * day * 1.2;
+    col += vec3(1.0, 0.95, 0.85) * pow(max(dot(rf, normalize(SUN)), 0.0), 160.0) * day * 0.7;
     fragColor = vec4(col, 1.0);
 }
