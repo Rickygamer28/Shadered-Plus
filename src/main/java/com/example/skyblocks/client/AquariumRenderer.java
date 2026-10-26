@@ -374,14 +374,26 @@ public final class AquariumRenderer {
             // the deep sea's: anglerfish, lanternfish
             {0.13F, 0.1F, 0.09F, 0.045F, 0.05F, 0.006F, 0.04F, 0.03F, 0.006F, 0.3F, 0.3F},
             {0.09F, 0.03F, 0.02F, 0.035F, 0.035F, 0.005F, 0.04F, 0.02F, 0.005F, 1.3F, 0.5F},
+            // the cleaner shrimp (on the bottom, climbing the glass, cleaning the fish that come to it)
+            {0.16F, 0.1F, 0.07F, 0, 0, 0, 0, 0, 0, 0.35F, 0},
     };
 
-    /** The creatures that walk on the bottom (not swimming): 20-25, and the axolotl. */
+    /** The creatures that walk on the bottom (not swimming): 20-25, the axolotl, the cleaner shrimp. */
     static boolean crawler(int kind) {
-        return kind >= 20 && kind <= 25 || kind == AXOLOTL;
+        return kind >= 20 && kind <= 25 || kind == AXOLOTL || kind == CLEANER;
     }
 
     static final int AXOLOTL = 32;
+    static final int CLEANER = 35;
+    /** The cleaner shrimp's round (seconds): walking 0-24, a cleaning stop 24-36, a climb up the glass 36-48, walking 48-60. */
+    private static final double CLEAN_CYCLE = 60.0;
+
+    /** The cleaner shrimp's own clock along its walking path: standing still while it cleans and climbs. */
+    private static double cleanerClock(double t, double offset) {
+        double u = t + offset * CLEAN_CYCLE;
+        double cyc = Math.floor(u / CLEAN_CYCLE), c = u - cyc * CLEAN_CYCLE;
+        return cyc * 36.0 + (c < 24.0 ? c : c < 48.0 ? 24.0 : c - 24.0);
+    }
 
     /** The squid and glow squid: jetting along mantle first, their arms trailing. */
     static boolean squid(int kind) {
@@ -503,9 +515,10 @@ public final class AquariumRenderer {
             double p0 = r[lead * 10 + 2] * Math.PI * 2.0, p1 = r[lead * 10 + 3] * Math.PI * 2.0, p2 = r[lead * 10 + 4] * Math.PI * 2.0;
             double level = my + (r[lead * 10 + 5] * 2.0 - 1.0) * ry * 0.6;
             // the path, and how fast and which way it's going along it (exactly, not from differences)
-            double sn = Math.sin(0.7 * t + p2), cs = Math.cos(0.7 * t + p2);
+            double tt = kind == CLEANER ? cleanerClock(t, r[i * 10 + 6]) : t; // (the cleaner shrimp stops now and then)
+            double sn = Math.sin(0.7 * tt + p2), cs = Math.cos(0.7 * tt + p2);
             double halt = crawler ? 0.93 : squid(kind) ? 0.85 : 0.45; // (how much it slows between bursts: the bottom creatures stop and go)
-            double a = speed * (t + halt * sn / 0.7), da = speed * (1.0 + halt * cs), dda = -speed * halt * 0.7 * sn;
+            double a = speed * (tt + halt * sn / 0.7), da = speed * (1.0 + halt * cs), dda = -speed * halt * 0.7 * sn;
             double x = 0.78 * Math.sin(a + p0) + 0.22 * Math.sin(2.3 * a + p1);
             double x1 = 0.78 * Math.cos(a + p0) + 0.506 * Math.cos(2.3 * a + p1);
             double x2 = -0.78 * Math.sin(a + p0) - 1.1638 * Math.sin(2.3 * a + p1);
@@ -562,7 +575,16 @@ public final class AquariumRenderer {
             double wave = beatK * (0.35 * t + 0.65 * (t + 0.45 * sn / 0.7)) + fi * 2.0;
             waves[i] = wave % (Math.PI * 2.0 * 1000.0); // (kept small: whole turns don't change anything)
             beats[i] = 0.55 + 0.45 * burst / 1.45;
-            squeezes[i] = squeeze;
+            squeezes[i] = kind == CLEANER ? 0.0 : squeeze;
+        }
+        // ---- the cleaner shrimp: now and then it stops and a fish comes down to it to be cleaned; now and then it
+        // climbs a little way up the glass, grazes there and comes back down ----
+        double[] ovF = new double[n * 3], ovU = new double[n * 3];
+        boolean[] ov = new boolean[n];
+        for (int i = 0; i < n; i++) {
+            if (floor.kinds[i] == CLEANER) {
+                cleaner(floor, i, t, px, py, pz, vxs, vys, vzs, axs, azs, sizes, beats, walks, squeezes, lo, hi, ovF, ovU, ov);
+            }
         }
         // ---- keeping out of each other's way: each fish eases away from any it's too close to (the smaller one
         // moving more), and drifts back to its own path once clear ----
@@ -679,7 +701,10 @@ public final class AquariumRenderer {
                 fx = 1.0; fwy = 0.0; fwz = 0.0;
                 ux = 0.0; uy = 1.0; uz = 0.0;
             }
-            if (crawler(kind)) { // the bottom creatures stay level; a crab faces across the way it walks (sideways)
+            if (ov[i]) { // (the cleaner shrimp on the glass, turning onto it or off it)
+                fx = ovF[i * 3]; fwy = ovF[i * 3 + 1]; fwz = ovF[i * 3 + 2];
+                ux = ovU[i * 3]; uy = ovU[i * 3 + 1]; uz = ovU[i * 3 + 2];
+            } else if (crawler(kind)) { // the bottom creatures stay level; a crab faces across the way it walks (sideways)
                 fx = hx; fwy = 0.0; fwz = hz;
                 if (kind == 21) {
                     double pa = t * 0.05 + floor.rnd[i * 10 + 4] * 6.0;
@@ -701,12 +726,220 @@ public final class AquariumRenderer {
         }
     }
 
+    /**
+     * Cleaner shrimp i, this moment. Its walking path stands still while it stops (its own clock: cleanerClock), so
+     * where it is then is where it stopped. Cleaning (24-36 in its round): a fish swimming in that part of the tank
+     * comes down and hovers facing it, the shrimp rearing up, front legs and feelers picking at it; then the fish swims
+     * back to its own way. Climbing (36-48): if the glass is close, it walks to it, turns up onto it, climbs a little,
+     * grazes, turns round, comes back down and walks back to where it was.
+     */
+    private static void cleaner(Floor floor, int i, double t, double[] px, double[] py, double[] pz, double[] vxs, double[] vys, double[] vzs,
+                                double[] axs, double[] azs, double[] sizes, double[] beats, double[] walks, double[] squeezes,
+                                double[] lo, double[] hi, double[] ovF, double[] ovU, boolean[] ov) {
+        int n = floor.fishCount;
+        double u = t + floor.rnd[i * 10 + 6] * CLEAN_CYCLE;
+        long cyc = (long) Math.floor(u / CLEAN_CYCLE);
+        double c = u - cyc * CLEAN_CYCLE;
+        double sx = px[i], sy = py[i], sz = pz[i], size = sizes[i];
+        double hl = Math.hypot(vxs[i], vzs[i]);
+        double hx = hl > 1.0e-6 ? vxs[i] / hl : 1.0, hz = hl > 1.0e-6 ? vzs[i] / hl : 0.0;
+        if (c >= 24.0 && c < 36.0) {
+            // which fish: one whose part of the tank this spot is in (picked anew each round)
+            List<Integer> can = new ArrayList<>();
+            for (int j = 0; j < n; j++) {
+                int k = floor.kinds[j];
+                if (crawler(k) || squid(k) || k == 15 || k == 12 || k == 13 || k == 3 || k == 17 || k == 29) continue;
+                if (Math.abs(sx - floor.fish[j * 8]) <= floor.fish[j * 8 + 4] && Math.abs(sz - floor.fish[j * 8 + 2]) <= floor.fish[j * 8 + 6]) can.add(j);
+            }
+            if (can.isEmpty()) {
+                return;
+            }
+            int j = can.get(new java.util.Random(cyc * 7919L + i * 31L + floor.min.asLong()).nextInt(can.size()));
+            double w = smooth(24.0, 27.0, c) * (1.0 - smooth(33.0, 36.0, c));
+            squeezes[i] = smooth(25.5, 27.0, c) * (1.0 - smooth(32.5, 34.0, c));
+            float[] sp = SPECIES[floor.kinds[j]];
+            double fs = sizes[j];
+            double reach = 0.06 * size + 0.02 + sp[0] * fs; // (its mouth just over the shrimp's raised legs)
+            double tx = sx + hx * reach, tz = sz + hz * reach;
+            double ty = sy + 0.075 * size + sp[1] * fs * 0.55;
+            px[j] += (tx - px[j]) * w;
+            py[j] += (ty - py[j]) * w;
+            pz[j] += (tz - pz[j]) * w;
+            vxs[j] += (-hx * 0.03 - vxs[j]) * w;
+            vys[j] *= 1.0 - w;
+            vzs[j] += (-hz * 0.03 - vzs[j]) * w;
+            axs[j] *= 1.0 - w;
+            azs[j] *= 1.0 - w;
+            beats[j] *= 1.0 - 0.6 * w;
+            if (w > 0.001) {
+                pin(lo, hi, j, px[j], py[j], pz[j]);
+            }
+            pin(lo, hi, i, sx, sy, sz);
+            return;
+        }
+        if (c < 36.0 || c >= 51.0) {
+            return;
+        }
+        // the nearest glass (a side of its part of the tank with no water past it), if close enough
+        double best = 0.7, ax = 0.0, az = 0.0, dist = 0.0;
+        for (int side = 0; side < 4; side++) {
+            double nx = side == 0 ? 1.0 : side == 1 ? -1.0 : 0.0, nz = side == 2 ? 1.0 : side == 3 ? -1.0 : 0.0;
+            double wall = nx != 0.0 ? floor.fish[i * 8] + nx * floor.fish[i * 8 + 4] : floor.fish[i * 8 + 2] + nz * floor.fish[i * 8 + 6];
+            double d = nx != 0.0 ? (wall - sx) * nx : (wall - sz) * nz;
+            BlockPos past = floor.min.offset((int) Math.floor(nx != 0.0 ? wall + nx * 0.01 : sx), (int) Math.floor(sy),
+                    (int) Math.floor(nz != 0.0 ? wall + nz * 0.01 : sz));
+            if (d < best && d > 0.0 && !floor.blocks.contains(past)) {
+                best = d;
+                ax = nx;
+                az = nz;
+                dist = d;
+            }
+        }
+        if (ax == 0.0 && az == 0.0) {
+            return;
+        }
+        double room = Math.max(floor.fish[i * 8 + 5] * 2.0 - 0.35, 0.12);
+        double climb = Math.min(0.45, room) * (0.7 + 0.3 * floor.rnd[i * 10 + 5]);
+        double body = 0.07 * size; // (how far its middle is from its feet's end: it turns round that onto the glass)
+        double wx = sx + ax * dist, wz = sz + az * dist;           // (on the glass)
+        double bx = wx - ax * body, bz = wz - az * body;           // (facing it, its front at the foot of it)
+        double e = c - 36.0;
+        double x, y, z;
+        double fX = ax, fY = 0.0, fZ = az, uX = 0.0, uY = 1.0, uZ = 0.0;
+        double moved; // (how far its legs have walked, for their stepping)
+        if (c >= 48.0) { // walking back to where it was
+            double k = smooth(48.0, 51.0, c);
+            x = bx + (sx - bx) * k;
+            z = bz + (sz - bz) * k;
+            y = sy;
+            fX = -ax;
+            fZ = -az;
+            if (k > 0.85) { // (turning back to its path's way)
+                double m = (k - 0.85) / 0.15;
+                fX = fX * (1.0 - m) + hx * m;
+                fZ = fZ * (1.0 - m) + hz * m;
+            }
+            moved = 3.0 + 3.4 + 2.0 + 0.6 + 3.0 * k;
+            pin(lo, hi, i, x, y, z);
+        } else if (e < 3.0) { // walking to the glass
+            double k = smooth(0.0, 3.0, e);
+            x = sx + (bx - sx) * k;
+            z = sz + (bz - sz) * k;
+            y = sy;
+            if (e < 0.6) { // (turning to face it)
+                double m = e / 0.6;
+                fX = hx * (1.0 - m) + ax * m;
+                fZ = hz * (1.0 - m) + az * m;
+            }
+            moved = e;
+        } else if (e < 3.6 || (e >= 11.4)) { // turning up onto the glass (or back down off it), round its feet's end
+            double k = e < 3.6 ? (e - 3.0) / 0.6 : 1.0 - (e - 11.4) / 0.6;
+            double th = k * Math.PI * 0.5;
+            // (its feet's front end stays at the foot of the glass; its middle swings up onto it)
+            x = wx - ax * body * Math.cos(th);
+            z = wz - az * body * Math.cos(th);
+            y = sy + body * Math.sin(th);
+            boolean down = e >= 11.4;
+            fX = ax * Math.cos(th);
+            fZ = az * Math.cos(th);
+            fY = Math.sin(th);
+            if (down) { // (coming down head first: off the glass facing away from it)
+                fX = -fX;
+                fZ = -fZ;
+                fY = -fY;
+            }
+            uX = -ax * Math.sin(th);
+            uZ = -az * Math.sin(th);
+            uY = Math.cos(th);
+            moved = e < 3.6 ? 3.0 + (e - 3.0) : 3.0 + 0.6 + 3.4 + 2.0 + (e - 11.4);
+        } else { // on the glass: up, a while grazing, turning round, down
+            x = wx - ax * 0.004;
+            z = wz - az * 0.004;
+            uX = -ax;
+            uZ = -az;
+            uY = 0.0;
+            double h0 = body, top = h0 + climb;
+            double sideX = -az, sideZ = ax; // (along the glass, level)
+            if (e < 7.0) {
+                y = sy + h0 + (top - h0) * smooth(3.6, 7.0, e);
+                fX = 0.0; fY = 1.0; fZ = 0.0;
+                moved = 3.6 + (e - 3.6);
+            } else if (e < 9.0) {
+                y = sy + top;
+                fX = 0.0; fY = 1.0; fZ = 0.0;
+                squeezes[i] = 0.35 * Math.max(Math.sin((e - 7.0) * Math.PI / 2.0), 0.0); // (picking at the glass)
+                moved = 7.0;
+            } else if (e < 9.4) {
+                y = sy + top;
+                double ph = (e - 9.0) / 0.4 * Math.PI;
+                fX = sideX * Math.sin(ph); fY = Math.cos(ph); fZ = sideZ * Math.sin(ph);
+                moved = 7.0 + (e - 9.0);
+            } else {
+                y = sy + top + (h0 - top) * smooth(9.4, 11.4, e);
+                fX = 0.0; fY = -1.0; fZ = 0.0;
+                moved = 7.4 + (e - 9.4);
+            }
+        }
+        px[i] = x;
+        py[i] = y;
+        pz[i] = z;
+        walks[i] += moved * 1.6 / Math.max(size, 0.3);
+        double fl = Math.sqrt(fX * fX + fY * fY + fZ * fZ), ul = Math.sqrt(uX * uX + uY * uY + uZ * uZ);
+        ovF[i * 3] = fX / fl; ovF[i * 3 + 1] = fY / fl; ovF[i * 3 + 2] = fZ / fl;
+        ovU[i * 3] = uX / ul; ovU[i * 3 + 1] = uY / ul; ovU[i * 3 + 2] = uZ / ul;
+        ov[i] = true;
+        pin(lo, hi, i, x, y, z);
+    }
+
+    /** Keep fish i exactly here this frame (no dodging out of the way). */
+    private static void pin(double[] lo, double[] hi, int i, double x, double y, double z) {
+        lo[i * 3] = hi[i * 3] = x;
+        lo[i * 3 + 1] = hi[i * 3 + 1] = y;
+        lo[i * 3 + 2] = hi[i * 3 + 2] = z;
+    }
+
+    /** Each treasure chest's time last frame (as the shader's: its lid pops open as its time comes round again). */
+    private static final Map<Long, Double> CHEST_TIME = new HashMap<>();
+
+    /** A treasure chest popping open: its lid's creak and the burst of bubbles (when you're near enough to hear). */
+    private static void chestSounds(Floor floor, double t) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || mc.player == null || floor.vanilla) {
+            return;
+        }
+        double secs = t % 86400.0; // (the shader's Time)
+        for (int d = 0; d < floor.decorCount; d++) {
+            int pk = Math.round(floor.decor[d * 4 + 3]);
+            if (pk % 16 != 5) {
+                continue;
+            }
+            double bx = floor.decor[d * 4], bz = floor.decor[d * 4 + 2];
+            double phase = ((bx * 3.7 + bz * 5.3) % 14.0 + 14.0) % 14.0;
+            double c = ((secs + phase) % 14.0 + 14.0) % 14.0;
+            long key = floor.min.asLong() * 37L + d;
+            Double before = CHEST_TIME.put(key, c);
+            if (CHEST_TIME.size() > 512) {
+                CHEST_TIME.clear();
+            }
+            if (before == null || c >= before || before - c < 7.0) {
+                continue; // (only as it comes round)
+            }
+            double x = floor.min.getX() + bx, y = floor.min.getY() + floor.decor[d * 4 + 1] + 0.2, z = floor.min.getZ() + bz;
+            if (mc.player.distanceToSqr(x, y, z) > 16.0 * 16.0) {
+                continue;
+            }
+            mc.level.playLocalSound(x, y, z, net.minecraft.sounds.SoundEvents.CHEST_OPEN, net.minecraft.sounds.SoundSource.AMBIENT, 0.25F, 1.5F, false);
+            mc.level.playLocalSound(x, y, z, net.minecraft.sounds.SoundEvents.BUBBLE_COLUMN_UPWARDS_INSIDE, net.minecraft.sounds.SoundSource.AMBIENT, 0.5F, 1.3F, false);
+        }
+    }
+
     /** This tank's fish, this moment, into the fish texture. */
     private static void uploadFish(Floor floor) {
         Minecraft mc = Minecraft.getInstance();
         long gameTime = mc.level == null ? 0L : mc.level.getGameTime();
         double t = ((gameTime % 1_728_000L) + mc.getTimer().getGameTimeDeltaPartialTick(false)) / 20.0;
         fishFrame(floor, t);
+        chestSounds(floor, t);
         if (fishTex < 0) {
             fishTex = com.mojang.blaze3d.platform.TextureUtil.generateTextureId();
             com.mojang.blaze3d.platform.GlStateManager._bindTexture(fishTex);
@@ -853,23 +1086,23 @@ public final class AquariumRenderer {
             14.0F, 6.0F, 10.0F, 6.0F, 8.0F, 4.0F, 10.0F, 1.2F, 16.0F, 30.0F,
             0.6F, 0.7F, 6.0F, 1.0F, 3.0F, 0.3F,
             3.0F, 2.5F, 0.8F, 0.25F, 8.0F, 8.0F, 1.2F,
-            1.5F, 0.35F};
+            1.5F, 0.35F, 0.4F};
     /** How often each kind is picked, against the others. */
     private static final float[] WEIGHT = {1, 1, 1, 1.3F, 1, 1, 1, 0.8F, 1.2F, 1,
             0.9F, 1.2F, 0.7F, 1.0F, 0.9F, 0.9F, 0.7F, 2.4F, 0.7F, 0.6F,
             0.8F, 0.8F, 0.7F, 0.7F, 0.6F, 1.0F,
             1.0F, 0.9F, 1.4F, 0.9F, 0.8F, 0.8F, 1.0F,
-            1.0F, 1.5F};
+            1.0F, 1.5F, 1.0F};
     /** Most of each kind in one tank (with every kind on). */
     private static final int[] CAP = {8, 6, 6, 16, 4, 8, 4, 3, 12, 4,
             3, 6, 3, 4, 3, 5, 3, 16, 2, 2,
             3, 3, 2, 2, 2, 4,
             6, 4, 10, 12, 3, 3, 4,
-            3, 16};
+            3, 16, 3};
 
     /** What each aquarium can have: the normal one's fish and bottom creatures, and the ocean one's. */
-    static final int[] NORMAL_KINDS = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 28, 27, 29, 32, 20, 21, 23, 25};
-    static final int[] OCEAN_KINDS = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 26, 27, 30, 31, 21, 22, 23, 24, 25};
+    static final int[] NORMAL_KINDS = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 28, 27, 29, 32, 20, 21, 23, 25, 35};
+    static final int[] OCEAN_KINDS = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 26, 27, 30, 31, 21, 22, 23, 24, 25, 35};
     static final int[] DEEP_KINDS = {33, 34, 15, 31};
 
     private static int[] kindsFor(Floor floor) {

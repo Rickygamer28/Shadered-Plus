@@ -48,6 +48,7 @@ public final class VanillaAquariumRenderer {
             "guppy", "discus", "shark", "tuna", "manta_ray", null, "grouper", "jellyfish", null, "sardine", "ocean_sunfish", "basking_shark",
             "hermit_crab", "crab", "stingray", "octopus", "lobster", "shrimp", null, null, null, null, null, null, null};
     private static final int PUFFERFISH = 7, SEA_TURTLE = 13, DOLPHIN = 16, MANTA = 12, JELLYFISH = 15, STINGRAY = 22;
+    private static final int CLEANER = 35;
     private static final int COD = 26, SALMON = 27, TROPICAL = 28, TADPOLE = 29, SQUID = 30, GLOW_SQUID = 31, AXOLOTL = 32;
     private static final String[] AXOLOTL_TEX = {"lucy", "wild", "gold", "cyan", "blue"};
     /** The sixteen dye colours (a tropical fish's body and pattern colours). */
@@ -173,6 +174,8 @@ public final class VanillaAquariumRenderer {
         int lightKind = job.light();
         if (lightKind == 1) { // (the tank's light: as the aquariums' water in it)
             r = 0.02F; g = 0.075F; b = 0.21F;
+        } else if (lightKind == 4) {
+            r = 0.01F; g = 0.045F; b = 0.155F;
         } else if (lightKind == 2) {
             r = 0.36F; g = 0.2F; b = 0.21F;
         } else if (lightKind == 3) {
@@ -199,7 +202,7 @@ public final class VanillaAquariumRenderer {
         float[] f = job.fish();
         int o = i * 16;
         int kind = Math.round(f[o + 7]);
-        if (kind < 0 || kind >= MODEL.length) {
+        if (kind < 0 || kind >= MODEL.length && kind != CLEANER) {
             return;
         }
         double x = job.min().getX() + f[o], y = job.min().getY() + f[o + 1], z = job.min().getZ() + f[o + 2];
@@ -214,8 +217,8 @@ public final class VanillaAquariumRenderer {
         }
         // how big: as long as the aquariums' own (its body and tail), as wide for the rays, the bell for a jellyfish
         float length = crawler ? 2.0F * Math.max(sp[0], sp[2]) * size : (2.0F * sp[0] + 1.6F * sp[3]) * size;
-        String name = MODEL[kind];
-        if (kind >= COD) {
+        String name = kind == CLEANER ? "shrimp" : MODEL[kind];
+        if (kind >= COD && kind != CLEANER) {
             mob(job, i, kind, x, y, z, fwd, up, size, sp, wave, beat, squeeze, walk, light, poseStack, buffers);
             return;
         }
@@ -272,7 +275,7 @@ public final class VanillaAquariumRenderer {
         }
         float scale = length / Math.max(modelLength, 0.05F);
         float squash = kind == JELLYFISH ? 1.0F - 0.25F * squeeze : 1.0F; // (a jellyfish's bell squeezing)
-        ResourceLocation texture = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "textures/entity/aqua/" + name + ".png");
+        ResourceLocation texture = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "textures/entity/aqua/" + (kind == CLEANER ? "cleaner_shrimp" : name) + ".png");
         draw(poseStack, buffers, m, RenderType.entityCutoutNoCull(texture), x, y, z, fwd, up, scale, squash, light, 0.0, 0.0, 0xFFFFFFFF);
     }
 
@@ -517,7 +520,7 @@ public final class VanillaAquariumRenderer {
     }
 
     /** Each light's colour on what's in the tank (daylight, moonlight, sunset, reef: as the aquariums' own). */
-    private static final float[][] LIGHT_TINT = {{1.0F, 1.0F, 1.0F}, {0.42F, 0.55F, 1.0F}, {1.0F, 0.8F, 0.62F}, {0.86F, 0.76F, 1.0F}};
+    private static final float[][] LIGHT_TINT = {{1.0F, 1.0F, 1.0F}, {0.42F, 0.55F, 1.0F}, {1.0F, 0.8F, 0.62F}, {0.86F, 0.76F, 1.0F}, {0.32F, 0.45F, 0.95F}};
 
     /** Buffers whose vertex colours are all tinted (the tank's light on its fish and decorations, blocks included). */
     private record Tinted(MultiBufferSource inner, float[] tint) implements MultiBufferSource {

@@ -19,13 +19,13 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
  * An aquarium lid: a black hood over a tank with a lamp in it. Click it to change the tank's light (daylight,
- * moonlight, sunset, reef: as in the aquarium's menu) without opening the menu.
+ * moonlight, sunset, reef, jellies: as in the aquarium's menu) without opening the menu.
  */
 public class AquariumLidBlock extends Block {
     private static final VoxelShape SHAPE = Block.box(0.0, 0.0, 0.0, 16.0, 3.0, 16.0);
-    /** The light it gives the tank under it: 0 as the aquarium's menu has it, 1 daylight, 2 moonlight, 3 sunset, 4 reef. */
+    /** The light it gives the tank under it: 0 as the aquarium's menu has it, 1 daylight, 2 moonlight, 3 sunset, 4 reef, 5 jellies. */
     public static final net.minecraft.world.level.block.state.properties.IntegerProperty LIGHT =
-            net.minecraft.world.level.block.state.properties.IntegerProperty.create("light", 0, 4);
+            net.minecraft.world.level.block.state.properties.IntegerProperty.create("light", 0, 5);
 
     public AquariumLidBlock(Properties properties) {
         super(properties);
@@ -49,7 +49,7 @@ public class AquariumLidBlock extends Block {
         }
         // (only the tank under it: its lid's own light, kept on the lid; from the menu's to moonlight, then round)
         int light = state.getValue(LIGHT);
-        int next = light == 0 ? 2 : light % 4 + 1;
+        int next = light == 0 ? 2 : light % 5 + 1;
         if (level.isClientSide) {
             com.example.skyblocks.client.ClientAccess.showAquariumLight(next - 1);
         } else {

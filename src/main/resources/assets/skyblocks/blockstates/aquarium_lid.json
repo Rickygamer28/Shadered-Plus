@@ -14,6 +14,9 @@
     },
     "light=4": {
       "model": "skyblocks:block/aquarium_lid"
+    },
+    "light=5": {
+      "model": "skyblocks:block/aquarium_lid"
     }
   }
 }

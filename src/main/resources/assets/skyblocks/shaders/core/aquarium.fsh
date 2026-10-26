@@ -84,6 +84,7 @@ vec3 lightGrade(vec3 c) {
     int l = int(Light + 0.5);
     float lum = dot(c, vec3(0.3, 0.55, 0.15));
     if (l == 1) return mix(vec3(lum), c, 0.55) * vec3(0.42, 0.56, 0.98);                 // moonlight: cool, dim, silvery
+    if (l == 4) return mix(vec3(lum), c, 0.5) * vec3(0.3, 0.42, 0.85);                   // jellies: dark blue, the jellyfish lighting it
     if (l == 2) return mix(c * vec3(1.2, 0.84, 0.6), lum * vec3(1.4, 0.82, 0.58), 0.4) + vec3(0.03, 0.0, 0.0); // sunset: warm orange-pink
     if (l == 3) { // reef: richer colours, a violet-blue light
         c = max(mix(vec3(lum), c, 1.45), 0.0);
@@ -95,6 +96,7 @@ vec3 lightGrade(vec3 c) {
 vec3 lightWater(float y, vec3 usual) {
     int l = int(Light + 0.5);
     if (l == 1) return mix(vec3(0.0, 0.02, 0.1), vec3(0.04, 0.13, 0.33), y);
+    if (l == 4) return mix(vec3(0.0, 0.01, 0.07), vec3(0.02, 0.08, 0.24), y);
     if (l == 2) return mix(vec3(0.13, 0.06, 0.11), vec3(0.58, 0.34, 0.3), y);
     if (l == 3) return mix(vec3(0.05, 0.02, 0.18), vec3(0.24, 0.2, 0.58), y);
     return usual;
@@ -174,6 +176,7 @@ Species species(int k) {
     if (k == 23) return Species(vec3(0.17, 0.13, 0.17), vec3(0.0), vec3(0.0), 0.5);  // octopus
     if (k == 24) return Species(vec3(0.38, 0.1, 0.17), vec3(0.0), vec3(0.0), 0.4);   // lobster
     if (k == 25) return Species(vec3(0.13, 0.08, 0.06), vec3(0.0), vec3(0.0), 0.8);  // shrimp
+    if (k == 35) return Species(vec3(0.16, 0.1, 0.07), vec3(0.0), vec3(0.0), 0.8);   // cleaner shrimp (its feelers longer)
     // the game's own water mobs
     if (k == 26) return Species(vec3(0.26, 0.07, 0.05), vec3(0.07, 0.08, 0.008), vec3(0.15, 0.05, 0.008), 0.8);   // cod
     if (k == 27) return Species(vec3(0.25, 0.075, 0.05), vec3(0.08, 0.1, 0.009), vec3(0.08, 0.07, 0.008), 1.1);   // salmon
@@ -189,7 +192,7 @@ Species species(int k) {
 
 // the creatures that walk on the bottom (20-25, the axolotl), and the squid (jetting mantle first, arms trailing)
 bool isCrawler(int k) {
-    return (k >= 20 && k <= 25) || k == 32;
+    return (k >= 20 && k <= 25) || k == 32 || k == 35;
 }
 
 bool isSquid(int k) {
@@ -1225,7 +1228,9 @@ float critterSDF(int kind, vec3 p, float wave, out int ptype, out vec3 q) {
             vec3 foot = vec3(x + 0.014 + cos(ph) * 0.012 + 0.006, 0.004 + max(sin(ph), 0.0) * 0.011, 0.058);
             addPart(res, best, ptype, sdEllipsoid(sp - foot, vec3(0.011, 0.0035, 0.009)), 1, 0.004);
         }
-    } else { // fire shrimp: bright red, white spots, a curved tail, long white legs and feelers
+    } else { // fire shrimp: bright red, white spots, a curved tail, long white legs and feelers (the cleaner shrimp: the
+             // same, its feelers longer; cleaning a fish, it rears up, front legs and feelers reaching and picking)
+        float clean = kind == 35 ? gPulse : 0.0;
         addPart(res, best, ptype, sdEllipsoid(p - vec3(0.015, 0.042, 0.0), vec3(0.028, 0.018, 0.014)), 0, 0.0);
         addPart(res, best, ptype, sdTaper(p, vec3(0.04, 0.047, 0.0), vec3(0.056, 0.05, 0.0), 0.003, 0.001), 0, 0.002);
         for (int k = 0; k < 5; k++) {
@@ -1240,11 +1245,17 @@ float critterSDF(int kind, vec3 p, float wave, out int ptype, out vec3 q) {
         addPart(res, best, ptype, sdTaper(sp, vec3(0.03, 0.032, 0.008), vec3(0.058, 0.026, 0.013), 0.0032, 0.0018), 0, 0.0);
         for (int k = 0; k < 5; k++) {
             float x = 0.024 - float(k) * 0.009;
+            vec3 foot = vec3(x - 0.004, 0.0, 0.026);
+            if (k < 2 && clean > 0.0) { // (reaching up and forward, picking: each its own little rhythm)
+                float pick = sin(gTime * 9.0 + float(k) * 2.1 + sgn * 1.3);
+                foot = mix(foot, vec3(0.06 + 0.01 * pick, 0.07 + 0.012 * pick + 0.01 * float(k), 0.012), clean);
+            }
             addLeg(res, best, ptype, sp, vec3(x, 0.03, 0.007), vec3(x + 0.002, 0.037, 0.02),
-                   vec3(x - 0.004, 0.0, 0.026), 0.0018, stepPh * 1.5 + float(k) * 1.26 + sgn * 1.57, vec3(1.0, 0.0, 0.0), 0.005, 3);
+                   foot, 0.0018, stepPh * 1.5 + float(k) * 1.26 + sgn * 1.57, vec3(1.0, 0.0, 0.0), 0.005, 3);
         }
-        float aw = 0.01 * sin(wave * 1.1 + p.z * 50.0);
-        vec3 a1 = vec3(0.08, 0.07, 0.02 + aw), a2 = vec3(0.12, 0.052 + aw, 0.036);
+        float aw = 0.01 * sin(wave * 1.1 + p.z * 50.0) + clean * 0.012 * sin(gTime * 6.0 + sgn);
+        float al = kind == 35 ? 1.7 : 1.0;
+        vec3 a1 = vec3(0.08, 0.07 + 0.03 * clean, 0.02 + aw), a2 = vec3(0.04 + 0.08 * al, 0.052 + aw + 0.07 * clean, 0.036 * al);
         addPart(res, best, ptype, sdTaper(sp, vec3(0.042, 0.05, 0.004), a1, 0.0013, 0.001), 3, 0.0);
         addPart(res, best, ptype, sdTaper(sp, a1, a2, 0.001, 0.0008), 3, 0.0);
     }
@@ -1307,6 +1318,16 @@ vec3 critterColour(int kind, vec3 p, int part, float rnd) {
         c = mix(c, c * 1.12 + 0.06, smoothstep(0.034, 0.022, p.y)); // (a paler belly)
         if (p.x > 0.095 && abs(p.y - 0.042 - 6.0 * p.z * p.z) < 0.0018) c *= 0.5; // (its smile)
         return p.x < -0.1 ? mix(c, c * 1.1 + 0.08, smoothstep(0.012, 0.03, abs(p.y - 0.048))) : c; // (the tail fin's edges paler)
+    }
+    if (kind == 35) { // cleaner shrimp: see-through amber sides, a white stripe down its back between two red ones, white feelers
+        if (part == 3) return vec3(0.97);
+        float back = smoothstep(0.036, 0.046, p.y + p.x * 0.12);
+        vec3 c = vec3(1.0, 0.72, 0.36) * (0.9 + 0.15 * fbm(p.xy * 200.0));
+        float az = abs(p.z);
+        vec3 stripe = az < 0.0032 ? vec3(1.0) : az < 0.009 ? vec3(0.9, 0.1, 0.08) : c;
+        c = mix(c, stripe, back);
+        if (p.x < -0.06) c = mix(c, vec3(1.0), spot(p.xz * 300.0, 0.18)); // (white spots on its tail fan)
+        return c;
     }
     // fire shrimp
     if (part == 3) return vec3(0.95, 0.94, 0.92);
@@ -1582,6 +1603,45 @@ float kelpSDF(vec3 p, float t, out int part) {
     return d;
 }
 
+// ---- the treasure chest (5): now and then its lid pops open, a burst of bubbles rising out of it, gold coins heaped
+// inside glinting, then it slowly falls shut again. Each chest keeps its own time (from where it stands: the same on
+// the CPU, for the sound) ----
+const float CHEST_CYCLE = 14.0;
+float gDecoPhase = 0.0; // (this chest's own time offset)
+
+float chestPhase(vec3 base) {
+    return mod(base.x * 3.7 + base.z * 5.3, CHEST_CYCLE);
+}
+
+// how far open the lid is (radians): a rattle, a quick pop open with a little bounce, a while open, slowly shut
+float chestOpen(float t) {
+    float c = mod(t + gDecoPhase, CHEST_CYCLE);
+    if (c > CHEST_CYCLE - 0.7) return 0.05 * abs(sin(c * 38.0)) * smoothstep(CHEST_CYCLE - 0.7, CHEST_CYCLE - 0.3, c); // (the rattle)
+    float a = c < 0.3 ? sin(c / 0.3 * 1.5708) * 1.12
+            : c < 3.2 ? 1.0 + 0.12 * exp(-(c - 0.3) * 4.0) * cos((c - 0.3) * 16.0)
+            : 1.0 - smoothstep(3.2, 5.0, c);
+    return a * 1.05;
+}
+
+// a point in the closed lid's frame (the lid turned up round its hinge at the back)
+vec3 chestLid(vec3 p, float a) {
+    vec2 h = p.yz - vec2(0.14, -0.09);
+    h = vec2(h.x * cos(a) - h.y * sin(a), h.x * sin(a) + h.y * cos(a));
+    return vec3(p.x, h + vec2(0.14, -0.09));
+}
+
+// the chest's parts: (body, lid, gold heap)
+vec3 chestParts(vec3 p, float t) {
+    float body = sdBox(p - vec3(0.0, 0.07, 0.0), vec3(0.14, 0.07, 0.09)) - 0.004;
+    body = max(body, -sdBox(p - vec3(0.0, 0.13, 0.0), vec3(0.124, 0.035, 0.074))); // (hollow: open at the top)
+    float heap = 0.104 + 0.018 * (1.0 - length(p.xz / vec2(0.124, 0.074))) + 0.003 * sin(p.x * 160.0) * sin(p.z * 170.0);
+    float gold = max(sdBox(p - vec3(0.0, 0.08, 0.0), vec3(0.124, 0.06, 0.074)), p.y - heap);
+    vec3 l = chestLid(p, chestOpen(t));
+    float lid = max(max(length(l.yz - vec2(0.14, 0.0)) - 0.09, abs(l.x) - 0.14), 0.14 - l.y);
+    lid = max(lid, -max(max(length(l.yz - vec2(0.14, 0.0)) - 0.078, abs(l.x) - 0.128), 0.13 - l.y)); // (hollow underneath)
+    return vec3(body, lid, gold);
+}
+
 float decoSDF(int type, vec3 p, float t) {
     if (type == 14) { // an air stone: a little round porous stone, its bubbles rising from it
         vec2 d = vec2(length(p.xz) - 0.06, abs(p.y - 0.024) - 0.022);
@@ -1659,9 +1719,8 @@ float decoSDF(int type, vec3 p, float t) {
         return smin(d, sdCapsule(p, vec3(0.05, 0.19, 0.015), vec3(0.12, 0.3, 0.08), 0.017), 0.025);
     }
     if (type == 5) {
-        float body = sdBox(p - vec3(0.0, 0.07, 0.0), vec3(0.14, 0.07, 0.09)) - 0.004;
-        float lid = max(max(length(p.yz - vec2(0.14, 0.0)) - 0.09, abs(p.x) - 0.14), 0.14 - p.y);
-        return min(body, lid);
+        vec3 c = chestParts(p, t);
+        return min(min(c.x, c.y), c.z);
     }
     if (type == 6) {
         float d = sdEllipsoid(p - vec3(0.0, 0.03, 0.0), vec3(0.08, 0.05, 0.08));
@@ -1744,8 +1803,20 @@ vec3 decoColour(int type, vec3 p, vec3 n, float rnd) {
     }
     if (type == 4) return mix(hue(0.9 + rnd * 0.2), vec3(1.0, 0.9, 0.85), smoothstep(0.2, 0.33, p.y) * 0.5);
     if (type == 5) {
-        bool gold = abs(abs(p.x) - 0.09) < 0.015 || abs(p.y - 0.14) < 0.012;
-        return gold ? vec3(1.0, 0.8, 0.25) * 1.2 : vec3(0.42, 0.25, 0.12) * (0.8 + 0.2 * step(0.5, fract(p.y * 25.0)));
+        vec3 c = chestParts(p, gTime);
+        if (c.z <= min(c.x, c.y) + 0.0005) { // the gold inside: a heap of coins, glinting
+            vec2 cp = p.xz * 70.0;
+            cp.y += 0.5 * floor(cp.x);
+            float coin = smoothstep(0.42, 0.36, length(fract(cp) - 0.5));
+            vec3 g = mix(vec3(0.75, 0.52, 0.12), vec3(1.0, 0.85, 0.35), coin) * 1.25;
+            float glint = step(0.93, hash22(floor(cp) + floor(gTime * 3.0)).x);
+            return g + vec3(1.0, 0.95, 0.7) * glint * 1.5;
+        }
+        vec3 q = c.y < c.x ? chestLid(p, chestOpen(gTime)) : p; // (the lid's bands turn up with it)
+        bool inside = c.y < c.x ? length(q.yz - vec2(0.14, 0.0)) < 0.084 && abs(q.x) < 0.134 : max(abs(q.x) - 0.12, abs(q.z) - 0.07) < 0.0 && q.y > 0.09;
+        if (inside) return vec3(0.22, 0.12, 0.06); // (the dark wood inside)
+        bool gold = abs(abs(q.x) - 0.09) < 0.015 || abs(q.y - 0.14) < 0.012 || (c.y < c.x && abs(q.x) < 0.02 && q.z > 0.07 && q.y < 0.19);
+        return gold ? vec3(1.0, 0.8, 0.25) * 1.2 : vec3(0.42, 0.25, 0.12) * (0.8 + 0.2 * step(0.5, fract(q.y * 25.0)));
     }
     if (type == 6) return mix(vec3(0.95, 0.5, 0.2), mix(vec3(0.75, 0.2, 0.9), vec3(1.0, 0.5, 0.9), rnd), smoothstep(0.05, 0.16, p.y)) * 1.1;
     return abs(p.y - 0.16) < 0.015 ? vec3(0.12, 0.08, 0.06) : vec3(0.75, 0.38, 0.2) * (0.85 + 0.15 * speck);
@@ -1767,6 +1838,89 @@ float stoneRipple(vec2 p, vec3 s0, vec3 s1, float t) {
 
 vec4 decoData(int k) {
     return k == 0 ? Deco0 : k == 1 ? Deco1 : k == 2 ? Deco2 : k == 3 ? Deco3 : k == 4 ? Deco4 : k == 5 ? Deco5 : k == 6 ? Deco6 : k == 7 ? Deco7 : k == 8 ? Deco8 : k == 9 ? Deco9 : k == 10 ? Deco10 : k == 11 ? Deco11 : k == 12 ? Deco12 : k == 13 ? Deco13 : k == 14 ? Deco14 : k == 15 ? Deco15 : k == 16 ? Deco16 : k == 17 ? Deco17 : k == 18 ? Deco18 : k == 19 ? Deco19 : k == 20 ? Deco20 : k == 21 ? Deco21 : k == 22 ? Deco22 : Deco23;
+}
+
+bool water(ivec3 c);
+
+// ---- the "jellies" light: the tank full of small moon jellyfish drifting, each glowing softly - a pale see-through
+// bell with four lilac rings in it, pulsing, its short frilly arms trailing. One maybe in each little cell of water
+// along the ray (front to back); returns their colour over what's behind (premultiplied) and how much they cover ----
+vec4 jellies(vec3 org, vec3 rd, float tMin, float tMax, float t) {
+    const float JC = 0.6;
+    vec3 rdn = mix(rd, vec3(1.0e-5), lessThan(abs(rd), vec3(1.0e-5)));
+    vec3 p0 = org + rd * tMin;
+    vec3 cell = floor(p0 / JC);
+    vec3 stp = sign(rdn);
+    vec3 tD = abs(JC / rdn);
+    vec3 tM = ((cell + max(stp, 0.0)) * JC - p0) / rdn + tMin;
+    vec4 acc = vec4(0.0);
+    for (int i = 0; i < 40; i++) {
+        vec2 h1 = hash22(cell.xy + cell.z * 7.31 + 0.37), h2 = hash22(cell.zx * 1.7 + cell.y * 3.1 + 5.3);
+        if (h1.x < 0.55) {
+            float r = 0.065 + 0.035 * h2.x;
+            float ph = h1.y * 6.28 + t * (0.55 + 0.25 * h2.y);
+            float pulse = pow(max(sin(ph), 0.0), 2.0);
+            vec3 c = (cell + 0.5) * JC + vec3((h2.y - 0.5) * 0.12, (h1.x / 0.55 - 0.5) * 0.06 + 0.04 * sin(t * 0.35 + h2.x * 6.0) + 0.025 * pulse, (h1.y - 0.5) * 0.12);
+            if (c.y > 0.3 && c.y < BoxSize.y - 0.12 && water(ivec3(floor(c)))) {
+                vec3 rad = vec3(r * (1.0 - 0.12 * pulse), r * 0.72 * (1.0 + 0.1 * pulse), r * (1.0 - 0.12 * pulse));
+                vec3 oc = (org - c) / rad, dd = rd / rad;
+                float a = dot(dd, dd), b = dot(oc, dd), k = dot(oc, oc) - 1.0, disc = b * b - a * k;
+                float along = dot(c - org, rd);
+                float fog = exp(-max(along - tMin, 0.0) * 0.18);
+                vec3 glowC = vec3(0.0);
+                float glowA = 0.0;
+                if (along > tMin && along < tMax) { // (a soft glow round it, and its arms hanging under it)
+                    float dc = length(org + rd * along - c);
+                    glowC += vec3(0.35, 0.6, 1.0) * exp(-dc * dc / (r * r * 2.2)) * 0.22;
+                    vec3 a0 = c - vec3(0.0, 0.05 * r, 0.0), a1 = c - vec3(0.0, 1.5 * r, 0.0);
+                    vec3 w = a1 - a0;
+                    vec3 cr = cross(rd, w);
+                    float lc = length(cr);
+                    if (lc > 1.0e-5) {
+                        float dl = abs(dot(org - a0, cr)) / lc;
+                        float s = dot(cross(a0 - org, rd), cr) / (lc * lc); // (how far down the arms)
+                        float wid = r * (0.2 + 0.1 * sin(s * 18.0 + t * 2.0 + h2.x * 9.0));
+                        float arm = exp(-dl * dl / (wid * wid)) * smoothstep(0.0, 0.15, s) * (1.0 - smoothstep(0.5, 1.0, s));
+                        glowC += vec3(0.7, 0.6, 1.0) * arm * 0.5;
+                        glowA += arm * 0.25;
+                    }
+                }
+                vec3 jc = glowC;
+                float ja = glowA;
+                if (disc > 0.0) {
+                    float sq = sqrt(disc);
+                    for (int side = 0; side < 2; side++) {
+                        float th = (-b + (side == 0 ? -sq : sq)) / a;
+                        vec3 lp = oc + dd * th; // (on the unit sphere)
+                        if (th < tMin || th > tMax || lp.y < -0.05) continue;
+                        vec3 n = normalize(lp / rad);
+                        float fres = pow(1.0 - abs(dot(n, rd)), 2.0);
+                        vec2 xz = lp.xz;
+                        float rings = 0.0;
+                        for (int g = 0; g < 4; g++) { // (the four lilac horseshoe rings, seen through the top)
+                            float ang = float(g) * 1.5708 + 0.785;
+                            float dr = length(xz - vec2(cos(ang), sin(ang)) * 0.36);
+                            rings = max(rings, smoothstep(0.06, 0.0, abs(dr - 0.17)));
+                        }
+                        float rim = smoothstep(0.15, 0.0, lp.y) * (0.6 + 0.4 * sin(atan(xz.y, xz.x) * 16.0)); // (the frilly rim)
+                        vec3 bc = mix(vec3(0.6, 0.78, 1.0), vec3(0.85, 0.55, 1.0), rings) * (0.45 + 0.9 * fres + 0.3 * rim + 0.25 * pulse);
+                        float ba = 0.12 + 0.5 * fres + 0.35 * rings + 0.2 * rim;
+                        jc += (1.0 - ja) * bc * ba;
+                        ja += (1.0 - ja) * ba;
+                    }
+                }
+                acc.rgb += (1.0 - acc.a) * jc * fog;
+                acc.a += (1.0 - acc.a) * clamp(ja, 0.0, 1.0) * fog;
+                if (acc.a > 0.97) break;
+            }
+        }
+        float tn = min(tM.x, min(tM.y, tM.z));
+        if (tn > tMax) break;
+        if (tM.x < tM.y && tM.x < tM.z) { cell.x += stp.x; tM.x += tD.x; }
+        else if (tM.y < tM.z) { cell.y += stp.y; tM.y += tD.y; }
+        else { cell.z += stp.z; tM.z += tD.z; }
+    }
+    return acc;
 }
 
 bool water(ivec3 c) {
@@ -2099,6 +2253,7 @@ void main() {
         float ang = float((pk / 16) - (pk / 256) * 16) * 0.3927;
         float sz = float(pk / 256) / 10.0;
         vec3 base = dd.xyz;
+        gDecoPhase = chestPhase(base);
         float rad = (type == 8 ? 0.7 : type == 13 ? 0.56 : type == 14 ? 0.25 : 0.5) * sz;
         vec3 oc = rot - (base + vec3(0.0, (type == 13 ? 0.5 : 0.2) * sz, 0.0));
         gDecoSz = sz;
@@ -2142,7 +2297,11 @@ void main() {
         float light = 0.4 + 0.6 * max(n.y, 0.0) + 0.2 * max(dot(n, -rd), 0.0);
         decoCol = decoColour(type, pl, g, hash11(float(k) * 17.1)) * light
                 + vec3(0.6, 0.85, 1.0) * caustics(p.xz, t) * max(n.y, 0.0) * 0.45;
-        if (type == 5) decoCol += vec3(1.0, 0.8, 0.3) * 0.15 * pow(max(dot(reflect(rd, n), vec3(0.0, 1.0, 0.0)), 0.0), 8.0);
+        if (type == 5) {
+            decoCol += vec3(1.0, 0.8, 0.3) * 0.15 * pow(max(dot(reflect(rd, n), vec3(0.0, 1.0, 0.0)), 0.0), 8.0);
+            vec3 cpp = chestParts(pl, t);
+            if (cpp.z <= min(cpp.x, cpp.y) + 0.0005) decoCol += vec3(1.0, 0.75, 0.3) * 0.35 * min(chestOpen(t), 1.0); // (the gold shining out)
+        }
         deco = true;
         fish = false;
         hitT = td;
@@ -2163,7 +2322,8 @@ void main() {
     }
 
     // ---- bubbles: a stream rising from each air stone, wobbling, growing a little as they rise ----
-    vec3 stone0 = vec3(-9.0), stone1 = vec3(-9.0);
+    vec3 stone0 = vec3(-9.0), stone1 = vec3(-9.0), chest = vec3(-9.0);
+    float chestSz = 1.0;
     for (int k = 0; k < 24; k++) {
         if (k >= int(DecoCount + 0.5)) break;
         vec4 dd = decoData(k);
@@ -2171,12 +2331,16 @@ void main() {
         if (pk - (pk / 16) * 16 == 14) {
             if (stone0.y < -1.0) stone0 = dd.xyz; else if (stone1.y < -1.0) stone1 = dd.xyz;
         }
+        if (pk - (pk / 16) * 16 == 5 && chest.y < -1.0) {
+            chest = dd.xyz;
+            chestSz = float(pk / 256) / 10.0;
+        }
     }
     vec3 bubbleCol = vec3(0.0);
     float bubbleT = 1.0e9;
-    for (int k = 0; k < 32; k++) {
+    for (int k = 0; k < 46; k++) {
         float fk = float(k);
-        vec3 src = k < 16 ? stone0 : stone1;
+        vec3 src = k < 16 ? stone0 : k < 32 ? stone1 : chest;
         if (src.y < -1.0) continue;
         float top = BoxSize.y - 0.02 - src.y;
         float sp = 0.5 + 0.18 * hash11(fk + 20.0);
@@ -2184,6 +2348,17 @@ void main() {
         float wob = 0.012 + 0.035 * rise / max(top, 0.1);
         vec3 bc = src + vec3(wob * sin(t * 4.0 + fk * 1.7 + rise * 6.0), 0.05 + rise, wob * cos(t * 3.4 + fk + rise * 5.0));
         float br = (0.009 + 0.008 * hash11(fk * 9.1)) * (1.0 + 0.5 * rise / max(top, 0.1));
+        if (k >= 32) { // a burst of bubbles out of the treasure chest as its lid pops open
+            if (chest.y < -1.0) continue;
+            float age = mod(t + chestPhase(chest), CHEST_CYCLE) - 0.12 - 0.5 * hash11(fk * 4.3);
+            float top2 = BoxSize.y - 0.02 - chest.y;
+            float up2 = age * (0.45 + 0.25 * hash11(fk * 1.9)) + 0.35 * age * age;
+            if (age < 0.0 || up2 > top2) continue;
+            vec2 off = (hash22(vec2(fk, 7.7)) - 0.5) * vec2(0.18, 0.1) * chestSz;
+            float w2 = 0.01 + 0.03 * up2 / max(top2, 0.1);
+            bc = chest + vec3(off.x + w2 * sin(t * 5.0 + fk * 2.3), 0.15 * chestSz + up2, off.y + w2 * cos(t * 4.3 + fk));
+            br = (0.012 + 0.012 * hash11(fk * 6.1)) * (1.0 + 0.4 * up2 / max(top2, 0.1));
+        }
         vec3 o = ro - BoxMin - bc;
         float b = dot(o, rd), cc = dot(o, o) - br * br, h = b * b - cc;
         if (h > 0.0) {
@@ -2315,7 +2490,7 @@ void main() {
 
     // ---- night: the tank's lights dimmed to a deep blue; what glows still glows ----
     // (in moonlight too: what glows shines out, the plankton twinkles)
-    float glowing = max(Night, abs(Light - 1.0) < 0.5 ? 0.8 : 0.0);
+    float glowing = max(Night, abs(Light - 1.0) < 0.5 || abs(Light - 4.0) < 0.5 ? 0.8 : 0.0);
     if (glowing > 0.0) {
         float seen = max(hitT - tEnter, 0.0);
         col *= mix(vec3(1.0), vec3(0.24, 0.3, 0.5), Night); // (dim, but you can still see in)
@@ -2343,6 +2518,11 @@ void main() {
         col += vec3(0.25, 0.85, 1.0) * min(spark, 1.0) * 0.7 * glowing;
         if (!deco) col += glow * glowing * exp(-seen * 0.25);
         col += lureHalo * glowing;
+    }
+
+    if (abs(Light - 4.0) < 0.5 && Deep < 0.5) { // the jellies (glowing: not dimmed by the night)
+        vec4 jl = jellies(ro - BoxMin, rd, tEnter, hitT, t);
+        col = col * (1.0 - jl.a) + jl.rgb;
     }
 
     // ---- the frame round the tank's edges ----

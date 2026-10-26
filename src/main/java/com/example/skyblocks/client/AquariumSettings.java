@@ -17,12 +17,12 @@ public final class AquariumSettings {
     public static final String[] NAMES = {"clownfish", "blue_tang", "yellow_tang", "neon_tetra", "angelfish", "goldfish", "betta",
             "pufferfish", "guppy", "discus", "shark", "tuna", "manta_ray", "sea_turtle", "grouper", "jellyfish", "dolphin", "sardine",
             "ocean_sunfish", "basking_shark", "hermit_crab", "crab", "stingray", "octopus", "lobster", "shrimp",
-            "cod", "salmon", "tropical_fish", "tadpole", "squid", "glow_squid", "axolotl", "anglerfish", "lanternfish"};
+            "cod", "salmon", "tropical_fish", "tadpole", "squid", "glow_squid", "axolotl", "anglerfish", "lanternfish", "cleaner_shrimp"};
     private static final boolean[] ENABLED = new boolean[NAMES.length];
     private static boolean loaded;
     private static boolean nightMode = true;
-    /** The tanks' light (normal, ocean): 0 daylight, 1 moonlight, 2 sunset, 3 reef. */
-    public static final String[] LIGHTS = {"daylight", "moonlight", "sunset", "reef"};
+    /** The tanks' light (normal, ocean): 0 daylight, 1 moonlight, 2 sunset, 3 reef, 4 jellies (glowing moon jellyfish). */
+    public static final String[] LIGHTS = {"daylight", "moonlight", "sunset", "reef", "jellies"};
     private static final int[] LIGHT = new int[2];
 
     private AquariumSettings() {}
