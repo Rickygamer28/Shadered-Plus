@@ -64,7 +64,6 @@ public class SkyBlocksMod {
         event.accept(ModItems.JELLYFISH_TANK.get());
         event.accept(ModItems.KOI_POND.get());
         event.accept(ModItems.VANILLA_KOI_POND.get());
-        event.accept(ModItems.POND_WATERFALL.get());
         event.accept(ModItems.POND_STEPPING_STONE.get());
         event.accept(ModItems.POND_BRIDGE.get());
         event.accept(ModItems.NEON_SIGN.get());

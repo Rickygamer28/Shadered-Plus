@@ -147,10 +147,6 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.STONE).noOcclusion()
                     .mapColor(net.minecraft.world.level.material.MapColor.WATER));
 
-    /** A stone waterfall pouring into a koi pond (PondWaterfallBlock, client/PondWaterfallRenderer). */
-    public static final DeferredBlock<PondWaterfallBlock> POND_WATERFALL = BLOCKS.registerBlock("pond_waterfall", PondWaterfallBlock::new,
-            BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.STONE).noOcclusion().requiresCorrectToolForDrops()
-                    .mapColor(net.minecraft.world.level.material.MapColor.STONE));
     /** A flat stepping stone, for across a koi pond (frogs sit on it). */
     public static final DeferredBlock<SteppingStoneBlock> POND_STEPPING_STONE = BLOCKS.registerBlock("pond_stepping_stone", SteppingStoneBlock::new,
             BlockBehaviour.Properties.of().strength(1.0F, 6.0F).sound(SoundType.STONE).noOcclusion().requiresCorrectToolForDrops()

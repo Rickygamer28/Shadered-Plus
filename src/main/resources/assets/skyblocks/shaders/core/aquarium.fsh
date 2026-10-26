@@ -2065,13 +2065,14 @@ void main() {
             }
             float sGlow = kind == 31 ? squidGlow(q, part) * (0.8 + 0.4 * pulse) : 0.0; // (a glow squid's lights, by day too)
             shade += vec3(0.2, 0.95, 0.8) * sGlow * 0.45;
+            if (kind == 15 && Deep > 0.5) shade += base * (0.5 + 0.4 * pulse); // (the deep sea's jellyfish lit from within)
             float alpha = (kind == 15 ? 0.55 : 1.0) * cover; // (the jellyfish is see-through)
             if (cover > 0.99) {
                 hitT = tf;
                 fish = true;
                 fishCol = shade;
                 fishAlpha = alpha;
-                glow = kind == 15 ? (Deep > 0.5 ? vec3(0.25, 0.55, 1.0) * (0.5 + 0.8 * pulse) * alpha : base * (1.3 + 0.5 * pulse) * alpha)
+                glow = kind == 15 ? (Deep > 0.5 ? (base * (1.4 + 1.0 * pulse) + vec3(0.04, 0.1, 0.25) * pulse) * (part == 0 ? 1.0 : 0.6) * alpha : base * (1.3 + 0.5 * pulse) * alpha)
                      : kind == 33 && part == 3 ? vec3(0.6, 1.0, 1.0) * 2.0
                      : kind == 34 && part == 0 ? vec3(0.3, 0.65, 1.0) * photophores(q) * 1.6
                      : kind == 31 ? vec3(0.25, 1.0, 0.85) * sGlow * 1.4 : kind == 3 && part == 0 && abs(q.y - 0.12) < 0.13 ? vec3(0.1, 0.6, 0.8) : vec3(0.0);
