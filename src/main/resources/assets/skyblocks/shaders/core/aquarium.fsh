@@ -32,6 +32,7 @@ uniform sampler2D FishTex; // per fish, 4 texels (worked out on the CPU each fra
 uniform float FishCount;
 uniform float Ocean;
 uniform float Night;   // 0 day .. 1 night: the tank lights dimmed, the jellyfish glowing
+uniform float Light;   // the tank's light: 0 daylight, 1 moonlight, 2 sunset, 3 reef
 // decorations: (x, y, z of its base, type + 8 * (turn + 16 * size * 10))
 uniform vec4 Deco0;
 uniform vec4 Deco1;
@@ -77,6 +78,27 @@ vec2 hash22(vec2 p) {
 }
 
 // light patterns from the rippling surface, on a horizontal plane
+// the tank's light (chosen in its menu): what it does to everything seen in the tank, and the water's own colour
+vec3 lightGrade(vec3 c) {
+    int l = int(Light + 0.5);
+    float lum = dot(c, vec3(0.3, 0.55, 0.15));
+    if (l == 1) return mix(vec3(lum), c, 0.55) * vec3(0.42, 0.56, 0.98);                 // moonlight: cool, dim, silvery
+    if (l == 2) return mix(c * vec3(1.2, 0.84, 0.6), lum * vec3(1.4, 0.82, 0.58), 0.4) + vec3(0.03, 0.0, 0.0); // sunset: warm orange-pink
+    if (l == 3) { // reef: richer colours, a violet-blue light
+        c = max(mix(vec3(lum), c, 1.45), 0.0);
+        return mix(c * vec3(0.92, 0.8, 1.15), lum * vec3(0.85, 0.55, 1.35), 0.3);
+    }
+    return c;
+}
+
+vec3 lightWater(float y, vec3 usual) {
+    int l = int(Light + 0.5);
+    if (l == 1) return mix(vec3(0.0, 0.02, 0.1), vec3(0.04, 0.13, 0.33), y);
+    if (l == 2) return mix(vec3(0.13, 0.06, 0.11), vec3(0.58, 0.34, 0.3), y);
+    if (l == 3) return mix(vec3(0.05, 0.02, 0.18), vec3(0.24, 0.2, 0.58), y);
+    return usual;
+}
+
 float caustics(vec2 p, float t) {
     p *= 2.2;
     vec2 i = floor(p), f = fract(p);
@@ -1487,6 +1509,10 @@ float kelpSDF(vec3 p, float t, out int part) {
 }
 
 float decoSDF(int type, vec3 p, float t) {
+    if (type == 14) { // an air stone: a little round porous stone, its bubbles rising from it
+        vec2 d = vec2(length(p.xz) - 0.06, abs(p.y - 0.024) - 0.022);
+        return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - 0.008;
+    }
     if (type == 12) {
         return seagrassSDF(p, t);
     }
@@ -1578,6 +1604,11 @@ float decoSDF(int type, vec3 p, float t) {
 }
 
 vec3 decoColour(int type, vec3 p, vec3 n, float rnd) {
+    if (type == 14) { // the air stone: blue-grey, fine pores all over it, a ring of tiny bubbles just leaving its top
+        vec3 c = vec3(0.56, 0.62, 0.68) * (0.85 + 0.25 * hash22(floor(p.xz * 140.0 + p.y * 90.0)).x);
+        c *= 1.0 - 0.45 * step(0.82, hash22(floor(vec2(atan(p.z, p.x) * 18.0, p.y * 120.0 + length(p.xz) * 140.0))).y);
+        return c;
+    }
     if (type == 12) { // seagrass: deep green at the root, lighter to the tips
         return mix(vec3(0.1, 0.32, 0.14), vec3(0.36, 0.66, 0.3), smoothstep(0.0, 0.5, p.y)) * (0.9 + 0.2 * rnd);
     }
@@ -1647,6 +1678,18 @@ vec3 decoColour(int type, vec3 p, vec3 n, float rnd) {
 }
 
 
+
+// rings spreading out on the surface above the air stones (where their bubbles burst)
+float stoneRipple(vec2 p, vec3 s0, vec3 s1, float t) {
+    float r = 0.0;
+    for (int i = 0; i < 2; i++) {
+        vec3 s = i == 0 ? s0 : s1;
+        if (s.y < -1.0) continue;
+        float d = length(p - s.xz);
+        r += max(sin(d * 45.0 - t * 7.0), 0.0) * exp(-d * 9.0) + exp(-d * d * 900.0) * (0.5 + 0.5 * sin(t * 13.0));
+    }
+    return r;
+}
 
 vec4 decoData(int k) {
     return k == 0 ? Deco0 : k == 1 ? Deco1 : k == 2 ? Deco2 : k == 3 ? Deco3 : k == 4 ? Deco4 : k == 5 ? Deco5 : k == 6 ? Deco6 : k == 7 ? Deco7 : k == 8 ? Deco8 : k == 9 ? Deco9 : k == 10 ? Deco10 : k == 11 ? Deco11 : k == 12 ? Deco12 : k == 13 ? Deco13 : k == 14 ? Deco14 : k == 15 ? Deco15 : k == 16 ? Deco16 : k == 17 ? Deco17 : k == 18 ? Deco18 : k == 19 ? Deco19 : k == 20 ? Deco20 : k == 21 ? Deco21 : k == 22 ? Deco22 : Deco23;
@@ -1950,7 +1993,7 @@ void main() {
         float ang = float((pk / 16) - (pk / 256) * 16) * 0.3927;
         float sz = float(pk / 256) / 10.0;
         vec3 base = dd.xyz;
-        float rad = (type == 8 ? 0.7 : type == 13 ? 0.56 : 0.5) * sz;
+        float rad = (type == 8 ? 0.7 : type == 13 ? 0.56 : type == 14 ? 0.25 : 0.5) * sz;
         vec3 oc = rot - (base + vec3(0.0, (type == 13 ? 0.5 : 0.2) * sz, 0.0));
         gDecoSz = sz;
         float bq = dot(oc, rd), cq = dot(oc, oc) - rad * rad;
@@ -2013,15 +2056,28 @@ void main() {
         }
     }
 
-    // ---- bubbles from a bubbler in one corner ----
-    vec2 bubbler = vec2(0.3, 0.3) + vec2(hash11(41.0), hash11(43.0)) * max(BoxSize.xz - 0.6, vec2(0.0));
+    // ---- bubbles: a stream rising from each air stone, wobbling, growing a little as they rise ----
+    vec3 stone0 = vec3(-9.0), stone1 = vec3(-9.0);
+    for (int k = 0; k < 24; k++) {
+        if (k >= int(DecoCount + 0.5)) break;
+        vec4 dd = decoData(k);
+        int pk = int(dd.w + 0.5);
+        if (pk - (pk / 16) * 16 == 14) {
+            if (stone0.y < -1.0) stone0 = dd.xyz; else if (stone1.y < -1.0) stone1 = dd.xyz;
+        }
+    }
     vec3 bubbleCol = vec3(0.0);
     float bubbleT = 1.0e9;
-    for (int k = 0; k < 9; k++) {
+    for (int k = 0; k < 32; k++) {
         float fk = float(k);
-        float rise = mod(t * (0.55 + 0.1 * hash11(fk + 20.0)) + fk / 9.0 * BoxSize.y, BoxSize.y);
-        vec3 bc = vec3(bubbler.x + 0.05 * sin(t * 3.0 + fk * 1.7), rise, bubbler.y + 0.05 * cos(t * 2.6 + fk));
-        float br = 0.018 + 0.012 * hash11(fk * 9.1);
+        vec3 src = k < 16 ? stone0 : stone1;
+        if (src.y < -1.0) continue;
+        float top = BoxSize.y - 0.02 - src.y;
+        float sp = 0.5 + 0.18 * hash11(fk + 20.0);
+        float rise = mod(t * sp + hash11(fk * 3.7) * top + fk * 0.11, top);
+        float wob = 0.012 + 0.035 * rise / max(top, 0.1);
+        vec3 bc = src + vec3(wob * sin(t * 4.0 + fk * 1.7 + rise * 6.0), 0.05 + rise, wob * cos(t * 3.4 + fk + rise * 5.0));
+        float br = (0.009 + 0.008 * hash11(fk * 9.1)) * (1.0 + 0.5 * rise / max(top, 0.1));
         vec3 o = ro - BoxMin - bc;
         float b = dot(o, rd), cc = dot(o, o) - br * br, h = b * b - cc;
         if (h > 0.0) {
@@ -2072,8 +2128,9 @@ void main() {
             col = vec3(0.85, 0.75, 0.52) * pebble * 0.82;
             col += vec3(0.6, 0.85, 1.0) * caustics(p.xz, t) * 0.55;
         } else if (up) {
-            // the underside of the surface: bright, rippling
+            // the underside of the surface: bright, rippling (rings spreading where the bubbles reach it)
             col = vec3(0.35, 0.75, 0.85) + vec3(0.5, 0.8, 0.9) * caustics(p.xz * 1.3, t * 1.4) * 0.6;
+            col += vec3(0.6, 0.9, 1.0) * stoneRipple(p.xz, stone0, stone1, t) * 0.35;
         } else {
             // the back glass: deep water, seaweed swaying on it, darker lower down
             vec2 wall = exitAxis == 0 ? vec2(p.z, p.y) : vec2(p.x, p.y);
@@ -2113,6 +2170,8 @@ void main() {
         hitT = bubbleT;
     }
 
+    col = lightGrade(col);
+
     // ---- the water between: deeper colour with distance, lighter near the top, a soft shimmer ----
     float travel = max(hitT - tEnter, 0.0);
     // (no fog across the tunnels' air; a faint glassy tint for each tunnel seen through)
@@ -2123,16 +2182,20 @@ void main() {
     col = mix(col, vec3(0.6, 0.8, 0.88), 0.07 * crossed);
     vec3 waterCol = Ocean > 0.5 ? mix(vec3(0.0, 0.1, 0.24), vec3(0.05, 0.38, 0.58), clamp(entry.y / BoxSize.y, 0.0, 1.0))
                                 : mix(vec3(0.02, 0.2, 0.32), vec3(0.15, 0.55, 0.62), clamp(entry.y / BoxSize.y, 0.0, 1.0));
+    waterCol = lightWater(clamp(entry.y / BoxSize.y, 0.0, 1.0), waterCol);
     col = mix(col, waterCol, 1.0 - exp(-travel * (Ocean > 0.5 ? 0.22 : 0.3)));
     col += vec3(0.25, 0.5, 0.55) * 0.08 * (0.5 + 0.5 * sin(entry.x * 4.0 + entry.z * 3.0 + entry.y * 2.0 + t * 1.5));
 
     // looking down through the top: the surface ripples catch the light
     if (faceN.y < -0.5) { // (a top face: faceN points into the tank, down)
         col += vec3(0.8, 0.95, 1.0) * caustics(entry.xz * 1.6 + vec2(t * 0.1, 0.0), t * 1.6) * 0.18;
+        col += vec3(0.85, 0.95, 1.0) * stoneRipple(entry.xz, stone0, stone1, t) * 0.22;
     }
 
     // ---- night: the tank's lights dimmed to a deep blue; what glows still glows ----
-    if (Night > 0.0) {
+    // (in moonlight too: what glows shines out, the plankton twinkles)
+    float glowing = max(Night, abs(Light - 1.0) < 0.5 ? 0.8 : 0.0);
+    if (glowing > 0.0) {
         float seen = max(hitT - tEnter, 0.0);
         col *= mix(vec3(1.0), vec3(0.24, 0.3, 0.5), Night); // (dim, but you can still see in)
         // glowing plankton drifting in the water, twinkling
@@ -2156,8 +2219,8 @@ void main() {
                 }
             }
         }
-        col += vec3(0.25, 0.85, 1.0) * min(spark, 1.0) * 0.7 * Night;
-        if (!deco) col += glow * Night * exp(-seen * 0.25);
+        col += vec3(0.25, 0.85, 1.0) * min(spark, 1.0) * 0.7 * glowing;
+        if (!deco) col += glow * glowing * exp(-seen * 0.25);
     }
 
     // ---- the frame round the tank's edges ----

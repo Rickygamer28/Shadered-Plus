@@ -53,6 +53,11 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
                                 net.minecraft.client.multiplayer.ClientLevel level = net.minecraft.client.Minecraft.getInstance().level;
                                 float day = level == null ? 1.0F : (level.getSkyDarken(1.0F) - 0.2F) / 0.8F; // (1 day .. 0 night)
                                 shader.safeGetUniform("Daylight").set(Math.max(0.0F, Math.min(1.0F, day)));
+                                float pt = net.minecraft.client.Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false);
+                                net.minecraft.world.phys.Vec3 cam = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+                                shader.safeGetUniform("Rain").set(level == null ? 0.0F : PondLife.rain(level, BlockPos.containing(cam), pt));
+                                net.minecraft.world.phys.Vec3 moon = level == null ? new net.minecraft.world.phys.Vec3(0, -1, 0) : PondLife.moon(level, pt);
+                                shader.safeGetUniform("MoonDir").set((float) moon.x, (float) moon.y, (float) moon.z);
                             }
                         }, () -> {}))
                         .setTransparencyState(NO_TRANSPARENCY)
@@ -155,6 +160,9 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
     @Override
     public void render(KoiPondBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
         BlockState state = be.getBlockState();
+        if (state.getBlock() instanceof KoiPondBlock) {
+            PondLife.saw(pond(be.getLevel(), be.getBlockPos(), state.getBlock()), be.getBlockPos()); // (its dragonflies, fireflies)
+        }
         if (state.getBlock() == ModBlocks.VANILLA_KOI_POND.get()) {
             vanilla.render(be, poseStack, buffers, light);
             return;

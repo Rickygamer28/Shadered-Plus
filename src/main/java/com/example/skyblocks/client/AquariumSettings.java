@@ -21,6 +21,9 @@ public final class AquariumSettings {
     private static final boolean[] ENABLED = new boolean[NAMES.length];
     private static boolean loaded;
     private static boolean nightMode = true;
+    /** The tanks' light (normal, ocean): 0 daylight, 1 moonlight, 2 sunset, 3 reef. */
+    public static final String[] LIGHTS = {"daylight", "moonlight", "sunset", "reef"};
+    private static final int[] LIGHT = new int[2];
 
     private AquariumSettings() {}
 
@@ -45,6 +48,9 @@ public final class AquariumSettings {
                 ENABLED[i] = !"false".equalsIgnoreCase(p.getProperty(NAMES[i], "true").trim());
             }
             nightMode = !"false".equalsIgnoreCase(p.getProperty("night_mode", "true").trim());
+            for (int o = 0; o < 2; o++) {
+                LIGHT[o] = Math.max(0, java.util.Arrays.asList(LIGHTS).indexOf(p.getProperty(o == 0 ? "light" : "ocean_light", "daylight").trim()));
+            }
         } catch (IOException | IllegalArgumentException ignored) {
             // (a broken file: everything on)
         }
@@ -59,6 +65,18 @@ public final class AquariumSettings {
     public static boolean nightMode() {
         load();
         return nightMode;
+    }
+
+    /** The light this type of tank has (0 daylight, 1 moonlight, 2 sunset, 3 reef). */
+    public static int light(boolean ocean) {
+        load();
+        return LIGHT[ocean ? 1 : 0];
+    }
+
+    public static void setLight(boolean ocean, int light) {
+        load();
+        LIGHT[ocean ? 1 : 0] = Math.floorMod(light, LIGHTS.length);
+        save();
     }
 
     public static void setNightMode(boolean on) {
@@ -77,6 +95,8 @@ public final class AquariumSettings {
     private static void save() {
         Properties p = new Properties();
         p.setProperty("night_mode", Boolean.toString(nightMode));
+        p.setProperty("light", LIGHTS[LIGHT[0]]);
+        p.setProperty("ocean_light", LIGHTS[LIGHT[1]]);
         for (int i = 0; i < NAMES.length; i++) {
             p.setProperty(NAMES[i], Boolean.toString(ENABLED[i]));
         }

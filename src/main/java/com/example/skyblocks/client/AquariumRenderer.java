@@ -723,6 +723,7 @@ public final class AquariumRenderer {
         shader.safeGetUniform("Full").set(floor.full ? 1.0F : 0.0F);
         shader.safeGetUniform("FishCount").set(0.0F);
         shader.safeGetUniform("Ocean").set(floor.ocean ? 1.0F : 0.0F);
+        shader.safeGetUniform("Light").set((float) AquariumSettings.light(floor.ocean));
         shader.safeGetUniform("DecoCount").set(0.0F);
     }
 
@@ -736,6 +737,7 @@ public final class AquariumRenderer {
         shader.setSampler("FishTex", fishTex);
         shader.safeGetUniform("FishCount").set(floor.vanilla ? 0.0F : (float) floor.fishCount); // (a vanilla tank's: drawn as models)
         shader.safeGetUniform("Ocean").set(floor.ocean ? 1.0F : 0.0F);
+        shader.safeGetUniform("Light").set((float) AquariumSettings.light(floor.ocean));
         float[] d = floor.decor;
         for (int v = 0; v < MAX_DECOR; v++) {
             shader.safeGetUniform("Deco" + v).set(d[v * 4], d[v * 4 + 1], d[v * 4 + 2], d[v * 4 + 3]);
@@ -759,6 +761,17 @@ public final class AquariumRenderer {
         int count = Math.max(3, Math.min(MAX_DECOR, (int) (bottom.size() * (floor.ocean ? 0.6F : 0.8F)))); // (more, with the seaweed)
         boolean castle = false, chest = false, ship = false, anchor = false, helmet = false;
         floor.decorCount = 0;
+        // an air stone (two in a big tank), its stream of bubbles rising to the surface
+        int stones = bottom.size() >= 12 ? 2 : 1;
+        for (int i = 0; i < stones; i++) {
+            BlockPos cell = bottom.get(random.nextInt(bottom.size()));
+            int k = floor.decorCount++;
+            floor.decor[k * 4] = cell.getX() - floor.min.getX() + 0.25F + random.nextFloat() * 0.5F;
+            floor.decor[k * 4 + 1] = 0.12F;
+            floor.decor[k * 4 + 2] = cell.getZ() - floor.min.getZ() + 0.25F + random.nextFloat() * 0.5F;
+            floor.decor[k * 4 + 3] = 14 + 16 * (random.nextInt(16) + 16 * 10);
+        }
+        count = Math.min(count, MAX_DECOR - stones);
         for (int i = 0; i < count; i++) {
             BlockPos cell = bottom.get(random.nextInt(bottom.size()));
             float r = random.nextFloat();

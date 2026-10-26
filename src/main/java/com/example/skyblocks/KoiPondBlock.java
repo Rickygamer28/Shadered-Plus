@@ -139,7 +139,11 @@ public class KoiPondBlock extends BaseEntityBlock {
     @Override
     public void animateTick(BlockState state, net.minecraft.world.level.Level level, BlockPos pos, net.minecraft.util.RandomSource random) {
         double seconds = (level.getGameTime() % 72_000L) / 20.0;
-        if (frogOn(pos, seconds) && random.nextInt(260) == 0) { // (only a frog sitting on a lily pad croaks)
+        // (only a frog sitting on a lily pad croaks: now and then by day, much more at night - but not with anyone close)
+        long dayTime = level.getDayTime() % 24000L;
+        boolean night = dayTime > 13000L && dayTime < 23000L;
+        boolean near = level.getNearestPlayer(pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, 3.5, false) != null;
+        if (frogOn(pos, seconds) && !near && random.nextInt(night ? 70 : 400) == 0) {
             level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.95, pos.getZ() + 0.5, net.minecraft.sounds.SoundEvents.FROG_AMBIENT,
                     net.minecraft.sounds.SoundSource.AMBIENT, 0.5F, 0.9F + random.nextFloat() * 0.2F, false);
         }

@@ -126,6 +126,8 @@ public final class VanillaAquariumRenderer {
             order.sort((a, b) -> Double.compare(b.centre().distanceToSqr(cam), a.centre().distanceToSqr(cam)));
             for (AquariumRenderer.VanillaJob job : order) {
                 AquariumRenderer.drawPicture(job, view);
+                int lightKind = AquariumSettings.light(job.ocean());
+                MultiBufferSource lit = lightKind == 0 ? buffers : new Tinted(buffers, LIGHT_TINT[lightKind]);
                 // its fish and decorations, in its water's fog (as the aquariums': the water's colour, deeper the farther in)
                 float fogStart = RenderSystem.getShaderFogStart(), fogEnd = RenderSystem.getShaderFogEnd();
                 float[] fogColour = RenderSystem.getShaderFogColor().clone();
@@ -133,10 +135,10 @@ public final class VanillaAquariumRenderer {
                 waterFog(job, cam);
                 try {
                     for (int d = 0; d < job.decorCount(); d++) {
-                        decoration(level, job, d, poseStack, buffers);
+                        decoration(level, job, d, poseStack, lit);
                     }
                     for (int i = 0; i < job.fishCount(); i++) {
-                        creature(level, job, i, night, poseStack, buffers);
+                        creature(level, job, i, night, poseStack, lit);
                     }
                     buffers.endBatch();
                 } finally {
@@ -168,7 +170,14 @@ public final class VanillaAquariumRenderer {
         float into = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
         float k = job.ocean() ? 0.22F : 0.3F; // (as thick as the aquariums' water)
         float r, g, b;
-        if (job.ocean()) {
+        int lightKind = AquariumSettings.light(job.ocean());
+        if (lightKind == 1) { // (the tank's light: as the aquariums' water in it)
+            r = 0.02F; g = 0.075F; b = 0.21F;
+        } else if (lightKind == 2) {
+            r = 0.36F; g = 0.2F; b = 0.21F;
+        } else if (lightKind == 3) {
+            r = 0.14F; g = 0.11F; b = 0.38F;
+        } else if (job.ocean()) {
             r = 0.025F; g = 0.24F; b = 0.41F;
         } else {
             r = 0.085F; g = 0.375F; b = 0.47F;
@@ -507,6 +516,55 @@ public final class VanillaAquariumRenderer {
         poseStack.popPose();
     }
 
+    /** Each light's colour on what's in the tank (daylight, moonlight, sunset, reef: as the aquariums' own). */
+    private static final float[][] LIGHT_TINT = {{1.0F, 1.0F, 1.0F}, {0.42F, 0.55F, 1.0F}, {1.0F, 0.8F, 0.62F}, {0.86F, 0.76F, 1.0F}};
+
+    /** Buffers whose vertex colours are all tinted (the tank's light on its fish and decorations, blocks included). */
+    private record Tinted(MultiBufferSource inner, float[] tint) implements MultiBufferSource {
+        @Override
+        public com.mojang.blaze3d.vertex.VertexConsumer getBuffer(RenderType type) {
+            return new TintedConsumer(inner.getBuffer(type), tint);
+        }
+    }
+
+    private record TintedConsumer(com.mojang.blaze3d.vertex.VertexConsumer inner, float[] tint) implements com.mojang.blaze3d.vertex.VertexConsumer {
+        @Override
+        public com.mojang.blaze3d.vertex.VertexConsumer addVertex(float x, float y, float z) {
+            inner.addVertex(x, y, z);
+            return this;
+        }
+
+        @Override
+        public com.mojang.blaze3d.vertex.VertexConsumer setColor(int r, int g, int b, int a) {
+            inner.setColor((int) (r * tint[0]), (int) (g * tint[1]), (int) (b * tint[2]), a);
+            return this;
+        }
+
+        @Override
+        public com.mojang.blaze3d.vertex.VertexConsumer setUv(float u, float v) {
+            inner.setUv(u, v);
+            return this;
+        }
+
+        @Override
+        public com.mojang.blaze3d.vertex.VertexConsumer setUv1(int u, int v) {
+            inner.setUv1(u, v);
+            return this;
+        }
+
+        @Override
+        public com.mojang.blaze3d.vertex.VertexConsumer setUv2(int u, int v) {
+            inner.setUv2(u, v);
+            return this;
+        }
+
+        @Override
+        public com.mojang.blaze3d.vertex.VertexConsumer setNormal(float x, float y, float z) {
+            inner.setNormal(x, y, z);
+            return this;
+        }
+    }
+
     /** A colour as seen through the water (a little blue-green, as the aquariums' water). */
     private static int underwater(int c) {
         int r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
@@ -552,6 +610,11 @@ public final class VanillaAquariumRenderer {
             case 7 -> pieces.add(new Piece(Blocks.DECORATED_POT.defaultBlockState(), x, y - 0.01 * sz, z, 0.3F * sz, 0.33F * sz, 0.3F * sz,
                     Axis.YP.rotationDegrees(180.0F - yaw)));
             case 8 -> ship(pieces, x, y, z, yaw, 0.1F * sz);
+            case 14 -> { // an air stone: a little round stone, a stream of bubbles rising from it to the surface
+                pieces.add(new Piece(Blocks.POLISHED_TUFF.defaultBlockState(), x, y - 0.005, z, 0.13F, 0.045F, 0.13F, Axis.YP.rotationDegrees(yaw)));
+                pieces.add(new Piece(Blocks.POLISHED_TUFF.defaultBlockState(), x, y + 0.04, z, 0.1F, 0.012F, 0.1F, Axis.YP.rotationDegrees(yaw + 45.0F)));
+                bubbles(level, job, d, x, y + 0.05, z, poseStack, buffers);
+            }
             case 12 -> { // seagrass: a little clump (as tall as the aquariums' own), swaying
                 int n = 3 + random.nextInt(2);
                 for (int i = 0; i < n; i++) {
@@ -592,6 +655,39 @@ public final class VanillaAquariumRenderer {
         }
         for (Piece p : pieces) {
             piece(level, p, poseStack, buffers);
+        }
+    }
+
+    private static final ResourceLocation BUBBLE = mc("textures/particle/bubble.png");
+
+    /** An air stone's stream of bubbles: rising, wobbling more as they go, a little bigger near the top, up to the surface. */
+    private static void bubbles(ClientLevel level, AquariumRenderer.VanillaJob job, int d, double x, double y, double z, PoseStack poseStack,
+                                MultiBufferSource buffers) {
+        double top = roomAbove(job, x, y, z) - 0.06;
+        if (top < 0.1) return;
+        float t = LavaLampRenderer.seconds();
+        int light = LevelRenderer.getLightColor(level, BlockPos.containing(x, y, z));
+        com.mojang.blaze3d.vertex.VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(BUBBLE));
+        Quaternionf face = Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
+        Random r = new Random(job.min().asLong() * 13L + d);
+        for (int k = 0; k < 16; k++) {
+            double speed = 0.5 + 0.18 * r.nextDouble();
+            double rise = ((t * speed + r.nextDouble() * top + k * 0.11) % top + top) % top;
+            double up = rise / top;
+            double wob = 0.012 + 0.035 * up;
+            double bx = x + wob * Math.sin(t * 4.0 + k * 1.7 + rise * 6.0), bz = z + wob * Math.cos(t * 3.4 + k + rise * 5.0);
+            float size = (float) ((0.022 + 0.016 * r.nextDouble()) * (1.0 + 0.5 * up));
+            poseStack.pushPose();
+            poseStack.translate(bx, y + rise, bz);
+            poseStack.mulPose(face);
+            poseStack.scale(size, size, size);
+            PoseStack.Pose pose = poseStack.last();
+            float[][] corners = {{-1, -1, 0, 1}, {1, -1, 1, 1}, {1, 1, 1, 0}, {-1, 1, 0, 0}};
+            for (float[] c : corners) {
+                vc.addVertex(pose, c[0], c[1], 0.0F).setColor(underwater(0xFFFFFFFF)).setUv(c[2], c[3]).setOverlay(OverlayTexture.NO_OVERLAY)
+                        .setLight(light).setNormal(pose, 0.0F, 0.0F, 1.0F);
+            }
+            poseStack.popPose();
         }
     }
 

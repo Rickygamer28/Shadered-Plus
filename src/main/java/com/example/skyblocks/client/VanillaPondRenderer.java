@@ -118,6 +118,7 @@ final class VanillaPondRenderer {
                 }
             }
         }
+        PondLife.sawVanillaWater(pos); // (rain rings, the moon on it)
         // the water (drawn last of all by the game, so what's under it shows through)
         int tint = WATER_TINT; // (the koi pond's own deep green, as the shader pond's)
         TextureAtlasSprite water = sprite(WATER);
@@ -305,6 +306,8 @@ final class VanillaPondRenderer {
 
     private void creatures(KoiPondRenderer.Pond pond, BlockPos anchorPos, PoseStack poseStack, MultiBufferSource buffers, int light, float t) {
         long anchor = pond.anchor();
+        net.minecraft.client.multiplayer.ClientLevel level = Minecraft.getInstance().level;
+        float rain = level == null ? 0.0F : PondLife.rain(level, anchorPos, Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false));
         int[][] parts = pond.parts();
         int fish = Math.max(1, Math.min(24, (int) (pond.blocks() * 0.45F + 0.75F)));
         float ox = -anchorPos.getX(), oz = -anchorPos.getZ(); // (world blocks -> this block's own)
@@ -323,7 +326,7 @@ final class VanillaPondRenderer {
             float size = 0.75F + 0.35F * u(anchor, 102 + i * 7);
             float scale = 0.8F * size * (koi[0] == 1 ? 0.8F : 1.0F); // (as long as the koi pond's koi)
             float[] at = wander(anchor, 200 + i * 9, part, 0.3F * size, 0.12F, t);
-            float y = SURF - (i % 3 == 0 ? 3.0F : i % 3 == 1 ? 5.5F : 8.0F) / 16.0F - 0.1F * scale;
+            float y = SURF - (i % 3 == 0 ? 3.0F : i % 3 == 1 ? 5.5F : 8.0F) / 16.0F - 0.1F * scale - 0.06F * rain; // (lower in the rain)
             ModelPart body = koi[0] == 0 ? fishA : fishB, pattern = koi[0] == 0 ? fishAPattern : fishBPattern;
             float wag = 0.45F * Mth.sin(t * 6.0F + i * 1.7F);
             for (ModelPart m : new ModelPart[] {body, pattern}) {

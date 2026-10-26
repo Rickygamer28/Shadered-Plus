@@ -578,6 +578,14 @@
             "values": [
                 0.0
             ]
+        },
+        {
+            "name": "Light",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
+            ]
         }
     ]
 }

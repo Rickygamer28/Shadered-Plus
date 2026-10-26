@@ -20,6 +20,8 @@ uniform mat4 ProjMat;
 
 uniform float PondTime;
 uniform float Daylight;
+uniform float Rain;    // how hard it's raining on the pond (0 none): rings on the water, the koi swimming lower
+uniform vec3 MoonDir;  // where the moon is (its reflection on the water at night)
 
 out vec4 fragColor;
 
@@ -42,7 +44,34 @@ float noise2(vec2 p) {
 }
 
 float layerY(int L) {
-    return SURF - (L == 0 ? 3.0 : L == 1 ? 5.5 : 8.0) / 16.0;
+    return SURF - (L == 0 ? 3.0 : L == 1 ? 5.5 : 8.0) / 16.0 - 0.06 * Rain; // (lower in the rain)
+}
+
+// rain on the water: rings spreading from where drops land (each little patch of water its own drops, coming and
+// going); returns the slope the rings give the surface (xy) and how bright their crests are (z)
+vec3 rainRings(vec2 x, float t) {
+    vec3 acc = vec3(0.0);
+    vec2 cell = floor(x * 5.0);
+    for (int j = -1; j <= 1; j++) {
+        for (int i = -1; i <= 1; i++) {
+            vec2 c = cell + vec2(i, j);
+            vec2 h = hash22(c * 1.7 + 3.1);
+            float period = 0.9 + 0.6 * h.x;
+            float ph = t / period + h.y;
+            float n = floor(ph), age = ph - n;
+            if (hash22(c + n * 0.37).x > 0.35 + 0.6 * Rain) continue; // (fewer drops in light rain)
+            vec2 centre = (c + 0.15 + 0.7 * hash22(c * 3.3 + n * 1.13)) / 5.0;
+            vec2 d = x - centre;
+            float r = length(d);
+            float rad = 0.015 + 0.11 * sqrt(age);
+            float w = 0.012 + 0.01 * age;
+            float ring = exp(-pow((r - rad) / w, 2.0)) * (1.0 - age) * (1.0 - age);
+            float slope = -2.0 * (r - rad) / (w * w) * ring;
+            acc.xy += (r > 1.0e-4 ? d / r : vec2(0.0)) * slope * 0.0025;
+            acc.z += ring;
+        }
+    }
+    return acc * Rain;
 }
 
 // the pond this block is part of (the rectangle round it, in world blocks), the rectangles it is made of (any shape
@@ -673,6 +702,8 @@ void main() {
     g += vec2(1.0, 0.3) * cos(dot(x, vec2(1.0, 0.3)) * 23.0 - t * 1.4) * 0.0035;
     g += vec2(-0.4, 1.0) * cos(dot(x, vec2(-0.4, 1.0)) * 31.0 - t * 1.9) * 0.0025;
     g += vec2(0.7, -0.7) * cos(dot(x, vec2(0.7, -0.7)) * 47.0 - t * 2.6) * 0.0015;
+    vec3 rings = rainRings(x, t);
+    g += rings.xy;
     vec3 n = normalize(vec3(-g.x * 23.0, 1.0, -g.y * 23.0));
     vec3 rr = refract(rd, n, 1.0 / 1.33);
     if (rr.y > -0.05) rr = normalize(vec3(rr.x, -0.05, rr.z));
@@ -752,5 +783,12 @@ void main() {
     vec3 col = mix(under, sky, fres);
     col += vec3(1.0, 0.95, 0.85) * pow(max(dot(rf, normalize(SUN)), 0.0), 160.0) * day * 0.7;
     col += vec3(0.8, 0.9, 0.9) * ripple * light; // (rings round a swimming duck)
+    col += vec3(0.7, 0.78, 0.85) * min(rings.z, 1.0) * 0.18 * light;
+    // the moon at night: its reflection, broken up a little by the ripples, a soft glow round it
+    if (MoonDir.y > 0.02) {
+        float m = max(dot(rf, normalize(MoonDir)), 0.0);
+        float night = (1.0 - day) * smoothstep(0.02, 0.2, MoonDir.y);
+        col += vec3(0.85, 0.9, 1.0) * (smoothstep(0.9988, 0.9994, m) * 0.9 + pow(m, 300.0) * 0.35) * night * (0.4 + 0.6 * fres * 8.0);
+    }
     fragColor = vec4(col, 1.0);
 }
