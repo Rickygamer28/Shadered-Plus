@@ -380,13 +380,23 @@ final class VanillaPondRenderer {
                 duck.getChild("left_wing").zRot = -wing;
             }
             int kind = u(anchor, 90 + epoch * 13 + d) < 0.5F ? 0 : 1;
+            legs(height > 0.05F); // (drifting on the water: no legs to be seen; flying: legs)
             model(poseStack, buffers, duck, DUCKS[kind], x + ox, y, z + oz, yawOf(at[2], at[3]), scale, light, 0xFFFFFFFF, false);
         }
+        legs(true);
         if (duck.hasChild("right_wing")) {
             duck.getChild("right_wing").zRot = 0.0F;
         }
         if (duck.hasChild("left_wing")) {
             duck.getChild("left_wing").zRot = 0.0F;
+        }
+    }
+
+    private void legs(boolean shown) {
+        for (String leg : new String[] {"right_leg", "left_leg"}) {
+            if (duck.hasChild(leg)) {
+                duck.getChild(leg).visible = shown;
+            }
         }
     }
 
