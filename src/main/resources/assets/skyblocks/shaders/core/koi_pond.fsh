@@ -137,16 +137,6 @@ uvec3 padKey(vec2 cell, int k) {
     return uvec3(uint(int(cell.x)), uint(int(cell.y)), uint(k));
 }
 
-// lily pad k of a cell: is there one, and where / how big / turned
-bool padParams(vec2 cell, int k, float t, out vec2 c, out float r, out vec2 h, out vec2 h2) {
-    uvec3 key = padKey(cell, k);
-    h = vec2(u01(hashu(key)), u01(hashu(key + uvec3(0u, 0u, 100u))));
-    h2 = hash22(cell * 3.1 + float(k) * 4.7);
-    c = cell + 0.15 + 0.7 * h2 + 0.02 * vec2(sin(t * 0.07 + h.y * 9.0), cos(t * 0.05 + h.x * 7.0));
-    r = 0.08 + 0.07 * h.y;
-    return h.x >= 0.45;
-}
-
 // is a frog on this pad now: its kind, size and which way it faces, and its hop (1 sitting; 0..1 hopping on from the
 // water; 0..-1 hopping off). At most one frog to a block (on its first pad); each stays a minute or so, then hops off,
 // and a while later another may come - never two at once.
@@ -162,9 +152,26 @@ bool frogOn(vec2 cell, int k, float t, out vec3 info, out float hop) {
     uint epoch = uint(int(floor(phase)));
     float te = fract(phase) * 75.0;
     vec2 he = vec2(u01(hashu(key + uvec3(0u, 0u, 200000u + epoch))), u01(hashu(key + uvec3(0u, 0u, 500000u + epoch))));
-    info = vec3(floor(he.y * 3.0), 0.62 + 0.16 * hf.x, he.x * 6.2832 + 0.4 * sin(t * 0.3 + hf.y * 9.0));
+    info = vec3(floor(he.y * 3.0), 0.62 + 0.16 * hf.x, he.x * 6.2832); // (z: which way it faces, on its pad)
     hop = te < 6.0 ? te - 5.0 : te > 70.0 ? -(te - 70.0) : 1.0;
     return hf.y < 0.55 && he.x < 0.6 && te > 5.0 && te < 71.0;
+}
+
+// lily pad k of a cell: is there one, where, how big, and which way it is turned (a frog sitting on it turns with it)
+bool padParams(vec2 cell, int k, float t, out vec2 c, out float r, out vec2 h, out vec2 h2, out float ang) {
+    uvec3 key = padKey(cell, k);
+    h = vec2(u01(hashu(key)), u01(hashu(key + uvec3(0u, 0u, 100u))));
+    h2 = hash22(cell * 3.1 + float(k) * 4.7);
+    c = cell + 0.15 + 0.7 * h2 + 0.02 * vec2(sin(t * 0.07 + h.y * 9.0), cos(t * 0.05 + h.x * 7.0));
+    r = 0.08 + 0.07 * h.y;
+    ang = h2.x * 6.28 + t * 0.02;
+    vec3 info;
+    float hop;
+    if (r >= 0.09 && frogOn(cell, k, t, info, hop)) {
+        float sit = clamp(hop >= 0.0 ? hop : 1.0 + hop, 0.0, 1.0); // (eases in as it lands, out as it leaves)
+        ang += 0.5 * sin(t * 0.3 + h2.y * 9.0) * sit * sit; // (the frog shifting round, the pad turning under it)
+    }
+    return h.x >= 0.45;
 }
 
 float smin(float a, float b, float k) {
@@ -206,7 +213,8 @@ vec4 frogHit(vec3 p0, vec3 rd, float t, float light) {
                 float r;
                 vec3 info;
                 float hop;
-                if (!padParams(cell, k, t, c, r, h, h2) || r < 0.09 || !frogOn(cell, k, t, info, hop)) continue;
+                float pang;
+                if (!padParams(cell, k, t, c, r, h, h2, pang) || r < 0.09 || !frogOn(cell, k, t, info, hop)) continue;
                 // hopping on: a leap up out of the water onto the pad; hopping off: a leap forward into the water
                 float u = hop > 0.0 ? 1.0 - hop : -hop;
                 vec3 off = hop >= 1.0 ? vec3(0.0) : hop > 0.0 ? vec3(0.0, 9.0 * u * (1.0 - u) - 3.0 * u * u, -5.0 * u)
@@ -215,7 +223,7 @@ vec4 frogHit(vec3 p0, vec3 rd, float t, float light) {
                 vec2 ab = p0.xz - pTop.xz;
                 float w = clamp(dot(c - pTop.xz, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
                 if (length(pTop.xz + ab * w - c) > 0.32) continue;
-                float ca = cos(info.z), sa = sin(info.z);
+                float ca = cos(pang + info.z), sa = sin(pang + info.z); // (turning with its pad)
                 float sc = 16.0 / info.y;
                 vec3 ro = vec3(pTop.x - c.x, pTop.y - SURF, pTop.z - c.y) * sc;
                 vec3 rr = rd;
@@ -261,12 +269,12 @@ vec4 padAt(vec2 q, float t) {
             vec2 cell = c0 + vec2(i, j);
             for (int k = 0; k < 2; k++) {
                 vec2 c, h, h2;
-                float r;
-                if (!padParams(cell, k, t, c, r, h, h2)) continue;
+                float r, pang;
+                if (!padParams(cell, k, t, c, r, h, h2, pang)) continue;
                 vec2 d = q - c;
                 float dist = length(d);
                 if (dist > r) continue;
-                float a = atan(d.y, d.x) - h2.x * 6.28 - t * 0.02;
+                float a = atan(d.y, d.x) - pang;
                 float notch = abs(mod(a + 3.1416, 6.2832) - 3.1416);
                 if (notch < 0.32 * (1.0 - 0.3 * dist / r) && dist > r * 0.08) continue;
                 vec3 col = mix(vec3(0.14, 0.4, 0.12), vec3(0.3, 0.58, 0.2), noise2(d * 60.0 + h * 9.0) * 0.6 + 0.2);

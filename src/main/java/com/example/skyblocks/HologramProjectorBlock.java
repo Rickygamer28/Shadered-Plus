@@ -67,8 +67,8 @@ public class HologramProjectorBlock extends BaseEntityBlock {
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
                                               InteractionHand hand, BlockHitResult hit) {
-        if (!(level.getBlockEntity(pos) instanceof HologramBlockEntity be)) {
-            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (stack.isEmpty() || !(level.getBlockEntity(pos) instanceof HologramBlockEntity be)) {
+            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION; // (an empty hand: clear / size, below)
         }
         if (!level.isClientSide) {
             if (stack.getItem() instanceof DyeItem dye) {
