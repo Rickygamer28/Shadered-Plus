@@ -89,7 +89,7 @@ public final class AquariumRenderer {
      * world).
      */
     public record VanillaJob(BlockPos min, boolean ocean, float[] fish, int fishCount, float[] decor, int decorCount, float[] faces,
-                             Set<BlockPos> blocks, Vec3 centre, Runnable picture) {}
+                             float[] frames, Set<BlockPos> blocks, Vec3 centre, Runnable picture) {}
 
     /**
      * Draws a vanilla tank's water (its picture: as an aquarium's, without its own fish or decorations, nor its depth)
@@ -283,13 +283,13 @@ public final class AquariumRenderer {
                         shader.safeGetUniform("BoxSize").set((float) floor.sizeX, (float) floor.sizeY, (float) floor.sizeZ);
                         shader.safeGetUniform("Seed").set(seed);
                         setShapeOnly(floor);
-                        MeshData later = mesh(floor, shown, cam); // (built when drawn: the builder is shared)
+                        MeshData later = mesh(floor, shown, cam, false); // (built when drawn: the builder is shared)
                         if (later != null) {
                             BufferUploader.drawWithShader(later);
                         }
                     };
                     VANILLA_JOBS.add(new VanillaJob(floor.min, floor.ocean, java.util.Arrays.copyOf(FISH_DATA, floor.fishCount * 16), floor.fishCount,
-                            java.util.Arrays.copyOf(floor.decor, floor.decorCount * 4), floor.decorCount, faceCorners(floor), floor.blocks,
+                            java.util.Arrays.copyOf(floor.decor, floor.decorCount * 4), floor.decorCount, faceCorners(floor), frameStrips(floor), floor.blocks,
                             new Vec3(floor.min.getX() + floor.sizeX * 0.5, floor.min.getY() + floor.sizeY * 0.5, floor.min.getZ() + floor.sizeZ * 0.5),
                             picture));
                     continue;
@@ -963,12 +963,17 @@ public final class AquariumRenderer {
      * which of the face's 4 edges are edges of the tank (and so get a frame): u = 0, u = 1, v = 0, v = 1.
      */
     private static MeshData mesh(Floor floor, List<Face> faces, Vec3 cam) {
+        return mesh(floor, faces, cam, true);
+    }
+
+    /** frame: with the dark frame round the tank's edges (a vanilla tank's is drawn after its fish, over them: not here). */
+    private static MeshData mesh(Floor floor, List<Face> faces, Vec3 cam, boolean frame) {
         BufferBuilder b = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         for (Face f : faces) {
             Direction side = f.side();
             Direction du = side.getAxis() == Direction.Axis.X ? Direction.SOUTH : Direction.EAST;
             Direction dv = side.getAxis() == Direction.Axis.Y ? Direction.SOUTH : Direction.UP;
-            int flags = (framed(floor, f.pos(), du.getOpposite(), side) ? 0xFF : 0)
+            int flags = !frame ? 0 : (framed(floor, f.pos(), du.getOpposite(), side) ? 0xFF : 0)
                     | (framed(floor, f.pos(), du, side) ? 0xFF00 : 0)
                     | (framed(floor, f.pos(), dv.getOpposite(), side) ? 0xFF0000 : 0)
                     | (framed(floor, f.pos(), dv, side) ? 0xFF000000 : 0);
@@ -1013,6 +1018,41 @@ public final class AquariumRenderer {
             }
         }
         return out;
+    }
+
+    /**
+     * The dark frame round a tank's edges, as strips (4 corners each, in the world, a hair out from the glass): along
+     * every edge of an outside face where the tank ends (as the shader draws it, 0.05 wide).
+     */
+    private static float[] frameStrips(Floor floor) {
+        final float w = 0.05F, out = 0.002F;
+        List<float[]> strips = new ArrayList<>();
+        for (Face f : floor.faces) {
+            Direction side = f.side();
+            Direction du = side.getAxis() == Direction.Axis.X ? Direction.SOUTH : Direction.EAST;
+            Direction dv = side.getAxis() == Direction.Axis.Y ? Direction.SOUTH : Direction.UP;
+            boolean[] edge = {framed(floor, f.pos(), du.getOpposite(), side), framed(floor, f.pos(), du, side),
+                    framed(floor, f.pos(), dv.getOpposite(), side), framed(floor, f.pos(), dv, side)};
+            float[][] rect = {{0, w, 0, 1}, {1 - w, 1, 0, 1}, {0, 1, 0, w}, {0, 1, 1 - w, 1}}; // (u0, u1, v0, v1)
+            float bx = f.pos().getX() + (side.getStepX() > 0 ? 1 : 0) + side.getStepX() * out;
+            float by = f.pos().getY() + (side.getStepY() > 0 ? 1 : 0) + side.getStepY() * out;
+            float bz = f.pos().getZ() + (side.getStepZ() > 0 ? 1 : 0) + side.getStepZ() * out;
+            for (int e = 0; e < 4; e++) {
+                if (!edge[e]) continue;
+                float[] r = rect[e];
+                float[] q = new float[12];
+                float[][] uv = {{r[0], r[2]}, {r[1], r[2]}, {r[1], r[3]}, {r[0], r[3]}};
+                for (int k = 0; k < 4; k++) {
+                    q[k * 3] = bx + du.getStepX() * uv[k][0] + dv.getStepX() * uv[k][1];
+                    q[k * 3 + 1] = by + du.getStepY() * uv[k][0] + dv.getStepY() * uv[k][1];
+                    q[k * 3 + 2] = bz + du.getStepZ() * uv[k][0] + dv.getStepZ() * uv[k][1];
+                }
+                strips.add(q);
+            }
+        }
+        float[] all = new float[strips.size() * 12];
+        for (int i = 0; i < strips.size(); i++) System.arraycopy(strips.get(i), 0, all, i * 12, 12);
+        return all;
     }
 
     /** Each kind's body (as the shader's): half its length, its tail's length; for sizing the vanilla tanks' models. */
