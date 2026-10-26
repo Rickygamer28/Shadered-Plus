@@ -28,6 +28,45 @@ import net.minecraft.world.phys.AABB;
  * time, white streaks of foam in it and foam where each drop lands (client/PondLife). Turned off: only the still pool.
  */
 public class PondWaterfallRenderer implements BlockEntityRenderer<PondWaterfallBlockEntity> {
+    static net.minecraft.client.renderer.ShaderInstance shader;
+
+    @net.neoforged.fml.common.EventBusSubscriber(modid = com.example.skyblocks.SkyBlocksMod.MOD_ID, bus = net.neoforged.fml.common.EventBusSubscriber.Bus.MOD,
+            value = net.neoforged.api.distmarker.Dist.CLIENT)
+    public static final class Shaders {
+        private Shaders() {}
+
+        @net.neoforged.bus.api.SubscribeEvent
+        public static void register(net.neoforged.neoforge.client.event.RegisterShadersEvent event) throws java.io.IOException {
+            event.registerShader(new net.minecraft.client.renderer.ShaderInstance(event.getResourceProvider(),
+                    ResourceLocation.fromNamespaceAndPath(com.example.skyblocks.SkyBlocksMod.MOD_ID, "pond_waterfall"),
+                    com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX_COLOR), s -> shader = s);
+        }
+    }
+
+    /** Pouring into the koi pond: its water as the koi pond's own (shaders/core/pond_waterfall), see-through, both faces. */
+    abstract static class Types extends net.minecraft.client.renderer.RenderType {
+        static final net.minecraft.client.renderer.RenderType WATER = create("skyblocks_pond_waterfall",
+                com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX_COLOR, com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 4096, false, true,
+                CompositeState.builder()
+                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setTexturingState(new TexturingStateShard("skyblocks_pond_waterfall_time", () -> {
+                            if (shader != null) {
+                                shader.safeGetUniform("PondTime").set(LavaLampRenderer.seconds());
+                                net.minecraft.client.multiplayer.ClientLevel level = Minecraft.getInstance().level;
+                                shader.safeGetUniform("Daylight").set(level == null ? 1.0F : PondLife.day(level));
+                            }
+                        }, () -> {}))
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .setWriteMaskState(COLOR_WRITE)
+                        .setCullState(NO_CULL)
+                        .createCompositeState(false));
+
+        private Types() {
+            super("", com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION, com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 0, false, false,
+                    () -> {}, () -> {});
+        }
+    }
+
     private static final ResourceLocation FLOW = ResourceLocation.withDefaultNamespace("block/water_flow");
     private static final ResourceLocation STILL = ResourceLocation.withDefaultNamespace("block/water_still");
     private static final float PX = 1.0F / 16.0F;
@@ -49,10 +88,12 @@ public class PondWaterfallRenderer implements BlockEntityRenderer<PondWaterfallB
         BlockPos pos = be.getBlockPos();
         Direction facing = state.getValue(PondWaterfallBlock.FACING);
         double land = PondWaterfallBlock.landing(be.getLevel(), pos, facing) - pos.getY();
-        boolean pond = false;
+        boolean pond = false, koi = false;
         for (int down = 0; down < 5; down++) {
-            if (be.getLevel().getBlockState(pos.relative(facing).below(down)).getBlock() instanceof com.example.skyblocks.KoiPondBlock) {
+            net.minecraft.world.level.block.Block b = be.getLevel().getBlockState(pos.relative(facing).below(down)).getBlock();
+            if (b instanceof com.example.skyblocks.KoiPondBlock) {
                 pond = true;
+                koi = b == com.example.skyblocks.ModBlocks.KOI_POND.get(); // (the koi pond: its own water, not the game's)
                 break;
             }
         }
@@ -68,9 +109,19 @@ public class PondWaterfallRenderer implements BlockEntityRenderer<PondWaterfallB
         PoseStack.Pose pose = poseStack.last();
         VertexConsumer vc = buffers.getBuffer(Sheets.translucentCullBlockSheet());
         // the pool on top, in its stone rim (and its water in the spillway)
-        flat(vc, pose, still, 4 * PX, 12 * PX, 11 * PX, 14 * PX, 27 * PX, tint, 215, light);
+        org.joml.Matrix4f world = null;
+        if (koi) { // (drawn after everything, as the pond's water: client/PondLife)
+            world = new org.joml.Matrix4f().translate(pos.getX() + 0.5F, pos.getY(), pos.getZ() + 0.5F)
+                    .rotate(Axis.YP.rotationDegrees(-facing.toYRot() + 180.0F)).translate(-0.5F, 0.0F, -0.5F);
+        } else {
+            flat(vc, pose, still, 4 * PX, 12 * PX, 11 * PX, 14 * PX, 27 * PX, tint, 215, light);
+        }
         if (!PondWaterfallBlock.pouring(state)) {
-            flat(vc, pose, still, 6 * PX, 10 * PX, 9 * PX, 11 * PX, 26.2F * PX, tint, 215, light);
+            if (koi) {
+                PondLife.sawKoiFall(world, null);
+            } else {
+                flat(vc, pose, still, 6 * PX, 10 * PX, 9 * PX, 11 * PX, 26.2F * PX, tint, 215, light);
+            }
             poseStack.popPose();
             return;
         }
@@ -94,10 +145,13 @@ public class PondWaterfallRenderer implements BlockEntityRenderer<PondWaterfallB
             float y = fallTop - 0.1F * PX - drop * s * s;
             path.add(new float[] {y, 1.0F * PX - out * (float) Math.sqrt(s), (3.2F + 0.8F * s) * PX});
         }
+        if (koi) {
+            PondLife.sawKoiFall(world, path);
+        }
         // the water: running down all the time (the texture moving along it), a little ripple across it
         float run = (t * 1.1F) % 1.0F;
         float along = 0.0F;
-        for (int k = 0; k + 1 < path.size(); k++) {
+        for (int k = 0; k + 1 < path.size() && !koi; k++) {
             float[] a = path.get(k), b = path.get(k + 1);
             float seg = (float) Math.sqrt((b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]));
             float va = along * 1.6F - run, vb = (along + seg) * 1.6F - run;

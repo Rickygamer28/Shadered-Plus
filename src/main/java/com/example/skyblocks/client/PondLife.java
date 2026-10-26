@@ -72,6 +72,16 @@ public final class PondLife {
         VANILLA_WATER.add(pos.asLong());
     }
 
+    /** A waterfall pouring into a koi pond this frame: where its block is (in the world, facing north), its water's way down. */
+    private record KoiFall(org.joml.Matrix4f world, List<float[]> path) {}
+
+    private static final List<KoiFall> KOI_FALLS = new ArrayList<>();
+
+    /** A waterfall into a koi pond (its water drawn after everything, as the pond's: shaders/core/pond_waterfall); path null: off. */
+    static void sawKoiFall(org.joml.Matrix4f world, List<float[]> path) {
+        KOI_FALLS.add(new KoiFall(world, path));
+    }
+
     /** A pond waterfall's water lands here this frame (its foam and rings). */
     static void sawWaterfall(double x, double y, double z, net.minecraft.core.Direction facing) {
         FALLS.add(new double[] {x, y, z});
@@ -106,10 +116,11 @@ public final class PondLife {
                 return;
             }
             ClientLevel level = Minecraft.getInstance().level;
-            if (level == null || (PONDS.isEmpty() && VANILLA_WATER.isEmpty() && FALLS.isEmpty())) {
+            if (level == null || (PONDS.isEmpty() && VANILLA_WATER.isEmpty() && FALLS.isEmpty() && KOI_FALLS.isEmpty())) {
                 PONDS.clear();
                 VANILLA_WATER.clear();
                 FALLS.clear();
+                KOI_FALLS.clear();
                 return;
             }
             Vec3 cam = event.getCamera().getPosition();
@@ -137,6 +148,7 @@ public final class PondLife {
                     }
                 }
                 vanillaWater(level, cam, pt, t, day, poseStack, buffers);
+                koiFalls(poseStack, buffers);
                 falls(t, day, poseStack, buffers);
                 buffers.endBatch();
             } finally {
@@ -145,8 +157,59 @@ public final class PondLife {
                 PONDS.clear();
                 VANILLA_WATER.clear();
                 FALLS.clear();
+                KOI_FALLS.clear();
             }
         }
+    }
+
+    /** The waterfalls into koi ponds: their pool and their water, as the pond's own. */
+    private static void koiFalls(PoseStack poseStack, MultiBufferSource buffers) {
+        if (KOI_FALLS.isEmpty() || PondWaterfallRenderer.shader == null) {
+            return;
+        }
+        VertexConsumer vc = buffers.getBuffer(PondWaterfallRenderer.Types.WATER);
+        float px = 1.0F / 16.0F;
+        for (KoiFall f : KOI_FALLS) {
+            poseStack.pushPose();
+            poseStack.mulPose(f.world());
+            PoseStack.Pose pose = poseStack.last();
+            // the pool on top (still)
+            float y = 27.0F * px;
+            fv(vc, pose, 4 * px, y, 11 * px, 0, 0, 0.0F, 1.0F, 1.0F);
+            fv(vc, pose, 4 * px, y, 14 * px, 0, 1, 0.0F, 1.0F, 1.0F);
+            fv(vc, pose, 12 * px, y, 14 * px, 1, 1, 0.0F, 1.0F, 1.0F);
+            fv(vc, pose, 12 * px, y, 11 * px, 1, 0, 0.0F, 1.0F, 1.0F);
+            List<float[]> path = f.path();
+            if (path != null) {
+                float along = 0.0F;
+                int n = path.size();
+                for (int k = 0; k + 1 < n; k++) {
+                    float[] a = path.get(k), b = path.get(k + 1);
+                    float seg = (float) Math.sqrt((b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]));
+                    // (rough water: at the lip, where the first drop lands, and at the end where it hits the pond)
+                    float fa = foamAt(k, n), fb = foamAt(k + 1, n);
+                    fv(vc, pose, 0.5F - a[2], a[0], a[1], 0.0F, along, fa, 0.0F, 1.0F);
+                    fv(vc, pose, 0.5F + a[2], a[0], a[1], 1.0F, along, fa, 0.0F, 1.0F);
+                    fv(vc, pose, 0.5F + b[2], b[0], b[1], 1.0F, along + seg, fb, 0.0F, 1.0F);
+                    fv(vc, pose, 0.5F - b[2], b[0], b[1], 0.0F, along + seg, fb, 0.0F, 1.0F);
+                    along += seg;
+                }
+            }
+            poseStack.popPose();
+        }
+    }
+
+    /** How rough the water is at point k of n on a waterfall's way down (0..1). */
+    private static float foamAt(int k, int n) {
+        float f = 0.15F;
+        if (k >= 2 && k <= 3) f = 0.7F;          // (going over the lip)
+        if (k >= 8 && k <= 10) f = 0.9F;         // (the first drop landing on the ledge)
+        if (k >= n - 2) f = 1.0F;                // (hitting the pond)
+        return f;
+    }
+
+    private static void fv(VertexConsumer vc, PoseStack.Pose pose, float x, float y, float z, float u, float v, float foam, float still, float alpha) {
+        vc.addVertex(pose, x, y, z).setUv(u, v).setColor(foam, still, 0.0F, alpha);
     }
 
     /** Where a waterfall lands: white foam churning, rings spreading out from it. */
