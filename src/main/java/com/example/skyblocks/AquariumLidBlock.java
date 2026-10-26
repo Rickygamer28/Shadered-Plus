@@ -23,9 +23,18 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  */
 public class AquariumLidBlock extends Block {
     private static final VoxelShape SHAPE = Block.box(0.0, 0.0, 0.0, 16.0, 3.0, 16.0);
+    /** The light it gives the tank under it: 0 as the aquarium's menu has it, 1 daylight, 2 moonlight, 3 sunset, 4 reef. */
+    public static final net.minecraft.world.level.block.state.properties.IntegerProperty LIGHT =
+            net.minecraft.world.level.block.state.properties.IntegerProperty.create("light", 0, 4);
 
     public AquariumLidBlock(Properties properties) {
         super(properties);
+        registerDefaultState(stateDefinition.any().setValue(LIGHT, 0));
+    }
+
+    @Override
+    protected void createBlockStateDefinition(net.minecraft.world.level.block.state.StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(LIGHT);
     }
 
     @Override
@@ -38,8 +47,13 @@ public class AquariumLidBlock extends Block {
         if (!(level.getBlockState(pos.below()).getBlock() instanceof AquariumBlock tank) || tank.deep()) {
             return InteractionResult.PASS;
         }
-        if (level.isClientSide) { // (the light is a setting on this computer, as the aquarium's menu)
-            com.example.skyblocks.client.ClientAccess.cycleAquariumLight(tank.ocean());
+        // (only the tank under it: its lid's own light, kept on the lid; from the menu's to moonlight, then round)
+        int light = state.getValue(LIGHT);
+        int next = light == 0 ? 2 : light % 4 + 1;
+        if (level.isClientSide) {
+            com.example.skyblocks.client.ClientAccess.showAquariumLight(next - 1);
+        } else {
+            level.setBlock(pos, state.setValue(LIGHT, next), Block.UPDATE_ALL);
         }
         level.playSound(player, pos, net.minecraft.sounds.SoundEvents.STONE_BUTTON_CLICK_ON, net.minecraft.sounds.SoundSource.BLOCKS, 0.4F, 1.2F);
         return InteractionResult.sidedSuccess(level.isClientSide);

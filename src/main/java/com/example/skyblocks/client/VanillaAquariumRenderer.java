@@ -126,7 +126,7 @@ public final class VanillaAquariumRenderer {
             order.sort((a, b) -> Double.compare(b.centre().distanceToSqr(cam), a.centre().distanceToSqr(cam)));
             for (AquariumRenderer.VanillaJob job : order) {
                 AquariumRenderer.drawPicture(job, view);
-                int lightKind = AquariumSettings.light(job.ocean());
+                int lightKind = job.light();
                 MultiBufferSource lit = lightKind == 0 ? buffers : new Tinted(buffers, LIGHT_TINT[lightKind]);
                 // its fish and decorations, in its water's fog (as the aquariums': the water's colour, deeper the farther in)
                 float fogStart = RenderSystem.getShaderFogStart(), fogEnd = RenderSystem.getShaderFogEnd();
@@ -170,7 +170,7 @@ public final class VanillaAquariumRenderer {
         float into = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
         float k = job.ocean() ? 0.22F : 0.3F; // (as thick as the aquariums' water)
         float r, g, b;
-        int lightKind = AquariumSettings.light(job.ocean());
+        int lightKind = job.light();
         if (lightKind == 1) { // (the tank's light: as the aquariums' water in it)
             r = 0.02F; g = 0.075F; b = 0.21F;
         } else if (lightKind == 2) {

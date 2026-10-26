@@ -57,7 +57,7 @@
   "block.skyblocks.aquarium_stand": "Aquarium Stand",
   "tooltip.skyblocks.aquarium_stand": "A cabinet for a tank to sit on",
   "block.skyblocks.aquarium_lid": "Aquarium Lid",
-  "tooltip.skyblocks.aquarium_lid": "A hood with a lamp, on top of a tank. Click it to change the tank's light",
+  "tooltip.skyblocks.aquarium_lid": "A hood with a lamp, on top of a tank. Click it to change that tank's light",
   "block.skyblocks.pond_waterfall": "Pond Waterfall",
   "tooltip.skyblocks.pond_waterfall": "Put it beside a koi pond: water pours off it into the pond",
   "block.skyblocks.pond_stepping_stone": "Pond Stepping Stone",

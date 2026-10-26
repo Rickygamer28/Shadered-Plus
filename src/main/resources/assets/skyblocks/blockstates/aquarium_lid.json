@@ -1,6 +1,18 @@
 {
   "variants": {
-    "": {
+    "light=0": {
+      "model": "skyblocks:block/aquarium_lid"
+    },
+    "light=1": {
+      "model": "skyblocks:block/aquarium_lid"
+    },
+    "light=2": {
+      "model": "skyblocks:block/aquarium_lid"
+    },
+    "light=3": {
+      "model": "skyblocks:block/aquarium_lid"
+    },
+    "light=4": {
       "model": "skyblocks:block/aquarium_lid"
     }
   }

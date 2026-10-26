@@ -26,10 +26,8 @@ public final class ClientAccess {
         Minecraft.getInstance().setScreen(new AquariumScreen(ocean, deep));
     }
 
-    /** An aquarium lid clicked: the next light for that type of tank, said over the hotbar. */
-    public static void cycleAquariumLight(boolean ocean) {
-        int light = (AquariumSettings.light(ocean) + 1) % AquariumSettings.LIGHTS.length;
-        AquariumSettings.setLight(ocean, light);
+    /** An aquarium lid clicked: its tank's new light, said over the hotbar. */
+    public static void showAquariumLight(int light) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
             mc.player.displayClientMessage(net.minecraft.network.chat.Component.translatable("screen.skyblocks.aquarium_light").append(": ")

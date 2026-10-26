@@ -68,6 +68,8 @@ public final class AquariumRenderer {
         boolean ocean;
         /** The deep sea aquarium: always dark, its own creatures. */
         boolean deep;
+        /** The light a lid on it has set (0 daylight .. 3 reef), or -1: as the aquarium's menu has it. */
+        int lidLight = -1;
         /** A vanilla aquarium: only the water, light, sand and frame here (client/VanillaAquariumRenderer puts the game's own fish in it). */
         boolean vanilla;
         /** Per decoration: its base (x, y, z, tank coordinates) and type + 8 * (turn + 16 * size * 10). */
@@ -91,7 +93,7 @@ public final class AquariumRenderer {
      * world).
      */
     public record VanillaJob(BlockPos min, boolean ocean, float[] fish, int fishCount, float[] decor, int decorCount, float[] faces,
-                             float[] frames, Set<BlockPos> blocks, Vec3 centre, Runnable picture) {}
+                             float[] frames, Set<BlockPos> blocks, Vec3 centre, Runnable picture, int light) {}
 
     /**
      * Draws a vanilla tank's water (its picture: as an aquarium's, without its own fish or decorations, nor its depth)
@@ -220,9 +222,15 @@ public final class AquariumRenderer {
         }
     }
 
-    /** A block changed on the client: rescan if an aquarium block came or went. */
+    /** A tank's light: its lid's, else the aquarium menu's for its type (the deep sea: always its own dark). */
+    static int lightOf(Floor floor) {
+        return floor.deep ? 0 : floor.lidLight >= 0 ? floor.lidLight : AquariumSettings.light(floor.ocean);
+    }
+
+    /** A block changed on the client: rescan if an aquarium block came or went (or a lid). */
     static void blockChanged(BlockState oldState, BlockState newState) {
-        if (oldState.getBlock() instanceof AquariumBlock || newState.getBlock() instanceof AquariumBlock) {
+        if (oldState.getBlock() instanceof AquariumBlock || newState.getBlock() instanceof AquariumBlock
+                || oldState.getBlock() instanceof com.example.skyblocks.AquariumLidBlock || newState.getBlock() instanceof com.example.skyblocks.AquariumLidBlock) {
             dirty = true;
         }
     }
@@ -293,7 +301,7 @@ public final class AquariumRenderer {
                     VANILLA_JOBS.add(new VanillaJob(floor.min, floor.ocean, java.util.Arrays.copyOf(FISH_DATA, floor.fishCount * 16), floor.fishCount,
                             java.util.Arrays.copyOf(floor.decor, floor.decorCount * 4), floor.decorCount, faceCorners(floor), frameStrips(floor, shown), floor.blocks,
                             new Vec3(floor.min.getX() + floor.sizeX * 0.5, floor.min.getY() + floor.sizeY * 0.5, floor.min.getZ() + floor.sizeZ * 0.5),
-                            picture));
+                            picture, lightOf(floor)));
                     continue;
                 }
                 MeshData mesh = mesh(floor, shown, cam);
@@ -728,7 +736,7 @@ public final class AquariumRenderer {
         shader.safeGetUniform("Full").set(floor.full ? 1.0F : 0.0F);
         shader.safeGetUniform("FishCount").set(0.0F);
         shader.safeGetUniform("Ocean").set(floor.ocean ? 1.0F : 0.0F);
-        shader.safeGetUniform("Light").set((float) AquariumSettings.light(floor.ocean));
+        shader.safeGetUniform("Light").set((float) lightOf(floor));
         shader.safeGetUniform("Deep").set(0.0F);
         shader.safeGetUniform("Night").set((float) night());
         shader.safeGetUniform("DecoCount").set(0.0F);
@@ -744,7 +752,7 @@ public final class AquariumRenderer {
         shader.setSampler("FishTex", fishTex);
         shader.safeGetUniform("FishCount").set(floor.vanilla ? 0.0F : (float) floor.fishCount); // (a vanilla tank's: drawn as models)
         shader.safeGetUniform("Ocean").set(floor.ocean ? 1.0F : 0.0F);
-        shader.safeGetUniform("Light").set(floor.deep ? 0.0F : (float) AquariumSettings.light(floor.ocean));
+        shader.safeGetUniform("Light").set((float) lightOf(floor));
         shader.safeGetUniform("Deep").set(floor.deep ? 1.0F : 0.0F);
         shader.safeGetUniform("Night").set(floor.deep ? 1.0F : (float) night()); // (the deep sea: always night)
         float[] d = floor.decor;
@@ -1225,6 +1233,16 @@ public final class AquariumRenderer {
                 for (BlockPos b : floor.blocks) {
                     int index = (b.getX() - minX) + floor.sizeX * ((b.getZ() - minZ) + floor.sizeZ * (b.getY() - minY));
                     floor.occupancy[index / 24] += (float) (1 << (index % 24));
+                }
+            }
+            // a lid on it with its own light set (the first one found, if there are several)
+            for (BlockPos b : floor.blocks) {
+                if (!floor.blocks.contains(b.above())) {
+                    BlockState above = level.getBlockState(b.above());
+                    if (above.getBlock() instanceof com.example.skyblocks.AquariumLidBlock && above.getValue(com.example.skyblocks.AquariumLidBlock.LIGHT) > 0) {
+                        floor.lidLight = above.getValue(com.example.skyblocks.AquariumLidBlock.LIGHT) - 1;
+                        break;
+                    }
                 }
             }
             placeFish(floor);
