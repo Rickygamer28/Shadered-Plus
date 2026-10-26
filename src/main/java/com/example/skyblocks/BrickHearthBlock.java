@@ -217,6 +217,23 @@ public class BrickHearthBlock extends BaseEntityBlock {
                     }
                 }
                 level.playSound(null, pos, lit ? SoundEvents.FLINTANDSTEEL_USE : SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.5F, 1.0F);
+                if (lit) {
+                    level.playSound(null, pos, SoundEvents.FIRECHARGE_USE, SoundSource.BLOCKS, 0.35F, 0.6F);
+                }
+                if (level instanceof net.minecraft.server.level.ServerLevel server) {
+                    // sparks as it catches; a puff of smoke rolling out of the opening as it goes out
+                    Direction f = state.getValue(FACING);
+                    Direction across = f.getClockWise();
+                    double cx = main.getX() + 0.5 + across.getStepX() * 0.5 + f.getStepX() * 0.15;
+                    double cz = main.getZ() + 0.5 + across.getStepZ() * 0.5 + f.getStepZ() * 0.15;
+                    if (lit) {
+                        server.sendParticles(ParticleTypes.FLAME, cx, main.getY() + 0.45, cz, 14, 0.25, 0.08, 0.12, 0.01);
+                        server.sendParticles(ParticleTypes.LAVA, cx, main.getY() + 0.4, cz, 4, 0.3, 0.05, 0.1, 0.0);
+                    } else {
+                        server.sendParticles(ParticleTypes.LARGE_SMOKE, cx, main.getY() + 0.6, cz, 10, 0.35, 0.15, 0.12, 0.01);
+                        server.sendParticles(ParticleTypes.SMOKE, cx, main.getY() + 0.9, cz, 16, 0.35, 0.3, 0.12, 0.02);
+                    }
+                }
             }
         }
         return InteractionResult.sidedSuccess(level.isClientSide);

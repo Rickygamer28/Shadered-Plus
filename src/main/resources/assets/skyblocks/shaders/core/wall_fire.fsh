@@ -62,7 +62,8 @@ vec2 fire(vec3 P, float t, int kind, float g) { // (g: 0..1 lighting up / dying 
     float H = (10.5 + 2.5 * Boost) * max(g, 0.04);
     float y = P.y - base;
     float hn = y / H;
-    float foot = smoothstep(6.5, 9.0, P.x) * smoothstep(25.5, 23.0, P.x);
+    float spread = 2.0 + 13.0 * g; // (lighting: it catches in the middle of the logs and spreads out to the ends)
+    float foot = smoothstep(6.5, 9.0, P.x) * smoothstep(25.5, 23.0, P.x) * smoothstep(spread, spread - 3.0, abs(P.x - 16.0));
     if (y < -0.6 || hn > 1.25 || foot <= 0.0) {
         return vec2(0.0);
     }
