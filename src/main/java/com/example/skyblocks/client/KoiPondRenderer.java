@@ -86,12 +86,23 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
 
     /** Each pond, found once and kept a second (ponds rarely change). */
     private static final java.util.Map<Long, Pond> PONDS = new java.util.HashMap<>();
+    /** Each block's neighbours that are pond too, and the stepping stones on it and round it: found with the ponds, kept as long. */
+    private static final java.util.Map<Long, Integer> ROUNDS = new java.util.HashMap<>();
     private static long pondsAt;
+
+    /** A block changed on the client: a pond or stepping stone came or went - find the ponds again straight away. */
+    static void blockChanged(BlockState oldState, BlockState newState) {
+        if (oldState.getBlock() instanceof KoiPondBlock || newState.getBlock() instanceof KoiPondBlock
+                || oldState.getBlock() instanceof com.example.skyblocks.SteppingStoneBlock || newState.getBlock() instanceof com.example.skyblocks.SteppingStoneBlock) {
+            pondsAt = 0L;
+        }
+    }
 
     static Pond pond(net.minecraft.world.level.Level level, BlockPos start, net.minecraft.world.level.block.Block kind) {
         long now = System.nanoTime();
         if (now - pondsAt > 1_000_000_000L) {
             PONDS.clear();
+            ROUNDS.clear();
             pondsAt = now;
         }
         Pond known = PONDS.get(start.asLong());
@@ -185,7 +196,11 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
         // and in the second texture coordinates: its shape's row in KoiPondData's texture, and which of the eight
         // blocks round this one are pond too (for the frogs: only on the pond's own lily pads)
         int round = 0, stones = 0;
-        if (be.getLevel() != null) {
+        Integer known = ROUNDS.get(p.asLong());
+        if (known != null) {
+            round = known & 255;
+            stones = known >>> 8;
+        } else if (be.getLevel() != null) {
             if (com.example.skyblocks.SteppingStoneBlock.on(be.getLevel(), p)) {
                 stones |= 1; // (stepping stones on this block and those round it: frogs sit on them)
             }
@@ -198,6 +213,9 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
                     }
                 }
             }
+        }
+        if (known == null) {
+            ROUNDS.put(p.asLong(), round | stones << 8);
         }
         int word = pond.row() | round << 8 | stones << 16;
         int k0 = word & 0xFFFF, k1 = (word >>> 16) & 0xFFFF;

@@ -52,19 +52,24 @@ vec3 aurora(vec3 d, float t) {
     if (d.y < 0.015) return col;
     float shift = 0.5 + 0.5 * sin(t * 0.021); // (the colours slowly changing: more violet, then more green)
     float jit = hash13(floor(d * 1400.0)); // (each layer a little higher or lower for each bit of sky: no stripes)
+    // (each curtain's own frame, for this direction: worked out once, not for every layer)
+    vec2 qd0 = rot(0.4) * d.xz / d.y, qd1 = rot(1.7) * d.xz / d.y, qd2 = rot(3.0) * d.xz / d.y;
+    vec3 green = mix(vec3(0.15, 1.0, 0.45), vec3(0.2, 1.0, 0.8), shift * 0.5);
+    vec3 top = mix(vec3(0.6, 0.25, 1.0), vec3(1.0, 0.3, 0.55), shift);
     for (int i = 0; i < 40; i++) {
         float fi = float(i) + jit;
         float k = fi / 40.0;
         float h = 1.0 + k * 1.4;            // (each layer's height: the curtains' foot at 1)
-        vec2 p = d.xz * (h / d.y);          // (where the view meets it)
-        float far = length(p);
+        float far = length(d.xz) * (h / d.y); // (how far off it is, where the view meets it)
         float band = 0.0;
         for (int c = 0; c < 3; c++) {
             float fc = float(c);
-            vec2 q = rot(fc * 1.3 + 0.4) * p;
+            vec2 q = (c == 0 ? qd0 : c == 1 ? qd1 : qd2) * h;
             // the line it hangs along: wandering and drifting, folded in small pleats
-            float line = q.y - (fc * 2.4 - 1.9) - 1.1 * sin(q.x * 0.28 + t * (0.04 + 0.015 * fc) + fc * 2.3)
-                       - 1.2 * (fbm(vec2(q.x * 0.35 + t * 0.03, fc * 5.1)) - 0.5)
+            float line = q.y - (fc * 2.4 - 1.9) - 1.1 * sin(q.x * 0.28 + t * (0.04 + 0.015 * fc) + fc * 2.3);
+            // (the rest moves it at most 0.84 more: far enough from it, the curtain gives nothing you could see - skip it)
+            if (abs(line) > 1.95) continue;
+            line = line - 1.2 * (fbm(vec2(q.x * 0.35 + t * 0.03, fc * 5.1)) - 0.5)
                        - 0.18 * sin(q.x * 2.3 + t * 0.4 + fc) - 0.12 * (noise(vec2(q.x * 3.0 - t * 0.3, fc * 9.0)) - 0.5);
             float w = 0.05 + 0.04 * (0.5 + 0.5 * sin(q.x * 0.6 + fc * 1.9 + t * 0.07));
             float sheet = exp(-line * line / (w * w)) + 0.22 * exp(-line * line / (w * w * 16.0));
@@ -74,10 +79,9 @@ vec3 aurora(vec3 d, float t) {
             float pulse = 0.55 + 0.45 * sin(t * 0.23 + fc * 2.1 + q.x * 0.08);
             band += sheet * rays * pulse;
         }
+        if (band <= 0.0) continue;
         // a bright sharp foot, a long fading top
         float fall = smoothstep(0.0, 0.03, k) * (exp(-k * 7.0) + 0.5 * exp(-k * 1.4));
-        vec3 green = mix(vec3(0.15, 1.0, 0.45), vec3(0.2, 1.0, 0.8), shift * 0.5);
-        vec3 top = mix(vec3(0.6, 0.25, 1.0), vec3(1.0, 0.3, 0.55), shift);
         vec3 c = mix(green, top, smoothstep(0.15, 0.55, k));
         col += c * band * fall * 0.14 / (1.0 + far * 0.05);
     }

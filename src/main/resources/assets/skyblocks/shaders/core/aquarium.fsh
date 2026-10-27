@@ -587,6 +587,139 @@ bool water(ivec3 c) {
     return ((bits >> (index - word * 24)) & 1) == 1;
 }
 
+// a fish found by the tracing (fish i, at tf along the ray; cover: how much of the pixel it covers): its colour, how
+// opaque, and the light it gives off itself. Worked out once a pixel, for the fish seen there (and one soft edge), not
+// for every fish the ray passes
+void shadeFish(int i, float tf, float cover, vec3 rot, vec3 rd, float pixA, float t, out vec3 shadeOut, out float alphaOut, out vec3 glowOut) {
+    float fi = float(i);
+    vec4 f0 = texelFetch(FishTex, ivec2(0, i), 0), f1 = texelFetch(FishTex, ivec2(1, i), 0);
+    vec4 f2 = texelFetch(FishTex, ivec2(2, i), 0), f3 = texelFetch(FishTex, ivec2(3, i), 0);
+    int kind = int(f1.w + 0.5);
+    Species sp = species(kind);
+    vec3 c = f0.xyz;
+    float size = f0.w;
+    vec3 fwd = f1.xyz, up = f2.xyz;
+    vec3 side = normalize(cross(fwd, up));
+    float wave = f2.w;
+    float squeeze = f3.z;
+    gBeat = f3.x; gBend = f3.y; gFinSway = sin(t * 1.6 + fi); gMouth = 0.5 + 0.5 * sin(t * (2.0 + hash11(fi * 2.2)) + fi * 1.7);
+    gTime = t; gPulse = squeeze; gWalk = f3.w;
+    vec3 F = fwd, U = up, S = side;
+    vec3 oc = rot - c;
+    vec3 lo = vec3(dot(oc, F), dot(oc, U), dot(oc, S)) / size;
+    vec3 ld = vec3(dot(rd, F), dot(rd, U), dot(rd, S));
+    float flap = kind == 13 ? sin(t * 1.4 + fi * 1.3) : sin(t * 3.0 + fi * 1.3);
+    float pulse = squeeze;
+    int part_ = 0;
+    vec3 q = vec3(0.0);
+    float unused = fishSDF(kind, sp, lo + ld * (tf / size), wave, flap, pulse, part_, q);
+    shadeOut = vec3(0.0);
+    alphaOut = 0.0;
+    glowOut = vec3(0.0);
+    vec3 pl = lo + ld * (tf / size);
+    float ee = max(0.0007, 0.008 * min(sp.body.x, sp.body.y));
+    vec2 e = vec2(ee, -ee);
+    int dummyT;
+    vec3 dummyQ;
+    vec3 g = e.xyy * fishSDF(kind, sp, pl + e.xyy, wave, flap, pulse, dummyT, dummyQ)
+           + e.yyx * fishSDF(kind, sp, pl + e.yyx, wave, flap, pulse, dummyT, dummyQ)
+           + e.yxy * fishSDF(kind, sp, pl + e.yxy, wave, flap, pulse, dummyT, dummyQ)
+           + e.xxx * fishSDF(kind, sp, pl + e.xxx, wave, flap, pulse, dummyT, dummyQ);
+    vec3 nl = normalize(g);
+    vec3 n = normalize(F * g.x + U * g.y + S * g.z);
+    int part = part_;
+    {
+        // shade in the creases (where fins meet the body, under the gill cover): ambient occlusion
+        float occ = 0.0;
+        for (int k = 1; k <= 3; k++) {
+            float hk = 0.12 * sp.body.y * float(k);
+            occ += max(hk - fishSDF(kind, sp, pl + nl * hk, wave, flap, pulse, dummyT, dummyQ), 0.0) / hk / float(k);
+        }
+        float ao = clamp(1.0 - 0.55 * occ, 0.35, 1.0);
+        float rnd = hash11(fi * 13.3);
+        vec3 base = fishColour(kind, q, part, rnd);
+        bool isEye = false;
+        // the eye
+        bool eyed = isFish(kind);
+        if (kind == 13 && part == 1 && abs(q.z) > 0.55) {
+            float eyeD = length(vec2((q.x - 0.45) * 1.2, q.y - 0.2));
+            if (eyeD < 0.13) { base = vec3(0.02); isEye = true; }
+            else if (eyeD < 0.19) base = vec3(0.6, 0.45, 0.2);
+        }
+        if (eyed && part == 0 && abs(q.z) > 0.55) { // (where the eye bulges out)
+            float er = sp.body.y * eyeScale(kind);
+            vec2 ev = vec2((q.x - eyeAt(kind).x) * sp.body.x, (q.y - eyeAt(kind).y) * sp.body.y) / er;
+            float eyeD = length(ev);
+            if (eyeD < 0.115) {
+                isEye = true;
+                base = eyeD < 0.07 ? vec3(0.015) : mix(eyeRing(kind), eyeRing(kind) * 0.6, smoothstep(0.09, 0.115, eyeD)) * (0.85 + 0.15 * sin(atan(ev.y, ev.x) * 14.0));
+            } else if (eyeD < 0.13) {
+                base *= 0.6; // (a dark rim round the eye)
+            }
+        }
+        if (part >= 1 && part <= 2 && isFish(kind) && kind != 10 && kind != 16 && kind != 19 && kind != 29) {
+            float rc = part == 1 ? q.y * 8.0 : q.x * 10.0; // (rays run along a tail, up a fin)
+            float ray = 1.0 - smoothstep(0.0, 0.25, abs(fract(rc) - 0.5) - 0.2);
+            // (faded out where the rays would be finer than a few pixels: far off they'd shimmer)
+            float per = (part == 1 ? sp.tail.y * 0.25 : sp.body.x * 0.1) * size;
+            base *= 1.0 - 0.16 * ray * smoothstep(2.0, 5.0, per / (pixA * tf));
+            float edge = part == 1 ? 0.5 - 0.5 * q.x : abs(q.y);
+            base = mix(base, base * 1.15 + vec3(0.05, 0.08, 0.1), smoothstep(0.5, 1.0, edge) * 0.5);
+        }
+        if (part == 0 && !isEye && isFish(kind) && kind != 10 && kind != 16 && kind != 19 && kind != 18 && kind != 29 && kind != 33) {
+            float ss = sp.body.y * (kind == 5 || kind == 17 ? 0.13 : 0.1);
+            vec2 sc = vec2(-q.x * sp.body.x, q.y * sp.body.y) / ss;
+            sc.y += 0.5 * floor(sc.x);
+            vec2 sf = fract(sc) - 0.5;
+            float rim = smoothstep(0.32, 0.5, length(sf - vec2(0.45, 0.0)));
+            float sv = hash22(floor(sc)).x;
+            float strength = kind == 5 ? 0.2 : kind == 17 ? 0.16 : kind == 7 ? 0.0 : kind == 11 ? 0.05 : kind == 26 ? 0.12 : 0.09;
+            strength *= smoothstep(1.5, 4.0, ss * size / (pixA * tf)); // (fading where too fine to see: no shimmer)
+            base *= 1.0 - strength * (rim * 0.7 + (sv - 0.5) * 0.4); // (overlapping scales)
+            float gx = q.x - (0.44 - 0.1 * q.y * q.y);
+            if (kind != 7 && gx > 0.0 && gx < 0.03 && abs(q.y) < 0.75) base *= 0.78;              // (the gill cover's edge)
+            if (kind != 7 && q.x < 0.42 && abs(q.y - 0.18 + 0.12 * q.x * q.x) < 0.012) base *= 0.9; // (lateral line)
+        }
+        vec3 p = rot + rd * tf;
+        vec3 sun = normalize(vec3(0.3, 1.0, 0.2));
+        float diff = clamp(dot(n, sun) * 0.5 + 0.5, 0.0, 1.0);
+        vec3 amb = mix(vec3(0.24, 0.34, 0.45), vec3(0.6, 0.76, 0.88), n.y * 0.5 + 0.5);
+        float through = part >= 1 && kind != 13 && !isCrawler(kind) ? max(-dot(n, sun), 0.0) * 0.35 + 0.2 * max(dot(rd, sun), 0.0) : 0.0; // (thin fins let light through)
+        float irid = part != 0 ? 0.0 : kind == 3 || kind == 17 ? 0.28 : kind == 6 || kind == 8 ? 0.25 : kind == 11 ? 0.2 : kind == 4 || kind == 27 || isSquid(kind) ? 0.12 : kind == 1 ? 0.1 : 0.0;
+        if (irid > 0.0) {
+            float fa = 1.0 - max(dot(n, -rd), 0.0);
+            base = mix(base, base + hue(fa * 0.9 + q.x * 0.25 + 0.45) * 0.5, irid * (0.4 + 0.6 * fa));
+        }
+        vec3 shade = base * (amb * 0.85 + vec3(1.0, 0.97, 0.9) * diff * 0.8 + 0.18 * max(dot(n, -rd), 0.0) + through) * ao;
+        vec3 hv = normalize(sun - rd);
+        bool silver = kind == 3 || kind == 11 || kind == 17 || kind == 4 || kind == 27;
+        float shin = silver ? 60.0 : kind == 13 ? 12.0 : 40.0;
+        shade += vec3(1.0) * pow(max(dot(n, hv), 0.0), shin) * (silver ? 0.85 : kind == 13 ? 0.12 : 0.4) * ao; // (wet, shiny skin)
+        if (isEye) {
+            shade += vec3(1.0) * pow(max(dot(n, hv), 0.0), 150.0) * 1.5; // (a glossy eye)
+            shade += vec3(1.0) * pow(max(dot(reflect(rd, n), vec3(0.0, 1.0, 0.0)), 0.0), 80.0) * 0.8;
+        }
+        float caust = caustics(p.xz, t) * max(n.y, 0.0) * (p.y / BoxSize.y);
+        shade += vec3(0.6, 0.9, 1.0) * caust * 0.45 * ao;
+        shade += vec3(0.5, 0.8, 1.0) * pow(1.0 - max(dot(n, -rd), 0.0), 3.0) * 0.22; // (light round the edges, from the water)
+        if (kind == 33) { // (lit blue by its own lure)
+            vec3 lure = anglerLure(sp.body.x, sp.body.y);
+            shade += base * vec3(0.3, 0.75, 0.9) * 1.6 * exp(-length(pl - lure) / 0.07);
+            if (part == 3) shade = vec3(0.8, 1.0, 1.0);
+        }
+        float sGlow = kind == 31 ? squidGlow(q, part) * (0.8 + 0.4 * pulse) : 0.0; // (a glow squid's lights, by day too)
+        shade += vec3(0.2, 0.95, 0.8) * sGlow * 0.45;
+        if (kind == 15 && Deep > 0.5) shade += base * (0.5 + 0.4 * pulse); // (the deep sea's jellyfish lit from within)
+        float alpha = (kind == 15 ? 0.55 : 1.0) * cover; // (the jellyfish is see-through)
+        shadeOut = shade;
+        alphaOut = alpha;
+        glowOut = kind == 15 ? (Deep > 0.5 ? (base * (1.4 + 1.0 * pulse) + vec3(0.04, 0.1, 0.25) * pulse) * (part == 0 ? 1.0 : 0.6) * alpha : base * (1.3 + 0.5 * pulse) * alpha)
+                 : kind == 33 && part == 3 ? vec3(0.6, 1.0, 1.0) * 2.0
+                 : kind == 34 && part == 0 ? vec3(0.3, 0.65, 1.0) * photophores(q) * 1.6
+                 : kind == 31 ? vec3(0.25, 1.0, 0.85) * sGlow * 1.4 : kind == 3 && part == 0 && abs(q.y - 0.12) < 0.13 ? vec3(0.1, 0.6, 0.8) : vec3(0.0);
+    }
+}
+
 void main() {
     vec3 ro = Eye;
     vec3 rd = normalize(fragPos - Eye);
@@ -674,6 +807,8 @@ void main() {
     float edgeA = 0.0, edgeT = 1.0e9;
     float pixA = max(length(fwidth(rd)), 1.0e-5); // (how wide a pixel is, as an angle)
     vec3 rot = ro - BoxMin;
+    int hitI = -1, edgeI = -1;
+    float edgeCover = 0.0;
     for (int i = 0; i < 48; i++) {
         if (i >= count) {
             break;
@@ -757,128 +892,33 @@ void main() {
                 break;
             }
         }
-        float cover = 1.0;
         if (tf < 0.0) { // missed: but if it passed within a pixel, part of this pixel is fish (a soft edge)
             if (bestT < 0.0 || bestR > 1.0 || bestT >= edgeT) {
                 continue;
             }
-            cover = 1.0 - smoothstep(0.12, 1.0, bestR);
+            float cover = 1.0 - smoothstep(0.12, 1.0, bestR);
             if (cover < 0.03) {
                 continue;
             }
-            tf = bestT;
-            float unused = fishSDF(kind, sp, lo + ld * (tf / size), wave, flap, pulse, part_, q);
+            edgeT = bestT;
+            edgeI = i;
+            edgeCover = cover;
+            continue;
         }
-        vec3 pl = lo + ld * (tf / size);
-        float ee = max(0.0007, 0.008 * min(sp.body.x, sp.body.y));
-        vec2 e = vec2(ee, -ee);
-        int dummyT;
-        vec3 dummyQ;
-        vec3 g = e.xyy * fishSDF(kind, sp, pl + e.xyy, wave, flap, pulse, dummyT, dummyQ)
-               + e.yyx * fishSDF(kind, sp, pl + e.yyx, wave, flap, pulse, dummyT, dummyQ)
-               + e.yxy * fishSDF(kind, sp, pl + e.yxy, wave, flap, pulse, dummyT, dummyQ)
-               + e.xxx * fishSDF(kind, sp, pl + e.xxx, wave, flap, pulse, dummyT, dummyQ);
-        vec3 nl = normalize(g);
-        vec3 n = normalize(F * g.x + U * g.y + S * g.z);
-        int part = part_;
-        if (tf > tEnter - 0.01 && tf < hitT) {
-            // shade in the creases (where fins meet the body, under the gill cover): ambient occlusion
-            float occ = 0.0;
-            for (int k = 1; k <= 3; k++) {
-                float hk = 0.12 * sp.body.y * float(k);
-                occ += max(hk - fishSDF(kind, sp, pl + nl * hk, wave, flap, pulse, dummyT, dummyQ), 0.0) / hk / float(k);
-            }
-            float ao = clamp(1.0 - 0.55 * occ, 0.35, 1.0);
-            float rnd = hash11(fi * 13.3);
-            vec3 base = fishColour(kind, q, part, rnd);
-            bool isEye = false;
-            // the eye
-            bool eyed = isFish(kind);
-            if (kind == 13 && part == 1 && abs(q.z) > 0.55) {
-                float eyeD = length(vec2((q.x - 0.45) * 1.2, q.y - 0.2));
-                if (eyeD < 0.13) { base = vec3(0.02); isEye = true; }
-                else if (eyeD < 0.19) base = vec3(0.6, 0.45, 0.2);
-            }
-            if (eyed && part == 0 && abs(q.z) > 0.55) { // (where the eye bulges out)
-                float er = sp.body.y * eyeScale(kind);
-                vec2 ev = vec2((q.x - eyeAt(kind).x) * sp.body.x, (q.y - eyeAt(kind).y) * sp.body.y) / er;
-                float eyeD = length(ev);
-                if (eyeD < 0.115) {
-                    isEye = true;
-                    base = eyeD < 0.07 ? vec3(0.015) : mix(eyeRing(kind), eyeRing(kind) * 0.6, smoothstep(0.09, 0.115, eyeD)) * (0.85 + 0.15 * sin(atan(ev.y, ev.x) * 14.0));
-                } else if (eyeD < 0.13) {
-                    base *= 0.6; // (a dark rim round the eye)
-                }
-            }
-            if (part >= 1 && part <= 2 && isFish(kind) && kind != 10 && kind != 16 && kind != 19 && kind != 29) {
-                float rc = part == 1 ? q.y * 8.0 : q.x * 10.0; // (rays run along a tail, up a fin)
-                float ray = 1.0 - smoothstep(0.0, 0.25, abs(fract(rc) - 0.5) - 0.2);
-                // (faded out where the rays would be finer than a few pixels: far off they'd shimmer)
-                float per = (part == 1 ? sp.tail.y * 0.25 : sp.body.x * 0.1) * size;
-                base *= 1.0 - 0.16 * ray * smoothstep(2.0, 5.0, per / (pixA * tf));
-                float edge = part == 1 ? 0.5 - 0.5 * q.x : abs(q.y);
-                base = mix(base, base * 1.15 + vec3(0.05, 0.08, 0.1), smoothstep(0.5, 1.0, edge) * 0.5);
-            }
-            if (part == 0 && !isEye && isFish(kind) && kind != 10 && kind != 16 && kind != 19 && kind != 18 && kind != 29 && kind != 33) {
-                float ss = sp.body.y * (kind == 5 || kind == 17 ? 0.13 : 0.1);
-                vec2 sc = vec2(-q.x * sp.body.x, q.y * sp.body.y) / ss;
-                sc.y += 0.5 * floor(sc.x);
-                vec2 sf = fract(sc) - 0.5;
-                float rim = smoothstep(0.32, 0.5, length(sf - vec2(0.45, 0.0)));
-                float sv = hash22(floor(sc)).x;
-                float strength = kind == 5 ? 0.2 : kind == 17 ? 0.16 : kind == 7 ? 0.0 : kind == 11 ? 0.05 : kind == 26 ? 0.12 : 0.09;
-                strength *= smoothstep(1.5, 4.0, ss * size / (pixA * tf)); // (fading where too fine to see: no shimmer)
-                base *= 1.0 - strength * (rim * 0.7 + (sv - 0.5) * 0.4); // (overlapping scales)
-                float gx = q.x - (0.44 - 0.1 * q.y * q.y);
-                if (kind != 7 && gx > 0.0 && gx < 0.03 && abs(q.y) < 0.75) base *= 0.78;              // (the gill cover's edge)
-                if (kind != 7 && q.x < 0.42 && abs(q.y - 0.18 + 0.12 * q.x * q.x) < 0.012) base *= 0.9; // (lateral line)
-            }
-            vec3 p = rot + rd * tf;
-            vec3 sun = normalize(vec3(0.3, 1.0, 0.2));
-            float diff = clamp(dot(n, sun) * 0.5 + 0.5, 0.0, 1.0);
-            vec3 amb = mix(vec3(0.24, 0.34, 0.45), vec3(0.6, 0.76, 0.88), n.y * 0.5 + 0.5);
-            float through = part >= 1 && kind != 13 && !isCrawler(kind) ? max(-dot(n, sun), 0.0) * 0.35 + 0.2 * max(dot(rd, sun), 0.0) : 0.0; // (thin fins let light through)
-            float irid = part != 0 ? 0.0 : kind == 3 || kind == 17 ? 0.28 : kind == 6 || kind == 8 ? 0.25 : kind == 11 ? 0.2 : kind == 4 || kind == 27 || isSquid(kind) ? 0.12 : kind == 1 ? 0.1 : 0.0;
-            if (irid > 0.0) {
-                float fa = 1.0 - max(dot(n, -rd), 0.0);
-                base = mix(base, base + hue(fa * 0.9 + q.x * 0.25 + 0.45) * 0.5, irid * (0.4 + 0.6 * fa));
-            }
-            vec3 shade = base * (amb * 0.85 + vec3(1.0, 0.97, 0.9) * diff * 0.8 + 0.18 * max(dot(n, -rd), 0.0) + through) * ao;
-            vec3 hv = normalize(sun - rd);
-            bool silver = kind == 3 || kind == 11 || kind == 17 || kind == 4 || kind == 27;
-            float shin = silver ? 60.0 : kind == 13 ? 12.0 : 40.0;
-            shade += vec3(1.0) * pow(max(dot(n, hv), 0.0), shin) * (silver ? 0.85 : kind == 13 ? 0.12 : 0.4) * ao; // (wet, shiny skin)
-            if (isEye) {
-                shade += vec3(1.0) * pow(max(dot(n, hv), 0.0), 150.0) * 1.5; // (a glossy eye)
-                shade += vec3(1.0) * pow(max(dot(reflect(rd, n), vec3(0.0, 1.0, 0.0)), 0.0), 80.0) * 0.8;
-            }
-            float caust = caustics(p.xz, t) * max(n.y, 0.0) * (p.y / BoxSize.y);
-            shade += vec3(0.6, 0.9, 1.0) * caust * 0.45 * ao;
-            shade += vec3(0.5, 0.8, 1.0) * pow(1.0 - max(dot(n, -rd), 0.0), 3.0) * 0.22; // (light round the edges, from the water)
-            if (kind == 33) { // (lit blue by its own lure)
-                vec3 lure = anglerLure(sp.body.x, sp.body.y);
-                shade += base * vec3(0.3, 0.75, 0.9) * 1.6 * exp(-length(pl - lure) / 0.07);
-                if (part == 3) shade = vec3(0.8, 1.0, 1.0);
-            }
-            float sGlow = kind == 31 ? squidGlow(q, part) * (0.8 + 0.4 * pulse) : 0.0; // (a glow squid's lights, by day too)
-            shade += vec3(0.2, 0.95, 0.8) * sGlow * 0.45;
-            if (kind == 15 && Deep > 0.5) shade += base * (0.5 + 0.4 * pulse); // (the deep sea's jellyfish lit from within)
-            float alpha = (kind == 15 ? 0.55 : 1.0) * cover; // (the jellyfish is see-through)
-            if (cover > 0.99) {
-                hitT = tf;
-                fish = true;
-                fishCol = shade;
-                fishAlpha = alpha;
-                glow = kind == 15 ? (Deep > 0.5 ? (base * (1.4 + 1.0 * pulse) + vec3(0.04, 0.1, 0.25) * pulse) * (part == 0 ? 1.0 : 0.6) * alpha : base * (1.3 + 0.5 * pulse) * alpha)
-                     : kind == 33 && part == 3 ? vec3(0.6, 1.0, 1.0) * 2.0
-                     : kind == 34 && part == 0 ? vec3(0.3, 0.65, 1.0) * photophores(q) * 1.6
-                     : kind == 31 ? vec3(0.25, 1.0, 0.85) * sGlow * 1.4 : kind == 3 && part == 0 && abs(q.y - 0.12) < 0.13 ? vec3(0.1, 0.6, 0.8) : vec3(0.0);
-            } else { // (a soft edge: laid over whatever is behind, once that is known)
-                edgeT = tf;
-                edgeCol = shade;
-                edgeA = alpha;
-            }
-        }
+        hitT = tf; // (the nearest fish so far: those behind it are traced no further than this)
+        hitI = i;
+    }
+
+    // the fish seen here, and a soft edge of one in front of what's behind: their colours
+    if (hitI >= 0) {
+        float a;
+        shadeFish(hitI, hitT, 1.0, rot, rd, pixA, t, fishCol, a, glow);
+        fish = true;
+        fishAlpha = a;
+    }
+    if (edgeI >= 0) {
+        vec3 eg;
+        shadeFish(edgeI, edgeT, edgeCover, rot, rd, pixA, t, edgeCol, edgeA, eg);
     }
 
     // ---- decorations on the bottom (placed on the CPU, from the tank's floor) ----

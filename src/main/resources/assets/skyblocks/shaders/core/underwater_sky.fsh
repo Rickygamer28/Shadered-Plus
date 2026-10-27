@@ -76,6 +76,53 @@ float wrapA(float a) {
     return mod(a + PI, TAU) - PI;
 }
 
+// fish i of the sea round you: what it is, where (c), its frame (fwd, up, side), size, a jellyfish's squeeze
+void seaFish(int i, float t, out int kind, out vec3 c, out vec3 fwd, out vec3 up, out vec3 side, out float size, out float squeeze) {
+    float fi = float(i);
+    float R, h, w;
+    if (i < 10) { // a school of sardines, wheeling round together
+        kind = 17; R = 3.2 + (hash11(fi * 3.1) - 0.5) * 0.7; h = 0.4 + (hash11(fi * 5.3) - 0.5) * 0.6; w = 0.22; size = 1.6;
+    } else if (i == 10) { kind = 0; R = 2.2; h = -0.3; w = -0.18; size = 1.6; }   // clownfish
+    else if (i == 11) { kind = 1; R = 2.6; h = 0.6; w = 0.15; size = 1.6; }       // blue tang
+    else if (i == 12) { kind = 2; R = 2.0; h = 0.15; w = 0.2; size = 1.5; }       // yellow tang
+    else if (i == 13) { kind = 4; R = 2.8; h = -0.6; w = -0.12; size = 1.6; }     // angelfish
+    else if (i == 14) { kind = 13; R = 6.0; h = 1.3; w = 0.05; size = 1.4; }      // sea turtle
+    else if (i == 15) { kind = 10; R = 9.0; h = 0.2; w = -0.04; size = 1.3; }     // shark
+    else if (i == 16) { kind = 12; R = 7.0; h = 2.6; w = 0.035; size = 1.6; }     // manta ray
+    else if (i == 17) { kind = 15; R = 3.6; h = 1.3; w = 0.02; size = 1.2; }      // jellyfish
+    else if (i == 18) { kind = 14; R = 4.6; h = -1.0; w = 0.07; size = 1.3; }     // grouper
+    else { kind = 11; R = 5.2; h = 0.9; w = -0.1; size = 1.3; }                    // tuna
+    float a0 = (i < 10 ? 0.0 : fi * 2.399) + (i < 10 ? (hash11(fi * 7.7) - 0.5) * 0.5 : 0.0);
+    float ang = a0 + w * t;
+    float bob = 0.08 * sin(t * 0.4 + fi * 1.7);
+    if (i < 10) { // (each weaving a little in the school)
+        R += 0.08 * sin(t * 1.1 + fi * 2.0);
+        bob += 0.06 * sin(t * 1.3 + fi);
+    }
+    c = vec3(R * cos(ang), h + bob, R * sin(ang));
+    float sgn = w < 0.0 ? -1.0 : 1.0;
+    fwd = normalize(vec3(-sin(ang), 0.05 * cos(t * 0.4 + fi * 1.7), cos(ang)) * sgn);
+    up = vec3(0.0, 1.0, 0.0);
+    squeeze = 0.0;
+    if (kind == 15) { // (a jellyfish upright, squeezing and relaxing)
+        fwd = vec3(1.0, 0.0, 0.0);
+        float jph = fract(t * 0.4 + fi * 0.37);
+        squeeze = smoothstep(0.0, 0.12, jph) * (1.0 - smoothstep(0.12, 0.9, jph));
+        c.y += 0.05 * squeeze;
+    }
+    side = normalize(cross(fwd, up));
+    up = cross(side, fwd);
+}
+
+// its swimming this moment (the creatures' shared state, as the aquariums set it)
+void seaSwim(int i, int kind, Species sp, float t, out float wave, out float flap) {
+    float fi = float(i);
+    wave = t * (9.0 - 5.0 * clamp(sp.body.x, 0.0, 1.0)) + fi * 2.0;
+    flap = kind == 13 ? sin(t * 1.4 + fi * 1.3) : sin(t * 3.0 + fi * 1.3);
+    gBeat = 1.0; gBend = 0.0; gFinSway = sin(t * 1.6 + fi); gMouth = 0.5 + 0.5 * sin(t * 2.3 + fi * 1.7);
+    gTime = t; gWalk = 0.0;
+}
+
 void main() {
     vec3 d = normalize(dir);
     float t = Time / 20.0;
@@ -140,48 +187,17 @@ void main() {
         col += vec3(0.4, 0.75, 0.8) * shafts * toward * 0.35 * smoothstep(-0.5, 0.2, d.y);
     }
 
-    // the fish swimming round you (the aquariums' own, in 3D): the nearest one in front wins
+    // the fish swimming round you (the aquariums' own, in 3D): each traced only as far as the nearest found so far,
+    // only the one nearest in front then shaded
     {
         float hitT = 1.0e9;
-        vec3 fishCol = vec3(0.0);
-        float fishA = 0.0;
+        int hitI = -1;
         for (int i = 0; i < 20; i++) {
-            float fi = float(i);
             int kind;
-            float R, h, w, size;
-            if (i < 10) { // a school of sardines, wheeling round together
-                kind = 17; R = 3.2 + (hash11(fi * 3.1) - 0.5) * 0.7; h = 0.4 + (hash11(fi * 5.3) - 0.5) * 0.6; w = 0.22; size = 1.6;
-            } else if (i == 10) { kind = 0; R = 2.2; h = -0.3; w = -0.18; size = 1.6; }   // clownfish
-            else if (i == 11) { kind = 1; R = 2.6; h = 0.6; w = 0.15; size = 1.6; }       // blue tang
-            else if (i == 12) { kind = 2; R = 2.0; h = 0.15; w = 0.2; size = 1.5; }       // yellow tang
-            else if (i == 13) { kind = 4; R = 2.8; h = -0.6; w = -0.12; size = 1.6; }     // angelfish
-            else if (i == 14) { kind = 13; R = 6.0; h = 1.3; w = 0.05; size = 1.4; }      // sea turtle
-            else if (i == 15) { kind = 10; R = 9.0; h = 0.2; w = -0.04; size = 1.3; }     // shark
-            else if (i == 16) { kind = 12; R = 7.0; h = 2.6; w = 0.035; size = 1.6; }     // manta ray
-            else if (i == 17) { kind = 15; R = 3.6; h = 1.3; w = 0.02; size = 1.2; }      // jellyfish
-            else if (i == 18) { kind = 14; R = 4.6; h = -1.0; w = 0.07; size = 1.3; }     // grouper
-            else { kind = 11; R = 5.2; h = 0.9; w = -0.1; size = 1.3; }                    // tuna
+            vec3 c, fwd, up, side;
+            float size, squeeze;
+            seaFish(i, t, kind, c, fwd, up, side, size, squeeze);
             Species sp = species(kind);
-            float a0 = (i < 10 ? 0.0 : fi * 2.399) + (i < 10 ? (hash11(fi * 7.7) - 0.5) * 0.5 : 0.0);
-            float ang = a0 + w * t;
-            float bob = 0.08 * sin(t * 0.4 + fi * 1.7);
-            if (i < 10) { // (each weaving a little in the school)
-                R += 0.08 * sin(t * 1.1 + fi * 2.0);
-                bob += 0.06 * sin(t * 1.3 + fi);
-            }
-            vec3 c = vec3(R * cos(ang), h + bob, R * sin(ang));
-            float sgn = w < 0.0 ? -1.0 : 1.0;
-            vec3 fwd = normalize(vec3(-sin(ang), 0.05 * cos(t * 0.4 + fi * 1.7), cos(ang)) * sgn);
-            vec3 up = vec3(0.0, 1.0, 0.0);
-            float squeeze = 0.0;
-            if (kind == 15) { // (a jellyfish upright, squeezing and relaxing)
-                fwd = vec3(1.0, 0.0, 0.0);
-                float jph = fract(t * 0.4 + fi * 0.37);
-                squeeze = smoothstep(0.0, 0.12, jph) * (1.0 - smoothstep(0.12, 0.9, jph));
-                c.y += 0.05 * squeeze;
-            }
-            vec3 side = normalize(cross(fwd, up));
-            up = cross(side, fwd);
             float reach = size * (length(sp.body) + sp.tail.x * 2.5 + sp.tail.y * (kind == 15 ? 2.5 : 0.6) + sp.fin.z + sp.fin.y + 0.05);
             float bq = dot(-c, d), cq = dot(c, c) - reach * reach;
             float disc = bq * bq - cq;
@@ -190,21 +206,35 @@ void main() {
             if (t0 >= t1) continue;
             vec3 lo = vec3(dot(-c, fwd), dot(-c, up), dot(-c, side)) / size;
             vec3 ld = vec3(dot(d, fwd), dot(d, up), dot(d, side));
-            float wave = t * (9.0 - 5.0 * clamp(sp.body.x, 0.0, 1.0)) + fi * 2.0;
-            float flap = kind == 13 ? sin(t * 1.4 + fi * 1.3) : sin(t * 3.0 + fi * 1.3);
-            gBeat = 1.0; gBend = 0.0; gFinSway = sin(t * 1.6 + fi); gMouth = 0.5 + 0.5 * sin(t * 2.3 + fi * 1.7);
-            gTime = t; gPulse = squeeze; gWalk = 0.0;
-            float tm = t0, tf = -1.0;
-            int part = 0;
-            vec3 q = vec3(0.0);
+            float wave, flap;
+            seaSwim(i, kind, sp, t, wave, flap);
+            gPulse = squeeze;
+            float tm = t0;
+            int part;
+            vec3 q;
             for (int k = 0; k < 80; k++) {
                 float dd = fishSDF(kind, sp, lo + ld * (tm / size), wave, flap, squeeze, part, q) * size;
-                if (dd < 0.0015 * tm) { tf = tm; break; }
+                if (dd < 0.0015 * tm) { hitT = tm; hitI = i; break; }
                 tm += max(dd * 0.7, 0.0008 * tm);
                 if (tm > t1) break;
             }
-            if (tf < 0.0) continue;
+        }
+        if (hitI >= 0) {
+            int kind;
+            vec3 c, fwd, up, side;
+            float size, squeeze;
+            seaFish(hitI, t, kind, c, fwd, up, side, size, squeeze);
+            Species sp = species(kind);
+            float wave, flap;
+            seaSwim(hitI, kind, sp, t, wave, flap);
+            gPulse = squeeze;
+            float fi = float(hitI), tf = hitT;
+            vec3 lo = vec3(dot(-c, fwd), dot(-c, up), dot(-c, side)) / size;
+            vec3 ld = vec3(dot(d, fwd), dot(d, up), dot(d, side));
             vec3 pl = lo + ld * (tf / size);
+            int part;
+            vec3 q;
+            fishSDF(kind, sp, pl, wave, flap, squeeze, part, q);
             float ee = max(0.0007, 0.008 * min(sp.body.x, sp.body.y));
             vec2 e = vec2(ee, -ee);
             int dt2;
@@ -230,12 +260,11 @@ void main() {
             vec3 shade = base * (amb * 0.85 + vec3(1.0, 0.97, 0.9) * diff * 0.75);
             shade += vec3(1.0) * pow(max(dot(n, normalize(sun - d)), 0.0), isEye ? 120.0 : 40.0) * (isEye ? 1.2 : 0.35);
             shade += vec3(0.5, 0.8, 1.0) * pow(1.0 - max(dot(n, -d), 0.0), 3.0) * 0.25; // (light round its edges, from the water)
-            shade += vec3(0.6, 0.9, 1.0) * caustic(vec2(dot(c + d * tf, vec3(1.0, 0.0, 0.0)), (c + d * tf).z) * 1.5, t * 1.2) * max(n.y, 0.0) * 0.25;
-            hitT = tf;
-            fishCol = mix(shade, water(d), 1.0 - exp(-tf * 0.16)); // (fading into the blue far off)
-            fishA = kind == 15 ? 0.6 : 1.0;
+            vec3 wp = c + d * tf;
+            shade += vec3(0.6, 0.9, 1.0) * caustic(wp.xz * 1.5, t * 1.2) * max(n.y, 0.0) * 0.25;
+            vec3 fishCol = mix(shade, water(d), 1.0 - exp(-tf * 0.16)); // (fading into the blue far off)
+            col = mix(col, fishCol, kind == 15 ? 0.6 : 1.0);
         }
-        col = mix(col, fishCol, fishA);
     }
 
     // bubbles rising past, and bits drifting in the water

@@ -186,6 +186,7 @@ public final class MirrorRenderer {
         InfinityMirrorRenderer.blockChanged(level, pos, oldState, newState);
         DanceFloorRenderer.blockChanged(oldState, newState);
         AquariumRenderer.blockChanged(oldState, newState);
+        KoiPondRenderer.blockChanged(oldState, newState);
         boolean mirror = isMirror(oldState) || isMirror(newState);
         if (!mirror) {
             BlockPos.MutableBlockPos n = new BlockPos.MutableBlockPos();
