@@ -44,8 +44,8 @@ public abstract class SkyPassMixin implements SkyUsage.Pass {
         if (stage == RenderStage.AFTER_SKY) {
             SkyUsage.skyStage(renderTick, partialTick);
         }
-        if (!SkyUsage.recentlyUsed(batchData)) {
-            ci.cancel();
+        if (!SkyUsage.drawAtSkyStage(batchData)) {
+            ci.cancel(); // (unused; or only sky blocks use it: drawn just before them, where they are - SkyUsage)
             return;
         }
         skyblocks$drawnFrame = SkyUsage.frame(); // drawn this frame (at the sky stage or on demand)

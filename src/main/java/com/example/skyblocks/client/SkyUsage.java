@@ -11,6 +11,7 @@ import com.noodlegamer76.shadered.client.util.RenderableComplexPass;
 import com.noodlegamer76.shadered.client.util.skyblock.SkyblockBatchData;
 import java.util.IdentityHashMap;
 import java.util.Map;
+import com.noodlegamer76.shadered.client.renderer.ComplexPassRenderer;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShaderInstance;
@@ -68,6 +69,10 @@ public final class SkyUsage {
      * exact in a mirror); one never painted yet is painted once.
      */
 
+    /**
+     * Something uses this sky's picture where we can't tell where on screen it is (an item, a liquid, a painting...):
+     * its whole picture is drawn, for a few seconds after.
+     */
     public static void mark(@Nullable SkyblockBatchData data) {
         if (MirrorRenderer.isRenderingReflection()) {
             return; // (a sky seen only in a mirror isn't kept painted every frame)
@@ -75,6 +80,53 @@ public final class SkyUsage {
         if (data instanceof Tracked tracked) {
             tracked.skyblocks$markUsed();
         }
+        wantWhole(data);
+    }
+
+    /** The sky's batch was looked up (to queue sky blocks, mostly): used, but its blocks say where on screen it's needed. */
+    public static void markLight(@Nullable SkyblockBatchData data) {
+        if (MirrorRenderer.isRenderingReflection()) {
+            return;
+        }
+        if (data instanceof Tracked tracked) {
+            tracked.skyblocks$markUsed();
+        }
+    }
+
+    private static void wantWhole(@Nullable SkyblockBatchData data) {
+        if (data != null) {
+            WHOLE_UNTIL.put(data, System.nanoTime() + KEEP_NANOS);
+        }
+    }
+
+    /**
+     * A sky's picture is only drawn where it's needed this frame. Its sky blocks are only known (where they are on
+     * screen) just before Shadered draws them: then their part of the screen is drawn (ensureQueuedFresh). Users
+     * that could be anywhere on screen (items, liquids, paintings, mirrors) get the whole picture, as before.
+     */
+    private static final Map<SkyblockBatchData, Long> WHOLE_UNTIL = new IdentityHashMap<>();
+    /** Per sky, what of its picture is up to date: {frame, 1 all of it / 0 only x0, y0, x1, y1 (pixels)}. */
+    private static final Map<SkyblockBatchData, long[]> COVER = new IdentityHashMap<>();
+    /** Whether the on-demand drawing before the sky blocks is in place (else: the whole picture at the sky stage, as before). */
+    private static boolean onDemandOk;
+
+    /**
+     * At the sky stage, from the sky passes: whether to draw this sky's picture now (the whole of it). On demand
+     * (drawn from {@link #ensure}): always.
+     */
+    public static boolean drawAtSkyStage(@Nullable SkyblockBatchData data) {
+        if (drawing) {
+            return true;
+        }
+        if (!recentlyUsed(data)) {
+            return false;
+        }
+        Long until = data == null ? null : WHOLE_UNTIL.get(data);
+        boolean whole = !onDemandOk || data == null || (until != null && until - System.nanoTime() > 0);
+        if (whole && data != null) {
+            COVER.put(data, new long[] {frame, 1, 0, 0, 0, 0});
+        }
+        return whole;
     }
 
     /** Whether the sky with this batch was used recently (always true if the tracking isn't there). */
@@ -117,13 +169,32 @@ public final class SkyUsage {
      */
     public static void ensureFresh(@Nullable SkyblockBatchData data) {
         mark(data);
+        wantWhole(data); // (in a mirror too: mirrors look at other parts of the picture than the screen does)
+        ensure(data, null);
+    }
+
+    /** Draws the sky's picture now where it's out of date: within {@code rect} (pixels), or all of it (null). */
+    private static void ensure(@Nullable SkyblockBatchData data, @Nullable int[] rect) {
         RenderableComplexPass pass = data == null ? null : PASSES.get(data);
-        if (!(pass instanceof Pass tracked) || tracked.skyblocks$drawnFrame() == frame || skyProjection == null
-                || drawing || !RenderSystem.isOnRenderThread()) {
+        if (!(pass instanceof Pass tracked) || skyProjection == null || drawing || !RenderSystem.isOnRenderThread()) {
+            return;
+        }
+        long[] cover = COVER.get(data);
+        boolean fresh = cover != null && cover[0] == frame && tracked.skyblocks$drawnFrame() == frame;
+        if (fresh && (cover[1] == 1 || (rect != null && rect[0] >= cover[2] && rect[1] >= cover[3] && rect[2] <= cover[4] && rect[3] <= cover[5]))) {
             return;
         }
         if (MirrorRenderer.isRenderingReflection() && tracked.skyblocks$drawnFrame() >= 0) {
             return; // in a mirror: its last picture will do (painting one in the middle of a mirror upset the frame)
+        }
+        int[] box = rect;
+        if (box != null && fresh) { // (what's up to date already, and this: one box)
+            box = new int[] {Math.min(box[0], (int) cover[2]), Math.min(box[1], (int) cover[3]), Math.max(box[2], (int) cover[4]), Math.max(box[3], (int) cover[5])};
+        }
+        ComplexPassRenderer renderer = ComplexPassRenderer.getInstance();
+        int width = Math.max(1, renderer.getPreviousWidth()), height = Math.max(1, renderer.getPreviousHeight());
+        if (box != null && (long) (box[2] - box[0]) * (box[3] - box[1]) > (long) width * height * 6 / 10) {
+            box = null; // (most of the screen anyway)
         }
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) {
@@ -150,6 +221,10 @@ public final class SkyUsage {
             if (scissor) {
                 GlStateManager._disableScissorTest();
             }
+            if (box != null) { // (only this part of the picture)
+                GlStateManager._enableScissorTest();
+                GlStateManager._scissorBox(box[0], box[1], Math.max(1, box[2] - box[0]), Math.max(1, box[3] - box[1]));
+            }
             RenderSystem.setProjectionMatrix(new Matrix4f(skyProjection), VertexSorting.DISTANCE_TO_ORIGIN);
             // the same view rotation Shadered gives its sky passes
             Camera camera = mc.gameRenderer.getMainCamera();
@@ -157,6 +232,7 @@ public final class SkyUsage {
             view.mulPose(Axis.XP.rotationDegrees(camera.getXRot()));
             view.mulPose(Axis.YP.rotationDegrees(camera.getYRot() + 180.0F));
             pass.render(RenderStage.AFTER_SKY, view, lastRenderTick, lastPartialTick);
+            COVER.put(data, box == null ? new long[] {frame, 1, 0, 0, 0, 0} : new long[] {frame, 0, box[0], box[1], box[2], box[3]});
         } catch (RuntimeException e) {
             // leave it out of date rather than break the frame
         } finally {
@@ -171,6 +247,8 @@ public final class SkyUsage {
             if (scissor) {
                 GlStateManager._enableScissorTest();
                 GlStateManager._scissorBox(scissorBox[0], scissorBox[1], scissorBox[2], scissorBox[3]);
+            } else {
+                GlStateManager._disableScissorTest();
             }
             if (shader != null) {
                 RenderSystem.setShader(() -> shader);
@@ -186,11 +264,71 @@ public final class SkyUsage {
 
     /** Before Shadered draws the queued sky blocks: brings the picture of every sky with blocks queued up to date. */
     public static void ensureQueuedFresh() {
+        onDemandOk = true;
         for (Map.Entry<SkyblockBatchData, RenderableComplexPass> entry : PASSES.entrySet()) {
-            if (!entry.getKey().isEmpty()) {
-                ensureFresh(entry.getKey());
+            SkyblockBatchData data = entry.getKey();
+            if (!data.isEmpty()) {
+                ensure(data, MirrorRenderer.isRenderingReflection() ? null : queuedRect(data));
             }
         }
+    }
+
+    /**
+     * Where on screen the sky blocks queued for this sky are (pixels of the sky's picture, a few pixels' margin), or
+     * null if that can't be told (one partly behind the camera: then all of the picture).
+     */
+    @Nullable
+    private static int[] queuedRect(SkyblockBatchData data) {
+        Minecraft mc = Minecraft.getInstance();
+        if (skyProjection == null) {
+            return null;
+        }
+        Camera camera = mc.gameRenderer.getMainCamera();
+        Matrix4f toClip = new Matrix4f(skyProjection)
+                .rotateX(camera.getXRot() * net.minecraft.util.Mth.DEG_TO_RAD)
+                .rotateY((camera.getYRot() + 180.0F) * net.minecraft.util.Mth.DEG_TO_RAD);
+        float minX = 2.0F, minY = 2.0F, maxX = -2.0F, maxY = -2.0F;
+        org.joml.Vector4f v = new org.joml.Vector4f();
+        Matrix4f m = new Matrix4f();
+        boolean any = false;
+        for (com.noodlegamer76.shadered.client.util.skyblock.SkyblockPass sp : com.noodlegamer76.shadered.client.util.skyblock.SkyblockPass.values()) {
+            SkyblockBatchData.PassData pd = data.get(sp);
+            if (pd == null) {
+                continue;
+            }
+            java.util.List<Matrix4f> poses = pd.getPose();
+            for (Matrix4f pose : poses) {
+                m.set(toClip).mul(pose);
+                for (int i = 0; i < 8; i++) {
+                    // (a block, a little bigger: the cube Shadered draws round it)
+                    v.set((i & 1) == 0 ? -0.05F : 1.05F, (i & 2) == 0 ? -0.05F : 1.05F, (i & 4) == 0 ? -0.05F : 1.05F, 1.0F);
+                    m.transform(v);
+                    if (v.w < 0.05F) {
+                        return null;
+                    }
+                    float x = v.x / v.w, y = v.y / v.w;
+                    minX = Math.min(minX, x);
+                    maxX = Math.max(maxX, x);
+                    minY = Math.min(minY, y);
+                    maxY = Math.max(maxY, y);
+                }
+                any = true;
+            }
+        }
+        if (!any) {
+            return null;
+        }
+        ComplexPassRenderer renderer = ComplexPassRenderer.getInstance();
+        int width = Math.max(1, renderer.getPreviousWidth()), height = Math.max(1, renderer.getPreviousHeight());
+        int margin = 4;
+        int x0 = Math.max(0, (int) Math.floor((Math.max(minX, -1.0F) * 0.5F + 0.5F) * width) - margin);
+        int y0 = Math.max(0, (int) Math.floor((Math.max(minY, -1.0F) * 0.5F + 0.5F) * height) - margin);
+        int x1 = Math.min(width, (int) Math.ceil((Math.min(maxX, 1.0F) * 0.5F + 0.5F) * width) + margin);
+        int y1 = Math.min(height, (int) Math.ceil((Math.min(maxY, 1.0F) * 0.5F + 0.5F) * height) + margin);
+        if (x1 <= x0 || y1 <= y0) {
+            return new int[] {0, 0, 1, 1}; // (off screen)
+        }
+        return new int[] {x0, y0, x1, y1};
     }
 
     /**

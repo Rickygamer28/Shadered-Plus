@@ -141,8 +141,8 @@ public final class ShaderSky {
                 SkyUsage.skyStage(renderTick, partialTick);
             }
             ShaderInstance shader = shaderSource.get();
-            if (!SkyUsage.recentlyUsed(batch) || shader == null) {
-                return;
+            if (shader == null || !SkyUsage.drawAtSkyStage(batch)) {
+                return; // (unused; or only sky blocks use it: drawn just before them, where they are - SkyUsage)
             }
             if ((Object) this instanceof SkyUsage.Pass tracked) { // (added to SkyboxRenderPass by SkyPassMixin)
                 tracked.skyblocks$setDrawnFrame(SkyUsage.frame());
