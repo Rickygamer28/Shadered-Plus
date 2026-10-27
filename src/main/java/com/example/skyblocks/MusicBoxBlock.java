@@ -102,7 +102,7 @@ public class MusicBoxBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.BlockGetter context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.skyblocks.music_box").withStyle(ChatFormatting.GRAY));
     }
 

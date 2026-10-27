@@ -134,12 +134,13 @@ public class NeonSignScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void renderBackground(GuiGraphics graphics) {
         graphics.fill(left(), top(), left() + PANEL_W, top() + PANEL_H, 0xC0101018);
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderBackground(graphics); // (1.20.1: not done by Screen.render)
         super.render(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(font, title, left() + PANEL_W / 2, top() + 9, 0xFFFFFF);
         graphics.drawCenteredString(font, Component.literal(Integer.toString(size)), left() + 192, top() + 108, 0xFFFFFF);

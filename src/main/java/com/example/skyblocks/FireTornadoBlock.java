@@ -66,7 +66,7 @@ public class FireTornadoBlock extends BigLavaLampBlock {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.BlockGetter context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.skyblocks.fire_tornado").withStyle(ChatFormatting.GRAY));
     }
 }

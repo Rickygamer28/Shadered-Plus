@@ -2,7 +2,6 @@ package com.example.skyblocks;
 
 import com.example.skyblocks.island.ShaderedSkyItems;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;

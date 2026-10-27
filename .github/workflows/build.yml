@@ -41,9 +41,9 @@ jobs:
         if: failure()
         run: |
           # GitHub shows at most 10 error notes per step: pack up to 30 errors into each note.
-          grep -E "(\.java:[0-9]+: error:|^> |error: )" build.log | sed 's#.*/src/main/java/##' | awk '!seen[$0]++' > errors.txt || true
+          grep -E -A3 "\.java:[0-9]+: error:" build.log | grep -v "^\s*\^\s*$" | sed 's#.*/src/main/java/##' > errors.txt || true
           echo "errors: $(wc -l < errors.txt)"
-          split -l 30 errors.txt part_
+          split -l 120 errors.txt part_
           for f in $(ls part_* 2>/dev/null | head -10); do
             echo "::error::$(sed ':a;N;$!ba;s/\n/%0A/g' $f)"
           done

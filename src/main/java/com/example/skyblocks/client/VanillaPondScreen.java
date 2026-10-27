@@ -155,18 +155,19 @@ public class VanillaPondScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mx, double my, double sx, double sy) {
+    public boolean mouseScrolled(double mx, double my, double sy) {
         scroll = Math.max(0, Math.min(maxScroll(), scroll - (int) Math.signum(sy)));
         return true;
     }
 
     @Override
-    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void renderBackground(GuiGraphics graphics) {
         graphics.fill(left(), top(), left() + PANEL_W, top() + PANEL_H, 0xC0101018);
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderBackground(graphics); // (1.20.1: not done by Screen.render)
         super.render(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(font, title, left() + PANEL_W / 2, top() + 9, 0xFFFFFF);
         // the grid of blocks

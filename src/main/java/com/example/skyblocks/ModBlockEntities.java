@@ -3,6 +3,7 @@ package com.example.skyblocks;
 import com.example.skyblocks.island.IslandScannerBlockEntity;
 import com.example.skyblocks.island.SkyIslandBlockEntity;
 
+import java.util.function.Supplier;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;

@@ -119,7 +119,7 @@ public class DiscoBallBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.BlockGetter context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.skyblocks.disco_ball").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.skyblocks.disco_ball_animation").withStyle(ChatFormatting.GRAY));
     }

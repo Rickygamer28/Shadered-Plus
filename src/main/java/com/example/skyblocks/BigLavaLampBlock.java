@@ -122,7 +122,7 @@ public class BigLavaLampBlock extends LavaLampBlock {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.BlockGetter context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.skyblocks.big_lava_lamp").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.skyblocks.lava_lamp").withStyle(ChatFormatting.GRAY));
     }

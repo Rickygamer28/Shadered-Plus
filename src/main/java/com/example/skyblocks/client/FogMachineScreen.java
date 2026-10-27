@@ -69,12 +69,13 @@ public class FogMachineScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void renderBackground(GuiGraphics graphics) {
         graphics.fill(left(), top(), left() + PANEL_W, top() + PANEL_H, 0xC0101018); // (no blur: the outline stays visible)
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderBackground(graphics); // (1.20.1: not done by Screen.render)
         super.render(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(font, title, left() + PANEL_W / 2, top() + 8, 0xFFFFFF);
         for (int i = 0; i < ROWS.length; i++) {
