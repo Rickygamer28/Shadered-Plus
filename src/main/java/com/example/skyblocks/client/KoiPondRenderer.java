@@ -177,7 +177,7 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
     @Override
     public void render(KoiPondBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
         BlockState state = be.getBlockState();
-        if (state.getBlock() instanceof KoiPondBlock) {
+        if (state.getBlock() instanceof KoiPondBlock && !MirrorRenderer.isRenderingReflection()) { // (the main view's job)
             PondLife.saw(pond(be.getLevel(), be.getBlockPos(), state.getBlock()), be.getBlockPos()); // (its dragonflies, fireflies)
         }
         if (state.getBlock() == ModBlocks.VANILLA_KOI_POND.get()) {

@@ -194,7 +194,7 @@ public final class MirrorRenderer {
         }
     }
     private static long frame;
-    private static ByteBufferBuilder entityMemory;
+    private static MirrorBuffers entityBuffers;
     private static boolean rendering;
     private static boolean warnedSky, warnedFail;
     private static final boolean SODIUM = net.neoforged.fml.ModList.get().isLoaded("sodium");
@@ -939,8 +939,8 @@ public final class MirrorRenderer {
                                        double rx, double ry, double rz, float partialTick,
                                        boolean withBlockEntities) {
         Wall wall = node.wall;
-        if (entityMemory == null) {
-            entityMemory = new ByteBufferBuilder(1 << 18);
+        if (entityBuffers == null) {
+            entityBuffers = MirrorBuffers.create();
         }
         Matrix4fStack stack = RenderSystem.getModelViewStack();
         stack.pushMatrix();
@@ -950,7 +950,7 @@ public final class MirrorRenderer {
         dispatcher.setRenderShadow(mc.options.entityShadows().get());
         // (name tags turned to face you in the mirror, as particles are)
         dispatcher.overrideCameraOrientation(eyeFor(mc, camera, node, partialTick).rotation());
-        MultiBufferSource.BufferSource buffers = MultiBufferSource.immediate(entityMemory);
+        MultiBufferSource.BufferSource buffers = entityBuffers; // (each kind gathered, drawn once: MirrorBuffers)
         PoseStack pose = new PoseStack();
         Vec3 cam = camera.getPosition();
         try {

@@ -1071,7 +1071,7 @@ public final class AquariumRenderer {
     private static void setShapeOnly(Floor floor) {
         float[] o = floor.occupancy;
         for (int v = 0; v < OCC_VECS; v++) {
-            shader.safeGetUniform("Occ" + v).set(o[v * 4], o[v * 4 + 1], o[v * 4 + 2], o[v * 4 + 3]);
+            occ(v).set(o[v * 4], o[v * 4 + 1], o[v * 4 + 2], o[v * 4 + 3]);
         }
         shader.safeGetUniform("Full").set(floor.full ? 1.0F : 0.0F);
         shader.safeGetUniform("FishCount").set(0.0F);
@@ -1082,10 +1082,38 @@ public final class AquariumRenderer {
         shader.safeGetUniform("DecoCount").set(0.0F);
     }
 
+    /** The shape and decoration uniforms, looked up once per shader (not by name, for every tank, in every picture). */
+    private static ShaderInstance namesFor;
+    private static com.mojang.blaze3d.shaders.AbstractUniform[] occNames, decoNames;
+
+    private static void lookUpNames() {
+        if (namesFor != shader) {
+            namesFor = shader;
+            occNames = new com.mojang.blaze3d.shaders.AbstractUniform[OCC_VECS];
+            decoNames = new com.mojang.blaze3d.shaders.AbstractUniform[MAX_DECOR];
+            for (int v = 0; v < OCC_VECS; v++) {
+                occNames[v] = shader.safeGetUniform("Occ" + v);
+            }
+            for (int v = 0; v < MAX_DECOR; v++) {
+                decoNames[v] = shader.safeGetUniform("Deco" + v);
+            }
+        }
+    }
+
+    private static com.mojang.blaze3d.shaders.AbstractUniform occ(int v) {
+        lookUpNames();
+        return occNames[v];
+    }
+
+    private static com.mojang.blaze3d.shaders.AbstractUniform deco(int v) {
+        lookUpNames();
+        return decoNames[v];
+    }
+
     private static void setShape(Floor floor) {
         float[] o = floor.occupancy;
         for (int v = 0; v < OCC_VECS; v++) {
-            shader.safeGetUniform("Occ" + v).set(o[v * 4], o[v * 4 + 1], o[v * 4 + 2], o[v * 4 + 3]);
+            occ(v).set(o[v * 4], o[v * 4 + 1], o[v * 4 + 2], o[v * 4 + 3]);
         }
         shader.safeGetUniform("Full").set(floor.full ? 1.0F : 0.0F);
         uploadFish(floor);
@@ -1097,7 +1125,7 @@ public final class AquariumRenderer {
         shader.safeGetUniform("Night").set(floor.deep ? 1.0F : (float) night()); // (the deep sea: always night)
         float[] d = floor.decor;
         for (int v = 0; v < MAX_DECOR; v++) {
-            shader.safeGetUniform("Deco" + v).set(d[v * 4], d[v * 4 + 1], d[v * 4 + 2], d[v * 4 + 3]);
+            deco(v).set(d[v * 4], d[v * 4 + 1], d[v * 4 + 2], d[v * 4 + 3]);
         }
         shader.safeGetUniform("DecoCount").set(floor.vanilla ? 0.0F : (float) floor.decorCount);
     }
