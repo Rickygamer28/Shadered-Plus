@@ -280,6 +280,8 @@ public final class PortalSkyRenderer {
             Map.entry("SKYBLOCKS_DARKSYNTH", new float[] {1F, 0.05F, 0.08F}),
             Map.entry("SKYBLOCKS_SYNTHWAVE_TERMINAL", new float[] {0.15F, 1F, 0.3F}),
             Map.entry("SKYBLOCKS_VAPORWAVE", new float[] {1F, 0.55F, 0.85F}),
+            Map.entry("SKYBLOCKS_AURORA", new float[] {0.3F, 1.0F, 0.6F}),
+            Map.entry("SKYBLOCKS_UNDERWATER", new float[] {0.25F, 0.7F, 0.9F}),
             Map.entry("SKYBLOCKS_SYNTHWAVE", new float[] {1.0F, 0.3F, 0.75F}),
             Map.entry("SKYBLOCKS_CHAOS", new float[] {1.0F, 0.3F, 0.12F}),
             Map.entry("SKYBLOCKS_JUPITER", new float[] {0.9F, 0.8F, 1.0F}),

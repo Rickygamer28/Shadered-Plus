@@ -202,3 +202,6 @@
   RenderType with own ShaderInstance, CamPos/LampTime set in a TexturingStateShard), wall_fire (WallFireBlock
   LEFT/RIGHT joins, multipart model, WallFireRenderer + shaders/core/wall_fire, UV = world position along the strip),
   neon_sign (NeonSignBlockEntity text/colour/mode/size, NeonSignPayload, NeonSignScreen, NeonSignRenderer font glow).
+- Aurora and Underwater skies (27 Oct 2026, user ideas 26 and 29: "aurora block" for ceilings, "underwater window"):
+  last two entries of SkyNames, shaders/core/aurora_sky.fsh and underwater_sky.fsh (our own code), drawn like chaos
+  and synthwave by client/ShaderSky.Pass. No pictures, no tools/skies entry.

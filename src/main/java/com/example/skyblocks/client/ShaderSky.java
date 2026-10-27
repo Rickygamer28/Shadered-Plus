@@ -48,6 +48,8 @@ public final class ShaderSky {
     static final ResourceLocation NOISE = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "textures/effect/chaos_noise.png");
     private static ShaderInstance chaos;
     private static ShaderInstance synthwave;
+    private static ShaderInstance aurora;
+    private static ShaderInstance underwater;
 
     private ShaderSky() {}
 
@@ -56,6 +58,8 @@ public final class ShaderSky {
     public static SkyboxRenderPass passFor(String name, ResourceLocation folder, SkyblockBatchData batch) {
         return switch (name) {
             case SkyNames.CHAOS -> new Pass(folder, batch, () -> chaos, NOISE, null);
+            case SkyNames.AURORA -> new Pass(folder, batch, () -> aurora, null, null);
+            case SkyNames.UNDERWATER -> new Pass(folder, batch, () -> underwater, null, null);
             default -> SynthwavePalettes.has(name) // the synthwave skies: one scene, their own colours, reacting to music
                     ? new Pass(folder, batch, () -> synthwave, MusicReactor.HISTORY, shader -> {
                         MusicReactor.apply(shader);
@@ -75,6 +79,10 @@ public final class ShaderSky {
                     ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "chaos_sky"), DefaultVertexFormat.POSITION), s -> chaos = s);
             event.registerShader(new ShaderInstance(event.getResourceProvider(),
                     ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "synthwave_sky"), DefaultVertexFormat.POSITION), s -> synthwave = s);
+            event.registerShader(new ShaderInstance(event.getResourceProvider(),
+                    ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "aurora_sky"), DefaultVertexFormat.POSITION), s -> aurora = s);
+            event.registerShader(new ShaderInstance(event.getResourceProvider(),
+                    ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "underwater_sky"), DefaultVertexFormat.POSITION), s -> underwater = s);
         }
     }
 
