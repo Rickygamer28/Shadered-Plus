@@ -104,22 +104,28 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
 
     /** Passes a block-format vertex on, adding the overlay the hologram's format also has. */
     private record WithOverlay(VertexConsumer inner) implements VertexConsumer {
-        @Override public VertexConsumer addVertex(float x, float y, float z) { inner.vertex(x, y, z); inner.overlayCoords(0, 10); return this; }
-        @Override public VertexConsumer setColor(int r, int g, int b, int a) { inner.color(r, g, b, a); return this; }
-        @Override public VertexConsumer setUv(float u, float v) { inner.uv(u, v); return this; }
-        @Override public VertexConsumer setUv1(int u, int v) { return this; }
-        @Override public VertexConsumer setUv2(int u, int v) { inner.uv2(u, v); return this; }
-        @Override public VertexConsumer setNormal(float x, float y, float z) { inner.normal(x, y, z); return this; }
+        @Override public VertexConsumer vertex(double x, double y, double z) { inner.vertex(x, y, z); inner.overlayCoords(0, 10); return this; }
+        @Override public VertexConsumer color(int r, int g, int b, int a) { inner.color(r, g, b, a); return this; }
+        @Override public VertexConsumer uv(float u, float v) { inner.uv(u, v); return this; }
+        @Override public VertexConsumer overlayCoords(int u, int v) { return this; }
+        @Override public VertexConsumer uv2(int u, int v) { inner.uv2(u, v); return this; }
+        @Override public VertexConsumer normal(float x, float y, float z) { inner.normal(x, y, z); return this; }
+        @Override public void endVertex() { inner.endVertex(); }
+        @Override public void defaultColor(int r, int g, int b, int a) { inner.defaultColor(r, g, b, a); }
+        @Override public void unsetDefaultColor() { inner.unsetDefaultColor(); }
     }
 
     /** Writes nothing (for the enchantment glint and other parts that aren't the item's own textured faces). */
     private static final VertexConsumer NOTHING = new VertexConsumer() {
-        @Override public VertexConsumer addVertex(float x, float y, float z) { return this; }
-        @Override public VertexConsumer setColor(int r, int g, int b, int a) { return this; }
-        @Override public VertexConsumer setUv(float u, float v) { return this; }
-        @Override public VertexConsumer setUv1(int u, int v) { return this; }
-        @Override public VertexConsumer setUv2(int u, int v) { return this; }
-        @Override public VertexConsumer setNormal(float x, float y, float z) { return this; }
+        @Override public VertexConsumer vertex(double x, double y, double z) { return this; }
+        @Override public VertexConsumer color(int r, int g, int b, int a) { return this; }
+        @Override public VertexConsumer uv(float u, float v) { return this; }
+        @Override public VertexConsumer overlayCoords(int u, int v) { return this; }
+        @Override public VertexConsumer uv2(int u, int v) { return this; }
+        @Override public VertexConsumer normal(float x, float y, float z) { return this; }
+        @Override public void endVertex() {}
+        @Override public void defaultColor(int r, int g, int b, int a) {}
+        @Override public void unsetDefaultColor() {}
     };
 
     /**
@@ -140,21 +146,24 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
         }
 
         @Override
-        public VertexConsumer addVertex(float x, float y, float z) {
+        public VertexConsumer vertex(double x, double y, double z) {
             if (n == 3) flush();
             n++;
             java.util.Arrays.fill(v[n], 0.0F);
             java.util.Arrays.fill(set[n], false);
-            v[n][0] = x; v[n][1] = y; v[n][2] = z;
+            v[n][0] = (float) x; v[n][1] = (float) y; v[n][2] = (float) z;
             v[n][3] = v[n][4] = v[n][5] = v[n][6] = 255.0F;
             return this;
         }
 
-        @Override public VertexConsumer setColor(int r, int g, int b, int a) { if (n >= 0) { v[n][3] = r; v[n][4] = g; v[n][5] = b; v[n][6] = a; } return this; }
-        @Override public VertexConsumer setUv(float u, float w) { if (n >= 0) { v[n][7] = u; v[n][8] = w; } return this; }
-        @Override public VertexConsumer setUv1(int u, int w) { if (n >= 0) { v[n][9] = u; v[n][10] = w; set[n][0] = true; } return this; }
-        @Override public VertexConsumer setUv2(int u, int w) { if (n >= 0) { v[n][11] = u; v[n][12] = w; set[n][1] = true; } return this; }
-        @Override public VertexConsumer setNormal(float x, float y, float z) { if (n >= 0) { v[n][13] = x; v[n][14] = y; v[n][15] = z; set[n][2] = true; } return this; }
+        @Override public VertexConsumer color(int r, int g, int b, int a) { if (n >= 0) { v[n][3] = r; v[n][4] = g; v[n][5] = b; v[n][6] = a; } return this; }
+        @Override public VertexConsumer uv(float u, float w) { if (n >= 0) { v[n][7] = u; v[n][8] = w; } return this; }
+        @Override public VertexConsumer overlayCoords(int u, int w) { if (n >= 0) { v[n][9] = u; v[n][10] = w; set[n][0] = true; } return this; }
+        @Override public VertexConsumer uv2(int u, int w) { if (n >= 0) { v[n][11] = u; v[n][12] = w; set[n][1] = true; } return this; }
+        @Override public VertexConsumer normal(float x, float y, float z) { if (n >= 0) { v[n][13] = x; v[n][14] = y; v[n][15] = z; set[n][2] = true; } return this; }
+        @Override public void endVertex() {} // (whole quads are passed on, in flush)
+        @Override public void defaultColor(int r, int g, int b, int a) {}
+        @Override public void unsetDefaultColor() {}
 
         /** The quad so far, on (its texture made the item's own if it spans the atlas). */
         void flush() {
@@ -172,10 +181,11 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
                     u = fallback.getU0() + fu * (fallback.getU1() - fallback.getU0());
                     w = fallback.getV0() + fw * (fallback.getV1() - fallback.getV0());
                 }
-                VertexConsumer c = inner.vertex(v[i][0], v[i][1], v[i][2]).color((int) v[i][3], (int) v[i][4], (int) v[i][5], (int) v[i][6]).uv(u, w).endVertex();
+                VertexConsumer c = inner.vertex(v[i][0], v[i][1], v[i][2]).color((int) v[i][3], (int) v[i][4], (int) v[i][5], (int) v[i][6]).uv(u, w);
                 if (set[i][0]) c.overlayCoords((int) v[i][9], (int) v[i][10]);
                 if (set[i][1]) c.uv2((int) v[i][11], (int) v[i][12]);
                 if (set[i][2]) c.normal(v[i][13], v[i][14], v[i][15]);
+                c.endVertex();
             }
             n = -1;
         }

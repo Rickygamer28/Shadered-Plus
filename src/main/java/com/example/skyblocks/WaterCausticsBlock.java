@@ -36,7 +36,7 @@ public class WaterCausticsBlock extends BaseEntityBlock {
 
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
+    public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
 
@@ -105,7 +105,7 @@ public class WaterCausticsBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
         if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof WaterCausticsBlockEntity be && !be.held().isEmpty()) {
             Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), be.held().copy());
         }

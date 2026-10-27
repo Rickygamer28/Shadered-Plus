@@ -51,7 +51,7 @@ public class AquariumBlock extends AbstractGlassBlock {
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(UP, DOWN);
     }
 
@@ -63,7 +63,7 @@ public class AquariumBlock extends AbstractGlassBlock {
     }
 
     @Override
-    protected BlockState updateShape(BlockState state, Direction dir, BlockState next, LevelAccessor level, BlockPos pos, BlockPos nextPos) {
+    public BlockState updateShape(BlockState state, Direction dir, BlockState next, LevelAccessor level, BlockPos pos, BlockPos nextPos) {
         if (dir == Direction.UP) return state.setValue(UP, next.is(this));
         if (dir == Direction.DOWN) return state.setValue(DOWN, next.is(this));
         return state;
@@ -94,7 +94,7 @@ public class AquariumBlock extends AbstractGlassBlock {
     }
 
     @Override
-    protected boolean skipRendering(BlockState state, BlockState next, Direction side) {
+    public boolean skipRendering(BlockState state, BlockState next, Direction side) {
         return next.is(this) || super.skipRendering(state, next, side); // (one tank: no glass between its blocks)
     }
 

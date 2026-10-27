@@ -46,17 +46,17 @@ public class LavaLampBlock extends BaseEntityBlock {
 
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(LIT);
     }
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
+    public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return SHAPE;
     }
 
@@ -72,7 +72,7 @@ public class LavaLampBlock extends BaseEntityBlock {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
         if (!level.isClientSide) {
-            be.setColour(dye.getDyeColor().getTextureDiffuseColor());
+            be.setColour(com.example.skyblocks.compat.Compat.dyeColour(dye.getDyeColor()));
             if (!player.getAbilities().instabuild) {
                 stack.shrink(1);
             }

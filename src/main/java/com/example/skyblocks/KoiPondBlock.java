@@ -41,17 +41,17 @@ public class KoiPondBlock extends BaseEntityBlock {
 
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(NORTH, SOUTH, EAST, WEST);
     }
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
+    public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         VoxelShape s = Block.box(0, 0, 0, 16, 1, 16);
         if (!state.getValue(NORTH)) s = Shapes.or(s, Block.box(0, 0, 0, 16, 16, 2));
         if (!state.getValue(SOUTH)) s = Shapes.or(s, Block.box(0, 0, 14, 16, 16, 16));
@@ -61,7 +61,7 @@ public class KoiPondBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return Block.box(0, 0, 0, 16, 14.5, 16); // (you can walk on the water)
     }
 
@@ -77,7 +77,7 @@ public class KoiPondBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected BlockState updateShape(BlockState state, Direction dir, BlockState next, LevelAccessor level, BlockPos pos, BlockPos nextPos) {
+    public BlockState updateShape(BlockState state, Direction dir, BlockState next, LevelAccessor level, BlockPos pos, BlockPos nextPos) {
         return dir.getAxis().isHorizontal() ? connected(state, level, pos) : state;
     }
 

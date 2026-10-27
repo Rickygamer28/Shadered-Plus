@@ -49,23 +49,23 @@ public class DiscoBallBlock extends BaseEntityBlock {
 
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(MODE, POWERED, ANIMATION);
     }
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
+    public RenderShape getRenderShape(BlockState state) {
         return RenderShape.ENTITYBLOCK_ANIMATED; // (drawn by its renderer)
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return SHAPE;
     }
 
     /** Nothing for light to bump into (the beams start inside it). */
     @Override
-    protected VoxelShape getVisualShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getVisualShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return Shapes.empty();
     }
 
@@ -83,7 +83,7 @@ public class DiscoBallBlock extends BaseEntityBlock {
 
     /** Each new redstone signal: the next mode (like a right-click). */
     @Override
-    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean moving) {
+    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean moving) {
         super.neighborChanged(state, level, pos, block, fromPos, moving);
         if (level.isClientSide) {
             return;

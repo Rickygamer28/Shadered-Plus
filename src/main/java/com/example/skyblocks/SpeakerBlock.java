@@ -34,12 +34,12 @@ public class SpeakerBlock extends BaseEntityBlock {
 
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(FACING);
     }
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
+    public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
 
@@ -57,7 +57,7 @@ public class SpeakerBlock extends BaseEntityBlock {
             return com.example.skyblocks.compat.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
         if (!level.isClientSide) {
-            speaker.setColour(dye.getDyeColor().getTextureDiffuseColor());
+            speaker.setColour(com.example.skyblocks.compat.Compat.dyeColour(dye.getDyeColor()));
             if (!player.getAbilities().instabuild) {
                 stack.shrink(1);
             }

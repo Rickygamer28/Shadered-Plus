@@ -107,11 +107,11 @@ public final class PondLife {
             Vec3 cam = event.getCamera().getPosition();
             float pt = event.getPartialTick();
             PoseStack poseStack = new PoseStack();
-            poseStack.mulPose(new Matrix4f(event.getPoseStack().last().pose()));
+            poseStack.mulPoseMatrix(new Matrix4f(event.getPoseStack().last().pose()));
             poseStack.translate(-cam.x, -cam.y, -cam.z);
             var modelView = RenderSystem.getModelViewStack();
             modelView.pushPose();
-            modelView.identity();
+            modelView.setIdentity();
             RenderSystem.applyModelViewMatrix();
             MultiBufferSource.BufferSource buffers = Minecraft.getInstance().renderBuffers().bufferSource();
             try {
@@ -224,7 +224,7 @@ public final class PondLife {
             float scale = 0.65F / 16.0F * (0.85F + 0.3F * h(anchor, 50 + d)); // (about half a block long)
             poseStack.scale(scale, scale, scale);
             int tint = DRAGONFLY_TINT[(int) (h(anchor, 60 + d) * 3.0F) % 3];
-            m.render(poseStack, buffers.getBuffer(RenderType.entityTranslucent(DRAGONFLY)), light, OverlayTexture.NO_OVERLAY, tint);
+            ClientCompat.render(m, poseStack, buffers.getBuffer(RenderType.entityTranslucent(DRAGONFLY)), light, OverlayTexture.NO_OVERLAY, tint);
             poseStack.popPose();
         }
     }
@@ -280,7 +280,7 @@ public final class PondLife {
         float[][] c = {{-1, -1, 0, 1}, {1, -1, 1, 1}, {1, 1, 1, 0}, {-1, 1, 0, 0}};
         for (float[] q : c) {
             float vx = q[0], vy = lying ? 0.0F : q[1], vz = lying ? q[1] : 0.0F;
-            vc.vertex(pose, vx, vy, vz).color(Math.min(r, 1.0F), Math.min(g, 1.0F), Math.min(b, 1.0F), 1.0F).uv(q[2], q[3])
+            vc.vertex(pose.pose(), vx, vy, vz).color(Math.min(r, 1.0F), Math.min(g, 1.0F), Math.min(b, 1.0F), 1.0F).uv(q[2], q[3])
                     .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(LightTexture.FULL_BRIGHT).normal(pose.normal(), 0.0F, 1.0F, 0.0F).endVertex();
         }
     }

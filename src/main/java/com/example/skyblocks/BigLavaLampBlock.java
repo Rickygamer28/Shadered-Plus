@@ -47,12 +47,12 @@ public class BigLavaLampBlock extends LavaLampBlock {
 
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(LIT, HALF);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return state.getValue(HALF) == DoubleBlockHalf.LOWER ? LOWER : UPPER;
     }
 
@@ -72,7 +72,7 @@ public class BigLavaLampBlock extends LavaLampBlock {
     }
 
     @Override
-    protected BlockState updateShape(BlockState state, Direction dir, BlockState next, LevelAccessor level, BlockPos pos, BlockPos nextPos) {
+    public BlockState updateShape(BlockState state, Direction dir, BlockState next, LevelAccessor level, BlockPos pos, BlockPos nextPos) {
         DoubleBlockHalf half = state.getValue(HALF);
         if (dir.getAxis() == Direction.Axis.Y && (half == DoubleBlockHalf.LOWER) == (dir == Direction.UP)) {
             if (!next.is(this) || next.getValue(HALF) == half) {
@@ -84,7 +84,7 @@ public class BigLavaLampBlock extends LavaLampBlock {
     }
 
     @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide && state.getValue(HALF) == DoubleBlockHalf.UPPER) {
             BlockPos below = pos.below();
             if (level.getBlockState(below).is(this)) {
@@ -95,7 +95,7 @@ public class BigLavaLampBlock extends LavaLampBlock {
                 }
             }
         }
-        return super.playerWillDestroy(level, pos, state, player);
+        super.playerWillDestroy(level, pos, state, player);
     }
 
     private static BlockPos base(BlockState state, BlockPos pos) {

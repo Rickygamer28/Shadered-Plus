@@ -22,11 +22,11 @@ import net.minecraftforge.client.model.data.ModelData;
  * of it and turning on her toes, and its key turning in its side.
  */
 public class MusicBoxRenderer implements BlockEntityRenderer<MusicBoxBlockEntity> {
-    public static final ModelResourceLocation LID = model("block/music_box_lid"), DANCER = model("block/music_box_dancer"),
+    public static final net.minecraft.resources.ResourceLocation LID = model("block/music_box_lid"), DANCER = model("block/music_box_dancer"),
             KEY = model("block/music_box_key");
 
     private static ModelResourceLocation model(String path) {
-        return ModelResourceLocation.standalone(new ResourceLocation(SkyBlocksMod.MOD_ID, path));
+        return (new ResourceLocation(SkyBlocksMod.MOD_ID, path));
     }
 
     private long lastNanos;

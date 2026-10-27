@@ -48,12 +48,12 @@ public class PondBridgeBlock extends Block {
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(AXIS, RISE);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return SHAPES[state.getValue(AXIS) == Direction.Axis.X ? 0 : 1][state.getValue(RISE)];
     }
 
@@ -92,7 +92,7 @@ public class PondBridgeBlock extends Block {
     }
 
     @Override
-    protected BlockState updateShape(BlockState state, Direction dir, BlockState next, LevelAccessor level, BlockPos pos, BlockPos nextPos) {
+    public BlockState updateShape(BlockState state, Direction dir, BlockState next, LevelAccessor level, BlockPos pos, BlockPos nextPos) {
         Direction.Axis axis = state.getValue(AXIS);
         return dir.getAxis() == axis ? state.setValue(RISE, rise(level, pos, axis)) : state;
     }

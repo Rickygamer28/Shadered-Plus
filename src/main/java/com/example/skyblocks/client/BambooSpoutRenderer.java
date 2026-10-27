@@ -28,8 +28,7 @@ import net.minecraftforge.client.model.data.ModelData;
  * the pond (the pond's own deep green, as the ponds' water).
  */
 public class BambooSpoutRenderer implements BlockEntityRenderer<BambooSpoutBlockEntity> {
-    public static final ModelResourceLocation TUBE = ModelResourceLocation.standalone(
-            new ResourceLocation(SkyBlocksMod.MOD_ID, "block/bamboo_spout_tube"));
+    public static final net.minecraft.resources.ResourceLocation TUBE = (new ResourceLocation(SkyBlocksMod.MOD_ID, "block/bamboo_spout_tube"));
     private static final ResourceLocation FLOW = new ResourceLocation("block/water_flow");
     private static final int WATER = 0xD82E7466; // (the ponds' water)
 
@@ -110,7 +109,7 @@ public class BambooSpoutRenderer implements BlockEntityRenderer<BambooSpoutBlock
     }
 
     private static void v(VertexConsumer vc, PoseStack.Pose pose, float x, float y, float z, float u, float v, int light, int colour) {
-        vc.vertex(pose, x, y, z).color(colour).uv(u, v).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(pose.normal(), 0.0F, 1.0F, 0.0F).endVertex();
+        vc.vertex(pose.pose(), x, y, z).color(colour).uv(u, v).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(pose.normal(), 0.0F, 1.0F, 0.0F).endVertex();
     }
 
     private static double smooth(double a, double b, double x) {

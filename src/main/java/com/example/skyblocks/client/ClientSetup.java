@@ -68,13 +68,11 @@ public final class ClientSetup {
     private static final net.minecraft.resources.ResourceLocation LIQUID_MODEL =
             new net.minecraft.resources.ResourceLocation(SkyBlocksMod.MOD_ID, "block/sky_liquid");
 
-    private static final net.minecraft.client.resources.model.ModelResourceLocation CAUSTICS_OVERLAY =
-            net.minecraft.client.resources.model.ModelResourceLocation.standalone(
-                    new net.minecraft.resources.ResourceLocation(SkyBlocksMod.MOD_ID, "block/water_caustics_overlay"));
+    private static final net.minecraft.resources.ResourceLocation CAUSTICS_OVERLAY =
+            (new net.minecraft.resources.ResourceLocation(SkyBlocksMod.MOD_ID, "block/water_caustics_overlay"));
 
-    private static final net.minecraft.client.resources.model.ModelResourceLocation RAIN_OVERLAY =
-            net.minecraft.client.resources.model.ModelResourceLocation.standalone(
-                    new net.minecraft.resources.ResourceLocation(SkyBlocksMod.MOD_ID, "block/rain_glass_overlay"));
+    private static final net.minecraft.resources.ResourceLocation RAIN_OVERLAY =
+            (new net.minecraft.resources.ResourceLocation(SkyBlocksMod.MOD_ID, "block/rain_glass_overlay"));
 
     @SubscribeEvent
     public static void registerModels(net.minecraftforge.client.event.ModelEvent.RegisterAdditional event) {

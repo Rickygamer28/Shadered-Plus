@@ -112,11 +112,11 @@ public final class VanillaAquariumRenderer {
             }
             Vec3 cam = event.getCamera().getPosition();
             PoseStack poseStack = new PoseStack();
-            poseStack.mulPose(new Matrix4f(event.getPoseStack().last().pose()));
+            poseStack.mulPoseMatrix(new Matrix4f(event.getPoseStack().last().pose()));
             poseStack.translate(-cam.x, -cam.y, -cam.z);
             var modelView = RenderSystem.getModelViewStack();
             modelView.pushPose();
-            modelView.identity();
+            modelView.setIdentity();
             RenderSystem.applyModelViewMatrix();
             MultiBufferSource.BufferSource buffers = Minecraft.getInstance().renderBuffers().bufferSource();
             boolean night = AquariumRenderer.night() > 0.5;
@@ -515,7 +515,7 @@ public final class VanillaAquariumRenderer {
         poseStack.mulPose(new Quaternionf().setFromNormalized(r));
         poseStack.scale(-scale, -scale * squash, scale);
         poseStack.translate(0.0F, -1.5F, (float) (-centre / 16.0)); // (its middle, along it, on the fish's)
-        part.render(poseStack, buffers.getBuffer(type), light, OverlayTexture.NO_OVERLAY, underwater(colour));
+        ClientCompat.render(part, poseStack, buffers.getBuffer(type), light, OverlayTexture.NO_OVERLAY, underwater(colour));
         poseStack.popPose();
     }
 
@@ -532,39 +532,54 @@ public final class VanillaAquariumRenderer {
 
     private record TintedConsumer(com.mojang.blaze3d.vertex.VertexConsumer inner, float[] tint) implements com.mojang.blaze3d.vertex.VertexConsumer {
         @Override
-        public com.mojang.blaze3d.vertex.VertexConsumer addVertex(float x, float y, float z) {
-            inner.vertex(x, y, z).endVertex();
+        public com.mojang.blaze3d.vertex.VertexConsumer vertex(double x, double y, double z) {
+            inner.vertex(x, y, z);
             return this;
         }
 
         @Override
-        public com.mojang.blaze3d.vertex.VertexConsumer setColor(int r, int g, int b, int a) {
+        public com.mojang.blaze3d.vertex.VertexConsumer color(int r, int g, int b, int a) {
             inner.color((int) (r * tint[0]), (int) (g * tint[1]), (int) (b * tint[2]), a);
             return this;
         }
 
         @Override
-        public com.mojang.blaze3d.vertex.VertexConsumer setUv(float u, float v) {
+        public com.mojang.blaze3d.vertex.VertexConsumer uv(float u, float v) {
             inner.uv(u, v);
             return this;
         }
 
         @Override
-        public com.mojang.blaze3d.vertex.VertexConsumer setUv1(int u, int v) {
+        public com.mojang.blaze3d.vertex.VertexConsumer overlayCoords(int u, int v) {
             inner.overlayCoords(u, v);
             return this;
         }
 
         @Override
-        public com.mojang.blaze3d.vertex.VertexConsumer setUv2(int u, int v) {
+        public com.mojang.blaze3d.vertex.VertexConsumer uv2(int u, int v) {
             inner.uv2(u, v);
             return this;
         }
 
         @Override
-        public com.mojang.blaze3d.vertex.VertexConsumer setNormal(float x, float y, float z) {
+        public com.mojang.blaze3d.vertex.VertexConsumer normal(float x, float y, float z) {
             inner.normal(x, y, z);
             return this;
+        }
+
+        @Override
+        public void endVertex() {
+            inner.endVertex();
+        }
+
+        @Override
+        public void defaultColor(int r, int g, int b, int a) {
+            inner.defaultColor((int) (r * tint[0]), (int) (g * tint[1]), (int) (b * tint[2]), a);
+        }
+
+        @Override
+        public void unsetDefaultColor() {
+            inner.unsetDefaultColor();
         }
     }
 
@@ -614,8 +629,8 @@ public final class VanillaAquariumRenderer {
                     Axis.YP.rotationDegrees(180.0F - yaw)));
             case 8 -> ship(pieces, x, y, z, yaw, 0.1F * sz);
             case 14 -> { // an air stone: a little round stone, a stream of bubbles rising from it to the surface
-                pieces.add(new Piece(Blocks.POLISHED_TUFF.defaultBlockState(), x, y - 0.005, z, 0.13F, 0.045F, 0.13F, Axis.YP.rotationDegrees(yaw)));
-                pieces.add(new Piece(Blocks.POLISHED_TUFF.defaultBlockState(), x, y + 0.04, z, 0.1F, 0.012F, 0.1F, Axis.YP.rotationDegrees(yaw + 45.0F)));
+                pieces.add(new Piece(Blocks.POLISHED_ANDESITE.defaultBlockState(), x, y - 0.005, z, 0.13F, 0.045F, 0.13F, Axis.YP.rotationDegrees(yaw)));
+                pieces.add(new Piece(Blocks.POLISHED_ANDESITE.defaultBlockState(), x, y + 0.04, z, 0.1F, 0.012F, 0.1F, Axis.YP.rotationDegrees(yaw + 45.0F)));
                 bubbles(level, job, d, x, y + 0.05, z, poseStack, buffers);
             }
             case 12 -> { // seagrass: a little clump (as tall as the aquariums' own), swaying
@@ -687,7 +702,7 @@ public final class VanillaAquariumRenderer {
             PoseStack.Pose pose = poseStack.last();
             float[][] corners = {{-1, -1, 0, 1}, {1, -1, 1, 1}, {1, 1, 1, 0}, {-1, 1, 0, 0}};
             for (float[] c : corners) {
-                vc.vertex(pose, c[0], c[1], 0.0F).color(underwater(0xFFFFFFFF)).uv(c[2], c[3]).overlayCoords(OverlayTexture.NO_OVERLAY)
+                vc.vertex(pose.pose(), c[0], c[1], 0.0F).color(underwater(0xFFFFFFFF)).uv(c[2], c[3]).overlayCoords(OverlayTexture.NO_OVERLAY)
                         .uv2(light).normal(pose.normal(), 0.0F, 0.0F, 1.0F).endVertex();
             }
             poseStack.popPose();
@@ -837,7 +852,7 @@ public final class VanillaAquariumRenderer {
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - yaw));
         poseStack.scale(-scale, -scale, scale);
         poseStack.translate(0.0F, -1.5F, 0.0F);
-        m.render(poseStack, buffers.getBuffer(RenderType.entityCutoutNoCull(texture)), light, OverlayTexture.NO_OVERLAY, underwater(0xFFFFFFFF));
+        ClientCompat.render(m, poseStack, buffers.getBuffer(RenderType.entityCutoutNoCull(texture)), light, OverlayTexture.NO_OVERLAY, underwater(0xFFFFFFFF));
         poseStack.popPose();
     }
 
@@ -854,7 +869,7 @@ public final class VanillaAquariumRenderer {
         PoseStack.Pose pose = poseStack.last();
         for (int i = 0; i < f.length / 12; i++) {
             for (int k : new int[] {0, 1, 2, 3, 3, 2, 1, 0}) {
-                vc.vertex(pose, f[i * 12 + k * 3], f[i * 12 + k * 3 + 1], f[i * 12 + k * 3 + 2]).color(0xFF17171A).uv(u, v)
+                vc.vertex(pose.pose(), f[i * 12 + k * 3], f[i * 12 + k * 3 + 1], f[i * 12 + k * 3 + 2]).color(0xFF17171A).uv(u, v)
                         .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(LightTexture.FULL_BRIGHT).normal(pose.normal(), 0.0F, 1.0F, 0.0F).endVertex();
             }
         }

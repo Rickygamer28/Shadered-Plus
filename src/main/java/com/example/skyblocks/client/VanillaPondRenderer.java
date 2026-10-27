@@ -149,7 +149,7 @@ final class VanillaPondRenderer {
     }
 
     private static void vertex(VertexConsumer vc, PoseStack.Pose pose, float x, float y, float z, float u, float v, int colour, int light, float ny) {
-        vc.vertex(pose, x, y, z).color(colour).uv(u, v).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(pose.normal(), 0.0F, ny, 0.0F).endVertex();
+        vc.vertex(pose.pose(), x, y, z).color(colour).uv(u, v).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(pose.normal(), 0.0F, ny, 0.0F).endVertex();
     }
 
     // ---- lily pads and frogs ----
@@ -288,7 +288,7 @@ final class VanillaPondRenderer {
         poseStack.scale(-scale, -scale, scale);
         poseStack.translate(0.0F, -1.501F, 0.0F);
         RenderType type = seeThrough ? RenderType.entityTranslucent(texture) : RenderType.entityCutoutNoCull(texture);
-        part.render(poseStack, buffers.getBuffer(type), light, OverlayTexture.NO_OVERLAY, colour);
+        ClientCompat.render(part, poseStack, buffers.getBuffer(type), light, OverlayTexture.NO_OVERLAY, colour);
         poseStack.popPose();
     }
 

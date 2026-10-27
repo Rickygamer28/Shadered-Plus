@@ -21,7 +21,7 @@ public class RainGlassBlock extends WaterCausticsBlock {
 
 
     @Override
-    protected boolean holds(net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
+    public boolean holds(net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
         return !(state.getBlock() instanceof WaterCausticsBlock) && !state.hasBlockEntity()
                 && state.getRenderShape() == net.minecraft.world.level.block.RenderShape.MODEL
                 && net.minecraft.world.level.block.Block.isShapeFullBlock(state.getShape(level, pos));
@@ -32,17 +32,17 @@ public class RainGlassBlock extends WaterCausticsBlock {
      * the faces between two rain glass blocks are left out, like glass.
      */
     @Override
-    protected boolean skipRendering(net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.block.state.BlockState next, net.minecraft.core.Direction dir) {
+    public boolean skipRendering(net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.block.state.BlockState next, net.minecraft.core.Direction dir) {
         return next.is(this) || super.skipRendering(state, next, dir);
     }
 
     @Override
-    protected float getShadeBrightness(net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.BlockGetter level, net.minecraft.core.BlockPos pos) {
+    public float getShadeBrightness(net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.BlockGetter level, net.minecraft.core.BlockPos pos) {
         return 1.0F;
     }
 
     @Override
-    protected boolean propagatesSkylightDown(net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.BlockGetter level, net.minecraft.core.BlockPos pos) {
+    public boolean propagatesSkylightDown(net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.BlockGetter level, net.minecraft.core.BlockPos pos) {
         return true;
     }
 

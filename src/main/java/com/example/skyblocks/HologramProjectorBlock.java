@@ -44,17 +44,17 @@ public class HologramProjectorBlock extends BaseEntityBlock {
 
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(SIZE);
     }
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
+    public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return SHAPE;
     }
 
@@ -65,7 +65,7 @@ public class HologramProjectorBlock extends BaseEntityBlock {
         }
         if (!level.isClientSide) {
             if (stack.getItem() instanceof DyeItem dye) {
-                be.setColour(dye.getDyeColor().getTextureDiffuseColor());
+                be.setColour(com.example.skyblocks.compat.Compat.dyeColour(dye.getDyeColor()));
                 level.playSound(null, pos, SoundEvents.DYE_USE, SoundSource.BLOCKS, 1.0F, 1.0F);
             } else {
                 be.setShown(stack);

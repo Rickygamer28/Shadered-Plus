@@ -62,12 +62,12 @@ public class BrickHearthBlock extends BaseEntityBlock {
 
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(FACING, LIT, LEFT, HALF);
     }
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
+    public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
 
@@ -82,7 +82,7 @@ public class BrickHearthBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         Direction f = state.getValue(FACING);
         boolean left = state.getValue(LEFT);
         if (state.getValue(HALF) == DoubleBlockHalf.UPPER) {
@@ -131,7 +131,7 @@ public class BrickHearthBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected BlockState updateShape(BlockState state, Direction dir, BlockState next, LevelAccessor level, BlockPos pos, BlockPos nextPos) {
+    public BlockState updateShape(BlockState state, Direction dir, BlockState next, LevelAccessor level, BlockPos pos, BlockPos nextPos) {
         Direction f = state.getValue(FACING);
         boolean left = state.getValue(LEFT);
         DoubleBlockHalf half = state.getValue(HALF);
@@ -147,7 +147,7 @@ public class BrickHearthBlock extends BaseEntityBlock {
     }
 
     @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         BlockPos main = main(state, pos);
         if (!level.isClientSide && !main.equals(pos) && level.getBlockState(main).is(this)) {
             if (player.isCreative()) {
@@ -156,7 +156,7 @@ public class BrickHearthBlock extends BaseEntityBlock {
                 level.destroyBlock(main, true, player); // (the hearth drops from its main block)
             }
         }
-        return super.playerWillDestroy(level, pos, state, player);
+        super.playerWillDestroy(level, pos, state, player);
     }
 
     protected ItemInteractionResult useItemOn121(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
@@ -182,7 +182,7 @@ public class BrickHearthBlock extends BaseEntityBlock {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
         if (!level.isClientSide) {
-            be.setColour(dye.getDyeColor().getTextureDiffuseColor());
+            be.setColour(com.example.skyblocks.compat.Compat.dyeColour(dye.getDyeColor()));
             if (!player.getAbilities().instabuild) {
                 stack.shrink(1);
             }

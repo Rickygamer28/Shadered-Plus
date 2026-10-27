@@ -43,7 +43,7 @@ public class DanceFloorBlock extends Block {
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(POWERED, ANIMATION);
     }
 
@@ -69,7 +69,7 @@ public class DanceFloorBlock extends Block {
     }
 
     @Override
-    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean moving) {
+    public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean moving) {
         super.onPlace(state, level, pos, oldState, moving);
         if (!level.isClientSide && !oldState.is(this)) {
             setAnimation(level, floor(level, pos), state.getValue(ANIMATION)); // (two floors joined: one animation)
@@ -77,7 +77,7 @@ public class DanceFloorBlock extends Block {
     }
 
     @Override
-    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean moving) {
+    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean moving) {
         super.neighborChanged(state, level, pos, block, fromPos, moving);
         if (level.isClientSide) {
             return;

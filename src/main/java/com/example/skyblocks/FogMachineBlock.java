@@ -46,12 +46,12 @@ public class FogMachineBlock extends BaseEntityBlock {
 
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(FACING, ON, POWERED);
     }
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
+    public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
 
@@ -59,7 +59,7 @@ public class FogMachineBlock extends BaseEntityBlock {
             net.minecraft.world.phys.shapes.Shapes.or(Block.box(2.0, 0.0, 2.0, 14.0, 9.0, 14.0), Block.box(4.0, 9.0, 7.0, 12.0, 13.0, 9.0));
 
     @Override
-    protected net.minecraft.world.phys.shapes.VoxelShape getShape(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos,
+    public net.minecraft.world.phys.shapes.VoxelShape getShape(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos,
                                                                   net.minecraft.world.phys.shapes.CollisionContext context) {
         return SHAPE;
     }
@@ -85,7 +85,7 @@ public class FogMachineBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean moving) {
+    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean moving) {
         super.neighborChanged(state, level, pos, block, fromPos, moving);
         if (level.isClientSide) {
             return;

@@ -60,7 +60,7 @@ public class VanillaAquariumBlock extends AquariumBlock {
     }
 
     @Override
-    protected BlockState updateShape(BlockState state, Direction dir, BlockState next, LevelAccessor level, BlockPos pos, BlockPos nextPos) {
+    public BlockState updateShape(BlockState state, Direction dir, BlockState next, LevelAccessor level, BlockPos pos, BlockPos nextPos) {
         return dir.getAxis() == Direction.Axis.Y ? shaped(state, level, pos) : state;
     }
 
@@ -79,13 +79,13 @@ public class VanillaAquariumBlock extends AquariumBlock {
     }
 
     @Override
-    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moving) {
+    public void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moving) {
         super.onPlace(state, level, pos, old, moving);
         if (!old.is(this)) refreshBelow(level, pos);
     }
 
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState now, boolean moving) {
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState now, boolean moving) {
         super.onRemove(state, level, pos, now, moving);
         if (!now.is(this)) refreshBelow(level, pos);
     }
