@@ -270,9 +270,21 @@ final class VanillaPondRenderer {
     /** One of the game's models, standing at (x, y, z) facing that way, at that size (as the game draws mobs). */
     private static void model(PoseStack poseStack, MultiBufferSource buffers, ModelPart part, ResourceLocation texture, float x, float y, float z,
                               float yaw, float scale, int light, int colour, boolean seeThrough) {
+        model(poseStack, buffers, part, texture, x, y, z, yaw, scale, light, colour, seeThrough, 0.0F);
+    }
+
+    /** pitch: tipped forward (degrees: - its head down, as a duck dabbling), round its middle at the water. */
+    private static void model(PoseStack poseStack, MultiBufferSource buffers, ModelPart part, ResourceLocation texture, float x, float y, float z,
+                              float yaw, float scale, int light, int colour, boolean seeThrough, float pitch) {
         poseStack.pushPose();
         poseStack.translate(x, y, z);
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - yaw));
+        if (pitch != 0.0F) {
+            float pivot = 0.35F * scale;
+            poseStack.translate(0.0F, pivot, 0.0F);
+            poseStack.mulPose(Axis.XP.rotationDegrees(pitch));
+            poseStack.translate(0.0F, -pivot, 0.0F);
+        }
         poseStack.scale(-scale, -scale, scale);
         poseStack.translate(0.0F, -1.501F, 0.0F);
         RenderType type = seeThrough ? RenderType.entityTranslucent(texture) : RenderType.entityCutoutNoCull(texture);
@@ -346,132 +358,191 @@ final class VanillaPondRenderer {
         }
         int[] main = parts[0];
         int mainBlocks = (main[1] - main[0] + 1) * (main[3] - main[2] + 1);
-        ducks(anchor, main, mainBlocks, poseStack, buffers, light, t, ox, oz);
-        family(anchorPos, anchor, main, mainBlocks, poseStack, buffers, light, t, ox, oz);
+        ducks(anchorPos, anchor, main, mainBlocks, poseStack, buffers, light, t, ox, oz);
         turtle(anchor, main, mainBlocks, poseStack, buffers, light, t, ox, oz);
     }
 
-    /**
-     * Now and then a duck (two in a bigger pond) flies in, glides down and lands with its wings folding, swims about
-     * a while, then runs across the water flapping and takes off.
-     */
-    private void ducks(long anchor, int[] main, int mainBlocks, PoseStack poseStack, MultiBufferSource buffers, int light, float t, float ox, float oz) {
-        float ph = t / 140.0F + u(anchor, 50) * 7.0F;
-        int epoch = (int) Math.floor(ph);
-        float te = (ph - epoch) * 140.0F;
-        if (u(anchor, 60 + epoch * 13) >= 0.55F) {
-            return;
-        }
-        for (int d = 0; d < 2; d++) {
-            if (d == 1 && mainBlocks < 8) {
-                break;
-            }
-            float land = 8.0F + 20.0F * u(anchor, 70 + epoch * 13 + d), leave = Math.min(land + 55.0F + 25.0F * u(anchor, 80 + epoch * 13 + d), 134.0F);
-            if (te < land - 3.0F || te > leave + 3.0F) {
-                continue;
-            }
-            float height = 0.0F, ahead = 0.0F, flap = 0.0F;
-            if (te < land) { // flying in: down out of the sky, gliding the last of it
-                float a = (land - te) / 3.0F;
-                height = 2.4F * a * a;
-                ahead = -2.6F * a;
-                flap = a > 0.35F ? 1.0F : 0.4F;
-            } else if (te > leave) { // off: a run across the water, flapping, then up and away
-                float b = (te - leave) / 3.0F;
-                height = 2.4F * Math.max(0.0F, (b - 0.25F) / 0.75F) * Math.max(0.0F, (b - 0.25F) / 0.75F);
-                ahead = 2.6F * b * b;
-                flap = 1.0F;
-            }
-            float[] at = wander(anchor, 400 + d * 11, main, 0.3F, 0.07F, t);
-            float x = at[0] + at[2] * ahead, z = at[1] + at[3] * ahead;
-            float scale = 0.5F; // (as big as the koi pond's ducks)
-            float bob = height > 0.0F ? 0.0F : 0.012F * Mth.sin(t * 1.7F + d);
-            float y = SURF + height + bob - (height > 0.05F ? 0.0F : 4.5F / 16.0F * scale); // (swimming: its legs under the water)
-            float wing = flap > 0.0F ? (flap > 0.5F ? 0.2F + 1.0F * (0.5F + 0.5F * Mth.sin(t * 15.0F + d)) : 0.9F) : 0.0F;
-            if (duck.hasChild("right_wing")) {
-                duck.getChild("right_wing").zRot = wing;
-            }
-            if (duck.hasChild("left_wing")) {
-                duck.getChild("left_wing").zRot = -wing;
-            }
-            int kind = u(anchor, 90 + epoch * 13 + d) < 0.5F ? 0 : 1;
-            legs(height > 0.05F); // (drifting on the water: no legs to be seen; flying: legs)
-            model(poseStack, buffers, duck, DUCKS[kind], x + ox, y, z + oz, yawOf(at[2], at[3]), scale, light, 0xFFFFFFFF, false);
-        }
-        legs(true);
-        if (duck.hasChild("right_wing")) {
-            duck.getChild("right_wing").zRot = 0.0F;
-        }
-        if (duck.hasChild("left_wing")) {
-            duck.getChild("left_wing").zRot = 0.0F;
-        }
+    /** A duck to draw this frame. */
+    private static final class Duck {
+        float x, z, y, yaw, wing, scale, dab, radius;
+        boolean legs, tucked, free; // (free: swimming about, so it can ease out of the others' way)
+        ResourceLocation texture;
+    }
+
+    // the family's own clock: she swims about 18 s, slows to a stop and rests about 10 s, then sets off again
+    private static final float FAM_CYCLE = 32.0F, FAM_RUN = 21.55F;
+
+    private static float famClock(float t) {
+        float cyc = (float) Math.floor(t / FAM_CYCLE), c = t - cyc * FAM_CYCLE;
+        float s = Math.min(c, 18.0F);
+        if (c > 18.0F) { float u = Math.min(c, 21.0F) - 18.0F; s += u - 0.95F * u * u / 6.0F; }
+        if (c > 21.0F) s += (Math.min(c, 29.0F) - 21.0F) * 0.05F;
+        if (c > 29.0F) { float u = c - 29.0F; s += 0.05F * u + 0.95F * u * u / 6.0F; }
+        return cyc * FAM_RUN + s;
+    }
+
+    /** How much she's resting (0 swimming .. 1 stopped): the ducklings scatter round her and play. */
+    private static float famRest(float t) {
+        float c = t - (float) Math.floor(t / FAM_CYCLE) * FAM_CYCLE;
+        return smooth(19.5F, 22.0F, c) * (1.0F - smooth(28.5F, 31.0F, c));
     }
 
     /**
-     * In a pond big enough, a mother duck and her ducklings (three, four in a bigger pond) swimming round in a line after
-     * her by day. At dusk they swim to the edge and hop out onto the bank (the ground beside the pond, if there's room
-     * on it), and sleep there huddled together, heads turned back and tucked in, until morning (on the water at the
-     * pond's edge if there's no bank to sleep on).
+     * The ducks: now and then a visitor (two in a bigger pond) flies in, glides down and lands with its wings folding,
+     * swims about a while, then runs across the water flapping and takes off. And in a pond big enough a mother duck
+     * and her ducklings (three, four in a bigger pond) swim round in a line after her; when she stops for a rest they
+     * scatter round her and play, paddling in little loops and tipping up to dabble. At dusk they swim to the edge
+     * and hop out onto the bank (the ground beside the pond, if there's room on it) and sleep there huddled together,
+     * heads tucked in, until morning (on the water at the pond's edge if there's no bank). Swimming ducks ease out of
+     * each other's way.
      */
-    private void family(BlockPos anchorPos, long anchor, int[] main, int mainBlocks, PoseStack poseStack, MultiBufferSource buffers, int light,
-                        float t, float ox, float oz) {
+    private void ducks(BlockPos anchorPos, long anchor, int[] main, int mainBlocks, PoseStack poseStack, MultiBufferSource buffers, int light,
+                       float t, float ox, float oz) {
+        java.util.List<Duck> all = new java.util.ArrayList<>();
+        // the visitors
+        float ph = t / 140.0F + u(anchor, 50) * 7.0F;
+        int epoch = (int) Math.floor(ph);
+        float te = (ph - epoch) * 140.0F;
+        if (u(anchor, 60 + epoch * 13) < 0.55F) {
+            for (int d = 0; d < 2; d++) {
+                if (d == 1 && mainBlocks < 8) {
+                    break;
+                }
+                float land = 8.0F + 20.0F * u(anchor, 70 + epoch * 13 + d), leave = Math.min(land + 55.0F + 25.0F * u(anchor, 80 + epoch * 13 + d), 134.0F);
+                if (te < land - 3.0F || te > leave + 3.0F) {
+                    continue;
+                }
+                float height = 0.0F, ahead = 0.0F, flap = 0.0F;
+                if (te < land) { // flying in: down out of the sky, gliding the last of it
+                    float a = (land - te) / 3.0F;
+                    height = 2.4F * a * a;
+                    ahead = -2.6F * a;
+                    flap = a > 0.35F ? 1.0F : 0.4F;
+                } else if (te > leave) { // off: a run across the water, flapping, then up and away
+                    float b = (te - leave) / 3.0F;
+                    height = 2.4F * Math.max(0.0F, (b - 0.25F) / 0.75F) * Math.max(0.0F, (b - 0.25F) / 0.75F);
+                    ahead = 2.6F * b * b;
+                    flap = 1.0F;
+                }
+                float[] at = wander(anchor, 400 + d * 11, main, 0.3F, 0.07F, t);
+                Duck k = new Duck();
+                k.x = at[0] + at[2] * ahead;
+                k.z = at[1] + at[3] * ahead;
+                k.scale = 0.5F;
+                float bob = height > 0.0F ? 0.0F : 0.012F * Mth.sin(t * 1.7F + d);
+                k.y = SURF + height + bob - (height > 0.05F ? 0.0F : 4.5F / 16.0F * k.scale); // (swimming: its legs under the water)
+                k.wing = flap > 0.0F ? (flap > 0.5F ? 0.2F + 1.0F * (0.5F + 0.5F * Mth.sin(t * 15.0F + d)) : 0.9F) : 0.0F;
+                k.yaw = yawOf(at[2], at[3]);
+                k.texture = DUCKS[u(anchor, 90 + epoch * 13 + d) < 0.5F ? 0 : 1];
+                k.legs = height > 0.05F; // (drifting on the water: no legs to be seen; flying: legs)
+                k.free = height < 0.05F;
+                k.radius = 0.15F;
+                all.add(k);
+            }
+        }
+        int family = all.size();
+        // the family
         int kids = mainBlocks >= 12 ? 4 : mainBlocks >= 6 ? 3 : 0;
         net.minecraft.client.multiplayer.ClientLevel level = Minecraft.getInstance().level;
-        if (kids == 0 || level == null) {
-            return;
-        }
-        float awake = smooth(0.1F, 0.35F, PondLife.day(level));
-        // where they sleep: the bank beside the pond nearest its first corner (solid ground, room above it)
-        int y = anchorPos.getY();
-        float[] bank = bank(level, main, y);
-        float edgeX, edgeZ, bankX, bankZ;
-        boolean onBank = bank != null;
-        if (onBank) {
-            bankX = bank[0];
-            bankZ = bank[1];
-            edgeX = bank[2];
-            edgeZ = bank[3];
-        } else { // (no bank: on the water in the pond's corner)
-            edgeX = bankX = main[0] + 0.125F + 0.4F;
-            edgeZ = bankZ = main[2] + 0.125F + 0.4F;
-        }
-        float[][] huddle = {{0.0F, 0.0F}, {-0.2F, 0.16F}, {0.2F, 0.14F}, {0.16F, -0.18F}, {-0.17F, -0.16F}};
-        for (int f = 0; f <= kids; f++) {
-            float lag = f == 0 ? 0.0F : 3.8F + (f - 1) * 2.9F; // (each following on the way she went)
-            float[] at = wander(anchor, 700, main, 0.3F, 0.05F, t - lag);
-            float scale = f == 0 ? 0.5F : 0.27F;
-            float hx = huddle[f][0] * (onBank ? 1.0F : 0.8F), hz = huddle[f][1] * (onBank ? 1.0F : 0.8F);
-            float sleepYaw = 40.0F + f * 125.0F;
-            float x, z, yy, yaw;
-            boolean sitting; // (on the ground: settled down on it)
-            float bob = 0.012F * Mth.sin(t * (f == 0 ? 1.7F : 2.3F) + f);
-            float water = SURF + bob * awake - 4.5F / 16.0F * scale;
-            if (awake >= 0.5F || !onBank) { // swimming (to the edge, as night comes)
-                float k = onBank ? (awake - 0.5F) * 2.0F : awake;
-                x = edgeX + hx + (at[0] - edgeX - hx) * k;
-                z = edgeZ + hz + (at[1] - edgeZ - hz) * k;
-                yy = water;
-                yaw = k > 0.6F ? yawOf(at[2], at[3]) : k > 0.05F ? yawOf(at[0] - x, at[1] - z) + 180.0F : sleepYaw;
-                if (!onBank && k < 0.05F) yaw = sleepYaw;
-                sitting = false;
-            } else { // hopping out onto the bank, then asleep there
-                float u = Math.min(1.0F, (0.5F - awake) * 2.0F);
-                float hop = smooth(0.0F, 0.15F, u), move = smooth(0.0F, 0.5F, u);
-                x = edgeX + hx + (bankX - edgeX) * move;
-                z = edgeZ + hz + (bankZ - edgeZ) * move;
-                float ground = y + 1.0F - 4.5F / 16.0F * scale * 0.85F;
-                yy = water + (ground - water) * hop + 0.25F * Mth.sin((float) Math.PI * hop);
-                yaw = u < 0.5F ? yawOf(bankX - edgeX, bankZ - edgeZ) : sleepYaw;
-                sitting = true;
+        if (kids > 0 && level != null) {
+            float awake = smooth(0.1F, 0.35F, PondLife.day(level));
+            float rest = famRest(t) * awake;
+            float seed = u(anchor, 777) * 50.0F;
+            int y = anchorPos.getY();
+            float[] bank = bank(level, main, y);
+            boolean onBank = bank != null;
+            float bankX, bankZ, edgeX, edgeZ;
+            if (onBank) {
+                bankX = bank[0]; bankZ = bank[1]; edgeX = bank[2]; edgeZ = bank[3];
+            } else { // (no bank: on the water in the pond's corner)
+                edgeX = bankX = main[0] + 0.125F + 0.4F;
+                edgeZ = bankZ = main[2] + 0.125F + 0.4F;
             }
-            float tuck = 1.0F - awake;
-            if (onBank && awake >= 0.5F) tuck = 0.0F;
-            pose(tuck > 0.5F ? 1.0F : 0.0F);
-            legs(false);
-            model(poseStack, buffers, duck, f == 0 ? DUCKS[1] : DUCKLING, x + ox, yy, z + oz, yaw, scale, light, 0xFFFFFFFF, false);
+            float[][] huddle = {{0.0F, 0.0F}, {-0.2F, 0.16F}, {0.2F, 0.14F}, {0.16F, -0.18F}, {-0.17F, -0.16F}};
+            float[] mum = wander(anchor, 700, main, 0.3F, 0.05F, famClock(t));
+            for (int f = 0; f <= kids; f++) {
+                float lag = f == 0 ? 0.0F : 3.8F + (f - 1) * 2.9F; // (each following on the way she went)
+                float[] at = wander(anchor, 700, main, 0.3F, 0.05F, famClock(t - lag));
+                float px = at[0], pz = at[1], dx = at[2], dz = at[3];
+                float dab = 0.0F;
+                if (f > 0 && rest > 0.0F) { // playing round her while she rests
+                    float sgn = f % 2 == 0 ? 1.0F : -1.0F;
+                    float ang = f * 1.7F + seed + sgn * t * (0.35F + 0.08F * f) + 0.6F * Mth.sin(t * 0.5F + f * 2.3F);
+                    float rad = 0.2F + 0.07F * Mth.sin(t * 0.7F + f * 1.9F);
+                    float qx = mum[0] + Mth.cos(ang) * rad, qz = mum[1] + Mth.sin(ang) * rad;
+                    float tx = -Mth.sin(ang) * sgn + 0.4F * Mth.cos(t * 1.3F + f), tz = Mth.cos(ang) * sgn + 0.4F * Mth.sin(t * 1.1F + f);
+                    px += (qx - px) * rest;
+                    pz += (qz - pz) * rest;
+                    dx += (tx - dx) * rest;
+                    dz += (tz - dz) * rest;
+                    dab = rest * (float) Math.pow(Math.max(Mth.sin(t * 0.8F + f * 2.1F + seed), 0.0F), 10.0);
+                } else if (f == 0) {
+                    dab = rest * (float) Math.pow(Math.max(Mth.sin(t * 0.45F + seed + 1.0F), 0.0F), 14.0) * 0.8F;
+                }
+                Duck k = new Duck();
+                k.scale = f == 0 ? 0.5F : 0.27F;
+                k.radius = f == 0 ? 0.15F : 0.09F;
+                k.texture = f == 0 ? DUCKS[1] : DUCKLING;
+                float hx = huddle[f][0] * (onBank ? 1.0F : 0.8F), hz = huddle[f][1] * (onBank ? 1.0F : 0.8F);
+                float sleepYaw = 40.0F + f * 125.0F;
+                float bob = 0.012F * Mth.sin(t * (f == 0 ? 1.7F : 2.3F) + f);
+                float water = SURF + bob * awake - 4.5F / 16.0F * k.scale;
+                if (awake >= 0.5F || !onBank) { // swimming (to the edge, as night comes)
+                    float kk = onBank ? (awake - 0.5F) * 2.0F : awake;
+                    k.x = edgeX + hx + (px - edgeX - hx) * kk;
+                    k.z = edgeZ + hz + (pz - edgeZ - hz) * kk;
+                    k.y = water;
+                    k.yaw = kk > 0.6F ? yawOf(dx, dz) : kk > 0.05F ? yawOf(px - k.x, pz - k.z) + 180.0F : sleepYaw;
+                    k.free = kk > 0.6F;
+                    k.dab = dab;
+                    k.tucked = kk < 0.05F;
+                } else { // hopping out onto the bank, then asleep there
+                    float uu = Math.min(1.0F, (0.5F - awake) * 2.0F);
+                    float hop = smooth(0.0F, 0.15F, uu), move = smooth(0.0F, 0.5F, uu);
+                    k.x = edgeX + hx + (bankX - edgeX) * move;
+                    k.z = edgeZ + hz + (bankZ - edgeZ) * move;
+                    float ground = y + 1.0F - 4.5F / 16.0F * k.scale * 0.85F;
+                    k.y = water + (ground - water) * hop + 0.25F * Mth.sin((float) Math.PI * hop);
+                    k.yaw = uu < 0.5F ? yawOf(bankX - edgeX, bankZ - edgeZ) : sleepYaw;
+                    k.tucked = uu > 0.5F;
+                }
+                all.add(k);
+            }
+        }
+        // keeping out of each other's way: any two swimming too close ease apart (the smaller one moving more)
+        for (int it = 0; it < 3; it++) {
+            for (int i = 0; i < all.size(); i++) {
+                Duck a = all.get(i);
+                if (!a.free) continue;
+                for (int j = i + 1; j < all.size(); j++) {
+                    Duck b = all.get(j);
+                    if (!b.free) continue;
+                    float ddx = b.x - a.x, ddz = b.z - a.z, dl = (float) Math.sqrt(ddx * ddx + ddz * ddz), m = a.radius + b.radius;
+                    if (dl >= m) continue;
+                    float nx = dl > 1.0e-4F ? ddx / dl : Mth.cos(i * 7 + j), nz = dl > 1.0e-4F ? ddz / dl : Mth.sin(i * 7 + j);
+                    float wa = b.radius * b.radius / (a.radius * a.radius + b.radius * b.radius);
+                    a.x -= nx * (m - dl) * wa; a.z -= nz * (m - dl) * wa;
+                    b.x += nx * (m - dl) * (1.0F - wa); b.z += nz * (m - dl) * (1.0F - wa);
+                }
+            }
+            for (int i = family; i < all.size(); i++) { // (the family staying in the pond)
+                Duck a = all.get(i);
+                if (!a.free) continue;
+                a.x = Mth.clamp(a.x, main[0] + 0.25F, Math.max(main[1] + 0.75F, main[0] + 0.25F));
+                a.z = Mth.clamp(a.z, main[2] + 0.25F, Math.max(main[3] + 0.75F, main[2] + 0.25F));
+            }
+        }
+        for (Duck k : all) {
+            if (duck.hasChild("right_wing")) duck.getChild("right_wing").zRot = k.wing;
+            if (duck.hasChild("left_wing")) duck.getChild("left_wing").zRot = -k.wing;
+            legs(k.legs);
+            pose(k.tucked ? 1.0F : 0.0F);
+            model(poseStack, buffers, duck, k.texture, k.x + ox, k.y, k.z + oz, k.yaw, k.scale, light, 0xFFFFFFFF, false, -70.0F * k.dab);
         }
         pose(0.0F);
         legs(true);
+        if (duck.hasChild("right_wing")) duck.getChild("right_wing").zRot = 0.0F;
+        if (duck.hasChild("left_wing")) duck.getChild("left_wing").zRot = 0.0F;
     }
 
     /** Asleep (1): its head turned right round and laid down on its back, bill tucked in; awake (0): as it is. */

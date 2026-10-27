@@ -508,21 +508,94 @@ int familyKids() {
     return size.x * size.y >= 12.0 ? 4 : size.x * size.y >= 6.0 ? 3 : 0;
 }
 
-// family member f (0 the mother, then the ducklings): where it is, which way it faces, how asleep (0 awake .. 1)
-void familyAt(int f, float t, out vec2 pos, out vec2 dir, out float tuck) {
+// the family's own clock: she swims about 18 s, slows to a stop and rests about 10 s, then sets off again
+const float FAM_CYCLE = 32.0, FAM_RUN = 21.55;
+float famClock(float t) {
+    float cyc = floor(t / FAM_CYCLE), c = t - cyc * FAM_CYCLE;
+    float s = min(c, 18.0);
+    if (c > 18.0) { float u = min(c, 21.0) - 18.0; s += u - 0.95 * u * u / 6.0; }
+    if (c > 21.0) s += (min(c, 29.0) - 21.0) * 0.05;
+    if (c > 29.0) { float u = c - 29.0; s += 0.05 * u + 0.95 * u * u / 6.0; }
+    return cyc * FAM_RUN + s;
+}
+
+// how much she's resting now (0 swimming .. 1 stopped): the ducklings scatter round her and play
+float famRest(float t) {
+    float c = mod(t, FAM_CYCLE);
+    return smoothstep(19.5, 22.0, c) * (1.0 - smoothstep(28.5, 31.0, c));
+}
+
+// every duck on the pond now (the two visitors, then the family): where (xy), facing (zw); dab: tipped up head
+// down, dabbling (0..1); the ducks keeping out of each other's way
+vec4 gDuck[7];
+float gDab[7];
+bool gHere[7];
+
+void placeDucks(float t) {
+    int kids = familyKids();
     float awake = smoothstep(0.1, 0.35, Daylight);
-    float lag = f == 0 ? 0.0 : 3.8 + float(f - 1) * 2.9; // (following her, each on the way she went)
-    vec2 wp, wd;
-    wander(70.0, 0.3, 0.05, t - lag, wp, wd);
-    // where they sleep: a corner of the pond, huddled up, the ducklings round her
-    vec2 corner = pondRect[0].xy + 0.125;
-    vec2 off = f == 0 ? vec2(0.24, 0.24) : f == 1 ? vec2(0.12, 0.4) : f == 2 ? vec2(0.42, 0.12) : f == 3 ? vec2(0.4, 0.38) : vec2(0.13, 0.14);
-    vec2 sp = corner + off;
-    float sa = float(f) * 2.1 + 0.6;
-    vec2 sd = vec2(cos(sa), sin(sa));
-    pos = mix(sp, wp, awake);
-    dir = normalize(mix(sd, wd, awake) + vec2(1.0e-4, 0.0));
-    tuck = 1.0 - awake;
+    float rest = famRest(t) * awake;
+    float seed = hash22(pondLo * 0.77 + pondHi * 0.21).x * 50.0;
+    vec2 lo = pondRect[0].xy + 0.2, hi = pondRect[0].zw - 0.2;
+    for (int dk = 0; dk < 7; dk++) {
+        gDab[dk] = 0.0;
+        gHere[dk] = false;
+        vec2 pos, dir;
+        if (dk < 2) {
+            float height, ahead, spread, flap, splash, kind;
+            gHere[dk] = duckHere(dk, t, height, ahead, spread, flap, splash, kind);
+            wander(40.0 + float(dk) * 11.0, 0.3, 0.07, t, pos, dir);
+            pos += dir * ahead;
+        } else {
+            int f = dk - 2;
+            gHere[dk] = f <= kids;
+            float lag = f == 0 ? 0.0 : 3.8 + float(f - 1) * 2.9; // (following her, each on the way she went)
+            vec2 wp, wd;
+            wander(70.0, 0.3, 0.05, famClock(t - lag), wp, wd);
+            vec2 mp, md;
+            wander(70.0, 0.3, 0.05, famClock(t), mp, md);
+            if (f > 0) { // playing round her while she rests: paddling in little loops, now and then tipping up to dabble
+                float fk = float(f);
+                float sgn = mod(fk, 2.0) < 0.5 ? 1.0 : -1.0;
+                float ang = fk * 1.7 + seed + sgn * t * (0.35 + 0.08 * fk) + 0.6 * sin(t * 0.5 + fk * 2.3);
+                float rad = 0.17 + 0.07 * sin(t * 0.7 + fk * 1.9);
+                vec2 pp = mp + vec2(cos(ang), sin(ang)) * rad;
+                vec2 pd = normalize(vec2(-sin(ang), cos(ang)) * sgn + 0.4 * vec2(cos(t * 1.3 + fk), sin(t * 1.1 + fk)));
+                wp = mix(wp, pp, rest);
+                wd = normalize(mix(wd, pd, rest) + vec2(1.0e-4, 0.0));
+                gDab[dk] = rest * pow(max(sin(t * 0.8 + fk * 2.1 + seed), 0.0), 10.0);
+            } else {
+                gDab[dk] = rest * pow(max(sin(t * 0.45 + seed + 1.0), 0.0), 14.0) * 0.8;
+            }
+            // asleep at night: huddled in a corner of the pond, heads tucked
+            vec2 corner = pondRect[0].xy + 0.125;
+            vec2 off = f == 0 ? vec2(0.24, 0.24) : f == 1 ? vec2(0.12, 0.4) : f == 2 ? vec2(0.42, 0.12) : f == 3 ? vec2(0.4, 0.38) : vec2(0.13, 0.14);
+            float sa = float(f) * 2.1 + 0.6;
+            pos = mix(corner + off, wp, awake);
+            dir = normalize(mix(vec2(cos(sa), sin(sa)), wd, awake) + vec2(1.0e-4, 0.0));
+        }
+        gDuck[dk] = vec4(pos, dir);
+    }
+    // keeping out of each other's way: any two too close ease apart (the smaller one moving more)
+    for (int it = 0; it < 3; it++) {
+        for (int i = 0; i < 7; i++) {
+            if (!gHere[i]) continue;
+            float ri = i == 2 || i < 2 ? 0.15 : 0.09;
+            for (int j = 0; j < 7; j++) {
+                if (j <= i || !gHere[j]) continue;
+                float rj = j == 2 || j < 2 ? 0.15 : 0.09;
+                vec2 dd = gDuck[j].xy - gDuck[i].xy;
+                float dl = length(dd);
+                float m = (ri + rj) * (awake > 0.5 ? 1.0 : 0.75);
+                if (dl >= m) continue;
+                vec2 n = dl > 1.0e-4 ? dd / dl : vec2(cos(float(i * 7 + j)), sin(float(i * 7 + j)));
+                float wi = rj * rj / (ri * ri + rj * rj);
+                gDuck[i].xy -= n * (m - dl) * wi;
+                gDuck[j].xy += n * (m - dl) * (1.0 - wi);
+            }
+        }
+        for (int i = 2; i < 7; i++) gDuck[i].xy = clamp(gDuck[i].xy, lo, max(hi, lo)); // (staying in the pond)
+    }
 }
 
 // a duck in front of the surface point: (colour, 0/1); ripple: rings on the water round it (and its landing splash)
@@ -530,19 +603,22 @@ vec4 duckHit(vec3 p0, vec3 rd, float t, float light, out float ripple) {
     ripple = 0.0;
     vec4 res = vec4(0.0);
     int kids = familyKids();
+    placeDucks(t);
+    float tuckAll = 1.0 - smoothstep(0.1, 0.35, Daylight);
     for (int dk = 0; dk < 7; dk++) {
         float height = 0.0, ahead = 0.0, spread = 0.0, flap = 0.0, splash = 0.0, kind = 1.0, tuck = 0.0, scl = 1.0;
         vec2 pos, dir, sitPos;
+        if (!gHere[dk]) continue;
+        pos = gDuck[dk].xy;
+        dir = gDuck[dk].zw;
+        float dab = gDab[dk];
         if (dk < 2) { // a visitor, flying in for a while
-            if (!duckHere(dk, t, height, ahead, spread, flap, splash, kind)) continue;
-            wander(40.0 + float(dk) * 11.0, 0.3, 0.07, t, pos, dir);
-            sitPos = pos;
-            pos += dir * ahead;
+            duckHere(dk, t, height, ahead, spread, flap, splash, kind);
+            sitPos = pos - dir * ahead;
         } else { // the family
             int f = dk - 2;
-            if (f > kids) continue;
-            familyAt(f, t, pos, dir, tuck);
             sitPos = pos;
+            tuck = tuckAll;
             kind = f == 0 ? 1.0 : 2.0;
             scl = f == 0 ? 1.0 : 0.55;
         }
@@ -550,6 +626,7 @@ vec4 duckHit(vec3 p0, vec3 rd, float t, float light, out float ripple) {
         if (height < 0.05) ripple += sin(dist * 110.0 - t * 5.0) * exp(-dist * 9.0 / scl) * 0.06 * (1.0 - 0.7 * tuck);
         float sd = length(p0.xz - sitPos);
         ripple += splash * sin(sd * 70.0 - t * 9.0) * exp(-sd * 5.0) * 0.25; // (the landing splash, spreading)
+        ripple += dab * sin(sd * 120.0 / scl - t * 8.0) * exp(-sd * 14.0 / scl) * 0.15; // (rings as it dabbles)
         if (rd.y > -0.002 || res.a > 0.0) continue;
         float bob = height > 0.0 ? 0.0 : (kind > 1.5 ? 0.008 : 0.012) * sin(t * (kind > 1.5 ? 2.3 : 1.7) + float(dk)) * (1.0 - 0.6 * tuck);
         float base = SURF + height + bob;
@@ -563,6 +640,13 @@ vec4 duckHit(vec3 p0, vec3 rd, float t, float light, out float ripple) {
         vec2 right = vec2(dir.y, -dir.x);
         vec3 ro = vec3(dot(pTop.xz - pos, right), pTop.y - base, dot(pTop.xz - pos, dir)) * sc;
         vec3 rr = vec3(dot(rd.xz, right), rd.y, dot(rd.xz, dir));
+        if (dab > 0.001) { // (tipped up: head down under the water, tail in the air)
+            float pa = -dab * 1.25;
+            mat2 pr = mat2(cos(pa), -sin(pa), sin(pa), cos(pa));
+            vec2 pv = ro.yz - vec2(0.8, 0.0);
+            ro.yz = pr * pv + vec2(0.8, 0.0);
+            rr.yz = pr * rr.yz;
+        }
         float flapAngle = flap > 0.5 ? 0.15 + 0.85 * sin(t * 15.0 + float(dk)) : 0.25; // (beating, or held up in a glide)
         float tm = 0.0, tEnd = length(p0 - pTop) * sc;
         for (int n = 0; n < 56; n++) {

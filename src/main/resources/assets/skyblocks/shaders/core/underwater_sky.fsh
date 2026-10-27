@@ -2,8 +2,9 @@
 
 // Shadered+'s underwater sky (our own code): down in clear blue sea. Overhead the bright rippling surface, the sun a
 // blur of light through it; shafts of light slanting down and swaying; all round, blue water fading into the
-// distance, kelp swaying far off, schools of little fish wheeling past, now and then a turtle or a shark gliding by,
-// bubbles rising; below, a sandy floor with light rippling on it, rocks and seagrass. Walls of these blocks: the sea
+// distance, kelp swaying far off, the aquariums' own fish swimming round you (a school of sardines wheeling past,
+// clownfish, tangs and an angelfish close by, a grouper and a tuna further off, a sea turtle, a manta ray high above,
+// a shark far out, a jellyfish drifting), bubbles rising; below, a sandy floor with light rippling on it, rocks and seagrass. Walls of these blocks: the sea
 // right outside your windows.
 
 uniform float Time; // ticks
@@ -22,6 +23,16 @@ float hash12(vec2 p) {
     return fract((p3.x + p3.y) * p3.z);
 }
 
+vec2 hash22(vec2 p) {
+    p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
+    return fract(sin(p) * 43758.5453);
+}
+
+const float Deep = 0.0; // (not the deep sea: the creatures' everyday colours)
+
+// the aquariums' fish and sea creatures: their shapes, colours and how they swim
+#moj_import <skyblocks:aqua_creatures.glsl>
+
 float hash11(float n) {
     return hash12(vec2(n, n * 0.37 + 1.3));
 }
@@ -32,7 +43,7 @@ float noise(vec2 p) {
     return mix(mix(hash12(i), hash12(i + vec2(1.0, 0.0)), f.x), mix(hash12(i + vec2(0.0, 1.0)), hash12(i + vec2(1.0, 1.0)), f.x), f.y);
 }
 
-float fbm(vec2 p) {
+float fbm4(vec2 p) {
     float v = 0.0, a = 0.5;
     for (int i = 0; i < 4; i++) {
         v += a * noise(p);
@@ -65,15 +76,6 @@ float wrapA(float a) {
     return mod(a + PI, TAU) - PI;
 }
 
-// a little fish seen side on (x along it, head forward, y up; in its own size): body, tail, how far in it is
-float fishShape(vec2 p, float wig) {
-    p.y -= 0.12 * wig * p.x * p.x; // (wiggling)
-    float body = length(p * vec2(1.0, 2.6)) - 0.5;
-    vec2 tp = p - vec2(-0.62, 0.0);
-    float tail = max(abs(tp.y) - (0.05 - tp.x * 0.85), max(tp.x - 0.06, -tp.x - 0.24));
-    return min(body, tail);
-}
-
 void main() {
     vec3 d = normalize(dir);
     float t = Time / 20.0;
@@ -94,16 +96,16 @@ void main() {
     if (d.y < -0.04) { // the sea floor: sand in soft ripples, light dancing on it, rocks and tufts of seagrass
         vec2 p = d.xz * (4.0 / -d.y);
         float far = length(p);
-        float rip = 0.5 + 0.5 * sin(p.x * 3.0 + 1.5 * fbm(p * 0.6));
-        vec3 sand = vec3(0.78, 0.72, 0.52) * (0.8 + 0.2 * rip) * (0.85 + 0.25 * fbm(p * 4.0));
+        float rip = 0.5 + 0.5 * sin(p.x * 3.0 + 1.5 * fbm4(p * 0.6));
+        vec3 sand = vec3(0.78, 0.72, 0.52) * (0.8 + 0.2 * rip) * (0.85 + 0.25 * fbm4(p * 4.0));
         sand += vec3(0.5, 0.75, 0.8) * caustic(p * 0.9, t * 1.3) * 0.5;
-        float rf = fbm(p * 0.35 + 3.0);
+        float rf = fbm4(p * 0.35 + 3.0);
         float rock = smoothstep(0.64, 0.67, rf);
-        float lit = clamp((fbm(p * 0.35 + 3.0 + vec2(0.15, 0.15)) - rf) * -14.0 + 0.6, 0.2, 1.2); // (lit on the sun's side)
-        vec3 stone = vec3(0.42, 0.44, 0.4) * (0.75 + 0.4 * fbm(p * 3.0)) * lit + vec3(0.4, 0.6, 0.6) * caustic(p * 0.9, t * 1.3) * 0.3;
-        stone = mix(stone, vec3(0.25, 0.4, 0.2), smoothstep(0.5, 0.8, fbm(p * 2.0 + 5.0)) * 0.5); // (weedy)
+        float lit = clamp((fbm4(p * 0.35 + 3.0 + vec2(0.15, 0.15)) - rf) * -14.0 + 0.6, 0.2, 1.2); // (lit on the sun's side)
+        vec3 stone = vec3(0.42, 0.44, 0.4) * (0.75 + 0.4 * fbm4(p * 3.0)) * lit + vec3(0.4, 0.6, 0.6) * caustic(p * 0.9, t * 1.3) * 0.3;
+        stone = mix(stone, vec3(0.25, 0.4, 0.2), smoothstep(0.5, 0.8, fbm4(p * 2.0 + 5.0)) * 0.5); // (weedy)
         sand = mix(sand, stone, rock);
-        float grass = smoothstep(0.6, 0.7, fbm(p * 0.5 + 9.0)) * step(0.45, noise(p * 14.0 + vec2(sin(t + p.y), 0.0) * 0.3));
+        float grass = smoothstep(0.6, 0.7, fbm4(p * 0.5 + 9.0)) * step(0.45, noise(p * 14.0 + vec2(sin(t + p.y), 0.0) * 0.3));
         sand = mix(sand, vec3(0.15, 0.45, 0.2), grass * (1.0 - rock));
         col = mix(col, sand * vec3(0.7, 0.9, 1.0), exp(-far * 0.07) * smoothstep(-0.04, -0.2, d.y));
     }
@@ -138,66 +140,102 @@ void main() {
         col += vec3(0.4, 0.75, 0.8) * shafts * toward * 0.35 * smoothstep(-0.5, 0.2, d.y);
     }
 
-    // schools of little fish wheeling round, at different heights and distances
-    for (int s = 0; s < 3; s++) {
-        float fs = float(s);
-        float dirn = s == 1 ? -1.0 : 1.0;
-        float speed = (0.07 + 0.03 * fs) * dirn;
-        float sAz = fs * 2.1 + t * speed;
-        float sEl = -0.05 + 0.18 * fs * 0.6 + 0.06 * sin(t * 0.13 + fs * 2.0);
-        float scale = 0.05 - 0.01 * fs; // (the nearer school bigger)
-        float haze = 0.15 + 0.22 * fs;
-        float dAz = wrapA(az - sAz) * cos(el);
-        if (abs(dAz) > 0.55 || abs(el - sEl) > 0.35) continue;
-        for (int i = 0; i < 16; i++) {
-            float fi = float(i);
-            vec2 off = (vec2(hash11(fi * 3.1 + fs * 9.0), hash11(fi * 5.3 + fs * 2.0)) - 0.5) * vec2(0.8, 0.4);
-            off += 0.025 * vec2(sin(t * 1.3 + fi), cos(t * 1.1 + fi * 1.7)); // (each weaving a little)
-            vec2 fp = (vec2(dAz, el - sEl) - off) / scale;
-            fp.x *= dirn; // (facing the way it's swimming)
-            if (dot(fp, fp) > 1.5) continue;
-            float f = fishShape(fp, sin(t * 9.0 + fi * 2.0));
-            if (f < 0.0) {
-                vec3 fc = mix(vec3(0.15, 0.25, 0.35), vec3(0.7, 0.8, 0.85), smoothstep(-0.2, 0.15, fp.y)); // (dark back, silver belly)
-                fc = mix(fc, vec3(0.95, 0.85, 0.3), step(0.85, hash11(fi + fs * 17.0)) * 0.6);             // (a few yellow ones)
-                if (length(fp - vec2(0.32, 0.04)) < 0.05) fc = vec3(0.02);
-                col = mix(fc, col, haze);
-            }
-        }
-    }
-
-    // now and then something bigger gliding by far off: a sea turtle, or a shark
+    // the fish swimming round you (the aquariums' own, in 3D): the nearest one in front wins
     {
-        float period = 70.0;
-        float n = floor(t / period), u = fract(t / period);
-        float kind = step(0.5, hash11(n * 3.7));
-        float bAz = hash11(n * 1.3) * TAU + (u - 0.5) * 1.6;
-        float bEl = 0.05 + 0.2 * hash11(n * 2.9) + 0.03 * sin(t * 0.3);
-        vec2 bp = vec2(wrapA(az - bAz) * cos(el), el - bEl) / 0.09;
-        bp.x = -bp.x;
-        float seen = smoothstep(0.0, 0.12, u) * smoothstep(1.0, 0.88, u);
-        float shape;
-        if (kind < 0.5) { // a turtle: a domed shell, flippers sweeping, a little head
-            float fl = sin(t * 1.4);
-            shape = length(bp * vec2(1.0, 1.7)) - 0.55;
-            shape = min(shape, length((bp - vec2(0.72, 0.02)) * vec2(1.0, 1.3)) - 0.17);
-            vec2 f1 = bp - vec2(0.2, -0.25 - 0.12 * fl);
-            shape = min(shape, length(f1 * vec2(0.8, 2.6)) - 0.22);
-            vec2 f2 = bp - vec2(-0.35, -0.18);
-            shape = min(shape, length(f2 * vec2(1.2, 2.4)) - 0.14);
-        } else { // a shark: long body, tall fin on its back, a crescent tail swishing
-            float sw = 0.15 * sin(t * 3.0);
-            vec2 q = bp;
-            q.y -= sw * 0.3 * q.x * q.x * step(q.x, 0.0);
-            shape = length(q * vec2(0.55, 3.2)) - 0.55;
-            vec2 df = q - vec2(0.05, 0.12);
-            shape = min(shape, max(abs(df.x + df.y * 0.5) - 0.18 * (1.0 - df.y / 0.35), max(-df.y, df.y - 0.35)));
-            vec2 tf = q - vec2(-1.05, 0.0);
-            shape = min(shape, max(abs(tf.y) - (0.03 - tf.x * 1.4), max(tf.x - 0.05, -tf.x - 0.3)));
+        float hitT = 1.0e9;
+        vec3 fishCol = vec3(0.0);
+        float fishA = 0.0;
+        for (int i = 0; i < 20; i++) {
+            float fi = float(i);
+            int kind;
+            float R, h, w, size;
+            if (i < 10) { // a school of sardines, wheeling round together
+                kind = 17; R = 3.2 + (hash11(fi * 3.1) - 0.5) * 0.7; h = 0.4 + (hash11(fi * 5.3) - 0.5) * 0.6; w = 0.22; size = 1.6;
+            } else if (i == 10) { kind = 0; R = 2.2; h = -0.3; w = -0.18; size = 1.6; }   // clownfish
+            else if (i == 11) { kind = 1; R = 2.6; h = 0.6; w = 0.15; size = 1.6; }       // blue tang
+            else if (i == 12) { kind = 2; R = 2.0; h = 0.15; w = 0.2; size = 1.5; }       // yellow tang
+            else if (i == 13) { kind = 4; R = 2.8; h = -0.6; w = -0.12; size = 1.6; }     // angelfish
+            else if (i == 14) { kind = 13; R = 6.0; h = 1.3; w = 0.05; size = 1.4; }      // sea turtle
+            else if (i == 15) { kind = 10; R = 9.0; h = 0.2; w = -0.04; size = 1.3; }     // shark
+            else if (i == 16) { kind = 12; R = 7.0; h = 2.6; w = 0.035; size = 1.6; }     // manta ray
+            else if (i == 17) { kind = 15; R = 3.6; h = 1.3; w = 0.02; size = 1.2; }      // jellyfish
+            else if (i == 18) { kind = 14; R = 4.6; h = -1.0; w = 0.07; size = 1.3; }     // grouper
+            else { kind = 11; R = 5.2; h = 0.9; w = -0.1; size = 1.3; }                    // tuna
+            Species sp = species(kind);
+            float a0 = (i < 10 ? 0.0 : fi * 2.399) + (i < 10 ? (hash11(fi * 7.7) - 0.5) * 0.5 : 0.0);
+            float ang = a0 + w * t;
+            float bob = 0.08 * sin(t * 0.4 + fi * 1.7);
+            if (i < 10) { // (each weaving a little in the school)
+                R += 0.08 * sin(t * 1.1 + fi * 2.0);
+                bob += 0.06 * sin(t * 1.3 + fi);
+            }
+            vec3 c = vec3(R * cos(ang), h + bob, R * sin(ang));
+            float sgn = w < 0.0 ? -1.0 : 1.0;
+            vec3 fwd = normalize(vec3(-sin(ang), 0.05 * cos(t * 0.4 + fi * 1.7), cos(ang)) * sgn);
+            vec3 up = vec3(0.0, 1.0, 0.0);
+            float squeeze = 0.0;
+            if (kind == 15) { // (a jellyfish upright, squeezing and relaxing)
+                fwd = vec3(1.0, 0.0, 0.0);
+                float jph = fract(t * 0.4 + fi * 0.37);
+                squeeze = smoothstep(0.0, 0.12, jph) * (1.0 - smoothstep(0.12, 0.9, jph));
+                c.y += 0.05 * squeeze;
+            }
+            vec3 side = normalize(cross(fwd, up));
+            up = cross(side, fwd);
+            float reach = size * (length(sp.body) + sp.tail.x * 2.5 + sp.tail.y * (kind == 15 ? 2.5 : 0.6) + sp.fin.z + sp.fin.y + 0.05);
+            float bq = dot(-c, d), cq = dot(c, c) - reach * reach;
+            float disc = bq * bq - cq;
+            if (disc < 0.0) continue;
+            float t0 = max(-bq - sqrt(disc), 0.05), t1 = min(-bq + sqrt(disc), hitT);
+            if (t0 >= t1) continue;
+            vec3 lo = vec3(dot(-c, fwd), dot(-c, up), dot(-c, side)) / size;
+            vec3 ld = vec3(dot(d, fwd), dot(d, up), dot(d, side));
+            float wave = t * (9.0 - 5.0 * clamp(sp.body.x, 0.0, 1.0)) + fi * 2.0;
+            float flap = kind == 13 ? sin(t * 1.4 + fi * 1.3) : sin(t * 3.0 + fi * 1.3);
+            gBeat = 1.0; gBend = 0.0; gFinSway = sin(t * 1.6 + fi); gMouth = 0.5 + 0.5 * sin(t * 2.3 + fi * 1.7);
+            gTime = t; gPulse = squeeze; gWalk = 0.0;
+            float tm = t0, tf = -1.0;
+            int part = 0;
+            vec3 q = vec3(0.0);
+            for (int k = 0; k < 80; k++) {
+                float dd = fishSDF(kind, sp, lo + ld * (tm / size), wave, flap, squeeze, part, q) * size;
+                if (dd < 0.0015 * tm) { tf = tm; break; }
+                tm += max(dd * 0.7, 0.0008 * tm);
+                if (tm > t1) break;
+            }
+            if (tf < 0.0) continue;
+            vec3 pl = lo + ld * (tf / size);
+            float ee = max(0.0007, 0.008 * min(sp.body.x, sp.body.y));
+            vec2 e = vec2(ee, -ee);
+            int dt2;
+            vec3 dq;
+            vec3 g = e.xyy * fishSDF(kind, sp, pl + e.xyy, wave, flap, squeeze, dt2, dq) + e.yyx * fishSDF(kind, sp, pl + e.yyx, wave, flap, squeeze, dt2, dq)
+                   + e.yxy * fishSDF(kind, sp, pl + e.yxy, wave, flap, squeeze, dt2, dq) + e.xxx * fishSDF(kind, sp, pl + e.xxx, wave, flap, squeeze, dt2, dq);
+            vec3 n = normalize(fwd * g.x + up * g.y + side * g.z);
+            vec3 base = fishColour(kind, q, part, hash11(fi * 13.3));
+            bool isEye = false;
+            if (isFish(kind) && part == 0 && abs(q.z) > 0.55) { // (its eye)
+                float er = sp.body.y * eyeScale(kind);
+                vec2 ev = vec2((q.x - eyeAt(kind).x) * sp.body.x, (q.y - eyeAt(kind).y) * sp.body.y) / er;
+                float eyeD = length(ev);
+                if (eyeD < 0.115) { isEye = true; base = eyeD < 0.07 ? vec3(0.015) : eyeRing(kind); }
+                else if (eyeD < 0.13) base *= 0.6;
+            }
+            if (kind == 13 && part == 1 && abs(q.z) > 0.55) {
+                float eyeD = length(vec2((q.x - 0.45) * 1.2, q.y - 0.2));
+                if (eyeD < 0.13) { base = vec3(0.02); isEye = true; }
+            }
+            float diff = clamp(dot(n, sun) * 0.5 + 0.5, 0.0, 1.0);
+            vec3 amb = mix(vec3(0.2, 0.32, 0.45), vec3(0.55, 0.75, 0.88), n.y * 0.5 + 0.5);
+            vec3 shade = base * (amb * 0.85 + vec3(1.0, 0.97, 0.9) * diff * 0.75);
+            shade += vec3(1.0) * pow(max(dot(n, normalize(sun - d)), 0.0), isEye ? 120.0 : 40.0) * (isEye ? 1.2 : 0.35);
+            shade += vec3(0.5, 0.8, 1.0) * pow(1.0 - max(dot(n, -d), 0.0), 3.0) * 0.25; // (light round its edges, from the water)
+            shade += vec3(0.6, 0.9, 1.0) * caustic(vec2(dot(c + d * tf, vec3(1.0, 0.0, 0.0)), (c + d * tf).z) * 1.5, t * 1.2) * max(n.y, 0.0) * 0.25;
+            hitT = tf;
+            fishCol = mix(shade, water(d), 1.0 - exp(-tf * 0.16)); // (fading into the blue far off)
+            fishA = kind == 15 ? 0.6 : 1.0;
         }
-        if (shape < 0.0 && seen > 0.0) {
-            col = mix(col, vec3(0.04, 0.12, 0.2) + (kind < 0.5 ? vec3(0.05, 0.07, 0.0) : vec3(0.05)), 0.6 * seen);
-        }
+        col = mix(col, fishCol, fishA);
     }
 
     // bubbles rising past, and bits drifting in the water
