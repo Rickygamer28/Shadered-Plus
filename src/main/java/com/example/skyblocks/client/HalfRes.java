@@ -107,7 +107,10 @@ public final class HalfRes {
         }
         int timing = WorldTiming.start(WorldTiming.HALF_RES);
         ShaderInstance shader = composite;
-        shader.setSampler("Sampler0", target.getColorTextureId());
+        // (through the game's shader textures: drawing sets every Sampler0..11 from them, so a sampler set straight on
+        // the shader was replaced by the block atlas - the tanks showed block textures)
+        int before = RenderSystem.getShaderTexture(0);
+        RenderSystem.setShaderTexture(0, target.getColorTextureId());
         shader.safeGetUniform("HalfSize").set((float) target.width, (float) target.height);
         shader.safeGetUniform("MainSize").set((float) main.width, (float) main.height);
         RenderSystem.enableDepthTest();
@@ -126,6 +129,7 @@ public final class HalfRes {
             RenderSystem.polygonOffset(0.0F, 0.0F);
             RenderSystem.disablePolygonOffset();
             RenderSystem.enableCull();
+            RenderSystem.setShaderTexture(0, before);
             WorldTiming.stop(timing);
         }
     }
