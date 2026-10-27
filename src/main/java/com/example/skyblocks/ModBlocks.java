@@ -147,6 +147,10 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.STONE).noOcclusion()
                     .mapColor(net.minecraft.world.level.material.MapColor.WATER));
 
+    /** A bamboo water spout (a shishi-odoshi) for beside a pond: it fills, tips, pours and clacks (BambooSpoutBlock). */
+    public static final DeferredBlock<BambooSpoutBlock> BAMBOO_SPOUT = BLOCKS.registerBlock("bamboo_spout", BambooSpoutBlock::new,
+            BlockBehaviour.Properties.of().strength(1.0F, 3.0F).sound(SoundType.BAMBOO_WOOD).noOcclusion()
+                    .mapColor(net.minecraft.world.level.material.MapColor.PLANT));
     /** A flat stepping stone, for across a koi pond (frogs sit on it). */
     public static final DeferredBlock<SteppingStoneBlock> POND_STEPPING_STONE = BLOCKS.registerBlock("pond_stepping_stone", SteppingStoneBlock::new,
             BlockBehaviour.Properties.of().strength(1.0F, 6.0F).sound(SoundType.STONE).noOcclusion().requiresCorrectToolForDrops()

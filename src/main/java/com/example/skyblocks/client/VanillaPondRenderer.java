@@ -46,6 +46,7 @@ final class VanillaPondRenderer {
     private static final ResourceLocation[] DUCKS = {
         ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "textures/entity/mallard_drake.png"),
         ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "textures/entity/mallard_hen.png")};
+    private static final ResourceLocation DUCKLING = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "textures/entity/duckling.png");
 
     // koi colours (the game's dye colours): white, orange, red, black, yellow
     private static final int WHITE = 0xFFF9FFFE, ORANGE = 0xFFF9801D, RED = 0xFFB02E26, BLACK = 0xFF1D1D21, GOLD = 0xFFFED83D;
@@ -346,6 +347,7 @@ final class VanillaPondRenderer {
         int[] main = parts[0];
         int mainBlocks = (main[1] - main[0] + 1) * (main[3] - main[2] + 1);
         ducks(anchor, main, mainBlocks, poseStack, buffers, light, t, ox, oz);
+        family(anchorPos, anchor, main, mainBlocks, poseStack, buffers, light, t, ox, oz);
         turtle(anchor, main, mainBlocks, poseStack, buffers, light, t, ox, oz);
     }
 
@@ -403,6 +405,128 @@ final class VanillaPondRenderer {
         if (duck.hasChild("left_wing")) {
             duck.getChild("left_wing").zRot = 0.0F;
         }
+    }
+
+    /**
+     * In a pond big enough, a mother duck and her ducklings (three, four in a bigger pond) swimming round in a line after
+     * her by day. At dusk they swim to the edge and hop out onto the bank (the ground beside the pond, if there's room
+     * on it), and sleep there huddled together, heads turned back and tucked in, until morning (on the water at the
+     * pond's edge if there's no bank to sleep on).
+     */
+    private void family(BlockPos anchorPos, long anchor, int[] main, int mainBlocks, PoseStack poseStack, MultiBufferSource buffers, int light,
+                        float t, float ox, float oz) {
+        int kids = mainBlocks >= 12 ? 4 : mainBlocks >= 6 ? 3 : 0;
+        net.minecraft.client.multiplayer.ClientLevel level = Minecraft.getInstance().level;
+        if (kids == 0 || level == null) {
+            return;
+        }
+        float awake = smooth(0.1F, 0.35F, PondLife.day(level));
+        // where they sleep: the bank beside the pond nearest its first corner (solid ground, room above it)
+        int y = anchorPos.getY();
+        float[] bank = bank(level, main, y);
+        float edgeX, edgeZ, bankX, bankZ;
+        boolean onBank = bank != null;
+        if (onBank) {
+            bankX = bank[0];
+            bankZ = bank[1];
+            edgeX = bank[2];
+            edgeZ = bank[3];
+        } else { // (no bank: on the water in the pond's corner)
+            edgeX = bankX = main[0] + 0.125F + 0.4F;
+            edgeZ = bankZ = main[2] + 0.125F + 0.4F;
+        }
+        float[][] huddle = {{0.0F, 0.0F}, {-0.2F, 0.16F}, {0.2F, 0.14F}, {0.16F, -0.18F}, {-0.17F, -0.16F}};
+        for (int f = 0; f <= kids; f++) {
+            float lag = f == 0 ? 0.0F : 3.8F + (f - 1) * 2.9F; // (each following on the way she went)
+            float[] at = wander(anchor, 700, main, 0.3F, 0.05F, t - lag);
+            float scale = f == 0 ? 0.5F : 0.27F;
+            float hx = huddle[f][0] * (onBank ? 1.0F : 0.8F), hz = huddle[f][1] * (onBank ? 1.0F : 0.8F);
+            float sleepYaw = 40.0F + f * 125.0F;
+            float x, z, yy, yaw;
+            boolean sitting; // (on the ground: settled down on it)
+            float bob = 0.012F * Mth.sin(t * (f == 0 ? 1.7F : 2.3F) + f);
+            float water = SURF + bob * awake - 4.5F / 16.0F * scale;
+            if (awake >= 0.5F || !onBank) { // swimming (to the edge, as night comes)
+                float k = onBank ? (awake - 0.5F) * 2.0F : awake;
+                x = edgeX + hx + (at[0] - edgeX - hx) * k;
+                z = edgeZ + hz + (at[1] - edgeZ - hz) * k;
+                yy = water;
+                yaw = k > 0.6F ? yawOf(at[2], at[3]) : k > 0.05F ? yawOf(at[0] - x, at[1] - z) + 180.0F : sleepYaw;
+                if (!onBank && k < 0.05F) yaw = sleepYaw;
+                sitting = false;
+            } else { // hopping out onto the bank, then asleep there
+                float u = Math.min(1.0F, (0.5F - awake) * 2.0F);
+                float hop = smooth(0.0F, 0.15F, u), move = smooth(0.0F, 0.5F, u);
+                x = edgeX + hx + (bankX - edgeX) * move;
+                z = edgeZ + hz + (bankZ - edgeZ) * move;
+                float ground = y + 1.0F - 4.5F / 16.0F * scale * 0.85F;
+                yy = water + (ground - water) * hop + 0.25F * Mth.sin((float) Math.PI * hop);
+                yaw = u < 0.5F ? yawOf(bankX - edgeX, bankZ - edgeZ) : sleepYaw;
+                sitting = true;
+            }
+            float tuck = 1.0F - awake;
+            if (onBank && awake >= 0.5F) tuck = 0.0F;
+            pose(tuck > 0.5F ? 1.0F : 0.0F);
+            legs(false);
+            model(poseStack, buffers, duck, f == 0 ? DUCKS[1] : DUCKLING, x + ox, yy, z + oz, yaw, scale, light, 0xFFFFFFFF, false);
+        }
+        pose(0.0F);
+        legs(true);
+    }
+
+    /** Asleep (1): its head turned right round and laid down on its back, bill tucked in; awake (0): as it is. */
+    private void pose(float tuck) {
+        for (String name : new String[] {"head", "beak", "red_thing"}) {
+            if (duck.hasChild(name)) {
+                ModelPart part = duck.getChild(name);
+                part.yRot = 2.7F * tuck;
+                part.xRot = 0.35F * tuck;
+                part.y = part.getInitialPose().y + 1.5F * tuck;
+            }
+        }
+    }
+
+    /** Ponds' banks, found now and then: (bank x, z, the water's edge next to it x, z), or none. */
+    private static final java.util.Map<Long, float[]> BANKS = new java.util.HashMap<>();
+    private static long banksAt;
+
+    private static float[] bank(net.minecraft.client.multiplayer.ClientLevel level, int[] main, int y) {
+        long now = System.nanoTime();
+        if (now - banksAt > 2_000_000_000L) {
+            BANKS.clear();
+            banksAt = now;
+        }
+        long key = BlockPos.asLong(main[0], y, main[2]) * 31L + main[1] * 7L + main[3];
+        if (BANKS.containsKey(key)) {
+            return BANKS.get(key);
+        }
+        float[] found = null;
+        // round the pond's biggest part: the north side, west, south, east (nearest its first corner first)
+        int w = main[1] - main[0] + 1, h = main[3] - main[2] + 1;
+        outer:
+        for (int side = 0; side < 4; side++) {
+            int len = side % 2 == 0 ? w : h;
+            for (int i = 0; i < len; i++) {
+                int bx, bz;
+                float ex, ez;
+                if (side == 0) { bx = main[0] + i; bz = main[2] - 1; ex = bx + 0.5F; ez = main[2] + 0.4F; }
+                else if (side == 1) { bx = main[0] - 1; bz = main[2] + i; ex = main[0] + 0.4F; ez = bz + 0.5F; }
+                else if (side == 2) { bx = main[0] + i; bz = main[3] + 1; ex = bx + 0.5F; ez = main[3] + 0.6F; }
+                else { bx = main[1] + 1; bz = main[2] + i; ex = main[1] + 0.6F; ez = bz + 0.5F; }
+                BlockPos g = new BlockPos(bx, y, bz);
+                BlockState gs = level.getBlockState(g);
+                if (gs.getBlock() instanceof KoiPondBlock || !gs.isFaceSturdy(level, g, net.minecraft.core.Direction.UP)) {
+                    continue;
+                }
+                if (level.getBlockState(g.above()).blocksMotion() || level.getBlockState(g.above(2)).blocksMotion()) {
+                    continue;
+                }
+                found = new float[] {bx + 0.5F, bz + 0.5F, ex, ez};
+                break outer;
+            }
+        }
+        BANKS.put(key, found);
+        return found;
     }
 
     private void legs(boolean shown) {

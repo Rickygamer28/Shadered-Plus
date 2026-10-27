@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "skyblocks:block/bamboo_spout"
+    },
+    "facing=east": {
+      "model": "skyblocks:block/bamboo_spout",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "skyblocks:block/bamboo_spout",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "skyblocks:block/bamboo_spout",
+      "y": 270
+    }
+  }
+}

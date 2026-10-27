@@ -69,6 +69,7 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> JELLYFISH_TANK = ITEMS.registerSimpleBlockItem("jellyfish_tank", ModBlocks.JELLYFISH_TANK);
     public static final DeferredItem<BlockItem> KOI_POND = ITEMS.registerSimpleBlockItem("koi_pond", ModBlocks.KOI_POND);
     public static final DeferredItem<BlockItem> VANILLA_KOI_POND = ITEMS.registerSimpleBlockItem("vanilla_koi_pond", ModBlocks.VANILLA_KOI_POND);
+    public static final DeferredItem<BlockItem> BAMBOO_SPOUT = ITEMS.registerSimpleBlockItem("bamboo_spout", ModBlocks.BAMBOO_SPOUT);
     public static final DeferredItem<BlockItem> POND_STEPPING_STONE = ITEMS.registerSimpleBlockItem("pond_stepping_stone", ModBlocks.POND_STEPPING_STONE);
     public static final DeferredItem<BlockItem> POND_BRIDGE = ITEMS.registerSimpleBlockItem("pond_bridge", ModBlocks.POND_BRIDGE);
     public static final DeferredItem<BlockItem> NEON_SIGN = ITEMS.registerSimpleBlockItem("neon_sign", ModBlocks.NEON_SIGN);

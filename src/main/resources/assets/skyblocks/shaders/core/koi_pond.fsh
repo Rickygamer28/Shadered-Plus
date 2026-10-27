@@ -459,12 +459,13 @@ bool duckHere(int d, float t, out float height, out float ahead, out float sprea
     return visit && te > tin && te < tout;
 }
 
-float duckSDF(vec3 p, float spread, float flapAngle, out int mat) {
+// tuck: asleep, its head turned back and laid on its back, its bill tucked in its feathers
+float duckSDF(vec3 p, float spread, float flapAngle, float tuck, out int mat) {
     vec3 q = vec3(abs(p.x), p.y, p.z);
     float d = sdEllipsoid(p - vec3(0.0, 0.7, 0.0), vec3(1.7, 1.25, 2.7));
     d = smin(d, sdEllipsoid(p - vec3(0.0, 1.5, -2.3), vec3(0.9, 0.6, 0.9)), 0.6);
-    d = smin(d, sdEllipsoid(p - vec3(0.0, 2.0, 1.6), vec3(0.75, 1.3, 0.75)), 0.5);
-    d = smin(d, length(p - vec3(0.0, 3.1, 2.0)) - 1.0, 0.4);
+    d = smin(d, sdEllipsoid(p - mix(vec3(0.0, 2.0, 1.6), vec3(0.25, 1.7, 0.7), tuck), mix(vec3(0.75, 1.3, 0.75), vec3(0.8, 0.8, 0.8), tuck)), 0.5);
+    d = smin(d, length(p - mix(vec3(0.0, 3.1, 2.0), vec3(0.6, 2.15, -0.1), tuck)) - 1.0, 0.4);
     mat = 0;
     // the wings: folded along its sides, or spread wide and beating
     vec3 w = q - mix(vec3(1.35, 1.35, -0.3), vec3(1.1, 1.65, 0.2), spread);
@@ -473,38 +474,92 @@ float duckSDF(vec3 p, float spread, float flapAngle, out int mat) {
     float wing = sdEllipsoid(w - vec3(mix(0.1, 2.3, spread), 0.0, mix(0.0, -0.2, spread)),
                              vec3(mix(0.32, 2.5, spread), mix(0.62, 0.17, spread), mix(1.9, 1.15, spread)));
     if (wing < d) { d = min(d, wing); mat = 3; }
-    float bill = sdEllipsoid(p - vec3(0.0, 2.85, 3.15), vec3(0.42, 0.2, 0.8));
+    float bill = sdEllipsoid(p - mix(vec3(0.0, 2.85, 3.15), vec3(0.95, 1.95, -1.05), tuck), vec3(0.42, 0.2, 0.8));
     if (bill < d) { d = bill; mat = 1; }
-    float eye = length(q - vec3(0.72, 3.3, 2.45)) - 0.17;
-    if (eye < d) { d = eye; mat = 2; }
+    if (tuck < 0.5) {
+        float eye = length(q - vec3(0.72, 3.3, 2.45)) - 0.17;
+        if (eye < d) { d = eye; mat = 2; }
+    }
     return d;
+}
+
+// a duckling (in the same units as a duck, drawn smaller): a round fluffy body, a big head, a little bill
+float ducklingSDF(vec3 p, float tuck, out int mat) {
+    vec3 q = vec3(abs(p.x), p.y, p.z);
+    float d = sdEllipsoid(p - vec3(0.0, 0.9, -0.1), vec3(1.5, 1.3, 1.9));
+    d = smin(d, sdEllipsoid(p - vec3(0.0, 1.2, -1.9), vec3(0.5, 0.45, 0.55)), 0.4); // (a little tail tuft)
+    vec3 hc = mix(vec3(0.0, 2.35, 1.45), vec3(0.45, 1.75, 0.35), tuck);
+    d = smin(d, length(p - hc) - 1.15, 0.6);
+    mat = 0;
+    float bill = sdEllipsoid(p - (hc + mix(vec3(0.0, -0.2, 1.15), vec3(0.6, -0.15, -0.75), tuck)), vec3(0.42, 0.2, 0.5));
+    if (bill < d) { d = bill; mat = 1; }
+    if (tuck < 0.5) {
+        float eye = length(q - vec3(0.8, 2.55, 1.95)) - 0.2;
+        if (eye < d) { d = eye; mat = 2; }
+    }
+    return d;
+}
+
+// ---- the duck family: in a pond big enough, a mother duck with her ducklings, swimming round in a line after her by
+// day, at night asleep together at the edge of the pond, heads tucked ----
+
+int familyKids() {
+    vec2 size = pondRect[0].zw - pondRect[0].xy;
+    return size.x * size.y >= 12.0 ? 4 : size.x * size.y >= 6.0 ? 3 : 0;
+}
+
+// family member f (0 the mother, then the ducklings): where it is, which way it faces, how asleep (0 awake .. 1)
+void familyAt(int f, float t, out vec2 pos, out vec2 dir, out float tuck) {
+    float awake = smoothstep(0.1, 0.35, Daylight);
+    float lag = f == 0 ? 0.0 : 3.8 + float(f - 1) * 2.9; // (following her, each on the way she went)
+    vec2 wp, wd;
+    wander(70.0, 0.3, 0.05, t - lag, wp, wd);
+    // where they sleep: a corner of the pond, huddled up, the ducklings round her
+    vec2 corner = pondRect[0].xy + 0.125;
+    vec2 off = f == 0 ? vec2(0.24, 0.24) : f == 1 ? vec2(0.12, 0.4) : f == 2 ? vec2(0.42, 0.12) : f == 3 ? vec2(0.4, 0.38) : vec2(0.13, 0.14);
+    vec2 sp = corner + off;
+    float sa = float(f) * 2.1 + 0.6;
+    vec2 sd = vec2(cos(sa), sin(sa));
+    pos = mix(sp, wp, awake);
+    dir = normalize(mix(sd, wd, awake) + vec2(1.0e-4, 0.0));
+    tuck = 1.0 - awake;
 }
 
 // a duck in front of the surface point: (colour, 0/1); ripple: rings on the water round it (and its landing splash)
 vec4 duckHit(vec3 p0, vec3 rd, float t, float light, out float ripple) {
     ripple = 0.0;
     vec4 res = vec4(0.0);
-    for (int dk = 0; dk < 2; dk++) {
-        float height, ahead, spread, flap, splash, kind;
-        if (!duckHere(dk, t, height, ahead, spread, flap, splash, kind)) continue;
-        vec2 pos, dir;
-        wander(40.0 + float(dk) * 11.0, 0.3, 0.07, t, pos, dir);
-        vec2 sitPos = pos;
-        pos += dir * ahead;
+    int kids = familyKids();
+    for (int dk = 0; dk < 7; dk++) {
+        float height = 0.0, ahead = 0.0, spread = 0.0, flap = 0.0, splash = 0.0, kind = 1.0, tuck = 0.0, scl = 1.0;
+        vec2 pos, dir, sitPos;
+        if (dk < 2) { // a visitor, flying in for a while
+            if (!duckHere(dk, t, height, ahead, spread, flap, splash, kind)) continue;
+            wander(40.0 + float(dk) * 11.0, 0.3, 0.07, t, pos, dir);
+            sitPos = pos;
+            pos += dir * ahead;
+        } else { // the family
+            int f = dk - 2;
+            if (f > kids) continue;
+            familyAt(f, t, pos, dir, tuck);
+            sitPos = pos;
+            kind = f == 0 ? 1.0 : 2.0;
+            scl = f == 0 ? 1.0 : 0.55;
+        }
         float dist = length(p0.xz - pos);
-        if (height < 0.05) ripple += sin(dist * 110.0 - t * 5.0) * exp(-dist * 9.0) * 0.06;
+        if (height < 0.05) ripple += sin(dist * 110.0 - t * 5.0) * exp(-dist * 9.0 / scl) * 0.06 * (1.0 - 0.7 * tuck);
         float sd = length(p0.xz - sitPos);
         ripple += splash * sin(sd * 70.0 - t * 9.0) * exp(-sd * 5.0) * 0.25; // (the landing splash, spreading)
         if (rd.y > -0.002 || res.a > 0.0) continue;
-        float bob = height > 0.0 ? 0.0 : 0.012 * sin(t * 1.7 + float(dk));
+        float bob = height > 0.0 ? 0.0 : (kind > 1.5 ? 0.008 : 0.012) * sin(t * (kind > 1.5 ? 2.3 : 1.7) + float(dk)) * (1.0 - 0.6 * tuck);
         float base = SURF + height + bob;
-        float up = 0.4 + height;
+        float up = (0.4 + height) * scl;
         vec3 pTop = p0 - rd * (up / -rd.y);
         if (pTop.y > gStart.y) pTop = gStart; // (nothing behind the eye)
         vec2 ab = p0.xz - pTop.xz;
         float w = clamp(dot(pos - pTop.xz, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
-        if (length(pTop.xz + ab * w - pos) > 0.36) continue;
-        float sc = 16.0 / 0.85;
+        if (length(pTop.xz + ab * w - pos) > 0.36 * scl) continue;
+        float sc = 16.0 / 0.85 / scl;
         vec2 right = vec2(dir.y, -dir.x);
         vec3 ro = vec3(dot(pTop.xz - pos, right), pTop.y - base, dot(pTop.xz - pos, dir)) * sc;
         vec3 rr = vec3(dot(rd.xz, right), rd.y, dot(rd.xz, dir));
@@ -513,18 +568,35 @@ vec4 duckHit(vec3 p0, vec3 rd, float t, float light, out float ripple) {
         for (int n = 0; n < 56; n++) {
             vec3 q = ro + rr * tm;
             int mat;
-            float f = duckSDF(q, spread, flapAngle, mat);
+            float f = kind > 1.5 ? ducklingSDF(q, tuck, mat) : duckSDF(q, spread, flapAngle, tuck, mat);
             if (f < 0.02) {
                 vec2 e = vec2(0.03, 0.0);
                 int m2;
-                vec3 nn = normalize(vec3(duckSDF(q + e.xyy, spread, flapAngle, m2) - duckSDF(q - e.xyy, spread, flapAngle, m2),
-                                         duckSDF(q + e.yxy, spread, flapAngle, m2) - duckSDF(q - e.yxy, spread, flapAngle, m2),
-                                         duckSDF(q + e.yyx, spread, flapAngle, m2) - duckSDF(q - e.yyx, spread, flapAngle, m2)));
+                vec3 nn = kind > 1.5
+                        ? normalize(vec3(ducklingSDF(q + e.xyy, tuck, m2) - ducklingSDF(q - e.xyy, tuck, m2),
+                                         ducklingSDF(q + e.yxy, tuck, m2) - ducklingSDF(q - e.yxy, tuck, m2),
+                                         ducklingSDF(q + e.yyx, tuck, m2) - ducklingSDF(q - e.yyx, tuck, m2)))
+                        : normalize(vec3(duckSDF(q + e.xyy, spread, flapAngle, tuck, m2) - duckSDF(q - e.xyy, spread, flapAngle, tuck, m2),
+                                         duckSDF(q + e.yxy, spread, flapAngle, tuck, m2) - duckSDF(q - e.yxy, spread, flapAngle, tuck, m2),
+                                         duckSDF(q + e.yyx, spread, flapAngle, tuck, m2) - duckSDF(q - e.yyx, spread, flapAngle, tuck, m2)));
                 vec3 sun = normalize(vec3(dot(SUN.xz, right), SUN.y, dot(SUN.xz, dir)));
                 float lam = 0.45 + 0.55 * max(dot(nn, sun), 0.0);
                 vec3 col;
                 if (mat == 2) {
                     col = vec3(0.03) + vec3(0.8) * pow(max(dot(reflect(rr, nn), sun), 0.0), 30.0);
+                } else if (kind > 1.5) { // a duckling: fluffy yellow, a brown cap and back, a dark stripe through its eye, a dark bill
+                    if (mat == 1) {
+                        col = vec3(0.3, 0.26, 0.22) * lam;
+                    } else {
+                        float fluff = noise2(q.xz * 6.0 + q.y * 4.0);
+                        col = vec3(0.98, 0.84, 0.36) * (0.88 + 0.2 * fluff);
+                        vec3 hc = mix(vec3(0.0, 2.35, 1.45), vec3(0.45, 1.75, 0.35), tuck);
+                        bool onHead = length(q - hc) < 1.3;
+                        if (onHead ? q.y > hc.y + 0.55 : q.y > 1.55 && q.z < 0.9) col = vec3(0.45, 0.33, 0.16) * (0.85 + 0.25 * fluff); // (cap, back)
+                        if (!onHead && q.y > 1.55 && q.z < 0.9 && noise2(q.xz * 3.0) > 0.72) col = vec3(0.95, 0.85, 0.45); // (pale patches)
+                        if (onHead && tuck < 0.5 && abs(q.y - 2.55 + 0.25 * (q.z - 1.95)) < 0.12 && q.z > 1.4 && abs(q.x) > 0.5) col = vec3(0.3, 0.22, 0.12);
+                        col *= lam;
+                    }
                 } else if (mat == 1) {
                     col = (kind < 0.5 ? vec3(0.92, 0.78, 0.22) : vec3(0.85, 0.5, 0.15)) * lam;
                 } else if (mat == 3) { // the wings: grey-brown, a blue patch with white edges near the back
@@ -541,7 +613,7 @@ vec4 duckHit(vec3 p0, vec3 rd, float t, float light, out float ripple) {
                     col *= lam;
                 } else { // a hen: mottled browns
                     col = mix(vec3(0.5, 0.37, 0.22), vec3(0.3, 0.2, 0.12), step(0.62, noise2(q.xz * 2.3 + q.y * 1.7)));
-                    if (q.y > 2.4 && q.z > 1.0) col = vec3(0.55, 0.42, 0.28);
+                    if (q.y > 2.4 && q.z > 1.0 && tuck < 0.5) col = vec3(0.55, 0.42, 0.28);
                     col *= lam;
                 }
                 gHit = pTop + rd * (tm / sc);
