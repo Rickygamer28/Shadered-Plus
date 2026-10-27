@@ -150,15 +150,19 @@ public final class MirrorRenderer {
      * screens' worth of pixels, and at most this many pictures. Within that every picture is drawn every frame; past it
      * they take turns (biggest and oldest first), keeping their latest picture meanwhile.
      */
-    private static final float PIXEL_BUDGET = 3.0F;
-    private static final int MAX_DRAWS = 24;
+    private static final float PIXEL_BUDGET = 0.8F;
+    private static final int MAX_DRAWS = 16;
+    /** What drawing any picture costs whatever its size (the sky, the lists of blocks and things in it...), in screens. */
+    private static final float PICTURE_COST = 0.05F;
+    /** Mirrors seen in mirrors at least this big on screen are drawn every frame too (smaller ones take turns: tiny, a few frames old doesn't show). */
+    private static final float EVERY_FRAME_AREA = 0.03F;
     /** At most this many pictures in view (mirrors, and mirrors seen in mirrors), and this many mirrors seen per mirror. */
-    private static final int MAX_NODES = 48, MAX_CHILDREN = 4;
+    private static final int MAX_NODES = 32, MAX_CHILDREN = 4;
     /** Mirrors seen in mirrors: each bounce's picture is this much less sharp than the one it's in... */
     private static final float BOUNCE_SCALE = 0.9F;
     /** ...and bounces stop when the picture would be smaller than this (pixels), or the mirror too small on screen. */
     private static final int MIN_BOUNCE_SIZE = 64;
-    private static final float MIN_BOUNCE_AREA = 0.0004F;
+    private static final float MIN_BOUNCE_AREA = 0.0015F;
     /** Block entities near the camera that mirrors show (gathered once a frame). */
     private static final List<BlockEntity> NEARBY_BLOCK_ENTITIES = new ArrayList<>();
     /** Mobs (and you) near the camera, where they are this frame: gathered once, not again for every picture. */
@@ -491,8 +495,8 @@ public final class MirrorRenderer {
         float spent = 0.0F;
         for (Node node : order) {
             float sc = scaleFor(node);
-            float cost = Math.max(area(grow(node.rect, RECT_MARGIN)), 0.002F) * sc * sc;
-            boolean must = node == biggest || !node.valid;
+            float cost = Math.max(area(grow(node.rect, RECT_MARGIN)), 0.002F) * sc * sc + PICTURE_COST;
+            boolean must = node == biggest || !node.valid || node.depth == 1 || node.area >= EVERY_FRAME_AREA;
             if (chosen.size() < MAX_DRAWS && (spent + cost <= PIXEL_BUDGET || must)) {
                 chosen.add(node);
                 spent += cost;
@@ -839,9 +843,13 @@ public final class MirrorRenderer {
             GL11.glFrontFace(frontFace);
             RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
             // infinity mirrors in view (their tunnel worked out from this mirror's eye)
-            InfinityMirrorRenderer.drawInMirror(rx, ry, rz, modelView, clipped);
-            DanceFloorRenderer.drawInMirror(rx, ry, rz, modelView, clipped);
-            AquariumRenderer.drawInMirror(rx, ry, rz, modelView, clipped);
+            // (the aquariums, infinity mirrors and dance floors are traced pixel by pixel: in a mirror seen in mirrors two
+            // deep and small on screen they'd be a few pixels each, for the cost of drawing them again)
+            if (node.depth <= 2 || node.area >= 0.01F) {
+                InfinityMirrorRenderer.drawInMirror(rx, ry, rz, modelView, clipped);
+                DanceFloorRenderer.drawInMirror(rx, ry, rz, modelView, clipped);
+                AquariumRenderer.drawInMirror(rx, ry, rz, modelView, clipped);
+            }
             for (Node child : node.children) {
                 Node shown = child.valid ? child : NODES.get(List.of(child.wall)); // (not drawn yet: that mirror's own picture)
                 if (shown != null && shown.valid && shown.target != null) {
@@ -966,7 +974,7 @@ public final class MirrorRenderer {
                             continue; // not in this mirror's view
                         }
                         float[] onScreen = screenRect(toPicture, box, rect);
-                        if (onScreen == null || area(onScreen) < TINY) {
+                        if (onScreen == null || area(onScreen) < TINY * (node.depth >= 3 ? 8.0F : node.depth == 2 ? 2.0F : 1.0F)) {
                             continue; // a few pixels in the mirror: not worth drawing
                         }
                         pose.pushPose();
