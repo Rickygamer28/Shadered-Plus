@@ -536,7 +536,39 @@ void placeDucks(float t) {
     float awake = smoothstep(0.1, 0.35, Daylight);
     float rest = famRest(t) * awake;
     float seed = hash22(pondLo * 0.77 + pondHi * 0.21).x * 50.0;
-    vec2 lo = pondRect[0].xy + 0.2, hi = pondRect[0].zw - 0.2;
+    // where the family is on the way she has swum: the ducklings a set distance apart behind her along it (however
+    // slowly she goes: never bunching up), found by going back along her way
+    float tau = famClock(t);
+    vec2 follow[5];
+    vec2 followDir[5];
+    vec2 mp, md;
+    wander(70.0, 0.3, 0.05, tau, mp, md);
+    follow[0] = mp; followDir[0] = md;
+    for (int f = 1; f < 5; f++) { follow[f] = mp; followDir[f] = md; }
+    {
+        vec2 prev = mp;
+        float walked = 0.0;
+        int next = 1;
+        for (int s = 1; s <= 64; s++) {
+            if (next > kids) break;
+            vec2 p, pd;
+            wander(70.0, 0.3, 0.05, tau - float(s) * 0.6, p, pd);
+            float seg = length(p - prev);
+            for (int k = 0; k < 4; k++) {
+                if (next > kids) break;
+                float want = 0.19 + float(next) * 0.17; // (the first a little further back from her)
+                if (walked + seg < want) break;
+                float u = seg > 1.0e-5 ? (want - walked) / seg : 0.0;
+                follow[next] = mix(prev, p, u);
+                followDir[next] = normalize(prev - p + pd * 1.0e-3);
+                next++;
+            }
+            walked += seg;
+            prev = p;
+        }
+        vec2 back = -normalize(md + vec2(1.0e-4, 0.0)); // (not far enough found: carried on straight behind)
+        for (int f = 1; f < 5; f++) if (f >= next) { follow[f] = prev + back * max(0.19 + float(f) * 0.17 - walked, 0.0); followDir[f] = md; }
+    }
     for (int dk = 0; dk < 7; dk++) {
         gDab[dk] = 0.0;
         gHere[dk] = false;
@@ -549,18 +581,13 @@ void placeDucks(float t) {
         } else {
             int f = dk - 2;
             gHere[dk] = f <= kids;
-            float lag = f == 0 ? 0.0 : 3.8 + float(f - 1) * 2.9; // (following her, each on the way she went)
-            vec2 wp, wd;
-            wander(70.0, 0.3, 0.05, famClock(t - lag), wp, wd);
-            vec2 mp, md;
-            wander(70.0, 0.3, 0.05, famClock(t), mp, md);
-            if (f > 0) { // playing round her while she rests: paddling in little loops, now and then tipping up to dabble
+            vec2 wp = follow[f], wd = followDir[f];
+            if (f > 0) { // playing round her while she rests: paddling round her, evenly spaced, now and then tipping up to dabble
                 float fk = float(f);
-                float sgn = mod(fk, 2.0) < 0.5 ? 1.0 : -1.0;
-                float ang = fk * 1.7 + seed + sgn * t * (0.35 + 0.08 * fk) + 0.6 * sin(t * 0.5 + fk * 2.3);
-                float rad = 0.17 + 0.07 * sin(t * 0.7 + fk * 1.9);
+                float ang = fk / float(max(kids, 1)) * 6.2832 + seed + t * 0.3;
+                float rad = 0.28 + 0.025 * sin(t * 0.7 + fk * 1.9);
                 vec2 pp = mp + vec2(cos(ang), sin(ang)) * rad;
-                vec2 pd = normalize(vec2(-sin(ang), cos(ang)) * sgn + 0.4 * vec2(cos(t * 1.3 + fk), sin(t * 1.1 + fk)));
+                vec2 pd = normalize(vec2(-sin(ang), cos(ang)) + 0.25 * vec2(cos(t * 1.3 + fk), sin(t * 1.1 + fk)));
                 wp = mix(wp, pp, rest);
                 wd = normalize(mix(wd, pd, rest) + vec2(1.0e-4, 0.0));
                 gDab[dk] = rest * pow(max(sin(t * 0.8 + fk * 2.1 + seed), 0.0), 10.0);
@@ -576,25 +603,19 @@ void placeDucks(float t) {
         }
         gDuck[dk] = vec4(pos, dir);
     }
-    // keeping out of each other's way: any two too close ease apart (the smaller one moving more)
-    for (int it = 0; it < 3; it++) {
-        for (int i = 0; i < 7; i++) {
-            if (!gHere[i]) continue;
-            float ri = i == 2 || i < 2 ? 0.15 : 0.09;
-            for (int j = 0; j < 7; j++) {
-                if (j <= i || !gHere[j]) continue;
-                float rj = j == 2 || j < 2 ? 0.15 : 0.09;
-                vec2 dd = gDuck[j].xy - gDuck[i].xy;
-                float dl = length(dd);
-                float m = (ri + rj) * (awake > 0.5 ? 1.0 : 0.75);
-                if (dl >= m) continue;
-                vec2 n = dl > 1.0e-4 ? dd / dl : vec2(cos(float(i * 7 + j)), sin(float(i * 7 + j)));
-                float wi = rj * rj / (ri * ri + rj * rj);
-                gDuck[i].xy -= n * (m - dl) * wi;
-                gDuck[j].xy += n * (m - dl) * (1.0 - wi);
-            }
+    // a visiting duck and the family keep out of each other's way: gently (the family moving aside for it)
+    for (int i = 0; i < 2; i++) {
+        if (!gHere[i]) continue;
+        for (int j = 2; j < 7; j++) {
+            if (!gHere[j]) continue;
+            vec2 dd = gDuck[j].xy - gDuck[i].xy;
+            float dl = length(dd);
+            float m = j == 2 ? 0.32 : 0.25;
+            if (dl >= m || dl < 1.0e-4) continue;
+            float push = (m - dl) * smoothstep(m, m * 0.4, dl);
+            gDuck[j].xy += dd / dl * push * 0.8;
+            gDuck[i].xy -= dd / dl * push * 0.2;
         }
-        for (int i = 2; i < 7; i++) gDuck[i].xy = clamp(gDuck[i].xy, lo, max(hi, lo)); // (staying in the pond)
     }
 }
 

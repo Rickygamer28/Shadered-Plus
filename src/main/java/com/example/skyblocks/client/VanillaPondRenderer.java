@@ -459,18 +459,45 @@ final class VanillaPondRenderer {
                 edgeZ = bankZ = main[2] + 0.125F + 0.4F;
             }
             float[][] huddle = {{0.0F, 0.0F}, {-0.2F, 0.16F}, {0.2F, 0.14F}, {0.16F, -0.18F}, {-0.17F, -0.16F}};
-            float[] mum = wander(anchor, 700, main, 0.3F, 0.05F, famClock(t));
+            float tau = famClock(t);
+            float[] mum = wander(anchor, 700, main, 0.3F, 0.05F, tau);
+            // the ducklings a set distance apart behind her along the way she has swum (however slowly she goes: never
+            // bunching up), found by going back along her way
+            float[][] follow = new float[kids + 1][];
+            follow[0] = mum;
+            {
+                float px0 = mum[0], pz0 = mum[1], walked = 0.0F;
+                int next = 1;
+                for (int st = 1; st <= 64 && next <= kids; st++) {
+                    float[] p = wander(anchor, 700, main, 0.3F, 0.05F, tau - st * 0.6F);
+                    float seg = (float) Math.hypot(p[0] - px0, p[1] - pz0);
+                    while (next <= kids) {
+                        float want = 0.19F + next * 0.17F;
+                        if (walked + seg < want) break;
+                        float uu = seg > 1.0e-5F ? (want - walked) / seg : 0.0F;
+                        float fx = px0 + (p[0] - px0) * uu, fz = pz0 + (p[1] - pz0) * uu;
+                        float hl = Math.max(seg, 1.0e-5F);
+                        follow[next] = new float[] {fx, fz, (px0 - p[0]) / hl, (pz0 - p[1]) / hl};
+                        next++;
+                    }
+                    walked += seg;
+                    px0 = p[0];
+                    pz0 = p[1];
+                }
+                for (int f = next; f <= kids; f++) { // (not far enough found: carried on straight behind)
+                    float more = Math.max(0.19F + f * 0.17F - walked, 0.0F);
+                    follow[f] = new float[] {px0 - mum[2] * more, pz0 - mum[3] * more, mum[2], mum[3]};
+                }
+            }
             for (int f = 0; f <= kids; f++) {
-                float lag = f == 0 ? 0.0F : 3.8F + (f - 1) * 2.9F; // (each following on the way she went)
-                float[] at = wander(anchor, 700, main, 0.3F, 0.05F, famClock(t - lag));
+                float[] at = follow[f];
                 float px = at[0], pz = at[1], dx = at[2], dz = at[3];
                 float dab = 0.0F;
-                if (f > 0 && rest > 0.0F) { // playing round her while she rests
-                    float sgn = f % 2 == 0 ? 1.0F : -1.0F;
-                    float ang = f * 1.7F + seed + sgn * t * (0.35F + 0.08F * f) + 0.6F * Mth.sin(t * 0.5F + f * 2.3F);
-                    float rad = 0.2F + 0.07F * Mth.sin(t * 0.7F + f * 1.9F);
+                if (f > 0 && rest > 0.0F) { // playing round her while she rests: paddling round her, evenly spaced
+                    float ang = (float) f / kids * Mth.TWO_PI + seed + t * 0.3F;
+                    float rad = 0.28F + 0.025F * Mth.sin(t * 0.7F + f * 1.9F);
                     float qx = mum[0] + Mth.cos(ang) * rad, qz = mum[1] + Mth.sin(ang) * rad;
-                    float tx = -Mth.sin(ang) * sgn + 0.4F * Mth.cos(t * 1.3F + f), tz = Mth.cos(ang) * sgn + 0.4F * Mth.sin(t * 1.1F + f);
+                    float tx = -Mth.sin(ang) + 0.25F * Mth.cos(t * 1.3F + f), tz = Mth.cos(ang) + 0.25F * Mth.sin(t * 1.1F + f);
                     px += (qx - px) * rest;
                     pz += (qz - pz) * rest;
                     dx += (tx - dx) * rest;
@@ -509,27 +536,18 @@ final class VanillaPondRenderer {
                 all.add(k);
             }
         }
-        // keeping out of each other's way: any two swimming too close ease apart (the smaller one moving more)
-        for (int it = 0; it < 3; it++) {
-            for (int i = 0; i < all.size(); i++) {
-                Duck a = all.get(i);
-                if (!a.free) continue;
-                for (int j = i + 1; j < all.size(); j++) {
-                    Duck b = all.get(j);
-                    if (!b.free) continue;
-                    float ddx = b.x - a.x, ddz = b.z - a.z, dl = (float) Math.sqrt(ddx * ddx + ddz * ddz), m = a.radius + b.radius;
-                    if (dl >= m) continue;
-                    float nx = dl > 1.0e-4F ? ddx / dl : Mth.cos(i * 7 + j), nz = dl > 1.0e-4F ? ddz / dl : Mth.sin(i * 7 + j);
-                    float wa = b.radius * b.radius / (a.radius * a.radius + b.radius * b.radius);
-                    a.x -= nx * (m - dl) * wa; a.z -= nz * (m - dl) * wa;
-                    b.x += nx * (m - dl) * (1.0F - wa); b.z += nz * (m - dl) * (1.0F - wa);
-                }
-            }
-            for (int i = family; i < all.size(); i++) { // (the family staying in the pond)
-                Duck a = all.get(i);
-                if (!a.free) continue;
-                a.x = Mth.clamp(a.x, main[0] + 0.25F, Math.max(main[1] + 0.75F, main[0] + 0.25F));
-                a.z = Mth.clamp(a.z, main[2] + 0.25F, Math.max(main[3] + 0.75F, main[2] + 0.25F));
+        // a visiting duck and the family keep out of each other's way: gently (the family moving aside for it)
+        for (int i = 0; i < family; i++) {
+            Duck a = all.get(i);
+            if (!a.free) continue;
+            for (int j = family; j < all.size(); j++) {
+                Duck b = all.get(j);
+                if (!b.free) continue;
+                float ddx = b.x - a.x, ddz = b.z - a.z, dl = (float) Math.sqrt(ddx * ddx + ddz * ddz), m = a.radius + b.radius + 0.08F;
+                if (dl >= m || dl < 1.0e-4F) continue;
+                float push = (m - dl) * smooth(m, m * 0.4F, dl);
+                b.x += ddx / dl * push * 0.8F; b.z += ddz / dl * push * 0.8F;
+                a.x -= ddx / dl * push * 0.2F; a.z -= ddz / dl * push * 0.2F;
             }
         }
         for (Duck k : all) {
