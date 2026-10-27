@@ -20,9 +20,9 @@ import java.util.Locale;
 @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class MirrorTiming {
     public static final int SKY = 0, BLOCKS = 1, MOBS = 2, BLOCK_ENTITIES = 3, SHADERED_MODELS = 4, SHADERED_SKIES = 5,
-            INSIDE = 6, SEE_THROUGH = 7, FACES = 8, COUNT = 9;
+            INSIDE = 6, SEE_THROUGH = 7, FACES = 8, PORTALS = 9, INFINITY = 10, DANCE_FLOORS = 11, AQUARIUMS = 12, COUNT = 13;
     private static final String[] NAMES = {"sky", "blocks", "mobs", "block entities", "shadered models", "shadered skies",
-            "mirrors inside", "see-through", "faces"};
+            "mirrors inside", "see-through", "faces", "portal skies", "infinity blocks", "dance floors", "aquariums"};
     private static final int RING = 4;
 
     private static final class Frame {

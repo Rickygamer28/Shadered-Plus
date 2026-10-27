@@ -836,7 +836,7 @@ public final class MirrorRenderer {
         GL11.glFrontFace(frontFace);
         RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
         // the mirrors seen in this one: their latest pictures
-        MirrorTiming.start(MirrorTiming.INSIDE);
+        MirrorTiming.start(MirrorTiming.PORTALS);
         Matrix4fStack stack = RenderSystem.getModelViewStack();
         stack.pushMatrix();
         stack.set(modelView);
@@ -855,10 +855,14 @@ public final class MirrorRenderer {
             // (the aquariums, infinity mirrors and dance floors are traced pixel by pixel: in a mirror seen in mirrors two
             // deep and small on screen they'd be a few pixels each, for the cost of drawing them again)
             if (node.depth <= 2 || node.area >= 0.01F) {
+                MirrorTiming.start(MirrorTiming.INFINITY);
                 InfinityMirrorRenderer.drawInMirror(rx, ry, rz, modelView, clipped);
+                MirrorTiming.start(MirrorTiming.DANCE_FLOORS);
                 DanceFloorRenderer.drawInMirror(rx, ry, rz, modelView, clipped);
+                MirrorTiming.start(MirrorTiming.AQUARIUMS);
                 AquariumRenderer.drawInMirror(rx, ry, rz, modelView, clipped);
             }
+            MirrorTiming.start(MirrorTiming.INSIDE);
             for (Node child : node.children) {
                 Node shown = child.valid ? child : NODES.get(List.of(child.wall)); // (not drawn yet: that mirror's own picture)
                 if (shown != null && shown.valid && shown.target != null) {
