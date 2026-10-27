@@ -141,7 +141,7 @@ public class MusicBoxBlockEntity extends BlockEntity {
 
     @Override
     public CompoundTag getUpdateTag() {
-        CompoundTag tag = super.getUpdateTag(registries);
+        CompoundTag tag = super.getUpdateTag();
         saveAdditional(tag);
         return tag;
     }

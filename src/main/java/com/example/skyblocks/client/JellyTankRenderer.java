@@ -80,7 +80,7 @@ public class JellyTankRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         int[][] faces = {{0, 2, 3, 1}, {4, 5, 7, 6}, {0, 4, 6, 2}, {1, 3, 7, 5}, {2, 6, 7, 3}, {0, 1, 5, 4}};
         for (int[] f : faces) {
             for (int k : f) {
-                vc.vertex(m, (k & 1) != 0 ? x1 : x0, (k & 2) != 0 ? y1 : y0, (k & 4) != 0 ? z1 : z0).color(r, g, b, 255).uv(k, lit).endVertex();
+                vc.vertex(m, (k & 1) != 0 ? x1 : x0, (k & 2) != 0 ? y1 : y0, (k & 4) != 0 ? z1 : z0).uv(k, lit).color(r, g, b, 255).endVertex();
             }
         }
     }

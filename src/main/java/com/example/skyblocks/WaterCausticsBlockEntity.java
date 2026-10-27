@@ -79,7 +79,7 @@ public class WaterCausticsBlockEntity extends BlockEntity {
         } else {
             held = ItemStack.EMPTY;
         }
-        if (level != null && level.isClientSide && !ItemStack.isSameItemSameComponents(before, held)) {
+        if (level != null && level.isClientSide && !ItemStack.isSameItemSameTags(before, held)) {
             requestModelDataUpdate();
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_IMMEDIATE); // redraw the chunk
         }
@@ -87,7 +87,7 @@ public class WaterCausticsBlockEntity extends BlockEntity {
 
     @Override
     public CompoundTag getUpdateTag() {
-        return saveWithoutMetadata(registries);
+        return saveWithoutMetadata();
     }
 
     @Nullable
@@ -100,7 +100,7 @@ public class WaterCausticsBlockEntity extends BlockEntity {
     public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt) {
         super.onDataPacket(net, pkt);
         if (!pkt.getTag().contains("held")) {
-            loadAdditional(new CompoundTag(), registries); // (taken out: the tag has nothing under the water)
+            load(new CompoundTag()); // (taken out: the tag has nothing under the water)
         }
     }
 

@@ -58,7 +58,7 @@ public class NeonSignScreen extends Screen {
         setInitialFocus(box);
         DyeColor[] dyes = DyeColor.values();
         for (int i = 0; i < dyes.length; i++) {
-            final int c = dyes[i].getTextureDiffuseColor() & 0xFFFFFF;
+            final int c = com.example.skyblocks.compat.Compat.dyeColour(dyes[i]) & 0xFFFFFF;
             int x = left() + 12 + (i % 8) * 27, y = top() + 50 + (i / 8) * 24;
             addRenderableWidget(new Button(x, y, 24, 20, Component.empty(), b -> {
                 colour = c;
@@ -79,7 +79,7 @@ public class NeonSignScreen extends Screen {
         bgs[0] = NeonSignBlockEntity.DEFAULT_BACKGROUND;
         bgs[1] = 0xFFFFFF;
         for (int i = 0; i < 16; i++) {
-            int c = dyes[i].getTextureDiffuseColor();
+            int c = com.example.skyblocks.compat.Compat.dyeColour(dyes[i]);
             bgs[i + 2] = (((c >> 16) & 255) * 3 / 5 << 16) | (((c >> 8) & 255) * 3 / 5 << 8) | ((c & 255) * 3 / 5);
         }
         for (int i = 0; i < bgs.length; i++) {

@@ -181,9 +181,9 @@ public final class ShaderSky {
                                  float ticks) {
             com.mojang.blaze3d.vertex.PoseStack modelView = RenderSystem.getModelViewStack();
             modelView.pushPose();
-            modelView.mul(view);
+            modelView.mulPoseMatrix(view);
             float far = Math.max(16.0F, Minecraft.getInstance().gameRenderer.getRenderDistance());
-            modelView.scale(far);
+            modelView.scale(far, far, far);
             RenderSystem.applyModelViewMatrix();
             RenderSystem.disableDepthTest();
             RenderSystem.depthMask(false);

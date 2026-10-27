@@ -104,9 +104,9 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
 
     /** Passes a block-format vertex on, adding the overlay the hologram's format also has. */
     private record WithOverlay(VertexConsumer inner) implements VertexConsumer {
-        @Override public VertexConsumer vertex(double x, double y, double z) { inner.vertex(x, y, z); inner.overlayCoords(0, 10); return this; }
+        @Override public VertexConsumer vertex(double x, double y, double z) { inner.vertex(x, y, z); return this; }
         @Override public VertexConsumer color(int r, int g, int b, int a) { inner.color(r, g, b, a); return this; }
-        @Override public VertexConsumer uv(float u, float v) { inner.uv(u, v); return this; }
+        @Override public VertexConsumer uv(float u, float v) { inner.uv(u, v); inner.overlayCoords(0, 10); return this; } // (1.20.1: in the format's order)
         @Override public VertexConsumer overlayCoords(int u, int v) { return this; }
         @Override public VertexConsumer uv2(int u, int v) { inner.uv2(u, v); return this; }
         @Override public VertexConsumer normal(float x, float y, float z) { inner.normal(x, y, z); return this; }

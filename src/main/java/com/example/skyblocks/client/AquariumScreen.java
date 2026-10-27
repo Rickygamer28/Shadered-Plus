@@ -84,7 +84,7 @@ public class AquariumScreen extends Screen {
         int y = top() + panelH() - 28;
         if (!deep) { // (the deep sea: always dark)
             addRenderableWidget(Button.builder(lightLabel(), b -> {
-                AquariumSettings.uv2(ocean, AquariumSettings.light(ocean) + 1);
+                AquariumSettings.setLight(ocean, AquariumSettings.light(ocean) + 1);
                 b.setMessage(lightLabel());
             }).bounds(left() + 12, y - 24, 160, 20).tooltip(Tooltip.create(Component.translatable("screen.skyblocks.aquarium_light_tip"))).build());
         }

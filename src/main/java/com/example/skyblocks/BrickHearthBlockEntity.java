@@ -66,6 +66,6 @@ public class BrickHearthBlockEntity extends GlowColourBlockEntity {
         ModelData.Builder b = ModelData.builder();
         if (stone != null) b.with(STONE, stone);
         if (wood != null) b.with(WOOD, wood);
-        return b.end();
+        return b.build();
     }
 }

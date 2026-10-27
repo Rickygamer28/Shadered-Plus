@@ -880,8 +880,8 @@ public final class VanillaAquariumRenderer {
         if (f.length == 0) {
             return;
         }
-        com.mojang.blaze3d.vertex.BufferBuilder b = com.mojang.blaze3d.vertex.Tesselator.getInstance()
-                .begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION);
+        com.mojang.blaze3d.vertex.BufferBuilder b = com.mojang.blaze3d.vertex.Tesselator.getInstance().getBuilder();
+        b.begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION);
         Matrix4f m = poseStack.last().pose();
         for (int i = 0; i < f.length; i += 3) {
             b.vertex(m, f[i], f[i + 1], f[i + 2]).endVertex();

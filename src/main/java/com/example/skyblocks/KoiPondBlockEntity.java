@@ -64,7 +64,7 @@ public class KoiPondBlockEntity extends BlockEntity {
 
     @Override
     public CompoundTag getUpdateTag() {
-        CompoundTag tag = super.getUpdateTag(registries);
+        CompoundTag tag = super.getUpdateTag();
         saveAdditional(tag);
         tag.putBoolean("pond", true); // (never empty: the game skips an empty update, so going back to the defaults wouldn't show)
         return tag;
@@ -86,7 +86,7 @@ public class KoiPondBlockEntity extends BlockEntity {
         ModelData.Builder b = ModelData.builder();
         if (rim != null) b.with(RIM, rim);
         if (floor != null) b.with(FLOOR, floor);
-        return b.end();
+        return b.build();
     }
 
     /** What its renderer draws (1.20.1: the block entity says, not the renderer). */

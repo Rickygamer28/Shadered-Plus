@@ -104,7 +104,7 @@ public class DiscoBallRenderer implements BlockEntityRenderer<DiscoBallBlockEnti
             Vec3 dir = new Vec3(d0.x * cos - d0.z * sin, d0.y, d0.x * sin + d0.z * cos);
             Vec3 start = centre.add(dir.scale(RADIUS + 0.02));
             BlockHitResult hit = level.clip(new ClipContext(start, centre.add(dir.scale(RANGE)), ClipContext.Block.VISUAL,
-                    ClipContext.Fluid.NONE, CollisionContext.empty()));
+                    ClipContext.Fluid.NONE, (net.minecraft.world.entity.Entity) null));
             if (hit.getType() == HitResult.Type.MISS) {
                 continue;
             }

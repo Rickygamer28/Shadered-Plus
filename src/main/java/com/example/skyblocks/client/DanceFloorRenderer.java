@@ -413,7 +413,7 @@ public final class DanceFloorRenderer {
         com.mojang.blaze3d.vertex.PoseStack stack = RenderSystem.getModelViewStack();
         stack.pushPose();
         try {
-            stack.mul(pose);
+            stack.mulPoseMatrix(pose);
             RenderSystem.applyModelViewMatrix();
             draw(island.floors, Vec3.ZERO, modelView, projection, true, new ArrayList<>(), Double.MAX_VALUE / 4);
         } finally {
@@ -434,7 +434,7 @@ public final class DanceFloorRenderer {
                 com.mojang.blaze3d.vertex.PoseStack stack = RenderSystem.getModelViewStack();
                 stack.pushPose();
                 try {
-                    stack.mul(job.pose());
+                    stack.mulPoseMatrix(job.pose());
                     RenderSystem.applyModelViewMatrix();
                     List<Runnable> shapes = new ArrayList<>();
                     draw(job.island().floors, Vec3.ZERO, modelView, projection, !overlay, shapes, Double.MAX_VALUE / 4);

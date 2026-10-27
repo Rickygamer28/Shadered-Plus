@@ -211,7 +211,7 @@ public final class WorldTiming {
         beDepth = 0;
         mobDepth = 0;
         shaderedDepth = 0;
-        on = supported && Minecraft.getInstance().getDebugOverlay().showDebugScreen();
+        on = supported && Minecraft.getInstance().options.renderDebug;
         if (!on) {
             BE_NOW.clear();
             MOB_NOW.clear();
@@ -320,7 +320,7 @@ public final class WorldTiming {
 
     @SubscribeEvent
     public static void onDebugText(CustomizeGuiOverlayEvent.DebugText event) {
-        if (!Minecraft.getInstance().getDebugOverlay().showDebugScreen() || System.currentTimeMillis() - lastSeen > 2000) {
+        if (!Minecraft.getInstance().options.renderDebug || System.currentTimeMillis() - lastSeen > 2000) {
             return;
         }
         List<String> lines = event.getLeft();

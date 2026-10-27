@@ -12,7 +12,6 @@ import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.client.model.data.ModelData;
@@ -25,7 +24,7 @@ public class MusicBoxRenderer implements BlockEntityRenderer<MusicBoxBlockEntity
     public static final net.minecraft.resources.ResourceLocation LID = model("block/music_box_lid"), DANCER = model("block/music_box_dancer"),
             KEY = model("block/music_box_key");
 
-    private static ModelResourceLocation model(String path) {
+    private static ResourceLocation model(String path) {
         return (new ResourceLocation(SkyBlocksMod.MOD_ID, path));
     }
 
@@ -79,7 +78,7 @@ public class MusicBoxRenderer implements BlockEntityRenderer<MusicBoxBlockEntity
         poseStack.popPose();
     }
 
-    private static void draw(ModelResourceLocation name, BlockState state, PoseStack poseStack, MultiBufferSource buffers, int light) {
+    private static void draw(ResourceLocation name, BlockState state, PoseStack poseStack, MultiBufferSource buffers, int light) {
         Minecraft.getInstance().getBlockRenderer().getModelRenderer().renderModel(poseStack.last(), buffers.getBuffer(Sheets.cutoutBlockSheet()),
                 state, Minecraft.getInstance().getModelManager().getModel(name), 1.0F, 1.0F, 1.0F, light, OverlayTexture.NO_OVERLAY,
                 ModelData.EMPTY, RenderType.cutout());

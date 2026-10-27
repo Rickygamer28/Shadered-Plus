@@ -130,14 +130,15 @@ public final class AquariumRenderer {
     /** The model-view set to view while open. */
     private static final class Matrix4fStackScope implements AutoCloseable {
         Matrix4fStackScope(Matrix4f view) {
-            RenderSystem.getModelViewStack().pushMatrix();
-            RenderSystem.getModelViewStack().set(view);
+            RenderSystem.getModelViewStack().pushPose();
+            RenderSystem.getModelViewStack().setIdentity();
+            RenderSystem.getModelViewStack().mulPoseMatrix(view);
             RenderSystem.applyModelViewMatrix();
         }
 
         @Override
         public void close() {
-            RenderSystem.getModelViewStack().popMatrix();
+            RenderSystem.getModelViewStack().popPose();
             RenderSystem.applyModelViewMatrix();
         }
     }
@@ -1673,7 +1674,7 @@ public final class AquariumRenderer {
         com.mojang.blaze3d.vertex.PoseStack stack = RenderSystem.getModelViewStack();
         stack.pushPose();
         try {
-            stack.mul(pose);
+            stack.mulPoseMatrix(pose);
             RenderSystem.applyModelViewMatrix();
             draw(island.floors, Vec3.ZERO, modelView, projection, true, new ArrayList<>(), Double.MAX_VALUE / 4);
         } finally {
@@ -1694,7 +1695,7 @@ public final class AquariumRenderer {
                 com.mojang.blaze3d.vertex.PoseStack stack = RenderSystem.getModelViewStack();
                 stack.pushPose();
                 try {
-                    stack.mul(job.pose());
+                    stack.mulPoseMatrix(job.pose());
                     RenderSystem.applyModelViewMatrix();
                     List<Runnable> shapes = new ArrayList<>();
                     draw(job.island().floors, Vec3.ZERO, modelView, projection, !overlay, shapes, Double.MAX_VALUE / 4);

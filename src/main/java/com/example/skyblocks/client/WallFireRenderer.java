@@ -131,7 +131,7 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         for (int[] f : faces) {
             for (int k : f) {
                 vc.vertex(m, (k & 1) != 0 ? x1 : x0, (k & 2) != 0 ? y1 : y0, (k & 4) != 0 ? z1 : z0)
-                        .color(r, g, b, 32 + 16).uv(k, 320.0F + lit).endVertex(); // (+ how lit, 0..1)
+                        .uv(k, 320.0F + lit).color(r, g, b, 32 + 16).endVertex(); // (+ how lit, 0..1)
             }
         }
     }
@@ -153,10 +153,10 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
     private static void quad(RenderType type, MultiBufferSource buffers, Matrix4f m, float xa, float xb, float y0, float y1, float z,
                              float sa, float sb, float flags, int r, int g, int b, int a) {
         VertexConsumer vc = buffers.getBuffer(type);
-        vc.vertex(m, xa, y0, z).color(r, g, b, a).uv(sa, y0 + flags).endVertex();
-        vc.vertex(m, xb, y0, z).color(r, g, b, a).uv(sb, y0 + flags).endVertex();
-        vc.vertex(m, xb, y1, z).color(r, g, b, a).uv(sb, y1 + flags).endVertex();
-        vc.vertex(m, xa, y1, z).color(r, g, b, a).uv(sa, y1 + flags).endVertex();
+        vc.vertex(m, xa, y0, z).uv(sa, y0 + flags).color(r, g, b, a).endVertex();
+        vc.vertex(m, xb, y0, z).uv(sb, y0 + flags).color(r, g, b, a).endVertex();
+        vc.vertex(m, xb, y1, z).uv(sb, y1 + flags).color(r, g, b, a).endVertex();
+        vc.vertex(m, xa, y1, z).uv(sa, y1 + flags).color(r, g, b, a).endVertex();
     }
 
 

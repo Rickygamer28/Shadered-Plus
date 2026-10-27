@@ -66,7 +66,7 @@ public class WaterCausticsBlock extends BaseEntityBlock {
         if (!sky && !(stack.getItem() instanceof BlockItem item && holds(item.getBlock().defaultBlockState(), level, pos))) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
-        if (ItemStack.isSameItemSameComponents(be.held(), stack)) {
+        if (ItemStack.isSameItemSameTags(be.held(), stack)) {
             return ItemInteractionResult.SUCCESS; // (already that)
         }
         if (!level.isClientSide) {
