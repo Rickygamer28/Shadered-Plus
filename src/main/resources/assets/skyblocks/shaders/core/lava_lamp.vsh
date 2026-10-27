@@ -9,6 +9,8 @@ in vec4 Color;
 in vec2 UV0;
 
 uniform mat4 ModelViewMat;
+// 1.20.1: the camera's turn already in the positions (block entities' poses hold it): taken back out (client/ViewState)
+uniform mat4 ViewRot;
 uniform mat4 ProjMat;
 uniform float ItemMode;
 uniform mat4 LampInv;
@@ -20,8 +22,10 @@ out vec4 vColor;
 out vec2 uv;
 
 void main() {
+    vec3 Pos = (inverse(ViewRot) * vec4(Position, 1.0)).xyz;
+    mat4 MVm = ModelViewMat * ViewRot;
     vColor = Color;
-    gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
+    gl_Position = ProjMat * MVm * vec4(Pos, 1.0);
     int code = int(UV0.x + 0.5);
     float big = code >= 10 ? 1.0 : 0.0;
     int corner = code - 10 * int(big);
@@ -33,9 +37,9 @@ void main() {
     }
     lp = mix(lo, hi, vec3(float(corner & 1), float((corner >> 1) & 1), float((corner >> 2) & 1)));
     seedIn = UV0.y;
-    mat4 iv = inverse(ModelViewMat);
+    mat4 iv = inverse(MVm);
     bool persp = ProjMat[2][3] < -0.5;
-    vec3 dir = persp ? Position - (iv * vec4(0.0, 0.0, 0.0, 1.0)).xyz : (iv * vec4(0.0, 0.0, -1.0, 0.0)).xyz;
+    vec3 dir = persp ? Pos - (iv * vec4(0.0, 0.0, 0.0, 1.0)).xyz : (iv * vec4(0.0, 0.0, -1.0, 0.0)).xyz;
     // in the world the box is only moved, not turned: the ray is the same in the lamp's space; an item can be turned
     lray = ItemMode < 0.5 ? dir : (LampInv * vec4(dir, 0.0)).xyz;
 }

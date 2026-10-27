@@ -16,6 +16,7 @@ flat in ivec2 vShape;
 uniform sampler2D Sampler0; // (the ponds' shapes: KoiPondData)
 
 uniform mat4 ModelViewMat;
+uniform mat4 ViewRot; // (1.20.1: see koi_pond.vsh)
 uniform mat4 ProjMat;
 
 uniform float PondTime;
@@ -837,7 +838,7 @@ float caustics(vec2 p, float t) {
 
 // the depth of a point (world blocks), from where this fragment is on the box (vpos: the same point, as drawn)
 float depthOf(vec3 hit, vec3 entry) {
-    vec4 c = ProjMat * ModelViewMat * vec4(vpos + (hit - entry), 1.0);
+    vec4 c = ProjMat * ModelViewMat * ViewRot * vec4(vpos + (hit - entry), 1.0);
     return clamp(c.z / c.w * 0.5 + 0.5, 0.0, 1.0);
 }
 

@@ -47,7 +47,7 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
     abstract static class Types extends RenderType {
         static final RenderType WATER = create("skyblocks_koi_pond", DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP, VertexFormat.Mode.QUADS, 4096,
                 false, false, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                         .setTextureState(new TextureStateShard(KoiPondData.TEXTURE, false, false))
                         .setTexturingState(new TexturingStateShard("skyblocks_koi_pond_time", () -> {
                             pondTiming = WorldTiming.start(WorldTiming.KOI_PONDS);

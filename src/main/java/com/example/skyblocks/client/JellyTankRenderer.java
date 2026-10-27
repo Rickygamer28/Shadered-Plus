@@ -41,7 +41,7 @@ public class JellyTankRenderer implements BlockEntityRenderer<GlowColourBlockEnt
     abstract static class Types extends RenderType {
         static final RenderType WATER = create("skyblocks_jelly_tank", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 4096,
                 false, false, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                         .setTexturingState(new TexturingStateShard("skyblocks_jelly_tank", () -> {
                             if (shader != null) {
                                 shader.safeGetUniform("JellyTime").set(LavaLampRenderer.seconds());
@@ -54,7 +54,7 @@ public class JellyTankRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                         .createCompositeState(false));
         static final RenderType ITEM = create("skyblocks_jelly_tank_item", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 256,
                 false, false, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                         .setTexturingState(new TexturingStateShard("skyblocks_jelly_tank_item", () -> {
                             if (shader != null) {
                                 shader.safeGetUniform("JellyTime").set(LavaLampRenderer.seconds());

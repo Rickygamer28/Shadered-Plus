@@ -10,6 +10,8 @@ in vec4 Color;
 in ivec2 UV2;
 
 uniform mat4 ModelViewMat;
+// 1.20.1: the camera's turn already in the positions (block entities' poses hold it): taken back out (client/ViewState)
+uniform mat4 ViewRot;
 uniform mat4 ProjMat;
 
 out vec3 wray;
@@ -19,11 +21,13 @@ out vec3 vpos;
 flat out ivec2 vShape;
 
 void main() {
+    vec3 Pos = (inverse(ViewRot) * vec4(Position, 1.0)).xyz;
+    mat4 MVm = ModelViewMat * ViewRot;
     uv = UV0;
     vColor = Color;
     vShape = UV2;
-    vpos = Position;
-    gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
-    mat4 iv = inverse(ModelViewMat);
-    wray = ProjMat[2][3] < -0.5 ? Position - (iv * vec4(0.0, 0.0, 0.0, 1.0)).xyz : (iv * vec4(0.0, 0.0, -1.0, 0.0)).xyz;
+    vpos = Pos;
+    gl_Position = ProjMat * MVm * vec4(Pos, 1.0);
+    mat4 iv = inverse(MVm);
+    wray = ProjMat[2][3] < -0.5 ? Pos - (iv * vec4(0.0, 0.0, 0.0, 1.0)).xyz : (iv * vec4(0.0, 0.0, -1.0, 0.0)).xyz;
 }

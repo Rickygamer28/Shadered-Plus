@@ -43,7 +43,7 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
     abstract static class Types extends RenderType {
         static final RenderType FIRE = create("skyblocks_wall_fire", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 4096,
                 false, false, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                         .setTexturingState(new TexturingStateShard("skyblocks_wall_fire_time", () -> {
                             if (shader != null) {
                                 shader.safeGetUniform("FireTime").set(LavaLampRenderer.seconds());
@@ -58,7 +58,7 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         /** Free flames (the hearth): see-through round the flames, drawn after the solid blocks. */
         static final RenderType FREE = create("skyblocks_hearth_fire", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 4096,
                 false, true, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                         .setTexturingState(new TexturingStateShard("skyblocks_hearth_fire_time", () -> {
                             if (shader != null) {
                                 shader.safeGetUniform("FireTime").set(LavaLampRenderer.seconds());
@@ -81,7 +81,7 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         /** The fire tornado as an item: drawn at once with its own matrix (see drawTornadoItem). */
         static final RenderType ITEM = create("skyblocks_fire_item", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 256,
                 false, false, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                         .setTexturingState(new TexturingStateShard("skyblocks_fire_item", () -> {
                             if (shader != null) {
                                 shader.safeGetUniform("FireTime").set(LavaLampRenderer.seconds());

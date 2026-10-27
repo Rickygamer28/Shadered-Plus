@@ -48,7 +48,7 @@ public class NeonSignRenderer implements BlockEntityRenderer<NeonSignBlockEntity
     abstract static class Types extends RenderType {
         static final RenderType NEON = create("skyblocks_neon_sign", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 8192,
                 false, true, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                         .setTransparencyState(LIGHTNING_TRANSPARENCY)
                         .setWriteMaskState(COLOR_WRITE)
                         .setCullState(NO_CULL)

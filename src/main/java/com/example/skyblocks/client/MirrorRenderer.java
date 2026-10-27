@@ -972,6 +972,7 @@ public final class MirrorRenderer {
         // camera's turn from it and its passes turn it back, which leaves the mirror's view in place)
         PoseStack pose = poseOf(modelView);
         Vec3 cam = camera.getPosition();
+        ViewState.mirror(modelView); // (the turn in these poses, for the shaders that take it out)
         try {
             for (Near near : NEARBY_ENTITIES) {
                 Entity entity = near.entity();
@@ -1081,6 +1082,7 @@ public final class MirrorRenderer {
                 // sky blocks left out of the mirror
             }
         } finally {
+            ViewState.mirror(null);
             dispatcher.setRenderShadow(true);
             dispatcher.overrideCameraOrientation(camera.rotation());
             stack.popPose();

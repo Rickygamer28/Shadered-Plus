@@ -430,10 +430,11 @@ public final class DanceFloorRenderer {
         }
         InfinityMirrorRenderer.scoped(view, projection, overlay -> {
             for (IslandJob job : jobs) {
-                Matrix4f modelView = new Matrix4f(view).mul(job.pose());
+                Matrix4f modelView = new Matrix4f(job.pose()); // (1.20.1: a block entity's pose holds the view)
                 com.mojang.blaze3d.vertex.PoseStack stack = RenderSystem.getModelViewStack();
                 stack.pushPose();
                 try {
+                    stack.setIdentity();
                     stack.mulPoseMatrix(job.pose());
                     RenderSystem.applyModelViewMatrix();
                     List<Runnable> shapes = new ArrayList<>();

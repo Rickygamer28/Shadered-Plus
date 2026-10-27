@@ -49,7 +49,7 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
     abstract static class Types extends RenderType {
         static final RenderType LAMP = create("skyblocks_lava_lamp", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 4096,
                 false, false, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                         .setTexturingState(new TexturingStateShard("skyblocks_lava_lamp_camera", () -> {
                             if (shader != null) {
                                 shader.safeGetUniform("LampTime").set(seconds());
@@ -63,7 +63,7 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         /** As an item: drawn at once (LampInv is this one lamp's), see LavaLampItemRenderer. */
         static final RenderType ITEM = create("skyblocks_lava_lamp_item", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 256,
                 false, false, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                         .setTexturingState(new TexturingStateShard("skyblocks_lava_lamp_item", () -> {
                             if (shader != null) {
                                 shader.safeGetUniform("LampTime").set(seconds());

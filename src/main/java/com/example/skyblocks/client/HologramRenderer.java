@@ -53,7 +53,7 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
         static RenderType holo(ResourceLocation texture) {
             return BY_TEXTURE.computeIfAbsent(texture, tex -> create("skyblocks_hologram", DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 262144,
                     false, true, CompositeState.builder()
-                            .setShaderState(new ShaderStateShard(() -> shader))
+                            .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                             .setTextureState(new TextureStateShard(tex, false, false))
                             .setTexturingState(new TexturingStateShard("skyblocks_hologram_look", () -> {
                                 if (shader != null) {

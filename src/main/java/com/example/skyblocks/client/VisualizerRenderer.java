@@ -46,7 +46,7 @@ public class VisualizerRenderer implements BlockEntityRenderer<GlowColourBlockEn
     abstract static class Types extends RenderType {
         static final RenderType SCREEN = create("skyblocks_visualizer", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 4096,
                 false, false, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                         .setTextureState(new TextureStateShard(MusicReactor.HISTORY, true, false))
                         .setTexturingState(new TexturingStateShard("skyblocks_visualizer_music", () -> {
                             if (shader != null) {
