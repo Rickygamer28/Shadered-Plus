@@ -42,12 +42,15 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
         }
     }
 
+    private static int pondTiming = -1;
+
     abstract static class Types extends RenderType {
         static final RenderType WATER = create("skyblocks_koi_pond", DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP, VertexFormat.Mode.QUADS, 4096,
                 false, false, CompositeState.builder()
                         .setShaderState(new ShaderStateShard(() -> shader))
                         .setTextureState(new TextureStateShard(KoiPondData.TEXTURE, false, false))
                         .setTexturingState(new TexturingStateShard("skyblocks_koi_pond_time", () -> {
+                            pondTiming = WorldTiming.start(WorldTiming.KOI_PONDS);
                             if (shader != null) {
                                 shader.safeGetUniform("PondTime").set(LavaLampRenderer.seconds());
                                 net.minecraft.client.multiplayer.ClientLevel level = net.minecraft.client.Minecraft.getInstance().level;
@@ -59,7 +62,10 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
                                 net.minecraft.world.phys.Vec3 moon = level == null ? new net.minecraft.world.phys.Vec3(0, -1, 0) : PondLife.moon(level, pt);
                                 shader.safeGetUniform("MoonDir").set((float) moon.x, (float) moon.y, (float) moon.z);
                             }
-                        }, () -> {}))
+                        }, () -> {
+                            WorldTiming.stop(pondTiming);
+                            pondTiming = -1;
+                        }))
                         .setTransparencyState(NO_TRANSPARENCY)
                         .setWriteMaskState(COLOR_DEPTH_WRITE)
                         .setCullState(NO_CULL) // (both sides: from inside it too, standing on the pond)

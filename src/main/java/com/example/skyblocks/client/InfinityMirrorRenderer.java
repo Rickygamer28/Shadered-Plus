@@ -190,11 +190,18 @@ public final class InfinityMirrorRenderer {
         Vector3f eyeRel = eyeOf(projection, view);
         Vec3 eye = cam.add(eyeRel.x, eyeRel.y, eyeRel.z);
         InfinitySet set = world;
-        scoped(view, projection, overlay -> {
-            List<Runnable> shapes = new ArrayList<>();
-            drawSet(set, cam, eye, eyeRel, view, projection, !overlay, shapes);
-            recordShapes(overlay, shapes, 0.0F);
-        });
+        int timing = WorldTiming.start(WorldTiming.INFINITY);
+        HalfRes.mainView = true; // (the cubes: at half size - see HalfRes)
+        try {
+            scoped(view, projection, overlay -> {
+                List<Runnable> shapes = new ArrayList<>();
+                drawSet(set, cam, eye, eyeRel, view, projection, !overlay, shapes);
+                recordShapes(overlay, shapes, 0.0F);
+            });
+        } finally {
+            HalfRes.mainView = false;
+        }
+        WorldTiming.stop(timing);
     }
 
     interface Body {

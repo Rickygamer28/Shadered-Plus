@@ -204,11 +204,18 @@ public final class AquariumRenderer {
             }
             Matrix4f view = new Matrix4f(event.getModelViewMatrix());
             Matrix4f projection = new Matrix4f(event.getProjectionMatrix());
-            InfinityMirrorRenderer.scoped(view, projection, overlay -> {
-                List<Runnable> shapes = new ArrayList<>();
-                draw(FLOORS, cam, view, projection, !overlay, shapes, RANGE);
-                InfinityMirrorRenderer.recordShapes(overlay, shapes, 0.0F);
-            });
+            int timing = WorldTiming.start(WorldTiming.AQUARIUMS);
+            HalfRes.mainView = true;
+            try {
+                InfinityMirrorRenderer.scoped(view, projection, overlay -> {
+                    List<Runnable> shapes = new ArrayList<>();
+                    draw(FLOORS, cam, view, projection, !overlay, shapes, RANGE);
+                    InfinityMirrorRenderer.recordShapes(overlay, shapes, 0.0F);
+                });
+            } finally {
+                HalfRes.mainView = false;
+            }
+            WorldTiming.stop(timing);
         }
     }
 
@@ -272,6 +279,9 @@ public final class AquariumRenderer {
         RenderSystem.disableCull();
         RenderSystem.enablePolygonOffset();
         RenderSystem.polygonOffset(-2.0F, -20.0F); // over the blocks' own faces
+        // (in the normal view: worked out at half size, then put on screen - see HalfRes)
+        boolean half = false;
+        List<Runnable> drawnShapes = shapes;
         try {
             shader.safeGetUniform("Time").set(seconds);
             shader.safeGetUniform("Lite").set(lite ? 1.0F : 0.0F);
@@ -317,13 +327,17 @@ public final class AquariumRenderer {
                             picture, lightOf(floor)));
                     continue;
                 }
+                if (!half && drawnShapes == shapes && HalfRes.begin()) { // (only once there's a tank to draw)
+                    half = true;
+                    drawnShapes = new ArrayList<>();
+                }
                 MeshData mesh = mesh(floor, shown, cam);
                 RenderSystem.depthMask(writeDepth && !floor.vanilla); // (a vanilla tank: its own fish go into the picture next, then its depth)
                 if (mesh != null) {
                     BufferUploader.drawWithShader(mesh);
                 }
                 RenderSystem.depthMask(writeDepth);
-                shapes.add(() -> {
+                drawnShapes.add(() -> {
                     shader.safeGetUniform("BoxMin").set(mx, my, mz);
                     shader.safeGetUniform("BoxSize").set((float) floor.sizeX, (float) floor.sizeY, (float) floor.sizeZ);
                     shader.safeGetUniform("Seed").set(seed);
@@ -338,6 +352,10 @@ public final class AquariumRenderer {
             RenderSystem.polygonOffset(0.0F, 0.0F);
             RenderSystem.disablePolygonOffset();
             RenderSystem.enableCull();
+            if (half) {
+                HalfRes.finish(drawnShapes, writeDepth);
+                shapes.addAll(drawnShapes);
+            }
         }
     }
 

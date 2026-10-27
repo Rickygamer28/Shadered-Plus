@@ -96,6 +96,8 @@ void main() {
     vec3 sight = normalize(facePos - Eye);
     vec3 p = clamp(facePos - BoxMin, vec3(0.0), BoxSize);
     float eyeDistance = length(facePos - Eye);
+    // (in a mirror, or far off - fading in from 10 to 18 blocks away: fewer reflections followed)
+    float liteW = max(Lite, smoothstep(10.0, 18.0, eyeDistance));
     vec3 base = Rainbow > 0.5 ? hue(fract(Time * 0.2)) : ColorFront;
 
     // the face this pixel is on (the axis it's flat across), and how far from that face's border
@@ -134,7 +136,7 @@ void main() {
         vec3 local = q - origin;
         float keepNow = pow(KEEP, t0 * perBlock);
         // (in a mirror: the reflections followed until they're a few times brighter, fading out before the cut)
-        float cut = Lite > 0.5 ? 0.035 : 0.004;
+        float cut = mix(0.004, 0.035, liteW);
         if (keepNow < cut) {
             break;
         }
@@ -152,8 +154,8 @@ void main() {
              + strip(2, inset, hi.y, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
              + strip(2, hi.x, hi.y, local, sight, t0, t1, size, eyeDistance, perBlock, origin);
         lit += ledColor(origin, t0 * perBlock) * 0.004 * keepNow; // (a faint glow in the glass)
-        if (Lite > 0.5) {
-            lit = before + (lit - before) * smoothstep(cut, cut * 3.0, keepNow);
+        if (liteW > 0.0) {
+            lit = before + (lit - before) * mix(1.0, smoothstep(cut, cut * 3.0, keepNow), liteW);
         }
         // on to the next box
         t0 = t1;

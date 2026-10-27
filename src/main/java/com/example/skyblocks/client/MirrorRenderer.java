@@ -322,6 +322,15 @@ public final class MirrorRenderer {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS || rendering) {
             return;
         }
+        int timing = WorldTiming.start(WorldTiming.MIRRORS);
+        try {
+            drawMirrors(event);
+        } finally {
+            WorldTiming.stop(timing);
+        }
+    }
+
+    private static void drawMirrors(RenderLevelStageEvent event) {
         if (com.example.skyblocks.client.iris.IrisCompat.renderingShadowPass()) {
             return; // (the shader pack's shadow pass draws the world from the sun: no mirrors there)
         }
@@ -406,6 +415,15 @@ public final class MirrorRenderer {
                 continue;
             }
             skipped("no screen rect", w);
+        }
+        // mirrors in view but hidden behind blocks (a wall, a hill between): no picture for them
+        boolean irisNow = com.example.skyblocks.client.iris.IrisIslandTarget.active();
+        if (!irisNow) {
+            occlusion(mc.getMainRenderTarget(), visible, view, projection, cam);
+            visible.removeIf(e -> {
+                int[] o = OCCLUSION.get(e.getKey());
+                return o != null && o[1] >= HIDDEN_FRAMES;
+            });
         }
         visible.sort(Comparator.comparingDouble(e -> -area(rects.get(e.getKey()))));
         if (visible.size() > MAX_WALLS) {
@@ -1192,6 +1210,85 @@ public final class MirrorRenderer {
         if (!warnedEffects) {
             warnedEffects = true;
             SkyBlocksMod.LOGGER.warn("Shadered+: couldn't draw particles, clouds or rain in a mirror", e);
+        }
+    }
+
+    /**
+     * Per mirror in view: {its occlusion query, frames in a row it was wholly hidden behind blocks, 1 while its query
+     * is still being answered, the frame it was last asked about}. The answers are read a frame or two late (no waiting on the graphics card).
+     */
+    private static final Map<Wall, int[]> OCCLUSION = new HashMap<>();
+    /** Hidden this many frames in a row: its picture isn't drawn (back the frame after it shows again). */
+    private static final int HIDDEN_FRAMES = 2;
+
+    /**
+     * Asks the graphics card whether any of each mirror's face shows past the world's blocks drawn so far (the
+     * answer read in a later frame), and reads the answers that are in.
+     */
+    private static void occlusion(RenderTarget main, List<Map.Entry<Wall, List<BlockPos>>> visible, Matrix4f view, Matrix4f projection, Vec3 cam) {
+        try {
+            OCCLUSION.keySet().removeIf(w -> {
+                if (WALLS.containsKey(w)) {
+                    return false;
+                }
+                org.lwjgl.opengl.GL15.glDeleteQueries(OCCLUSION.get(w)[0]);
+                return true;
+            });
+            ShaderInstance position = net.minecraft.client.renderer.GameRenderer.getPositionShader();
+            if (position == null) {
+                return;
+            }
+            main.bindWrite(true);
+            Matrix4fStack stack = RenderSystem.getModelViewStack();
+            stack.pushMatrix();
+            stack.set(view);
+            RenderSystem.applyModelViewMatrix();
+            RenderSystem.setProjectionMatrix(projection, VertexSorting.DISTANCE_TO_ORIGIN);
+            RenderSystem.colorMask(false, false, false, false);
+            RenderSystem.depthMask(false);
+            RenderSystem.enableDepthTest();
+            RenderSystem.depthFunc(GL11.GL_LEQUAL);
+            RenderSystem.disableCull();
+            RenderSystem.disableBlend();
+            RenderSystem.enablePolygonOffset();
+            RenderSystem.polygonOffset(-2.0F, -20.0F); // (as the faces: in front of the mirror block's own face)
+            try {
+                for (Map.Entry<Wall, List<BlockPos>> e : visible) {
+                    int[] o = OCCLUSION.computeIfAbsent(e.getKey(), w -> new int[] {org.lwjgl.opengl.GL15.glGenQueries(), 0, 0, 0});
+                    if ((int) frame - o[3] > 1) {
+                        o[1] = 0; // (out of view for a while: what it was then doesn't count)
+                    }
+                    o[3] = (int) frame;
+                    if (o[2] == 1) {
+                        if (org.lwjgl.opengl.GL15.glGetQueryObjecti(o[0], org.lwjgl.opengl.GL15.GL_QUERY_RESULT_AVAILABLE) == 0) {
+                            continue; // (not answered yet: ask again once it is)
+                        }
+                        boolean seen = org.lwjgl.opengl.GL15.glGetQueryObjecti(o[0], org.lwjgl.opengl.GL15.GL_QUERY_RESULT) != 0;
+                        o[1] = seen ? 0 : o[1] + 1;
+                        o[2] = 0;
+                    }
+                    MeshData mesh = faceMesh(e.getKey(), e.getValue(), cam.x, cam.y, cam.z);
+                    if (mesh == null) {
+                        continue;
+                    }
+                    RenderSystem.setShader(() -> position);
+                    org.lwjgl.opengl.GL15.glBeginQuery(org.lwjgl.opengl.GL33.GL_ANY_SAMPLES_PASSED, o[0]);
+                    BufferUploader.drawWithShader(mesh);
+                    org.lwjgl.opengl.GL15.glEndQuery(org.lwjgl.opengl.GL33.GL_ANY_SAMPLES_PASSED);
+                    o[2] = 1;
+                }
+            } finally {
+                RenderSystem.polygonOffset(0.0F, 0.0F);
+                RenderSystem.disablePolygonOffset();
+                RenderSystem.colorMask(true, true, true, true);
+                RenderSystem.depthMask(true);
+                RenderSystem.enableCull();
+                stack.popMatrix();
+                RenderSystem.applyModelViewMatrix();
+            }
+        } catch (RuntimeException | LinkageError ex) {
+            // (no answers: every mirror in view is drawn)
+            OCCLUSION.values().forEach(o -> o[1] = 0);
         }
     }
 

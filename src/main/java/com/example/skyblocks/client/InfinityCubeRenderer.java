@@ -54,6 +54,9 @@ final class InfinityCubeRenderer {
         RenderSystem.disableCull();
         RenderSystem.enablePolygonOffset();
         RenderSystem.polygonOffset(-2.0F, -20.0F); // over the block's own faces
+        // (in the normal view: worked out at half size, then put on screen - see HalfRes)
+        boolean half = false;
+        List<Runnable> drawnShapes = shapes;
         try {
             for (InfinitySet.Box b : boxes) {
                 if (b.faces().isEmpty()
@@ -73,6 +76,12 @@ final class InfinityCubeRenderer {
                 if (facing.isEmpty()) {
                     continue;
                 }
+                if (!half && drawnShapes == shapes && HalfRes.begin()) { // (only once there's a cube to draw)
+                    half = true;
+                    drawnShapes = new ArrayList<>();
+                    GL11.glGetIntegerv(GL11.GL_VIEWPORT, viewport);
+                    pixel = 2.0F / (Math.abs(projection.m11()) * Math.max(1, viewport[3]));
+                }
                 float[] c = InfinityMirrorRenderer.color(b.color());
                 shader.safeGetUniform("Eye").set(eyeRel.x, eyeRel.y, eyeRel.z);
                 shader.safeGetUniform("BoxMin").set((float) (b.minX() - origin.x), (float) (b.minY() - origin.y), (float) (b.minZ() - origin.z));
@@ -89,7 +98,7 @@ final class InfinityCubeRenderer {
                 if (mesh != null) {
                     BufferUploader.drawWithShader(mesh);
                 }
-                shapes.add(() -> {
+                drawnShapes.add(() -> {
                     MeshData shape = mesh(facing, origin);
                     if (shape != null) {
                         BufferUploader.drawWithShader(shape);
@@ -100,6 +109,10 @@ final class InfinityCubeRenderer {
             RenderSystem.polygonOffset(0.0F, 0.0F);
             RenderSystem.disablePolygonOffset();
             RenderSystem.enableCull();
+            if (half) {
+                HalfRes.finish(drawnShapes, writeDepth);
+                shapes.addAll(drawnShapes);
+            }
         }
     }
 

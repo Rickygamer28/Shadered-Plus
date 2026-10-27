@@ -128,11 +128,13 @@ public final class DanceFloorRenderer {
             }
             Matrix4f view = new Matrix4f(event.getModelViewMatrix());
             Matrix4f projection = new Matrix4f(event.getProjectionMatrix());
+            int timing = WorldTiming.start(WorldTiming.DANCE_FLOORS);
             InfinityMirrorRenderer.scoped(view, projection, overlay -> {
                 List<Runnable> shapes = new ArrayList<>();
                 draw(FLOORS, cam, view, projection, !overlay, shapes, RANGE);
                 InfinityMirrorRenderer.recordShapes(overlay, shapes, 0.0F);
             });
+            WorldTiming.stop(timing);
         }
     }
 
