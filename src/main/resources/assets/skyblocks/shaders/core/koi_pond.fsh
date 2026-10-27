@@ -51,6 +51,7 @@ float layerY(int L) {
 // going); returns the slope the rings give the surface (xy) and how bright their crests are (z)
 vec3 rainRings(vec2 x, float t) {
     vec3 acc = vec3(0.0);
+    if (Rain <= 0.0) return acc; // (no rain: no rings - and nothing to work out)
     vec2 cell = floor(x * 5.0);
     for (int j = -1; j <= 1; j++) {
         for (int i = -1; i <= 1; i++) {
@@ -148,12 +149,27 @@ void koiPath(int i, float size, float t, out vec2 pos, out vec2 dir) {
     dir = length(v) > 1e-5 ? normalize(v) : vec2(1.0, 0.0);
 }
 
+// every koi of the pond this moment (its layer, kind, size, seed; where it is and which way it faces): worked out once
+// for this pixel, then looked up by the shadows and the koi themselves
+vec4 gKoiInfo[24];
+vec4 gKoiAt[24];
+
+void placeKoi(float t) {
+    for (int i = 0; i < 24; i++) {
+        if (i >= pondFish) break;
+        vec4 info = koiOf(i);
+        vec2 pos, dir;
+        koiPath(i, info.z, t, pos, dir);
+        gKoiInfo[i] = info;
+        gKoiAt[i] = vec4(pos, dir);
+    }
+}
+
 // a koi at q (world x, z): (colour, how much it covers); body = only its body (for shadows)
 vec4 koiAt(vec2 q, int i, float t, bool body) {
-    vec4 info = koiOf(i);
+    vec4 info = gKoiInfo[i];
     float size = info.z;
-    vec2 pos, dir;
-    koiPath(i, size, t, pos, dir);
+    vec2 pos = gKoiAt[i].xy, dir = gKoiAt[i].zw;
     vec2 d = q - pos;
     if (dot(d, d) > 0.09 * size * size) {
         return vec4(0.0);
@@ -207,7 +223,7 @@ vec4 koiAt(vec2 q, int i, float t, bool body) {
 vec4 koiLayer(vec2 q, int L, float t, bool body) {
     for (int i = 0; i < 24; i++) {
         if (i >= pondFish) break;
-        if (int(koiOf(i).x) != L) continue;
+        if (int(gKoiInfo[i].x) != L) continue;
         vec4 k = koiAt(q, i, t, body);
         if (k.a > 0.0) return k;
     }
@@ -303,11 +319,13 @@ vec4 frogHit(vec3 p0, vec3 rd, float t, float light) {
     vec3 pTop = p0 - rd * (up / -rd.y);
     if (pTop.y > gStart.y) pTop = gStart; // (nothing behind the eye)
     vec2 c0 = floor(p0.xz);
+    vec2 sLo = min(pTop.xz, p0.xz) - 0.33, sHi = max(pTop.xz, p0.xz) + 0.33; // (where a frog could be, for this ray)
     for (int j = -1; j <= 1; j++) {
         for (int i = -1; i <= 1; i++) {
             vec2 cell = c0 + vec2(i, j);
+            if (any(greaterThan(cell, sHi)) || any(lessThan(cell + 1.0, sLo))) continue; // (too far from the ray)
             if (!isPond(cell)) continue; // (only the pond's own pads)
-            for (int k = 0; k < 2; k++) {
+            for (int k = 0; k < 1; k++) { // (a frog only ever sits on a block's first pad)
                 vec2 c, h, h2;
                 float r;
                 vec3 info;
@@ -320,7 +338,7 @@ vec4 frogHit(vec3 p0, vec3 rd, float t, float light) {
                     h2 = hash22(cell * 3.1);
                     pang = h2.x * 6.28 + t * 0.02;
                     seat = 1.0 + 2.0 / 16.0;
-                } else if (!padParams(cell, k, t, c, r, h, h2, pang) || r < 0.09 || !frogOn(cell, k, t, false, info, hop)) continue;
+                } else if (!frogOn(cell, k, t, false, info, hop) || !padParams(cell, k, t, c, r, h, h2, pang) || r < 0.09) continue;
                 // hopping on: a leap up out of the water onto the pad; hopping off: a leap forward into the water
                 float u = hop > 0.0 ? 1.0 - hop : -hop;
                 vec3 off = hop >= 1.0 ? vec3(0.0) : hop > 0.0 ? vec3(0.0, 8.0 * u * (1.0 - u) - 3.0 * u * u, -2.5 * u)
@@ -378,8 +396,10 @@ vec4 frogHit(vec3 p0, vec3 rd, float t, float light) {
 // a lily pad at q on the surface: (colour, 0/1)
 vec4 padAt(vec2 q, float t) {
     vec2 c0 = floor(q);
-    for (int j = -1; j <= 1; j++) {
-        for (int i = -1; i <= 1; i++) {
+    // (a pad lies wholly inside its own block - its middle is kept further from the block's edges than it is wide - so
+    // only this block's pads can be here)
+    for (int j = 0; j <= 0; j++) {
+        for (int i = 0; i <= 0; i++) {
             vec2 cell = c0 + vec2(i, j);
             for (int k = 0; k < 2; k++) {
                 vec2 c, h, h2;
@@ -531,8 +551,8 @@ vec4 gDuck[7];
 float gDab[7];
 bool gHere[7];
 
-void placeDucks(float t) {
-    int kids = familyKids();
+void placeDucks(float t, bool family) {
+    int kids = family ? familyKids() : 0;
     float awake = smoothstep(0.1, 0.35, Daylight);
     float rest = famRest(t) * awake;
     float seed = hash22(pondLo * 0.77 + pondHi * 0.21).x * 50.0;
@@ -549,10 +569,10 @@ void placeDucks(float t) {
         vec2 prev = mp;
         float walked = 0.0;
         int next = 1;
-        for (int s = 1; s <= 64; s++) {
+        for (int s = 1; s <= 48; s++) {
             if (next > kids) break;
             vec2 p, pd;
-            wander(70.0, 0.3, 0.05, tau - float(s) * 0.6, p, pd);
+            wander(70.0, 0.3, 0.05, tau - float(s) * 0.8, p, pd);
             float seg = length(p - prev);
             for (int k = 0; k < 4; k++) {
                 if (next > kids) break;
@@ -580,7 +600,8 @@ void placeDucks(float t) {
             pos += dir * ahead;
         } else {
             int f = dk - 2;
-            gHere[dk] = f <= kids;
+            gHere[dk] = family && f <= kids;
+            if (!gHere[dk]) { gDuck[dk] = vec4(0.0, 0.0, 1.0, 0.0); continue; }
             vec2 wp = follow[f], wd = followDir[f];
             if (f > 0) { // playing round her while she rests: paddling round her, evenly spaced, now and then tipping up to dabble
                 float fk = float(f);
@@ -624,7 +645,25 @@ vec4 duckHit(vec3 p0, vec3 rd, float t, float light, out float ripple) {
     ripple = 0.0;
     vec4 res = vec4(0.0);
     int kids = familyKids();
-    placeDucks(t);
+    // (the family: only near where it is - her, the ducklings behind her or round her, or their corner at night - is
+    // its whereabouts worked out: the ray over the water passing near them, or near enough for their rings)
+    bool family = false;
+    if (kids > 0) {
+        vec2 mp, md;
+        wander(70.0, 0.3, 0.05, famClock(t), mp, md);
+        float reach = 0.19 + float(kids) * 0.17 + 0.6;
+        vec3 pHigh = rd.y < -0.002 ? p0 - rd * (0.45 / -rd.y) : p0;
+        if (pHigh.y > gStart.y) pHigh = gStart;
+        vec2 ab = p0.xz - pHigh.xz;
+        float w = clamp(dot(mp - pHigh.xz, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
+        family = length(pHigh.xz + ab * w - mp) < reach || (Daylight > 0.1 && Daylight < 0.35); // (going to bed: anywhere between)
+        if (Daylight < 0.35) { // (asleep in the pond's corner)
+            vec2 cn = pondRect[0].xy + 0.4;
+            float wc = clamp(dot(cn - pHigh.xz, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
+            family = family || length(pHigh.xz + ab * wc - cn) < 0.9;
+        }
+    }
+    placeDucks(t, family);
     float tuckAll = 1.0 - smoothstep(0.1, 0.35, Daylight);
     for (int dk = 0; dk < 7; dk++) {
         float height = 0.0, ahead = 0.0, spread = 0.0, flap = 0.0, splash = 0.0, kind = 1.0, tuck = 0.0, scl = 1.0;
@@ -916,6 +955,7 @@ void main() {
     vec3 ph = p0 + rr * tHit;
 
     vec3 water = vec3(0.05, 0.17, 0.15) * light;
+    placeKoi(t);
     // the bottom or the side
     vec3 bg;
     if (what == 0) {

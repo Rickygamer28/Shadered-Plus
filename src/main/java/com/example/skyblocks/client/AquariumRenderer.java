@@ -72,6 +72,10 @@ public final class AquariumRenderer {
         int lidLight = -1;
         /** A vanilla aquarium: only the water, light, sand and frame here (client/VanillaAquariumRenderer puts the game's own fish in it). */
         boolean vanilla;
+        /** Its fish as last worked out (FISH_DATA), and for which moment and how many: worked out once a frame, however often drawn. */
+        float[] fishCache;
+        double fishCacheT = -1.0;
+        int fishCacheCount = -1;
         /** Per decoration: its base (x, y, z, tank coordinates) and type + 8 * (turn + 16 * size * 10). */
         final float[] decor = new float[MAX_DECOR * 4];
         int decorCount;
@@ -956,12 +960,32 @@ public final class AquariumRenderer {
     }
 
     /** This tank's fish, this moment, into the fish texture. */
+    /** Which tank's fish the fish texture holds now, and for which moment. */
+    private static Floor uploadedFor;
+    private static double uploadedT = -1.0;
+
     private static void uploadFish(Floor floor) {
         Minecraft mc = Minecraft.getInstance();
         long gameTime = mc.level == null ? 0L : mc.level.getGameTime();
         double t = ((gameTime % 1_728_000L) + mc.getTimer().getGameTimeDeltaPartialTick(false)) / 20.0;
-        fishFrame(floor, t);
-        chestSounds(floor, t);
+        if (floor.fishCache != null && floor.fishCacheT == t && floor.fishCacheCount == floor.fishCount) {
+            // (already worked out this frame - drawn again, in a mirror or as an outline: as it was)
+            System.arraycopy(floor.fishCache, 0, FISH_DATA, 0, FISH_DATA.length);
+            if (uploadedFor == floor && uploadedT == t) {
+                return; // (and the texture already holds it)
+            }
+        } else {
+            fishFrame(floor, t);
+            chestSounds(floor, t);
+            if (floor.fishCache == null) {
+                floor.fishCache = new float[FISH_DATA.length];
+            }
+            System.arraycopy(FISH_DATA, 0, floor.fishCache, 0, FISH_DATA.length);
+            floor.fishCacheT = t;
+            floor.fishCacheCount = floor.fishCount;
+        }
+        uploadedFor = floor;
+        uploadedT = t;
         if (fishTex < 0) {
             fishTex = com.mojang.blaze3d.platform.TextureUtil.generateTextureId();
             com.mojang.blaze3d.platform.GlStateManager._bindTexture(fishTex);

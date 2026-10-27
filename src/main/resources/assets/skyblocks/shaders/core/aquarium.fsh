@@ -681,23 +681,17 @@ void main() {
         float fi = float(i);
         // where it is and how it's swimming (worked out on the CPU, once a frame)
         vec4 f0 = texelFetch(FishTex, ivec2(0, i), 0), f1 = texelFetch(FishTex, ivec2(1, i), 0);
-        vec4 f2 = texelFetch(FishTex, ivec2(2, i), 0), f3 = texelFetch(FishTex, ivec2(3, i), 0);
         int kind = int(f1.w + 0.5);
         Species sp = species(kind);
         vec3 c = f0.xyz;
         float size = f0.w;
-        vec3 fwd = f1.xyz, up = f2.xyz;
-        vec3 side = normalize(cross(fwd, up));
-        float wave = f2.w;
-        float squeeze = f3.z;
-        gBeat = f3.x;
-        gBend = f3.y;
-        gFinSway = sin(t * 1.6 + fi);
-        gMouth = 0.5 + 0.5 * sin(t * (2.0 + hash11(fi * 2.2)) + fi * 1.7);
-        gTime = t;
-        gPulse = squeeze;
-        gWalk = f3.w;
-        if (kind == 33) { // an anglerfish's lure: a soft glow in the water round its bulb (seen even where the fish isn't)
+        vec3 fwd = f1.xyz, up = vec3(0.0, 1.0, 0.0), side = vec3(0.0, 0.0, 1.0);
+        float wave = 0.0, squeeze = 0.0;
+        vec4 f3 = vec4(0.0);
+        // (the rest of its data, and how it's swimming: only for a fish the ray may pass near)
+        #define FISH_REST() { vec4 f2 = texelFetch(FishTex, ivec2(2, i), 0); f3 = texelFetch(FishTex, ivec2(3, i), 0); up = f2.xyz; side = normalize(cross(fwd, up)); wave = f2.w; squeeze = f3.z; gBeat = f3.x; gBend = f3.y; gFinSway = sin(t * 1.6 + fi); gMouth = 0.5 + 0.5 * sin(t * (2.0 + hash11(fi * 2.2)) + fi * 1.7); gTime = t; gPulse = squeeze; gWalk = f3.w; }
+        if (kind == 33) {
+            FISH_REST(); // an anglerfish's lure: a soft glow in the water round its bulb (seen even where the fish isn't)
             vec3 lure = anglerLure(sp.body.x, sp.body.y);
             vec3 lw = c + (fwd * lure.x + up * lure.y + side * lure.z) * size - rot;
             float along = dot(lw, rd);
@@ -721,6 +715,7 @@ void main() {
         if (t0 >= t1) {
             continue;
         }
+        if (kind != 33) FISH_REST();
         vec3 F = fwd, U = up, S = side;
         vec3 lo = vec3(dot(oc, F), dot(oc, U), dot(oc, S)) / size;
         vec3 ld = vec3(dot(rd, F), dot(rd, U), dot(rd, S));
@@ -891,6 +886,8 @@ void main() {
     bool deco = false;
     vec3 decoCol = vec3(0.0);
     int decoCount = int(DecoCount + 0.5);
+    vec3 stone0 = vec3(-9.0), stone1 = vec3(-9.0), chest = vec3(-9.0); // (for the bubbles: found on the way)
+    float chestSz = 1.0;
     for (int k = 0; k < 24; k++) {
         if (k >= decoCount) {
             break;
@@ -898,6 +895,13 @@ void main() {
         vec4 dd = decoData(k);
         int pk = int(dd.w + 0.5);
         int type = pk - (pk / 16) * 16;
+        if (type == 14) {
+            if (stone0.y < -1.0) stone0 = dd.xyz; else if (stone1.y < -1.0) stone1 = dd.xyz;
+        }
+        if (type == 5 && chest.y < -1.0) {
+            chest = dd.xyz;
+            chestSz = float(pk / 256) / 10.0;
+        }
         float ang = float((pk / 16) - (pk / 256) * 16) * 0.3927;
         float sz = float(pk / 256) / 10.0;
         vec3 base = dd.xyz;
@@ -970,20 +974,6 @@ void main() {
     }
 
     // ---- bubbles: a stream rising from each air stone, wobbling, growing a little as they rise ----
-    vec3 stone0 = vec3(-9.0), stone1 = vec3(-9.0), chest = vec3(-9.0);
-    float chestSz = 1.0;
-    for (int k = 0; k < 24; k++) {
-        if (k >= int(DecoCount + 0.5)) break;
-        vec4 dd = decoData(k);
-        int pk = int(dd.w + 0.5);
-        if (pk - (pk / 16) * 16 == 14) {
-            if (stone0.y < -1.0) stone0 = dd.xyz; else if (stone1.y < -1.0) stone1 = dd.xyz;
-        }
-        if (pk - (pk / 16) * 16 == 5 && chest.y < -1.0) {
-            chest = dd.xyz;
-            chestSz = float(pk / 256) / 10.0;
-        }
-    }
     vec3 bubbleCol = vec3(0.0);
     float bubbleT = 1.0e9;
     for (int k = 0; k < 46; k++) {
