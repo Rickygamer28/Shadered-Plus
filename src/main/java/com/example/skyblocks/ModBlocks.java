@@ -151,6 +151,10 @@ public final class ModBlocks {
     public static final DeferredBlock<BambooSpoutBlock> BAMBOO_SPOUT = BLOCKS.registerBlock("bamboo_spout", BambooSpoutBlock::new,
             BlockBehaviour.Properties.of().strength(1.0F, 3.0F).sound(SoundType.BAMBOO_WOOD).noOcclusion()
                     .mapColor(net.minecraft.world.level.material.MapColor.PLANT));
+    /** A music box: its lid opens, a dancer turns, it plays a tune; fish and fireflies near it move in time (MusicBoxBlock). */
+    public static final DeferredBlock<MusicBoxBlock> MUSIC_BOX = BLOCKS.registerBlock("music_box", MusicBoxBlock::new,
+            BlockBehaviour.Properties.of().strength(1.0F, 3.0F).sound(SoundType.CHERRY_WOOD).noOcclusion()
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PINK));
     /** A flat stepping stone, for across a koi pond (frogs sit on it). */
     public static final DeferredBlock<SteppingStoneBlock> POND_STEPPING_STONE = BLOCKS.registerBlock("pond_stepping_stone", SteppingStoneBlock::new,
             BlockBehaviour.Properties.of().strength(1.0F, 6.0F).sound(SoundType.STONE).noOcclusion().requiresCorrectToolForDrops()

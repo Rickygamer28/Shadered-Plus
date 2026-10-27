@@ -1,0 +1,149 @@
+{
+ "textures": {
+  "wood": "minecraft:block/cherry_planks",
+  "gold": "minecraft:block/gold_block",
+  "velvet": "minecraft:block/red_wool",
+  "white": "minecraft:block/white_concrete",
+  "pink": "minecraft:block/pink_concrete",
+  "hair": "minecraft:block/brown_concrete",
+  "particle": "minecraft:block/cherry_planks"
+ },
+ "elements": [
+  {
+   "from": [
+    13,
+    2.25,
+    7.75
+   ],
+   "to": [
+    14,
+    2.75,
+    8.25
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      2,
+      13.25,
+      3,
+      13.75
+     ],
+     "texture": "#gold"
+    },
+    "south": {
+     "uv": [
+      13,
+      13.25,
+      14,
+      13.75
+     ],
+     "texture": "#gold"
+    },
+    "east": {
+     "uv": [
+      7.75,
+      13.25,
+      8.25,
+      13.75
+     ],
+     "texture": "#gold"
+    },
+    "west": {
+     "uv": [
+      7.75,
+      13.25,
+      8.25,
+      13.75
+     ],
+     "texture": "#gold"
+    },
+    "up": {
+     "uv": [
+      13,
+      7.75,
+      14,
+      8.25
+     ],
+     "texture": "#gold"
+    },
+    "down": {
+     "uv": [
+      13,
+      7.75,
+      14,
+      8.25
+     ],
+     "texture": "#gold"
+    }
+   }
+  },
+  {
+   "from": [
+    14,
+    1.25,
+    7.5
+   ],
+   "to": [
+    14.5,
+    3.75,
+    8.5
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      1.5,
+      12.25,
+      2,
+      14.75
+     ],
+     "texture": "#gold"
+    },
+    "south": {
+     "uv": [
+      14,
+      12.25,
+      14.5,
+      14.75
+     ],
+     "texture": "#gold"
+    },
+    "east": {
+     "uv": [
+      7.5,
+      12.25,
+      8.5,
+      14.75
+     ],
+     "texture": "#gold"
+    },
+    "west": {
+     "uv": [
+      7.5,
+      12.25,
+      8.5,
+      14.75
+     ],
+     "texture": "#gold"
+    },
+    "up": {
+     "uv": [
+      14,
+      7.5,
+      14.5,
+      8.5
+     ],
+     "texture": "#gold"
+    },
+    "down": {
+     "uv": [
+      14,
+      7.5,
+      14.5,
+      8.5
+     ],
+     "texture": "#gold"
+    }
+   }
+  }
+ ]
+}

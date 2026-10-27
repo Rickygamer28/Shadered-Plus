@@ -235,6 +235,8 @@
   "block.skyblocks.vanilla_koi_pond": "Vanilla Koi Pond",
   "block.skyblocks.bamboo_spout": "Bamboo Water Spout",
   "tooltip.skyblocks.bamboo_spout": "A shishi-odoshi for beside a pond: it fills with water, tips and pours into the pond, then knocks back on its stone with a clack",
+  "block.skyblocks.music_box": "Music Box",
+  "tooltip.skyblocks.music_box": "Click to play a tune (sneak-click for the next one). Fish in aquariums and fireflies over ponds nearby move in time with it",
   "tooltip.skyblocks.vanilla_koi_pond": "A koi pond in plain Minecraft style: tropical fish, frogs on lily pads, the odd duck and turtle. Ponds side by side join into one. Right-click it to choose what its rim and floor are made of",
   "screen.skyblocks.vanilla_pond": "Vanilla Koi Pond",
   "screen.skyblocks.pond_rim": "Rim",

@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "skyblocks:block/music_box"
+    },
+    "facing=east": {
+      "model": "skyblocks:block/music_box",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "skyblocks:block/music_box",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "skyblocks:block/music_box",
+      "y": 270
+    }
+  }
+}

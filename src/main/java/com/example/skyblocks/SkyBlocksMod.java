@@ -65,6 +65,7 @@ public class SkyBlocksMod {
         event.accept(ModItems.KOI_POND.get());
         event.accept(ModItems.VANILLA_KOI_POND.get());
         event.accept(ModItems.BAMBOO_SPOUT.get());
+        event.accept(ModItems.MUSIC_BOX.get());
         event.accept(ModItems.POND_STEPPING_STONE.get());
         event.accept(ModItems.POND_BRIDGE.get());
         event.accept(ModItems.NEON_SIGN.get());

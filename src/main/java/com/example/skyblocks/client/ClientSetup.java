@@ -54,6 +54,7 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.JELLYFISH_TANK.get(), JellyTankRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.KOI_POND.get(), KoiPondRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.BAMBOO_SPOUT.get(), BambooSpoutRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.MUSIC_BOX.get(), MusicBoxRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.NEON_SIGN.get(), NeonSignRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.FOG_MACHINE.get(), FogMachineRenderer::new);
         BlockEntityRendererProvider<OiiaCatBlockEntity> big = OiiaCatRenderer::new;
@@ -205,6 +206,9 @@ public final class ClientSetup {
         event.register(CAUSTICS_OVERLAY);
         event.register(RAIN_OVERLAY);
         event.register(BambooSpoutRenderer.TUBE);
+        event.register(MusicBoxRenderer.LID);
+        event.register(MusicBoxRenderer.DANCER);
+        event.register(MusicBoxRenderer.KEY);
     }
 
     /** The hearth is a glow-colour block entity too: the fires' renderer draws it. */

@@ -1,0 +1,199 @@
+{
+ "textures": {
+  "wood": "minecraft:block/cherry_planks",
+  "gold": "minecraft:block/gold_block",
+  "velvet": "minecraft:block/red_wool",
+  "white": "minecraft:block/white_concrete",
+  "pink": "minecraft:block/pink_concrete",
+  "hair": "minecraft:block/brown_concrete",
+  "particle": "minecraft:block/cherry_planks"
+ },
+ "elements": [
+  {
+   "from": [
+    3,
+    5,
+    4
+   ],
+   "to": [
+    13,
+    6.5,
+    12
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      3,
+      9.5,
+      13,
+      11
+     ],
+     "texture": "#wood"
+    },
+    "south": {
+     "uv": [
+      3,
+      9.5,
+      13,
+      11
+     ],
+     "texture": "#wood"
+    },
+    "east": {
+     "uv": [
+      4,
+      9.5,
+      12,
+      11
+     ],
+     "texture": "#wood"
+    },
+    "west": {
+     "uv": [
+      4,
+      9.5,
+      12,
+      11
+     ],
+     "texture": "#wood"
+    },
+    "up": {
+     "uv": [
+      3,
+      4,
+      13,
+      12
+     ],
+     "texture": "#wood"
+    },
+    "down": {
+     "uv": [
+      3,
+      4,
+      13,
+      12
+     ],
+     "texture": "#velvet"
+    }
+   }
+  },
+  {
+   "from": [
+    2.9,
+    5.6,
+    3.9
+   ],
+   "to": [
+    13.1,
+    6.1,
+    12.1
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      2.9000000000000004,
+      9.9,
+      13.1,
+      10.4
+     ],
+     "texture": "#gold"
+    },
+    "south": {
+     "uv": [
+      2.9,
+      9.9,
+      13.1,
+      10.4
+     ],
+     "texture": "#gold"
+    },
+    "east": {
+     "uv": [
+      3.9000000000000004,
+      9.9,
+      12.1,
+      10.4
+     ],
+     "texture": "#gold"
+    },
+    "west": {
+     "uv": [
+      3.9,
+      9.9,
+      12.1,
+      10.4
+     ],
+     "texture": "#gold"
+    }
+   }
+  },
+  {
+   "from": [
+    7,
+    6.5,
+    7
+   ],
+   "to": [
+    9,
+    7,
+    9
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      7,
+      9,
+      9,
+      9.5
+     ],
+     "texture": "#gold"
+    },
+    "south": {
+     "uv": [
+      7,
+      9,
+      9,
+      9.5
+     ],
+     "texture": "#gold"
+    },
+    "east": {
+     "uv": [
+      7,
+      9,
+      9,
+      9.5
+     ],
+     "texture": "#gold"
+    },
+    "west": {
+     "uv": [
+      7,
+      9,
+      9,
+      9.5
+     ],
+     "texture": "#gold"
+    },
+    "up": {
+     "uv": [
+      7,
+      7,
+      9,
+      9
+     ],
+     "texture": "#gold"
+    },
+    "down": {
+     "uv": [
+      7,
+      7,
+      9,
+      9
+     ],
+     "texture": "#gold"
+    }
+   }
+  }
+ ]
+}

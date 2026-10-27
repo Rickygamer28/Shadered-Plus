@@ -586,6 +586,28 @@ public final class AquariumRenderer {
                 cleaner(floor, i, t, px, py, pz, vxs, vys, vzs, axs, azs, sizes, beats, walks, squeezes, lo, hi, ovF, ovU, ov);
             }
         }
+        // ---- a music box playing near the tank: every fish hops with each note, swaying one way then the other ----
+        Minecraft mcm = Minecraft.getInstance();
+        if (mcm.level != null) {
+            double cxw = floor.min.getX() + floor.sizeX * 0.5, cyw = floor.min.getY() + floor.sizeY * 0.5, czw = floor.min.getZ() + floor.sizeZ * 0.5;
+            float[] beat = com.example.skyblocks.MusicBoxBlockEntity.beat(mcm.level, cxw, cyw, czw, 10.0 + Math.max(floor.sizeX, floor.sizeZ) * 0.5,
+                    mcm.getTimer().getGameTimeDeltaPartialTick(false));
+            if (beat[0] > 0.002) {
+                for (int i = 0; i < n; i++) {
+                    boolean low = crawler(floor.kinds[i]);
+                    double side = ((int) beat[1] + i) % 2 == 0 ? 1.0 : -1.0;
+                    double hop = beat[0] * (low ? 0.025 : 0.05) * Math.max(sizes[i], 0.4);
+                    py[i] += hop;
+                    if (!low) {
+                        px[i] += side * beat[0] * 0.02 * vzs[i] / Math.max(Math.hypot(vxs[i], vzs[i]), 1.0e-4);
+                        pz[i] -= side * beat[0] * 0.02 * vxs[i] / Math.max(Math.hypot(vxs[i], vzs[i]), 1.0e-4);
+                        beats[i] = Math.max(beats[i], 0.6 + 0.4 * beat[0]);
+                    } else {
+                        walks[i] += beat[0] * 0.15; // (tapping its feet)
+                    }
+                }
+            }
+        }
         // ---- keeping out of each other's way: each fish eases away from any it's too close to (the smaller one
         // moving more), and drifts back to its own path once clear ----
         long key = floor.min.asLong() * 31L + n * 7L + (floor.ocean ? 1L : 0L);

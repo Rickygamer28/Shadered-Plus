@@ -40,6 +40,8 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(KoiPondBlockEntity::new, ModBlocks.KOI_POND.get(), ModBlocks.VANILLA_KOI_POND.get()).build(null));
     public static final Supplier<BlockEntityType<BambooSpoutBlockEntity>> BAMBOO_SPOUT = TYPES.register("bamboo_spout",
             () -> BlockEntityType.Builder.of(BambooSpoutBlockEntity::new, ModBlocks.BAMBOO_SPOUT.get()).build(null));
+    public static final Supplier<BlockEntityType<MusicBoxBlockEntity>> MUSIC_BOX = TYPES.register("music_box",
+            () -> BlockEntityType.Builder.of(MusicBoxBlockEntity::new, ModBlocks.MUSIC_BOX.get()).build(null));
     public static final Supplier<BlockEntityType<BrickHearthBlockEntity>> BRICK_HEARTH = TYPES.register("brick_hearth",
             () -> BlockEntityType.Builder.of(BrickHearthBlockEntity::new, ModBlocks.BRICK_HEARTH.get()).build(null));
 

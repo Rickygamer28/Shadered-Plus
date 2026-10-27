@@ -237,6 +237,12 @@ public final class PondLife {
         int[] rect = pond.rect();
         int count = Math.max(4, Math.min(14, (int) (pond.blocks() * 1.5F)));
         VertexConsumer vc = buffers.getBuffer(RenderType.eyes(GLOW));
+        // a music box playing near the pond: they all flash with its notes (taking turns, in threes) and bob to it
+        net.minecraft.client.multiplayer.ClientLevel lv = Minecraft.getInstance().level;
+        float[] beat = lv == null ? new float[] {0.0F, 0.0F, 0.0F} : com.example.skyblocks.MusicBoxBlockEntity.beat(lv,
+                (rect[0] + rect[1] + 1) * 0.5, s.y() + 1.0, (rect[2] + rect[3] + 1) * 0.5, 12.0 + (rect[1] - rect[0] + rect[3] - rect[2]) * 0.25,
+                Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false));
+        float pulse = beat[2] > 0.0F ? beat[0] / beat[2] : 0.0F;
         for (int f = 0; f < count; f++) {
             float bx = rect[0] - 0.3F + (rect[1] - rect[0] + 1.6F) * h(anchor, 200 + f);
             float bz = rect[2] - 0.3F + (rect[3] - rect[2] + 1.6F) * h(anchor, 210 + f);
@@ -248,6 +254,11 @@ public final class PondLife {
             float period = 2.5F + 2.5F * h(anchor, 240 + f);
             float ph = (t / period + h(anchor, 250 + f)) % 1.0F;
             float glow = (float) Math.pow(Math.max(Mth.sin(ph * Mth.TWO_PI), 0.0F), 3.0) * fade;
+            if (beat[2] > 0.0F) {
+                float turn = (f + (int) beat[1]) % 3 == 0 ? 1.0F : 0.2F;
+                glow = glow + (Math.min(1.0F, pulse * turn * 1.2F) * fade - glow) * beat[2];
+                y += 0.08 * pulse * beat[2] * turn;
+            }
             if (glow < 0.02F) continue;
             billboard(vc, poseStack, facing, x, y, z, 0.16F * (0.6F + 0.4F * glow), 0.55F * glow, 0.85F * glow, 0.18F * glow); // (its halo)
             billboard(vc, poseStack, facing, x, y, z, 0.035F, glow, glow, 0.6F * glow);                                          // (its light)
