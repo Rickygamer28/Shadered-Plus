@@ -244,8 +244,16 @@ public final class AquariumRenderer {
         if (FLOORS.isEmpty() || shader == null || Minecraft.getInstance().level == null) {
             return;
         }
-        draw(FLOORS, new Vec3(ex, ey, ez), modelView, projection, true, new ArrayList<>(), RANGE);
+        lite = true; // (in a mirror: the cheaper look)
+        try {
+            draw(FLOORS, new Vec3(ex, ey, ez), modelView, projection, true, new ArrayList<>(), RANGE);
+        } finally {
+            lite = false;
+        }
     }
+
+    /** Drawing into a mirror's picture: coarser tracing, simpler light patterns. */
+    private static boolean lite;
 
     private static void draw(List<Floor> floors, Vec3 cam, Matrix4f modelView, Matrix4f projection, boolean writeDepth, List<Runnable> shapes,
                              double range) {
@@ -266,6 +274,7 @@ public final class AquariumRenderer {
         RenderSystem.polygonOffset(-2.0F, -20.0F); // over the blocks' own faces
         try {
             shader.safeGetUniform("Time").set(seconds);
+            shader.safeGetUniform("Lite").set(lite ? 1.0F : 0.0F);
             shader.safeGetUniform("Night").set((float) night());
             shader.safeGetUniform("Eye").set(eyeOffset.x, eyeOffset.y, eyeOffset.z);
             RenderSystem.setShader(() -> shader);

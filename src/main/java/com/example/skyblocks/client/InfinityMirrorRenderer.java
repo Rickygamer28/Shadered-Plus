@@ -357,7 +357,12 @@ public final class InfinityMirrorRenderer {
         }
         Vec3 at = new Vec3(ex, ey, ez);
         Vector3f eyeRel = eyeOf(projection, modelView);
-        drawSet(world, at, at.add(eyeRel.x, eyeRel.y, eyeRel.z), eyeRel, modelView, projection, true, new ArrayList<>());
+        InfinityCubeRenderer.lite = true;
+        try {
+            drawSet(world, at, at.add(eyeRel.x, eyeRel.y, eyeRel.z), eyeRel, modelView, projection, true, new ArrayList<>());
+        } finally {
+            InfinityCubeRenderer.lite = false;
+        }
     }
 
     /**

@@ -16,6 +16,7 @@ uniform vec3 ColorDeep;  // ...and after many reflections
 uniform float Rainbow;   // 1: every colour
 uniform float Time;      // seconds
 uniform float PixelSize; // how wide one pixel is at one block away
+uniform float Lite;      // 1: seen in a mirror - fewer reflections followed (fading out sooner)
 
 in vec3 facePos;
 
@@ -131,9 +132,13 @@ void main() {
         // this box: from t0 to t1, positions relative to its corner
         vec3 origin = cell * size;
         vec3 local = q - origin;
-        if (pow(KEEP, t0 * perBlock) < 0.004) {
+        float keepNow = pow(KEEP, t0 * perBlock);
+        // (in a mirror: the reflections followed until they're a few times brighter, fading out before the cut)
+        float cut = Lite > 0.5 ? 0.035 : 0.004;
+        if (keepNow < cut) {
             break;
         }
+        vec3 before = lit;
         lit += strip(0, inset, inset, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
              + strip(0, hi.y, inset, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
              + strip(0, inset, hi.z, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
@@ -146,7 +151,10 @@ void main() {
              + strip(2, hi.x, inset, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
              + strip(2, inset, hi.y, local, sight, t0, t1, size, eyeDistance, perBlock, origin)
              + strip(2, hi.x, hi.y, local, sight, t0, t1, size, eyeDistance, perBlock, origin);
-        lit += ledColor(origin, t0 * perBlock) * 0.004 * pow(KEEP, t0 * perBlock); // (a faint glow in the glass)
+        lit += ledColor(origin, t0 * perBlock) * 0.004 * keepNow; // (a faint glow in the glass)
+        if (Lite > 0.5) {
+            lit = before + (lit - before) * smoothstep(cut, cut * 3.0, keepNow);
+        }
         // on to the next box
         t0 = t1;
         tNext[axis] += tStep[axis];

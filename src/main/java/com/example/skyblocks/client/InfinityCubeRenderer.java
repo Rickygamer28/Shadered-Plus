@@ -25,6 +25,9 @@ import org.lwjgl.opengl.GL11;
 final class InfinityCubeRenderer {
     private static final double RANGE = 128.0;
 
+    /** Drawing into a mirror's picture: the cheaper look (fewer reflections followed). */
+    static boolean lite;
+
     private InfinityCubeRenderer() {}
 
     /**
@@ -39,7 +42,10 @@ final class InfinityCubeRenderer {
             return;
         }
         FrustumIntersection seen = new FrustumIntersection(new Matrix4f(projection).mul(modelView));
-        int height = Math.max(1, Minecraft.getInstance().getMainRenderTarget().height);
+        // (the picture being drawn into: in a mirror, its own picture - not the screen - sets how big a pixel is)
+        int[] viewport = new int[4];
+        GL11.glGetIntegerv(GL11.GL_VIEWPORT, viewport);
+        int height = Math.max(1, viewport[3] > 0 ? viewport[3] : Minecraft.getInstance().getMainRenderTarget().height);
         float pixel = 2.0F / (Math.abs(projection.m11()) * height);
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL11.GL_LEQUAL);
@@ -76,6 +82,7 @@ final class InfinityCubeRenderer {
                 shader.safeGetUniform("Rainbow").set(InfinityMirrorRenderer.isRainbow(b.color()) ? 1.0F : 0.0F);
                 shader.safeGetUniform("Time").set(seconds);
                 shader.safeGetUniform("PixelSize").set(pixel);
+                shader.safeGetUniform("Lite").set(lite ? 1.0F : 0.0F);
                 shader.safeGetUniform("Pull").set(InfinityMirrorRenderer.pull);
                 RenderSystem.setShader(() -> shader);
                 MeshData mesh = mesh(facing, origin);

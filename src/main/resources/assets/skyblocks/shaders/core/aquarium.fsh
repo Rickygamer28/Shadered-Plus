@@ -33,6 +33,7 @@ uniform float FishCount;
 uniform float Ocean;
 uniform float Night;   // 0 day .. 1 night: the tank lights dimmed, the jellyfish glowing
 uniform float Light;   // the tank's light: 0 daylight, 1 moonlight, 2 sunset, 3 reef
+uniform float Lite;    // 1: seen in a mirror - a cheaper look (coarser tracing, simpler light patterns)
 uniform float Deep;    // 1: the deep sea aquarium (always dark; no plants, no sunlight; its creatures glow)
 // decorations: (x, y, z of its base, type + 8 * (turn + 16 * size * 10))
 uniform vec4 Deco0;
@@ -104,6 +105,11 @@ vec3 lightWater(float y, vec3 usual) {
 
 float caustics(vec2 p, float t) {
     p *= 2.2;
+    if (Lite > 0.5) { // (in a mirror: crossing ripples instead of the cell pattern - much cheaper, much the same look)
+        float a = sin(p.x * 2.6 + sin(p.y * 1.7 + t * 0.7) + t * 0.9), b = sin(p.y * 2.9 + sin(p.x * 1.9 - t * 0.6) - t * 0.8);
+        float c = 1.0 - abs(a + b) * 0.5;
+        return c * c * c * c;
+    }
     vec2 i = floor(p), f = fract(p);
     float f1 = 8.0, f2 = 8.0;
     for (int y = -1; y <= 1; y++) {
@@ -876,10 +882,14 @@ void main() {
         vec3 q = vec3(0.0);
         float tm = t0;
         float bestR = 1.0e9, bestT = -1.0; // (how close the ray passes, in pixels: for smooth edges)
+        // (in a mirror: bigger steps, done a little sooner, no soft edges)
+        int fishSteps = Lite > 0.5 ? 40 : 96;
+        float hitPx = Lite > 0.5 ? 0.35 : 0.12, minPx = Lite > 0.5 ? 0.3 : 0.08, stepK = Lite > 0.5 ? 0.9 : 0.6;
         for (int s = 0; s < 96; s++) {
+            if (s >= fishSteps) break;
             float d = fishSDF(kind, sp, lo + ld * (tm / size), wave, flap, pulse, part_, q) * size;
             float px = pixA * tm;
-            if (d < max(0.0004, 0.12 * px)) {
+            if (d < max(0.0004, hitPx * px)) {
                 tf = tm;
                 break;
             }
@@ -887,13 +897,13 @@ void main() {
                 bestR = d / px;
                 bestT = tm;
             }
-            tm += max(d * 0.6, 0.0003 + 0.08 * px);
+            tm += max(d * stepK, 0.0003 + minPx * px);
             if (tm > t1) {
                 break;
             }
         }
         if (tf < 0.0) { // missed: but if it passed within a pixel, part of this pixel is fish (a soft edge)
-            if (bestT < 0.0 || bestR > 1.0 || bestT >= edgeT) {
+            if (Lite > 0.5 || bestT < 0.0 || bestR > 1.0 || bestT >= edgeT) {
                 continue;
             }
             float cover = 1.0 - smoothstep(0.12, 1.0, bestR);
@@ -964,14 +974,15 @@ void main() {
         vec3 ld = vec3(ca * rd.x + sa * rd.z, rd.y, -sa * rd.x + ca * rd.z);
         float tm = t0, td = -1.0;
         int steps = type == 13 ? 72 : type == 12 ? 56 : 40; // (the thin seaweed takes more little steps)
+        if (Lite > 0.5) steps /= 2;
         for (int s = 0; s < 72; s++) {
             if (s >= steps) break;
             float d = decoSDF(type, lo + ld * (tm / sz), t) * sz;
-            if (d < 0.0012) {
+            if (d < (Lite > 0.5 ? 0.003 : 0.0012)) {
                 td = tm;
                 break;
             }
-            tm += max(d * 0.8, 0.0015);
+            tm += max(d * (Lite > 0.5 ? 1.0 : 0.8), Lite > 0.5 ? 0.003 : 0.0015);
             if (tm > t1) {
                 break;
             }
