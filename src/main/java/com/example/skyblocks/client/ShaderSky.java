@@ -174,7 +174,7 @@ public final class ShaderSky {
 
         @Override
         public TextureTarget getSkyboxTarget() {
-            SkyUsage.mark(batch, "its picture asked for");
+            SkyUsage.markLight(batch); // (whoever asks says what for: the render types - ModRenderTypesMixin)
             return target;
         }
 

@@ -70,6 +70,6 @@ public abstract class SkyPassMixin implements SkyUsage.Pass {
 
     @Inject(method = "getSkyboxTarget", at = @At("HEAD"), require = 0, remap = false)
     private void skyblocks$targetWanted(CallbackInfoReturnable<?> cir) {
-        SkyUsage.mark(batchData, "its picture asked for");
+        SkyUsage.markLight(batchData); // (whoever asks says what for: the render types - ModRenderTypesMixin)
     }
 }
