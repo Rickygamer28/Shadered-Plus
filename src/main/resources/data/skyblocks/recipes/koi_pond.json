@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "SLS",
+    "SWS",
+    "SFS"
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:stone_bricks"
+    },
+    "L": {
+      "item": "minecraft:lily_pad"
+    },
+    "W": {
+      "item": "minecraft:water_bucket"
+    },
+    "F": {
+      "item": "minecraft:cod"
+    }
+  },
+  "result": {
+    "count": 2,
+    "item": "skyblocks:koi_pond"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "parent": "skyblocks:block/koi_pond_base",
+  "textures": {
+    "stone": "minecraft:block/gravel",
+    "particle": "minecraft:block/mossy_stone_bricks"
+  }
+}

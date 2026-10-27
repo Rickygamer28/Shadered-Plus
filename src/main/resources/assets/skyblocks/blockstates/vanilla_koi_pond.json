@@ -1,0 +1,41 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "skyblocks:block/vanilla_koi_pond_base"
+      }
+    },
+    {
+      "when": {
+        "north": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/vanilla_koi_pond_north"
+      }
+    },
+    {
+      "when": {
+        "south": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/vanilla_koi_pond_south"
+      }
+    },
+    {
+      "when": {
+        "west": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/vanilla_koi_pond_west"
+      }
+    },
+    {
+      "when": {
+        "east": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/vanilla_koi_pond_east"
+      }
+    }
+  ]
+}

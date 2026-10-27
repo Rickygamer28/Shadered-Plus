@@ -1,0 +1,28 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "minecraft:light_blue_concrete"
+    },
+    {
+      "item": "minecraft:light_blue_concrete"
+    },
+    {
+      "item": "minecraft:light_blue_concrete"
+    },
+    {
+      "item": "minecraft:light_blue_concrete"
+    },
+    {
+      "item": "minecraft:water_bucket"
+    },
+    {
+      "item": "minecraft:prismarine_crystals"
+    }
+  ],
+  "result": {
+    "count": 4,
+    "item": "skyblocks:water_caustics"
+  }
+}

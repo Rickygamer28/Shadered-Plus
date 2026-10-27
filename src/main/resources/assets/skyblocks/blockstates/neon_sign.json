@@ -1,0 +1,216 @@
+{
+  "multipart": [
+    {
+      "when": {
+        "facing": "north"
+      },
+      "apply": {
+        "model": "skyblocks:block/neon_sign",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "up": "false",
+        "left": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/neon_sign_bolt_ul",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "up": "false",
+        "right": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/neon_sign_bolt_ur",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "down": "false",
+        "left": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/neon_sign_bolt_dl",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "down": "false",
+        "right": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/neon_sign_bolt_dr",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "east"
+      },
+      "apply": {
+        "model": "skyblocks:block/neon_sign",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "up": "false",
+        "left": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/neon_sign_bolt_ul",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "up": "false",
+        "right": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/neon_sign_bolt_ur",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "down": "false",
+        "left": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/neon_sign_bolt_dl",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "down": "false",
+        "right": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/neon_sign_bolt_dr",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "south"
+      },
+      "apply": {
+        "model": "skyblocks:block/neon_sign",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "up": "false",
+        "left": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/neon_sign_bolt_ul",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "up": "false",
+        "right": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/neon_sign_bolt_ur",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "down": "false",
+        "left": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/neon_sign_bolt_dl",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "down": "false",
+        "right": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/neon_sign_bolt_dr",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "west"
+      },
+      "apply": {
+        "model": "skyblocks:block/neon_sign",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "up": "false",
+        "left": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/neon_sign_bolt_ul",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "up": "false",
+        "right": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/neon_sign_bolt_ur",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "down": "false",
+        "left": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/neon_sign_bolt_dl",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "down": "false",
+        "right": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/neon_sign_bolt_dr",
+        "y": 270
+      }
+    }
+  ]
+}

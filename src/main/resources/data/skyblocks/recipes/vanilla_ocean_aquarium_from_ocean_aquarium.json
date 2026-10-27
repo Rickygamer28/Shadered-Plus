@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "skyblocks:ocean_aquarium"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "item": "skyblocks:vanilla_ocean_aquarium"
+  }
+}

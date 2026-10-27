@@ -1,0 +1,75 @@
+{
+    "vertex": "skyblocks:hologram",
+    "fragment": "skyblocks:hologram",
+    "samplers": [
+        {
+            "name": "Sampler0"
+        }
+    ],
+    "uniforms": [
+        {
+            "name": "ModelViewMat",
+            "type": "matrix4x4",
+            "count": 16,
+            "values": [
+                1,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                1
+            ]
+        },
+        {
+            "name": "ProjMat",
+            "type": "matrix4x4",
+            "count": 16,
+            "values": [
+                1,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                1
+            ]
+        },
+        {
+            "name": "HoloColor",
+            "type": "float",
+            "count": 3,
+            "values": [
+                0.3,
+                0.9,
+                1.0
+            ]
+        },
+        {
+            "name": "HoloTime",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
+            ]
+        }
+    ]
+}

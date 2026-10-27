@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "down=false,up=false": {
+      "model": "skyblocks:block/ocean_aquarium"
+    },
+    "down=false,up=true": {
+      "model": "skyblocks:block/ocean_aquarium_bottom"
+    },
+    "down=true,up=false": {
+      "model": "skyblocks:block/ocean_aquarium_top"
+    },
+    "down=true,up=true": {
+      "model": "skyblocks:block/ocean_aquarium_middle"
+    }
+  }
+}

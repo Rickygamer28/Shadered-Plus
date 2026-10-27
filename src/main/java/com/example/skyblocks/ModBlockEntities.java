@@ -25,5 +25,40 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(SkyIslandBlockEntity::new, ModBlocks.SKY_ISLAND.get(),
                     ModBlocks.ISLAND_PAINTING.get()).build(null));
 
+    public static final Supplier<BlockEntityType<GlowColourBlockEntity>> LAVA_LAMP = TYPES.register("lava_lamp",
+            () -> BlockEntityType.Builder.of(GlowColourBlockEntity::lavaLamp, ModBlocks.LAVA_LAMP.get(), ModBlocks.BIG_LAVA_LAMP.get()).build(null));
+
+    public static final Supplier<BlockEntityType<GlowColourBlockEntity>> FIRE = TYPES.register("fire",
+            () -> BlockEntityType.Builder.of(GlowColourBlockEntity::fire, ModBlocks.FIRE_TORNADO.get()).build(null));
+    public static final Supplier<BlockEntityType<GlowColourBlockEntity>> VISUALIZER = TYPES.register("music_visualizer",
+            () -> BlockEntityType.Builder.of(GlowColourBlockEntity::visualizer, ModBlocks.MUSIC_VISUALIZER.get()).build(null));
+    public static final Supplier<BlockEntityType<HologramBlockEntity>> HOLOGRAM = TYPES.register("hologram_projector",
+            () -> BlockEntityType.Builder.of(HologramBlockEntity::new, ModBlocks.HOLOGRAM_PROJECTOR.get()).build(null));
+    public static final Supplier<BlockEntityType<GlowColourBlockEntity>> JELLYFISH_TANK = TYPES.register("jellyfish_tank",
+            () -> BlockEntityType.Builder.of(GlowColourBlockEntity::jellyTank, ModBlocks.JELLYFISH_TANK.get()).build(null));
+    public static final Supplier<BlockEntityType<KoiPondBlockEntity>> KOI_POND = TYPES.register("koi_pond",
+            () -> BlockEntityType.Builder.of(KoiPondBlockEntity::new, ModBlocks.KOI_POND.get(), ModBlocks.VANILLA_KOI_POND.get()).build(null));
+    public static final Supplier<BlockEntityType<BambooSpoutBlockEntity>> BAMBOO_SPOUT = TYPES.register("bamboo_spout",
+            () -> BlockEntityType.Builder.of(BambooSpoutBlockEntity::new, ModBlocks.BAMBOO_SPOUT.get()).build(null));
+    public static final Supplier<BlockEntityType<MusicBoxBlockEntity>> MUSIC_BOX = TYPES.register("music_box",
+            () -> BlockEntityType.Builder.of(MusicBoxBlockEntity::new, ModBlocks.MUSIC_BOX.get()).build(null));
+    public static final Supplier<BlockEntityType<BrickHearthBlockEntity>> BRICK_HEARTH = TYPES.register("brick_hearth",
+            () -> BlockEntityType.Builder.of(BrickHearthBlockEntity::new, ModBlocks.BRICK_HEARTH.get()).build(null));
+
+    public static final Supplier<BlockEntityType<NeonSignBlockEntity>> NEON_SIGN = TYPES.register("neon_sign",
+            () -> BlockEntityType.Builder.of(NeonSignBlockEntity::new, ModBlocks.NEON_SIGN.get()).build(null));
+
+    public static final Supplier<BlockEntityType<WaterCausticsBlockEntity>> WATER_CAUSTICS = TYPES.register("water_caustics",
+            () -> BlockEntityType.Builder.of(WaterCausticsBlockEntity::new, ModBlocks.WATER_CAUSTICS.get(), ModBlocks.RAIN_GLASS.get()).build(null));
+
+    public static final Supplier<BlockEntityType<DiscoBallBlockEntity>> DISCO_BALL = TYPES.register("disco_ball",
+            () -> BlockEntityType.Builder.of(DiscoBallBlockEntity::new, ModBlocks.DISCO_BALL.get()).build(null));
+
+    public static final Supplier<BlockEntityType<FogMachineBlockEntity>> FOG_MACHINE = TYPES.register("fog_machine",
+            () -> BlockEntityType.Builder.of(FogMachineBlockEntity::new, ModBlocks.FOG_MACHINE.get()).build(null));
+
+    public static final Supplier<BlockEntityType<SpeakerBlockEntity>> SPEAKER = TYPES.register("speaker",
+            () -> BlockEntityType.Builder.of(SpeakerBlockEntity::new, ModBlocks.SPEAKER.get()).build(null));
+
     private ModBlockEntities() {}
 }

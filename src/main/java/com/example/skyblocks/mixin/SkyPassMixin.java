@@ -44,11 +44,16 @@ public abstract class SkyPassMixin implements SkyUsage.Pass {
         if (stage == RenderStage.AFTER_SKY) {
             SkyUsage.skyStage(renderTick, partialTick);
         }
-        if (!SkyUsage.recentlyUsed(batchData)) {
-            ci.cancel();
+        if (!SkyUsage.drawAtSkyStage(batchData)) {
+            ci.cancel(); // (unused; or only sky blocks use it: drawn just before them, where they are - SkyUsage)
             return;
         }
         skyblocks$drawnFrame = SkyUsage.frame(); // drawn this frame (at the sky stage or on demand)
+    }
+
+    @Inject(method = "render", at = @At("RETURN"), require = 0, remap = false)
+    private void skyblocks$skyStageDone(RenderStage stage, PoseStack poseStack, int renderTick, float partialTick, CallbackInfo ci) {
+        SkyUsage.endSkyStageDraw(); // (a hotbar-only picture's scissor)
     }
 
     @org.spongepowered.asm.mixin.Unique
@@ -65,6 +70,6 @@ public abstract class SkyPassMixin implements SkyUsage.Pass {
 
     @Inject(method = "getSkyboxTarget", at = @At("HEAD"), require = 0, remap = false)
     private void skyblocks$targetWanted(CallbackInfoReturnable<?> cir) {
-        SkyUsage.mark(batchData);
+        SkyUsage.markLight(batchData); // (whoever asks says what for: the render types - ModRenderTypesMixin)
     }
 }

@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "decorations",
+  "pattern": [
+    "BB ",
+    "B B",
+    "BCB"
+  ],
+  "key": {
+    "B": {
+      "item": "minecraft:bamboo"
+    },
+    "C": {
+      "item": "minecraft:mossy_cobblestone"
+    }
+  },
+  "result": {
+    "count": 1,
+    "item": "skyblocks:bamboo_spout"
+  }
+}

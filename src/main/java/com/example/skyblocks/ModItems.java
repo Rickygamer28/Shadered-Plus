@@ -46,6 +46,67 @@ public final class ModItems {
     public static final RegistryObject<BlockItem> MIRROR = ITEMS.register("mirror",
             () -> new BlockItem(ModBlocks.MIRROR.get(), new Item.Properties()));
 
+    public static final RegistryObject<BlockItem> DANCE_FLOOR = ITEMS.register("dance_floor",
+            () -> new BlockItem(ModBlocks.DANCE_FLOOR.get(), new Item.Properties()));
+
+    public static final RegistryObject<BlockItem> FOG_MACHINE = ITEMS.register("fog_machine",
+            () -> new BlockItem(ModBlocks.FOG_MACHINE.get(), new Item.Properties()));
+
+    public static final RegistryObject<BlockItem> SPEAKER = ITEMS.register("speaker",
+            () -> new BlockItem(ModBlocks.SPEAKER.get(), new Item.Properties()));
+
+    public static final RegistryObject<BlockItem> AQUARIUM = ITEMS.register("aquarium",
+            () -> new BlockItem(ModBlocks.AQUARIUM.get(), new Item.Properties()));
+
+    public static final RegistryObject<BlockItem> OCEAN_AQUARIUM = ITEMS.register("ocean_aquarium",
+            () -> new BlockItem(ModBlocks.OCEAN_AQUARIUM.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> VANILLA_AQUARIUM = ITEMS.register("vanilla_aquarium",
+            () -> new BlockItem(ModBlocks.VANILLA_AQUARIUM.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> DEEP_SEA_AQUARIUM = ITEMS.register("deep_sea_aquarium",
+            () -> new BlockItem(ModBlocks.DEEP_SEA_AQUARIUM.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> AQUARIUM_STAND = ITEMS.register("aquarium_stand",
+            () -> new BlockItem(ModBlocks.AQUARIUM_STAND.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> AQUARIUM_LID = ITEMS.register("aquarium_lid",
+            () -> new BlockItem(ModBlocks.AQUARIUM_LID.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> VANILLA_OCEAN_AQUARIUM = ITEMS.register("vanilla_ocean_aquarium",
+            () -> new BlockItem(ModBlocks.VANILLA_OCEAN_AQUARIUM.get(), new Item.Properties()));
+
+    public static final RegistryObject<BlockItem> DISCO_BALL = ITEMS.register("disco_ball",
+            () -> new RenderedBlockItem(ModBlocks.DISCO_BALL.get(), new Item.Properties(), "disco_ball"));
+
+    public static final RegistryObject<BlockItem> WATER_CAUSTICS = ITEMS.register("water_caustics",
+            () -> new BlockItem(ModBlocks.WATER_CAUSTICS.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> RAIN_GLASS = ITEMS.register("rain_glass",
+            () -> new BlockItem(ModBlocks.RAIN_GLASS.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> LAVA_LAMP = ITEMS.register("lava_lamp",
+            () -> new RenderedBlockItem(ModBlocks.LAVA_LAMP.get(), new Item.Properties(), "lava_lamp"));
+    public static final RegistryObject<BlockItem> BIG_LAVA_LAMP = ITEMS.register("big_lava_lamp",
+            () -> new RenderedBlockItem(ModBlocks.BIG_LAVA_LAMP.get(), new Item.Properties(), "big_lava_lamp"));
+    public static final RegistryObject<BlockItem> FIRE_TORNADO = ITEMS.register("fire_tornado",
+            () -> new RenderedBlockItem(ModBlocks.FIRE_TORNADO.get(), new Item.Properties(), "fire_tornado"));
+    public static final RegistryObject<BlockItem> BRICK_HEARTH = ITEMS.register("brick_hearth",
+            () -> new BlockItem(ModBlocks.BRICK_HEARTH.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> MUSIC_VISUALIZER = ITEMS.register("music_visualizer",
+            () -> new BlockItem(ModBlocks.MUSIC_VISUALIZER.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> HOLOGRAM_PROJECTOR = ITEMS.register("hologram_projector",
+            () -> new BlockItem(ModBlocks.HOLOGRAM_PROJECTOR.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> JELLYFISH_TANK = ITEMS.register("jellyfish_tank",
+            () -> new RenderedBlockItem(ModBlocks.JELLYFISH_TANK.get(), new Item.Properties(), "jellyfish_tank"));
+    public static final RegistryObject<BlockItem> KOI_POND = ITEMS.register("koi_pond",
+            () -> new BlockItem(ModBlocks.KOI_POND.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> VANILLA_KOI_POND = ITEMS.register("vanilla_koi_pond",
+            () -> new BlockItem(ModBlocks.VANILLA_KOI_POND.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> BAMBOO_SPOUT = ITEMS.register("bamboo_spout",
+            () -> new BlockItem(ModBlocks.BAMBOO_SPOUT.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> MUSIC_BOX = ITEMS.register("music_box",
+            () -> new BlockItem(ModBlocks.MUSIC_BOX.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> POND_STEPPING_STONE = ITEMS.register("pond_stepping_stone",
+            () -> new BlockItem(ModBlocks.POND_STEPPING_STONE.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> POND_BRIDGE = ITEMS.register("pond_bridge",
+            () -> new BlockItem(ModBlocks.POND_BRIDGE.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> NEON_SIGN = ITEMS.register("neon_sign",
+            () -> new BlockItem(ModBlocks.NEON_SIGN.get(), new Item.Properties()));
+
     public static final RegistryObject<BlockItem> INFINITY_MIRROR = ITEMS.register("infinity_mirror",
             () -> new BlockItem(ModBlocks.INFINITY_MIRROR.get(), new Item.Properties()));
 

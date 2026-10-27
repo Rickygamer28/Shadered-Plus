@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "skyblocks:block/aquarium_stand_top",
+    "front": "skyblocks:block/aquarium_stand_front",
+    "side": "skyblocks:block/aquarium_stand_side"
+  }
+}

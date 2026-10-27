@@ -75,6 +75,8 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
     /** The infinity mirrors and cubes inside (worked out the first time it's needed). */
     @Nullable
     private com.example.skyblocks.client.InfinitySet infinity;
+    private com.example.skyblocks.client.AquariumRenderer.Island aquariums;
+    private com.example.skyblocks.client.DanceFloorRenderer.Island danceFloors;
     /** Resource reload count the mesh was baked for (textures move on the atlas after a reload). */
     private int meshGeneration = -1;
     private long lastTick = -1;
@@ -351,6 +353,22 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
             infinity = com.example.skyblocks.client.InfinityMirrorRenderer.islandSet(this, size, height, size);
         }
         return infinity;
+    }
+
+    /** The aquariums inside, ready to draw. */
+    public com.example.skyblocks.client.AquariumRenderer.Island aquariums() {
+        if (aquariums == null) {
+            aquariums = com.example.skyblocks.client.AquariumRenderer.islandSet(this, size, height, size);
+        }
+        return aquariums;
+    }
+
+    /** The dance floors inside, ready to draw. */
+    public com.example.skyblocks.client.DanceFloorRenderer.Island danceFloors() {
+        if (danceFloors == null) {
+            danceFloors = com.example.skyblocks.client.DanceFloorRenderer.islandSet(this, size, height, size);
+        }
+        return danceFloors;
     }
 
     BlockState stateAt(int x, int y, int z) {

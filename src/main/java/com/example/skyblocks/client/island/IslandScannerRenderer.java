@@ -52,6 +52,8 @@ public class IslandScannerRenderer implements BlockEntityRenderer<IslandScannerB
 
     /** How often the area is checked for changes (ticks); the preview is rebuilt only when something changed. */
     private static final int PREVIEW_REFRESH = 20;
+    /** The preview's block entities (chests, sky blocks, cats...) are drawn up to this far away. */
+    private static final double PREVIEW_DETAIL = 10.0;
     /** The preview is this many blocks wide, floating above the lens. */
     private static final float PREVIEW_WIDTH = 0.9F;
 
@@ -106,7 +108,8 @@ public class IslandScannerRenderer implements BlockEntityRenderer<IslandScannerB
         poseStack.scale(scale, scale, scale);
         poseStack.translate(-view.contentCenterX(), -view.lowestLayer(), -view.contentCenterZ());
         mesh.render(poseStack.last(), buffer);
-        if (!IslandRendering.inMirror) { // (in a mirror: just the blocks)
+        // (in a mirror, or more than a few blocks off - the preview's blocks are a few pixels each: just the blocks)
+        if (!IslandRendering.inMirror && mc.player.distanceToSqr(be.getBlockPos().getCenter()) < PREVIEW_DETAIL * PREVIEW_DETAIL) {
             view.renderBlockEntities(poseStack, buffer, partialTick);
         }
         poseStack.popPose();

@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "size=0": {
+      "model": "skyblocks:block/hologram_projector"
+    },
+    "size=1": {
+      "model": "skyblocks:block/hologram_projector"
+    },
+    "size=2": {
+      "model": "skyblocks:block/hologram_projector"
+    }
+  }
+}
