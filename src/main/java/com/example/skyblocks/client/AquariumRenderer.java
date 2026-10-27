@@ -959,20 +959,53 @@ public final class AquariumRenderer {
         }
     }
 
-    /** This tank's fish, this moment, into the fish texture. */
-    /** Which tank's fish the fish texture holds now, and for which moment. */
-    private static Floor uploadedFor;
-    private static double uploadedT = -1.0;
+    /**
+     * Each tank's own fish texture, and the moment it holds (a tank drawn again - in mirrors, as an outline - binds its
+     * texture as it is, instead of sending its fish to the graphics card again for every picture).
+     */
+    private static final class FishTex {
+        int id = -1;
+        double t = -1.0;
+        int count = -1;
+    }
 
+    private static final java.util.IdentityHashMap<Floor, FishTex> FISH_TEX = new java.util.IdentityHashMap<>();
+    private static int fishUploads;
+
+    private static FishTex fishTexOf(Floor floor, double t) {
+        FishTex ft = FISH_TEX.get(floor);
+        if (ft == null) {
+            if (++fishUploads > 256) { // (now and then: textures of tanks not drawn for a while - gone, or rebuilt - freed)
+                fishUploads = 0;
+                java.util.Iterator<FishTex> it = FISH_TEX.values().iterator();
+                while (it.hasNext()) {
+                    FishTex old = it.next();
+                    if (Math.abs(old.t - t) > 5.0) {
+                        if (old.id >= 0) {
+                            com.mojang.blaze3d.platform.TextureUtil.releaseTextureId(old.id);
+                        }
+                        it.remove();
+                    }
+                }
+            }
+            ft = new FishTex();
+            FISH_TEX.put(floor, ft);
+        }
+        return ft;
+    }
+
+    /** This tank's fish, this moment, into its fish texture ({@link #fishTex}: the one to bind). */
     private static void uploadFish(Floor floor) {
         Minecraft mc = Minecraft.getInstance();
         long gameTime = mc.level == null ? 0L : mc.level.getGameTime();
         double t = ((gameTime % 1_728_000L) + mc.getTimer().getGameTimeDeltaPartialTick(false)) / 20.0;
+        FishTex ft = fishTexOf(floor, t);
         if (floor.fishCache != null && floor.fishCacheT == t && floor.fishCacheCount == floor.fishCount) {
             // (already worked out this frame - drawn again, in a mirror or as an outline: as it was)
             System.arraycopy(floor.fishCache, 0, FISH_DATA, 0, FISH_DATA.length);
-            if (uploadedFor == floor && uploadedT == t) {
-                return; // (and the texture already holds it)
+            if (ft.id >= 0 && ft.t == t && ft.count == floor.fishCount) {
+                fishTex = ft.id;
+                return; // (and its texture already holds it)
             }
         } else {
             fishFrame(floor, t);
@@ -984,18 +1017,19 @@ public final class AquariumRenderer {
             floor.fishCacheT = t;
             floor.fishCacheCount = floor.fishCount;
         }
-        uploadedFor = floor;
-        uploadedT = t;
-        if (fishTex < 0) {
-            fishTex = com.mojang.blaze3d.platform.TextureUtil.generateTextureId();
-            com.mojang.blaze3d.platform.GlStateManager._bindTexture(fishTex);
+        ft.t = t;
+        ft.count = floor.fishCount;
+        if (ft.id < 0) {
+            ft.id = com.mojang.blaze3d.platform.TextureUtil.generateTextureId();
+            com.mojang.blaze3d.platform.GlStateManager._bindTexture(ft.id);
             com.mojang.blaze3d.platform.GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
             com.mojang.blaze3d.platform.GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
             com.mojang.blaze3d.platform.GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, org.lwjgl.opengl.GL12.GL_CLAMP_TO_EDGE);
             com.mojang.blaze3d.platform.GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, org.lwjgl.opengl.GL12.GL_CLAMP_TO_EDGE);
         } else {
-            com.mojang.blaze3d.platform.GlStateManager._bindTexture(fishTex);
+            com.mojang.blaze3d.platform.GlStateManager._bindTexture(ft.id);
         }
+        fishTex = ft.id;
         FISH_BUF.clear();
         FISH_BUF.put(FISH_DATA);
         FISH_BUF.flip();

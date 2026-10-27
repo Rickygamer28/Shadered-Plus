@@ -110,6 +110,11 @@ public final class MirrorRenderer {
         float[] renderedRect;
         /** The part of the screen its picture covers (fractions): only round its mirror, not the whole screen. */
         float[] picRect;
+        /**
+         * The part of the picture actually drawn (fractions of it, from its lower left corner): the picture is kept a
+         * little big so it isn't made again at every step (and rounded up), but only its mirror's part is drawn.
+         */
+        float usedW = 1.0F, usedH = 1.0F;
         final Shot shot = new Shot();
         MirrorCulling.View view;
         // this frame
@@ -143,6 +148,8 @@ public final class MirrorRenderer {
     private static final class Shot {
         final Matrix4f projModel = new Matrix4f();
         double rx, ry, rz;
+        /** How far into the picture it was drawn (fractions; the rest: left over from before): looked up only within. */
+        float maxU = 1.0F, maxV = 1.0F;
     }
 
     /**
@@ -511,7 +518,7 @@ public final class MirrorRenderer {
                 node.valid = true;
                 node.renderedFrame = frame;
                 node.renderedArea = node.area;
-                node.renderedRect = node.picRect.clone();
+                node.renderedRect = grow(node.rect, RECT_MARGIN);
             } catch (RuntimeException ex) {
                 skipped("drawing failed: " + ex, node.wall);
                 if (!warnedFail) {
@@ -678,10 +685,12 @@ public final class MirrorRenderer {
             resize(n.target, roundUp(needW), roundUp(needH));
         }
         n.scale = scale;
-        // (the wanted part, grown to the picture's own shape round its middle)
+        // (the picture laid over the screen from the wanted part's lower left corner: the wanted part is drawn, the
+        // rest of the picture - there only so it needn't be made again at every step - isn't)
         float pw = n.target.width / (main.width * scale), ph = n.target.height / (main.height * scale);
-        float cx = (want[0] + want[2]) * 0.5F, cy = (want[1] + want[3]) * 0.5F;
-        n.picRect = new float[] {cx - pw * 0.5F, cy - ph * 0.5F, cx + pw * 0.5F, cy + ph * 0.5F};
+        n.picRect = new float[] {want[0], want[1], want[0] + pw, want[1] + ph};
+        n.usedW = Math.min(1.0F, (want[2] - want[0]) / pw);
+        n.usedH = Math.min(1.0F, (want[3] - want[1]) / ph);
     }
 
     private static int roundUp(int v) {
@@ -756,7 +765,7 @@ public final class MirrorRenderer {
         Chain c = node.chain;
         TextureTarget target = node.target;
         currentTarget = target;
-        currentRect = null; // (the picture is only its mirror's part of the screen: all of it is drawn)
+        currentRect = new float[] {0.0F, 0.0F, node.usedW, node.usedH}; // (only the mirror's part of the picture)
         double rx = c.rx, ry = c.ry, rz = c.rz;
         // the picture's projections: the screen's, with its part of the screen filling the picture
         Matrix4f toPic = rectOnly(node.picRect);
@@ -772,7 +781,7 @@ public final class MirrorRenderer {
         float[] drawRect = grow(node.rect, RECT_MARGIN); // (where the mirror is on screen: for skipping what's tiny in it)
         RenderSystem.disableScissor();
         target.clear(Minecraft.ON_OSX);
-        target.bindWrite(true);
+        rebindPicture(); // (and only the mirror's part from here on)
         GL11.glFrontFace(GL11.GL_CCW);
         try {
             RenderSystem.setProjectionMatrix(projection, VertexSorting.DISTANCE_TO_ORIGIN);
@@ -823,7 +832,7 @@ public final class MirrorRenderer {
         // mobs in front of the wall, you included, with their shadows; block entities
         MirrorTiming.start(MirrorTiming.MOBS);
         renderEntities(mc, level, camera, node, modelView, inRect, toPicture, drawRect, rx, ry, rz, partialTick, true);
-        target.bindWrite(true);
+        rebindPicture();
         GL11.glFrontFace(frontFace);
         RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
         // the mirrors seen in this one: their latest pictures
@@ -839,7 +848,7 @@ public final class MirrorRenderer {
             } catch (RuntimeException ignored) {
                 // left out of the mirror
             }
-            target.bindWrite(true);
+            rebindPicture();
             GL11.glFrontFace(frontFace);
             RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
             // infinity mirrors in view (their tunnel worked out from this mirror's eye)
@@ -881,7 +890,7 @@ public final class MirrorRenderer {
         Eye eye = eyeFor(mc, camera, node, partialTick);
         effects(mc, camera, eye, node, modelView, clipped, frustum, rx, ry, rz, partialTick, false);
         GL11.glFrontFace(frontFace);
-        target.bindWrite(true);
+        rebindPicture();
         RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
         if (SODIUM) {
             chunks.skyblocks$renderSectionLayer(RenderType.translucent(), rx, ry, rz, modelView, clipped);
@@ -894,6 +903,8 @@ public final class MirrorRenderer {
         MirrorTiming.end();
 
         node.shot.projModel.set(projection).mul(modelView); // (the oblique cut only changes depth: x, y and w are the projection's)
+        node.shot.maxU = node.usedW;
+        node.shot.maxV = node.usedH;
         node.shot.rx = rx;
         node.shot.ry = ry;
         node.shot.rz = rz;
@@ -1326,6 +1337,7 @@ public final class MirrorRenderer {
         // positions here are relative to (cx, cy, cz); the picture was taken relative to the mirrored eye
         shader.safeGetUniform("MirrorTexMat").set(new Matrix4f(shot.projModel)
                 .translate((float) (cx - shot.rx), (float) (cy - shot.ry), (float) (cz - shot.rz)));
+        shader.safeGetUniform("MirrorTexMax").set(shot.maxU, shot.maxV);
         RenderSystem.setShader(() -> shader);
         RenderSystem.setShaderTexture(0, texture);
         RenderSystem.enableDepthTest();
