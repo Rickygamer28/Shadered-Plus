@@ -163,8 +163,12 @@ public final class ShaderSky {
             // time would only move 20 times a second: animations stepping instead of moving smoothly)
             float partial = Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false);
             int timing = WorldTiming.start(WorldTiming.SKY_BLOCKS);
-            draw(shader, texture, poseStack.last().pose(), (renderTick % 240000) + partial);
-            WorldTiming.stop(timing);
+            try {
+                draw(shader, texture, poseStack.last().pose(), (renderTick % 240000) + partial);
+            } finally {
+                SkyUsage.endSkyStageDraw(); // (a hotbar-only picture's scissor)
+                WorldTiming.stop(timing);
+            }
             renderer.getRenderBuffer().bindWrite(true);
         }
 

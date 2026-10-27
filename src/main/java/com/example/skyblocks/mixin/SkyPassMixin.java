@@ -51,6 +51,11 @@ public abstract class SkyPassMixin implements SkyUsage.Pass {
         skyblocks$drawnFrame = SkyUsage.frame(); // drawn this frame (at the sky stage or on demand)
     }
 
+    @Inject(method = "render", at = @At("RETURN"), require = 0, remap = false)
+    private void skyblocks$skyStageDone(RenderStage stage, PoseStack poseStack, int renderTick, float partialTick, CallbackInfo ci) {
+        SkyUsage.endSkyStageDraw(); // (a hotbar-only picture's scissor)
+    }
+
     @org.spongepowered.asm.mixin.Unique
     private static boolean skyblocks$announced;
 

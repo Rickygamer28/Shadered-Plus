@@ -16,7 +16,12 @@ public abstract class ModRenderTypesMixin {
     @Inject(method = "getSkyboxTextureId", at = @At("HEAD"), cancellable = true)
     private static void skyblocks$ourTexture(SkyblockType type, CallbackInfoReturnable<Integer> cir) {
         // something is drawn with this sky's render type: keep its picture up to date (see SkyUsage)
-        com.example.skyblocks.client.SkyUsage.mark(com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(type));
+        com.noodlegamer76.shadered.client.util.skyblock.SkyblockBatchData data = com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(type);
+        if (com.example.skyblocks.client.SkyUsage.inHud) {
+            com.example.skyblocks.client.SkyUsage.markHud(data); // (the hotbar: only its strip of the picture)
+        } else {
+            com.example.skyblocks.client.SkyUsage.mark(data);
+        }
         int index = SkyTypes.index(type);
         if (index >= 0) {
             cir.setReturnValue(ShaderedSkies.skyboxTexture(index));

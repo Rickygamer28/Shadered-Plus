@@ -18,5 +18,16 @@ public final class SkyUsageEvents {
         }
     }
 
+    /** While the HUD is drawn, sky items in it (the hotbar) only need the hotbar's strip of their sky (SkyUsage). */
+    @SubscribeEvent
+    public static void onHudStart(net.neoforged.neoforge.client.event.RenderGuiEvent.Pre event) {
+        SkyUsage.inHud = true;
+    }
+
+    @SubscribeEvent
+    public static void onHudEnd(net.neoforged.neoforge.client.event.RenderGuiEvent.Post event) {
+        SkyUsage.inHud = false;
+    }
+
     private SkyUsageEvents() {}
 }

@@ -93,6 +93,40 @@ public final class SkyUsage {
         }
     }
 
+    /**
+     * Drawn in the HUD (the hotbar): only the hotbar's strip of the picture is needed, for a few seconds after. Set
+     * while the HUD is drawn ({@link #inHud}) and for the hotbar at the start of each frame.
+     */
+    public static void markHud(@Nullable SkyblockBatchData data) {
+        markLight(data);
+        if (data != null) {
+            HUD_UNTIL.put(data, System.nanoTime() + KEEP_NANOS);
+        }
+    }
+
+    /** True while the game draws the HUD (hotbar and all): sky items there only need the hotbar's strip. */
+    public static boolean inHud;
+    private static final Map<SkyblockBatchData, Long> HUD_UNTIL = new IdentityHashMap<>();
+    private static boolean skyStageScissor;
+
+    /** The hotbar's strip of the screen, in the sky pictures' pixels (from the bottom), with a margin. */
+    private static int[] hudRect() {
+        Minecraft mc = Minecraft.getInstance();
+        ComplexPassRenderer renderer = ComplexPassRenderer.getInstance();
+        int width = Math.max(1, renderer.getPreviousWidth());
+        double scale = mc.getWindow().getGuiScale();
+        int half = (int) Math.ceil(96 * scale);
+        return new int[] {Math.max(0, width / 2 - half), 0, Math.min(width, width / 2 + half), (int) Math.ceil(26 * scale)};
+    }
+
+    /** After a sky pass drawn at the sky stage: the scissor it got for the hotbar's strip, off again. */
+    public static void endSkyStageDraw() {
+        if (skyStageScissor) {
+            skyStageScissor = false;
+            GlStateManager._disableScissorTest();
+        }
+    }
+
     private static void wantWhole(@Nullable SkyblockBatchData data) {
         if (data != null) {
             WHOLE_UNTIL.put(data, System.nanoTime() + KEEP_NANOS);
@@ -121,12 +155,26 @@ public final class SkyUsage {
         if (!recentlyUsed(data)) {
             return false;
         }
+        long now = System.nanoTime();
         Long until = data == null ? null : WHOLE_UNTIL.get(data);
-        boolean whole = !onDemandOk || data == null || (until != null && until - System.nanoTime() > 0);
+        boolean whole = !onDemandOk || data == null || (until != null && until - now > 0);
         if (whole && data != null) {
             COVER.put(data, new long[] {frame, 1, 0, 0, 0, 0});
         }
-        return whole;
+        if (whole) {
+            return true;
+        }
+        Long hud = HUD_UNTIL.get(data);
+        if (hud != null && hud - now > 0) { // only the hotbar's strip
+            int[] r = hudRect();
+            endSkyStageDraw();
+            GlStateManager._enableScissorTest();
+            GlStateManager._scissorBox(r[0], r[1], Math.max(1, r[2] - r[0]), Math.max(1, r[3] - r[1]));
+            skyStageScissor = true;
+            COVER.put(data, new long[] {frame, 0, r[0], r[1], r[2], r[3]});
+            return true;
+        }
+        return false;
     }
 
     /** Whether the sky with this batch was used recently (always true if the tracking isn't there). */
@@ -187,10 +235,7 @@ public final class SkyUsage {
         if (MirrorRenderer.isRenderingReflection() && tracked.skyblocks$drawnFrame() >= 0) {
             return; // in a mirror: its last picture will do (painting one in the middle of a mirror upset the frame)
         }
-        int[] box = rect;
-        if (box != null && fresh) { // (what's up to date already, and this: one box)
-            box = new int[] {Math.min(box[0], (int) cover[2]), Math.min(box[1], (int) cover[3]), Math.max(box[2], (int) cover[4]), Math.max(box[3], (int) cover[5])};
-        }
+        int[] box = rect; // (only what's needed now: what was drawn before this frame - the hotbar's strip - stays as it is)
         ComplexPassRenderer renderer = ComplexPassRenderer.getInstance();
         int width = Math.max(1, renderer.getPreviousWidth()), height = Math.max(1, renderer.getPreviousHeight());
         if (box != null && (long) (box[2] - box[0]) * (box[3] - box[1]) > (long) width * height * 6 / 10) {
@@ -340,10 +385,21 @@ public final class SkyUsage {
         if (mc.player == null) {
             return;
         }
-        for (net.minecraft.world.item.ItemStack stack : mc.player.getInventory().items) {
-            markItem(stack);
+        // the hotbar: only its strip of the screen (the item in your hand: all of it - it's drawn big, in the world);
+        // the rest of the inventory only shows with a screen open (below)
+        net.minecraft.world.entity.player.Inventory inventory = mc.player.getInventory();
+        for (int i = 0; i < 9 && i < inventory.items.size(); i++) {
+            net.minecraft.world.item.ItemStack stack = inventory.items.get(i);
+            if (i == inventory.selected) {
+                markItem(stack);
+            } else {
+                SkyblockBatchData data = itemSky(stack);
+                if (data != null) {
+                    markHud(data);
+                }
+            }
         }
-        for (net.minecraft.world.item.ItemStack stack : mc.player.getInventory().offhand) {
+        for (net.minecraft.world.item.ItemStack stack : inventory.offhand) {
             markItem(stack);
         }
         markItem(mc.player.containerMenu.getCarried());
@@ -355,20 +411,28 @@ public final class SkyUsage {
     }
 
     private static void markItem(net.minecraft.world.item.ItemStack stack) {
+        SkyblockBatchData data = itemSky(stack);
+        if (data != null) {
+            mark(data);
+        }
+    }
+
+    /** The sky an item shows (a sky block, a Sky Liquid bucket), or null. */
+    @Nullable
+    private static SkyblockBatchData itemSky(net.minecraft.world.item.ItemStack stack) {
         if (stack.isEmpty()) {
-            return;
+            return null;
         }
         com.example.skyblocks.island.ShaderedSkyItems.Sky sky = com.example.skyblocks.island.ShaderedSkyItems.sky(stack);
         if (sky != null) {
-            mark(SkyblockRenderer.getData(sky.type()));
-            return;
+            return SkyblockRenderer.getData(sky.type());
         }
         for (com.example.skyblocks.ModFluids.SkyLiquid liquid : com.example.skyblocks.ModFluids.ALL) {
             if (liquid.bucket != null && stack.is(liquid.bucket.get())) {
-                mark(SkyblockRenderer.getData(liquid.sky)); // a Sky Liquid bucket shows its sky too
-                return;
+                return SkyblockRenderer.getData(liquid.sky); // a Sky Liquid bucket shows its sky too
             }
         }
+        return null;
     }
 
     /** Logs whether the tracking mixins are in place (once, at client setup). */
