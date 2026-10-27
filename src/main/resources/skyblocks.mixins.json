@@ -12,6 +12,9 @@
   ],
   "client": [
     "AssimpRendererBonesMixin",
+    "BlockEntityTimingMixin",
+    "ComplexPassTimingMixin",
+    "EntityTimingMixin",
     "EntityAccessor",
     "GameRendererIrisMixin",
     "LevelRendererInvoker",
