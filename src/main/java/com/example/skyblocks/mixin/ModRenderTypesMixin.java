@@ -20,7 +20,7 @@ public abstract class ModRenderTypesMixin {
         if (com.example.skyblocks.client.SkyUsage.inHud) {
             com.example.skyblocks.client.SkyUsage.markHud(data); // (the hotbar: only its strip of the picture)
         } else {
-            com.example.skyblocks.client.SkyUsage.mark(data);
+            com.example.skyblocks.client.SkyUsage.mark(data, "sky items drawn in the world or a screen");
         }
         int index = SkyTypes.index(type);
         if (index >= 0) {

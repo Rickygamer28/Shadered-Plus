@@ -119,6 +119,70 @@ public final class SkyUsage {
         return new int[] {Math.max(0, width / 2 - half), 0, Math.min(width, width / 2 + half), (int) Math.ceil(26 * scale)};
     }
 
+    /**
+     * Sky blocks seen in mirrors: a mirror's picture reads the sky's picture where its own pixels are (its lower left
+     * corner), so only that part is needed - drawn at the next frame's sky stage (in a mirror it's never exact anyway).
+     * Per sky: {frame asked in, x0, y0, x1, y1}.
+     */
+    private static final Map<SkyblockBatchData, long[]> MIRROR_WANT = new IdentityHashMap<>();
+
+    /** Sky blocks of {@code taken} (sky -> its blocks) drawn now into a mirror's picture, with the view and projection set. */
+    public static void inMirror(Map<SkyblockBatchData, SkyblockBatchData> taken) {
+        int[] viewport = new int[4];
+        GL11.glGetIntegerv(GL11.GL_VIEWPORT, viewport);
+        Matrix4f toClip = new Matrix4f(RenderSystem.getProjectionMatrix()).mul(RenderSystem.getModelViewMatrix());
+        for (Map.Entry<SkyblockBatchData, SkyblockBatchData> e : taken.entrySet()) {
+            SkyblockBatchData data = e.getKey();
+            RenderableComplexPass pass = PASSES.get(data);
+            if (pass instanceof Pass tracked && tracked.skyblocks$drawnFrame() < 0) {
+                ensureFresh(data); // (never drawn yet: once, all of it)
+                continue;
+            }
+            int[] r = rectOf(e.getValue(), toClip, Math.max(1, viewport[2]), Math.max(1, viewport[3]));
+            if (r == null) {
+                r = new int[] {0, 0, Math.max(1, viewport[2]), Math.max(1, viewport[3])};
+            }
+            long[] w = MIRROR_WANT.get(data);
+            if (w != null && w[0] == frame) {
+                w[1] = Math.min(w[1], r[0]);
+                w[2] = Math.min(w[2], r[1]);
+                w[3] = Math.max(w[3], r[2]);
+                w[4] = Math.max(w[4], r[3]);
+            } else {
+                MIRROR_WANT.put(data, new long[] {frame, r[0], r[1], r[2], r[3]});
+            }
+            if (data instanceof Tracked tracked) {
+                tracked.skyblocks$markUsed();
+            }
+        }
+    }
+
+    // (F3: how the skies' pictures were drawn this frame)
+    private static int wholeNow, partNow;
+    private static double wholeAvg, partAvg;
+    private static final Map<String, Integer> REASONS_NOW = new java.util.TreeMap<>();
+    private static String reasons = "";
+
+    public static String debugLine() {
+        return String.format(java.util.Locale.ROOT, "Sky pictures: %.1f whole, %.1f only in part%s", wholeAvg, partAvg, reasons);
+    }
+
+    private static void frameDone() {
+        wholeAvg = wholeAvg * 0.9 + wholeNow * 0.1;
+        partAvg = partAvg * 0.9 + partNow * 0.1;
+        if (!REASONS_NOW.isEmpty()) {
+            StringBuilder sb = new StringBuilder(" (whole for: ");
+            REASONS_NOW.forEach((k, v) -> sb.append(k).append(' ').append(v).append(", "));
+            sb.setLength(sb.length() - 2);
+            reasons = sb.append(')').toString();
+        } else {
+            reasons = "";
+        }
+        wholeNow = 0;
+        partNow = 0;
+        REASONS_NOW.clear();
+    }
+
     /** After a sky pass drawn at the sky stage: the scissor it got for the hotbar's strip, off again. */
     public static void endSkyStageDraw() {
         if (skyStageScissor) {
@@ -128,8 +192,28 @@ public final class SkyUsage {
     }
 
     private static void wantWhole(@Nullable SkyblockBatchData data) {
+        wantWhole(data, reason);
+    }
+
+    /** Why the next marks want the whole picture (for F3). */
+    private static String reason = "something";
+    private static final Map<SkyblockBatchData, String> WHOLE_REASON = new IdentityHashMap<>();
+
+    private static void wantWhole(@Nullable SkyblockBatchData data, String why) {
         if (data != null) {
             WHOLE_UNTIL.put(data, System.nanoTime() + KEEP_NANOS);
+            WHOLE_REASON.put(data, why);
+        }
+    }
+
+    /** {@link #mark}, saying why (for F3). */
+    public static void mark(@Nullable SkyblockBatchData data, String why) {
+        String before = reason;
+        reason = why;
+        try {
+            mark(data);
+        } finally {
+            reason = before;
         }
     }
 
@@ -160,13 +244,22 @@ public final class SkyUsage {
         boolean whole = !onDemandOk || data == null || (until != null && until - now > 0);
         if (whole && data != null) {
             COVER.put(data, new long[] {frame, 1, 0, 0, 0, 0});
+            wholeNow++;
+            REASONS_NOW.merge(WHOLE_REASON.getOrDefault(data, onDemandOk ? "?" : "no on-demand drawing"), 1, Integer::sum);
         }
         if (whole) {
             return true;
         }
         Long hud = HUD_UNTIL.get(data);
-        if (hud != null && hud - now > 0) { // only the hotbar's strip
-            int[] r = hudRect();
+        long[] mirror = MIRROR_WANT.get(data);
+        boolean hudWanted = hud != null && hud - now > 0, mirrorWanted = mirror != null && frame - mirror[0] <= 2;
+        if (hudWanted || mirrorWanted) { // only the hotbar's strip, and what mirrors read
+            int[] r = hudWanted ? hudRect() : null;
+            if (mirrorWanted) {
+                int[] m = {(int) mirror[1], (int) mirror[2], (int) mirror[3], (int) mirror[4]};
+                r = r == null ? m : new int[] {Math.min(r[0], m[0]), Math.min(r[1], m[1]), Math.max(r[2], m[2]), Math.max(r[3], m[3])};
+            }
+            partNow++;
             endSkyStageDraw();
             GlStateManager._enableScissorTest();
             GlStateManager._scissorBox(r[0], r[1], Math.max(1, r[2] - r[0]), Math.max(1, r[3] - r[1]));
@@ -199,6 +292,7 @@ public final class SkyUsage {
         if (renderTick != lastRenderTick || Float.compare(partialTick, lastPartialTick) != 0 || skyProjection == null) {
             lastRenderTick = renderTick;
             lastPartialTick = partialTick;
+            frameDone();
             frame++;
             skyProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
         }
@@ -216,8 +310,8 @@ public final class SkyUsage {
      * that drawing the sky changes is put back, but render states set up for something else would be lost.
      */
     public static void ensureFresh(@Nullable SkyblockBatchData data) {
-        mark(data);
-        wantWhole(data); // (in a mirror too: mirrors look at other parts of the picture than the screen does)
+        mark(data, "liquids, portals, paintings");
+        wantWhole(data, "liquids, portals, paintings"); // (in a mirror too)
         ensure(data, null);
     }
 
@@ -332,6 +426,13 @@ public final class SkyUsage {
         Matrix4f toClip = new Matrix4f(skyProjection)
                 .rotateX(camera.getXRot() * net.minecraft.util.Mth.DEG_TO_RAD)
                 .rotateY((camera.getYRot() + 180.0F) * net.minecraft.util.Mth.DEG_TO_RAD);
+        ComplexPassRenderer renderer = ComplexPassRenderer.getInstance();
+        return rectOf(data, toClip, Math.max(1, renderer.getPreviousWidth()), Math.max(1, renderer.getPreviousHeight()));
+    }
+
+    /** Where the sky blocks in {@code data} are in a picture {@code width} x {@code height} ({@code toClip}: their poses -> clip space). */
+    @Nullable
+    private static int[] rectOf(SkyblockBatchData data, Matrix4f toClip, int width, int height) {
         float minX = 2.0F, minY = 2.0F, maxX = -2.0F, maxY = -2.0F;
         org.joml.Vector4f v = new org.joml.Vector4f();
         Matrix4f m = new Matrix4f();
@@ -363,8 +464,6 @@ public final class SkyUsage {
         if (!any) {
             return null;
         }
-        ComplexPassRenderer renderer = ComplexPassRenderer.getInstance();
-        int width = Math.max(1, renderer.getPreviousWidth()), height = Math.max(1, renderer.getPreviousHeight());
         int margin = 4;
         int x0 = Math.max(0, (int) Math.floor((Math.max(minX, -1.0F) * 0.5F + 0.5F) * width) - margin);
         int y0 = Math.max(0, (int) Math.floor((Math.max(minY, -1.0F) * 0.5F + 0.5F) * height) - margin);
@@ -413,7 +512,7 @@ public final class SkyUsage {
     private static void markItem(net.minecraft.world.item.ItemStack stack) {
         SkyblockBatchData data = itemSky(stack);
         if (data != null) {
-            mark(data);
+            mark(data, "items in hand, offhand or an open inventory");
         }
     }
 

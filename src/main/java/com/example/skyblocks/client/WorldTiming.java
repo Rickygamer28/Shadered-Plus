@@ -337,6 +337,7 @@ public final class WorldTiming {
                 lines.add(String.format(Locale.ROOT, "  %s: %.2f, %.2f", NAMES.get(i), gpuMs[i], cpuMs[i]));
             }
         }
+        lines.add(SkyUsage.debugLine());
         kinds(lines, "Block entities (CPU)", BE);
         kinds(lines, "Mobs (CPU)", MOB);
     }

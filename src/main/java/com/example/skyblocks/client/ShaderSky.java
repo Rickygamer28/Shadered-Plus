@@ -174,7 +174,7 @@ public final class ShaderSky {
 
         @Override
         public TextureTarget getSkyboxTarget() {
-            SkyUsage.mark(batch);
+            SkyUsage.mark(batch, "its picture asked for");
             return target;
         }
 
