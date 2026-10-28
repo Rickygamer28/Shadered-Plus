@@ -1,0 +1,213 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "metal": "skyblocks:block/lava_lamp_metal",
+    "particle": "skyblocks:block/lava_lamp_metal"
+  },
+  "elements": [
+    {
+      "from": [
+        3,
+        0,
+        3
+      ],
+      "to": [
+        13,
+        3,
+        13
+      ],
+      "faces": {
+        "north": {
+          "texture": "#metal",
+          "uv": [
+            3,
+            13,
+            13,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#metal",
+          "uv": [
+            3,
+            13,
+            13,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#metal",
+          "uv": [
+            3,
+            13,
+            13,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#metal",
+          "uv": [
+            3,
+            13,
+            13,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#metal",
+          "uv": [
+            3,
+            3,
+            13,
+            13
+          ]
+        },
+        "down": {
+          "texture": "#metal",
+          "uv": [
+            3,
+            3,
+            13,
+            13
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        3.5,
+        3,
+        3.5
+      ],
+      "to": [
+        12.5,
+        6.5,
+        12.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#metal",
+          "uv": [
+            3.5,
+            9.5,
+            12.5,
+            13
+          ]
+        },
+        "south": {
+          "texture": "#metal",
+          "uv": [
+            3.5,
+            9.5,
+            12.5,
+            13
+          ]
+        },
+        "east": {
+          "texture": "#metal",
+          "uv": [
+            3.5,
+            9.5,
+            12.5,
+            13
+          ]
+        },
+        "west": {
+          "texture": "#metal",
+          "uv": [
+            3.5,
+            9.5,
+            12.5,
+            13
+          ]
+        },
+        "up": {
+          "texture": "#metal",
+          "uv": [
+            3.5,
+            3.5,
+            12.5,
+            12.5
+          ]
+        },
+        "down": {
+          "texture": "#metal",
+          "uv": [
+            3.5,
+            3.5,
+            12.5,
+            12.5
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        4.3,
+        6.5,
+        4.3
+      ],
+      "to": [
+        11.7,
+        8.7,
+        11.7
+      ],
+      "faces": {
+        "north": {
+          "texture": "#metal",
+          "uv": [
+            4.3,
+            7.300000000000001,
+            11.7,
+            9.5
+          ]
+        },
+        "south": {
+          "texture": "#metal",
+          "uv": [
+            4.3,
+            7.300000000000001,
+            11.7,
+            9.5
+          ]
+        },
+        "east": {
+          "texture": "#metal",
+          "uv": [
+            4.3,
+            7.300000000000001,
+            11.7,
+            9.5
+          ]
+        },
+        "west": {
+          "texture": "#metal",
+          "uv": [
+            4.3,
+            7.300000000000001,
+            11.7,
+            9.5
+          ]
+        },
+        "up": {
+          "texture": "#metal",
+          "uv": [
+            4.3,
+            4.3,
+            11.7,
+            11.7
+          ]
+        },
+        "down": {
+          "texture": "#metal",
+          "uv": [
+            4.3,
+            4.3,
+            11.7,
+            11.7
+          ]
+        }
+      }
+    }
+  ]
+}

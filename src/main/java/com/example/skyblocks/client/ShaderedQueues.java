@@ -74,8 +74,12 @@ public final class ShaderedQueues {
         int drawFramebuffer = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
         int[] viewport = new int[4];
         GL11.glGetIntegerv(GL11.GL_VIEWPORT, viewport);
-        for (SkyblockBatchData data : skies.keySet()) {
-            SkyUsage.ensureFresh(data); // a resting sky: draw its picture first
+        if (com.example.skyblocks.client.MirrorRenderer.isRenderingReflection()) {
+            SkyUsage.inMirror(skies); // (only the part the mirror reads, at the next sky stage)
+        } else {
+            for (SkyblockBatchData data : skies.keySet()) {
+                SkyUsage.ensureFresh(data); // a resting sky: draw its picture first
+            }
         }
         // (drawing a sky's picture uses Shadered's own framebuffer)
         GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, drawFramebuffer);

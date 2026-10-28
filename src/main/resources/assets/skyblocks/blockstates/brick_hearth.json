@@ -1,0 +1,132 @@
+{
+  "variants": {
+    "facing=north,half=lower,left=false,lit=false": {
+      "model": "skyblocks:block/brick_hearth_lower_right",
+      "y": 0
+    },
+    "facing=north,half=lower,left=false,lit=true": {
+      "model": "skyblocks:block/brick_hearth_lower_right",
+      "y": 0
+    },
+    "facing=north,half=lower,left=true,lit=false": {
+      "model": "skyblocks:block/brick_hearth_lower_left",
+      "y": 0
+    },
+    "facing=north,half=lower,left=true,lit=true": {
+      "model": "skyblocks:block/brick_hearth_lower_left",
+      "y": 0
+    },
+    "facing=north,half=upper,left=false,lit=false": {
+      "model": "skyblocks:block/brick_hearth_upper_right",
+      "y": 0
+    },
+    "facing=north,half=upper,left=false,lit=true": {
+      "model": "skyblocks:block/brick_hearth_upper_right",
+      "y": 0
+    },
+    "facing=north,half=upper,left=true,lit=false": {
+      "model": "skyblocks:block/brick_hearth_upper_left",
+      "y": 0
+    },
+    "facing=north,half=upper,left=true,lit=true": {
+      "model": "skyblocks:block/brick_hearth_upper_left",
+      "y": 0
+    },
+    "facing=east,half=lower,left=false,lit=false": {
+      "model": "skyblocks:block/brick_hearth_lower_right",
+      "y": 90
+    },
+    "facing=east,half=lower,left=false,lit=true": {
+      "model": "skyblocks:block/brick_hearth_lower_right",
+      "y": 90
+    },
+    "facing=east,half=lower,left=true,lit=false": {
+      "model": "skyblocks:block/brick_hearth_lower_left",
+      "y": 90
+    },
+    "facing=east,half=lower,left=true,lit=true": {
+      "model": "skyblocks:block/brick_hearth_lower_left",
+      "y": 90
+    },
+    "facing=east,half=upper,left=false,lit=false": {
+      "model": "skyblocks:block/brick_hearth_upper_right",
+      "y": 90
+    },
+    "facing=east,half=upper,left=false,lit=true": {
+      "model": "skyblocks:block/brick_hearth_upper_right",
+      "y": 90
+    },
+    "facing=east,half=upper,left=true,lit=false": {
+      "model": "skyblocks:block/brick_hearth_upper_left",
+      "y": 90
+    },
+    "facing=east,half=upper,left=true,lit=true": {
+      "model": "skyblocks:block/brick_hearth_upper_left",
+      "y": 90
+    },
+    "facing=south,half=lower,left=false,lit=false": {
+      "model": "skyblocks:block/brick_hearth_lower_right",
+      "y": 180
+    },
+    "facing=south,half=lower,left=false,lit=true": {
+      "model": "skyblocks:block/brick_hearth_lower_right",
+      "y": 180
+    },
+    "facing=south,half=lower,left=true,lit=false": {
+      "model": "skyblocks:block/brick_hearth_lower_left",
+      "y": 180
+    },
+    "facing=south,half=lower,left=true,lit=true": {
+      "model": "skyblocks:block/brick_hearth_lower_left",
+      "y": 180
+    },
+    "facing=south,half=upper,left=false,lit=false": {
+      "model": "skyblocks:block/brick_hearth_upper_right",
+      "y": 180
+    },
+    "facing=south,half=upper,left=false,lit=true": {
+      "model": "skyblocks:block/brick_hearth_upper_right",
+      "y": 180
+    },
+    "facing=south,half=upper,left=true,lit=false": {
+      "model": "skyblocks:block/brick_hearth_upper_left",
+      "y": 180
+    },
+    "facing=south,half=upper,left=true,lit=true": {
+      "model": "skyblocks:block/brick_hearth_upper_left",
+      "y": 180
+    },
+    "facing=west,half=lower,left=false,lit=false": {
+      "model": "skyblocks:block/brick_hearth_lower_right",
+      "y": 270
+    },
+    "facing=west,half=lower,left=false,lit=true": {
+      "model": "skyblocks:block/brick_hearth_lower_right",
+      "y": 270
+    },
+    "facing=west,half=lower,left=true,lit=false": {
+      "model": "skyblocks:block/brick_hearth_lower_left",
+      "y": 270
+    },
+    "facing=west,half=lower,left=true,lit=true": {
+      "model": "skyblocks:block/brick_hearth_lower_left",
+      "y": 270
+    },
+    "facing=west,half=upper,left=false,lit=false": {
+      "model": "skyblocks:block/brick_hearth_upper_right",
+      "y": 270
+    },
+    "facing=west,half=upper,left=false,lit=true": {
+      "model": "skyblocks:block/brick_hearth_upper_right",
+      "y": 270
+    },
+    "facing=west,half=upper,left=true,lit=false": {
+      "model": "skyblocks:block/brick_hearth_upper_left",
+      "y": 270
+    },
+    "facing=west,half=upper,left=true,lit=true": {
+      "model": "skyblocks:block/brick_hearth_upper_left",
+      "y": 270
+    }
+  }
+}

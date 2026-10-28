@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "skyblocks:block/aquarium_stand"
+    },
+    "facing=east": {
+      "model": "skyblocks:block/aquarium_stand",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "skyblocks:block/aquarium_stand",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "skyblocks:block/aquarium_stand",
+      "y": 270
+    }
+  }
+}

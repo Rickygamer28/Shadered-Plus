@@ -51,17 +51,18 @@ import org.joml.Vector4f;
 import org.lwjgl.opengl.GL11;
 
 /**
- * Mirrors (ModBlocks.MIRROR): each flat wall of mirror faces gets one live reflection a frame, shared by all its faces:
- * the world drawn again from the camera mirrored in that wall, into a picture laid out like the screen (lower
- * resolution), which the faces then show at each pixel (mirror_surface shader). Kept cheap like Shadered's skies:
- * <ul>
- *   <li>only walls facing the camera, in view and near; a few pictures drawn a frame, the rest kept from earlier;</li>
- *   <li>the chunks drawn are the ones already on the graphics card for the main view (Sodium's own meshes when Sodium is
- *   installed; with Sodium the main view's chunk search also takes the mirrors' views into account, see
- *   MirrorCulling), solid and cutout only;</li>
- *   <li>sky, solid blocks, and entities near the wall (you included), no particles, clouds or shadows.</li>
- * </ul>
- * With a shader pack, mirrors show their plain block texture for now.
+ * Mirrors (ModBlocks.MIRROR): each flat wall of mirror faces gets a live reflection, shared by all its faces: the world
+ * drawn again from the camera mirrored in that wall, into a picture laid out like the screen, which the faces then show
+ * at each pixel (mirror_surface shader). Everything shows in it: the sky, clouds, rain and snow, every block (see-through
+ * ones too), mobs and you (with their shadows), block entities, particles, and the other mirrors - mirrors seen in
+ * mirrors get their own pictures, the deeper ones drawn first so each picture shows the newest ones inside it.
+ * <p>
+ * Kept cheap: only walls facing the camera, in view and near; only the part of each picture where its mirror is on
+ * screen is drawn; only the chunk sections, mobs, block entities and particles in that part are drawn (with Sodium its
+ * own chunk meshes, the main view's chunk search taking the mirrors' views into account - MirrorCulling; without,
+ * MirrorChunks lists each mirror's own sections); mirrors seen in mirrors a little less sharp each bounce, stopping when
+ * they're tiny; and a frame draws as many pictures as fit a budget of pixels (all of them, unless there are a great
+ * many), the rest keeping their latest picture, which still lines up (Shot).
  */
 @Mod.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public final class MirrorRenderer {
@@ -69,7 +70,7 @@ public final class MirrorRenderer {
     private static final int RESCAN_TICKS = 10;
     private static final int MAX_WALLS = 256; // (sanity only: pictures take turns being redrawn, see PASSES_PER_FRAME)
     private static final double WALL_RANGE = 64.0;
-    private static final double ENTITY_RANGE = 48.0;
+    private static final double ENTITY_RANGE = 64.0;
     /** Just in front of the mirror block's face. */
     private static final float OUT = 0.0F;
 
@@ -104,6 +105,13 @@ public final class MirrorRenderer {
         boolean valid;
         float renderedArea;
         float[] renderedRect;
+        /** The part of the screen its picture covers (fractions): only round its mirror, not the whole screen. */
+        float[] picRect;
+        /**
+         * The part of the picture actually drawn (fractions of it, from its lower left corner): the picture is kept a
+         * little big so it isn't made again at every step (and rounded up), but only its mirror's part is drawn.
+         */
+        float usedW = 1.0F, usedH = 1.0F;
         final Shot shot = new Shot();
         MirrorCulling.View view;
         // this frame
@@ -137,21 +145,33 @@ public final class MirrorRenderer {
     private static final class Shot {
         final Matrix4f projModel = new Matrix4f();
         double rx, ry, rz;
+        /** How far into the picture it was drawn (fractions; the rest: left over from before): looked up only within. */
+        float maxU = 1.0F, maxV = 1.0F;
     }
 
-    /** Pictures of mirrors seen in mirrors drawn per frame (they take turns: oldest/biggest first). */
-    private static final int PASSES_PER_FRAME = 4;
-    /** The mirrors themselves (biggest on screen first) drawn every frame. */
-    private static final int TOP_EVERY_FRAME = 8;
+    /**
+     * How much drawing a frame may do: pictures (their part on screen, at their sharpness) adding up to this many
+     * screens' worth of pixels, and at most this many pictures. Within that every picture is drawn every frame; past it
+     * they take turns (biggest and oldest first), keeping their latest picture meanwhile.
+     */
+    private static final float PIXEL_BUDGET = 0.8F;
+    private static final int MAX_DRAWS = 16;
+    /** What drawing any picture costs whatever its size (the sky, the lists of blocks and things in it...), in screens. */
+    private static final float PICTURE_COST = 0.05F;
+    /** Mirrors seen in mirrors at least this big on screen are drawn every frame too (smaller ones take turns: tiny, a few frames old doesn't show). */
+    private static final float EVERY_FRAME_AREA = 0.03F;
     /** At most this many pictures in view (mirrors, and mirrors seen in mirrors), and this many mirrors seen per mirror. */
-    private static final int MAX_NODES = 48, MAX_CHILDREN = 4;
+    private static final int MAX_NODES = 32, MAX_CHILDREN = 4;
     /** Mirrors seen in mirrors: each bounce's picture is this much less sharp than the one it's in... */
-    private static final float BOUNCE_SCALE = 0.8F;
+    private static final float BOUNCE_SCALE = 0.9F;
     /** ...and bounces stop when the picture would be smaller than this (pixels), or the mirror too small on screen. */
     private static final int MIN_BOUNCE_SIZE = 64;
-    private static final float MIN_BOUNCE_AREA = 0.0004F;
+    private static final float MIN_BOUNCE_AREA = 0.0015F;
     /** Block entities near the camera that mirrors show (gathered once a frame). */
     private static final List<BlockEntity> NEARBY_BLOCK_ENTITIES = new ArrayList<>();
+    /** Mobs (and you) near the camera, where they are this frame: gathered once, not again for every picture. */
+    private record Near(Entity entity, double x, double y, double z, float yRot) {}
+    private static final List<Near> NEARBY_ENTITIES = new ArrayList<>();
 
     private static final Map<List<Wall>, Node> NODES = new HashMap<>();
     private static final List<MirrorCulling.View> LAST_VIEWS = new ArrayList<>();
@@ -171,7 +191,7 @@ public final class MirrorRenderer {
         }
     }
     private static long frame;
-    private static BufferBuilder entityMemory;
+    private static MirrorBuffers entityBuffers;
     private static boolean rendering;
     private static boolean warnedSky, warnedFail;
     private static final boolean SODIUM = net.minecraftforge.fml.ModList.get().isLoaded("embeddium")
@@ -182,6 +202,9 @@ public final class MirrorRenderer {
     /** A block changed on the client: rescan straight away if it's a mirror or next to one. */
     public static void blockChanged(ClientLevel level, BlockPos pos, BlockState oldState, BlockState newState) {
         InfinityMirrorRenderer.blockChanged(level, pos, oldState, newState);
+        DanceFloorRenderer.blockChanged(oldState, newState);
+        AquariumRenderer.blockChanged(oldState, newState);
+        KoiPondRenderer.blockChanged(oldState, newState);
         boolean mirror = isMirror(oldState) || isMirror(newState);
         if (!mirror) {
             BlockPos.MutableBlockPos n = new BlockPos.MutableBlockPos();
@@ -304,6 +327,15 @@ public final class MirrorRenderer {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS || rendering) {
             return;
         }
+        int timing = WorldTiming.start(WorldTiming.MIRRORS);
+        try {
+            drawMirrors(event);
+        } finally {
+            WorldTiming.stop(timing);
+        }
+    }
+
+    private static void drawMirrors(RenderLevelStageEvent event) {
         if (com.example.skyblocks.client.iris.IrisCompat.renderingShadowPass()) {
             return; // (the shader pack's shadow pass draws the world from the sun: no mirrors there)
         }
@@ -389,6 +421,15 @@ public final class MirrorRenderer {
             }
             skipped("no screen rect", w);
         }
+        // mirrors in view but hidden behind blocks (a wall, a hill between): no picture for them
+        boolean irisNow = com.example.skyblocks.client.iris.IrisIslandTarget.active();
+        if (!irisNow) {
+            occlusion(mc.getMainRenderTarget(), visible, view, projection, cam);
+            visible.removeIf(e -> {
+                int[] o = OCCLUSION.get(e.getKey());
+                return o != null && o[1] >= HIDDEN_FRAMES;
+            });
+        }
         visible.sort(Comparator.comparingDouble(e -> -area(rects.get(e.getKey()))));
         if (visible.size() > MAX_WALLS) {
             visible = visible.subList(0, MAX_WALLS);
@@ -404,6 +445,15 @@ public final class MirrorRenderer {
         frame++;
         MirrorTiming.beginFrame();
         gatherBlockEntities(level, cam);
+        NEARBY_ENTITIES.clear();
+        for (Entity entity : level.entitiesForRendering()) {
+            double x = Mth.lerp(partialTick, entity.xOld, entity.getX());
+            double y = Mth.lerp(partialTick, entity.yOld, entity.getY());
+            double z = Mth.lerp(partialTick, entity.zOld, entity.getZ());
+            if (cam.distanceToSqr(x, y, z) <= ENTITY_RANGE * ENTITY_RANGE) {
+                NEARBY_ENTITIES.add(new Near(entity, x, y, z, Mth.lerp(partialTick, entity.yRotO, entity.getYRot())));
+            }
+        }
 
         // every picture in view this frame: the mirrors on screen, then (biggest first) the mirrors seen in them...
         List<Node> all = new ArrayList<>();
@@ -471,25 +521,17 @@ public final class MirrorRenderer {
         List<Node> order = new ArrayList<>(all);
         Node biggest = all.isEmpty() ? null : all.get(0);
         order.sort(Comparator.comparingDouble(n -> -priority(n, n == biggest)));
-        // the mirrors themselves: every frame (a picture from a few frames ago is from where you stood then, so while
-        // walking the reflection swam and jumped); mirrors seen in mirrors take turns
+        // as many as fit the budget, most needed first: the biggest mirror, any without a picture yet or grown a lot,
+        // then the rest (the mirrors themselves before mirrors seen in them, at the same size)
         List<Node> chosen = new ArrayList<>();
-        for (Node node : all) {
-            if (node.depth == 1 && chosen.size() < TOP_EVERY_FRAME) {
-                chosen.add(node);
-            }
-        }
-        int bounces = 0, extra = 0;
+        float spent = 0.0F;
         for (Node node : order) {
-            if (chosen.contains(node)) {
-                continue;
-            }
-            if (bounces < PASSES_PER_FRAME) {
+            float sc = scaleFor(node);
+            float cost = Math.max(area(grow(node.rect, RECT_MARGIN)), 0.002F) * sc * sc + PICTURE_COST;
+            boolean must = node == biggest || !node.valid || node.depth == 1 || node.area >= EVERY_FRAME_AREA;
+            if (chosen.size() < MAX_DRAWS && (spent + cost <= PIXEL_BUDGET || must)) {
                 chosen.add(node);
-                bounces++;
-            } else if (!node.valid && (node.depth == 1 || extra < 4)) {
-                chosen.add(node); // a mirror just come into view gets its picture now (no frame of plain block)
-                extra++;
+                spent += cost;
             }
         }
         chosen.sort(Comparator.comparingInt(n -> -n.depth)); // (deeper first: a picture shows the newest ones inside it)
@@ -497,11 +539,11 @@ public final class MirrorRenderer {
         for (Node node : chosen) {
             try {
                 prepare(node, main, true); // (a new size only right before drawing: no frame without a picture)
-                renderNode(mc, level, camera, node, projection, partialTick, node.depth == 1);
+                renderNode(mc, level, camera, node, projection, partialTick, true);
                 node.valid = true;
                 node.renderedFrame = frame;
                 node.renderedArea = node.area;
-                node.renderedRect = node.rect.clone();
+                node.renderedRect = grow(node.rect, RECT_MARGIN);
             } catch (RuntimeException ex) {
                 skipped("drawing failed: " + ex, node.wall);
                 if (!warnedFail) {
@@ -647,23 +689,40 @@ public final class MirrorRenderer {
         if (n.depth == 1) {
             return 1.0F;
         }
-        float tier = n.area < 0.01F ? 0.5F : 1.0F;
+        float tier = n.area < 0.004F ? 0.5F : 1.0F;
         return tier * (float) Math.pow(BOUNCE_SCALE, n.depth - 1);
     }
 
-    /** The node's picture, sized for this frame (a new size loses the old picture). */
+    /**
+     * The node's picture, sized for this frame: only as big as its mirror's part of the screen (and a margin), at its
+     * sharpness - not a whole screen's worth for every mirror. Its size changes only when it no longer fits or is far
+     * too big (a new size loses the old picture, so only right before drawing it).
+     */
     private static void prepare(Node n, RenderTarget main, boolean drawingNow) {
-        float scale = scaleFor(n);
-        int w = Math.max(1, (int) (main.width * scale)), h = Math.max(1, (int) (main.height * scale));
-        if (n.target == null) {
-            n.target = newTarget(w, h);
-            n.scale = scale;
-            n.valid = false;
-        } else if (drawingNow && (Math.abs(scale - n.scale) > 0.001F || n.target.width != w || n.target.height != h)) {
-            // (until it's drawn again, the old picture keeps showing: it still lines up at any size)
-            resize(n.target, w, h);
-            n.scale = scale;
+        if (!drawingNow) {
+            return;
         }
+        float scale = scaleFor(n);
+        float[] want = grow(n.rect, RECT_MARGIN);
+        int needW = Math.max(16, (int) Math.ceil((want[2] - want[0]) * main.width * scale));
+        int needH = Math.max(16, (int) Math.ceil((want[3] - want[1]) * main.height * scale));
+        if (n.target == null) {
+            n.target = newTarget(roundUp(needW), roundUp(needH));
+            n.valid = false;
+        } else if (n.target.width < needW || n.target.height < needH || n.target.width > needW * 2 + 64 || n.target.height > needH * 2 + 64) {
+            resize(n.target, roundUp(needW), roundUp(needH));
+        }
+        n.scale = scale;
+        // (the picture laid over the screen from the wanted part's lower left corner: the wanted part is drawn, the
+        // rest of the picture - there only so it needn't be made again at every step - isn't)
+        float pw = n.target.width / (main.width * scale), ph = n.target.height / (main.height * scale);
+        n.picRect = new float[] {want[0], want[1], want[0] + pw, want[1] + ph};
+        n.usedW = Math.min(1.0F, (want[2] - want[0]) / pw);
+        n.usedH = Math.min(1.0F, (want[3] - want[1]) / ph);
+    }
+
+    private static int roundUp(int v) {
+        return (v + 31) & ~31;
     }
 
     /**
@@ -736,9 +795,12 @@ public final class MirrorRenderer {
         Chain c = node.chain;
         TextureTarget target = node.target;
         currentTarget = target;
-        currentRect = grow(node.rect, RECT_MARGIN);
+        currentRect = new float[] {0.0F, 0.0F, node.usedW, node.usedH}; // (only the mirror's part of the picture)
         double rx = c.rx, ry = c.ry, rz = c.rz;
-        Matrix4f modelView = c.modelView, clipped = c.clipped;
+        // the picture's projections: the screen's, with its part of the screen filling the picture
+        Matrix4f toPic = rectOnly(node.picRect);
+        Matrix4f modelView = c.modelView, clipped = new Matrix4f(toPic).mul(c.clipped);
+        projection = new Matrix4f(toPic).mul(projection);
         int frontFace = c.flipped ? GL11.GL_CW : GL11.GL_CCW; // a reflection turns everything inside out
 
         rendering = true;
@@ -746,12 +808,10 @@ public final class MirrorRenderer {
         // the sky's colour first (what the main view is cleared to), then the sky itself on top
         float[] fog = RenderSystem.getShaderFogColor();
         target.setClearColor(fog[0], fog[1], fog[2], 0); // (alpha 0: "nothing drawn here", see mirror_surface.fsh)
-        // only the part of the picture where the mirror is on screen is drawn (and cleared)
-        float[] drawRect = grow(node.rect, RECT_MARGIN);
-        scissor(target, drawRect);
+        float[] drawRect = grow(node.rect, RECT_MARGIN); // (where the mirror is on screen: for skipping what's tiny in it)
+        RenderSystem.disableScissor();
         target.clear(Minecraft.ON_OSX);
-        target.bindWrite(true);
-        scissor(target, drawRect);
+        rebindPicture(); // (and only the mirror's part from here on)
         GL11.glFrontFace(GL11.GL_CCW);
         try {
             RenderSystem.setProjectionMatrix(projection, VertexSorting.DISTANCE_TO_ORIGIN);
@@ -780,39 +840,46 @@ public final class MirrorRenderer {
         // blocks: the chunk meshes already on the graphics card (with Sodium: only the sections this mirror sees)
         LevelRendererInvoker chunks = (LevelRendererInvoker) mc.levelRenderer;
         RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
-        // only what shows in the mirror's part of the screen: chunk sections, mobs and block entities outside it are
-        // skipped (a small mirror then costs little)
-        FrustumIntersection inRect = new FrustumIntersection(rectOnly(drawRect).mul(clipped).mul(modelView));
-        Matrix4f toPicture = new Matrix4f(projection).mul(modelView);
+        // only what shows in the mirror's part of the screen: chunk sections, mobs, block entities and particles outside
+        // it are skipped (a small mirror then costs little)
+        Matrix4f rectClip = clipped; // (already only the picture's part of the screen)
+        FrustumIntersection inRect = new FrustumIntersection(new Matrix4f(rectClip).mul(modelView));
+        net.minecraft.client.renderer.culling.Frustum frustum = new net.minecraft.client.renderer.culling.Frustum(modelView, rectClip);
+        frustum.prepare(rx, ry, rz);
+        Matrix4f toPicture = new Matrix4f(c.clipped).mul(modelView); // (to the screen: what's tiny there is skipped)
         cullChunks(inRect, rx, ry, rz);
         MirrorTiming.start(MirrorTiming.BLOCKS);
-        chunks.skyblocks$renderChunkLayer(RenderType.solid(), poseOf(modelView), rx, ry, rz, clipped);
-        rebindPicture(); // (with a shader pack, Iris binds its own framebuffers around chunk drawing)
-        chunks.skyblocks$renderChunkLayer(RenderType.cutoutMipped(), poseOf(modelView), rx, ry, rz, clipped);
-        rebindPicture();
-        chunks.skyblocks$renderChunkLayer(RenderType.cutout(), poseOf(modelView), rx, ry, rz, clipped);
-        rebindPicture();
-        // entities in front of the wall, you included (block entities: in the mirrors themselves, not in bounces)
-        if (node.depth <= 3) {
-            MirrorTiming.start(MirrorTiming.MOBS);
-            renderEntities(mc, level, camera, node.wall, modelView, inRect, toPicture, drawRect, rx, ry, rz, partialTick, withBlockEntities);
-            target.bindWrite(true);
-            scissor(target, drawRect);
-            GL11.glFrontFace(frontFace);
-            RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
+        // without Sodium: this mirror's own sections (all round you, in its view), not the main view's every one
+        boolean own = !SODIUM && MirrorChunks.works();
+        List<Object> sections = own ? MirrorChunks.sections(frustum) : List.of();
+        if (own) {
+            MirrorChunks.build(sections, frame);
         }
+        for (RenderType layer : new RenderType[] {RenderType.solid(), RenderType.cutoutMipped(), RenderType.cutout()}) {
+            if (own) {
+                MirrorChunks.draw(layer, sections, rx, ry, rz, modelView, clipped);
+            } else {
+                chunks.skyblocks$renderChunkLayer(layer, poseOf(modelView), rx, ry, rz, clipped);
+            }
+            rebindPicture(); // (with a shader pack, Iris binds its own framebuffers around chunk drawing)
+        }
+        // mobs in front of the wall, you included, with their shadows; block entities
+        MirrorTiming.start(MirrorTiming.MOBS);
+        renderEntities(mc, level, camera, node, modelView, inRect, toPicture, drawRect, rx, ry, rz, partialTick, true);
+        rebindPicture();
+        GL11.glFrontFace(frontFace);
+        RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
         // portals given a Shadered sky: their sky (drawn in the main view at its entity stage, so not by the chunks)
+        MirrorTiming.start(MirrorTiming.PORTALS);
         try {
             PortalSkyRenderer.drawInMirror(level, rx, ry, rz, modelView);
         } catch (RuntimeException ignored) {
             // left out of the mirror
         }
-        target.bindWrite(true);
-        scissor(target, drawRect);
+        rebindPicture();
         GL11.glFrontFace(frontFace);
         RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
         // the mirrors seen in this one: their latest pictures
-        MirrorTiming.start(MirrorTiming.INSIDE);
         PoseStack stack = RenderSystem.getModelViewStack();
         stack.pushPose();
         stack.setIdentity();
@@ -820,7 +887,17 @@ public final class MirrorRenderer {
         RenderSystem.applyModelViewMatrix();
         try {
             // infinity mirrors in view (their tunnel worked out from this mirror's eye)
-            InfinityMirrorRenderer.drawInMirror(rx, ry, rz, modelView, clipped);
+            // (the aquariums, infinity mirrors and dance floors are traced pixel by pixel: in a mirror seen in mirrors two
+            // deep and small on screen they'd be a few pixels each, for the cost of drawing them again)
+            if (node.depth <= 2 || node.area >= 0.01F) {
+                MirrorTiming.start(MirrorTiming.INFINITY);
+                InfinityMirrorRenderer.drawInMirror(rx, ry, rz, modelView, clipped);
+                MirrorTiming.start(MirrorTiming.DANCE_FLOORS);
+                DanceFloorRenderer.drawInMirror(rx, ry, rz, modelView, clipped);
+                MirrorTiming.start(MirrorTiming.AQUARIUMS);
+                AquariumRenderer.drawInMirror(rx, ry, rz, modelView, clipped);
+            }
+            MirrorTiming.start(MirrorTiming.INSIDE);
             for (Node child : node.children) {
                 Node shown = child.valid ? child : NODES.get(List.of(child.wall)); // (not drawn yet: that mirror's own picture)
                 if (shown != null && shown.valid && shown.target != null) {
@@ -845,49 +922,63 @@ public final class MirrorRenderer {
             RenderSystem.applyModelViewMatrix();
         }
         GL11.glFrontFace(frontFace);
-        // see-through blocks (glass, water, portals) after the entities, like the main view; only with Sodium: vanilla
-        // would re-sort its see-through chunks for the mirror's camera and then again for the real one every frame
+        // particles that aren't see-through, then see-through blocks (glass, water, portals) after the entities, like the
+        // main view (without Sodium: in the main view's order, not re-sorted for every mirror), see-through particles,
+        // clouds, rain and snow
+        MirrorTiming.start(MirrorTiming.SEE_THROUGH);
+        Eye eye = eyeFor(mc, camera, node, partialTick);
+        effects(mc, camera, eye, node, modelView, clipped, frustum, rx, ry, rz, partialTick, false);
+        GL11.glFrontFace(frontFace);
+        rebindPicture();
+        RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
         if (SODIUM) {
-            MirrorTiming.start(MirrorTiming.SEE_THROUGH);
-            RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
             chunks.skyblocks$renderChunkLayer(RenderType.translucent(), poseOf(modelView), rx, ry, rz, clipped);
             rebindPicture();
+        } else if (own) {
+            MirrorChunks.draw(RenderType.translucent(), sections, rx, ry, rz, modelView, clipped);
         }
+        effects(mc, camera, eye, node, modelView, clipped, frustum, rx, ry, rz, partialTick, true);
+        GL11.glFrontFace(frontFace);
         MirrorTiming.end();
 
         node.shot.projModel.set(projection).mul(modelView); // (the oblique cut only changes depth: x, y and w are the projection's)
+        node.shot.maxU = node.usedW;
+        node.shot.maxV = node.usedH;
         node.shot.rx = rx;
         node.shot.ry = ry;
         node.shot.rz = rz;
-        Matrix4f culling = rectOnly(grow(node.rect, CHUNK_MARGIN)).mul(clipped).mul(modelView).translate((float) (cam.x - rx), (float) (cam.y - ry), (float) (cam.z - rz));
+        Matrix4f culling = rectOnly(grow(node.rect, CHUNK_MARGIN)).mul(c.clipped).mul(modelView).translate((float) (cam.x - rx), (float) (cam.y - ry), (float) (cam.z - rz));
         node.view = new MirrorCulling.View(new FrustumIntersection(culling));
     }
 
-    private static void renderEntities(Minecraft mc, ClientLevel level, Camera camera, Wall wall, Matrix4f modelView,
+    private static void renderEntities(Minecraft mc, ClientLevel level, Camera camera, Node node, Matrix4f modelView,
                                        FrustumIntersection seen, Matrix4f toPicture, float[] rect,
                                        double rx, double ry, double rz, float partialTick,
                                        boolean withBlockEntities) {
-        if (entityMemory == null) {
-            entityMemory = new BufferBuilder(1 << 18);
+        Wall wall = node.wall;
+        if (entityBuffers == null) {
+            entityBuffers = MirrorBuffers.create();
         }
         PoseStack stack = RenderSystem.getModelViewStack();
         stack.pushPose();
         stack.setIdentity();
         RenderSystem.applyModelViewMatrix();
         EntityRenderDispatcher dispatcher = mc.getEntityRenderDispatcher();
-        dispatcher.setRenderShadow(false);
-        MultiBufferSource.BufferSource buffers = MultiBufferSource.immediate(entityMemory);
+        dispatcher.setRenderShadow(mc.options.entityShadows().get());
+        // (name tags turned to face you in the mirror, as particles are)
+        dispatcher.overrideCameraOrientation(eyeFor(mc, camera, node, partialTick).rotation());
+        MultiBufferSource.BufferSource buffers = entityBuffers; // (each kind gathered, drawn once: MirrorBuffers)
         // (1.20.1: renderers get the view in their pose, as in the world's own pass; Shadered's models undo the real
         // camera's turn from it and its passes turn it back, which leaves the mirror's view in place)
         PoseStack pose = poseOf(modelView);
         Vec3 cam = camera.getPosition();
+        ViewState.mirror(modelView); // (the turn in these poses, for the shaders that take it out)
         try {
-            for (Entity entity : level.entitiesForRendering()) {
-                double x = Mth.lerp(partialTick, entity.xOld, entity.getX());
-                double y = Mth.lerp(partialTick, entity.yOld, entity.getY());
-                double z = Mth.lerp(partialTick, entity.zOld, entity.getZ());
+            for (Near near : NEARBY_ENTITIES) {
+                Entity entity = near.entity();
+                double x = near.x(), y = near.y(), z = near.z();
                 double front = wall.distance(new Vec3(x, y, z));
-                if (front < -0.5 || front > ENTITY_RANGE || cam.distanceToSqr(x, y, z) > ENTITY_RANGE * ENTITY_RANGE) {
+                if (front < -0.5 || front > ENTITY_RANGE) {
                     continue;
                 }
                 if (!entity.noCulling) {
@@ -897,7 +988,7 @@ public final class MirrorRenderer {
                     }
                 }
                 try {
-                    dispatcher.render(entity, x - rx, y - ry, z - rz, Mth.lerp(partialTick, entity.yRotO, entity.getYRot()),
+                    dispatcher.render(entity, x - rx, y - ry, z - rz, near.yRot(),
                             partialTick, pose, buffers, dispatcher.getPackedLightCoords(entity, partialTick));
                 } catch (RuntimeException ignored) {
                     // an entity that can't be drawn here is left out of the mirror
@@ -934,7 +1025,7 @@ public final class MirrorRenderer {
                             continue; // not in this mirror's view
                         }
                         float[] onScreen = screenRect(toPicture, box, rect);
-                        if (onScreen == null || area(onScreen) < TINY) {
+                        if (onScreen == null || area(onScreen) < TINY * (node.depth >= 3 ? 8.0F : node.depth == 2 ? 2.0F : 1.0F)) {
                             continue; // a few pixels in the mirror: not worth drawing
                         }
                         pose.pushPose();
@@ -991,7 +1082,9 @@ public final class MirrorRenderer {
                 // sky blocks left out of the mirror
             }
         } finally {
+            ViewState.mirror(null);
             dispatcher.setRenderShadow(true);
+            dispatcher.overrideCameraOrientation(camera.rotation());
             stack.popPose();
             RenderSystem.applyModelViewMatrix();
         }
@@ -1025,6 +1118,210 @@ public final class MirrorRenderer {
                     NEARBY_BLOCK_ENTITIES.add(be);
                 }
             }
+        }
+    }
+
+    /**
+     * The camera particles and name tags are turned to in a mirror: at the real camera, looking the way the mirrored
+     * view looks in the world (the real view direction mirrored in each wall of the node's chain, first to last). A
+     * particle turned to it, seen through the reflection, faces you - as it would in a real mirror.
+     */
+    static final class Eye extends Camera {
+        void place(Camera real, Vec3 forward) {
+            setPosition(real.getPosition());
+            float yaw = (float) Math.toDegrees(Math.atan2(-forward.x, forward.z));
+            float pitch = (float) Math.toDegrees(Math.asin(Mth.clamp(-forward.y, -1.0, 1.0)));
+            setRotation(yaw, pitch);
+        }
+    }
+
+    private static final Eye EYE = new Eye();
+    private static Node eyeNode;
+    private static long eyeFrame = -1;
+
+    private static Eye eyeFor(Minecraft mc, Camera camera, Node node, float partialTick) {
+        if (eyeNode == node && eyeFrame == frame) {
+            return EYE;
+        }
+        org.joml.Vector3f look = camera.getLookVector();
+        Vec3 f = new Vec3(look.x(), look.y(), look.z());
+        for (Wall w : node.path) { // (mirrored in the first wall seen, then the next...)
+            Vec3 n = new Vec3(w.nx(), w.ny(), w.nz());
+            f = f.subtract(n.scale(2.0 * f.dot(n)));
+        }
+        try {
+            if (mc.level != null && mc.getCameraEntity() != null) {
+                EYE.setup(mc.level, mc.getCameraEntity(), false, false, partialTick); // (its entity and level, as the real camera's)
+            }
+        } catch (RuntimeException ignored) {
+            // (only its place and turn matter)
+        }
+        EYE.place(camera, f);
+        eyeNode = node;
+        eyeFrame = frame;
+        return EYE;
+    }
+
+    private static java.lang.reflect.Method snowAndRain;
+    private static boolean snowAndRainLooked, warnedEffects;
+
+    /**
+     * Particles (the see-through kinds, or the rest), and with the see-through ones the clouds, rain and snow, into the
+     * picture. They're worked out round the real camera, as the main view's (no rebuilding the clouds for every mirror,
+     * the same raindrops as you see): the model-view takes them from there to the mirrored eye.
+     */
+    private static void effects(Minecraft mc, Camera camera, Eye eye, Node node, Matrix4f modelView, Matrix4f clipped,
+                                net.minecraft.client.renderer.culling.Frustum frustum, double rx, double ry, double rz, float partialTick,
+                                boolean seeThrough) {
+        Vec3 cam = camera.getPosition();
+        Matrix4f fromCamera = new Matrix4f(modelView).translate((float) (cam.x - rx), (float) (cam.y - ry), (float) (cam.z - rz));
+        // (1.20.1: particles and clouds take their view as a pose; the model-view stays plain)
+        com.mojang.blaze3d.vertex.PoseStack stack = RenderSystem.getModelViewStack();
+        stack.pushPose();
+        stack.setIdentity();
+        RenderSystem.applyModelViewMatrix();
+        RenderSystem.setProjectionMatrix(clipped, VertexSorting.DISTANCE_TO_ORIGIN);
+        net.minecraft.client.renderer.LightTexture light = mc.gameRenderer.lightTexture();
+        try {
+            RenderSystem.disableCull(); // (particles, rain: flat, seen from either side)
+            // (1.20.1: all particles at once - no see-through split - with the see-through blocks' pass)
+            if (seeThrough && node.depth <= 3) { // (deeper bounces are tiny: every particle in the world gone through again for them isn't worth it)
+                try {
+                    mc.particleEngine.render(poseOf(fromCamera), mc.renderBuffers().bufferSource(), light, eye, partialTick, frustum);
+                } catch (RuntimeException e) {
+                    warnEffects(e);
+                }
+                rebindPicture();
+            }
+            if (!seeThrough) {
+                return;
+            }
+            RenderSystem.enableCull();
+            if (mc.options.getCloudsType() != net.minecraft.client.CloudStatus.OFF) {
+                try {
+                    mc.levelRenderer.renderClouds(poseOf(fromCamera), clipped, partialTick, cam.x, cam.y, cam.z);
+                } catch (RuntimeException e) {
+                    warnEffects(e);
+                }
+                rebindPicture();
+            }
+            if (!snowAndRainLooked) {
+                snowAndRainLooked = true;
+                try {
+                    snowAndRain = net.minecraft.client.renderer.LevelRenderer.class.getDeclaredMethod("renderSnowAndRain",
+                            net.minecraft.client.renderer.LightTexture.class, float.class, double.class, double.class, double.class);
+                    snowAndRain.setAccessible(true);
+                } catch (ReflectiveOperationException | RuntimeException e) {
+                    snowAndRain = null;
+                }
+            }
+            if (snowAndRain != null && node.depth <= 2 && mc.level != null && mc.level.getRainLevel(partialTick) > 0.0F) {
+                RenderSystem.depthMask(false);
+                try {
+                    stack.mulPoseMatrix(fromCamera); // (the rain is drawn with the model-view)
+                    RenderSystem.applyModelViewMatrix();
+                    snowAndRain.invoke(mc.levelRenderer, light, partialTick, cam.x, cam.y, cam.z);
+                } catch (ReflectiveOperationException | RuntimeException e) {
+                    warnEffects(e);
+                    snowAndRain = null;
+                } finally {
+                    RenderSystem.depthMask(true);
+                }
+                rebindPicture();
+            }
+        } finally {
+            RenderSystem.enableCull();
+            RenderSystem.disableBlend();
+            RenderSystem.depthMask(true);
+            stack.popPose();
+            RenderSystem.applyModelViewMatrix();
+        }
+    }
+
+    private static void warnEffects(Exception e) {
+        if (!warnedEffects) {
+            warnedEffects = true;
+            SkyBlocksMod.LOGGER.warn("Shadered+: couldn't draw particles, clouds or rain in a mirror", e);
+        }
+    }
+
+    /**
+     * Per mirror in view: {its occlusion query, frames in a row it was wholly hidden behind blocks, 1 while its query
+     * is still being answered, the frame it was last asked about}. The answers are read a frame or two late (no waiting on the graphics card).
+     */
+    private static final Map<Wall, int[]> OCCLUSION = new HashMap<>();
+    /** Hidden this many frames in a row: its picture isn't drawn (back the frame after it shows again). */
+    private static final int HIDDEN_FRAMES = 2;
+
+    /**
+     * Asks the graphics card whether any of each mirror's face shows past the world's blocks drawn so far (the
+     * answer read in a later frame), and reads the answers that are in.
+     */
+    private static void occlusion(RenderTarget main, List<Map.Entry<Wall, List<BlockPos>>> visible, Matrix4f view, Matrix4f projection, Vec3 cam) {
+        try {
+            OCCLUSION.keySet().removeIf(w -> {
+                if (WALLS.containsKey(w)) {
+                    return false;
+                }
+                org.lwjgl.opengl.GL15.glDeleteQueries(OCCLUSION.get(w)[0]);
+                return true;
+            });
+            ShaderInstance position = net.minecraft.client.renderer.GameRenderer.getPositionShader();
+            if (position == null) {
+                return;
+            }
+            main.bindWrite(true);
+            com.mojang.blaze3d.vertex.PoseStack stack = RenderSystem.getModelViewStack();
+            stack.pushPose();
+            stack.setIdentity();
+            stack.mulPoseMatrix(view);
+            RenderSystem.applyModelViewMatrix();
+            RenderSystem.setProjectionMatrix(projection, VertexSorting.DISTANCE_TO_ORIGIN);
+            RenderSystem.colorMask(false, false, false, false);
+            RenderSystem.depthMask(false);
+            RenderSystem.enableDepthTest();
+            RenderSystem.depthFunc(GL11.GL_LEQUAL);
+            RenderSystem.disableCull();
+            RenderSystem.disableBlend();
+            RenderSystem.enablePolygonOffset();
+            RenderSystem.polygonOffset(-2.0F, -20.0F); // (as the faces: in front of the mirror block's own face)
+            try {
+                for (Map.Entry<Wall, List<BlockPos>> e : visible) {
+                    int[] o = OCCLUSION.computeIfAbsent(e.getKey(), w -> new int[] {org.lwjgl.opengl.GL15.glGenQueries(), 0, 0, 0});
+                    if ((int) frame - o[3] > 1) {
+                        o[1] = 0; // (out of view for a while: what it was then doesn't count)
+                    }
+                    o[3] = (int) frame;
+                    if (o[2] == 1) {
+                        if (org.lwjgl.opengl.GL15.glGetQueryObjecti(o[0], org.lwjgl.opengl.GL15.GL_QUERY_RESULT_AVAILABLE) == 0) {
+                            continue; // (not answered yet: ask again once it is)
+                        }
+                        boolean seen = org.lwjgl.opengl.GL15.glGetQueryObjecti(o[0], org.lwjgl.opengl.GL15.GL_QUERY_RESULT) != 0;
+                        o[1] = seen ? 0 : o[1] + 1;
+                        o[2] = 0;
+                    }
+                    BufferBuilder.RenderedBuffer mesh = faceMesh(e.getKey(), e.getValue(), cam.x, cam.y, cam.z);
+                    if (mesh == null) {
+                        continue;
+                    }
+                    RenderSystem.setShader(() -> position);
+                    org.lwjgl.opengl.GL15.glBeginQuery(org.lwjgl.opengl.GL33.GL_ANY_SAMPLES_PASSED, o[0]);
+                    BufferUploader.drawWithShader(mesh);
+                    org.lwjgl.opengl.GL15.glEndQuery(org.lwjgl.opengl.GL33.GL_ANY_SAMPLES_PASSED);
+                    o[2] = 1;
+                }
+            } finally {
+                RenderSystem.polygonOffset(0.0F, 0.0F);
+                RenderSystem.disablePolygonOffset();
+                RenderSystem.colorMask(true, true, true, true);
+                RenderSystem.depthMask(true);
+                RenderSystem.enableCull();
+                stack.popPose();
+                RenderSystem.applyModelViewMatrix();
+            }
+        } catch (RuntimeException | LinkageError ex) {
+            // (no answers: every mirror in view is drawn)
+            OCCLUSION.values().forEach(o -> o[1] = 0);
         }
     }
 
@@ -1175,6 +1472,7 @@ public final class MirrorRenderer {
         // positions here are relative to (cx, cy, cz); the picture was taken relative to the mirrored eye
         shader.safeGetUniform("MirrorTexMat").set(new Matrix4f(shot.projModel)
                 .translate((float) (cx - shot.rx), (float) (cy - shot.ry), (float) (cz - shot.rz)));
+        shader.safeGetUniform("MirrorTexMax").set(shot.maxU, shot.maxV);
         RenderSystem.setShader(() -> shader);
         RenderSystem.setShaderTexture(0, texture);
         RenderSystem.enableDepthTest();

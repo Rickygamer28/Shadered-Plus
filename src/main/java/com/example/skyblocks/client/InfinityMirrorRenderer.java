@@ -189,14 +189,21 @@ public final class InfinityMirrorRenderer {
         Vector3f eyeRel = eyeOf(projection, view);
         Vec3 eye = cam.add(eyeRel.x, eyeRel.y, eyeRel.z);
         InfinitySet set = world;
-        scoped(view, projection, overlay -> {
-            List<Runnable> shapes = new ArrayList<>();
-            drawSet(set, cam, eye, eyeRel, view, projection, !overlay, shapes);
-            recordShapes(overlay, shapes, 0.0F);
-        });
+        int timing = WorldTiming.start(WorldTiming.INFINITY);
+        HalfRes.mainView = true; // (the cubes: at half size - see HalfRes)
+        try {
+            scoped(view, projection, overlay -> {
+                List<Runnable> shapes = new ArrayList<>();
+                drawSet(set, cam, eye, eyeRel, view, projection, !overlay, shapes);
+                recordShapes(overlay, shapes, 0.0F);
+            });
+        } finally {
+            HalfRes.mainView = false;
+        }
+        WorldTiming.stop(timing);
     }
 
-    private interface Body {
+    interface Body {
         void draw(boolean overlay);
     }
 
@@ -204,7 +211,7 @@ public final class InfinityMirrorRenderer {
      * Runs {@code body} set up for drawing into the world: the projection and view set, the main framebuffer (or, with
      * a shader pack, Shadered+'s overlay, laid over the pack's image at the end of the frame), everything put back after.
      */
-    private static void scoped(Matrix4f view, Matrix4f projection, Body body) {
+    static void scoped(Matrix4f view, Matrix4f projection, Body body) {
         Minecraft mc = Minecraft.getInstance();
         RenderTarget main = mc.getMainRenderTarget();
         boolean iris = IrisIslandTarget.active();
@@ -253,7 +260,7 @@ public final class InfinityMirrorRenderer {
     }
 
     /** With a shader pack: where the faces just drawn are (with the view now set), for the overlay's end-of-frame test. */
-    private static void recordShapes(boolean overlay, List<Runnable> shapes, float shapePull) {
+    static void recordShapes(boolean overlay, List<Runnable> shapes, float shapePull) {
         if (!overlay || shapes.isEmpty()) {
             return;
         }
@@ -359,7 +366,12 @@ public final class InfinityMirrorRenderer {
         }
         Vec3 at = new Vec3(ex, ey, ez);
         Vector3f eyeRel = eyeOf(projection, modelView);
-        drawSet(world, at, at.add(eyeRel.x, eyeRel.y, eyeRel.z), eyeRel, modelView, projection, true, new ArrayList<>());
+        InfinityCubeRenderer.lite = true;
+        try {
+            drawSet(world, at, at.add(eyeRel.x, eyeRel.y, eyeRel.z), eyeRel, modelView, projection, true, new ArrayList<>());
+        } finally {
+            InfinityCubeRenderer.lite = false;
+        }
     }
 
     /**
@@ -412,6 +424,20 @@ public final class InfinityMirrorRenderer {
         shader.safeGetUniform("Rainbow").set(isRainbow(f.color()) ? 1.0F : 0.0F);
         shader.safeGetUniform("Time").set(seconds);
         shader.safeGetUniform("Pull").set(pull);
+        // its shape: which blocks of its rectangle are mirrors (the tunnel follows it, round holes and corners)
+        int w = f.maxU() - f.minU() + 1, h = f.maxV() - f.minV() + 1;
+        boolean full = f.blocks().size() >= w * h || w * h > 8 * 4 * 24;
+        shader.safeGetUniform("Full").set(full ? 1.0F : 0.0F);
+        if (!full) {
+            int[] bits = new int[8 * 4];
+            for (BlockPos pos : f.blocks()) {
+                int i = (InfinitySet.u(pos, f.facing()) - f.minU()) + w * (InfinitySet.v(pos, f.facing()) - f.minV());
+                bits[i / 24] |= 1 << (i % 24);
+            }
+            for (int k = 0; k < 8; k++) {
+                shader.safeGetUniform("Occ" + k).set((float) bits[k * 4], (float) bits[k * 4 + 1], (float) bits[k * 4 + 2], (float) bits[k * 4 + 3]);
+            }
+        }
     }
 
     /** The frame's faces as quads (positions relative to {@code origin}). */

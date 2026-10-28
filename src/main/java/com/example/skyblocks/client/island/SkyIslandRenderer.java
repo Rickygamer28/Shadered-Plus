@@ -23,8 +23,11 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
 
     /** Mobs inside are drawn up to this many blocks away per block of their size (per block the island is shown wide). */
     private static final double FIGURE_REACH = 24.0;
-    /** Block entities inside (chests, signs, sky blocks...) are drawn up to this far (per block the island is shown wide). */
-    private static final double DETAIL_REACH = 48.0;
+    /**
+     * Block entities inside (chests, signs, sky blocks...) are drawn up to this far (per block the island is shown wide):
+     * a 25-block island on a 1-block pedestal shows a block 1/25 block wide, a few pixels from here on.
+     */
+    private static final double DETAIL_REACH = 24.0;
     /** How high above the bottom of the block the island's lowest point floats. */
     private static final float FLOAT = 0.35F;
 
@@ -143,6 +146,9 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         if (!simple) {
             // infinity mirrors and cubes inside: drawn with their own shaders after the block entities
             com.example.skyblocks.client.InfinityMirrorRenderer.queueIsland(view.infinity(), poseStack.last().pose());
+            // aquariums and dance floors too
+            com.example.skyblocks.client.AquariumRenderer.queueIsland(view.aquariums(), poseStack.last().pose());
+            com.example.skyblocks.client.DanceFloorRenderer.queueIsland(view.danceFloors(), poseStack.last().pose());
             // portals given a Shadered sky: that sky
             com.example.skyblocks.client.PortalSkyRenderer.drawInIsland(view, view.portalSkies, poseStack, buffer, true);
         }

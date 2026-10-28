@@ -40,6 +40,7 @@ public class SkyBlocksMod {
         ModBlocks.BLOCKS.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
         ModBlockEntities.TYPES.register(modEventBus);
+        ModParticles.TYPES.register(modEventBus);
         ModFluids.TYPES.register(modEventBus);
         ModFluids.FLUIDS.register(modEventBus);
         ModFluids.RECIPES.register(modEventBus);
@@ -60,6 +61,33 @@ public class SkyBlocksMod {
         event.accept(ModItems.ISLAND_PAINTING.get());
         event.accept(ModItems.MIRROR.get());
         event.accept(ModItems.INFINITY_MIRROR.get());
+        event.accept(ModItems.WATER_CAUSTICS.get());
+        event.accept(ModItems.RAIN_GLASS.get());
+        event.accept(ModItems.LAVA_LAMP.get());
+        event.accept(ModItems.BIG_LAVA_LAMP.get());
+        event.accept(ModItems.FIRE_TORNADO.get());
+        event.accept(ModItems.BRICK_HEARTH.get());
+        event.accept(ModItems.MUSIC_VISUALIZER.get());
+        event.accept(ModItems.HOLOGRAM_PROJECTOR.get());
+        event.accept(ModItems.JELLYFISH_TANK.get());
+        event.accept(ModItems.KOI_POND.get());
+        event.accept(ModItems.VANILLA_KOI_POND.get());
+        event.accept(ModItems.BAMBOO_SPOUT.get());
+        event.accept(ModItems.MUSIC_BOX.get());
+        event.accept(ModItems.POND_STEPPING_STONE.get());
+        event.accept(ModItems.POND_BRIDGE.get());
+        event.accept(ModItems.NEON_SIGN.get());
+        event.accept(ModItems.DANCE_FLOOR.get());
+        event.accept(ModItems.DISCO_BALL.get());
+        event.accept(ModItems.SPEAKER.get());
+        event.accept(ModItems.FOG_MACHINE.get());
+        event.accept(ModItems.AQUARIUM.get());
+        event.accept(ModItems.OCEAN_AQUARIUM.get());
+        event.accept(ModItems.DEEP_SEA_AQUARIUM.get());
+        event.accept(ModItems.AQUARIUM_STAND.get());
+        event.accept(ModItems.AQUARIUM_LID.get());
+        event.accept(ModItems.VANILLA_AQUARIUM.get());
+        event.accept(ModItems.VANILLA_OCEAN_AQUARIUM.get());
         event.accept(ModItems.INFINITY_CUBE.get());
         for (ModFluids.SkyLiquid liquid : ModFluids.ALL) {
             event.accept(liquid.bucket.get());
@@ -81,6 +109,21 @@ public class SkyBlocksMod {
                 .encoder(com.example.skyblocks.portal.PortalSkiesPayload::encode)
                 .decoder(com.example.skyblocks.portal.PortalSkiesPayload::decode)
                 .consumerMainThread(com.example.skyblocks.portal.PortalSkiesPayload::handle)
+                .add();
+        NETWORK.messageBuilder(FogAreaPayload.class, 3, net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER)
+                .encoder(FogAreaPayload::encode)
+                .decoder(FogAreaPayload::decode)
+                .consumerMainThread(FogAreaPayload::handle)
+                .add();
+        NETWORK.messageBuilder(NeonSignPayload.class, 4, net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER)
+                .encoder(NeonSignPayload::encode)
+                .decoder(NeonSignPayload::decode)
+                .consumerMainThread(NeonSignPayload::handle)
+                .add();
+        NETWORK.messageBuilder(PondMaterialsPayload.class, 5, net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER)
+                .encoder(PondMaterialsPayload::encode)
+                .decoder(PondMaterialsPayload::decode)
+                .consumerMainThread(PondMaterialsPayload::handle)
                 .add();
     }
 }

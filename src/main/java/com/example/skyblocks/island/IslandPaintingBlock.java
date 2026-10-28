@@ -72,7 +72,7 @@ public class IslandPaintingBlock extends BaseEntityBlock {
 
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(FACING, UP, DOWN, CW, CCW, FRAME);
     }
 

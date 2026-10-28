@@ -1,0 +1,84 @@
+{
+  "parent": "minecraft:block/block",
+  "render_type": "minecraft:translucent",
+  "textures": {
+    "panel": "skyblocks:block/neon_sign_panel",
+    "particle": "skyblocks:block/neon_sign_panel"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        15
+      ],
+      "to": [
+        16,
+        16,
+        15.6
+      ],
+      "faces": {
+        "north": {
+          "texture": "#panel",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "tintindex": 0
+        },
+        "south": {
+          "texture": "#panel",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "tintindex": 0
+        },
+        "east": {
+          "texture": "#panel",
+          "uv": [
+            15,
+            0,
+            15.6,
+            16
+          ],
+          "tintindex": 0
+        },
+        "west": {
+          "texture": "#panel",
+          "uv": [
+            15,
+            0,
+            15.6,
+            16
+          ],
+          "tintindex": 0
+        },
+        "up": {
+          "texture": "#panel",
+          "uv": [
+            0,
+            15,
+            16,
+            15.6
+          ],
+          "tintindex": 0
+        },
+        "down": {
+          "texture": "#panel",
+          "uv": [
+            0,
+            15,
+            16,
+            15.6
+          ],
+          "tintindex": 0
+        }
+      }
+    }
+  ]
+}

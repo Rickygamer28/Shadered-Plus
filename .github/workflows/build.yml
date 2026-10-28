@@ -36,17 +36,26 @@ jobs:
           set -o pipefail
           gradle build --no-daemon 2>&1 | tee build.log
 
-      # Show Java compile errors as annotations on the run (readable without opening the log).
+      # Show Java compile errors as annotations on the run (readable without opening the log): GitHub keeps
+      # 10 notes of each level per step and cuts long ones, so the errors go out in ~3.5 KB pieces as errors,
+      # warnings and notices (30 pieces).
       - name: Report compile errors
         if: failure()
         run: |
-          # GitHub shows at most 10 error notes per step: pack up to 30 errors into each note.
-          grep -E "(\.java:[0-9]+: error:|^> |error: )" build.log | sed 's#.*/src/main/java/##' | awk '!seen[$0]++' > errors.txt || true
-          echo "errors: $(wc -l < errors.txt)"
-          split -l 30 errors.txt part_
-          for f in $(ls part_* 2>/dev/null | head -10); do
-            echo "::error::$(sed ':a;N;$!ba;s/\n/%0A/g' $f)"
-          done
+          grep -E -A3 "\.java:[0-9]+: error:" build.log | grep -vE "^\s*\^\s*$|^--$|warning: \[removal\]" | sed 's#.*/src/main/java/##' | cut -c1-220 > errors.txt || true
+          echo "errors: $(grep -c ': error:' errors.txt)"
+          python3 - <<'PY'
+          lines = open('errors.txt').read().split('\n')
+          parts, cur = [], ''
+          for l in lines:
+              if len(cur) + len(l) > 3400:
+                  parts.append(cur); cur = ''
+              cur += l + '\n'
+          if cur: parts.append(cur)
+          levels = ['error'] * 10 + ['warning'] * 10 + ['notice'] * 10
+          for lvl, p in zip(levels, parts):
+              print('::%s::%s' % (lvl, p.replace('%', '%25').replace('\r', '').replace('\n', '%0A')))
+          PY
 
       # Quick look inside the finished jar (shown as notices on the run).
       - name: Check jar

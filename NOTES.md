@@ -119,3 +119,13 @@
   (recolours its particles), so any portal's particles change colour.
 - 1.20.1 port (21 Oct 2026): SimpleChannel id 2 (PLAY_TO_CLIENT, DIMENSION/PLAYER distributors), SavedData load/save without
   registries, stage pose applied to the quads (1.20.1 keeps the view rotation there), amethyst chime instead of resonate.
+
+## 1.20.1 catch-up 2 (27-28 Oct 2026)
+- Everything from 1.21.1 since 1.0.2 (up to c6514bb on iris-paintings) ported in one go: aquariums, ponds, disco
+  ball, dance floor, fog machine, speakers, lava lamps, neon signs, fires, hologram, visualizer, music box, new skies,
+  the rebuilt mirror, half-size heavy blocks, sky pictures drawn only where needed, F3 timings.
+- 1.20.1 block entity poses hold the camera's turn (and view bobbing); the ported shaders that work in world axes get
+  it as ViewRot (client/ViewState) and take it back out. SkyUsage.queuedRect uses the sky projection only (no extra
+  camera turn). Render boxes are on the block entities (getRenderBoundingBox), not the renderers.
+- MirrorChunks is a stub on 1.20.1 (other chunk lists): without Embeddium mirrors draw the main view's chunk list.
+- Not tested in a world: CI compiles and reaches the title screen.

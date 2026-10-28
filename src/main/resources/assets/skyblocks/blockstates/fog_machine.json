@@ -1,0 +1,68 @@
+{
+  "variants": {
+    "facing=north,on=true,powered=true": {
+      "model": "skyblocks:block/fog_machine",
+      "y": 0
+    },
+    "facing=north,on=true,powered=false": {
+      "model": "skyblocks:block/fog_machine",
+      "y": 0
+    },
+    "facing=north,on=false,powered=true": {
+      "model": "skyblocks:block/fog_machine",
+      "y": 0
+    },
+    "facing=north,on=false,powered=false": {
+      "model": "skyblocks:block/fog_machine",
+      "y": 0
+    },
+    "facing=east,on=true,powered=true": {
+      "model": "skyblocks:block/fog_machine",
+      "y": 90
+    },
+    "facing=east,on=true,powered=false": {
+      "model": "skyblocks:block/fog_machine",
+      "y": 90
+    },
+    "facing=east,on=false,powered=true": {
+      "model": "skyblocks:block/fog_machine",
+      "y": 90
+    },
+    "facing=east,on=false,powered=false": {
+      "model": "skyblocks:block/fog_machine",
+      "y": 90
+    },
+    "facing=south,on=true,powered=true": {
+      "model": "skyblocks:block/fog_machine",
+      "y": 180
+    },
+    "facing=south,on=true,powered=false": {
+      "model": "skyblocks:block/fog_machine",
+      "y": 180
+    },
+    "facing=south,on=false,powered=true": {
+      "model": "skyblocks:block/fog_machine",
+      "y": 180
+    },
+    "facing=south,on=false,powered=false": {
+      "model": "skyblocks:block/fog_machine",
+      "y": 180
+    },
+    "facing=west,on=true,powered=true": {
+      "model": "skyblocks:block/fog_machine",
+      "y": 270
+    },
+    "facing=west,on=true,powered=false": {
+      "model": "skyblocks:block/fog_machine",
+      "y": 270
+    },
+    "facing=west,on=false,powered=true": {
+      "model": "skyblocks:block/fog_machine",
+      "y": 270
+    },
+    "facing=west,on=false,powered=false": {
+      "model": "skyblocks:block/fog_machine",
+      "y": 270
+    }
+  }
+}

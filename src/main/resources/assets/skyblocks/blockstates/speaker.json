@@ -1,0 +1,20 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "skyblocks:block/speaker",
+      "y": 0
+    },
+    "facing=east": {
+      "model": "skyblocks:block/speaker",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "skyblocks:block/speaker",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "skyblocks:block/speaker",
+      "y": 270
+    }
+  }
+}

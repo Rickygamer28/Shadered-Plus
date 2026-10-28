@@ -24,6 +24,9 @@ import org.lwjgl.opengl.GL11;
 final class InfinityCubeRenderer {
     private static final double RANGE = 128.0;
 
+    /** Drawing into a mirror's picture: the cheaper look (fewer reflections followed). */
+    static boolean lite;
+
     private InfinityCubeRenderer() {}
 
     /**
@@ -38,7 +41,10 @@ final class InfinityCubeRenderer {
             return;
         }
         FrustumIntersection seen = new FrustumIntersection(new Matrix4f(projection).mul(modelView));
-        int height = Math.max(1, Minecraft.getInstance().getMainRenderTarget().height);
+        // (the picture being drawn into: in a mirror, its own picture - not the screen - sets how big a pixel is)
+        int[] viewport = new int[4];
+        GL11.glGetIntegerv(GL11.GL_VIEWPORT, viewport);
+        int height = Math.max(1, viewport[3] > 0 ? viewport[3] : Minecraft.getInstance().getMainRenderTarget().height);
         float pixel = 2.0F / (Math.abs(projection.m11()) * height);
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL11.GL_LEQUAL);
@@ -47,6 +53,9 @@ final class InfinityCubeRenderer {
         RenderSystem.disableCull();
         RenderSystem.enablePolygonOffset();
         RenderSystem.polygonOffset(-2.0F, -20.0F); // over the block's own faces
+        // (in the normal view: worked out at half size, then put on screen - see HalfRes)
+        boolean half = false;
+        List<Runnable> drawnShapes = shapes;
         try {
             for (InfinitySet.Box b : boxes) {
                 if (b.faces().isEmpty()
@@ -66,6 +75,12 @@ final class InfinityCubeRenderer {
                 if (facing.isEmpty()) {
                     continue;
                 }
+                if (!half && drawnShapes == shapes && HalfRes.begin()) { // (only once there's a cube to draw)
+                    half = true;
+                    drawnShapes = new ArrayList<>();
+                    GL11.glGetIntegerv(GL11.GL_VIEWPORT, viewport);
+                    pixel = 2.0F / (Math.abs(projection.m11()) * Math.max(1, viewport[3]));
+                }
                 float[] c = InfinityMirrorRenderer.color(b.color());
                 shader.safeGetUniform("Eye").set(eyeRel.x, eyeRel.y, eyeRel.z);
                 shader.safeGetUniform("BoxMin").set((float) (b.minX() - origin.x), (float) (b.minY() - origin.y), (float) (b.minZ() - origin.z));
@@ -75,13 +90,14 @@ final class InfinityCubeRenderer {
                 shader.safeGetUniform("Rainbow").set(InfinityMirrorRenderer.isRainbow(b.color()) ? 1.0F : 0.0F);
                 shader.safeGetUniform("Time").set(seconds);
                 shader.safeGetUniform("PixelSize").set(pixel);
+                shader.safeGetUniform("Lite").set(lite ? 1.0F : 0.0F);
                 shader.safeGetUniform("Pull").set(InfinityMirrorRenderer.pull);
                 RenderSystem.setShader(() -> shader);
                 BufferBuilder.RenderedBuffer mesh = mesh(facing, origin);
                 if (mesh != null) {
                     BufferUploader.drawWithShader(mesh);
                 }
-                shapes.add(() -> {
+                drawnShapes.add(() -> {
                     BufferBuilder.RenderedBuffer shape = mesh(facing, origin);
                     if (shape != null) {
                         BufferUploader.drawWithShader(shape);
@@ -92,6 +108,10 @@ final class InfinityCubeRenderer {
             RenderSystem.polygonOffset(0.0F, 0.0F);
             RenderSystem.disablePolygonOffset();
             RenderSystem.enableCull();
+            if (half) {
+                HalfRes.finish(drawnShapes, writeDepth);
+                shapes.addAll(drawnShapes);
+            }
         }
     }
 

@@ -116,7 +116,7 @@ public class BigOiiaCatBlock extends Block implements EntityBlock {
 
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(LINK, EDGE_X, EDGE_Y, EDGE_Z, CUT);
     }
 
