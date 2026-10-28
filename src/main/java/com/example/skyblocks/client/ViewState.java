@@ -38,9 +38,21 @@ public final class ViewState {
         }
     }
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onStageLast(RenderLevelStageEvent event) {
-        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL && !MirrorRenderer.isRenderingReflection()) {
+    // (not at AFTER_LEVEL: block entities' see-through batches are drawn later than that; the world's turn holds
+    // until the hand or the GUI is drawn, or the next frame starts)
+    @SubscribeEvent
+    public static void onViewStateHand(net.minecraftforge.client.event.RenderHandEvent event) {
+        inLevel = false;
+    }
+
+    @SubscribeEvent
+    public static void onViewStateGui(net.minecraftforge.client.event.RenderGuiEvent.Pre event) {
+        inLevel = false;
+    }
+
+    @SubscribeEvent
+    public static void onViewStateFrame(net.minecraftforge.event.TickEvent.RenderTickEvent event) {
+        if (event.phase == net.minecraftforge.event.TickEvent.Phase.START) {
             inLevel = false;
         }
     }
@@ -58,7 +70,16 @@ public final class ViewState {
     static ShaderInstance upload(ShaderInstance shader) {
         if (shader != null) {
             shader.safeGetUniform("ViewRot").set(current());
+            long now = System.currentTimeMillis();
+            if (now - lastLog > 10000) { // (temporary: for checking the 1.20.1 port)
+                lastLog = now;
+                SkyBlocksMod.LOGGER.info("Shadered+ view check: {} drawn {} (mirror {}), turn used:\n{}model-view:\n{}", shader.getName(),
+                        inLevel ? "in the world" : "outside the world", override != null, current(),
+                        com.mojang.blaze3d.systems.RenderSystem.getModelViewMatrix());
+            }
         }
         return shader;
     }
+
+    private static long lastLog;
 }
