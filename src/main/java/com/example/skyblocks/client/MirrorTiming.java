@@ -158,7 +158,7 @@ public final class MirrorTiming {
     }
 
     @SubscribeEvent
-    public static void onDebugText(CustomizeGuiOverlayEvent.DebugText event) {
+    public static void onMirrorDebugText(CustomizeGuiOverlayEvent.DebugText event) {
         if (!Minecraft.getInstance().options.renderDebug || System.currentTimeMillis() - lastSeen > 2000) {
             return;
         }

@@ -129,3 +129,7 @@
   camera turn). Render boxes are on the block entities (getRenderBoundingBox), not the renderers.
 - MirrorChunks is a stub on 1.20.1 (other chunk lists): without Embeddium mirrors draw the main view's chunk list.
 - Not tested in a world: CI compiles and reaches the title screen.
+- Forge 1.20.1's event bus names each listener's generated class from its package, declaring class simple name,
+  method name and event type: two @SubscribeEvent methods with the same four (e.g. nested `Shaders.register
+  (RegisterShadersEvent)` in several renderers of one package) collide and only one of them ever runs. Give every
+  listener a unique class-or-method name (e.g. registerKoiPondRenderer). NeoForge 1.21.1 doesn't have this.

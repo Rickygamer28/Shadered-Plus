@@ -80,7 +80,7 @@ public final class DanceFloorRenderer {
         private Shaders() {}
 
         @SubscribeEvent
-        public static void register(RegisterShadersEvent event) throws java.io.IOException {
+        public static void registerDanceFloorRenderer(RegisterShadersEvent event) throws java.io.IOException {
             com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "dance_floor"), DefaultVertexFormat.POSITION_TEX, s -> shader = s);
         }
     }
@@ -90,7 +90,7 @@ public final class DanceFloorRenderer {
         private Events() {}
 
         @SubscribeEvent
-        public static void onStage(RenderLevelStageEvent event) {
+        public static void onStageDanceFloorRenderer(RenderLevelStageEvent event) {
             if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES) {
                 if (MirrorRenderer.isRenderingReflection()) {
                     return;
@@ -161,8 +161,6 @@ public final class DanceFloorRenderer {
         float partial = mc.getFrameTime();
         float seconds = (float) ((gameTime % 1_728_000L) + partial) / 20.0F;
         MusicReactor.tick();
-        Diag.count("dance.draw");
-        Diag.note("dance.music", MusicReactor.music());
 
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL11.GL_LEQUAL);

@@ -37,7 +37,7 @@ public class VisualizerRenderer implements BlockEntityRenderer<GlowColourBlockEn
         private Shaders() {}
 
         @SubscribeEvent
-        public static void register(RegisterShadersEvent event) throws java.io.IOException {
+        public static void registerVisualizerRenderer(RegisterShadersEvent event) throws java.io.IOException {
             com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "visualizer"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> shader = s);
         }
     }

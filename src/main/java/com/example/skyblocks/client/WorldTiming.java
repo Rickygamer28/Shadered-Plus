@@ -319,7 +319,7 @@ public final class WorldTiming {
     }
 
     @SubscribeEvent
-    public static void onDebugText(CustomizeGuiOverlayEvent.DebugText event) {
+    public static void onWorldDebugText(CustomizeGuiOverlayEvent.DebugText event) {
         if (!Minecraft.getInstance().options.renderDebug || System.currentTimeMillis() - lastSeen > 2000) {
             return;
         }

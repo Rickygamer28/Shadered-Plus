@@ -34,7 +34,7 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         private Shaders() {}
 
         @SubscribeEvent
-        public static void register(RegisterShadersEvent event) throws java.io.IOException {
+        public static void registerWallFireRenderer(RegisterShadersEvent event) throws java.io.IOException {
             com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "wall_fire"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> shader = s);
         }
     }

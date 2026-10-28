@@ -72,7 +72,7 @@ public final class ShaderSky {
         private Shaders() {}
 
         @SubscribeEvent
-        public static void register(RegisterShadersEvent event) throws java.io.IOException {
+        public static void registerShaderSky(RegisterShadersEvent event) throws java.io.IOException {
             com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "chaos_sky"), DefaultVertexFormat.POSITION, s -> chaos = s);
             com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "synthwave_sky"), DefaultVertexFormat.POSITION, s -> synthwave = s);
             com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "aurora_sky"), DefaultVertexFormat.POSITION, s -> aurora = s);

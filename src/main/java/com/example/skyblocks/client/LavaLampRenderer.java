@@ -33,7 +33,7 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         private Shaders() {}
 
         @SubscribeEvent
-        public static void register(RegisterShadersEvent event) throws java.io.IOException {
+        public static void registerLavaLampRenderer(RegisterShadersEvent event) throws java.io.IOException {
             com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "lava_lamp"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> shader = s);
         }
     }
@@ -84,8 +84,6 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
 
     @Override
     public void render(GlowColourBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
-        Diag.count("lava.render");
-        Diag.note("lava.pose", poseStack.last().pose());
         if (shader == null) {
             return;
         }

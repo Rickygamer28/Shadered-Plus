@@ -91,7 +91,7 @@ public final class PondLife {
         private Events() {}
 
         @SubscribeEvent
-        public static void onStage(RenderLevelStageEvent event) {
+        public static void onStagePondLife(RenderLevelStageEvent event) {
             if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
                 return;
             }

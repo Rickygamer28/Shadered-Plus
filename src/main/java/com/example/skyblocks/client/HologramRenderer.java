@@ -40,7 +40,7 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
         private Shaders() {}
 
         @SubscribeEvent
-        public static void register(RegisterShadersEvent event) throws java.io.IOException {
+        public static void registerHologramRenderer(RegisterShadersEvent event) throws java.io.IOException {
             com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "hologram"), DefaultVertexFormat.NEW_ENTITY, s -> shader = s);
         }
     }

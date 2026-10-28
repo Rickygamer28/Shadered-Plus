@@ -36,7 +36,7 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
         private Shaders() {}
 
         @SubscribeEvent
-        public static void register(RegisterShadersEvent event) throws java.io.IOException {
+        public static void registerKoiPondRenderer(RegisterShadersEvent event) throws java.io.IOException {
             com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "koi_pond"), DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP, s -> shader = s);
         }
     }
@@ -183,12 +183,9 @@ public class KoiPondRenderer implements BlockEntityRenderer<KoiPondBlockEntity> 
             vanilla.render(be, poseStack, buffers, light);
             return;
         }
-        Diag.count("koi.render");
         if (shader == null || !(state.getBlock() instanceof KoiPondBlock)) {
-            Diag.count("koi.skipped");
             return;
         }
-        Diag.note("koi.viewRot", ViewState.current());
         boolean n = state.getValue(KoiPondBlock.NORTH), s = state.getValue(KoiPondBlock.SOUTH);
         boolean e = state.getValue(KoiPondBlock.EAST), w = state.getValue(KoiPondBlock.WEST);
         float x0 = w ? 0.0F : 2.0F / 16.0F, x1 = e ? 1.0F : 14.0F / 16.0F, z0 = n ? 0.0F : 2.0F / 16.0F, z1 = s ? 1.0F : 14.0F / 16.0F;

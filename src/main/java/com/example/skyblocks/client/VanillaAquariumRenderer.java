@@ -100,7 +100,7 @@ public final class VanillaAquariumRenderer {
         private Events() {}
 
         @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.LOW) // (after the aquariums have drawn the water)
-        public static void onStage(RenderLevelStageEvent event) {
+        public static void onStageVanillaAquariumRenderer(RenderLevelStageEvent event) {
             if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS || MirrorRenderer.isRenderingReflection()
                     || IrisCompat.renderingShadowPass()) {
                 return;

@@ -39,7 +39,7 @@ public class NeonSignRenderer implements BlockEntityRenderer<NeonSignBlockEntity
         private Shaders() {}
 
         @SubscribeEvent
-        public static void register(RegisterShadersEvent event) throws java.io.IOException {
+        public static void registerNeonSignRenderer(RegisterShadersEvent event) throws java.io.IOException {
             com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "neon_sign"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> shader = s);
         }
     }
