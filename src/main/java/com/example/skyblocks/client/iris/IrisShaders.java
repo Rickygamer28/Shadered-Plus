@@ -23,14 +23,8 @@ public final class IrisShaders {
 
     @SubscribeEvent
     public static void register(RegisterShadersEvent event) throws IOException {
-        event.registerShader(new ShaderInstance(event.getResourceProvider(),
-                        new ResourceLocation(SkyBlocksMod.MOD_ID, "iris_island_overlay"), DefaultVertexFormat.POSITION_TEX),
-                shader -> overlay = shader);
-        event.registerShader(new ShaderInstance(event.getResourceProvider(),
-                        new ResourceLocation(SkyBlocksMod.MOD_ID, "iris_picture_depth"), DefaultVertexFormat.POSITION),
-                shader -> pictureDepth = shader);
-        event.registerShader(new ShaderInstance(event.getResourceProvider(),
-                        new ResourceLocation(SkyBlocksMod.MOD_ID, "iris_depth_copy"), DefaultVertexFormat.POSITION_TEX),
-                shader -> depthCopy = shader);
+        com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "iris_island_overlay"), DefaultVertexFormat.POSITION_TEX, shader -> overlay = shader);
+        com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "iris_picture_depth"), DefaultVertexFormat.POSITION, shader -> pictureDepth = shader);
+        com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "iris_depth_copy"), DefaultVertexFormat.POSITION_TEX, shader -> depthCopy = shader);
     }
 }

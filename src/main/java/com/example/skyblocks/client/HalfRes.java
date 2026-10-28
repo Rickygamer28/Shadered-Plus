@@ -42,8 +42,7 @@ public final class HalfRes {
         @SubscribeEvent
         public static void register(RegisterShadersEvent event) throws IOException {
             // (only the position is read: it's the first part of every format the heavy blocks use)
-            event.registerShader(new ShaderInstance(event.getResourceProvider(),
-                    new ResourceLocation(SkyBlocksMod.MOD_ID, "half_composite"), DefaultVertexFormat.POSITION), s -> composite = s);
+            com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "half_composite"), DefaultVertexFormat.POSITION, s -> composite = s);
         }
     }
 

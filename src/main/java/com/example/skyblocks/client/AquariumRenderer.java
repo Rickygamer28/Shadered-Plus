@@ -157,8 +157,7 @@ public final class AquariumRenderer {
 
         @SubscribeEvent
         public static void register(RegisterShadersEvent event) throws java.io.IOException {
-            event.registerShader(new ShaderInstance(event.getResourceProvider(),
-                    new ResourceLocation(SkyBlocksMod.MOD_ID, "aquarium"), DefaultVertexFormat.POSITION_TEX_COLOR), s -> shader = s);
+            com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "aquarium"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> shader = s);
         }
     }
 
