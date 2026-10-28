@@ -185,6 +185,7 @@ public final class AquariumRenderer {
             }
             VANILLA_JOBS.clear();
             ClientLevel level = Minecraft.getInstance().level;
+            Diag.count("aq.stage");
             if (level == null || shader == null) {
                 return;
             }
@@ -199,11 +200,14 @@ public final class AquariumRenderer {
                 lastChunkX = chunkX;
                 lastChunkZ = chunkZ;
             }
+            Diag.note("aq.floors", FLOORS.size());
             if (FLOORS.isEmpty()) {
                 return;
             }
             Matrix4f view = new Matrix4f(event.getPoseStack().last().pose());
             Matrix4f projection = new Matrix4f(event.getProjectionMatrix());
+            Diag.glError("aq.before");
+            Diag.note("aq.view", view);
             int timing = WorldTiming.start(WorldTiming.AQUARIUMS);
             HalfRes.mainView = true;
             try {
@@ -215,6 +219,7 @@ public final class AquariumRenderer {
             } finally {
                 HalfRes.mainView = false;
             }
+            Diag.glError("aq.after");
             WorldTiming.stop(timing);
         }
     }
@@ -301,7 +306,9 @@ public final class AquariumRenderer {
                     }
                     shown.add(f);
                 }
+                Diag.count("aq.floorLoop");
                 if (shown.isEmpty()) {
+                    Diag.count("aq.shownEmpty");
                     continue;
                 }
                 float mx = (float) (floor.min.getX() - cam.x), my = (float) (floor.min.getY() - cam.y), mz = (float) (floor.min.getZ() - cam.z);
@@ -321,13 +328,16 @@ public final class AquariumRenderer {
                             BufferUploader.drawWithShader(later);
                         }
                     };
+                    Diag.count("aq.vanillaJob");
                     VANILLA_JOBS.add(new VanillaJob(floor.min, floor.ocean, java.util.Arrays.copyOf(FISH_DATA, floor.fishCount * 16), floor.fishCount,
                             java.util.Arrays.copyOf(floor.decor, floor.decorCount * 4), floor.decorCount, faceCorners(floor), frameStrips(floor, shown), floor.blocks,
                             new Vec3(floor.min.getX() + floor.sizeX * 0.5, floor.min.getY() + floor.sizeY * 0.5, floor.min.getZ() + floor.sizeZ * 0.5),
                             picture, lightOf(floor)));
                     continue;
                 }
+                Diag.count(floor.vanilla ? "aq.vanillaDrawn" : "aq.drawn");
                 if (!half && drawnShapes == shapes && HalfRes.begin()) { // (only once there's a tank to draw)
+                    Diag.count("aq.half");
                     half = true;
                     drawnShapes = new ArrayList<>();
                 }

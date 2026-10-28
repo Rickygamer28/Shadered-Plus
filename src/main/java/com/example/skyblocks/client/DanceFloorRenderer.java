@@ -162,6 +162,8 @@ public final class DanceFloorRenderer {
         float partial = mc.getFrameTime();
         float seconds = (float) ((gameTime % 1_728_000L) + partial) / 20.0F;
         MusicReactor.tick();
+        Diag.count("dance.draw");
+        Diag.note("dance.music", MusicReactor.music());
 
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL11.GL_LEQUAL);

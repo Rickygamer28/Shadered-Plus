@@ -85,6 +85,8 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
 
     @Override
     public void render(GlowColourBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
+        Diag.count("lava.render");
+        Diag.note("lava.pose", poseStack.last().pose());
         if (shader == null) {
             return;
         }

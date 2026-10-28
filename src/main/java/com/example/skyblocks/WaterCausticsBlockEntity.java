@@ -99,7 +99,8 @@ public class WaterCausticsBlockEntity extends BlockEntity {
     @Override
     public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt) {
         super.onDataPacket(net, pkt);
-        if (!pkt.getTag().contains("held")) {
+        CompoundTag tag = pkt.getTag(); // (1.20.1: null when the block entity sent nothing)
+        if (tag == null || !tag.contains("held")) {
             load(new CompoundTag()); // (taken out: the tag has nothing under the water)
         }
     }
