@@ -63,7 +63,7 @@ float wax(vec3 p, float t, float on) {
 
 void main() {
     if (debugMode == 1) { fragColor = vec4(1.0, 0.0, 0.0, 1.0); return; }
-    if (debugMode == 2) { fragColor = vec4(lp, 1.0); return; }
+    if (debugMode == 2) { fragColor = vec4(uv, 0.5, 1.0); return; }
     if (debugMode == 3) { fragColor = vec4(0.0, 1.0, 0.0, 1.0); return; }
     vec3 p0 = lp;
     vec3 rd = normalize(lray);

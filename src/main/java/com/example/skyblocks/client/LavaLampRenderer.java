@@ -54,7 +54,10 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
                                 shader.safeGetUniform("LampTime").set(seconds());
                                 shader.safeGetUniform("ItemMode").set(0.0F);
                             }
-                        }, () -> RenderTest.read("batched red lamp", "just after its batch")))
+                        }, () -> {
+                            RenderTest.read("batched red lamp", "just after its batch");
+                            RenderTest.read("batched lamp without the turn", "just after its batch");
+                        }))
                         .setTransparencyState(NO_TRANSPARENCY)
                         .setWriteMaskState(COLOR_DEPTH_WRITE)
                         .setCullState(CULL)
@@ -121,6 +124,9 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
                 if (mode == 1) {
                     RenderTest.probe("batched red lamp", new Matrix4f(poseStack.last().pose()));
                     RenderTest.read("batched red lamp", "when queued");
+                }
+                if (mode == 2) {
+                    RenderTest.probe("batched lamp without the turn", new Matrix4f(poseStack.last().pose()));
                 }
                 seed += 100.0F * mode;
             }
