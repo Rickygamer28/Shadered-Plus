@@ -2,12 +2,15 @@ name: Build mod
 
 on:
   push:
+    branches-ignore: [ 'ci-shots*' ]
   pull_request:
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -93,6 +96,31 @@ jobs:
           echo "::notice::our log lines: $(grep -E 'SkyBlocksMod|sky usage|Shadered\+' client.log | head -8 | sed ':a;N;$!ba;s/\n/%0A/g' | cut -c1-3000)"
           split -l 15 summary.txt cli_
           for f in $(ls cli_* 2>/dev/null | head -6); do echo "::notice::$(sed ':a;N;$!ba;s/\n/%0A/g' $f | cut -c1-7000)"; done
+
+      # The render test: a flat world with the shader blocks, screenshots from a few spots (client/RenderTest), once
+      # plain and once with Embeddium; the pictures are pushed to the ci-shots-1.20.1 branch.
+      - name: Render test
+        if: success()
+        continue-on-error: true
+        run: |
+          set +e
+          export LIBGL_ALWAYS_SOFTWARE=1 MESA_GL_VERSION_OVERRIDE=4.5
+          for v in plain embeddium; do
+            EXTRA=""; [ $v = embeddium ] && EXTRA="-PwithEmbeddium"
+            (SKYBLOCKS_RENDER_TEST=$v xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient $EXTRA --no-daemon > render_$v.log 2>&1 &)
+            for i in $(seq 1 150); do
+              sleep 5
+              if grep -qE "render test done|Crash report saved|BUILD FAILED" render_$v.log; then sleep 5; break; fi
+            done
+            pkill -f "runClient|DevLaunch|minecraft" ; sleep 5
+            echo "::notice::render test $v: $(grep -E 'render test|GL_RENDERER|OpenGL|Exception|ERROR' render_$v.log | grep -v DEBUG | head -25 | sed ':a;N;$!ba;s/\n/%0A/g' | cut -c1-5000)"
+          done
+          mkdir -p shots && cp run/screenshots/rendertest_*.png shots/ 2>/dev/null
+          cp render_plain.log render_embeddium.log shots/ 2>/dev/null
+          echo "::notice::screenshots: $(ls shots | tr '\n' ' ')"
+          cd shots && git init -q && git checkout -q -b ci-shots-1.20.1 && git add . \
+            && git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "render test ${GITHUB_SHA}" \
+            && git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" ci-shots-1.20.1
 
       - name: Upload jar
         uses: actions/upload-artifact@v4
