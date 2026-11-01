@@ -101,6 +101,10 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
                 // the render test's debug row: 0 as normal, 1 the shader's box in red, 2 its lamp-space position as
                 // colour, 3 without the view turn (green), 4 vanilla's debug quads (white)
                 int mode = (be.getBlockPos().getX() + 6) / 2;
+                if (mode == 0 && System.currentTimeMillis() - poseLog > 5000) {
+                    poseLog = System.currentTimeMillis();
+                    SkyBlocksMod.LOGGER.info("Shadered+ render test lamp at {}: pose\n{}buffers {}", be.getBlockPos(), poseStack.last().pose(), buffers.getClass().getName());
+                }
                 if (mode == 4) {
                     VertexConsumer dq = buffers.getBuffer(RenderType.debugQuads());
                     Matrix4f m = poseStack.last().pose();
@@ -114,6 +118,8 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
             box(vc, poseStack.last().pose(), 0.325F, 0.305F, 0.325F, 0.675F, 0.805F, 0.675F, r, g, b, a, 0.0F, seed);
         }
     }
+
+    private static long poseLog;
 
     /** Each lamp's own timing (from where it stands). */
     private static float seed(GlowColourBlockEntity be) {
