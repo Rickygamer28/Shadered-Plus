@@ -1,6 +1,9 @@
 {
     "vertex": "skyblocks:half_composite",
     "fragment": "skyblocks:half_composite",
+    "attributes": [
+        "Position"
+    ],
     "samplers": [
         {
             "name": "Sampler0"

@@ -1,6 +1,11 @@
 {
     "vertex": "skyblocks:visualizer",
     "fragment": "skyblocks:visualizer",
+    "attributes": [
+        "Position",
+        "UV0",
+        "Color"
+    ],
     "samplers": [
         {
             "name": "Sampler0"

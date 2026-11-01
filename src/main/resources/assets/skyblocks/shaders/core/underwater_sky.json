@@ -1,6 +1,9 @@
 {
     "vertex": "skyblocks:shader_sky",
     "fragment": "skyblocks:underwater_sky",
+    "attributes": [
+        "Position"
+    ],
     "uniforms": [
         {
             "name": "ModelViewMat",

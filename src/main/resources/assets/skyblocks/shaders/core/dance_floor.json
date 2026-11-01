@@ -1,6 +1,10 @@
 {
     "vertex": "skyblocks:dance_floor",
     "fragment": "skyblocks:dance_floor",
+    "attributes": [
+        "Position",
+        "UV0"
+    ],
     "samplers": [],
     "uniforms": [
         {

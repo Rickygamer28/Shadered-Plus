@@ -1,6 +1,11 @@
 {
     "vertex": "skyblocks:jelly_tank",
     "fragment": "skyblocks:jelly_tank",
+    "attributes": [
+        "Position",
+        "UV0",
+        "Color"
+    ],
     "samplers": [],
     "uniforms": [
         {

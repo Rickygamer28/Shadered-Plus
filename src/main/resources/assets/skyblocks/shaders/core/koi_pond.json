@@ -1,6 +1,12 @@
 {
     "vertex": "skyblocks:koi_pond",
     "fragment": "skyblocks:koi_pond",
+    "attributes": [
+        "Position",
+        "Color",
+        "UV0",
+        "UV2"
+    ],
     "samplers": [
         {
             "name": "Sampler0"

@@ -1,6 +1,9 @@
 {
     "vertex": "skyblocks:shader_sky",
     "fragment": "skyblocks:chaos_sky",
+    "attributes": [
+        "Position"
+    ],
     "samplers": [
         {
             "name": "Sampler0"

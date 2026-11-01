@@ -1,6 +1,9 @@
 {
     "vertex": "skyblocks:infinity_mirror",
     "fragment": "skyblocks:infinity_mirror",
+    "attributes": [
+        "Position"
+    ],
     "samplers": [],
     "uniforms": [
         {

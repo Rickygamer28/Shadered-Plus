@@ -1,6 +1,9 @@
 {
     "vertex": "skyblocks:iris_picture_depth",
     "fragment": "skyblocks:iris_picture_depth",
+    "attributes": [
+        "Position"
+    ],
     "samplers": [],
     "uniforms": [
         {

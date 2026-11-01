@@ -70,37 +70,8 @@ public final class ViewState {
     static ShaderInstance upload(ShaderInstance shader) {
         if (shader != null) {
             shader.safeGetUniform("ViewRot").set(current());
-            long now = System.currentTimeMillis();
-            if (now - lastLog > 10000) { // (temporary: for checking the 1.20.1 port)
-                lastLog = now;
-                SkyBlocksMod.LOGGER.info("Shadered+ view check: {} drawn {} (mirror {}), turn used:\n{}model-view:\n{}", shader.getName(),
-                        inLevel ? "in the world" : "outside the world", override != null, current(),
-                        com.mojang.blaze3d.systems.RenderSystem.getModelViewMatrix());
-                int[] vp = new int[4];
-                org.lwjgl.opengl.GL11.glGetIntegerv(org.lwjgl.opengl.GL11.GL_VIEWPORT, vp);
-                int[] sc = new int[4];
-                org.lwjgl.opengl.GL11.glGetIntegerv(org.lwjgl.opengl.GL11.GL_SCISSOR_BOX, sc);
-                java.nio.ByteBuffer mask = org.lwjgl.BufferUtils.createByteBuffer(16);
-                org.lwjgl.opengl.GL11.glGetBooleanv(org.lwjgl.opengl.GL11.GL_COLOR_WRITEMASK, mask);
-                StackTraceElement[] st = new Throwable().getStackTrace();
-                StringBuilder who = new StringBuilder();
-                for (int i = 1; i < Math.min(st.length, 22); i++) {
-                    who.append("\n    ").append(st[i]);
-                }
-                SkyBlocksMod.LOGGER.info("Shadered+ view check GL: draw framebuffer {}, main target {}, viewport {}x{} at {},{}, colour mask {}{}{}{}, "
-                                + "depth test {}, depth func {}, depth mask {}, blend {}, cull {}, scissor {} {}, stencil {}, GL error {}\nprojection:\n{}called from:{}",
-                        org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING),
-                        net.minecraft.client.Minecraft.getInstance().getMainRenderTarget().frameBufferId, vp[2], vp[3], vp[0], vp[1],
-                        mask.get(0), mask.get(1), mask.get(2), mask.get(3),
-                        org.lwjgl.opengl.GL11.glIsEnabled(org.lwjgl.opengl.GL11.GL_DEPTH_TEST), org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL11.GL_DEPTH_FUNC),
-                        org.lwjgl.opengl.GL11.glGetBoolean(org.lwjgl.opengl.GL11.GL_DEPTH_WRITEMASK), org.lwjgl.opengl.GL11.glIsEnabled(org.lwjgl.opengl.GL11.GL_BLEND),
-                        org.lwjgl.opengl.GL11.glIsEnabled(org.lwjgl.opengl.GL11.GL_CULL_FACE), org.lwjgl.opengl.GL11.glIsEnabled(org.lwjgl.opengl.GL11.GL_SCISSOR_TEST), sc[0] + "," + sc[1] + " " + sc[2] + "x" + sc[3],
-                        org.lwjgl.opengl.GL11.glIsEnabled(org.lwjgl.opengl.GL11.GL_STENCIL_TEST), org.lwjgl.opengl.GL11.glGetError(),
-                        com.mojang.blaze3d.systems.RenderSystem.getProjectionMatrix(), who);
-            }
         }
         return shader;
     }
 
-    private static long lastLog;
 }

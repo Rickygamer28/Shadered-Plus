@@ -1,6 +1,11 @@
 {
     "vertex": "skyblocks:lava_lamp",
     "fragment": "skyblocks:lava_lamp",
+    "attributes": [
+        "Position",
+        "UV0",
+        "Color"
+    ],
     "samplers": [],
     "uniforms": [
         {

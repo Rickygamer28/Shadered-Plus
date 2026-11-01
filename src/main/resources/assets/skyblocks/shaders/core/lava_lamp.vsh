@@ -20,13 +20,10 @@ out vec3 lray;
 out float seedIn;
 out vec4 vColor;
 out vec2 uv;
-flat out int debugMode;
 
 void main() {
-    debugMode = int(UV0.y / 100.0);
     vec3 Pos = (inverse(ViewRot) * vec4(Position, 1.0)).xyz;
     mat4 MVm = ModelViewMat * ViewRot;
-    if (debugMode == 2) { Pos = Position; MVm = ModelViewMat; }
     vColor = Color;
     gl_Position = ProjMat * MVm * vec4(Pos, 1.0);
     int code = int(UV0.x + 0.5);
@@ -38,9 +35,8 @@ void main() {
         lo = vec3(0.5 - 0.175 * 1.55, 0.305 * 2.2 - 0.143, 0.5 - 0.175 * 1.55);
         hi = vec3(0.5 + 0.175 * 1.55, 0.805 * 2.2 - 0.143, 0.5 + 0.175 * 1.55);
     }
-    if (debugMode == 2) uv = vec2(abs(ViewRot[0][0]) + abs(ViewRot[2][0]), abs(ViewRot[1][1]) + abs(ViewRot[2][1]));
     lp = mix(lo, hi, vec3(float(corner & 1), float((corner >> 1) & 1), float((corner >> 2) & 1)));
-    seedIn = fract(UV0.y);
+    seedIn = UV0.y;
     mat4 iv = inverse(MVm);
     bool persp = ProjMat[2][3] < -0.5;
     vec3 dir = persp ? Pos - (iv * vec4(0.0, 0.0, 0.0, 1.0)).xyz : (iv * vec4(0.0, 0.0, -1.0, 0.0)).xyz;

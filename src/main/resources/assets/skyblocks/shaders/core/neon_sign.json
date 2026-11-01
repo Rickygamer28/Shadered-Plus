@@ -1,6 +1,11 @@
 {
     "vertex": "skyblocks:neon_sign",
     "fragment": "skyblocks:neon_sign",
+    "attributes": [
+        "Position",
+        "UV0",
+        "Color"
+    ],
     "samplers": [],
     "uniforms": [
         {

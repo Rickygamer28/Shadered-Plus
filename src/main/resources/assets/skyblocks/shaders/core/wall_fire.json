@@ -1,6 +1,11 @@
 {
     "vertex": "skyblocks:wall_fire",
     "fragment": "skyblocks:wall_fire",
+    "attributes": [
+        "Position",
+        "UV0",
+        "Color"
+    ],
     "samplers": [],
     "uniforms": [
         {

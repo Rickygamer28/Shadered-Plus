@@ -54,10 +54,7 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
                                 shader.safeGetUniform("LampTime").set(seconds());
                                 shader.safeGetUniform("ItemMode").set(0.0F);
                             }
-                        }, () -> {
-                            RenderTest.read("batched red lamp", "just after its batch");
-                            RenderTest.read("batched lamp without the turn", "just after its batch");
-                        }))
+                        }, () -> {}))
                         .setTransparencyState(NO_TRANSPARENCY)
                         .setWriteMaskState(COLOR_DEPTH_WRITE)
                         .setCullState(CULL)
@@ -99,42 +96,9 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
             box(vc, poseStack.last().pose(), 0.5F - 0.175F * BIG_H, 0.305F * BIG_V + BIG_Y, 0.5F - 0.175F * BIG_H,
                     0.5F + 0.175F * BIG_H, 0.805F * BIG_V + BIG_Y, 0.5F + 0.175F * BIG_H, r, g, b, a, 1.0F, seed(be));
         } else {
-            float seed = seed(be);
-            if (RenderTest.ON && be.getBlockPos().getZ() == 10) {
-                // the render test's debug row: 0 as normal, 1 the shader's box in red, 2 its lamp-space position as
-                // colour, 3 without the view turn (green), 4 vanilla's debug quads (white)
-                int mode = (be.getBlockPos().getX() + 6) / 2;
-                if (mode == 0 && System.currentTimeMillis() - poseLog > 5000) {
-                    poseLog = System.currentTimeMillis();
-                    SkyBlocksMod.LOGGER.info("Shadered+ render test lamp at {}: pose\n{}buffers {}", be.getBlockPos(), poseStack.last().pose(), buffers.getClass().getName());
-                }
-                if (mode == 3) { // (drawn now, not batched: green)
-                    RenderTest.quad(new Matrix4f(poseStack.last().pose()), 0, 255, 0);
-                    return;
-                }
-                if (mode == 4) {
-                    RenderTest.probe("batched white quad", new Matrix4f(poseStack.last().pose()));
-                    VertexConsumer dq = buffers.getBuffer(RenderType.debugQuads());
-                    Matrix4f m = poseStack.last().pose();
-                    float[][] f = {{0.3F, 0.3F, 0.5F}, {0.7F, 0.3F, 0.5F}, {0.7F, 0.9F, 0.5F}, {0.3F, 0.9F, 0.5F}};
-                    for (float[] q : f) dq.vertex(m, q[0], q[1], q[2]).color(255, 255, 255, 255).endVertex();
-                    for (int i = 3; i >= 0; i--) dq.vertex(m, f[i][0], f[i][1], f[i][2]).color(255, 255, 255, 255).endVertex();
-                    return;
-                }
-                if (mode == 1) {
-                    RenderTest.probe("batched red lamp", new Matrix4f(poseStack.last().pose()));
-                    RenderTest.read("batched red lamp", "when queued");
-                }
-                if (mode == 2) {
-                    RenderTest.probe("batched lamp without the turn", new Matrix4f(poseStack.last().pose()));
-                }
-                seed += 100.0F * mode;
-            }
-            box(vc, poseStack.last().pose(), 0.325F, 0.305F, 0.325F, 0.675F, 0.805F, 0.675F, r, g, b, a, 0.0F, seed);
+            box(vc, poseStack.last().pose(), 0.325F, 0.305F, 0.325F, 0.675F, 0.805F, 0.675F, r, g, b, a, 0.0F, seed(be));
         }
     }
-
-    private static long poseLog;
 
     /** Each lamp's own timing (from where it stands). */
     private static float seed(GlowColourBlockEntity be) {
