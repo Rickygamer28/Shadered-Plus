@@ -96,7 +96,22 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
             box(vc, poseStack.last().pose(), 0.5F - 0.175F * BIG_H, 0.305F * BIG_V + BIG_Y, 0.5F - 0.175F * BIG_H,
                     0.5F + 0.175F * BIG_H, 0.805F * BIG_V + BIG_Y, 0.5F + 0.175F * BIG_H, r, g, b, a, 1.0F, seed(be));
         } else {
-            box(vc, poseStack.last().pose(), 0.325F, 0.305F, 0.325F, 0.675F, 0.805F, 0.675F, r, g, b, a, 0.0F, seed(be));
+            float seed = seed(be);
+            if (RenderTest.ON && be.getBlockPos().getZ() == 10) {
+                // the render test's debug row: 0 as normal, 1 the shader's box in red, 2 its lamp-space position as
+                // colour, 3 without the view turn (green), 4 vanilla's debug quads (white)
+                int mode = (be.getBlockPos().getX() + 6) / 2;
+                if (mode == 4) {
+                    VertexConsumer dq = buffers.getBuffer(RenderType.debugQuads());
+                    Matrix4f m = poseStack.last().pose();
+                    float[][] f = {{0.3F, 0.3F, 0.5F}, {0.7F, 0.3F, 0.5F}, {0.7F, 0.9F, 0.5F}, {0.3F, 0.9F, 0.5F}};
+                    for (float[] q : f) dq.vertex(m, q[0], q[1], q[2]).color(255, 255, 255, 255).endVertex();
+                    for (int i = 3; i >= 0; i--) dq.vertex(m, f[i][0], f[i][1], f[i][2]).color(255, 255, 255, 255).endVertex();
+                    return;
+                }
+                seed += 100.0F * mode;
+            }
+            box(vc, poseStack.last().pose(), 0.325F, 0.305F, 0.325F, 0.675F, 0.805F, 0.675F, r, g, b, a, 0.0F, seed);
         }
     }
 

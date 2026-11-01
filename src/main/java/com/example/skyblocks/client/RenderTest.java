@@ -24,7 +24,7 @@ import net.minecraftforge.fml.common.Mod;
  */
 @Mod.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public final class RenderTest {
-    private static final boolean ON = System.getenv("SKYBLOCKS_RENDER_TEST") != null;
+    static final boolean ON = System.getenv("SKYBLOCKS_RENDER_TEST") != null;
     private static final String TAG = System.getenv().getOrDefault("SKYBLOCKS_RENDER_TEST", "x");
     private static int stage = 0;
     private static int ticks = 0;
@@ -34,7 +34,7 @@ public final class RenderTest {
     private static final String[] ROW1 = {"lava_lamp", "big_lava_lamp", "fire_tornado", "brick_hearth", "koi_pond", "vanilla_koi_pond", "infinity_cube"};
     private static final String[] ROW2 = {"aquarium", "vanilla_aquarium", "dance_floor", "jellyfish_tank", "hologram_projector", "music_visualizer", "neon_sign"};
     /** Where the player stands for each picture: x y z yaw pitch. */
-    private static final String[] SPOTS = {"0.5 -60 -5.5 0 20", "0.5 -59 9.5 180 25", "-5.5 -60 -2.5 0 10", "-1.5 -60 0.5 0 15"};
+    private static final String[] SPOTS = {"0.5 -60 -5.5 0 20", "0.5 -59 9.5 180 25", "-5.5 -60 -2.5 0 10", "-1.5 -60 0.5 0 15", "-2 -59.5 7 0 30"};
 
     private static void run(MinecraftServer server, String command) {
         server.execute(() -> {
@@ -77,6 +77,9 @@ public final class RenderTest {
                             run(server, "gamerule doWeatherCycle false");
                             run(server, "gamerule doMobSpawning false");
                             run(server, "time set 6000");
+                            for (int i = 0; i < 5; i++) { // (lamps drawn in the debug modes, see LavaLampRenderer)
+                                run(server, "setblock " + (-6 + 2 * i) + " -60 10 skyblocks:lava_lamp");
+                            }
                             for (int i = 0; i < ROW1.length; i++) {
                                 run(server, "setblock " + (-6 + 2 * i) + " -60 0 skyblocks:" + ROW1[i]);
                                 run(server, "setblock " + (-6 + 2 * i) + " -60 4 skyblocks:" + ROW2[i]);
