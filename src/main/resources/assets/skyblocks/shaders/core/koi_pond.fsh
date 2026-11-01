@@ -37,7 +37,7 @@ vec2 hash22(vec2 p) {
     return fract(sin(p) * 43758.5453);
 }
 
-float noise2(vec2 p) {
+float vnoise2(vec2 p) {
     vec2 i = floor(p), f = fract(p);
     f = f * f * (3.0 - 2.0 * f);
     return mix(mix(hash22(i).x, hash22(i + vec2(1, 0)).x, f.x), mix(hash22(i + vec2(0, 1)).x, hash22(i + vec2(1, 1)).x, f.x), f.y);
@@ -186,7 +186,7 @@ vec4 koiAt(vec2 q, int i, float t, bool body) {
     if (abs(side) < bw && s > -0.46 && s < 0.56 && bw > 0.0) {
         if (body) return vec4(0.0, 0.0, 0.0, 1.0);
         float kind = info.y;
-        float n = noise2(lp * 9.0 + h * 40.0), n2 = noise2(lp * 17.0 + h * 77.0);
+        float n = vnoise2(lp * 9.0 + h * 40.0), n2 = vnoise2(lp * 17.0 + h * 77.0);
         vec3 white = vec3(0.96, 0.94, 0.9), red = vec3(0.86, 0.2, 0.08), black = vec3(0.06, 0.06, 0.07);
         vec3 col;
         if (kind < 0.5) col = n > 0.5 ? red : white;                                        // kohaku
@@ -378,7 +378,7 @@ vec4 frogHit(vec3 p0, vec3 rd, float t, float light) {
                             vec3 back = info.x < 0.5 ? vec3(0.78, 0.47, 0.24) : info.x < 1.5 ? vec3(0.4, 0.62, 0.3) : vec3(0.86, 0.83, 0.75);
                             vec3 belly = mix(back, vec3(0.95, 0.9, 0.78), 0.55);
                             col = mix(belly, back, smoothstep(0.6, 1.4, q.y));
-                            if (info.x > 1.5 && noise2(q.xz * 1.6) > 0.68) col *= 0.7; // (spots)
+                            if (info.x > 1.5 && vnoise2(q.xz * 1.6) > 0.68) col *= 0.7; // (spots)
                             col *= lam;
                         }
                         gHit = pTop + rd * (tm / sc);
@@ -411,7 +411,7 @@ vec4 padAt(vec2 q, float t) {
                 float a = atan(d.y, d.x) - pang;
                 float notch = abs(mod(a + 3.1416, 6.2832) - 3.1416);
                 if (notch < 0.32 * (1.0 - 0.3 * dist / r) && dist > r * 0.08) continue;
-                vec3 col = mix(vec3(0.14, 0.4, 0.12), vec3(0.3, 0.58, 0.2), noise2(d * 60.0 + h * 9.0) * 0.6 + 0.2);
+                vec3 col = mix(vec3(0.14, 0.4, 0.12), vec3(0.3, 0.58, 0.2), vnoise2(d * 60.0 + h * 9.0) * 0.6 + 0.2);
                 col *= 0.85 + 0.15 * sin(a * 12.0); // (veins)
                 col *= 0.8 + 0.2 * smoothstep(r, r * 0.85, dist);
                 vec3 info;
@@ -732,12 +732,12 @@ vec4 duckHit(vec3 p0, vec3 rd, float t, float light, out float ripple) {
                     if (mat == 1) {
                         col = vec3(0.3, 0.26, 0.22) * lam;
                     } else {
-                        float fluff = noise2(q.xz * 6.0 + q.y * 4.0);
+                        float fluff = vnoise2(q.xz * 6.0 + q.y * 4.0);
                         col = vec3(0.98, 0.84, 0.36) * (0.88 + 0.2 * fluff);
                         vec3 hc = mix(vec3(0.0, 2.35, 1.45), vec3(0.45, 1.75, 0.35), tuck);
                         bool onHead = length(q - hc) < 1.3;
                         if (onHead ? q.y > hc.y + 0.55 : q.y > 1.55 && q.z < 0.9) col = vec3(0.45, 0.33, 0.16) * (0.85 + 0.25 * fluff); // (cap, back)
-                        if (!onHead && q.y > 1.55 && q.z < 0.9 && noise2(q.xz * 3.0) > 0.72) col = vec3(0.95, 0.85, 0.45); // (pale patches)
+                        if (!onHead && q.y > 1.55 && q.z < 0.9 && vnoise2(q.xz * 3.0) > 0.72) col = vec3(0.95, 0.85, 0.45); // (pale patches)
                         if (onHead && tuck < 0.5 && abs(q.y - 2.55 + 0.25 * (q.z - 1.95)) < 0.12 && q.z > 1.4 && abs(q.x) > 0.5) col = vec3(0.3, 0.22, 0.12);
                         col *= lam;
                     }
@@ -756,7 +756,7 @@ vec4 duckHit(vec3 p0, vec3 rd, float t, float light, out float ripple) {
                     else col = vec3(0.62, 0.62, 0.58);
                     col *= lam;
                 } else { // a hen: mottled browns
-                    col = mix(vec3(0.5, 0.37, 0.22), vec3(0.3, 0.2, 0.12), step(0.62, noise2(q.xz * 2.3 + q.y * 1.7)));
+                    col = mix(vec3(0.5, 0.37, 0.22), vec3(0.3, 0.2, 0.12), step(0.62, vnoise2(q.xz * 2.3 + q.y * 1.7)));
                     if (q.y > 2.4 && q.z > 1.0 && tuck < 0.5) col = vec3(0.55, 0.42, 0.28);
                     col *= lam;
                 }
@@ -805,7 +805,7 @@ vec4 turtleAt(vec2 q, float t, bool body) {
                 if (dd < d1) { d2 = d1; d1 = dd; } else if (dd < d2) { d2 = dd; }
             }
         }
-        vec3 col = mix(vec3(0.24, 0.28, 0.13), vec3(0.38, 0.4, 0.2), 0.5 + 0.5 * noise2(g * 0.4));
+        vec3 col = mix(vec3(0.24, 0.28, 0.13), vec3(0.38, 0.4, 0.2), 0.5 + 0.5 * vnoise2(g * 0.4));
         col *= 0.65 + 0.35 * smoothstep(0.0, 0.15, d2 - d1);          // (the scutes' seams)
         col = mix(col, vec3(0.55, 0.5, 0.3), smoothstep(0.75, 1.0, r)); // (a paler rim)
         col *= 0.75 + 0.25 * (1.0 - r);
@@ -986,7 +986,7 @@ void main() {
         bg *= sh * light;
         bg += vec3(0.5, 0.6, 0.5) * caustics(ph.xz, t) * sh * day * 0.5;
     } else {
-        float s = noise2(vec2(ph.x + ph.z, ph.y) * 40.0) * 0.6 + noise2(vec2(ph.x + ph.z, ph.y) * 11.0) * 0.4;
+        float s = vnoise2(vec2(ph.x + ph.z, ph.y) * 40.0) * 0.6 + vnoise2(vec2(ph.x + ph.z, ph.y) * 11.0) * 0.4;
         bg = mix(vec3(0.32, 0.31, 0.29), vec3(0.5, 0.48, 0.44), s);
         bg = mix(bg, vec3(0.2, 0.32, 0.14), smoothstep(SURF - 0.12, SURF, ph.y) * 0.7); // (moss at the waterline)
         bg *= light;

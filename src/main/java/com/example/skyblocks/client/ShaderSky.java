@@ -75,14 +75,10 @@ public final class ShaderSky {
 
         @SubscribeEvent
         public static void register(RegisterShadersEvent event) throws java.io.IOException {
-            event.registerShader(new ShaderInstance(event.getResourceProvider(),
-                    ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "chaos_sky"), DefaultVertexFormat.POSITION), s -> chaos = s);
-            event.registerShader(new ShaderInstance(event.getResourceProvider(),
-                    ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "synthwave_sky"), DefaultVertexFormat.POSITION), s -> synthwave = s);
-            event.registerShader(new ShaderInstance(event.getResourceProvider(),
-                    ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "aurora_sky"), DefaultVertexFormat.POSITION), s -> aurora = s);
-            event.registerShader(new ShaderInstance(event.getResourceProvider(),
-                    ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "underwater_sky"), DefaultVertexFormat.POSITION), s -> underwater = s);
+            com.example.skyblocks.client.ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "chaos_sky"), DefaultVertexFormat.POSITION, s -> chaos = s);
+            com.example.skyblocks.client.ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "synthwave_sky"), DefaultVertexFormat.POSITION, s -> synthwave = s);
+            com.example.skyblocks.client.ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "aurora_sky"), DefaultVertexFormat.POSITION, s -> aurora = s);
+            com.example.skyblocks.client.ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "underwater_sky"), DefaultVertexFormat.POSITION, s -> underwater = s);
         }
     }
 

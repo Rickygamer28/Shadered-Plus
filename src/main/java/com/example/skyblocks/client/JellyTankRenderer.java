@@ -33,8 +33,7 @@ public class JellyTankRenderer implements BlockEntityRenderer<GlowColourBlockEnt
 
         @SubscribeEvent
         public static void register(RegisterShadersEvent event) throws java.io.IOException {
-            event.registerShader(new ShaderInstance(event.getResourceProvider(),
-                    ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "jelly_tank"), DefaultVertexFormat.POSITION_TEX_COLOR), s -> shader = s);
+            com.example.skyblocks.client.ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "jelly_tank"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> shader = s);
         }
     }
 

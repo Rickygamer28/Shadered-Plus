@@ -21,7 +21,7 @@ float hash3(vec3 p) {
     return fract((p.x + p.y) * p.z);
 }
 
-float noise3(vec3 p) {
+float vnoise3(vec3 p) {
     vec3 i = floor(p), f = fract(p);
     f = f * f * (3.0 - 2.0 * f);
     return mix(mix(mix(hash3(i), hash3(i + vec3(1, 0, 0)), f.x), mix(hash3(i + vec3(0, 1, 0)), hash3(i + vec3(1, 1, 0)), f.x), f.y),
@@ -29,7 +29,7 @@ float noise3(vec3 p) {
 }
 
 float fbm3(vec3 p) {
-    return 0.62 * noise3(p) + 0.38 * noise3(p * 2.13 + 5.7);
+    return 0.62 * vnoise3(p) + 0.38 * vnoise3(p * 2.13 + 5.7);
 }
 
 vec2 hash22(vec2 p) {
@@ -49,7 +49,7 @@ vec2 fire(vec3 P, float t, int kind, float g) { // (g: 0..1 lighting up / dying 
         q = mat2(cos(a), -sin(a), sin(a), cos(a)) * q;
         q += vec2(sin(P.y * 0.2 - t * 1.7), cos(P.y * 0.17 - t * 1.3)) * hn * 1.8;
         float n = fbm3(vec3(q * 0.5, P.y * 0.18 - t * 3.0));
-        float n2 = noise3(vec3(q * 1.2, P.y * 0.5 - t * 5.0));
+        float n2 = vnoise3(vec3(q * 1.2, P.y * 0.5 - t * 5.0));
         float R0 = 4.2 * (0.35 + 1.0 * hn);
         float r = length(q);
         float arms = 0.5 + 0.5 * sin(atan(q.y, q.x) * 3.0 + r * 0.8);
@@ -68,7 +68,7 @@ vec2 fire(vec3 P, float t, int kind, float g) { // (g: 0..1 lighting up / dying 
         return vec2(0.0);
     }
     float n = fbm3(vec3(P.x * 0.32, P.y * 0.22 - t * 2.3, P.z * 0.35 + t * 0.3));
-    float n2 = noise3(vec3(P.x * 0.9, P.y * 0.6 - t * 4.0, P.z * 0.9));
+    float n2 = vnoise3(vec3(P.x * 0.9, P.y * 0.6 - t * 4.0, P.z * 0.9));
     float tongue = foot * (0.62 + 0.25 * sin(P.x * 0.75 + n * 3.0 + t * 1.3) + 0.13 * sin(P.x * 1.37 - t * 2.1 + n2 * 2.0));
     float dz = (P.z - 11.4 - (n - 0.5) * 2.8 - sin(P.y * 0.4 - t * 3.0 + P.x * 0.3) * 0.4) / (3.2 * (1.0 - 0.55 * clamp(hn, 0.0, 1.0)));
     float d = tongue - hn - dz * dz * 0.55 + (n - 0.5) * 0.85 + (n2 - 0.5) * 0.3;
