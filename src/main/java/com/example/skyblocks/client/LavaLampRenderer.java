@@ -54,7 +54,7 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
                                 shader.safeGetUniform("LampTime").set(seconds());
                                 shader.safeGetUniform("ItemMode").set(0.0F);
                             }
-                        }, () -> {}))
+                        }, () -> RenderTest.read("batched red lamp", "just after its batch")))
                         .setTransparencyState(NO_TRANSPARENCY)
                         .setWriteMaskState(COLOR_DEPTH_WRITE)
                         .setCullState(CULL)
@@ -110,12 +110,17 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
                     return;
                 }
                 if (mode == 4) {
+                    RenderTest.probe("batched white quad", new Matrix4f(poseStack.last().pose()));
                     VertexConsumer dq = buffers.getBuffer(RenderType.debugQuads());
                     Matrix4f m = poseStack.last().pose();
                     float[][] f = {{0.3F, 0.3F, 0.5F}, {0.7F, 0.3F, 0.5F}, {0.7F, 0.9F, 0.5F}, {0.3F, 0.9F, 0.5F}};
                     for (float[] q : f) dq.vertex(m, q[0], q[1], q[2]).color(255, 255, 255, 255).endVertex();
                     for (int i = 3; i >= 0; i--) dq.vertex(m, f[i][0], f[i][1], f[i][2]).color(255, 255, 255, 255).endVertex();
                     return;
+                }
+                if (mode == 1) {
+                    RenderTest.probe("batched red lamp", new Matrix4f(poseStack.last().pose()));
+                    RenderTest.read("batched red lamp", "when queued");
                 }
                 seed += 100.0F * mode;
             }

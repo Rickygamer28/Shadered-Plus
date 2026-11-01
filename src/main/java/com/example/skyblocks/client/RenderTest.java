@@ -36,6 +36,45 @@ public final class RenderTest {
     /** Where the player stands for each picture: x y z yaw pitch. */
     private static final String[] SPOTS = {"0.5 -60 -5.5 0 20", "0.5 -59 9.5 180 25", "-5.5 -60 -2.5 0 10", "-1.5 -60 0.5 0 15", "-2 -59.5 7 0 30"};
 
+    /** The frame whose pixels are read back (one per picture, just before it is taken). */
+    static boolean probeFrame() {
+        return ON && stage >= 2 && ticks == 95;
+    }
+
+    private static final java.util.Map<String, int[]> PROBES = new java.util.LinkedHashMap<>();
+
+    /** Where on screen the middle of this quad (block units 0.5, 0.5, 0.5 under m) lands, remembered under name. */
+    static void probe(String name, org.joml.Matrix4f m) {
+        if (!probeFrame()) return;
+        org.joml.Vector4f v = new org.joml.Vector4f(0.5F, 0.5F, 0.5F, 1.0F);
+        m.transform(v);
+        com.mojang.blaze3d.systems.RenderSystem.getModelViewMatrix().transform(v);
+        com.mojang.blaze3d.systems.RenderSystem.getProjectionMatrix().transform(v);
+        var t = Minecraft.getInstance().getMainRenderTarget();
+        int x = (int) ((v.x / v.w * 0.5F + 0.5F) * t.width), y = (int) ((v.y / v.w * 0.5F + 0.5F) * t.height);
+        PROBES.put(name, new int[] {x, y});
+    }
+
+    /** The colour now at a remembered spot (main target), logged with when. */
+    static void read(String name, String when) {
+        if (!probeFrame() || !PROBES.containsKey(name)) return;
+        int[] p = PROBES.get(name);
+        int fb = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+        var t = Minecraft.getInstance().getMainRenderTarget();
+        int prev = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING);
+        org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, t.frameBufferId);
+        java.nio.ByteBuffer px = org.lwjgl.BufferUtils.createByteBuffer(4);
+        org.lwjgl.opengl.GL11.glReadPixels(Math.max(0, Math.min(p[0], t.width - 1)), Math.max(0, Math.min(p[1], t.height - 1)), 1, 1,
+                org.lwjgl.opengl.GL11.GL_RGBA, org.lwjgl.opengl.GL11.GL_UNSIGNED_BYTE, px);
+        org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, prev);
+        SkyBlocksMod.LOGGER.info("Shadered+ probe {} at {},{} {}: rgb {} {} {} (draw framebuffer {}, main {})", name, p[0], p[1], when,
+                px.get(0) & 255, px.get(1) & 255, px.get(2) & 255, fb, t.frameBufferId);
+    }
+
+    private static void readAll(String when) {
+        for (String n : PROBES.keySet()) read(n, when);
+    }
+
     /** A quad drawn now with vanilla's position-colour shader (for the debug row). */
     static void quad(org.joml.Matrix4f m, int r, int g, int b) {
         com.mojang.blaze3d.systems.RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionColorShader);
@@ -50,6 +89,9 @@ public final class RenderTest {
         bb.vertex(m, 0.2F, 0.8F, 0.5F).color(r, g, b, 255).endVertex();
         com.mojang.blaze3d.vertex.BufferUploader.drawWithShader(bb.end());
         com.mojang.blaze3d.systems.RenderSystem.enableCull();
+        String name = "quad " + r + "," + g + "," + b;
+        probe(name, m);
+        read(name, "just drawn");
     }
 
     /** The debug row's second line: a quad drawn at each stage (blue, yellow, magenta, cyan, orange). */
@@ -59,6 +101,12 @@ public final class RenderTest {
             return;
         }
         var st = event.getStage();
+        if (probeFrame()) {
+            SkyBlocksMod.LOGGER.info("Shadered+ stage {}: model-view\n{}projection\n{}pose\n{}", st,
+                    com.mojang.blaze3d.systems.RenderSystem.getModelViewMatrix(), com.mojang.blaze3d.systems.RenderSystem.getProjectionMatrix(),
+                    event.getPoseStack().last().pose());
+            readAll("at " + st);
+        }
         int x;
         int[] c;
         if (st == net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES) { x = -6; c = new int[] {0, 0, 255}; }
@@ -81,6 +129,14 @@ public final class RenderTest {
                 SkyBlocksMod.LOGGER.warn("Shadered+ render test: '{}' failed", command, t);
             }
         });
+    }
+
+    @SubscribeEvent
+    public static void onRenderTestFrameEnd(TickEvent.RenderTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) {
+            readAll("at the frame's end");
+            if (probeFrame()) PROBES.clear();
+        }
     }
 
     @SubscribeEvent
