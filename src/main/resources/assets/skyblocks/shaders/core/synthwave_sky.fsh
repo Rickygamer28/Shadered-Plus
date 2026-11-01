@@ -88,7 +88,7 @@ float lines(float v, float width) {
 
 // ---- sky things ----
 
-float noise3(vec3 p) {
+float vnoise3(vec3 p) {
     vec3 i = floor(p);
     vec3 f = fract(p);
     f = f * f * (3.0 - 2.0 * f);
@@ -99,7 +99,7 @@ float noise3(vec3 p) {
 float fbm(vec3 p) {
     float v = 0.0, a = 0.5;
     for (int i = 0; i < 4; i++) {
-        v += a * noise3(p);
+        v += a * vnoise3(p);
         p = p * 2.03 + vec3(1.7, 9.2, 4.1);
         a *= 0.5;
     }
@@ -234,7 +234,7 @@ vec3 sun(float az, float elev, float t, vec3 col) {
         col += SUN0 * (0.35 + 0.3 * Bass) * exp(-max(md - radius, 0.0) * 9.0);
         if (md < radius + 0.01) {
             vec2 q = mp / radius;
-            float craters = noise3(vec3(q * 4.0, 1.7)) * 0.6 + noise3(vec3(q * 11.0, 4.2)) * 0.4;
+            float craters = vnoise3(vec3(q * 4.0, 1.7)) * 0.6 + vnoise3(vec3(q * 11.0, 4.2)) * 0.4;
             vec3 disc = mix(SUN1, SUN2, smoothstep(-1.0, 1.0, q.y)) * (0.8 + 0.25 * smoothstep(0.35, 0.75, craters));
             col = mix(col, disc, 1.0 - smoothstep(radius - 0.004, radius + 0.004, md));
         }
