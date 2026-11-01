@@ -105,6 +105,10 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
                     poseLog = System.currentTimeMillis();
                     SkyBlocksMod.LOGGER.info("Shadered+ render test lamp at {}: pose\n{}buffers {}", be.getBlockPos(), poseStack.last().pose(), buffers.getClass().getName());
                 }
+                if (mode == 3) { // (drawn now, not batched: green)
+                    RenderTest.quad(new Matrix4f(poseStack.last().pose()), 0, 255, 0);
+                    return;
+                }
                 if (mode == 4) {
                     VertexConsumer dq = buffers.getBuffer(RenderType.debugQuads());
                     Matrix4f m = poseStack.last().pose();

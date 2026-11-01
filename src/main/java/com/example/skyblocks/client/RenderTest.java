@@ -36,6 +36,43 @@ public final class RenderTest {
     /** Where the player stands for each picture: x y z yaw pitch. */
     private static final String[] SPOTS = {"0.5 -60 -5.5 0 20", "0.5 -59 9.5 180 25", "-5.5 -60 -2.5 0 10", "-1.5 -60 0.5 0 15", "-2 -59.5 7 0 30"};
 
+    /** A quad drawn now with vanilla's position-colour shader (for the debug row). */
+    static void quad(org.joml.Matrix4f m, int r, int g, int b) {
+        com.mojang.blaze3d.systems.RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionColorShader);
+        com.mojang.blaze3d.systems.RenderSystem.disableCull();
+        com.mojang.blaze3d.systems.RenderSystem.enableDepthTest();
+        com.mojang.blaze3d.systems.RenderSystem.depthFunc(org.lwjgl.opengl.GL11.GL_LEQUAL);
+        com.mojang.blaze3d.vertex.BufferBuilder bb = com.mojang.blaze3d.vertex.Tesselator.getInstance().getBuilder();
+        bb.begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_COLOR);
+        bb.vertex(m, 0.2F, 0.2F, 0.5F).color(r, g, b, 255).endVertex();
+        bb.vertex(m, 0.8F, 0.2F, 0.5F).color(r, g, b, 255).endVertex();
+        bb.vertex(m, 0.8F, 0.8F, 0.5F).color(r, g, b, 255).endVertex();
+        bb.vertex(m, 0.2F, 0.8F, 0.5F).color(r, g, b, 255).endVertex();
+        com.mojang.blaze3d.vertex.BufferUploader.drawWithShader(bb.end());
+        com.mojang.blaze3d.systems.RenderSystem.enableCull();
+    }
+
+    /** The debug row's second line: a quad drawn at each stage (blue, yellow, magenta, cyan, orange). */
+    @SubscribeEvent
+    public static void onRenderTestStage(net.minecraftforge.client.event.RenderLevelStageEvent event) {
+        if (!ON || stage < 2) {
+            return;
+        }
+        var st = event.getStage();
+        int x;
+        int[] c;
+        if (st == net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES) { x = -6; c = new int[] {0, 0, 255}; }
+        else if (st == net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) { x = -4; c = new int[] {255, 255, 0}; }
+        else if (st == net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_LEVEL) { x = -2; c = new int[] {255, 0, 255}; }
+        else if (st == net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_PARTICLES) { x = 0; c = new int[] {0, 255, 255}; }
+        else if (st == net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_SOLID_BLOCKS) { x = 2; c = new int[] {255, 128, 0}; }
+        else return;
+        net.minecraft.world.phys.Vec3 cam = event.getCamera().getPosition();
+        org.joml.Matrix4f m = new org.joml.Matrix4f(event.getPoseStack().last().pose())
+                .translate((float) (x - cam.x), (float) (-58.0 - cam.y), (float) (10.0 - cam.z));
+        quad(m, c[0], c[1], c[2]);
+    }
+
     private static void run(MinecraftServer server, String command) {
         server.execute(() -> {
             try {
