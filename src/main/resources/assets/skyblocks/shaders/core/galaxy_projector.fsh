@@ -175,6 +175,6 @@ void main() {
     }
     float fade = 1.0 - smoothstep(Range * 0.6, Range, dist);
     float near = clamp(2.4 / (dist + 0.8), 0.35, 1.6);
-    vec3 col = sky(dir, GalTime) * (0.35 + 0.65 * facing) * fade * near * Strength;
+    vec3 col = sky(dir, GalTime) * (0.35 + 0.65 * facing) * fade * near * Strength * 2.2;
     fragColor = vec4(col, 0.0);
 }

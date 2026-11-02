@@ -177,7 +177,9 @@ public class TeslaCoilRenderer implements BlockEntityRenderer<GlowColourBlockEnt
             Vec3 seg = q.subtract(p);
             Vec3 side = seg.cross(p.add(q).scale(0.5).subtract(cam));
             if (side.lengthSqr() < 1e-10) continue;
-            side = side.normalize().scale(width * 0.5);
+            // (thinner right by the camera: a bolt to your hand shouldn't fill the screen)
+            double toCam = p.add(q).scale(0.5).distanceTo(cam);
+            side = side.normalize().scale(width * 0.5 * Math.min(1.0, 0.25 + toCam / 1.6));
             // (ends tapering off)
             float ta = i == 0 ? 0.5F : 1.0F, tb = i == pts.size() - 2 ? 0.3F : 1.0F;
             vc.addVertex(m, (float) (p.x - side.x * ta), (float) (p.y - side.y * ta), (float) (p.z - side.z * ta)).setColor(r, g, b, a);
