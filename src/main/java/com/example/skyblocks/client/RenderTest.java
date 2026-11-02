@@ -34,7 +34,7 @@ public final class RenderTest {
     private static final String[] ROW1 = {"lava_lamp", "big_lava_lamp", "fire_tornado", "brick_hearth", "koi_pond", "vanilla_koi_pond", "infinity_cube"};
     private static final String[] ROW2 = {"aquarium", "vanilla_aquarium", "dance_floor", "jellyfish_tank", "hologram_projector", "music_visualizer", "neon_sign"};
     /** Where the player stands for each picture: x y z yaw pitch. */
-    private static final String[] SPOTS = {"0.5 -60 -5.5 0 20", "0.5 -59 9.5 180 25", "-5.5 -60 -2.5 0 10", "-1.5 -60 0.5 0 15"};
+    private static final String[] SPOTS = {"0.5 -60 -5.5 0 20", "0.5 -59 9.5 180 25", "-5.5 -60 -2.5 0 10", "-1.5 -60 0.5 0 15", "-1.5 -60 -2.5 0 5", "night -1.5 -60 -2.5 0 5", "night 0.5 -60 -5.5 0 20"};
 
     private static void run(MinecraftServer server, String command) {
         server.execute(() -> {
@@ -94,7 +94,12 @@ public final class RenderTest {
                     if (stage >= 2 && stage < 2 + SPOTS.length) {
                         int spot = stage - 2;
                         if (ticks == 1) {
-                            run(mc.getSingleplayerServer(), "tp @a " + SPOTS[spot]);
+                            String where = SPOTS[spot];
+                            if (where.startsWith("night ")) {
+                                run(mc.getSingleplayerServer(), "time set 18000");
+                                where = where.substring(6);
+                            }
+                            run(mc.getSingleplayerServer(), "tp @a " + where);
                             mc.setScreen(null);
                         }
                         if (ticks == 100) { // (the chunks built, the shaders warmed up)
