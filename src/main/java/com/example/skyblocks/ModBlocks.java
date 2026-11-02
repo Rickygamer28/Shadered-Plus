@@ -116,6 +116,12 @@ public final class ModBlocks {
                     .lightLevel(state -> state.getValue(LavaLampBlock.LIT) ? 9 : 0)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE));
 
+    /** A magma basin: churning lava in a stone basin, basins side by side make one pool (MagmaBasinBlock). */
+    public static final DeferredBlock<MagmaBasinBlock> MAGMA_BASIN = BLOCKS.registerBlock("magma_basin", MagmaBasinBlock::new,
+            BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.POLISHED_DEEPSLATE).noOcclusion().requiresCorrectToolForDrops()
+                    .lightLevel(state -> 13)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_ORANGE));
+
     /** The big lava lamp: two blocks tall (BigLavaLampBlock). */
     public static final DeferredBlock<BigLavaLampBlock> BIG_LAVA_LAMP = BLOCKS.registerBlock("big_lava_lamp", BigLavaLampBlock::new,
             BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.GLASS).noOcclusion()

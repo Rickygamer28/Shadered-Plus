@@ -41,6 +41,10 @@ public class GlowColourBlockEntity extends BlockEntity {
         return new GlowColourBlockEntity(ModBlockEntities.PLASMA_BALL.get(), pos, state, 0xC45CFF);
     }
 
+    public static GlowColourBlockEntity magmaBasin(BlockPos pos, BlockState state) {
+        return new GlowColourBlockEntity(ModBlockEntities.MAGMA_BASIN.get(), pos, state, 0xFF5A12);
+    }
+
     public static GlowColourBlockEntity jellyTank(BlockPos pos, BlockState state) {
         return new GlowColourBlockEntity(ModBlockEntities.JELLYFISH_TANK.get(), pos, state, 0x7FB8FF);
     }
