@@ -88,6 +88,7 @@ public class SmallTankRenderer implements BlockEntityRenderer<SmallTankBlockEnti
     }
 
     static final Matrix4f ITEM_INV = new Matrix4f();
+    private static int debug;
 
     public SmallTankRenderer(BlockEntityRendererProvider.Context context) {}
 
@@ -97,6 +98,9 @@ public class SmallTankRenderer implements BlockEntityRenderer<SmallTankBlockEnti
 
     @Override
     public void render(SmallTankBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
+        if (RenderTest.ON && (debug++ % 300) == 0) {
+            SkyBlocksMod.LOGGER.info("small tank render: shader {}, level {}, at {}, state {}", shader != null, be.getLevel() != null, be.getBlockPos(), be.getBlockState());
+        }
         if (shader == null || be.getLevel() == null) {
             return;
         }
