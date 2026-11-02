@@ -183,5 +183,12 @@ void main() {
             col = vec4(sky * ga + col.rgb * (1.0 - ga), ga + col.a * (1.0 - ga));
         }
     }
-    fragColor = col;
+    // nothing here (no flame, no glass): leave what is behind alone; and never write a broken value
+    if (col.a < 0.002 && dot(col.rgb, vec3(1.0)) < 0.002) {
+        discard;
+    }
+    if (any(isnan(col)) || any(isinf(col))) {
+        discard;
+    }
+    fragColor = clamp(col, 0.0, 1.0);
 }

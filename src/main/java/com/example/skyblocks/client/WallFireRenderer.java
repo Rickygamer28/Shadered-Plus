@@ -28,6 +28,7 @@ import org.joml.Matrix4f;
  */
 public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEntity> {
     static ShaderInstance shader;
+    static ShaderInstance blendShader;
 
     @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
@@ -36,6 +37,9 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         @SubscribeEvent
         public static void register(RegisterShadersEvent event) throws java.io.IOException {
             com.example.skyblocks.client.ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "wall_fire"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> shader = s);
+            // the same shader for the see-through flames, with its blending in its json (Minecraft applies a shader's
+            // own blending when it is used - none listed = blending off, depending on what was drawn just before)
+            com.example.skyblocks.client.ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "wall_fire_blend"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> blendShader = s);
         }
     }
 
@@ -57,12 +61,12 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         /** Free flames (the hearth): see-through round the flames, drawn after the solid blocks. */
         static final RenderType FREE = create("skyblocks_hearth_fire", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 4096,
                 false, true, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> blendShader))
                         .setTexturingState(new TexturingStateShard("skyblocks_hearth_fire_time", () -> {
-                            if (shader != null) {
-                                shader.safeGetUniform("FireTime").set(LavaLampRenderer.seconds());
-                                shader.safeGetUniform("ItemMode").set(0.0F);
-                                shader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.2F, 1.0F));
+                            if (blendShader != null) {
+                                blendShader.safeGetUniform("FireTime").set(LavaLampRenderer.seconds());
+                                blendShader.safeGetUniform("ItemMode").set(0.0F);
+                                blendShader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.2F, 1.0F));
                             }
                         }, () -> {}))
                         .setTransparencyState(new TransparencyStateShard("skyblocks_premultiplied", () -> {
@@ -80,13 +84,13 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         /** The fire tornado as an item: drawn at once with its own matrix (see drawTornadoItem). */
         static final RenderType ITEM = create("skyblocks_fire_item", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 256,
                 false, false, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> blendShader))
                         .setTexturingState(new TexturingStateShard("skyblocks_fire_item", () -> {
-                            if (shader != null) {
-                                shader.safeGetUniform("FireTime").set(LavaLampRenderer.seconds());
-                                shader.safeGetUniform("Boost").set(0.0F);
-                                shader.safeGetUniform("ItemMode").set(1.0F);
-                                shader.safeGetUniform("LampInv").set(ITEM_INV);
+                            if (blendShader != null) {
+                                blendShader.safeGetUniform("FireTime").set(LavaLampRenderer.seconds());
+                                blendShader.safeGetUniform("Boost").set(0.0F);
+                                blendShader.safeGetUniform("ItemMode").set(1.0F);
+                                blendShader.safeGetUniform("LampInv").set(ITEM_INV);
                             }
                         }, () -> {}))
                         .setTransparencyState(new TransparencyStateShard("skyblocks_premultiplied_item", () -> {
