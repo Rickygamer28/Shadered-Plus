@@ -17,6 +17,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -67,20 +68,28 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
     }
 
     abstract static class Types extends RenderType {
-        static final RenderType HOLE = create("skyblocks_black_hole", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 4096,
-                false, false, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
-                        .setTexturingState(new TexturingStateShard("skyblocks_black_hole_copy", () -> {
-                            copyScreen();
-                            if (shader != null) {
-                                shader.safeGetUniform("HoleTime").set(LavaLampRenderer.seconds());
-                                shader.safeGetUniform("ItemMode").set(0.0F);
-                            }
-                        }, () -> {}))
-                        .setTransparencyState(NO_TRANSPARENCY)
-                        .setWriteMaskState(COLOR_WRITE)
-                        .setCullState(NO_CULL) // (both sides: still there with the eye inside the box)
-                        .createCompositeState(false));
+        static final RenderType HOLE = hole("skyblocks_black_hole", false);
+        /** With the eye inside the hole's box: not hidden by what's in the box (the floor under it, say) - all of it bent. */
+        static final RenderType HOLE_INSIDE = hole("skyblocks_black_hole_inside", true);
+
+        private static RenderType hole(String name, boolean inside) {
+            return create(name, DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 4096,
+                    false, false, CompositeState.builder()
+                            .setShaderState(new ShaderStateShard(() -> shader))
+                            .setTexturingState(new TexturingStateShard(name + "_copy", () -> {
+                                copyScreen();
+                                if (shader != null) {
+                                    shader.safeGetUniform("HoleTime").set(LavaLampRenderer.seconds());
+                                    shader.safeGetUniform("ItemMode").set(0.0F);
+                                }
+                            }, () -> {}))
+                            .setTransparencyState(NO_TRANSPARENCY)
+                            .setWriteMaskState(COLOR_WRITE)
+                            .setDepthTestState(inside ? NO_DEPTH_TEST : LEQUAL_DEPTH_TEST)
+                            .setCullState(NO_CULL) // (both sides: still there with the eye inside the box)
+                            .createCompositeState(false));
+        }
+
         /** As an item: no world behind it to bend; drawn at once with its own matrix. */
         static final RenderType ITEM = create("skyblocks_black_hole_item", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 256,
                 false, false, CompositeState.builder()
@@ -117,7 +126,13 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         }
         long h = be.getBlockPos().asLong() * 0x9E3779B97F4A7C15L;
         float seed = (float) ((h >>> 40) & 0xFFFF) / 65536.0F * 0.9F;
-        box(buffers.getBuffer(Types.HOLE), poseStack.last().pose(), big(be), GlowColourBlockEntity.shown(be, LavaLampRenderer.seconds()), seed);
+        // the eye inside the box? (the main camera's; the box as in box())
+        boolean big = big(be);
+        Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        double reach = (big ? 1.5 : 0.36) * 1.03;
+        boolean inside = Math.abs(cam.x - (be.getBlockPos().getX() + 0.5)) < reach && Math.abs(cam.z - (be.getBlockPos().getZ() + 0.5)) < reach
+                && Math.abs(cam.y - (be.getBlockPos().getY() + (big ? 0.5 : 0.62))) < reach;
+        box(buffers.getBuffer(inside ? Types.HOLE_INSIDE : Types.HOLE), poseStack.last().pose(), big, GlowColourBlockEntity.shown(be, LavaLampRenderer.seconds()), seed);
     }
 
     /** A hole as an item, drawn at once with this item's matrix (shrunk to fit for the big one). */
