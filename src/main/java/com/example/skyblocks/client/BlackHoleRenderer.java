@@ -163,6 +163,17 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         }
     }
 
+    private static int[] centre() {
+        int[] vp = new int[4];
+        GL11.glGetIntegerv(GL11.GL_VIEWPORT, vp);
+        java.nio.ByteBuffer px = org.lwjgl.BufferUtils.createByteBuffer(4);
+        int read = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
+        GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING));
+        GL11.glReadPixels(vp[0] + vp[2] / 2, vp[1] + vp[3] / 2, 1, 1, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, px);
+        GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, read);
+        return new int[] {px.get(0) & 255, px.get(1) & 255, px.get(2) & 255};
+    }
+
     private record Pending(Matrix4f pose, Matrix4f modelView, Matrix4f projection, int framebuffer, boolean inside, boolean big, int colour, float seed) {}
     private static final java.util.List<Pending> PENDING = new java.util.ArrayList<>();
     private static com.mojang.blaze3d.vertex.ByteBufferBuilder bytes;
@@ -210,11 +221,20 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                 RenderSystem.applyModelViewMatrix();
                 RenderType type = job.inside() ? Types.HOLE_INSIDE : Types.HOLE;
                 MultiBufferSource.BufferSource main = mc.renderBuffers().bufferSource();
+                boolean dbg = RenderTest.ON && debugDraws < 4;
+                int[] before = dbg ? centre() : null;
+                int e0 = dbg ? GL11.glGetError() : 0;
                 box(main.getBuffer(type), job.pose(), job.big(), job.colour(), job.seed());
                 main.endBatch(type); // (each its own copy of the picture: one hole bends another)
-                if (RenderTest.ON && debugDraws < 3) {
-                    SkyBlocksMod.LOGGER.info("black hole late draw: GL error {}, depth test {}, mv {}, proj {}", GL11.glGetError(),
-                            GL11.glIsEnabled(GL11.GL_DEPTH_TEST), RenderSystem.getModelViewMatrix(), RenderSystem.getProjectionMatrix());
+                if (dbg) {
+                    int e1 = GL11.glGetError();
+                    int[] after = centre();
+                    int[] mask = new int[4];
+                    java.nio.ByteBuffer cm = org.lwjgl.BufferUtils.createByteBuffer(16);
+                    GL11.glGetBooleanv(GL11.GL_COLOR_WRITEMASK, cm);
+                    SkyBlocksMod.LOGGER.info("black hole late draw: errors {} / {}, centre {} -> {}, colour mask {}{}{}{}, program {}, read fb {}",
+                            e0, e1, java.util.Arrays.toString(before), java.util.Arrays.toString(after), cm.get(0), cm.get(1), cm.get(2), cm.get(3),
+                            GL11.glGetInteger(org.lwjgl.opengl.GL20.GL_CURRENT_PROGRAM), GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING));
                 }
             }
         } finally {
