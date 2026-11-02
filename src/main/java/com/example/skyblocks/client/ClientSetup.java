@@ -47,6 +47,7 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.DISCO_BALL.get(), DiscoBallRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SPEAKER.get(), SpeakerRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.LAVA_LAMP.get(), LavaLampRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.PLASMA_BALL.get(), PlasmaBallRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.FIRE.get(), WallFireRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.BRICK_HEARTH.get(), ClientSetup::hearthRenderer);
         event.registerBlockEntityRenderer(ModBlockEntities.VISUALIZER.get(), VisualizerRenderer::new);
@@ -168,6 +169,17 @@ public final class ClientSetup {
                 return renderer;
             }
         }, ModItems.JELLYFISH_TANK.get());
+        event.registerItem(new IClientItemExtensions() {
+            private PlasmaBallItemRenderer renderer;
+
+            @Override
+            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (renderer == null) {
+                    renderer = new PlasmaBallItemRenderer();
+                }
+                return renderer;
+            }
+        }, ModItems.PLASMA_BALL.get());
         for (boolean big : new boolean[] {false, true}) {
             event.registerItem(new IClientItemExtensions() {
                 private LavaLampItemRenderer renderer;

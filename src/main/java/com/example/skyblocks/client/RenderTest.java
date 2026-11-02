@@ -40,9 +40,13 @@ public final class RenderTest {
             "setblock 2 -60 0 skyblocks:jellyfish_tank",
             "setblock 4 -60 0 skyblocks:infinity_cube",
             "setblock 6 -60 0 skyblocks:dance_floor",
+            // the new blocks, in a row of their own (closer up)
+            "setblock -1 -60 4 skyblocks:plasma_ball",
+            "setblock 1 -60 4 skyblocks:plasma_ball",
+            "data merge block 1 -60 4 {colour: 3407871, rgb: 0b}",
     };
     /** Where the player stands for each picture: x y z yaw pitch ("night " first: at night). */
-    private static final String[] SPOTS = {"0.5 -60 -6.5 0 15", "night 0.5 -60 -6.5 0 15"};
+    private static final String[] SPOTS = {"0.5 -60 -6.5 0 15", "0.5 -60 1.6 0 20", "night 0.5 -60 1.6 0 20"};
 
     private static void run(MinecraftServer server, String command) {
         server.execute(() -> {

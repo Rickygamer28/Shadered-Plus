@@ -248,5 +248,7 @@
   "block.skyblocks.vanilla_aquarium": "Vanilla Aquarium",
   "block.skyblocks.vanilla_ocean_aquarium": "Vanilla Ocean Aquarium",
   "tooltip.skyblocks.vanilla_aquarium": "An aquarium in plain Minecraft style: tropical fish, cod, salmon, pufferfish, axolotls, tadpoles, seagrass and kelp. Touching blocks make one tank",
-  "tooltip.skyblocks.vanilla_ocean_aquarium": "For big tanks, in plain Minecraft style: dolphins, sea turtles, squid, glow squid, fish and coral. Touching blocks make one tank"
+  "tooltip.skyblocks.vanilla_ocean_aquarium": "For big tanks, in plain Minecraft style: dolphins, sea turtles, squid, glow squid, fish and coral. Touching blocks make one tank",
+  "block.skyblocks.plasma_ball": "Plasma Ball",
+  "tooltip.skyblocks.plasma_ball": "Reaches for you when you come close. Right-click: on / off. With a dye: colour. Sneak + right-click: RGB"
 }

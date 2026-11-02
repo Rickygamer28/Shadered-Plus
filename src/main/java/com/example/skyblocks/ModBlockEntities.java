@@ -34,6 +34,8 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(GlowColourBlockEntity::visualizer, ModBlocks.MUSIC_VISUALIZER.get()).build(null));
     public static final Supplier<BlockEntityType<HologramBlockEntity>> HOLOGRAM = TYPES.register("hologram_projector",
             () -> BlockEntityType.Builder.of(HologramBlockEntity::new, ModBlocks.HOLOGRAM_PROJECTOR.get()).build(null));
+    public static final Supplier<BlockEntityType<GlowColourBlockEntity>> PLASMA_BALL = TYPES.register("plasma_ball",
+            () -> BlockEntityType.Builder.of(GlowColourBlockEntity::plasmaBall, ModBlocks.PLASMA_BALL.get()).build(null));
     public static final Supplier<BlockEntityType<GlowColourBlockEntity>> JELLYFISH_TANK = TYPES.register("jellyfish_tank",
             () -> BlockEntityType.Builder.of(GlowColourBlockEntity::jellyTank, ModBlocks.JELLYFISH_TANK.get()).build(null));
     public static final Supplier<BlockEntityType<KoiPondBlockEntity>> KOI_POND = TYPES.register("koi_pond",

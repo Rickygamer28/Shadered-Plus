@@ -110,6 +110,12 @@ public final class ModBlocks {
                     .lightLevel(state -> state.getValue(LavaLampBlock.LIT) ? 12 : 0)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_ORANGE));
 
+    /** A plasma ball: filaments of light in a glass globe (PlasmaBallBlock, client/PlasmaBallRenderer). */
+    public static final DeferredBlock<PlasmaBallBlock> PLASMA_BALL = BLOCKS.registerBlock("plasma_ball", PlasmaBallBlock::new,
+            BlockBehaviour.Properties.of().strength(0.6F).sound(SoundType.GLASS).noOcclusion()
+                    .lightLevel(state -> state.getValue(LavaLampBlock.LIT) ? 9 : 0)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE));
+
     /** The big lava lamp: two blocks tall (BigLavaLampBlock). */
     public static final DeferredBlock<BigLavaLampBlock> BIG_LAVA_LAMP = BLOCKS.registerBlock("big_lava_lamp", BigLavaLampBlock::new,
             BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.GLASS).noOcclusion()
