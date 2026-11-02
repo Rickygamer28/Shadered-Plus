@@ -20,8 +20,10 @@ public abstract class ComplexPassTimingMixin {
     @Inject(method = "render", at = @At("RETURN"), require = 0, remap = false)
     private void skyblocks$timeEnd(RenderStage stage, PoseStack poseStack, int renderTick, float partialTick, CallbackInfo ci) {
         WorldTiming.shaderedEnd();
-        // the black holes: drawn now, with Shadered's sky blocks and models there to be bent
-        if (String.valueOf(stage).contains("BLOCK") && !com.example.skyblocks.client.MirrorRenderer.isRenderingReflection()) {
+        // the black holes: drawn once Shadered's last pass has put its picture on the screen (it puts back what it
+        // copied before its sky blocks and models: anything drawn in between is lost), with everything there to bend
+        com.example.skyblocks.client.BlackHoleRenderer.debugPass(stage);
+        if (String.valueOf(stage).contains("END") && !com.example.skyblocks.client.MirrorRenderer.isRenderingReflection()) {
             com.example.skyblocks.client.BlackHoleRenderer.drawPending();
         }
     }

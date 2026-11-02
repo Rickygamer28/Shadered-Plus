@@ -163,6 +163,14 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
     private record Pending(Matrix4f pose, Matrix4f modelView, Matrix4f projection, int framebuffer, boolean inside, boolean big, int colour, float seed) {}
     private static final java.util.List<Pending> PENDING = new java.util.ArrayList<>();
     private static com.mojang.blaze3d.vertex.ByteBufferBuilder bytes;
+    private static int debugDraws, debugPasses;
+
+    /** (Render test only: which of Shadered's passes run, the first few.) */
+    public static void debugPass(Object stage) {
+        if (RenderTest.ON && debugPasses++ < 12) {
+            SkyBlocksMod.LOGGER.info("Shadered pass {} (holes waiting: {})", stage, PENDING.size());
+        }
+    }
 
     /**
      * Draws the holes waiting (after Shadered's pass, or later in the frame if it didn't run), each just as it would
@@ -171,6 +179,9 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
     public static void drawPending() {
         if (PENDING.isEmpty()) {
             return;
+        }
+        if (RenderTest.ON && (debugDraws++ % 200) == 0) {
+            SkyBlocksMod.LOGGER.info("black holes drawn late: {} (fb {})", PENDING.size(), GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING));
         }
         java.util.List<Pending> jobs = new java.util.ArrayList<>(PENDING);
         PENDING.clear();
@@ -210,10 +221,10 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
     public static final class Late {
         private Late() {}
 
-        /** (If Shadered's pass didn't run this frame: drawn after the see-through blocks instead.) */
+        /** (If Shadered's pass didn't run this frame: drawn at the end of the world's drawing instead.) */
         @SubscribeEvent
         public static void onBlackHolesLate(net.neoforged.neoforge.client.event.RenderLevelStageEvent event) {
-            if (event.getStage() == net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS
+            if (event.getStage() == net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_LEVEL
                     && !MirrorRenderer.isRenderingReflection()) {
                 drawPending();
             }
