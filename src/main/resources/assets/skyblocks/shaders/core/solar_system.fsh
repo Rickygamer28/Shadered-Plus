@@ -600,7 +600,7 @@ void main() {
         // the space inside the dome: dark, full of stars
         if (hit < 0) {
             vec3 bg = vec3(0.01, 0.015, 0.04) + stars(rd) * 0.9;
-            float a = 0.55;
+            float a = 0.72; // (dark space inside the dome)
             col += bg * a * (1.0 - alpha);
             alpha += a * (1.0 - alpha);
         }
