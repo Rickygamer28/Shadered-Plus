@@ -36,17 +36,27 @@ vec3 sphereDir(float u, float v) {
     return vec3(r * cos(a), z, r * sin(a));
 }
 
-// the ray (ro + rd * t, t in [t0, t1]) and the segment a..b: (closest distance, t there)
+// how far the point q is from the ray (ro + rd * t, t in [t0, t1])
+float rayPoint(vec3 ro, vec3 rd, float t0, float t1, vec3 q) {
+    float t = clamp(dot(q - ro, rd), t0, t1);
+    return length(ro + rd * t - q);
+}
+
+// how far the segment a..b comes to the ray (ro + rd * t, t in [t0, t1]); (nearly) along the ray: from points on it
 vec2 raySeg(vec3 ro, vec3 rd, float t0, float t1, vec3 a, vec3 b) {
     vec3 ab = b - a, w = ro - a;
     float bb = dot(ab, ab), rb = dot(rd, ab), rw = dot(rd, w), bw = dot(ab, w);
     float den = bb - rb * rb; // (rd is unit length)
-    float s = den > 1e-7 ? clamp((bw - rb * rw) / den, 0.0, 1.0) : 0.0;
+    if (den < 0.05 * bb || bb < 1e-8) {
+        float d = min(min(rayPoint(ro, rd, t0, t1, a), rayPoint(ro, rd, t0, t1, b)),
+                      min(rayPoint(ro, rd, t0, t1, a + ab * 0.33), rayPoint(ro, rd, t0, t1, a + ab * 0.67)));
+        return vec2(d, 0.0);
+    }
+    float s = clamp((bw - rb * rw) / den, 0.0, 1.0);
     float t = clamp(dot(rd, a + ab * s - ro), t0, t1);
-    s = clamp(dot(ro + rd * t - a, ab) / max(bb, 1e-7), 0.0, 1.0);
+    s = clamp(dot(ro + rd * t - a, ab) / bb, 0.0, 1.0);
     t = clamp(dot(rd, a + ab * s - ro), t0, t1);
-    vec3 d = ro + rd * t - (a + ab * s);
-    return vec2(length(d), t);
+    return vec2(length(ro + rd * t - (a + ab * s)), t);
 }
 
 void main() {
