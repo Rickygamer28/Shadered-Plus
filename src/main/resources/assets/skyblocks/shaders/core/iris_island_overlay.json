@@ -1,6 +1,11 @@
 {
     "vertex": "skyblocks:iris_island_overlay",
     "fragment": "skyblocks:iris_island_overlay",
+    "blend": {
+        "func": "add",
+        "srcrgb": "1",
+        "dstrgb": "1-srcalpha"
+    },
     "attributes": [
         "Position",
         "UV0"

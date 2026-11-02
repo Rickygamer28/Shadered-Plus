@@ -28,6 +28,7 @@ import org.joml.Matrix4f;
  */
 public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEntity> {
     static ShaderInstance shader;
+    static ShaderInstance blendShader;
 
     @Mod.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
@@ -36,6 +37,9 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         @SubscribeEvent
         public static void registerWallFireRenderer(RegisterShadersEvent event) throws java.io.IOException {
             com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "wall_fire"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> shader = s);
+            // the same shader for the see-through flames: 1.20.1 applies a shader's own blending when it is used
+            // (none listed = blending switched off), so these need it in their json
+            com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "wall_fire_blend"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> blendShader = s);
         }
     }
 
@@ -57,12 +61,12 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         /** Free flames (the hearth): see-through round the flames, drawn after the solid blocks. */
         static final RenderType FREE = create("skyblocks_hearth_fire", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 4096,
                 false, true, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(blendShader)))
                         .setTexturingState(new TexturingStateShard("skyblocks_hearth_fire_time", () -> {
-                            if (shader != null) {
-                                shader.safeGetUniform("FireTime").set(LavaLampRenderer.seconds());
-                                shader.safeGetUniform("ItemMode").set(0.0F);
-                                shader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.2F, 1.0F));
+                            if (blendShader != null) {
+                                blendShader.safeGetUniform("FireTime").set(LavaLampRenderer.seconds());
+                                blendShader.safeGetUniform("ItemMode").set(0.0F);
+                                blendShader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.2F, 1.0F));
                             }
                         }, () -> {}))
                         .setTransparencyState(new TransparencyStateShard("skyblocks_premultiplied", WallFireRenderer::premultipliedOn, WallFireRenderer::premultipliedOff))
@@ -73,13 +77,13 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
         /** The fire tornado as an item: drawn at once with its own matrix (see drawTornadoItem). */
         static final RenderType ITEM = create("skyblocks_fire_item", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 256,
                 false, false, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(blendShader)))
                         .setTexturingState(new TexturingStateShard("skyblocks_fire_item", () -> {
-                            if (shader != null) {
-                                shader.safeGetUniform("FireTime").set(LavaLampRenderer.seconds());
-                                shader.safeGetUniform("Boost").set(0.0F);
-                                shader.safeGetUniform("ItemMode").set(1.0F);
-                                shader.safeGetUniform("LampInv").set(ITEM_INV);
+                            if (blendShader != null) {
+                                blendShader.safeGetUniform("FireTime").set(LavaLampRenderer.seconds());
+                                blendShader.safeGetUniform("Boost").set(0.0F);
+                                blendShader.safeGetUniform("ItemMode").set(1.0F);
+                                blendShader.safeGetUniform("LampInv").set(ITEM_INV);
                             }
                         }, () -> {}))
                         .setTransparencyState(new TransparencyStateShard("skyblocks_premultiplied_item", WallFireRenderer::premultipliedOn, WallFireRenderer::premultipliedOff))
@@ -99,25 +103,12 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
      * when another mod changed the state behind its back (blending off, another blend equation) the flames came out
      * on a black box.
      */
-    private static boolean warned;
-
     static void premultipliedOn() {
         com.mojang.blaze3d.systems.RenderSystem.enableBlend();
         com.mojang.blaze3d.systems.RenderSystem.blendEquation(org.lwjgl.opengl.GL14.GL_FUNC_ADD);
         com.mojang.blaze3d.systems.RenderSystem.blendFuncSeparate(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.ONE,
                 com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, com.mojang.blaze3d.platform.GlStateManager.SourceFactor.ONE,
                 com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-        if (!warned) {
-            boolean on = org.lwjgl.opengl.GL11.glIsEnabled(org.lwjgl.opengl.GL11.GL_BLEND);
-            int eq = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL20.GL_BLEND_EQUATION_RGB);
-            int src = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL14.GL_BLEND_SRC_RGB);
-            int dst = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL14.GL_BLEND_DST_RGB);
-            if (!on || eq != org.lwjgl.opengl.GL14.GL_FUNC_ADD || src != org.lwjgl.opengl.GL11.GL_ONE || dst != org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA) {
-                warned = true;
-                SkyBlocksMod.LOGGER.warn("Shadered+: OpenGL's blending was not what Minecraft thought (on {}, equation {}, {} / {}) - "
-                        + "another mod changed it; the flames set it themselves", on, eq, src, dst);
-            }
-        }
         org.lwjgl.opengl.GL11.glEnable(org.lwjgl.opengl.GL11.GL_BLEND);
         org.lwjgl.opengl.GL14.glBlendEquation(org.lwjgl.opengl.GL14.GL_FUNC_ADD);
         org.lwjgl.opengl.GL14.glBlendFuncSeparate(org.lwjgl.opengl.GL11.GL_ONE, org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA,
