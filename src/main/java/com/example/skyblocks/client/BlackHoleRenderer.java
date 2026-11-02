@@ -145,6 +145,9 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         if (main && !MirrorRenderer.isRenderingReflection() && !IrisCompat.shaderPackInUse()) {
             // the world's view: drawn once Shadered's own pass is done too (its sky blocks and models - the cats - are
             // drawn after the block entities; they'd be on top of the hole, not bent by it)
+            if (RenderTest.ON && debugDraws < 2) {
+                SkyBlocksMod.LOGGER.info("black hole queued: mv {}, proj {}, pose {}", RenderSystem.getModelViewMatrix(), RenderSystem.getProjectionMatrix(), poseStack.last().pose());
+            }
             if (PENDING.size() < 256) {
                 PENDING.add(new Pending(new Matrix4f(poseStack.last().pose()), new Matrix4f(RenderSystem.getModelViewMatrix()),
                         new Matrix4f(RenderSystem.getProjectionMatrix()), GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING), inside, big, colour, seed));
@@ -181,7 +184,7 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
             return;
         }
         if (RenderTest.ON && (debugDraws++ % 200) == 0) {
-            SkyBlocksMod.LOGGER.info("black holes drawn late: {} (fb {})", PENDING.size(), GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING));
+            SkyBlocksMod.LOGGER.info("black holes drawn late: {} (fb {}, error before {})", PENDING.size(), GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING), GL11.glGetError());
         }
         java.util.List<Pending> jobs = new java.util.ArrayList<>(PENDING);
         PENDING.clear();
@@ -206,8 +209,13 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                 stack.set(job.modelView());
                 RenderSystem.applyModelViewMatrix();
                 RenderType type = job.inside() ? Types.HOLE_INSIDE : Types.HOLE;
-                box(source.getBuffer(type), job.pose(), job.big(), job.colour(), job.seed());
-                source.endBatch(type); // (each its own copy of the picture: one hole bends another)
+                MultiBufferSource.BufferSource main = mc.renderBuffers().bufferSource();
+                box(main.getBuffer(type), job.pose(), job.big(), job.colour(), job.seed());
+                main.endBatch(type); // (each its own copy of the picture: one hole bends another)
+                if (RenderTest.ON && debugDraws < 3) {
+                    SkyBlocksMod.LOGGER.info("black hole late draw: GL error {}, depth test {}, mv {}, proj {}", GL11.glGetError(),
+                            GL11.glIsEnabled(GL11.GL_DEPTH_TEST), RenderSystem.getModelViewMatrix(), RenderSystem.getProjectionMatrix());
+                }
             }
         } finally {
             stack.popMatrix();

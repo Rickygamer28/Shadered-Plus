@@ -23,7 +23,7 @@ public abstract class ComplexPassTimingMixin {
         // the black holes: drawn once Shadered's last pass has put its picture on the screen (it puts back what it
         // copied before its sky blocks and models: anything drawn in between is lost), with everything there to bend
         com.example.skyblocks.client.BlackHoleRenderer.debugPass(stage);
-        if (String.valueOf(stage).contains("END") && !com.example.skyblocks.client.MirrorRenderer.isRenderingReflection()) {
+        if (String.valueOf(stage).contains("LEVEL") && !com.example.skyblocks.client.MirrorRenderer.isRenderingReflection()) {
             com.example.skyblocks.client.BlackHoleRenderer.drawPending();
         }
     }
