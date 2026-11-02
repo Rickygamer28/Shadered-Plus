@@ -117,7 +117,15 @@ final class VanillaPondRenderer {
                 boolean frogged = !stone && k == 0 && KoiPondBlock.frogTime(pos, t) >= 0.0;
                 // (the bigger pads flower, as in the koi pond - not while a frog's on it)
                 boolean flower = !frogged && KoiPondBlock.u01(KoiPondBlock.hashu(cx(pos), cz(pos), 100 + k)) > 0.72F;
-                lilyPad(pad, poseStack, buffers, light, flower);
+                float open = 1.0F;
+                if (flower && be.getLevel() != null) { // (open by day, a closed bud at night - each in its own time)
+                    float day = Math.max(0.0F, Math.min(1.0F, (be.getLevel().getSkyDarken(1.0F) - 0.2F) / 0.8F));
+                    float h = KoiPondBlock.u01(KoiPondBlock.hashu(cx(pos), cz(pos), 200 + k));
+                    float lo = 0.15F + 0.3F * h, hi = 0.45F + 0.3F * h;
+                    float u = Math.max(0.0F, Math.min(1.0F, (day - lo) / (hi - lo)));
+                    open = u * u * (3.0F - 2.0F * u);
+                }
+                lilyPad(pad, poseStack, buffers, light, flower, open);
                 if (frogged) {
                     frog(pad, pos, poseStack, buffers, light, t, false);
                 }
@@ -188,7 +196,7 @@ final class VanillaPondRenderer {
         return new float[] {px, pz, r, ang + sway, sway};
     }
 
-    private void lilyPad(float[] pad, PoseStack poseStack, MultiBufferSource buffers, int light, boolean flower) {
+    private void lilyPad(float[] pad, PoseStack poseStack, MultiBufferSource buffers, int light, boolean flower, float open) {
         poseStack.pushPose();
         poseStack.translate(pad[0], 0.0F, pad[1]);
         poseStack.mulPose(Axis.YP.rotation(pad[3]));
@@ -196,9 +204,15 @@ final class VanillaPondRenderer {
         VertexConsumer vc = buffers.getBuffer(Sheets.cutoutBlockSheet());
         PoseStack.Pose pose = poseStack.last();
         square(vc, pose, sprite(LILY_PAD), a, b, SURF + 0.004F, LILY_PAD_COLOUR, light);
-        if (flower) { // a water lily on it: its outer petals, and the inner ones and the middle standing up a little
-            square(vc, pose, sprite(FLOWER_OUTER), a, b, SURF + 0.012F, 0xFFFFFFFF, light);
-            square(vc, pose, sprite(FLOWER_INNER), a, b, SURF + 0.03F, 0xFFFFFFFF, light);
+        if (flower) { // a water lily on it: its outer petals, and the inner ones and the middle standing up a little;
+            // closed (at night): only the inner petals, small and tinted deeper pink, standing up as a bud
+            if (open > 0.15F) {
+                float so = 0.45F + 0.55F * open;
+                square(vc, pose, sprite(FLOWER_OUTER), a * so, b * so, SURF + 0.012F, 0xFFFFFFFF, light);
+            }
+            float si = 0.45F + 0.55F * open;
+            int tint = open > 0.5F ? 0xFFFFFFFF : 0xFFF0A0C0;
+            square(vc, pose, sprite(FLOWER_INNER), a * si, b * si, SURF + 0.03F + 0.03F * (1.0F - open), tint, light);
         }
         poseStack.popPose();
     }

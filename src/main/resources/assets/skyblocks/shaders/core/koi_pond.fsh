@@ -70,6 +70,9 @@ vec3 rainRings(vec2 x, float t) {
             float slope = -2.0 * (r - rad) / (w * w) * ring;
             acc.xy += (r > 1.0e-4 ? d / r : vec2(0.0)) * slope * 0.0025;
             acc.z += ring;
+            if (age < 0.08) { // (the splash where it lands)
+                acc.z += 1.6 * exp(-r * r / (0.008 * 0.008)) * (1.0 - age / 0.08);
+            }
         }
     }
     return acc * Rain;
@@ -393,6 +396,40 @@ vec4 frogHit(vec3 p0, vec3 rd, float t, float light) {
     return vec4(0.0);
 }
 
+// a water lily on its pad (d from the pad's middle): open (1) - two rings of pointed petals, white with pink tips
+// round a golden middle - or closed (0): a small pink bud, its petals wrapped together. (colour, 0/1)
+vec4 lilyFlower(vec2 d, float r, float seed, float open) {
+    float dist = length(d);
+    float a = atan(d.y, d.x) + seed * 6.2832;
+    float fr = r * mix(0.14, 0.38, open);
+    if (dist > fr) return vec4(0.0);
+    if (open < 0.18) { // the bud
+        float rr = fr * (0.78 + 0.22 * abs(cos(a * 2.5)));
+        if (dist > rr) return vec4(0.0);
+        float stripe = 0.5 + 0.5 * cos(a * 5.0);
+        return vec4(mix(vec3(0.75, 0.22, 0.42), vec3(1.0, 0.62, 0.78), stripe * (1.0 - dist / rr) * 0.8 + 0.1), 1.0);
+    }
+    const float N = 10.0;
+    float p1 = pow(abs(cos(a * N * 0.5)), 0.7);
+    float e1 = fr * (0.45 + 0.55 * p1); // (the outer petals' outline: pointed tips)
+    float p2 = pow(abs(cos((a + 3.1416 / N) * N * 0.5)), 0.7);
+    float e2 = fr * mix(0.75, 0.62, open) * (0.5 + 0.5 * p2); // (the inner ring, standing up more)
+    float core = fr * 0.17;
+    if (dist < core) {
+        float dots = 0.5 + 0.5 * sin(a * 23.0) * sin(dist / core * 9.0);
+        return vec4(mix(vec3(0.95, 0.62, 0.12), vec3(1.0, 0.88, 0.35), dots), 1.0);
+    }
+    if (dist < e2) {
+        float u = dist / e2;
+        return vec4(mix(vec3(1.0, 0.97, 0.95), vec3(1.0, 0.72, 0.84), u * u) * (0.82 + 0.18 * p2), 1.0);
+    }
+    if (dist < e1) {
+        float u = dist / e1;
+        return vec4(mix(vec3(0.97, 0.93, 0.93), vec3(0.98, 0.5, 0.7), smoothstep(0.45, 1.0, u)) * (0.72 + 0.28 * p1), 1.0);
+    }
+    return vec4(0.0);
+}
+
 // a lily pad at q on the surface: (colour, 0/1)
 vec4 padAt(vec2 q, float t) {
     vec2 c0 = floor(q);
@@ -418,10 +455,10 @@ vec4 padAt(vec2 q, float t) {
                 float hop;
                 if (r >= 0.09 && !stoneAt(cell) && frogOn(cell, k, t, false, info, hop) && hop >= 1.0) {
                     col *= 0.55 + 0.45 * smoothstep(0.06 * info.y, 0.16 * info.y, dist); // (the frog's shadow)
-                } else if (h.y > 0.72 && dist < r * 0.32) { // a water-lily flower
-                    float petals = 0.5 + 0.5 * cos(atan(d.y, d.x) * 8.0);
-                    col = mix(vec3(1.0, 0.55, 0.75), vec3(1.0, 0.92, 0.95), petals * (1.0 - dist / (r * 0.32)));
-                    if (dist < r * 0.07) col = vec3(1.0, 0.85, 0.3);
+                } else if (h.y > 0.72 && dist < r * 0.4) { // a water lily: open by day, a closed bud at night
+                    float open = smoothstep(0.15 + 0.3 * h2.y, 0.45 + 0.3 * h2.y, Daylight);
+                    vec4 fl = lilyFlower(d, r, h2.x + float(k) * 0.37, open);
+                    if (fl.a > 0.0) col = fl.rgb;
                 }
                 return vec4(col, 1.0);
             }
@@ -940,6 +977,9 @@ void main() {
     g += vec2(0.7, -0.7) * cos(dot(x, vec2(0.7, -0.7)) * 47.0 - t * 2.6) * 0.0015;
     vec3 rings = rainRings(x, t);
     g += rings.xy;
+    if (Rain > 0.0) { // (the rain roughening the whole surface)
+        g += Rain * (vec2(vnoise2(x * 90.0 + vec2(t * 21.0, 0.0)), vnoise2(x * 90.0 + vec2(7.0, -t * 23.0))) - 0.5) * 0.004;
+    }
     vec3 n = normalize(vec3(-g.x * 23.0, 1.0, -g.y * 23.0));
     vec3 rr = refract(rd, n, 1.0 / 1.33);
     if (rr.y > -0.05) rr = normalize(vec3(rr.x, -0.05, rr.z));
