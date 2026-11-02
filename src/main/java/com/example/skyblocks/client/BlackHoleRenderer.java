@@ -140,6 +140,9 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         boolean inside = Math.abs(cam.x - (be.getBlockPos().getX() + 0.5)) < reach && Math.abs(cam.z - (be.getBlockPos().getZ() + 0.5)) < reach
                 && Math.abs(cam.y - (be.getBlockPos().getY() + (big ? 0.5 : 0.62))) < reach;
         int colour = GlowColourBlockEntity.shown(be, LavaLampRenderer.seconds());
+        if (RenderTest.ON && (debugRender++ % 240) == 0) {
+            SkyBlocksMod.LOGGER.info("black hole render: shadow {}, mirror {}, iris {}", IrisCompat.renderingShadowPass(), MirrorRenderer.isRenderingReflection(), IrisCompat.shaderPackInUse());
+        }
         if (IrisCompat.renderingShadowPass()) {
             return;
         }
@@ -156,6 +159,7 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
     private record Pending(Matrix4f pose, boolean big, int colour, float seed, boolean inside) {}
     private static final List<Pending> PENDING = new ArrayList<>();
     private static ByteBufferBuilder bytes;
+    private static int debugCount, debugRender;
 
     @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, value = Dist.CLIENT)
     public static final class Events {
@@ -165,6 +169,9 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         public static void onBlackHoleStage(RenderLevelStageEvent event) {
             if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES || MirrorRenderer.isRenderingReflection()) {
                 return;
+            }
+            if (RenderTest.ON && (debugCount++ % 120) == 0) {
+                SkyBlocksMod.LOGGER.info("black hole stage: {} pending, shader {}, shadow {}", PENDING.size(), shader != null, IrisCompat.renderingShadowPass());
             }
             if (PENDING.isEmpty()) {
                 return;
