@@ -43,6 +43,7 @@ vec3 blackbody(float k) { // (0 cool red .. 1 white-hot)
 }
 
 void main() {
+    gl_FragDepth = gl_FragCoord.z;
     bool big = kind > 0.5;
     vec3 C = big ? vec3(0.5) : vec3(0.5, 0.62, 0.5);
     float reach = big ? 1.5 : 0.36;
@@ -59,16 +60,17 @@ void main() {
         vec3 ta = (-hb - rel) / srd, tb = (hb - rel) / srd;
         float tIn = max(max(min(ta.x, tb.x), min(ta.y, tb.y)), min(ta.z, tb.z));
         if (dot(lp - ro, rd) > tIn + 0.02) {
-            { fragColor = vec4(1.0, 0.0, 0.0, 1.0); return; } // DEBUG
+            discard;
         }
     }
     vec3 oc = ro - C;
     float b = dot(oc, rd), c = dot(oc, oc) - reach * reach, h = b * b - c;
     if (h < 0.0 || -b + sqrt(max(h, 0.0)) < 0.0) {
-        { fragColor = vec4(1.0, 0.0, 0.0, 1.0); return; } // DEBUG
+        discard;
     }
     float t0 = max(-b - sqrt(h), 0.0);
     vec3 p = ro + rd * t0;
+    vec3 p0 = p; // (where the ray meets its reach: what's drawn later behind it is hidden from here)
     vec3 dir = rd;
     // the disk's plane: tilted a little, so it is never seen exactly edge-on
     vec3 dn = normalize(vec3(0.1, 1.0, 0.32)); // (tilted: from the side, its top is seen)
@@ -177,7 +179,13 @@ void main() {
     vec3 col = acc + trans * bg * bgA;
     float alpha = clamp(1.0 - trans * (1.0 - bgA) + (swallowed ? 1.0 : 0.0), 0.0, 1.0);
     if (ItemMode > 0.5 && alpha < 0.02) {
-        { fragColor = vec4(1.0, 0.0, 0.0, 1.0); return; } // DEBUG
+        discard;
     }
     fragColor = vec4(col, ItemMode > 0.5 ? alpha : 1.0);
+    if (ItemMode < 0.5) {
+        // its depth: the edge of its reach (Shadered's models and sky blocks are drawn after it, in their own pass, and
+        // can't be bent: behind the hole they're hidden by it, not drawn on top of it)
+        vec4 dc = ProjMat * ModelViewMat * vec4(origin + p0, 1.0);
+        if (dc.w > 1e-4) gl_FragDepth = clamp(dc.z / dc.w * 0.5 + 0.5, 0.0, 1.0);
+    }
 }

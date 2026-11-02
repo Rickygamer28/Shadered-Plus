@@ -85,7 +85,7 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                                 }
                             }, () -> {}))
                             .setTransparencyState(NO_TRANSPARENCY)
-                            .setWriteMaskState(COLOR_WRITE)
+                            .setWriteMaskState(inside ? COLOR_WRITE : COLOR_DEPTH_WRITE) // (its depth: see the shader)
                             .setDepthTestState(inside ? NO_DEPTH_TEST : LEQUAL_DEPTH_TEST)
                             .setCullState(NO_CULL) // (both sides: still there with the eye inside the box)
                             .createCompositeState(false));
@@ -142,136 +142,12 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         // and drawn now (left waiting, the last one would only be drawn at the very end of the frame, too late)
         RenderType type = inside ? Types.HOLE_INSIDE : Types.HOLE;
         boolean main = buffers == Minecraft.getInstance().renderBuffers().bufferSource();
-        if (main && !MirrorRenderer.isRenderingReflection() && !IrisCompat.shaderPackInUse()) {
-            // the world's view: drawn once Shadered's own pass is done too (its sky blocks and models - the cats - are
-            // drawn after the block entities; they'd be on top of the hole, not bent by it)
-            if (RenderTest.ON && debugDraws < 2) {
-                SkyBlocksMod.LOGGER.info("black hole queued: mv {}, proj {}, pose {}", RenderSystem.getModelViewMatrix(), RenderSystem.getProjectionMatrix(), poseStack.last().pose());
-            }
-            if (PENDING.size() < 256) {
-                PENDING.add(new Pending(new Matrix4f(poseStack.last().pose()), new Matrix4f(RenderSystem.getModelViewMatrix()),
-                        new Matrix4f(RenderSystem.getProjectionMatrix()), GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING), inside, big, colour, seed));
-            }
-            return;
-        }
         if (main) {
             Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
         }
         box(buffers.getBuffer(type), poseStack.last().pose(), big, colour, seed);
         if (main) {
             Minecraft.getInstance().renderBuffers().bufferSource().endBatch(type);
-        }
-    }
-
-    private static int[] centre(Pending job) {
-        int[] vp = new int[4];
-        GL11.glGetIntegerv(GL11.GL_VIEWPORT, vp);
-        org.joml.Vector4f c = new org.joml.Vector4f(0.5F, 0.5F, 0.5F, 1.0F);
-        job.pose().transform(c);
-        new Matrix4f(job.projection()).mul(job.modelView()).transform(c);
-        int x = (int) ((c.x / c.w * 0.5F + 0.5F) * vp[2]) + vp[0], y = (int) ((c.y / c.w * 0.5F + 0.5F) * vp[3]) + vp[1];
-        java.nio.ByteBuffer px = org.lwjgl.BufferUtils.createByteBuffer(4);
-        int read = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
-        GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING));
-        GL11.glReadPixels(Math.max(0, Math.min(x, vp[2] - 1)), Math.max(0, Math.min(y, vp[3] - 1)), 1, 1, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, px);
-        GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, read);
-        return new int[] {x, y, (int) (c.w * 100), px.get(0) & 255, px.get(1) & 255, px.get(2) & 255};
-    }
-
-    private record Pending(Matrix4f pose, Matrix4f modelView, Matrix4f projection, int framebuffer, boolean inside, boolean big, int colour, float seed) {}
-    private static final java.util.List<Pending> PENDING = new java.util.ArrayList<>();
-    private static com.mojang.blaze3d.vertex.ByteBufferBuilder bytes;
-    private static int debugDraws, debugPasses;
-
-    /** (Render test only: which of Shadered's passes run, the first few.) */
-    public static void debugPass(Object stage) {
-        if (RenderTest.ON && debugPasses++ < 12) {
-            SkyBlocksMod.LOGGER.info("Shadered pass {} (holes waiting: {})", stage, PENDING.size());
-        }
-    }
-
-    /**
-     * Draws the holes waiting (after Shadered's pass, or later in the frame if it didn't run), each just as it would
-     * have been drawn among the block entities: the same view, projection and picture.
-     */
-    public static void drawPending() {
-        if (PENDING.isEmpty()) {
-            return;
-        }
-        if (RenderTest.ON && (debugDraws++ % 200) == 0) {
-            SkyBlocksMod.LOGGER.info("black holes drawn late: {} (fb {}, error before {})", PENDING.size(), GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING), GL11.glGetError());
-        }
-        java.util.List<Pending> jobs = new java.util.ArrayList<>(PENDING);
-        PENDING.clear();
-        if (shader == null) {
-            return;
-        }
-        Minecraft mc = Minecraft.getInstance();
-        mc.renderBuffers().bufferSource().endBatch();
-        if (bytes == null) {
-            bytes = new com.mojang.blaze3d.vertex.ByteBufferBuilder(4096);
-        }
-        MultiBufferSource.BufferSource source = MultiBufferSource.immediate(bytes);
-        int drawBefore = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
-        Matrix4f savedProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
-        com.mojang.blaze3d.vertex.VertexSorting savedSorting = RenderSystem.getVertexSorting();
-        org.joml.Matrix4fStack stack = RenderSystem.getModelViewStack();
-        stack.pushMatrix();
-        try {
-            for (Pending job : jobs) {
-                com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, job.framebuffer());
-                RenderSystem.setProjectionMatrix(job.projection(), com.mojang.blaze3d.vertex.VertexSorting.DISTANCE_TO_ORIGIN);
-                stack.set(job.modelView());
-                RenderSystem.applyModelViewMatrix();
-                RenderType type = job.inside() ? Types.HOLE_INSIDE : Types.HOLE;
-                MultiBufferSource.BufferSource main = mc.renderBuffers().bufferSource();
-                boolean dbg = RenderTest.ON && job.big() && (debugDraws % 100) == 1;
-                int[] before = dbg ? centre(job) : null;
-                int e0 = dbg ? GL11.glGetError() : 0;
-                if (dbg) {
-                    int[] sb = new int[4];
-                    GL11.glGetIntegerv(GL11.GL_SCISSOR_BOX, sb);
-                    float[] dr = new float[2];
-                    GL11.glGetFloatv(GL11.GL_DEPTH_RANGE, dr);
-                    int[] vp = new int[4];
-                    GL11.glGetIntegerv(GL11.GL_VIEWPORT, vp);
-                    SkyBlocksMod.LOGGER.info("black hole late state: scissor {} {}, stencil {}, depth range {}..{}, viewport {}, polygon mode {}, rasterizer discard {}, sample mask {}",
-                            GL11.glIsEnabled(GL11.GL_SCISSOR_TEST), java.util.Arrays.toString(sb), GL11.glIsEnabled(GL11.GL_STENCIL_TEST), dr[0], dr[1],
-                            java.util.Arrays.toString(vp), GL11.glGetInteger(GL11.GL_POLYGON_MODE), GL11.glIsEnabled(org.lwjgl.opengl.GL30.GL_RASTERIZER_DISCARD),
-                            GL11.glIsEnabled(org.lwjgl.opengl.GL32.GL_SAMPLE_MASK));
-                }
-                box(main.getBuffer(type), job.pose(), job.big(), job.colour(), job.seed());
-                main.endBatch(type); // (each its own copy of the picture: one hole bends another)
-                if (dbg) {
-                    int e1 = GL11.glGetError();
-                    int[] after = centre(job);
-                    int[] mask = new int[4];
-                    java.nio.ByteBuffer cm = org.lwjgl.BufferUtils.createByteBuffer(16);
-                    GL11.glGetBooleanv(GL11.GL_COLOR_WRITEMASK, cm);
-                    SkyBlocksMod.LOGGER.info("black hole late draw: errors {} / {}, centre {} -> {}, colour mask {}{}{}{}, program {}, read fb {}",
-                            e0, e1, java.util.Arrays.toString(before), java.util.Arrays.toString(after), cm.get(0), cm.get(1), cm.get(2), cm.get(3),
-                            GL11.glGetInteger(org.lwjgl.opengl.GL20.GL_CURRENT_PROGRAM), GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING));
-                }
-            }
-        } finally {
-            stack.popMatrix();
-            RenderSystem.applyModelViewMatrix();
-            RenderSystem.setProjectionMatrix(savedProjection, savedSorting);
-            com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, drawBefore);
-        }
-    }
-
-    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, value = Dist.CLIENT)
-    public static final class Late {
-        private Late() {}
-
-        /** (If Shadered's pass didn't run this frame: drawn at the end of the world's drawing instead.) */
-        @SubscribeEvent
-        public static void onBlackHolesLate(net.neoforged.neoforge.client.event.RenderLevelStageEvent event) {
-            if (event.getStage() == net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_LEVEL
-                    && !MirrorRenderer.isRenderingReflection()) {
-                drawPending();
-            }
         }
     }
 
