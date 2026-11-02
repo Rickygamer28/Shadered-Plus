@@ -141,7 +141,7 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                 && Math.abs(cam.y - (be.getBlockPos().getY() + (big ? 0.5 : 0.62))) < reach;
         int colour = GlowColourBlockEntity.shown(be, LavaLampRenderer.seconds());
         if (RenderTest.ON && (debugRender++ % 240) == 0) {
-            SkyBlocksMod.LOGGER.info("black hole render: shadow {}, mirror {}, iris {}", IrisCompat.renderingShadowPass(), MirrorRenderer.isRenderingReflection(), IrisCompat.shaderPackInUse());
+            SkyBlocksMod.LOGGER.info("black hole render: shadow {}, mirror {}, iris {}; {}", IrisCompat.renderingShadowPass(), MirrorRenderer.isRenderingReflection(), IrisCompat.shaderPackInUse(), glState());
         }
         if (IrisCompat.renderingShadowPass()) {
             return;
@@ -154,6 +154,16 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         if (PENDING.size() < 512) {
             PENDING.add(new Pending(new Matrix4f(poseStack.last().pose()), big, colour, seed, inside));
         }
+    }
+
+    private static String glState() {
+        int[] vp = new int[4];
+        GL11.glGetIntegerv(GL11.GL_VIEWPORT, vp);
+        float[] range = new float[2];
+        GL11.glGetFloatv(GL11.GL_DEPTH_RANGE, range);
+        return "fb " + GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING) + " main " + Minecraft.getInstance().getMainRenderTarget().frameBufferId
+                + " depthTest " + GL11.glIsEnabled(GL11.GL_DEPTH_TEST) + " func " + GL11.glGetInteger(GL11.GL_DEPTH_FUNC) + " range " + range[0] + ".." + range[1]
+                + " vp " + vp[0] + "," + vp[1] + "," + vp[2] + "," + vp[3] + " clipControl? cull " + GL11.glIsEnabled(GL11.GL_CULL_FACE);
     }
 
     private record Pending(Matrix4f pose, boolean big, int colour, float seed, boolean inside) {}
@@ -171,7 +181,8 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                 return;
             }
             if (RenderTest.ON && (debugCount++ % 120) == 0) {
-                SkyBlocksMod.LOGGER.info("black hole stage: {} pending, shader {}, shadow {}", PENDING.size(), shader != null, IrisCompat.renderingShadowPass());
+                SkyBlocksMod.LOGGER.info("black hole stage: {} pending, shader {}, shadow {}; {}; mv {} / {}; proj {} / {}", PENDING.size(), shader != null, IrisCompat.renderingShadowPass(), glState(),
+                        RenderSystem.getModelViewMatrix(), event.getModelViewMatrix(), RenderSystem.getProjectionMatrix(), event.getProjectionMatrix());
             }
             if (PENDING.isEmpty()) {
                 return;
@@ -187,14 +198,10 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
             }
             MultiBufferSource.BufferSource source = MultiBufferSource.immediate(bytes);
             // the world's own view and projection, and its picture's drawing state (none of it is certain here)
-            Matrix4f savedProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
-            VertexSorting savedSorting = RenderSystem.getVertexSorting();
-            RenderSystem.setProjectionMatrix(new Matrix4f(event.getProjectionMatrix()), VertexSorting.DISTANCE_TO_ORIGIN);
             Matrix4fStack stack = RenderSystem.getModelViewStack();
             stack.pushMatrix();
             stack.set(event.getModelViewMatrix());
             RenderSystem.applyModelViewMatrix();
-            MirrorRenderer.mainDrawState(Minecraft.getInstance().getMainRenderTarget());
             try {
                 for (Pending job : jobs) {
                     RenderType type = job.inside() ? Types.HOLE_INSIDE : Types.HOLE;
@@ -205,7 +212,6 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                 RenderSystem.depthMask(true);
                 stack.popMatrix();
                 RenderSystem.applyModelViewMatrix();
-                RenderSystem.setProjectionMatrix(savedProjection, savedSorting);
             }
         }
     }
