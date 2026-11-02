@@ -296,7 +296,7 @@ void main() {
     vec2 tc = container(ro, rd);
     float t0 = max(tc.x, 0.0), t1 = tc.y;
     if (t1 <= t0) {
-        discard;
+        fragColor = vec4(0.6, 0.0, 0.6, 0.6); return; // DEBUG
     }
     float wt = waterTop(), fy = floorY();
 
