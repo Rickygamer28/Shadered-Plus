@@ -2,12 +2,15 @@ name: Build mod
 
 on:
   push:
+    branches-ignore: [ 'ci-shots*' ]
   pull_request:
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -33,6 +36,12 @@ jobs:
             echo "::error::$line"
           done
 
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadered-plus-jar
+          path: build/libs/*.jar
+
       # Every shader through the reference GLSL compiler (strict, like AMD's drivers: NVIDIA lets more through).
       - name: Check shaders (strict compiler)
         continue-on-error: true
@@ -40,31 +49,44 @@ jobs:
           sudo apt-get install -y -qq glslang-tools > /dev/null 2>&1 || (sudo apt-get update -qq && sudo apt-get install -y -qq glslang-tools > /dev/null)
           python3 .github/tools/check_shaders.py src/main/resources/assets
 
-      # Start the 1.21.1 NeoForge client (virtual screen, software graphics) with Shadered and this mod, wait until
-      # the game has loaded its resources (title screen), then report what happened.
-      - name: Client load test
-        if: success()
+      # A dedicated server must start with the mod (client-only code reached on a server crashes it).
+      - name: Server start test
+        continue-on-error: true
+        run: |
+          set +e
+          mkdir -p run && echo "eula=true" > run/eula.txt
+          (gradle runServer --no-daemon > server.log 2>&1 &)
+          for i in $(seq 1 90); do
+            sleep 5
+            if grep -qE "Done \(|Crash report saved|Failed to start|BUILD FAILED|Exception in server tick loop" server.log; then sleep 3; break; fi
+          done
+          pkill -f "runServer|DevLaunch|minecraft" ; sleep 3
+          if grep -q "Done (" server.log; then echo "::notice::server started fine"; else
+            echo "::error::server did not start: $(grep -E 'Exception|Error|Caused by|crash' server.log | head -20 | sed ':a;N;$!ba;s/\n/%0A/g' | cut -c1-5000)"; fi
+
+      # The render test: a flat world with the mod's blocks, screenshots from a few spots (client/RenderTest); the
+      # pictures and the log are pushed to the ci-shots-1.21.1 branch.
+      - name: Render test
         continue-on-error: true
         run: |
           set +e
           sudo apt-get update -qq && sudo apt-get install -y -qq xvfb mesa-utils libgl1-mesa-dri > /dev/null
           export LIBGL_ALWAYS_SOFTWARE=1 MESA_GL_VERSION_OVERRIDE=4.5
-          (xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient --no-daemon > client.log 2>&1 &)
-          for i in $(seq 1 120); do
+          (SKYBLOCKS_RENDER_TEST=plain xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient --no-daemon > client.log 2>&1 &)
+          for i in $(seq 1 160); do
             sleep 5
-            if grep -qE "textures/atlas/blocks.png-atlas|Crash report saved|Failed to start|BUILD FAILED" client.log; then sleep 25; break; fi
+            if grep -qE "render test done|Crash report saved|BUILD FAILED" client.log; then sleep 5; break; fi
           done
-          pkill -f "runClient|DevLaunch|minecraft" ; sleep 3
-          echo "::notice::client loaded resources: $(grep -c 'blocks.png-atlas' client.log), crash reports: $(grep -c 'Crash report saved' client.log), log lines: $(wc -l < client.log)"
-          grep -E "skyblocks|Shadered\+|Mixin apply|mixin.*(fail|error)|Exception|ERROR|FATAL|Caused by" client.log \
-            | grep -vE "DEBUG|Mixin subsystem|SpongePowered MIXIN|sodium|embeddium|Narrator|narrator|OpenAL|ALSA|Failed to load library|realms|Realms|telemetry" \
-            | awk '!seen[$0]++' | head -60 > summary.txt
-          echo "::notice::our log lines: $(grep -E 'SkyBlocksMod|sky usage' client.log | head -8 | sed ':a;N;$!ba;s/\n/%0A/g' | cut -c1-3000)"
+          pkill -f "runClient|DevLaunch|minecraft" ; sleep 5
+          echo "::notice::render test: $(grep -E 'render test|Shadered\+ shaders after' client.log | head -25 | sed ':a;N;$!ba;s/\n/%0A/g' | cut -c1-5000)"
+          grep -E "skyblocks|Shadered\+|mixin.*(fail|error)|Exception|ERROR|FATAL|Caused by" client.log \
+            | grep -vE "DEBUG|Mixin subsystem|SpongePowered MIXIN|Narrator|narrator|OpenAL|ALSA|Failed to load library|realms|Realms|telemetry" \
+            | awk '!seen[$0]++' | head -45 > summary.txt
           split -l 15 summary.txt cli_
-          for f in $(ls cli_* 2>/dev/null | head -6); do echo "::notice::$(sed ':a;N;$!ba;s/\n/%0A/g' $f | cut -c1-7000)"; done
-
-      - name: Upload jar
-        uses: actions/upload-artifact@v4
-        with:
-          name: shadered-plus-jar
-          path: build/libs/*.jar
+          for f in $(ls cli_* 2>/dev/null | head -3); do echo "::notice::$(sed ':a;N;$!ba;s/\n/%0A/g' $f | cut -c1-7000)"; done
+          mkdir -p shots && cp run/screenshots/rendertest_*.png shots/ 2>/dev/null
+          cp client.log shots/render.log; cp server.log shots/server.log 2>/dev/null
+          echo "::notice::screenshots: $(ls shots | tr '\n' ' ')"
+          cd shots && git init -q && git checkout -q -b ci-shots-1.21.1 && git add . \
+            && git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "render test ${GITHUB_SHA}" \
+            && git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" ci-shots-1.21.1
