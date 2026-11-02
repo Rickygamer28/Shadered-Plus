@@ -330,8 +330,8 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
             living.yBodyRot = living.yBodyRotO = 0.0F;
             living.yHeadRot = living.yHeadRotO = 25.0F * (float) Math.sin(t * 0.4);
         }
-        float big = Math.max(e.getBbHeight(), e.getBbWidth() * 1.2F);
-        float fit = scale * 0.75F / Math.max(big, 0.3F);
+        float big = Math.max(e.getBbHeight(), e.getBbWidth() * 1.8F); // (most mobs are longer than their box is wide)
+        float fit = scale * 0.62F / Math.max(big, 0.3F);
         float cage = scale * 0.42F;
         float mid = 0.33F + cage;
         // the cage: the edges of a box of light round the mob

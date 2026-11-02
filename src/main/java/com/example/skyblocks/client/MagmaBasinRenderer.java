@@ -72,7 +72,10 @@ public class MagmaBasinRenderer implements BlockEntityRenderer<GlowColourBlockEn
         float z0 = state.getValue(MagmaBasinBlock.NORTH) ? 0.0F : 2.0F / 16.0F, z1 = state.getValue(MagmaBasinBlock.SOUTH) ? 1.0F : 14.0F / 16.0F;
         float y = MagmaBasinBlock.SURFACE;
         BlockPos p = be.getBlockPos();
-        float wx = Math.floorMod(p.getX(), 1024), wz = Math.floorMod(p.getZ(), 1024);
+        // the world position, from a corner near the camera (every 2048 blocks: the lava shifts only when you cross one)
+        net.minecraft.world.phys.Vec3 cam = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        int ax = Math.floorDiv((int) Math.floor(cam.x), 2048) * 2048 - 1024, az = Math.floorDiv((int) Math.floor(cam.z), 2048) * 2048 - 1024;
+        float wx = p.getX() - ax, wz = p.getZ() - az;
         int c = GlowColourBlockEntity.shown(be, LavaLampRenderer.seconds());
         int r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
         VertexConsumer vc = buffers.getBuffer(Types.LAVA);
