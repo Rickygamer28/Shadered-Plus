@@ -62,9 +62,13 @@ public final class RenderTest {
             "setblock 3 -57 25 skyblocks:neon_sign[facing=north]{text:\"thin\",font:3,mode:7,colour:16760896,size:2}",
             "setblock -2 -56 25 skyblocks:neon_sign[facing=north]{text:\"WIDE\",font:4,mode:8,colour:65340,colour2:16711935,size:2}",
             "setblock 2 -56 25 skyblocks:neon_sign[facing=north]{text:\"NARROW\",font:5,mode:0,colour:16777215,size:2}",
+            // hologram projectors: a player, a mob, an item
+            "setblock -3 -60 31 skyblocks:hologram_projector[size=2]{mode:1,player:[I;1,2,3,4],playerName:\"Steve\"}",
+            "setblock 0 -60 31 skyblocks:hologram_projector[size=2]{mode:2,mob:\"minecraft:fox\",colour:16752190}",
+            "setblock 3 -60 31 skyblocks:hologram_projector[size=2]{mode:0,shown:{id:\"minecraft:diamond_sword\",count:1},colour:8453888}",
     };
     /** Where the player stands for each picture: x y z yaw pitch ("night " first: at night). */
-    private static final String[] SPOTS = {"0.5 -60 -6.5 0 15", "0.5 -60 1.6 0 20", "night 0.5 -60 1.6 0 20", "0.5 -59 5.6 0 40", "night 0.5 -59 5.6 0 40", "0.5 -59.5 8.5 0 8", "night 0.5 -59.5 8.5 0 8", "-2.5 -59.3 10.4 0 30", "-4 -58 18.3 0 55", "night -4 -58 18.3 0 55", "rain -4 -58 18.3 0 55", "4.5 -58 18.3 0 55", "night 4.5 -58 18.3 0 55", "night 0.5 -57 20.5 0 -8"};
+    private static final String[] SPOTS = {"0.5 -60 -6.5 0 15", "0.5 -60 1.6 0 20", "night 0.5 -60 1.6 0 20", "0.5 -59 5.6 0 40", "night 0.5 -59 5.6 0 40", "0.5 -59.5 8.5 0 8", "night 0.5 -59.5 8.5 0 8", "-2.5 -59.3 10.4 0 30", "-4 -58 18.3 0 55", "night -4 -58 18.3 0 55", "rain -4 -58 18.3 0 55", "4.5 -58 18.3 0 55", "night 4.5 -58 18.3 0 55", "night 0.5 -57 20.5 0 -8", "0.5 -59 27 0 10", "night 0.5 -59 27 0 10"};
 
     private static void run(MinecraftServer server, String command) {
         server.execute(() -> {

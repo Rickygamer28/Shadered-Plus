@@ -219,7 +219,7 @@
   "block.skyblocks.jellyfish_tank": "Jellyfish Tank",
   "block.skyblocks.koi_pond": "Koi Pond",
   "tooltip.skyblocks.visualizer": "Dances to music nearby. Join screens side by side and stacked. Right-click: next look (5). Dye: colour. Sneak + right-click: rainbow",
-  "tooltip.skyblocks.hologram_projector": "Right-click with any item to project it. Empty hand: clear. Sneak + right-click: size. Dye: colour",
+  "tooltip.skyblocks.hologram_projector": "Right-click with any item to project it, with a spawn egg: that mob. Empty hand: yourself / clear. Sneak + right-click: size. Dye: colour",
   "tooltip.skyblocks.jellyfish_tank": "2 tall. Right-click: light on / off. Dye: jellyfish colour. Sneak + right-click: RGB",
   "tooltip.skyblocks.koi_pond": "Koi and lily pads. Ponds side by side join into one",
   "message.skyblocks.visualizer_bars": "Bars",
