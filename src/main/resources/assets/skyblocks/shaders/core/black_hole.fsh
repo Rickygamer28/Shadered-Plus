@@ -59,13 +59,13 @@ void main() {
         vec3 ta = (-hb - rel) / srd, tb = (hb - rel) / srd;
         float tIn = max(max(min(ta.x, tb.x), min(ta.y, tb.y)), min(ta.z, tb.z));
         if (dot(lp - ro, rd) > tIn + 0.02) {
-            discard;
+            { fragColor = vec4(1.0, 0.0, 0.0, 1.0); return; } // DEBUG
         }
     }
     vec3 oc = ro - C;
     float b = dot(oc, rd), c = dot(oc, oc) - reach * reach, h = b * b - c;
     if (h < 0.0 || -b + sqrt(max(h, 0.0)) < 0.0) {
-        discard;
+        { fragColor = vec4(1.0, 0.0, 0.0, 1.0); return; } // DEBUG
     }
     float t0 = max(-b - sqrt(h), 0.0);
     vec3 p = ro + rd * t0;
@@ -177,7 +177,7 @@ void main() {
     vec3 col = acc + trans * bg * bgA;
     float alpha = clamp(1.0 - trans * (1.0 - bgA) + (swallowed ? 1.0 : 0.0), 0.0, 1.0);
     if (ItemMode > 0.5 && alpha < 0.02) {
-        discard;
+        { fragColor = vec4(1.0, 0.0, 0.0, 1.0); return; } // DEBUG
     }
     fragColor = vec4(col, ItemMode > 0.5 ? alpha : 1.0);
 }
