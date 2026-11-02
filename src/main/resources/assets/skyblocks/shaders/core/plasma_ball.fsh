@@ -41,9 +41,10 @@ vec2 raySeg(vec3 ro, vec3 rd, float t0, float t1, vec3 a, vec3 b) {
     vec3 ab = b - a, w = ro - a;
     float bb = dot(ab, ab), rb = dot(rd, ab), rw = dot(rd, w), bw = dot(ab, w);
     float den = bb - rb * rb; // (rd is unit length)
-    float s = den > 1e-7 ? clamp((rw * rb - bw) / den, 0.0, 1.0) : 0.0;
+    float s = den > 1e-7 ? clamp((bw - rb * rw) / den, 0.0, 1.0) : 0.0;
     float t = clamp(dot(rd, a + ab * s - ro), t0, t1);
     s = clamp(dot(ro + rd * t - a, ab) / max(bb, 1e-7), 0.0, 1.0);
+    t = clamp(dot(rd, a + ab * s - ro), t0, t1);
     vec3 d = ro + rd * t - (a + ab * s);
     return vec2(length(d), t);
 }
