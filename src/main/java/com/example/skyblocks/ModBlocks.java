@@ -137,6 +137,18 @@ public final class ModBlocks {
                     .lightLevel(state -> state.getValue(LavaLampBlock.LIT) ? 9 : 0)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE));
 
+    /** A tesla coil: lightning crackling from its ring (TeslaCoilBlock, client/TeslaCoilRenderer). */
+    public static final DeferredBlock<TeslaCoilBlock> TESLA_COIL = BLOCKS.registerBlock("tesla_coil", TeslaCoilBlock::new,
+            BlockBehaviour.Properties.of().strength(3.0F, 6.0F).sound(SoundType.COPPER).noOcclusion().requiresCorrectToolForDrops()
+                    .lightLevel(state -> state.getValue(TeslaCoilBlock.LIT) ? 10 : 0)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_ORANGE));
+
+    /** A galaxy projector: stars and nebulae thrown on the room round it (GalaxyProjectorBlock, client/GalaxyProjectorRenderer). */
+    public static final DeferredBlock<GalaxyProjectorBlock> GALAXY_PROJECTOR = BLOCKS.registerBlock("galaxy_projector", GalaxyProjectorBlock::new,
+            BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.GLASS).noOcclusion()
+                    .lightLevel(state -> state.getValue(GalaxyProjectorBlock.LIT) ? 4 : 0)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE));
+
     /** A magma basin: churning lava in a stone basin, basins side by side make one pool (MagmaBasinBlock). */
     public static final DeferredBlock<MagmaBasinBlock> MAGMA_BASIN = BLOCKS.registerBlock("magma_basin", MagmaBasinBlock::new,
             BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.POLISHED_DEEPSLATE).noOcclusion().requiresCorrectToolForDrops()

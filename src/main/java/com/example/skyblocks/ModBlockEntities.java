@@ -70,5 +70,10 @@ public final class ModBlockEntities {
     public static final Supplier<BlockEntityType<SmallTankBlockEntity>> SMALL_TANK = TYPES.register("small_tank",
             () -> BlockEntityType.Builder.of(SmallTankBlockEntity::new, ModBlocks.FISHBOWL.get(), ModBlocks.TALL_TANK.get(), ModBlocks.SLIM_TANK.get()).build(null));
 
+    public static final Supplier<BlockEntityType<GlowColourBlockEntity>> TESLA_COIL = TYPES.register("tesla_coil",
+            () -> BlockEntityType.Builder.of((pos, state) -> new GlowColourBlockEntity(ModBlockEntities.TESLA_COIL.get(), pos, state, 0x9FD8FF), ModBlocks.TESLA_COIL.get()).build(null));
+    public static final Supplier<BlockEntityType<GalaxyProjectorBlockEntity>> GALAXY_PROJECTOR = TYPES.register("galaxy_projector",
+            () -> BlockEntityType.Builder.of(GalaxyProjectorBlockEntity::new, ModBlocks.GALAXY_PROJECTOR.get()).build(null));
+
     private ModBlockEntities() {}
 }

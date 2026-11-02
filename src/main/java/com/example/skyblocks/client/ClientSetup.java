@@ -49,6 +49,8 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.LAVA_LAMP.get(), LavaLampRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.PLASMA_BALL.get(), PlasmaBallRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SMALL_TANK.get(), SmallTankRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.TESLA_COIL.get(), TeslaCoilRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.GALAXY_PROJECTOR.get(), GalaxyProjectorRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.MAGMA_BASIN.get(), MagmaBasinRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.BLACK_HOLE.get(), BlackHoleRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.FIRE.get(), WallFireRenderer::new);

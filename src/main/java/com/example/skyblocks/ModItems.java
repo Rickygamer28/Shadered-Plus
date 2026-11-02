@@ -92,5 +92,8 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> TALL_TANK = ITEMS.registerSimpleBlockItem("tall_tank", ModBlocks.TALL_TANK);
     public static final DeferredItem<BlockItem> SLIM_TANK = ITEMS.registerSimpleBlockItem("slim_tank", ModBlocks.SLIM_TANK);
 
+    public static final DeferredItem<BlockItem> TESLA_COIL = ITEMS.registerSimpleBlockItem("tesla_coil", ModBlocks.TESLA_COIL);
+    public static final DeferredItem<BlockItem> GALAXY_PROJECTOR = ITEMS.registerSimpleBlockItem("galaxy_projector", ModBlocks.GALAXY_PROJECTOR);
+
     private ModItems() {}
 }

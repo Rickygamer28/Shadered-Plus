@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "decorations",
+  "pattern": [
+    " G ",
+    "AEA",
+    "BBB"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:purple_stained_glass"
+    },
+    "A": {
+      "item": "minecraft:amethyst_shard"
+    },
+    "E": {
+      "item": "minecraft:ender_eye"
+    },
+    "B": {
+      "item": "minecraft:polished_blackstone_slab"
+    }
+  },
+  "result": {
+    "id": "skyblocks:galaxy_projector",
+    "count": 1
+  }
+}
