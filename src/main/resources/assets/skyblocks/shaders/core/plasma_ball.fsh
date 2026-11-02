@@ -81,12 +81,12 @@ void main() {
     // the thin gas: a faint glow, stronger near the middle
     vec3 mid = lp + rd * clamp(dot(C - lp, rd), t0, tEnd);
     float gas = smoothstep(R, 0.0, length(mid - C));
-    emit += pc * gas * gas * (0.10 + 0.25 * on) * (tEnd - t0) / R;
+    emit += pc * gas * gas * (0.12 + 0.4 * on) * (tEnd - t0) / R;
 
     // the filaments
     if (on > 0.5) {
-        int n = 6 + int(boost * 3.0);
-        for (int i = 0; i < 9; i++) {
+        int n = 8 + int(boost * 4.0);
+        for (int i = 0; i < 12; i++) {
             if (i >= n) {
                 break;
             }
@@ -102,7 +102,7 @@ void main() {
             vec3 s1 = normalize(cross(e, abs(e.y) < 0.9 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
             vec3 s2 = cross(e, s1);
             float flick = 0.55 + 0.45 * vnoise1(t * 9.0 + fi * 13.0); // (each one flickers)
-            float wid = (0.0025 + 0.0018 * boost) * (0.8 + 0.4 * flick);
+            float wid = (0.0055 + 0.003 * boost) * (0.8 + 0.4 * flick);
             vec3 prev = C + e * CORE;
             const int K = 7;
             float glow = 0.0;
@@ -115,13 +115,13 @@ void main() {
                 vec3 p = C + e * mix(CORE, R * 0.985, s) + (s1 * j.x + s2 * j.y) * bend;
                 vec2 dt = raySeg(lp, rd, t0, tEnd, prev, p);
                 float d = dt.x;
-                glow += wid * wid / (d * d + wid * wid) * (0.6 + 0.4 * s) + 0.12 * exp(-d * d / (0.02 * 0.02));
+                glow += wid * wid / (d * d + wid * wid) * (0.6 + 0.4 * s) + 0.22 * exp(-d * d / (0.028 * 0.028));
                 prev = p;
             }
             // the bright spot where it touches the glass
             vec2 ds = raySeg(lp, rd, t0, t1, prev, prev);
-            glow += 0.6 * exp(-ds.x * ds.x / (0.012 * 0.012));
-            emit += mix(pc, vec3(1.0), clamp(glow * 0.35, 0.0, 0.85)) * glow * flick * (0.9 + 0.8 * boost);
+            glow += 0.9 * exp(-ds.x * ds.x / (0.02 * 0.02));
+            emit += mix(pc, vec3(1.0), clamp(glow * 0.35, 0.0, 0.85)) * glow * flick * (1.2 + 0.8 * boost);
         }
     }
 
