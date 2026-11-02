@@ -110,8 +110,14 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         return be.getBlockState().getBlock() instanceof BlackHoleBlock b && b.big();
     }
 
+    private static final long[] logged = new long[2];
+
     @Override
     public void render(GlowColourBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
+        if (RenderTest.ON && System.currentTimeMillis() - logged[big(be) ? 1 : 0] > 2000) {
+            logged[big(be) ? 1 : 0] = System.currentTimeMillis();
+            SkyBlocksMod.LOGGER.info("Shadered+ render test: black hole at {} drawn (big {})", be.getBlockPos(), big(be));
+        }
         if (shader == null) {
             return;
         }

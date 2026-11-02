@@ -66,7 +66,7 @@ void main() {
     vec2 p = wpos * 1.7 + flow;
     vec3 pl = plates(p, t);
     // the cracks: wider where the plates pull apart (slowly, plate by plate), with ragged edges
-    float open = 0.06 + 0.13 * smoothstep(0.2, 0.9, vnoise(p * 0.7 + t * 0.05)) + 0.04 * (pl.z - 0.5);
+    float open = 0.10 + 0.22 * smoothstep(0.15, 0.85, vnoise(p * 0.7 + t * 0.05)) + 0.06 * (pl.z - 0.5);
     float rag = (fbm(p * 5.0) - 0.5) * 0.07;
     float edge = pl.x + rag;
     float crack = 1.0 - smoothstep(open * 0.35, open, edge);
@@ -81,7 +81,7 @@ void main() {
 
     // the crust: dark basalt, a faint warm glow near the cracks and where it is thin, fine grain
     float grain = fbm(p * 9.0 + pl.y * 10.0);
-    float thin = smoothstep(0.55, 0.15, pl.y + 0.3 * grain - 0.2) * 0.25; // (some plates are thinner: glowing through)
+    float thin = smoothstep(0.55, 0.15, pl.y + 0.3 * grain - 0.2) * 0.45; // (some plates are thinner: glowing through)
     vec3 crust = vec3(0.075, 0.065, 0.065) * (0.7 + 0.6 * grain) + tint * (0.25 * exp(-edge * 18.0) + thin * 0.35);
 
     vec3 col = mix(crust, lava, crack);
