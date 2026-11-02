@@ -79,7 +79,7 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                         }, () -> {}))
                         .setTransparencyState(NO_TRANSPARENCY)
                         .setWriteMaskState(COLOR_WRITE)
-                        .setCullState(CULL)
+                        .setCullState(NO_CULL) // (both sides: still there with the eye inside the box)
                         .createCompositeState(false));
         /** As an item: no world behind it to bend; drawn at once with its own matrix. */
         static final RenderType ITEM = create("skyblocks_black_hole_item", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 256,

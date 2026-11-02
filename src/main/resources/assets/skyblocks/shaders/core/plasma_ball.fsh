@@ -6,9 +6,9 @@
 
 in vec3 lp;
 in vec3 lray;
-in vec4 vColor;
-in vec4 target;
-in float seedIn;
+flat in vec4 vColor;
+flat in vec4 target;
+flat in float seedIn;
 
 uniform float PlasmaTime;
 uniform float Boost;

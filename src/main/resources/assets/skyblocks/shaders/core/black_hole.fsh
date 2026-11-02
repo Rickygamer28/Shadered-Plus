@@ -10,10 +10,11 @@
 
 in vec3 lp;
 in vec3 lray;
+in vec3 eyeLp;
 flat in vec3 origin;
 flat in float kind;
-in float seedIn;
-in vec4 vColor;
+flat in float seedIn;
+flat in vec4 vColor;
 
 uniform sampler2D Sampler0;
 uniform mat4 ModelViewMat;
@@ -49,13 +50,24 @@ void main() {
     float t = HoleTime + seedIn * 50.0;
 
     vec3 rd = normalize(lray);
-    vec3 oc = lp - C;
+    vec3 ro = eyeLp;
+    // the box is drawn both sides (so it's there with the eye inside it): from outside, only its near side counts
+    vec3 rel = ro - C;
+    if (any(greaterThan(abs(rel), vec3(reach)))) {
+        vec3 srd = vec3(rd.x < 0.0 ? -1.0 : 1.0, rd.y < 0.0 ? -1.0 : 1.0, rd.z < 0.0 ? -1.0 : 1.0) * max(abs(rd), vec3(1e-5));
+        vec3 ta = (-reach - rel) / srd, tb = (reach - rel) / srd;
+        float tIn = max(max(min(ta.x, tb.x), min(ta.y, tb.y)), min(ta.z, tb.z));
+        if (dot(lp - ro, rd) > tIn + 0.02) {
+            discard;
+        }
+    }
+    vec3 oc = ro - C;
     float b = dot(oc, rd), c = dot(oc, oc) - reach * reach, h = b * b - c;
-    if (h < 0.0) {
+    if (h < 0.0 || -b + sqrt(max(h, 0.0)) < 0.0) {
         discard;
     }
     float t0 = max(-b - sqrt(h), 0.0);
-    vec3 p = lp + rd * t0;
+    vec3 p = ro + rd * t0;
     vec3 dir = rd;
     // the disk's plane: tilted a little, so it is never seen exactly edge-on
     vec3 dn = normalize(vec3(0.1, 1.0, 0.32)); // (tilted: from the side, its top is seen)

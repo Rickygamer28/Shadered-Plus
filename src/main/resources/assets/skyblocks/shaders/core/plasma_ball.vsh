@@ -17,9 +17,9 @@ uniform mat4 LampInv;
 
 out vec3 lp;
 out vec3 lray;
-out vec4 vColor;
-out vec4 target; // (xyz: towards the player, w: how near)
-out float seedIn;
+flat out vec4 vColor;
+flat out vec4 target; // (xyz: towards the player, w: how near)
+flat out float seedIn;
 
 void main() {
     vColor = Color;

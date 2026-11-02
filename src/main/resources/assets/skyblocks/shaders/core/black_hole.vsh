@@ -17,8 +17,9 @@ out vec3 lp;
 out vec3 lray;
 flat out vec3 origin;
 flat out float kind;
-out float seedIn;
-out vec4 vColor;
+flat out float seedIn;
+out vec3 eyeLp; // (the eye in the block's space: so the hole is traced from the eye, even from inside its box)
+flat out vec4 vColor;
 
 void main() {
     vColor = Color;
@@ -35,4 +36,5 @@ void main() {
     bool persp = ProjMat[2][3] < -0.5;
     vec3 dir = persp ? Position - (iv * vec4(0.0, 0.0, 0.0, 1.0)).xyz : (iv * vec4(0.0, 0.0, -1.0, 0.0)).xyz;
     lray = ItemMode < 0.5 ? dir : (LampInv * vec4(dir, 0.0)).xyz;
+    eyeLp = persp ? lp - lray : lp - normalize(lray) * 8.0;
 }
