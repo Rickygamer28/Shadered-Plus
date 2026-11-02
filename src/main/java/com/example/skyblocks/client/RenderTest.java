@@ -52,6 +52,9 @@ public final class RenderTest {
             "fill -4 -60 16 4 -57 16 minecraft:white_concrete",
             "fill -4 -60 15 4 -60 15 minecraft:red_concrete",
             "fill -4 -58 15 4 -58 15 minecraft:blue_concrete",
+            // behind the big hole: a cat and one of Shadered's sky blocks (drawn in its own pass: they must still be bent)
+            "setblock 2 -60 15 skyblocks:oiia_cat",
+            "setblock 1 -59 15 shadered:space_block",
             // koi ponds (lilies open by day, closed at night; rain)
             "fill -6 -61 20 -3 -61 22 skyblocks:koi_pond",
             "fill 3 -61 20 6 -61 22 skyblocks:vanilla_koi_pond",

@@ -142,12 +142,81 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         // and drawn now (left waiting, the last one would only be drawn at the very end of the frame, too late)
         RenderType type = inside ? Types.HOLE_INSIDE : Types.HOLE;
         boolean main = buffers == Minecraft.getInstance().renderBuffers().bufferSource();
+        if (main && !MirrorRenderer.isRenderingReflection() && !IrisCompat.shaderPackInUse()) {
+            // the world's view: drawn once Shadered's own pass is done too (its sky blocks and models - the cats - are
+            // drawn after the block entities; they'd be on top of the hole, not bent by it)
+            if (PENDING.size() < 256) {
+                PENDING.add(new Pending(new Matrix4f(poseStack.last().pose()), new Matrix4f(RenderSystem.getModelViewMatrix()),
+                        new Matrix4f(RenderSystem.getProjectionMatrix()), GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING), inside, big, colour, seed));
+            }
+            return;
+        }
         if (main) {
             Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
         }
         box(buffers.getBuffer(type), poseStack.last().pose(), big, colour, seed);
         if (main) {
             Minecraft.getInstance().renderBuffers().bufferSource().endBatch(type);
+        }
+    }
+
+    private record Pending(Matrix4f pose, Matrix4f modelView, Matrix4f projection, int framebuffer, boolean inside, boolean big, int colour, float seed) {}
+    private static final java.util.List<Pending> PENDING = new java.util.ArrayList<>();
+    private static com.mojang.blaze3d.vertex.ByteBufferBuilder bytes;
+
+    /**
+     * Draws the holes waiting (after Shadered's pass, or later in the frame if it didn't run), each just as it would
+     * have been drawn among the block entities: the same view, projection and picture.
+     */
+    public static void drawPending() {
+        if (PENDING.isEmpty()) {
+            return;
+        }
+        java.util.List<Pending> jobs = new java.util.ArrayList<>(PENDING);
+        PENDING.clear();
+        if (shader == null) {
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        mc.renderBuffers().bufferSource().endBatch();
+        if (bytes == null) {
+            bytes = new com.mojang.blaze3d.vertex.ByteBufferBuilder(4096);
+        }
+        MultiBufferSource.BufferSource source = MultiBufferSource.immediate(bytes);
+        int drawBefore = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+        Matrix4f savedProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
+        com.mojang.blaze3d.vertex.VertexSorting savedSorting = RenderSystem.getVertexSorting();
+        org.joml.Matrix4fStack stack = RenderSystem.getModelViewStack();
+        stack.pushMatrix();
+        try {
+            for (Pending job : jobs) {
+                com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, job.framebuffer());
+                RenderSystem.setProjectionMatrix(job.projection(), com.mojang.blaze3d.vertex.VertexSorting.DISTANCE_TO_ORIGIN);
+                stack.set(job.modelView());
+                RenderSystem.applyModelViewMatrix();
+                RenderType type = job.inside() ? Types.HOLE_INSIDE : Types.HOLE;
+                box(source.getBuffer(type), job.pose(), job.big(), job.colour(), job.seed());
+                source.endBatch(type); // (each its own copy of the picture: one hole bends another)
+            }
+        } finally {
+            stack.popMatrix();
+            RenderSystem.applyModelViewMatrix();
+            RenderSystem.setProjectionMatrix(savedProjection, savedSorting);
+            com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, drawBefore);
+        }
+    }
+
+    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, value = Dist.CLIENT)
+    public static final class Late {
+        private Late() {}
+
+        /** (If Shadered's pass didn't run this frame: drawn after the see-through blocks instead.) */
+        @SubscribeEvent
+        public static void onBlackHolesLate(net.neoforged.neoforge.client.event.RenderLevelStageEvent event) {
+            if (event.getStage() == net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS
+                    && !MirrorRenderer.isRenderingReflection()) {
+                drawPending();
+            }
         }
     }
 

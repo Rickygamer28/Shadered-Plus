@@ -20,5 +20,9 @@ public abstract class ComplexPassTimingMixin {
     @Inject(method = "render", at = @At("RETURN"), require = 0, remap = false)
     private void skyblocks$timeEnd(RenderStage stage, PoseStack poseStack, int renderTick, float partialTick, CallbackInfo ci) {
         WorldTiming.shaderedEnd();
+        // the black holes: drawn now, with Shadered's sky blocks and models there to be bent
+        if (String.valueOf(stage).contains("BLOCK") && !com.example.skyblocks.client.MirrorRenderer.isRenderingReflection()) {
+            com.example.skyblocks.client.BlackHoleRenderer.drawPending();
+        }
     }
 }
