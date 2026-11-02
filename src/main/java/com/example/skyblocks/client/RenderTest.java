@@ -55,9 +55,16 @@ public final class RenderTest {
             // koi ponds (lilies open by day, closed at night; rain)
             "fill -6 -61 20 -3 -61 22 skyblocks:koi_pond",
             "fill 3 -61 20 6 -61 22 skyblocks:vanilla_koi_pond",
+            // neon signs: the new letterings and glows (facing north, towards the camera)
+            "fill -4 -58 26 4 -55 26 minecraft:black_concrete",
+            "setblock -3 -57 25 skyblocks:neon_sign[facing=north]{text:\"Italic\",font:1,mode:8,colour:16728031,colour2:4176127,size:2}",
+            "setblock 0 -57 25 skyblocks:neon_sign[facing=north]{text:\"BOLD\",font:2,mode:0,colour:4194047,size:2}",
+            "setblock 3 -57 25 skyblocks:neon_sign[facing=north]{text:\"thin\",font:3,mode:7,colour:16760896,size:2}",
+            "setblock -2 -56 25 skyblocks:neon_sign[facing=north]{text:\"WIDE\",font:4,mode:8,colour:65340,colour2:16711935,size:2}",
+            "setblock 2 -56 25 skyblocks:neon_sign[facing=north]{text:\"NARROW\",font:5,mode:0,colour:16777215,size:2}",
     };
     /** Where the player stands for each picture: x y z yaw pitch ("night " first: at night). */
-    private static final String[] SPOTS = {"0.5 -60 -6.5 0 15", "0.5 -60 1.6 0 20", "night 0.5 -60 1.6 0 20", "0.5 -59 5.6 0 40", "night 0.5 -59 5.6 0 40", "0.5 -59.5 8.5 0 8", "night 0.5 -59.5 8.5 0 8", "-2.5 -59.3 10.4 0 30", "0.5 -58 17.5 0 45", "night 0.5 -58 17.5 0 45", "rain 0.5 -58 17.5 0 45"};
+    private static final String[] SPOTS = {"0.5 -60 -6.5 0 15", "0.5 -60 1.6 0 20", "night 0.5 -60 1.6 0 20", "0.5 -59 5.6 0 40", "night 0.5 -59 5.6 0 40", "0.5 -59.5 8.5 0 8", "night 0.5 -59.5 8.5 0 8", "-2.5 -59.3 10.4 0 30", "0.5 -58 17.5 0 45", "night 0.5 -58 17.5 0 45", "rain 0.5 -58 17.5 0 45", "night 0.5 -57 21 0 5"};
 
     private static void run(MinecraftServer server, String command) {
         server.execute(() -> {

@@ -9,16 +9,23 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
-/** A neon sign's text ('|' starts a new line), colour, how it glows (steady, flicker, pulse, rainbow) and its size. */
+/**
+ * A neon sign's text ('|' starts a new line), colour (and a second one, for fading along the text), how it glows
+ * (steady, flicker, pulse, rainbow, scroll, typing, blink, a broken tube, fading colours), its lettering and size.
+ */
 public class NeonSignBlockEntity extends BlockEntity {
     public static final int MAX_LENGTH = 40;
-    public static final int STEADY = 0, FLICKER = 1, PULSE = 2, RAINBOW = 3, SCROLL = 4, TYPING = 5, BLINK = 6, MODES = 7;
+    public static final int STEADY = 0, FLICKER = 1, PULSE = 2, RAINBOW = 3, SCROLL = 4, TYPING = 5, BLINK = 6, BROKEN = 7, FADE = 8, MODES = 9;
+    /** The lettering: the font's strokes drawn upright, slanted, with fat or thin tubes, wider or narrower. */
+    public static final int CLASSIC = 0, ITALIC = 1, BOLD = 2, THIN = 3, WIDE = 4, NARROW = 5, FONTS = 6;
     /** (In the packet: the mode plus this when the chasing outline is on.) */
     public static final int OUTLINE_BIT = 16;
     public static final int MAX_SIZE = 6;
 
     private String text = "OPEN";
     private int colour = 0xFF3FD0;
+    private int colour2 = 0x3FB8FF;
+    private int font = CLASSIC;
     private int mode = STEADY;
     private boolean outline;
     private int size = 2;
@@ -32,6 +39,8 @@ public class NeonSignBlockEntity extends BlockEntity {
 
     public String text() { return text; }
     public int colour() { return colour; }
+    public int colour2() { return colour2; }
+    public int font() { return font; }
     public int mode() { return mode; }
     public boolean outline() { return outline; }
     public int size() { return size; }
@@ -58,11 +67,23 @@ public class NeonSignBlockEntity extends BlockEntity {
         }
     }
 
+    /** The lettering and the second colour (fading). */
+    public void setStyle(int font, int colour2) {
+        this.font = Math.floorMod(font, FONTS);
+        this.colour2 = colour2 & 0xFFFFFF;
+        setChanged();
+        if (level != null) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+        }
+    }
+
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.putString("text", text);
         tag.putInt("colour", colour);
+        tag.putInt("colour2", colour2);
+        tag.putInt("font", font);
         tag.putInt("mode", mode);
         tag.putBoolean("outline", outline);
         tag.putInt("size", size);
@@ -75,6 +96,8 @@ public class NeonSignBlockEntity extends BlockEntity {
         if (tag.contains("text")) {
             text = tag.getString("text");
             colour = tag.getInt("colour") & 0xFFFFFF;
+            colour2 = tag.contains("colour2") ? tag.getInt("colour2") & 0xFFFFFF : 0x3FB8FF;
+            font = Math.floorMod(tag.getInt("font"), FONTS);
             mode = Math.floorMod(tag.getInt("mode"), MODES);
             outline = tag.getBoolean("outline");
             size = Math.max(1, Math.min(MAX_SIZE, tag.getInt("size")));
