@@ -18,6 +18,12 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import com.example.skyblocks.client.iris.IrisCompat;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import java.util.ArrayList;
+import java.util.List;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import org.joml.Matrix4fStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -132,7 +138,61 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         double reach = (big ? 1.5 : 0.36) * 1.03;
         boolean inside = Math.abs(cam.x - (be.getBlockPos().getX() + 0.5)) < reach && Math.abs(cam.z - (be.getBlockPos().getZ() + 0.5)) < reach
                 && Math.abs(cam.y - (be.getBlockPos().getY() + (big ? 0.5 : 0.62))) < reach;
-        box(buffers.getBuffer(inside ? Types.HOLE_INSIDE : Types.HOLE), poseStack.last().pose(), big, GlowColourBlockEntity.shown(be, LavaLampRenderer.seconds()), seed);
+        int colour = GlowColourBlockEntity.shown(be, LavaLampRenderer.seconds());
+        if (IrisCompat.renderingShadowPass()) {
+            return;
+        }
+        if (MirrorRenderer.isRenderingReflection()) { // (a mirror's picture: drawn with it, right away)
+            box(buffers.getBuffer(inside ? Types.HOLE_INSIDE : Types.HOLE), poseStack.last().pose(), big, colour, seed);
+            return;
+        }
+        // in the world: drawn once every other block entity is (so what's behind the hole is there to bend)
+        if (PENDING.size() < 512) {
+            PENDING.add(new Pending(new Matrix4f(poseStack.last().pose()), big, colour, seed, inside));
+        }
+    }
+
+    private record Pending(Matrix4f pose, boolean big, int colour, float seed, boolean inside) {}
+    private static final List<Pending> PENDING = new ArrayList<>();
+    private static ByteBufferBuilder bytes;
+
+    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, value = Dist.CLIENT)
+    public static final class Events {
+        private Events() {}
+
+        @SubscribeEvent
+        public static void onBlackHoleStage(RenderLevelStageEvent event) {
+            if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES || MirrorRenderer.isRenderingReflection()) {
+                return;
+            }
+            if (PENDING.isEmpty()) {
+                return;
+            }
+            List<Pending> jobs = new ArrayList<>(PENDING);
+            PENDING.clear();
+            if (shader == null || IrisCompat.renderingShadowPass()) {
+                return;
+            }
+            Minecraft.getInstance().renderBuffers().bufferSource().endLastBatch(); // (the last block entities drawn first)
+            if (bytes == null) {
+                bytes = new ByteBufferBuilder(8192);
+            }
+            MultiBufferSource.BufferSource source = MultiBufferSource.immediate(bytes);
+            Matrix4fStack stack = RenderSystem.getModelViewStack();
+            stack.pushMatrix();
+            stack.set(event.getModelViewMatrix());
+            RenderSystem.applyModelViewMatrix();
+            try {
+                for (Pending job : jobs) {
+                    RenderType type = job.inside() ? Types.HOLE_INSIDE : Types.HOLE;
+                    box(source.getBuffer(type), job.pose(), job.big(), job.colour(), job.seed());
+                    source.endBatch(type); // (each its own copy of the screen: one hole bends the other)
+                }
+            } finally {
+                stack.popMatrix();
+                RenderSystem.applyModelViewMatrix();
+            }
+        }
     }
 
     /** A hole as an item, drawn at once with this item's matrix (shrunk to fit for the big one). */

@@ -34,7 +34,11 @@ void main() {
     origin = Position - lp;
     mat4 iv = inverse(ModelViewMat);
     bool persp = ProjMat[2][3] < -0.5;
-    vec3 dir = persp ? Position - (iv * vec4(0.0, 0.0, 0.0, 1.0)).xyz : (iv * vec4(0.0, 0.0, -1.0, 0.0)).xyz;
+    // the true eye: the point the whole projection (view bobbing in it too) sees from - the one that lands on clip
+    // (0, 0, z, 0) - not just the view's origin, so the rays here are the screen's own (the bent picture lines up)
+    vec4 e = inverse(ProjMat * ModelViewMat) * vec4(0.0, 0.0, 1.0, 0.0);
+    vec3 eye = abs(e.w) > 1e-6 ? e.xyz / e.w : (iv * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+    vec3 dir = persp ? Position - eye : (iv * vec4(0.0, 0.0, -1.0, 0.0)).xyz;
     lray = ItemMode < 0.5 ? dir : (LampInv * vec4(dir, 0.0)).xyz;
     eyeLp = persp ? lp - lray : lp - normalize(lray) * 8.0;
 }

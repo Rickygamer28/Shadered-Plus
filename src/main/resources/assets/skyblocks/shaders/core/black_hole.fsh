@@ -113,7 +113,8 @@ void main() {
                 vec3 col = blackbody(clamp((1.0 - u) * 0.95 * dop - 0.05, 0.0, 1.0)) * (1.6 - u) * dop * dop * 1.3 * vColor.rgb / max(max(vColor.r, vColor.g), max(vColor.b, 0.001));
                 float a = clamp(dens * 0.9, 0.0, 1.0);
                 acc += trans * col * a;
-                trans *= 1.0 - a;
+                // (the dim outer rim and the dim side glow, they don't hide much: no dark smudge beyond the disk)
+                trans *= 1.0 - a * clamp(max(col.r, max(col.g, col.b)), 0.0, 1.0) * (1.0 - smoothstep(0.55, 1.0, u));
             }
         }
         if (!big && r > rs * 1.15 && r < reach * 0.8) { // the small one's swirl of glowing dust
@@ -143,13 +144,29 @@ void main() {
         if (ItemMode > 0.5) {
             bgA = 0.0; // (an item: nothing behind to bend)
         } else {
-            vec4 clip = ProjMat * ModelViewMat * vec4(origin + p + dir * 2.0, 1.0);
-            if (clip.w > 0.001) {
-                vec2 uv = clamp(clip.xy / clip.w * 0.5 + 0.5, vec2(0.001), vec2(0.999));
-                bg = texture(Sampler0, uv).rgb;
-            } else {
-                bg = vec3(0.02);
+            // where the bent ray goes, on the screen. Off the screen (bent round to the side, or back): as near to
+            // that as the screen goes - along the way from the straight ray's point to it - not a smear of its edge
+            mat4 pm = ProjMat * ModelViewMat;
+            vec3 bent = origin + p + dir * 2.0;
+            vec3 eyeW = origin + ro;
+            vec3 straight = eyeW + rd * length(bent - eyeW);
+            vec4 clip = pm * vec4(bent, 1.0);
+            vec2 nd = clip.xy / max(clip.w, 1e-4);
+            if (clip.w < 0.01 || any(greaterThan(abs(nd), vec2(0.995)))) {
+                float lo = 0.0, hi = 1.0;
+                for (int k = 0; k < 8; k++) {
+                    float m = 0.5 * (lo + hi);
+                    vec4 cm = pm * vec4(mix(straight, bent, m), 1.0);
+                    if (cm.w > 0.01 && all(lessThan(abs(cm.xy / cm.w), vec2(0.995)))) {
+                        lo = m;
+                    } else {
+                        hi = m;
+                    }
+                }
+                clip = pm * vec4(mix(straight, bent, lo), 1.0);
+                nd = clip.xy / max(clip.w, 1e-4);
             }
+            bg = texture(Sampler0, clamp(nd * 0.5 + 0.5, vec2(0.001), vec2(0.999))).rgb;
         }
     }
     // the photon ring: a thin bright line where light can just circle the hole
