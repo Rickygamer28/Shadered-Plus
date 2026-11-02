@@ -156,6 +156,31 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         }
     }
 
+    /**
+     * Some drawing before this point leaves OpenGL's state (culling, depth) other than Minecraft's record of it says -
+     * so its own switches would do nothing. Sets both the same, the usual way round.
+     */
+    private static void syncDrawState() {
+        GL11.glEnable(GL11.GL_CULL_FACE);
+        RenderSystem.disableCull();
+        RenderSystem.enableCull();
+        GL11.glCullFace(GL11.GL_BACK);
+        GL11.glFrontFace(GL11.GL_CCW);
+        GL11.glEnable(GL11.GL_DEPTH_TEST);
+        RenderSystem.disableDepthTest();
+        RenderSystem.enableDepthTest();
+        GL11.glDepthFunc(GL11.GL_LEQUAL);
+        RenderSystem.depthFunc(GL11.GL_ALWAYS);
+        RenderSystem.depthFunc(GL11.GL_LEQUAL);
+        GL11.glDepthMask(true);
+        RenderSystem.depthMask(false);
+        RenderSystem.depthMask(true);
+        GL11.glDisable(GL11.GL_BLEND);
+        RenderSystem.enableBlend();
+        RenderSystem.disableBlend();
+        GL11.glDisable(GL11.GL_STENCIL_TEST);
+    }
+
     private static String glState() {
         int[] vp = new int[4];
         GL11.glGetIntegerv(GL11.GL_VIEWPORT, vp);
@@ -163,7 +188,9 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         GL11.glGetFloatv(GL11.GL_DEPTH_RANGE, range);
         return "fb " + GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING) + " main " + Minecraft.getInstance().getMainRenderTarget().frameBufferId
                 + " depthTest " + GL11.glIsEnabled(GL11.GL_DEPTH_TEST) + " func " + GL11.glGetInteger(GL11.GL_DEPTH_FUNC) + " range " + range[0] + ".." + range[1]
-                + " vp " + vp[0] + "," + vp[1] + "," + vp[2] + "," + vp[3] + " clipControl? cull " + GL11.glIsEnabled(GL11.GL_CULL_FACE);
+                + " vp " + vp[0] + "," + vp[1] + "," + vp[2] + "," + vp[3] + " cull " + GL11.glIsEnabled(GL11.GL_CULL_FACE)
+                + " cullMode " + GL11.glGetInteger(GL11.GL_CULL_FACE_MODE) + " front " + GL11.glGetInteger(GL11.GL_FRONT_FACE)
+                + " depthMask " + GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK) + " blend " + GL11.glIsEnabled(GL11.GL_BLEND) + " stencil " + GL11.glIsEnabled(GL11.GL_STENCIL_TEST);
     }
 
     private record Pending(Matrix4f pose, boolean big, int colour, float seed, boolean inside) {}
@@ -202,6 +229,7 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
             stack.pushMatrix();
             stack.set(event.getModelViewMatrix());
             RenderSystem.applyModelViewMatrix();
+            syncDrawState();
             try {
                 for (Pending job : jobs) {
                     RenderType type = job.inside() ? Types.HOLE_INSIDE : Types.HOLE;
