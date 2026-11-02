@@ -313,7 +313,360 @@ vec3 chestParts(vec3 p, float t) {
     return vec3(body, lid, gold);
 }
 
+// ---- the coral reef's own corals (only in the coral reef aquarium: the other tanks use these numbers for their
+// castle, vase, ship, anchor, helmet and driftwood). 3 brain coral, 7 table coral, 8 sea fan, 9 staghorn coral,
+// 10 tube sponges, 15 leather (mushroom) coral; 0 is a rock crusted with coralline algae and little polyps ----
+bool reefTheme() {
+    return Theme > 0.5 && Theme < 1.5;
+}
+
+// brain coral: its maze of winding ridges (1 along a ridge top, 0 down in a valley)
+float brainRidge(vec3 p) {
+    float f = 46.0 * (vnoise(p.xz * 7.0 + p.y * 5.0) + 0.7 * vnoise(p.zy * 9.0 - p.x * 4.0 + 4.1) + 0.4 * vnoise(p.xy * 13.0 + 9.7)); // (contours of the noise: winding)
+    return 0.5 + 0.5 * cos(f);
+}
+
+float brainCoral(vec3 p) {
+    float d = sdEllipsoid(p - vec3(0.0, -0.02, 0.0), vec3(0.23, 0.16, 0.21));
+    d = smin(d, sdEllipsoid(p - vec3(0.1, 0.0, 0.08), vec3(0.12, 0.1, 0.11)), 0.06); // (a second lobe grown on)
+    d += 0.006 * (1.0 - brainRidge(p)) * smoothstep(0.0, 0.03, p.y);
+    return max(d * 0.6, -p.y);
+}
+
+// table coral: a wide flat plate, a little dished, on a short stout stalk; its top knobbly with short branchlets
+float tableCoral(vec3 p) {
+    float r = length(p.xz), a = atan(p.z, p.x);
+    float R = 0.29 + 0.025 * sin(a * 7.0 + 1.3) + 0.014 * sin(a * 17.0);
+    float y0 = 0.19 + 0.3 * r * r;
+    float plate = max(abs(p.y - y0) - 0.013 * (1.0 - 0.4 * r / R), r - R) * 0.8;
+    plate -= 0.006 * smoothstep(-0.005, 0.01, p.y - y0) * smoothstep(0.3, 0.85, vnoise(p.xz * 70.0)) * step(r, R - 0.01);
+    float stalk = sdTaper(p, vec3(0.0, -0.01, 0.0), vec3(0.015, 0.19, 0.0), 0.05, 0.03);
+    stalk = smin(stalk, sdEllipsoid(p, vec3(0.08, 0.03, 0.07)), 0.03);
+    return smin(plate, stalk, 0.035);
+}
+
+// a sea fan: a flat lace of branches fanning up from one foot, swaying back and forth in the current
+float seaFan(vec3 p, float t) {
+    vec3 q = p;
+    q.z -= 0.045 * sin(t * 0.8 + p.x * 3.0 + gDecoPhase) * q.y * q.y * 5.0;
+    vec2 f = q.xy - vec2(0.0, 0.03);
+    float rr = length(f);
+    float a = atan(f.x, max(f.y, 0.001)); // (0 straight up)
+    float outline = max(length(vec2(f.x / 0.31, (f.y - 0.06) / 0.43)) - 1.0, 0.0) * 0.31;
+    outline = max(outline, -f.y);
+    float w = a * 8.0 + 0.5 * sin(rr * 21.0 + a * 3.0);
+    float spoke = abs(fract(w) - 0.5) / 8.0 * rr;
+    float link = abs(fract(rr * 20.0 + 0.35 * sin(a * 19.0)) - 0.5) / 20.0;
+    float net = min(spoke, link * (rr < 0.07 ? 9.0 : 1.0));
+    float thick = mix(0.008, 0.0038, smoothstep(0.0, 0.3, rr));
+    float d = length(vec2(net, q.z)) - thick;
+    d = max(d, outline);
+    d = min(d, sdTaper(q, vec3(0.0, -0.01, 0.0), vec3(0.0, 0.07, 0.0), 0.02, 0.009));
+    return d * 0.8;
+}
+
+// staghorn coral: a thicket of stout branching antlers
+float staghorn(vec3 p) {
+    float d = 1.0e9;
+    for (int k = 0; k < 8; k++) {
+        float fk = float(k);
+        float a = fk * 2.39996 + 0.4;
+        float lean = 0.32 + 0.3 * fract(fk * 0.618);
+        vec3 side = vec3(-sin(a), 0.0, cos(a));
+        vec3 b0 = vec3(cos(a), 0.0, sin(a)) * (0.03 + 0.05 * fract(fk * 0.43));
+        vec3 dir = normalize(vec3(cos(a) * lean, 1.0, sin(a) * lean));
+        float len = 0.19 + 0.09 * fract(fk * 0.37 + 0.2);
+        vec3 b1 = b0 + dir * len;
+        d = min(d, sdTaper(p, b0 - vec3(0.0, 0.02, 0.0), b1, 0.026, 0.018));
+        d = min(d, sdTaper(p, b1, b1 + normalize(dir + side * 0.65 + vec3(0.0, 0.15, 0.0)) * 0.13, 0.017, 0.01));
+        d = min(d, sdTaper(p, b1, b1 + normalize(dir - side * 0.5) * 0.11, 0.017, 0.01));
+        vec3 m = b0 + dir * len * 0.5;
+        d = min(d, sdTaper(p, m, m + normalize(dir * 0.6 - side * (fk < 4.0 ? 0.9 : -0.9) + vec3(0.0, 0.3, 0.0)) * 0.1, 0.016, 0.009));
+    }
+    return d;
+}
+
+// tube sponges: a clump of tall hollow tubes, open at the top, each flaring a little and leaning out
+float tubeSponges(vec3 p, out int idx) {
+    float d = 1.0e9;
+    idx = 0;
+    for (int k = 0; k < 5; k++) {
+        float fk = float(k);
+        vec2 c = k == 0 ? vec2(0.0) : vec2(cos(fk * 1.9), sin(fk * 1.9)) * (0.065 + 0.012 * fk);
+        float h = 0.4 - 0.055 * fk + 0.03 * sin(fk * 5.0);
+        float r = 0.045 - 0.004 * fk;
+        vec3 q = p - vec3(c.x, 0.0, c.y);
+        if (k > 0) q.xz -= normalize(c) * q.y * 0.22;
+        float rr = length(q.xz) - r * (1.0 + 0.5 * q.y);
+        float solid = max(rr - 0.008, max(q.y - h, -q.y - 0.02));
+        float hole = max(rr + 0.008, h * 0.4 - q.y);
+        float tube = max(solid, -hole);
+        if (tube < d) idx = k;
+        d = min(d, tube);
+    }
+    return d * 0.9;
+}
+
+// leather coral: a mushroom-shaped soft coral - a fat stalk, a wide cap folded in waves round its edge
+float leatherCoral(vec3 p, float t) {
+    float r = length(p.xz), a = atan(p.z, p.x);
+    float stalk = sdTaper(p, vec3(0.0, -0.02, 0.0), vec3(0.0, 0.15, 0.0), 0.07, 0.05);
+    float rim = 0.22 + 0.018 * sin(a * 5.0 + 0.7);
+    float y0 = 0.16 + (0.045 * sin(a * 6.0 + 0.4 * sin(t * 0.4 + gDecoPhase)) - 0.025) * smoothstep(0.06, 0.22, r);
+    float cap = max(abs(p.y - y0) - 0.018 * (1.0 - 0.5 * r / rim), r - rim) * 0.75;
+    return smin(stalk, cap, 0.04);
+}
+
+// the reef's shape for a decoration, or a huge number if it's one of the usual ones
+float reefSDF(int type, vec3 p, float t) {
+    if (type == 3) return brainCoral(p);
+    if (type == 7) return tableCoral(p);
+    if (type == 8) return seaFan(p, t);
+    if (type == 9) return staghorn(p);
+    if (type == 10) { int i; return tubeSponges(p, i); }
+    if (type == 15) return leatherCoral(p, t);
+    return 1.0e9;
+}
+
+// the reef's colours (rnd: this decoration's own random number, picking among each coral's colours)
+bool reefColour(int type, vec3 p, vec3 n, float rnd, out vec3 c) {
+    float speck = hash22(floor(p.xz * 60.0) + floor(p.y * 60.0)).x;
+    if (type == 3) { // brain coral: cream-yellow ridges, the valleys green or brown
+        float rg = brainRidge(p);
+        vec3 ridge = rnd < 0.5 ? vec3(0.86, 0.8, 0.5) : vec3(0.82, 0.88, 0.62);
+        vec3 valley = rnd < 0.5 ? vec3(0.32, 0.42, 0.18) : vec3(0.5, 0.3, 0.22);
+        c = mix(valley, ridge, smoothstep(0.25, 0.8, rg)) * (0.85 + 0.2 * fbm(p.xz * 12.0));
+        return true;
+    }
+    if (type == 7) { // table coral: blue-green or soft brown, the rim's growing tips pale lilac; dark underneath
+        float r = length(p.xz);
+        vec3 base = rnd < 0.5 ? vec3(0.32, 0.6, 0.62) : vec3(0.62, 0.52, 0.36);
+        c = mix(base, vec3(0.86, 0.78, 0.95), smoothstep(0.2, 0.29, r));
+        c *= 0.85 + 0.25 * step(0.6, vnoise(p.xz * 70.0));
+        if (n.y < -0.2) c *= 0.55;
+        return true;
+    }
+    if (type == 8) { // sea fan: deep purple, red or golden yellow
+        c = rnd < 0.4 ? vec3(0.58, 0.18, 0.62) : rnd < 0.75 ? vec3(0.85, 0.2, 0.22) : vec3(0.95, 0.72, 0.2);
+        c *= 0.85 + 0.25 * speck;
+        return true;
+    }
+    if (type == 9) { // staghorn: golden brown, the tips that are still growing nearly white with a blue tinge
+        float tip = smoothstep(0.24, 0.42, length(p - vec3(0.0, 0.04, 0.0)));
+        c = mix(rnd < 0.5 ? vec3(0.72, 0.56, 0.32) : vec3(0.55, 0.62, 0.42), vec3(0.85, 0.9, 1.0), tip);
+        c *= 0.85 + 0.25 * step(0.55, hash22(floor(p.xz * 110.0) + floor(p.y * 110.0)).x); // (its corallites: tiny cups)
+        return true;
+    }
+    if (type == 10) { // tube sponges: each its own colour - lavender, orange, yellow - darker down inside
+        int i;
+        tubeSponges(p, i);
+        float k = fract(rnd * 3.0 + float(i) * 0.37);
+        c = k < 0.34 ? vec3(0.66, 0.5, 0.9) : k < 0.67 ? vec3(0.98, 0.52, 0.18) : vec3(0.98, 0.85, 0.25);
+        c *= 0.8 + 0.3 * fbm(p.xz * 40.0 + p.y * 30.0);
+        vec2 cc = i == 0 ? vec2(0.0) : vec2(cos(float(i) * 1.9), sin(float(i) * 1.9)) * (0.065 + 0.012 * float(i));
+        vec2 q = p.xz - cc - (i > 0 ? normalize(cc) * p.y * 0.22 : vec2(0.0));
+        float r = (0.045 - 0.004 * float(i)) * (1.0 + 0.5 * p.y);
+        if (length(q) < r - 0.002) c *= 0.3; // (the inside of the tube)
+        return true;
+    }
+    if (type == 15) { // leather coral: a cream stalk, the cap tan-yellow or green, fuzzy with tiny pale polyps
+        bool cap = p.y > 0.11 && length(p.xz) > 0.04;
+        vec3 top = rnd < 0.5 ? vec3(0.82, 0.74, 0.45) : vec3(0.55, 0.7, 0.4);
+        c = cap ? top : vec3(0.9, 0.86, 0.72);
+        if (cap && n.y > 0.3) c = mix(c, vec3(0.98, 0.95, 0.85), 0.5 * step(0.6, hash22(floor(p.xz * 140.0)).x));
+        c *= 0.85 + 0.15 * speck;
+        return true;
+    }
+    if (type == 0) { // live rock: lilac-pink coralline algae over grey-beige stone, little clumps of bright polyps,
+        // green algae tufts on top
+        float b = fbm(p.xz * 9.0 + p.y * 6.0 + rnd * 7.0);
+        c = mix(vec3(0.66, 0.6, 0.52), mix(vec3(0.78, 0.45, 0.62), vec3(0.58, 0.42, 0.75), rnd), smoothstep(0.38, 0.6, b));
+        c *= 0.8 + 0.3 * speck;
+        vec3 cl = p * 24.0;
+        vec3 cell = floor(cl);
+        vec2 h = hash22(cell.xz + cell.y * 17.3 + floor(rnd * 50.0));
+        float rr = length(fract(cl) - 0.5);
+        if (h.x > 0.8 && rr < 0.36) { // (a zoanthid: a little disc, a bright ring round its middle)
+            vec3 z = h.y < 0.33 ? vec3(0.3, 0.95, 0.5) : h.y < 0.66 ? vec3(1.0, 0.55, 0.15) : vec3(0.95, 0.35, 0.65);
+            c = mix(z * 0.55, z * 1.2, smoothstep(0.1, 0.24, rr));
+        }
+        c = mix(c, vec3(0.3, 0.55, 0.22), smoothstep(0.7, 0.95, n.y) * smoothstep(0.55, 0.7, fbm(p.xz * 20.0 + 5.0)));
+        return true;
+    }
+    return false;
+}
+
+// ---- the jungle river's own decorations (only in the jungle aquarium): 3 a mossy boulder with java ferns growing
+// on it, 7 water lilies (long stems up to pads floating at the surface, a flower), 8 a tangle of tree roots, 9 an
+// Amazon sword plant, 10 anubias on a little stone; 15 driftwood and 0 smooth stones as before ----
+bool jungleTheme() {
+    return Theme > 1.5;
+}
+
+// a plant's leaves: n of them round from where they grow (p from there), each a stalk then a blade arching up and out
+float plantLeaves(vec3 p, int n, float len, float wid, float lift, float stalk, float t, float seed, out float midrib) {
+    float d = 1.0e9;
+    midrib = 1.0;
+    for (int k = 0; k < 10; k++) {
+        if (k >= n) break;
+        float fk = float(k);
+        float a = fk * 2.39996 + seed;
+        float L = len * (0.7 + 0.3 * fract(fk * 0.618 + seed));
+        float up = lift * (1.25 - 0.5 * fract(fk * 0.37 + seed)); // (some upright, some bending far out)
+        float full = stalk + L;
+        vec2 dir = vec2(cos(a), sin(a));
+        float along = dot(p.xz, dir), side = dot(p.xz, vec2(-dir.y, dir.x));
+        float al = clamp(along, 0.0, full);
+        float yc = up * al - 0.9 * up * al * al / full + 0.012 * sin(t * 0.8 + fk * 1.7 + seed) * al / full;
+        float sl = up - 1.8 * up * al / full;
+        float k2 = inversesqrt(1.0 + sl * sl);
+        float bu = along - stalk - L * 0.5;
+        float blade = sdEllipsoid(vec3(bu, (p.y - yc) * k2, side), vec3(L * 0.5, 0.0045, wid)) * 0.6;
+        float stem = max(length(vec2((p.y - yc) * k2, side)) - 0.006, max(-along, along - stalk - 0.02));
+        float l = min(blade, stem);
+        if (l < d) {
+            d = l;
+            midrib = abs(side) / wid;
+        }
+    }
+    return d;
+}
+
+float jungleRock(vec3 p) {
+    float d = sdEllipsoid(p - vec3(0.0, 0.06, 0.0), vec3(0.22, 0.16, 0.19));
+    d = smin(d, sdEllipsoid(p - vec3(0.15, 0.03, 0.09), vec3(0.12, 0.08, 0.11)), 0.06);
+    return d;
+}
+
+// the water lily's parts: (stems, pads, flower), from its base; its size is its height up to the surface
+vec3 lilyParts(vec3 p, float t) {
+    float s = 1.0 / max(gDecoSz, 0.5);
+    float stems = 1.0e9, pads = 1.0e9, flower = 1.0e9;
+    for (int k = 0; k < 4; k++) {
+        float fk = float(k);
+        float a = fk * 1.7 + 0.5;
+        vec2 off = vec2(cos(a), sin(a)) * s * (0.1 + 0.06 * fk);
+        vec3 c = vec3(off.x, 1.0 - 0.012 * s + 0.004 * s * sin(t * 1.2 + fk * 2.0), off.y);
+        vec3 mid = vec3(off.x * 0.4 + 0.05 * s * sin(t * 0.5 + fk), 0.5, off.y * 0.4 + 0.05 * s * cos(t * 0.45 + fk));
+        stems = min(stems, min(sdCapsule(p, vec3(0.0), mid, 0.007 * s), sdCapsule(p, mid, c, 0.006 * s)));
+        // the pad: a flat round leaf, a notch cut in to its middle
+        vec3 q = p - c;
+        float na = a + 2.0;
+        vec2 qn = vec2(dot(q.xz, vec2(cos(na), sin(na))), dot(q.xz, vec2(-sin(na), cos(na))));
+        float R = (0.12 - 0.012 * fk) * s;
+        float pad = max(length(q.xz) - R, abs(q.y) - 0.004 * s);
+        pad = max(pad, -(abs(qn.y) - qn.x * 0.3 + 0.002 * s));
+        pads = min(pads, pad);
+        if (k == 0) { // a pink flower opening on the biggest pad's stem, just above the water... (just under it here)
+            vec3 f = q - vec3(0.0, 0.012 * s, 0.0);
+            float fa = atan(f.z, f.x);
+            float r = length(f.xz);
+            float cup = max(length(f) - 0.04 * s * (0.75 + 0.25 * abs(cos(fa * 4.0))), -f.y - 0.004 * s);
+            flower = max(cup, -(length(f - vec3(0.0, 0.03 * s, 0.0)) - 0.03 * s));
+        }
+    }
+    return vec3(stems, pads, flower);
+}
+
+// a tangle of tree roots: a broken-off trunk standing on its roots, arching down into the sand all round it
+float rootTangle(vec3 p) {
+    float d = sdTaper(p, vec3(0.0, 0.0, 0.0), vec3(0.03, 0.5, -0.02), 0.07, 0.045);
+    d = max(d, p.y - 0.47 - 0.04 * sin(p.x * 60.0) * sin(p.z * 50.0)); // (snapped off, jagged)
+    for (int k = 0; k < 9; k++) {
+        float fk = float(k);
+        float a = fk * 0.6981 + 0.35 * sin(fk * 3.1);
+        vec2 dir = vec2(cos(a), sin(a)), sd = vec2(-dir.y, dir.x) * 0.06 * sin(fk * 2.3); // (each a little crooked)
+        float h = 0.14 + 0.2 * fract(fk * 0.618);
+        float reach = 0.26 + 0.14 * fract(fk * 0.37);
+        vec3 s0 = vec3(dir.x * 0.035, h, dir.y * 0.035);
+        vec3 knee = vec3(dir.x * reach * 0.5 + sd.x, h + 0.05, dir.y * reach * 0.5 + sd.y);
+        vec3 foot = vec3(dir.x * reach * 0.9 - sd.x, 0.04, dir.y * reach * 0.9 - sd.y);
+        vec3 end = vec3(dir.x * (reach + 0.08), -0.02, dir.y * (reach + 0.08));
+        float r = 0.026 - 0.008 * fract(fk * 0.71);
+        d = smin(d, sdTaper(p, s0, knee, r, r * 0.8), 0.03);
+        d = min(d, sdTaper(p, knee, foot, r * 0.8, r * 0.65));
+        d = min(d, sdTaper(p, foot, end, r * 0.65, r * 0.5));
+    }
+    d = min(d, sdTaper(p, vec3(0.0, 0.42, 0.0), vec3(0.12, 0.6, 0.06), 0.014, 0.006)); // (a thin twig left on it)
+    return d - 0.004 * sin(p.y * 70.0 + p.x * 30.0) * sin(p.z * 55.0);
+}
+
+float jungleSDF(int type, vec3 p, float t) {
+    float rib;
+    if (type == 3) {
+        float rock = jungleRock(p);
+        return min(rock, plantLeaves(p - vec3(0.02, 0.2, 0.01), 6, 0.2, 0.022, 1.6, 0.02, t, 1.3, rib));
+    }
+    if (type == 7) {
+        vec3 l = lilyParts(p, t);
+        return min(min(l.x, l.y), l.z);
+    }
+    if (type == 8) return rootTangle(p);
+    if (type == 9) return plantLeaves(p, 9, 0.3, 0.05, 2.4, 0.06, t, 0.4, rib);
+    if (type == 10) {
+        float stone = sdEllipsoid(p - vec3(0.0, 0.02, 0.0), vec3(0.09, 0.06, 0.08));
+        return min(stone, plantLeaves(p - vec3(0.0, 0.05, 0.0), 7, 0.13, 0.05, 1.2, 0.08, t, 2.2, rib));
+    }
+    return 1.0e9;
+}
+
+bool jungleColour(int type, vec3 p, vec3 n, float rnd, out vec3 c) {
+    float rib;
+    if (type == 3) {
+        float rock = jungleRock(p);
+        float lf = plantLeaves(p - vec3(0.02, 0.2, 0.01), 6, 0.2, 0.022, 1.6, 0.02, gTime, 1.3, rib);
+        if (lf < rock) { // java fern: dark green, crinkled, a paler line down its middle
+            c = mix(vec3(0.3, 0.55, 0.2), vec3(0.1, 0.3, 0.1), smoothstep(0.08, 0.3, rib)) * (0.85 + 0.15 * sin(p.x * 160.0 + p.z * 140.0));
+            return true;
+        }
+        vec3 stone = vec3(0.4, 0.38, 0.34) * (0.8 + 0.3 * fbm(p.xz * 22.0 + p.y * 9.0));
+        float moss = smoothstep(0.1, 0.6, n.y + 0.4 * fbm(p.xz * 14.0 + 2.0) - 0.2);
+        vec3 m = mix(vec3(0.16, 0.36, 0.1), vec3(0.32, 0.55, 0.16), hash22(floor(p.xz * 160.0 + p.y * 90.0)).x); // (fuzzy)
+        c = mix(stone, m, moss);
+        return true;
+    }
+    if (type == 7) {
+        vec3 l = lilyParts(p, gTime);
+        float m = min(min(l.x, l.y), l.z);
+        if (m == l.z) { c = mix(vec3(0.95, 0.42, 0.62), vec3(1.0, 0.92, 0.94), 0.3 + 0.5 * abs(n.y)); return true; }
+        if (m == l.y) { // the pads: glossy green on top, red-purple underneath, fine veins from the middle
+            c = n.y > 0.0 ? vec3(0.22, 0.52, 0.16) * (0.9 + 0.1 * sin(atan(p.z, p.x) * 40.0)) : vec3(0.5, 0.2, 0.25);
+            return true;
+        }
+        c = vec3(0.45, 0.5, 0.25);
+        return true;
+    }
+    if (type == 8) { // dark wet bark, furrowed, mossy where it faces up
+        float furrow = 0.5 + 0.5 * sin(atan(p.z, p.x) * 18.0 + p.y * 40.0 + 4.0 * fbm(p.xz * 12.0));
+        c = mix(vec3(0.12, 0.08, 0.05), vec3(0.3, 0.21, 0.13), furrow) * (0.85 + 0.25 * fbm(p.xy * 30.0 + p.z * 11.0));
+        c = mix(c, vec3(0.2, 0.36, 0.12), smoothstep(0.5, 0.9, n.y) * smoothstep(0.45, 0.65, fbm(p.xz * 18.0)) * 0.8);
+        return true;
+    }
+    if (type == 9) { // Amazon sword: bright green, paler veins along it, the midrib pale
+        plantLeaves(p, 9, 0.3, 0.05, 2.4, 0.06, gTime, 0.4, rib);
+        float vein = 0.5 + 0.5 * cos(rib * 14.0);
+        c = mix(vec3(0.2, 0.55, 0.16), vec3(0.42, 0.72, 0.28), max(smoothstep(0.15, 0.0, rib), vein * 0.25)) * (0.9 + 0.1 * rnd);
+        return true;
+    }
+    if (type == 10) {
+        float stone = sdEllipsoid(p - vec3(0.0, 0.02, 0.0), vec3(0.09, 0.06, 0.08));
+        float lf = plantLeaves(p - vec3(0.0, 0.05, 0.0), 7, 0.13, 0.05, 1.2, 0.08, gTime, 2.2, rib);
+        if (stone < lf) { c = vec3(0.3, 0.27, 0.24) * (0.8 + 0.3 * fbm(p.xz * 30.0)); return true; }
+        // anubias: very dark glossy green leaves, a lighter midrib; a shine on top
+        c = mix(vec3(0.25, 0.42, 0.18), vec3(0.06, 0.2, 0.07), smoothstep(0.06, 0.25, rib));
+        c += vec3(0.25) * pow(max(n.y, 0.0), 12.0);
+        return true;
+    }
+    return false;
+}
+
 float decoSDF(int type, vec3 p, float t) {
+    if (jungleTheme() && (type == 3 || type == 7 || type == 8 || type == 9 || type == 10)) {
+        return jungleSDF(type, p, t);
+    }
+    if (reefTheme() && (type == 3 || type == 7 || type == 8 || type == 9 || type == 10 || type == 15)) {
+        return reefSDF(type, p, t);
+    }
     if (type == 14) { // an air stone: a little round porous stone, its bubbles rising from it
         vec2 d = vec2(length(p.xz) - 0.06, abs(p.y - 0.024) - 0.022);
         return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - 0.008;
@@ -401,12 +754,19 @@ float decoSDF(int type, vec3 p, float t) {
         d = smin(d, sdCapsule(p, vec3(0.3, 0.06, 0.08), vec3(0.44, 0.13, 0.2), 0.02), 0.03);
         return d - 0.006 * sin(p.x * 60.0 + p.y * 37.0) * sin(p.z * 45.0); // (knotty)
     }
-    if (type == 6) {
-        float d = sdEllipsoid(p - vec3(0.0, 0.03, 0.0), vec3(0.08, 0.05, 0.08));
-        for (int k = 0; k < 7; k++) {
-            float a = float(k) * 0.8976;
-            vec3 tip = vec3(cos(a) * 0.11 + 0.025 * sin(t * 1.3 + float(k)), 0.18, sin(a) * 0.11 + 0.025 * cos(t * 1.1 + float(k)));
-            d = smin(d, sdCapsule(p, vec3(cos(a) * 0.04, 0.05, sin(a) * 0.04), tip, 0.012), 0.02);
+    if (type == 6) { // a sea anemone: a squat column, two rings of long swaying tentacles (the outer ones leaning out)
+        float d = sdEllipsoid(p - vec3(0.0, 0.03, 0.0), vec3(0.08, 0.055, 0.08));
+        for (int k = 0; k < 13; k++) {
+            float fk = float(k);
+            bool outer = k < 8;
+            float a = outer ? fk * 0.7854 : (fk - 8.0) * 1.2566 + 0.4;
+            float r0 = outer ? 0.055 : 0.025, r1 = outer ? 0.15 : 0.075;
+            float h = outer ? 0.14 : 0.2;
+            vec3 b = vec3(cos(a) * r0, 0.065, sin(a) * r0);
+            vec3 tip = vec3(cos(a) * r1 + 0.03 * sin(t * 1.3 + fk * 1.7), h + 0.02 * sin(t * 0.9 + fk), sin(a) * r1 + 0.03 * cos(t * 1.1 + fk * 1.3));
+            vec3 mid = mix(b, tip, 0.5) + vec3(0.0, 0.03, 0.0);
+            d = smin(d, sdTaper(p, b, mid, 0.015, 0.012), 0.02);
+            d = min(d, sdTaper(p, mid, tip, 0.012, 0.007));
         }
         return d;
     }
@@ -416,6 +776,13 @@ float decoSDF(int type, vec3 p, float t) {
 }
 
 vec3 decoColour(int type, vec3 p, vec3 n, float rnd) {
+    vec3 rc;
+    if (reefTheme() && reefColour(type, p, n, rnd, rc)) {
+        return rc;
+    }
+    if (jungleTheme() && jungleColour(type, p, n, rnd, rc)) {
+        return rc;
+    }
     if (type == 14) { // the air stone: blue-grey, fine pores all over it, a ring of tiny bubbles just leaving its top
         vec3 c = vec3(0.56, 0.62, 0.68) * (0.85 + 0.25 * hash22(floor(p.xz * 140.0 + p.y * 90.0)).x);
         c *= 1.0 - 0.45 * step(0.82, hash22(floor(vec2(atan(p.z, p.x) * 18.0, p.y * 120.0 + length(p.xz) * 140.0))).y);
@@ -473,11 +840,6 @@ vec3 decoColour(int type, vec3 p, vec3 n, float rnd) {
     if (type == 15) { // driftwood: grey-brown, its grain running along it, darker in the cracks
         float grain = 0.5 + 0.5 * sin(p.x * 90.0 + 6.0 * fbm(p.yz * 14.0));
         return mix(vec3(0.24, 0.16, 0.09), vec3(0.46, 0.36, 0.25), grain * 0.6 + speck * 0.3);
-    }
-    if (type == 0 && Theme > 0.5 && Theme < 1.5) { // reef rock: crusted with coral, sponges and coralline algae
-        float h = hash22(floor(p.xz * 18.0) + floor(p.y * 18.0)).x;
-        vec3 c = h < 0.3 ? vec3(0.85, 0.35, 0.5) : h < 0.55 ? vec3(0.55, 0.3, 0.75) : h < 0.75 ? vec3(0.95, 0.6, 0.25) : vec3(0.75, 0.7, 0.62);
-        return c * (0.75 + 0.3 * speck);
     }
     if (type == 0) {
         vec3 c = mix(vec3(0.45, 0.43, 0.39), vec3(0.3, 0.28, 0.25), speck * 0.7 + rnd * 0.3);
@@ -995,8 +1357,11 @@ void main() {
         float sz = float(pk / 256) / 10.0;
         vec3 base = dd.xyz;
         gDecoPhase = chestPhase(base);
-        float rad = (type == 8 ? 0.7 : type == 15 ? 0.66 : type == 13 ? 0.56 : type == 14 ? 0.25 : 0.5) * sz;
-        vec3 oc = rot - (base + vec3(0.0, (type == 13 ? 0.5 : 0.2) * sz, 0.0));
+        bool reefCoral = reefTheme() && (type == 3 || type == 7 || type == 8 || type == 9 || type == 10 || type == 15);
+        bool lily = jungleTheme() && type == 7; // (its size is its height, up to the surface)
+        bool junglePlant = jungleTheme() && (type == 3 || type == 8 || type == 9 || type == 10);
+        float rad = lily ? 0.52 * sz + 0.32 : (reefCoral || junglePlant ? (type == 8 ? 0.62 : 0.5) : type == 8 ? 0.7 : type == 15 ? 0.66 : type == 13 ? 0.56 : type == 14 ? 0.25 : 0.5) * sz;
+        vec3 oc = rot - (base + vec3(0.0, (type == 13 || lily ? 0.5 : 0.2) * sz, 0.0));
         gDecoSz = sz;
         float bq = dot(oc, rd), cq = dot(oc, oc) - rad * rad;
         float disc = bq * bq - cq;
@@ -1012,7 +1377,7 @@ void main() {
         lo = vec3(ca * lo.x + sa * lo.z, lo.y, -sa * lo.x + ca * lo.z) / sz;
         vec3 ld = vec3(ca * rd.x + sa * rd.z, rd.y, -sa * rd.x + ca * rd.z);
         float tm = t0, td = -1.0;
-        int steps = type == 13 ? 72 : type == 12 ? 56 : 40; // (the thin seaweed takes more little steps)
+        int steps = type == 13 || lily ? 72 : type == 12 || (reefCoral && (type == 8 || type == 9)) || junglePlant ? 56 : 40; // (the thin seaweed takes more little steps)
         steps = int(float(steps) * (1.0 - 0.5 * gLite));
         for (int s = 0; s < 72; s++) {
             if (s >= steps) break;

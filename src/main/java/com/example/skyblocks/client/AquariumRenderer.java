@@ -700,7 +700,7 @@ public final class AquariumRenderer {
                     int pk = Math.round(floor.decor[d * 4 + 3]);
                     double sz = (pk / 256) / 10.0;
                     int type = pk % 16;
-                    double dr = sz * (type == 8 ? 0.42 : type == 0 || type == 3 ? 0.24 : type == 5 || type == 10 ? 0.17 : 0.12) + 0.02;
+                    double dr = sz * decorFootprint(floor.theme, type) + 0.02;
                     double dx = px[i] + st[i * 3] - floor.decor[d * 4], dz = pz[i] + st[i * 3 + 2] - floor.decor[d * 4 + 2];
                     double m = rad[i] * 0.8 + dr;
                     double d2 = dx * dx + dz * dz;
@@ -1148,7 +1148,7 @@ public final class AquariumRenderer {
         }
         bottom.sort(java.util.Comparator.comparingLong(BlockPos::asLong));
         java.util.Random random = new java.util.Random(floor.min.asLong() * 17L + bottom.size() * 7L + 3L);
-        int count = Math.max(3, Math.min(MAX_DECOR, (int) (bottom.size() * (floor.ocean ? 0.6F : 0.8F)))); // (more, with the seaweed)
+        int count = Math.max(3, Math.min(MAX_DECOR, (int) (bottom.size() * (floor.ocean ? 0.6F : floor.theme == 1 ? 1.4F : floor.theme == 2 ? 1.1F : 0.8F)))); // (more, with the seaweed; a reef packed with coral)
         boolean castle = false, chest = false, ship = false, anchor = false, helmet = false;
         floor.decorCount = 0;
         // an air stone (two in a big tank), its stream of bubbles rising to the surface
@@ -1162,6 +1162,20 @@ public final class AquariumRenderer {
             floor.decor[k * 4 + 3] = 14 + 16 * (random.nextInt(16) + 16 * 10);
         }
         count = Math.min(count, MAX_DECOR - stones);
+        // the reef: first a mound or two of live rock, for corals to grow on
+        int mounds = floor.theme == 1 && !floor.deep ? (bottom.size() >= 6 ? 2 : 1) : 0;
+        int firstMound = floor.decorCount;
+        for (int i = 0; i < mounds && count > 0; i++) {
+            BlockPos cell = bottom.get(random.nextInt(bottom.size()));
+            float size = Math.min(1.3F + random.nextFloat() * 0.8F, 0.5F * Math.min(floor.sizeX, floor.sizeZ) + 0.4F);
+            size = Math.min(size, floor.sizeY * 2.0F);
+            int k = floor.decorCount++;
+            floor.decor[k * 4] = cell.getX() - floor.min.getX() + 0.3F + random.nextFloat() * 0.4F;
+            floor.decor[k * 4 + 1] = cell.getY() - floor.min.getY() + (cell.getY() == floor.min.getY() ? 0.1F : 0.0F);
+            floor.decor[k * 4 + 2] = cell.getZ() - floor.min.getZ() + 0.3F + random.nextFloat() * 0.4F;
+            floor.decor[k * 4 + 3] = 16 * (random.nextInt(16) + 16 * Math.max(1, Math.min(60, Math.round(size * 10.0F))));
+            count--;
+        }
         for (int i = 0; i < count; i++) {
             BlockPos cell = bottom.get(random.nextInt(bottom.size()));
             float r = random.nextFloat();
@@ -1178,13 +1192,17 @@ public final class AquariumRenderer {
                 type = r < 0.55F ? 0 : r < 0.65F && !chest ? 5 : r < 0.8F ? 11 : 0;
                 r3 = 1.0F;
             }
-            if (floor.theme == 1) { // the reef: branching coral, anemones (for the clownfish), crusted rock, starfish, shells
-                type = r < 0.32F ? 4 : r < 0.55F ? 6 : r < 0.72F ? 0 : r < 0.82F ? 2 : r < 0.9F ? 1 : 11;
-                r3 = r3 < 0.12F ? r3 : 1.0F; // (a little seagrass)
+            if (floor.theme == 1) { // the reef: brain, table, staghorn and branching coral, sea fans, tube sponges, leather
+                // coral, anemones (for the clownfish), live rock, starfish, clams (the shader draws the reef's own corals
+                // for the numbers the other tanks use for their castle, vase, ship...)
+                type = r < 0.13F ? 3 : r < 0.23F ? 7 : r < 0.33F ? 8 : r < 0.45F ? 9 : r < 0.55F ? 10 : r < 0.63F ? 15
+                        : r < 0.71F ? 4 : r < 0.84F ? 6 : r < 0.9F ? 0 : r < 0.95F ? 2 : 11;
+                r3 = r3 < 0.08F ? r3 : 1.0F; // (a little seagrass)
             }
-            if (floor.theme == 2) { // the river: driftwood, smooth stones, lots of plants (no coral, nothing from the sea)
-                type = r < 0.38F ? 15 : r < 0.7F ? 0 : 12;
-                r3 = r3 * 0.6F; // (more plants)
+            if (floor.theme == 2) { // the river: tree roots, Amazon swords, water lilies, mossy boulders with java fern,
+                // anubias, driftwood, smooth stones, grass (nothing from the sea; the shader draws these for its numbers)
+                type = r < 0.13F ? 8 : r < 0.33F ? 9 : r < 0.45F ? 7 : r < 0.58F ? 3 : r < 0.7F ? 10 : r < 0.8F ? 15 : r < 0.9F ? 0 : 12;
+                r3 = r3 < 0.22F ? r3 : 1.0F;
             }
             if (r3 < 0.28F) {
                 type = 12;
@@ -1220,7 +1238,51 @@ public final class AquariumRenderer {
             floor.decor[k * 4 + 1] = cell.getY() - floor.min.getY() + (cell.getY() == floor.min.getY() ? 0.12F : 0.0F);
             floor.decor[k * 4 + 2] = cell.getZ() - floor.min.getZ() + 0.2F + random.nextFloat() * 0.6F;
             floor.decor[k * 4 + 3] = type + 16 * (turn + 16 * sizeQ);
+            if (floor.theme == 1 && type != 0) { // (on a rock mound: up on top of it)
+                for (int m = firstMound; m < firstMound + mounds; m++) {
+                    float msz = (Math.round(floor.decor[m * 4 + 3]) / 256) / 10.0F;
+                    float dx = floor.decor[k * 4] - floor.decor[m * 4], dz = floor.decor[k * 4 + 2] - floor.decor[m * 4 + 2];
+                    float d = (float) Math.sqrt(dx * dx + dz * dz) / (0.16F * msz);
+                    if (d < 0.85F && Math.abs(floor.decor[k * 4 + 1] - floor.decor[m * 4 + 1]) < 0.3F) {
+                        floor.decor[k * 4 + 1] = floor.decor[m * 4 + 1] + msz * (0.07F + 0.13F * (float) Math.sqrt(1.0F - d * d)) - 0.02F;
+                        size = Math.min(size, (floor.sizeY - 0.15F - floor.decor[k * 4 + 1]) / 0.65F);
+                        sizeQ = Math.max(1, Math.min(60, Math.round(size * 10.0F)));
+                        floor.decor[k * 4 + 3] = type + 16 * (turn + 16 * sizeQ);
+                        break;
+                    }
+                }
+            }
+            if (floor.theme == 2 && type == 7) { // (a water lily: its size is its height, its pads at the surface)
+                sizeQ = Math.max(1, Math.min(60, (int) Math.floor((floor.sizeY - 0.06F - floor.decor[k * 4 + 1]) * 10.0F)));
+                floor.decor[k * 4 + 3] = type + 16 * (turn + 16 * sizeQ);
+            }
         }
+    }
+
+    /** How far round a decoration the bottom creatures keep (in its own size). */
+    private static double decorFootprint(int theme, int type) {
+        if (theme == 1) { // (the reef's corals: brain, table (its stalk), sea fan, staghorn, sponges, leather coral)
+            switch (type) {
+                case 3: return 0.22;
+                case 7: return 0.08;
+                case 8: return 0.06;
+                case 9: return 0.16;
+                case 10: return 0.12;
+                case 15: return 0.08;
+                default: break;
+            }
+        }
+        if (theme == 2) { // (the river's: boulder, lily stems, roots, sword plant, anubias)
+            switch (type) {
+                case 3: return 0.24;
+                case 7: return 0.03;
+                case 8: return 0.38;
+                case 9: return 0.08;
+                case 10: return 0.1;
+                default: break;
+            }
+        }
+        return type == 8 ? 0.42 : type == 0 || type == 3 ? 0.24 : type == 5 || type == 10 ? 0.17 : 0.12;
     }
 
     /**
