@@ -122,6 +122,15 @@ public final class ModBlocks {
                     .lightLevel(state -> 13)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_ORANGE));
 
+    /** A black hole ornament: the world bent round it, in a swirl of glowing dust (BlackHoleBlock). */
+    public static final DeferredBlock<BlackHoleBlock> BLACK_HOLE = BLOCKS.registerBlock("black_hole", p -> new BlackHoleBlock(p, false),
+            BlockBehaviour.Properties.of().strength(3.0F, 9.0F).sound(SoundType.AMETHYST).noOcclusion().lightLevel(state -> 6)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+    /** The big black hole: three blocks across, with a hot accretion disk (BlackHoleBlock). */
+    public static final DeferredBlock<BlackHoleBlock> BIG_BLACK_HOLE = BLOCKS.registerBlock("big_black_hole", p -> new BlackHoleBlock(p, true),
+            BlockBehaviour.Properties.of().strength(3.0F, 9.0F).sound(SoundType.AMETHYST).noOcclusion().lightLevel(state -> 11)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+
     /** The big lava lamp: two blocks tall (BigLavaLampBlock). */
     public static final DeferredBlock<BigLavaLampBlock> BIG_LAVA_LAMP = BLOCKS.registerBlock("big_lava_lamp", BigLavaLampBlock::new,
             BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.GLASS).noOcclusion()

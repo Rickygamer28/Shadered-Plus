@@ -87,6 +87,14 @@ public class MagmaBasinRenderer implements BlockEntityRenderer<GlowColourBlockEn
         vc.addVertex(m, x1, y, z1).setUv(wx + x1, wz + z1).setColor(r, g, b, 255);
         vc.addVertex(m, x1, y, z0).setUv(wx + x1, wz + z0).setColor(r, g, b, 255);
         vc.addVertex(m, x0, y, z0).setUv(wx + x0, wz + z0).setColor(r, g, b, 255);
+        if (RenderTest.ON && be.getBlockPos().getX() == 2) { // (render test: a plain red quad above the single basin)
+            VertexConsumer dq = buffers.getBuffer(RenderType.debugQuads());
+            float yy = 0.95F;
+            dq.addVertex(m, 0.3F, yy, 0.7F).setColor(255, 0, 0, 255);
+            dq.addVertex(m, 0.7F, yy, 0.7F).setColor(255, 0, 0, 255);
+            dq.addVertex(m, 0.7F, yy, 0.3F).setColor(255, 0, 0, 255);
+            dq.addVertex(m, 0.3F, yy, 0.3F).setColor(255, 0, 0, 255);
+        }
     }
 
     @Override

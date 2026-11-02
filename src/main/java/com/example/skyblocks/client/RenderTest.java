@@ -47,9 +47,14 @@ public final class RenderTest {
             "fill -1 -60 8 0 -60 9 skyblocks:magma_basin",
             "setblock 2 -60 8 skyblocks:magma_basin",
             "data merge block 2 -60 8 {colour: 3381759, rgb: 0b}",
+            "setblock -2 -60 12 skyblocks:black_hole",
+            "setblock 2 -59 13 skyblocks:big_black_hole",
+            "fill -4 -60 16 4 -57 16 minecraft:white_concrete",
+            "fill -4 -60 15 4 -60 15 minecraft:red_concrete",
+            "fill -4 -58 15 4 -58 15 minecraft:blue_concrete",
     };
     /** Where the player stands for each picture: x y z yaw pitch ("night " first: at night). */
-    private static final String[] SPOTS = {"0.5 -60 -6.5 0 15", "0.5 -60 1.6 0 20", "night 0.5 -60 1.6 0 20", "0.5 -59 5.6 0 40", "night 0.5 -59 5.6 0 40"};
+    private static final String[] SPOTS = {"0.5 -60 -6.5 0 15", "0.5 -60 1.6 0 20", "night 0.5 -60 1.6 0 20", "0.5 -59 5.6 0 40", "night 0.5 -59 5.6 0 40", "0.5 -59.5 8.5 0 8", "night 0.5 -59.5 8.5 0 8", "-2.5 -60 10.6 0 5"};
 
     private static void run(MinecraftServer server, String command) {
         server.execute(() -> {

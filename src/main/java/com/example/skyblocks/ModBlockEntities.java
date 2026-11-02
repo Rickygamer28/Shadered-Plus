@@ -38,6 +38,9 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(GlowColourBlockEntity::plasmaBall, ModBlocks.PLASMA_BALL.get()).build(null));
     public static final Supplier<BlockEntityType<GlowColourBlockEntity>> MAGMA_BASIN = TYPES.register("magma_basin",
             () -> BlockEntityType.Builder.of(GlowColourBlockEntity::magmaBasin, ModBlocks.MAGMA_BASIN.get()).build(null));
+    public static final Supplier<BlockEntityType<GlowColourBlockEntity>> BLACK_HOLE = TYPES.register("black_hole",
+            () -> BlockEntityType.Builder.of((pos, state) -> GlowColourBlockEntity.blackHole(pos, state,
+                    state.getBlock() instanceof BlackHoleBlock b && b.big()), ModBlocks.BLACK_HOLE.get(), ModBlocks.BIG_BLACK_HOLE.get()).build(null));
     public static final Supplier<BlockEntityType<GlowColourBlockEntity>> JELLYFISH_TANK = TYPES.register("jellyfish_tank",
             () -> BlockEntityType.Builder.of(GlowColourBlockEntity::jellyTank, ModBlocks.JELLYFISH_TANK.get()).build(null));
     public static final Supplier<BlockEntityType<KoiPondBlockEntity>> KOI_POND = TYPES.register("koi_pond",

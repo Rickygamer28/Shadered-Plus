@@ -252,5 +252,9 @@
   "block.skyblocks.plasma_ball": "Plasma Ball",
   "tooltip.skyblocks.plasma_ball": "Reaches for you when you come close. Right-click: on / off. With a dye: colour. Sneak + right-click: RGB",
   "block.skyblocks.magma_basin": "Magma Basin",
-  "tooltip.skyblocks.magma_basin": "Churning lava. Basins side by side make one pool. Hot to stand in. With a dye: colour"
+  "tooltip.skyblocks.magma_basin": "Churning lava. Basins side by side make one pool. Hot to stand in. With a dye: colour",
+  "block.skyblocks.black_hole": "Black Hole",
+  "tooltip.skyblocks.black_hole": "Bends the world behind it. With a dye: the dust's colour",
+  "block.skyblocks.big_black_hole": "Big Black Hole",
+  "tooltip.skyblocks.big_black_hole": "Three blocks across, with a glowing accretion disk. With a dye: the disk's colour"
 }

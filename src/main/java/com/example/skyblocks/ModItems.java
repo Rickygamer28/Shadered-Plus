@@ -63,6 +63,8 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> LAVA_LAMP = ITEMS.registerSimpleBlockItem("lava_lamp", ModBlocks.LAVA_LAMP);
     public static final DeferredItem<BlockItem> PLASMA_BALL = ITEMS.registerSimpleBlockItem("plasma_ball", ModBlocks.PLASMA_BALL);
     public static final DeferredItem<BlockItem> MAGMA_BASIN = ITEMS.registerSimpleBlockItem("magma_basin", ModBlocks.MAGMA_BASIN);
+    public static final DeferredItem<BlockItem> BLACK_HOLE = ITEMS.registerSimpleBlockItem("black_hole", ModBlocks.BLACK_HOLE);
+    public static final DeferredItem<BlockItem> BIG_BLACK_HOLE = ITEMS.registerSimpleBlockItem("big_black_hole", ModBlocks.BIG_BLACK_HOLE);
     public static final DeferredItem<BlockItem> BIG_LAVA_LAMP = ITEMS.registerSimpleBlockItem("big_lava_lamp", ModBlocks.BIG_LAVA_LAMP);
     public static final DeferredItem<BlockItem> FIRE_TORNADO = ITEMS.registerSimpleBlockItem("fire_tornado", ModBlocks.FIRE_TORNADO);
     public static final DeferredItem<BlockItem> BRICK_HEARTH = ITEMS.registerSimpleBlockItem("brick_hearth", ModBlocks.BRICK_HEARTH);
