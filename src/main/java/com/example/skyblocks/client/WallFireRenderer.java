@@ -65,14 +65,7 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
                                 shader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.2F, 1.0F));
                             }
                         }, () -> {}))
-                        .setTransparencyState(new TransparencyStateShard("skyblocks_premultiplied", () -> {
-                            com.mojang.blaze3d.systems.RenderSystem.enableBlend();
-                            com.mojang.blaze3d.systems.RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.ONE,
-                                    com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-                        }, () -> {
-                            com.mojang.blaze3d.systems.RenderSystem.disableBlend();
-                            com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
-                        }))
+                        .setTransparencyState(new TransparencyStateShard("skyblocks_premultiplied", WallFireRenderer::premultipliedOn, WallFireRenderer::premultipliedOff))
                         .setWriteMaskState(COLOR_WRITE)
                         .setCullState(NO_CULL)
                         .createCompositeState(false));
@@ -89,14 +82,7 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
                                 shader.safeGetUniform("LampInv").set(ITEM_INV);
                             }
                         }, () -> {}))
-                        .setTransparencyState(new TransparencyStateShard("skyblocks_premultiplied_item", () -> {
-                            com.mojang.blaze3d.systems.RenderSystem.enableBlend();
-                            com.mojang.blaze3d.systems.RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.ONE,
-                                    com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-                        }, () -> {
-                            com.mojang.blaze3d.systems.RenderSystem.disableBlend();
-                            com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
-                        }))
+                        .setTransparencyState(new TransparencyStateShard("skyblocks_premultiplied_item", WallFireRenderer::premultipliedOn, WallFireRenderer::premultipliedOff))
                         .setWriteMaskState(COLOR_WRITE)
                         .setCullState(NO_CULL)
                         .createCompositeState(false));
@@ -107,6 +93,44 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
     }
 
     public WallFireRenderer(BlockEntityRendererProvider.Context context) {}
+
+    /**
+     * Premultiplied blending for the flames, set in OpenGL itself too: Minecraft only remembers what it last set, and
+     * when another mod changed the state behind its back (blending off, another blend equation) the flames came out
+     * on a black box.
+     */
+    private static boolean warned;
+
+    static void premultipliedOn() {
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+        com.mojang.blaze3d.systems.RenderSystem.blendEquation(org.lwjgl.opengl.GL14.GL_FUNC_ADD);
+        com.mojang.blaze3d.systems.RenderSystem.blendFuncSeparate(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.ONE,
+                com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, com.mojang.blaze3d.platform.GlStateManager.SourceFactor.ONE,
+                com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+        if (!warned) {
+            boolean on = org.lwjgl.opengl.GL11.glIsEnabled(org.lwjgl.opengl.GL11.GL_BLEND);
+            int eq = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL20.GL_BLEND_EQUATION_RGB);
+            int src = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL14.GL_BLEND_SRC_RGB);
+            int dst = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL14.GL_BLEND_DST_RGB);
+            if (!on || eq != org.lwjgl.opengl.GL14.GL_FUNC_ADD || src != org.lwjgl.opengl.GL11.GL_ONE || dst != org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA) {
+                warned = true;
+                SkyBlocksMod.LOGGER.warn("Shadered+: OpenGL's blending was not what Minecraft thought (on {}, equation {}, {} / {}) - "
+                        + "another mod changed it; the flames set it themselves", on, eq, src, dst);
+            }
+        }
+        org.lwjgl.opengl.GL11.glEnable(org.lwjgl.opengl.GL11.GL_BLEND);
+        org.lwjgl.opengl.GL14.glBlendEquation(org.lwjgl.opengl.GL14.GL_FUNC_ADD);
+        org.lwjgl.opengl.GL14.glBlendFuncSeparate(org.lwjgl.opengl.GL11.GL_ONE, org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA,
+                org.lwjgl.opengl.GL11.GL_ONE, org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA);
+    }
+
+    static void premultipliedOff() {
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
+        com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
+        org.lwjgl.opengl.GL11.glDisable(org.lwjgl.opengl.GL11.GL_BLEND);
+        org.lwjgl.opengl.GL14.glBlendFuncSeparate(org.lwjgl.opengl.GL11.GL_SRC_ALPHA, org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA,
+                org.lwjgl.opengl.GL11.GL_ONE, org.lwjgl.opengl.GL11.GL_ZERO);
+    }
 
     static final Matrix4f ITEM_INV = new Matrix4f();
 
