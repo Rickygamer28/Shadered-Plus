@@ -60,7 +60,13 @@ public class MagmaBasinRenderer implements BlockEntityRenderer<GlowColourBlockEn
     public MagmaBasinRenderer(BlockEntityRendererProvider.Context context) {}
 
     @Override
+    private static long logged;
+
     public void render(GlowColourBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
+        if (RenderTest.ON && System.currentTimeMillis() - logged > 3000) {
+            logged = System.currentTimeMillis();
+            SkyBlocksMod.LOGGER.info("Shadered+ render test: magma basin at {} drawn, shader {}, state {}, colour {}", be.getBlockPos(), shader, be.getBlockState(), be.colour());
+        }
         if (shader == null) {
             return;
         }
