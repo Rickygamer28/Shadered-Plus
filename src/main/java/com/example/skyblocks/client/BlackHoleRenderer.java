@@ -19,12 +19,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import com.example.skyblocks.client.iris.IrisCompat;
-import com.mojang.blaze3d.vertex.ByteBufferBuilder;
-import java.util.ArrayList;
-import java.util.List;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import org.joml.Matrix4fStack;
-import com.mojang.blaze3d.vertex.VertexSorting;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -140,108 +134,15 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         boolean inside = Math.abs(cam.x - (be.getBlockPos().getX() + 0.5)) < reach && Math.abs(cam.z - (be.getBlockPos().getZ() + 0.5)) < reach
                 && Math.abs(cam.y - (be.getBlockPos().getY() + (big ? 0.5 : 0.62))) < reach;
         int colour = GlowColourBlockEntity.shown(be, LavaLampRenderer.seconds());
-        if (RenderTest.ON && (debugRender++ % 240) == 0) {
-            SkyBlocksMod.LOGGER.info("black hole render: shadow {}, mirror {}, iris {}; {}", IrisCompat.renderingShadowPass(), MirrorRenderer.isRenderingReflection(), IrisCompat.shaderPackInUse(), glState());
-        }
         if (IrisCompat.renderingShadowPass()) {
             return;
         }
-        if (MirrorRenderer.isRenderingReflection() || IrisCompat.shaderPackInUse()) { // (a mirror's picture, or a shader pack's: right away)
-            box(buffers.getBuffer(inside ? Types.HOLE_INSIDE : Types.HOLE), poseStack.last().pose(), big, colour, seed);
-            return;
+        // drawn after the other block entities (shouldRenderOffScreen: the holes are among the world's "global" ones,
+        // drawn last); what's still waiting to be drawn is drawn first - so it's in the picture the hole bends
+        if (buffers == Minecraft.getInstance().renderBuffers().bufferSource()) {
+            Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
         }
-        // in the world: drawn once every other block entity is (so what's behind the hole is there to bend)
-        if (PENDING.size() < 512) {
-            PENDING.add(new Pending(new Matrix4f(poseStack.last().pose()), big, colour, seed, inside));
-        }
-    }
-
-    /**
-     * Some drawing before this point leaves OpenGL's state (culling, depth) other than Minecraft's record of it says -
-     * so its own switches would do nothing. Sets both the same, the usual way round.
-     */
-    private static void syncDrawState() {
-        GL11.glEnable(GL11.GL_CULL_FACE);
-        RenderSystem.disableCull();
-        RenderSystem.enableCull();
-        GL11.glCullFace(GL11.GL_BACK);
-        GL11.glFrontFace(GL11.GL_CCW);
-        GL11.glEnable(GL11.GL_DEPTH_TEST);
-        RenderSystem.disableDepthTest();
-        RenderSystem.enableDepthTest();
-        GL11.glDepthFunc(GL11.GL_LEQUAL);
-        RenderSystem.depthFunc(GL11.GL_ALWAYS);
-        RenderSystem.depthFunc(GL11.GL_LEQUAL);
-        GL11.glDepthMask(true);
-        RenderSystem.depthMask(false);
-        RenderSystem.depthMask(true);
-        GL11.glDisable(GL11.GL_BLEND);
-        RenderSystem.enableBlend();
-        RenderSystem.disableBlend();
-        GL11.glDisable(GL11.GL_STENCIL_TEST);
-    }
-
-    private static String glState() {
-        int[] vp = new int[4];
-        GL11.glGetIntegerv(GL11.GL_VIEWPORT, vp);
-        float[] range = new float[2];
-        GL11.glGetFloatv(GL11.GL_DEPTH_RANGE, range);
-        return "fb " + GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING) + " main " + Minecraft.getInstance().getMainRenderTarget().frameBufferId
-                + " depthTest " + GL11.glIsEnabled(GL11.GL_DEPTH_TEST) + " func " + GL11.glGetInteger(GL11.GL_DEPTH_FUNC) + " range " + range[0] + ".." + range[1]
-                + " vp " + vp[0] + "," + vp[1] + "," + vp[2] + "," + vp[3] + " cull " + GL11.glIsEnabled(GL11.GL_CULL_FACE)
-                + " cullMode " + GL11.glGetInteger(GL11.GL_CULL_FACE_MODE) + " front " + GL11.glGetInteger(GL11.GL_FRONT_FACE)
-                + " depthMask " + GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK) + " blend " + GL11.glIsEnabled(GL11.GL_BLEND) + " stencil " + GL11.glIsEnabled(GL11.GL_STENCIL_TEST);
-    }
-
-    private record Pending(Matrix4f pose, boolean big, int colour, float seed, boolean inside) {}
-    private static final List<Pending> PENDING = new ArrayList<>();
-    private static ByteBufferBuilder bytes;
-    private static int debugCount, debugRender;
-
-    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, value = Dist.CLIENT)
-    public static final class Events {
-        private Events() {}
-
-        @SubscribeEvent
-        public static void onBlackHoleStage(RenderLevelStageEvent event) {
-            if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES || MirrorRenderer.isRenderingReflection()) {
-                return;
-            }
-            if (RenderTest.ON && (debugCount++ % 120) == 0) {
-                SkyBlocksMod.LOGGER.info("black hole stage: {} pending, shader {}, shadow {}; {}; mv {} / {}; proj {} / {}", PENDING.size(), shader != null, IrisCompat.renderingShadowPass(), glState(),
-                        RenderSystem.getModelViewMatrix(), event.getModelViewMatrix(), RenderSystem.getProjectionMatrix(), event.getProjectionMatrix());
-            }
-            if (PENDING.isEmpty()) {
-                return;
-            }
-            List<Pending> jobs = new ArrayList<>(PENDING);
-            PENDING.clear();
-            if (shader == null || IrisCompat.renderingShadowPass()) {
-                return;
-            }
-            Minecraft.getInstance().renderBuffers().bufferSource().endLastBatch(); // (the last block entities drawn first)
-            if (bytes == null) {
-                bytes = new ByteBufferBuilder(8192);
-            }
-            MultiBufferSource.BufferSource source = MultiBufferSource.immediate(bytes);
-            // the world's own view and projection, and its picture's drawing state (none of it is certain here)
-            Matrix4fStack stack = RenderSystem.getModelViewStack();
-            stack.pushMatrix();
-            stack.set(event.getModelViewMatrix());
-            RenderSystem.applyModelViewMatrix();
-            syncDrawState();
-            try {
-                for (Pending job : jobs) {
-                    RenderType type = job.inside() ? Types.HOLE_INSIDE : Types.HOLE;
-                    box(source.getBuffer(type), job.pose(), job.big(), job.colour(), job.seed());
-                    source.endBatch(type); // (each its own copy of the screen: one hole bends the other)
-                }
-            } finally {
-                RenderSystem.depthMask(true);
-                stack.popMatrix();
-                RenderSystem.applyModelViewMatrix();
-            }
-        }
+        box(buffers.getBuffer(inside ? Types.HOLE_INSIDE : Types.HOLE), poseStack.last().pose(), big, colour, seed);
     }
 
     /** A hole as an item, drawn at once with this item's matrix (shrunk to fit for the big one). */
@@ -277,6 +178,6 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
 
     @Override
     public boolean shouldRenderOffScreen(GlowColourBlockEntity be) {
-        return false;
+        return true; // (so it is drawn after the rest: see render)
     }
 }
