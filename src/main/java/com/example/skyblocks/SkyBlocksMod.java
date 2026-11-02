@@ -52,6 +52,9 @@ public class SkyBlocksMod {
         event.accept(ModItems.ISLAND_SCANNER.get());
         event.accept(ModItems.ISLAND_PAINTING.get());
         event.accept(ModItems.MIRROR.get());
+        event.accept(ModItems.ROUND_MIRROR.get());
+        event.accept(ModItems.CRACKED_MIRROR.get());
+        event.accept(ModItems.VANITY_MIRROR.get());
         event.accept(ModItems.INFINITY_MIRROR.get());
         event.accept(ModItems.WATER_CAUSTICS.get());
         event.accept(ModItems.RAIN_GLASS.get());

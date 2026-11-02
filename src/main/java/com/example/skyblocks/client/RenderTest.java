@@ -77,9 +77,15 @@ public final class RenderTest {
             "fill 2 -60 44 5 -57 44 minecraft:stone_bricks",
             "fill 2 -59 43 3 -58 43 skyblocks:slim_tank[facing=north]",
             "setblock 5 -59 43 skyblocks:slim_tank[facing=north]{variant:1}",
+            // the mirrors: a round one, a cracked wall of them, a vanity mirror 3 x 2 (facing the camera, north)
+            "setblock -9 -59 50 skyblocks:round_mirror",
+            "fill -7 -60 50 -6 -59 50 skyblocks:cracked_mirror",
+            "fill -4 -60 50 -2 -59 50 skyblocks:vanity_mirror",
+            "setblock -5 -60 46 minecraft:red_concrete",
+            "setblock -8 -60 47 minecraft:blue_concrete",
     };
     /** Where the player stands for each picture: x y z yaw pitch ("night " first: at night). */
-    private static final String[] SPOTS = {"0.5 -60 -6.5 0 15", "0.5 -60 1.6 0 20", "night 0.5 -60 1.6 0 20", "0.5 -59 5.6 0 40", "night 0.5 -59 5.6 0 40", "0.5 -59.5 8.5 0 8", "night 0.5 -59.5 8.5 0 8", "-2.5 -59.3 10.4 0 30", "-4 -58 18.3 0 55", "night -4 -58 18.3 0 55", "rain -4 -58 18.3 0 55", "4.5 -58 18.3 0 55", "night 4.5 -58 18.3 0 55", "night 0.5 -57 20.5 0 -8", "0.5 -59 27 0 10", "night 0.5 -59 27 0 10", "-4 -59.5 33.3 0 15", "3 -59.5 33.3 0 15", "2.5 -59.6 12.3 0 23", "1 -59.3 2.9 0 45", "-3 -60 40 0 30", "1 -59.5 39.5 0 10", "night 1 -59.5 39.5 0 10"};
+    private static final String[] SPOTS = {"0.5 -60 -6.5 0 15", "0.5 -60 1.6 0 20", "night 0.5 -60 1.6 0 20", "0.5 -59 5.6 0 40", "night 0.5 -59 5.6 0 40", "0.5 -59.5 8.5 0 8", "night 0.5 -59.5 8.5 0 8", "-2.5 -59.3 10.4 0 30", "-4 -58 18.3 0 55", "night -4 -58 18.3 0 55", "rain -4 -58 18.3 0 55", "4.5 -58 18.3 0 55", "night 4.5 -58 18.3 0 55", "night 0.5 -57 20.5 0 -8", "0.5 -59 27 0 10", "night 0.5 -59 27 0 10", "-4 -59.5 33.3 0 15", "3 -59.5 33.3 0 15", "2.5 -59.6 12.3 0 23", "1 -59.3 2.9 0 45", "-3 -60 40 0 30", "1 -59.5 39.5 0 10", "night 1 -59.5 39.5 0 10", "-5.5 -60 45 0 5"};
 
     private static void run(MinecraftServer server, String command) {
         server.execute(() -> {

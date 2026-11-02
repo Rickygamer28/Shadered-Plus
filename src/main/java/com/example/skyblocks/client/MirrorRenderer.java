@@ -1448,7 +1448,7 @@ public final class MirrorRenderer {
         RenderSystem.depthMask(!overlayFaces);
         RenderSystem.disableBlend();
         RenderSystem.disableCull();
-        MeshData mesh = faceMesh(wall, faces, cx, cy, cz);
+        MeshData mesh = faceMesh(wall, faces, cx, cy, cz, true);
         if (mesh != null) {
             // pulled towards the camera so the block's own face underneath never flickers through
             RenderSystem.enablePolygonOffset();
@@ -1465,10 +1465,38 @@ public final class MirrorRenderer {
 
     /** The wall's faces as quads (positions relative to (cx, cy, cz)). */
     private static MeshData faceMesh(Wall wall, List<BlockPos> faces, double cx, double cy, double cz) {
-        BufferBuilder b = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
+        return faceMesh(wall, faces, cx, cy, cz, false);
+    }
+
+    /**
+     * The wall's faces as quads; with {@code uv}, for the surface shader, each face's own place (0..1 across it) and
+     * what it is: UV = (u + 4 * (kind + 4 * seed), v + 4 * edges) - which mirror, a number of its own (0..15), and which
+     * of its sides join on to another face of the same mirror in this wall (1 before it across, 2 after, 4 below, 8
+     * above): the vanity mirror's frame goes round the outside of the whole mirror, not each block.
+     */
+    private static MeshData faceMesh(Wall wall, List<BlockPos> faces, double cx, double cy, double cz, boolean uv) {
+        BufferBuilder b = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, uv ? DefaultVertexFormat.POSITION_TEX : DefaultVertexFormat.POSITION);
         Direction d = wall.facing();
+        ClientLevel level = Minecraft.getInstance().level;
+        Set<BlockPos> here = uv ? new HashSet<>(faces) : null;
+        Direction across = d.getAxis() == Direction.Axis.X ? Direction.SOUTH : Direction.EAST;
+        Direction upward = d.getAxis() == Direction.Axis.Y ? Direction.SOUTH : Direction.UP;
         for (BlockPos pos : faces) {
             float x = (float) (pos.getX() - cx), y = (float) (pos.getY() - cy), z = (float) (pos.getZ() - cz);
+            if (uv) {
+                int kind = level == null ? 0 : Math.max(0, mirrorKind(level.getBlockState(pos)));
+                int edges = 0;
+                if (level != null) {
+                    if (sameMirror(level, here, pos, pos.relative(across.getOpposite()), kind)) edges |= 1;
+                    if (sameMirror(level, here, pos, pos.relative(across), kind)) edges |= 2;
+                    if (sameMirror(level, here, pos, pos.relative(upward.getOpposite()), kind)) edges |= 4;
+                    if (sameMirror(level, here, pos, pos.relative(upward), kind)) edges |= 8;
+                }
+                int seed = (int) ((pos.asLong() * 0x9E3779B97F4A7C15L) >>> 60) & 15;
+                faceU = 4.0F * (kind + 4 * seed);
+                faceV = 4.0F * edges;
+            }
+            faceUv = uv;
             switch (d) {
                 case UP -> quad(b, x, y + 1 + OUT, z, x + 1, y + 1 + OUT, z, x + 1, y + 1 + OUT, z + 1, x, y + 1 + OUT, z + 1);
                 case DOWN -> quad(b, x, y - OUT, z, x + 1, y - OUT, z, x + 1, y - OUT, z + 1, x, y - OUT, z + 1);
@@ -1493,8 +1521,22 @@ public final class MirrorRenderer {
         }
     }
 
+    private static boolean faceUv;
+    private static float faceU, faceV;
+
+    private static boolean sameMirror(ClientLevel level, Set<BlockPos> here, BlockPos pos, BlockPos next, int kind) {
+        return here.contains(next) && mirrorKind(level.getBlockState(next)) == kind;
+    }
+
     private static void quad(BufferBuilder b, float x0, float y0, float z0, float x1, float y1, float z1,
                              float x2, float y2, float z2, float x3, float y3, float z3) {
+        if (faceUv) {
+            b.addVertex(x0, y0, z0).setUv(faceU, faceV);
+            b.addVertex(x1, y1, z1).setUv(faceU + 1.0F, faceV);
+            b.addVertex(x2, y2, z2).setUv(faceU + 1.0F, faceV + 1.0F);
+            b.addVertex(x3, y3, z3).setUv(faceU, faceV + 1.0F);
+            return;
+        }
         b.addVertex(x0, y0, z0);
         b.addVertex(x1, y1, z1);
         b.addVertex(x2, y2, z2);
@@ -1535,7 +1577,16 @@ public final class MirrorRenderer {
     // ---- finding the mirrors near the camera ----
 
     private static boolean isMirror(BlockState state) {
-        return state.is(ModBlocks.MIRROR.get());
+        return mirrorKind(state) >= 0;
+    }
+
+    /** Which mirror: 0 the plain one, 1 round, 2 cracked, 3 vanity (framed with bulbs); -1 not a mirror. */
+    static int mirrorKind(BlockState state) {
+        if (state.is(ModBlocks.MIRROR.get())) return 0;
+        if (state.is(ModBlocks.ROUND_MIRROR.get())) return 1;
+        if (state.is(ModBlocks.CRACKED_MIRROR.get())) return 2;
+        if (state.is(ModBlocks.VANITY_MIRROR.get())) return 3;
+        return -1;
     }
 
     private static void scan(ClientLevel level, int centerX, int centerZ) {

@@ -40,6 +40,17 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS)
                     .mapColor(net.minecraft.world.level.material.MapColor.ICE).isValidSpawn((s, l, p, e) -> false));
 
+    /** The mirror's variants: a round mirror in a gold ring, a cracked mirror, a vanity mirror framed with bulbs. */
+    public static final DeferredBlock<net.minecraft.world.level.block.Block> ROUND_MIRROR = BLOCKS.registerSimpleBlock("round_mirror",
+            BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS)
+                    .mapColor(net.minecraft.world.level.material.MapColor.GOLD).isValidSpawn((s, l, p, e) -> false));
+    public static final DeferredBlock<net.minecraft.world.level.block.Block> CRACKED_MIRROR = BLOCKS.registerSimpleBlock("cracked_mirror",
+            BlockBehaviour.Properties.of().strength(0.4F).sound(SoundType.GLASS)
+                    .mapColor(net.minecraft.world.level.material.MapColor.ICE).isValidSpawn((s, l, p, e) -> false));
+    public static final DeferredBlock<net.minecraft.world.level.block.Block> VANITY_MIRROR = BLOCKS.registerSimpleBlock("vanity_mirror",
+            BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS).lightLevel(state -> 12)
+                    .mapColor(net.minecraft.world.level.material.MapColor.SNOW).isValidSpawn((s, l, p, e) -> false));
+
     /** A fog machine: low fog drifting along the floor (FogMachineBlock, client/FogParticle). */
     public static final DeferredBlock<FogMachineBlock> FOG_MACHINE = BLOCKS.registerBlock("fog_machine", FogMachineBlock::new,
             BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion().mapColor(net.minecraft.world.level.material.MapColor.METAL));

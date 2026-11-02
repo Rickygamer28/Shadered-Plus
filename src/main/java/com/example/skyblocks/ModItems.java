@@ -40,6 +40,9 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> ISLAND_PAINTING = ITEMS.registerSimpleBlockItem("island_painting", ModBlocks.ISLAND_PAINTING);
 
     public static final DeferredItem<BlockItem> MIRROR = ITEMS.registerSimpleBlockItem("mirror", ModBlocks.MIRROR);
+    public static final DeferredItem<BlockItem> ROUND_MIRROR = ITEMS.registerSimpleBlockItem("round_mirror", ModBlocks.ROUND_MIRROR);
+    public static final DeferredItem<BlockItem> CRACKED_MIRROR = ITEMS.registerSimpleBlockItem("cracked_mirror", ModBlocks.CRACKED_MIRROR);
+    public static final DeferredItem<BlockItem> VANITY_MIRROR = ITEMS.registerSimpleBlockItem("vanity_mirror", ModBlocks.VANITY_MIRROR);
 
     public static final DeferredItem<BlockItem> DANCE_FLOOR = ITEMS.registerSimpleBlockItem("dance_floor", ModBlocks.DANCE_FLOOR);
 

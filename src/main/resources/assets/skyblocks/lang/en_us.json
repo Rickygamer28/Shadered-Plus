@@ -286,5 +286,8 @@
   "message.skyblocks.small_tank.1.2": "Clownfish and tangs",
   "message.skyblocks.small_tank.2.0": "A school of neon tetras",
   "message.skyblocks.small_tank.2.1": "Guppies and a betta",
-  "message.skyblocks.small_tank.2.2": "Reef: clownfish, a tang, tetras"
+  "message.skyblocks.small_tank.2.2": "Reef: clownfish, a tang, tetras",
+  "block.skyblocks.round_mirror": "Round Mirror",
+  "block.skyblocks.cracked_mirror": "Cracked Mirror",
+  "block.skyblocks.vanity_mirror": "Vanity Mirror"
 }

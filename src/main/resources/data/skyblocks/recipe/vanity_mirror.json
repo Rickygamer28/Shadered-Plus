@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "GWG",
+    "WMW"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:glowstone_dust"
+    },
+    "W": {
+      "item": "minecraft:white_dye"
+    },
+    "M": {
+      "item": "skyblocks:mirror"
+    }
+  },
+  "result": {
+    "id": "skyblocks:vanity_mirror",
+    "count": 1
+  }
+}
