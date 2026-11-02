@@ -135,7 +135,8 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
 
     /** The box round the hole's reach, its faces facing out (the same numbers as the shader's). */
     static void box(VertexConsumer vc, Matrix4f m, boolean big, int colour, float seed) {
-        float cx = 0.5F, cy = big ? 0.5F : 0.62F, cz = 0.5F, reach = big ? 1.5F : 0.36F;
+        // (a little bigger than the reach: so its faces never lie flat on a floor, flickering against it)
+        float cx = 0.5F, cy = big ? 0.5F : 0.62F, cz = 0.5F, reach = (big ? 1.5F : 0.36F) * 1.03F;
         int r = (colour >> 16) & 255, g = (colour >> 8) & 255, b = colour & 255;
         int[][] faces = {{4, 5, 7, 6}, {1, 0, 2, 3}, {5, 1, 3, 7}, {0, 4, 6, 2}, {6, 7, 3, 2}, {0, 1, 5, 4}};
         for (int[] f : faces) {

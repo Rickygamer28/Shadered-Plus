@@ -29,7 +29,7 @@ void main() {
     seedIn = UV0.y - 10.0 * kind;
     // (client/BlackHoleRenderer's boxes: the reach round the hole's middle)
     vec3 c = kind > 0.5 ? vec3(0.5) : vec3(0.5, 0.62, 0.5);
-    float reach = kind > 0.5 ? 1.5 : 0.36;
+    float reach = (kind > 0.5 ? 1.5 : 0.36) * 1.03;
     lp = c + reach * (vec3(float(corner & 1), float((corner >> 1) & 1), float((corner >> 2) & 1)) * 2.0 - 1.0);
     origin = Position - lp;
     mat4 iv = inverse(ModelViewMat);

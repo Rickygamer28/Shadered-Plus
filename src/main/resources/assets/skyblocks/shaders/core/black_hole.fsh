@@ -53,9 +53,10 @@ void main() {
     vec3 ro = eyeLp;
     // the box is drawn both sides (so it's there with the eye inside it): from outside, only its near side counts
     vec3 rel = ro - C;
-    if (any(greaterThan(abs(rel), vec3(reach)))) {
+    float hb = reach * 1.03; // (client/BlackHoleRenderer's box)
+    if (any(greaterThan(abs(rel), vec3(hb)))) {
         vec3 srd = vec3(rd.x < 0.0 ? -1.0 : 1.0, rd.y < 0.0 ? -1.0 : 1.0, rd.z < 0.0 ? -1.0 : 1.0) * max(abs(rd), vec3(1e-5));
-        vec3 ta = (-reach - rel) / srd, tb = (reach - rel) / srd;
+        vec3 ta = (-hb - rel) / srd, tb = (hb - rel) / srd;
         float tIn = max(max(min(ta.x, tb.x), min(ta.y, tb.y)), min(ta.z, tb.z));
         if (dot(lp - ro, rd) > tIn + 0.02) {
             discard;
