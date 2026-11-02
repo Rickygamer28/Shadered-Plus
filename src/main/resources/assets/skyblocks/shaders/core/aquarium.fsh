@@ -39,6 +39,7 @@ uniform float Lite;    // 1: seen in a mirror - a cheaper look (coarser tracing,
 // blocks away (tracing coarser bit by bit: no line where it changes)
 float gLite = 0.0;
 const float LITE_NEAR = 10.0, LITE_FAR = 18.0;
+uniform float Theme;   // 0 the plain tank, 1 a coral reef (white sand, clear turquoise water), 2 a jungle river (dark sand, tea-coloured water)
 uniform float Deep;    // 1: the deep sea aquarium (always dark; no plants, no sunlight; its creatures glow)
 // decorations: (x, y, z of its base, type + 8 * (turn + 16 * size * 10))
 uniform vec4 Deco0;
@@ -392,6 +393,14 @@ float decoSDF(int type, vec3 p, float t) {
         vec3 c = chestParts(p, t);
         return min(min(c.x, c.y), c.z);
     }
+    if (type == 15) { // driftwood: a gnarled branch lying half in the sand, two crooked limbs reaching up
+        float d = sdCapsule(p, vec3(-0.42, 0.02, -0.08), vec3(0.38, 0.06, 0.1), 0.05);
+        d = smin(d, sdCapsule(p, vec3(0.1, 0.05, 0.03), vec3(0.22, 0.32, -0.05), 0.032), 0.04);
+        d = smin(d, sdCapsule(p, vec3(0.22, 0.32, -0.05), vec3(0.16, 0.48, -0.12), 0.022), 0.03);
+        d = smin(d, sdCapsule(p, vec3(-0.18, 0.04, -0.03), vec3(-0.3, 0.26, 0.1), 0.026), 0.035);
+        d = smin(d, sdCapsule(p, vec3(0.3, 0.06, 0.08), vec3(0.44, 0.13, 0.2), 0.02), 0.03);
+        return d - 0.006 * sin(p.x * 60.0 + p.y * 37.0) * sin(p.z * 45.0); // (knotty)
+    }
     if (type == 6) {
         float d = sdEllipsoid(p - vec3(0.0, 0.03, 0.0), vec3(0.08, 0.05, 0.08));
         for (int k = 0; k < 7; k++) {
@@ -414,6 +423,9 @@ vec3 decoColour(int type, vec3 p, vec3 n, float rnd) {
     }
     if (type == 12) { // seagrass: deep green at the root, lighter to the tips
         return mix(vec3(0.1, 0.32, 0.14), vec3(0.36, 0.66, 0.3), smoothstep(0.0, 0.5, p.y)) * (0.9 + 0.2 * rnd);
+    }
+    if (type == 13 && Theme > 1.5) { // (the river's tall plants: bright green ribbons, not kelp)
+        return mix(vec3(0.1, 0.32, 0.08), vec3(0.35, 0.7, 0.2), clamp(p.y * 0.6, 0.0, 1.0));
     }
     if (type == 13) { // kelp: an olive-brown stalk and leaves, yellowish bladders
         int part;
@@ -458,8 +470,18 @@ vec3 decoColour(int type, vec3 p, vec3 n, float rnd) {
         return mix(vec3(0.72, 0.6, 0.52), vec3(0.97, 0.84, 0.78), rib) * (0.88 + 0.12 * band);
     }
     float speck = hash22(floor(p.xz * 60.0) + floor(p.y * 60.0)).x;
+    if (type == 15) { // driftwood: grey-brown, its grain running along it, darker in the cracks
+        float grain = 0.5 + 0.5 * sin(p.x * 90.0 + 6.0 * fbm(p.yz * 14.0));
+        return mix(vec3(0.24, 0.16, 0.09), vec3(0.46, 0.36, 0.25), grain * 0.6 + speck * 0.3);
+    }
+    if (type == 0 && Theme > 0.5 && Theme < 1.5) { // reef rock: crusted with coral, sponges and coralline algae
+        float h = hash22(floor(p.xz * 18.0) + floor(p.y * 18.0)).x;
+        vec3 c = h < 0.3 ? vec3(0.85, 0.35, 0.5) : h < 0.55 ? vec3(0.55, 0.3, 0.75) : h < 0.75 ? vec3(0.95, 0.6, 0.25) : vec3(0.75, 0.7, 0.62);
+        return c * (0.75 + 0.3 * speck);
+    }
     if (type == 0) {
         vec3 c = mix(vec3(0.45, 0.43, 0.39), vec3(0.3, 0.28, 0.25), speck * 0.7 + rnd * 0.3);
+        if (Theme > 1.5) c = mix(vec3(0.36, 0.33, 0.28), vec3(0.22, 0.2, 0.17), speck * 0.7 + rnd * 0.3); // (smooth river stones)
         return mix(c, vec3(0.22, 0.4, 0.15), smoothstep(0.55, 0.9, n.y) * 0.6); // (moss on top)
     }
     if (type == 1) {
@@ -973,7 +995,7 @@ void main() {
         float sz = float(pk / 256) / 10.0;
         vec3 base = dd.xyz;
         gDecoPhase = chestPhase(base);
-        float rad = (type == 8 ? 0.7 : type == 13 ? 0.56 : type == 14 ? 0.25 : 0.5) * sz;
+        float rad = (type == 8 ? 0.7 : type == 15 ? 0.66 : type == 13 ? 0.56 : type == 14 ? 0.25 : 0.5) * sz;
         vec3 oc = rot - (base + vec3(0.0, (type == 13 ? 0.5 : 0.2) * sz, 0.0));
         gDecoSz = sz;
         float bq = dot(oc, rd), cq = dot(oc, oc) - rad * rad;
@@ -1115,7 +1137,17 @@ void main() {
             // a fine, lighter grain (no dark patches: they looked like shadows)
             float pebble = 0.94 + 0.1 * hash22(floor(p.xz * 30.0)).x;
             col = vec3(0.85, 0.75, 0.52) * pebble * 0.82;
-            col += vec3(0.6, 0.85, 1.0) * caustics(p.xz, t) * 0.55;
+            if (Theme > 0.5 && Theme < 1.5) col = vec3(0.97, 0.94, 0.86) * pebble * 0.85; // (the reef's white coral sand)
+            if (Theme > 1.5) { // (the river's dark sand, with leaves fallen in)
+                col = mix(vec3(0.36, 0.27, 0.17), vec3(0.24, 0.18, 0.11), fbm(p.xz * 7.0)) * pebble;
+                vec2 lc = floor(p.xz * 6.0);
+                vec2 lh = hash22(lc + 9.1);
+                vec2 lq = fract(p.xz * 6.0) - 0.5 - (lh - 0.5) * 0.4;
+                float la = lh.x * 6.28;
+                lq = vec2(cos(la) * lq.x + sin(la) * lq.y, -sin(la) * lq.x + cos(la) * lq.y);
+                if (lh.y > 0.72 && length(lq * vec2(1.0, 2.2)) < 0.22) col = mix(vec3(0.42, 0.22, 0.08), vec3(0.55, 0.36, 0.12), lh.x);
+            }
+            col += vec3(0.6, 0.85, 1.0) * caustics(p.xz, t) * (Theme > 1.5 ? 0.25 : 0.55);
             if (Deep > 0.5) { // (the deep sea floor: grey ooze, no sunlight playing on it)
                 col = mix(vec3(0.3, 0.32, 0.36), vec3(0.42, 0.43, 0.46), fbm(p.xz * 9.0)) * pebble;
             }
@@ -1136,6 +1168,8 @@ void main() {
             } else {
             col = Ocean > 0.5 ? mix(vec3(0.0, 0.08, 0.2), vec3(0.04, 0.3, 0.5), p.y / BoxSize.y)
                               : mix(vec3(0.02, 0.18, 0.3), vec3(0.1, 0.45, 0.55), p.y / BoxSize.y);
+            if (Theme > 0.5 && Theme < 1.5) col = mix(vec3(0.02, 0.25, 0.38), vec3(0.2, 0.62, 0.7), p.y / BoxSize.y);
+            if (Theme > 1.5) col = mix(vec3(0.05, 0.08, 0.03), vec3(0.2, 0.24, 0.1), p.y / BoxSize.y);
             for (int k = 0; k < 3; k++) {
                 float fk = float(k);
                 float spacing = 0.55 + 0.2 * fk;
@@ -1149,7 +1183,7 @@ void main() {
                     if (Ocean > 0.5) col = mix(vec3(0.25, 0.22, 0.05), vec3(0.45, 0.42, 0.1), wall.y / hgt) * (0.7 + 0.2 * fk); // kelp
                 }
             }
-            if (Ocean > 0.5) { // coral along the bottom of the glass
+            if (Ocean > 0.5 || (Theme > 0.5 && Theme < 1.5)) { // coral along the bottom of the glass
                 float ci = floor(wall.x / 0.7);
                 vec2 cc = vec2((ci + 0.5) * 0.7, 0.12 + 0.12 * hash11(ci * 5.1));
                 float r = 0.12 + 0.12 * hash11(ci * 2.9);
@@ -1183,9 +1217,11 @@ void main() {
     col = mix(col, vec3(0.6, 0.8, 0.88), 0.07 * crossed);
     vec3 waterCol = Ocean > 0.5 ? mix(vec3(0.0, 0.1, 0.24), vec3(0.05, 0.38, 0.58), clamp(entry.y / BoxSize.y, 0.0, 1.0))
                                 : mix(vec3(0.02, 0.2, 0.32), vec3(0.15, 0.55, 0.62), clamp(entry.y / BoxSize.y, 0.0, 1.0));
+    if (Theme > 0.5 && Theme < 1.5) waterCol = mix(vec3(0.02, 0.3, 0.4), vec3(0.18, 0.66, 0.7), clamp(entry.y / BoxSize.y, 0.0, 1.0));
+    if (Theme > 1.5) waterCol = mix(vec3(0.07, 0.08, 0.03), vec3(0.3, 0.28, 0.11), clamp(entry.y / BoxSize.y, 0.0, 1.0)); // (tea-coloured)
     waterCol = lightWater(clamp(entry.y / BoxSize.y, 0.0, 1.0), waterCol);
     if (Deep > 0.5) waterCol = mix(vec3(0.0, 0.008, 0.03), vec3(0.0, 0.03, 0.08), clamp(entry.y / BoxSize.y, 0.0, 1.0));
-    col = mix(col, waterCol, 1.0 - exp(-travel * (Ocean > 0.5 ? 0.22 : 0.3)));
+    col = mix(col, waterCol, 1.0 - exp(-travel * (Ocean > 0.5 ? 0.22 : Theme > 1.5 ? 0.42 : Theme > 0.5 ? 0.18 : 0.3)));
     col += vec3(0.25, 0.5, 0.55) * 0.08 * (0.5 + 0.5 * sin(entry.x * 4.0 + entry.z * 3.0 + entry.y * 2.0 + t * 1.5));
 
     // looking down through the top: the surface ripples catch the light

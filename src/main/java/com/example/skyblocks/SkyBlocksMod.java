@@ -80,6 +80,8 @@ public class SkyBlocksMod {
         event.accept(ModItems.AQUARIUM.get());
         event.accept(ModItems.OCEAN_AQUARIUM.get());
         event.accept(ModItems.DEEP_SEA_AQUARIUM.get());
+        event.accept(ModItems.REEF_AQUARIUM.get());
+        event.accept(ModItems.JUNGLE_AQUARIUM.get());
         event.accept(ModItems.AQUARIUM_STAND.get());
         event.accept(ModItems.AQUARIUM_LID.get());
         event.accept(ModItems.VANILLA_AQUARIUM.get());

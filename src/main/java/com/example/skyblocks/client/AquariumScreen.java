@@ -18,11 +18,14 @@ public class AquariumScreen extends Screen {
 
     private final boolean ocean;
     private final boolean deep;
+    private final int theme;
 
-    public AquariumScreen(boolean ocean, boolean deep) {
-        super(Component.translatable(deep ? "screen.skyblocks.deep_sea_aquarium" : ocean ? "screen.skyblocks.ocean_aquarium" : "screen.skyblocks.aquarium"));
+    public AquariumScreen(boolean ocean, boolean deep, int theme) {
+        super(Component.translatable(theme == 1 ? "block.skyblocks.reef_aquarium" : theme == 2 ? "block.skyblocks.jungle_aquarium"
+                : deep ? "screen.skyblocks.deep_sea_aquarium" : ocean ? "screen.skyblocks.ocean_aquarium" : "screen.skyblocks.aquarium"));
         this.ocean = ocean;
         this.deep = deep;
+        this.theme = theme;
     }
 
     /** As tall as its rows of buttons need (the ocean aquarium has more kinds). */
@@ -39,13 +42,15 @@ public class AquariumScreen extends Screen {
     }
 
     private int[] kinds() {
-        return deep ? AquariumRenderer.DEEP_KINDS : ocean ? AquariumRenderer.OCEAN_KINDS : AquariumRenderer.NORMAL_KINDS;
+        return theme == 1 ? AquariumRenderer.REEF_KINDS : theme == 2 ? AquariumRenderer.JUNGLE_KINDS
+                : deep ? AquariumRenderer.DEEP_KINDS : ocean ? AquariumRenderer.OCEAN_KINDS : AquariumRenderer.NORMAL_KINDS;
     }
 
     /** Is this kind in more than one type of aquarium (one setting for them all)? */
     private static boolean shared(int kind) {
         int in = 0;
-        for (int[] list : new int[][] {AquariumRenderer.NORMAL_KINDS, AquariumRenderer.OCEAN_KINDS, AquariumRenderer.DEEP_KINDS}) {
+        for (int[] list : new int[][] {AquariumRenderer.NORMAL_KINDS, AquariumRenderer.OCEAN_KINDS, AquariumRenderer.DEEP_KINDS,
+                AquariumRenderer.REEF_KINDS, AquariumRenderer.JUNGLE_KINDS}) {
             for (int k : list) {
                 if (k == kind) {
                     in++;

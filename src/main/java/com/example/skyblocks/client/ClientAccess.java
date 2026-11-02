@@ -22,8 +22,8 @@ public final class ClientAccess {
         }
     }
 
-    public static void openAquarium(boolean ocean, boolean deep) {
-        Minecraft.getInstance().setScreen(new AquariumScreen(ocean, deep));
+    public static void openAquarium(boolean ocean, boolean deep, int theme) {
+        Minecraft.getInstance().setScreen(new AquariumScreen(ocean, deep, theme));
     }
 
     /** An aquarium lid clicked: its tank's new light, said over the hotbar. */

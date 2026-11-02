@@ -266,5 +266,10 @@
   "screen.skyblocks.neon_font_wide": "Letters: Wide",
   "screen.skyblocks.neon_font_narrow": "Letters: Narrow",
   "screen.skyblocks.neon_pick_main": "Colours set: Main",
-  "screen.skyblocks.neon_pick_fade": "Colours set: Fade to"
+  "screen.skyblocks.neon_pick_fade": "Colours set: Fade to",
+  "block.skyblocks.reef_aquarium": "Coral Reef Aquarium",
+  "tooltip.skyblocks.reef_aquarium": "White sand, coral and anemones, reef fish. Touching blocks make one tank. Sneak + right-click: choose which fish",
+  "block.skyblocks.jungle_aquarium": "Jungle River Aquarium",
+  "tooltip.skyblocks.jungle_aquarium": "Tea-coloured water, driftwood and plants, piranhas and tetras. Touching blocks make one tank. Sneak + right-click: choose which fish",
+  "fish.skyblocks.piranha": "Piranha"
 }

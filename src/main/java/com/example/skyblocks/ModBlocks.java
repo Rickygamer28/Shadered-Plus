@@ -63,6 +63,16 @@ public final class ModBlocks {
             properties -> new AquariumBlock(properties, false, true),
             BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS).lightLevel(state -> 2));
 
+    /** The coral reef aquarium: white sand, corals and anemones, reef fish (clownfish, tangs, pufferfish...). */
+    public static final DeferredBlock<AquariumBlock> REEF_AQUARIUM = BLOCKS.registerBlock("reef_aquarium",
+            properties -> new AquariumBlock(properties, false, false, 1),
+            BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS).lightLevel(state -> 7));
+
+    /** The jungle river aquarium: tea-coloured water, driftwood and plants, piranhas, tetras, angelfish, an axolotl. */
+    public static final DeferredBlock<AquariumBlock> JUNGLE_AQUARIUM = BLOCKS.registerBlock("jungle_aquarium",
+            properties -> new AquariumBlock(properties, false, false, 2),
+            BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS).lightLevel(state -> 5));
+
     /** An aquarium stand: a dark wood cabinet for a tank to sit on. */
     public static final DeferredBlock<AquariumStandBlock> AQUARIUM_STAND = BLOCKS.registerBlock("aquarium_stand", AquariumStandBlock::new,
             BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.DARK_OAK_PLANKS));

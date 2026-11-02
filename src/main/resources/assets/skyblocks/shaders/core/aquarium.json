@@ -7,7 +7,14 @@
         }
     ],
     "uniforms": [
-        { "name": "Lite", "type": "float", "count": 1, "values": [ 0.0 ] },
+        {
+            "name": "Lite",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
+            ]
+        },
         {
             "name": "ModelViewMat",
             "type": "matrix4x4",
@@ -590,6 +597,14 @@
         },
         {
             "name": "Light",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
+            ]
+        },
+        {
+            "name": "Theme",
             "type": "float",
             "count": 1,
             "values": [
