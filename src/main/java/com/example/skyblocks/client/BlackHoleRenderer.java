@@ -83,10 +83,17 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                                     shader.safeGetUniform("HoleTime").set(LavaLampRenderer.seconds());
                                     shader.safeGetUniform("ItemMode").set(0.0F);
                                 }
-                            }, () -> {}))
+                                if (inside) { // (in front of everything, but its depth still written: the test on, always passing)
+                                    RenderSystem.depthFunc(GL11.GL_ALWAYS);
+                                }
+                            }, () -> {
+                                if (inside) {
+                                    RenderSystem.depthFunc(GL11.GL_LEQUAL);
+                                }
+                            }))
                             .setTransparencyState(NO_TRANSPARENCY)
                             .setWriteMaskState(COLOR_DEPTH_WRITE) // (its depth: see the shader)
-                            .setDepthTestState(inside ? NO_DEPTH_TEST : LEQUAL_DEPTH_TEST)
+                            .setDepthTestState(LEQUAL_DEPTH_TEST)
                             .setCullState(NO_CULL) // (both sides: still there with the eye inside the box)
                             .createCompositeState(false));
         }
