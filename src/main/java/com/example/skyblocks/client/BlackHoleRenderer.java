@@ -228,6 +228,18 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                 boolean dbg = RenderTest.ON && job.big() && (debugDraws % 100) == 1;
                 int[] before = dbg ? centre(job) : null;
                 int e0 = dbg ? GL11.glGetError() : 0;
+                if (dbg) {
+                    int[] sb = new int[4];
+                    GL11.glGetIntegerv(GL11.GL_SCISSOR_BOX, sb);
+                    float[] dr = new float[2];
+                    GL11.glGetFloatv(GL11.GL_DEPTH_RANGE, dr);
+                    int[] vp = new int[4];
+                    GL11.glGetIntegerv(GL11.GL_VIEWPORT, vp);
+                    SkyBlocksMod.LOGGER.info("black hole late state: scissor {} {}, stencil {}, depth range {}..{}, viewport {}, polygon mode {}, rasterizer discard {}, sample mask {}",
+                            GL11.glIsEnabled(GL11.GL_SCISSOR_TEST), java.util.Arrays.toString(sb), GL11.glIsEnabled(GL11.GL_STENCIL_TEST), dr[0], dr[1],
+                            java.util.Arrays.toString(vp), GL11.glGetInteger(GL11.GL_POLYGON_MODE), GL11.glIsEnabled(org.lwjgl.opengl.GL30.GL_RASTERIZER_DISCARD),
+                            GL11.glIsEnabled(org.lwjgl.opengl.GL32.GL_SAMPLE_MASK));
+                }
                 box(main.getBuffer(type), job.pose(), job.big(), job.colour(), job.seed());
                 main.endBatch(type); // (each its own copy of the picture: one hole bends another)
                 if (dbg) {
