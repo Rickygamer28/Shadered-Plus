@@ -67,5 +67,8 @@ public final class ModBlockEntities {
     public static final Supplier<BlockEntityType<SpeakerBlockEntity>> SPEAKER = TYPES.register("speaker",
             () -> BlockEntityType.Builder.of(SpeakerBlockEntity::new, ModBlocks.SPEAKER.get()).build(null));
 
+    public static final Supplier<BlockEntityType<SmallTankBlockEntity>> SMALL_TANK = TYPES.register("small_tank",
+            () -> BlockEntityType.Builder.of(SmallTankBlockEntity::new, ModBlocks.FISHBOWL.get(), ModBlocks.TALL_TANK.get(), ModBlocks.SLIM_TANK.get()).build(null));
+
     private ModBlockEntities() {}
 }

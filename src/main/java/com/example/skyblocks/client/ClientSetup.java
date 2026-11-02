@@ -48,6 +48,7 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.SPEAKER.get(), SpeakerRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.LAVA_LAMP.get(), LavaLampRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.PLASMA_BALL.get(), PlasmaBallRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.SMALL_TANK.get(), SmallTankRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.MAGMA_BASIN.get(), MagmaBasinRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.BLACK_HOLE.get(), BlackHoleRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.FIRE.get(), WallFireRenderer::new);
@@ -183,6 +184,20 @@ public final class ClientSetup {
                     return renderer;
                 }
             }, bigHole ? ModItems.BIG_BLACK_HOLE.get() : ModItems.BLACK_HOLE.get());
+        }
+        for (int shape = 0; shape < 3; shape++) {
+            final int kind = shape;
+            event.registerItem(new IClientItemExtensions() {
+                private SmallTankItemRenderer renderer;
+
+                @Override
+                public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                    if (renderer == null) {
+                        renderer = new SmallTankItemRenderer(kind);
+                    }
+                    return renderer;
+                }
+            }, kind == 0 ? ModItems.FISHBOWL.get() : kind == 1 ? ModItems.TALL_TANK.get() : ModItems.SLIM_TANK.get());
         }
         event.registerItem(new IClientItemExtensions() {
             private PlasmaBallItemRenderer renderer;

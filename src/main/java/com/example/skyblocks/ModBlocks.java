@@ -169,6 +169,17 @@ public final class ModBlocks {
                     .lightLevel(state -> state.getValue(LavaLampBlock.LIT) ? 11 : 3)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLUE));
 
+    /** The small fish tanks (SmallTankBlock, client/SmallTankRenderer): a fishbowl, a tall cylinder tank, a slim wall tank. */
+    public static final DeferredBlock<SmallTankBlock> FISHBOWL = BLOCKS.registerBlock("fishbowl", p -> new SmallTankBlock(p, SmallTankBlock.BOWL),
+            BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS).noOcclusion()
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_LIGHT_BLUE));
+    public static final DeferredBlock<SmallTankBlock> TALL_TANK = BLOCKS.registerBlock("tall_tank", p -> new SmallTankBlock(p, SmallTankBlock.TALL),
+            BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.GLASS).noOcclusion().lightLevel(state -> 6)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_LIGHT_BLUE));
+    public static final DeferredBlock<SmallTankBlock> SLIM_TANK = BLOCKS.registerBlock("slim_tank", p -> new SmallTankBlock(p, SmallTankBlock.SLIM),
+            BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.GLASS).noOcclusion().lightLevel(state -> 6)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_LIGHT_BLUE));
+
     /** A koi pond (KoiPondBlock, client/KoiPondRenderer). */
     public static final DeferredBlock<KoiPondBlock> KOI_POND = BLOCKS.registerBlock("koi_pond", KoiPondBlock::new,
             BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.STONE).noOcclusion()

@@ -85,5 +85,9 @@ public final class ModItems {
 
     public static final DeferredItem<BlockItem> INFINITY_CUBE = ITEMS.registerSimpleBlockItem("infinity_cube", ModBlocks.INFINITY_CUBE);
 
+    public static final DeferredItem<BlockItem> FISHBOWL = ITEMS.registerSimpleBlockItem("fishbowl", ModBlocks.FISHBOWL);
+    public static final DeferredItem<BlockItem> TALL_TANK = ITEMS.registerSimpleBlockItem("tall_tank", ModBlocks.TALL_TANK);
+    public static final DeferredItem<BlockItem> SLIM_TANK = ITEMS.registerSimpleBlockItem("slim_tank", ModBlocks.SLIM_TANK);
+
     private ModItems() {}
 }

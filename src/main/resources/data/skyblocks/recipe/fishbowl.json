@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "G G",
+    "GFG",
+    " G "
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:glass"
+    },
+    "F": {
+      "tag": "minecraft:fishes"
+    }
+  },
+  "result": {
+    "id": "skyblocks:fishbowl",
+    "count": 1
+  }
+}

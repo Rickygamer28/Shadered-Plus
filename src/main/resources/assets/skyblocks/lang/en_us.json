@@ -271,5 +271,20 @@
   "tooltip.skyblocks.reef_aquarium": "White sand, coral and anemones, reef fish. Touching blocks make one tank. Sneak + right-click: choose which fish",
   "block.skyblocks.jungle_aquarium": "Jungle River Aquarium",
   "tooltip.skyblocks.jungle_aquarium": "Tea-coloured water, driftwood and plants, piranhas and tetras. Touching blocks make one tank. Sneak + right-click: choose which fish",
-  "fish.skyblocks.piranha": "Piranha"
+  "fish.skyblocks.piranha": "Piranha",
+  "block.skyblocks.fishbowl": "Fishbowl",
+  "block.skyblocks.tall_tank": "Tall Cylinder Tank",
+  "block.skyblocks.slim_tank": "Slim Wall Tank",
+  "tooltip.skyblocks.small_tank.0": "A round glass bowl with a goldfish or two. Right-click: other fish",
+  "tooltip.skyblocks.small_tank.1": "Stack them: one tall glass column of fish, plants and bubbles. Right-click: other fish",
+  "tooltip.skyblocks.small_tank.2": "Hangs on a wall; side by side and stacked they make one bigger tank. Right-click: other fish",
+  "message.skyblocks.small_tank.0.0": "Goldfish",
+  "message.skyblocks.small_tank.0.1": "A betta",
+  "message.skyblocks.small_tank.0.2": "Guppies",
+  "message.skyblocks.small_tank.1.0": "Community tank: angelfish, discus, tetras, guppies",
+  "message.skyblocks.small_tank.1.1": "Goldfish and a betta",
+  "message.skyblocks.small_tank.1.2": "Clownfish and tangs",
+  "message.skyblocks.small_tank.2.0": "A school of neon tetras",
+  "message.skyblocks.small_tank.2.1": "Guppies and a betta",
+  "message.skyblocks.small_tank.2.2": "Reef: clownfish, a tang, tetras"
 }

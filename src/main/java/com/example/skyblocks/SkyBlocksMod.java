@@ -66,6 +66,9 @@ public class SkyBlocksMod {
         event.accept(ModItems.MUSIC_VISUALIZER.get());
         event.accept(ModItems.HOLOGRAM_PROJECTOR.get());
         event.accept(ModItems.JELLYFISH_TANK.get());
+        event.accept(ModItems.FISHBOWL.get());
+        event.accept(ModItems.TALL_TANK.get());
+        event.accept(ModItems.SLIM_TANK.get());
         event.accept(ModItems.KOI_POND.get());
         event.accept(ModItems.VANILLA_KOI_POND.get());
         event.accept(ModItems.BAMBOO_SPOUT.get());
