@@ -63,6 +63,8 @@ public class SkyBlocksMod {
         event.accept(ModItems.PLASMA_BALL.get());
         event.accept(ModItems.TESLA_COIL.get());
         event.accept(ModItems.GALAXY_PROJECTOR.get());
+        event.accept(ModItems.ORRERY.get());
+        event.accept(ModItems.PLANETARIUM.get());
         event.accept(ModItems.MAGMA_BASIN.get());
         event.accept(ModItems.BLACK_HOLE.get());
         event.accept(ModItems.BIG_BLACK_HOLE.get());

@@ -149,6 +149,14 @@ public final class ModBlocks {
                     .lightLevel(state -> state.getValue(GalaxyProjectorBlock.LIT) ? 4 : 0)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE));
 
+    /** Working models of the solar system (SolarSystemBlock, client/SolarSystemRenderer): a brass orrery, a hologram planetarium. */
+    public static final DeferredBlock<SolarSystemBlock> ORRERY = BLOCKS.registerBlock("orrery", p -> new SolarSystemBlock(p, false),
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 7)
+                    .mapColor(net.minecraft.world.level.material.MapColor.GOLD));
+    public static final DeferredBlock<SolarSystemBlock> PLANETARIUM = BLOCKS.registerBlock("planetarium", p -> new SolarSystemBlock(p, true),
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 9)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLUE));
+
     /** A magma basin: churning lava in a stone basin, basins side by side make one pool (MagmaBasinBlock). */
     public static final DeferredBlock<MagmaBasinBlock> MAGMA_BASIN = BLOCKS.registerBlock("magma_basin", MagmaBasinBlock::new,
             BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.POLISHED_DEEPSLATE).noOcclusion().requiresCorrectToolForDrops()

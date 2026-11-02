@@ -95,5 +95,8 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> TESLA_COIL = ITEMS.registerSimpleBlockItem("tesla_coil", ModBlocks.TESLA_COIL);
     public static final DeferredItem<BlockItem> GALAXY_PROJECTOR = ITEMS.registerSimpleBlockItem("galaxy_projector", ModBlocks.GALAXY_PROJECTOR);
 
+    public static final DeferredItem<BlockItem> ORRERY = ITEMS.registerSimpleBlockItem("orrery", ModBlocks.ORRERY);
+    public static final DeferredItem<BlockItem> PLANETARIUM = ITEMS.registerSimpleBlockItem("planetarium", ModBlocks.PLANETARIUM);
+
     private ModItems() {}
 }

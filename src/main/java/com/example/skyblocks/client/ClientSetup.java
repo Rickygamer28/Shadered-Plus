@@ -50,6 +50,7 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.PLASMA_BALL.get(), PlasmaBallRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SMALL_TANK.get(), SmallTankRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.TESLA_COIL.get(), TeslaCoilRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.SOLAR_SYSTEM.get(), SolarSystemRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.GALAXY_PROJECTOR.get(), GalaxyProjectorRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.MAGMA_BASIN.get(), MagmaBasinRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.BLACK_HOLE.get(), BlackHoleRenderer::new);
@@ -186,6 +187,19 @@ public final class ClientSetup {
                     return renderer;
                 }
             }, bigHole ? ModItems.BIG_BLACK_HOLE.get() : ModItems.BLACK_HOLE.get());
+        }
+        for (boolean holo : new boolean[] {false, true}) {
+            event.registerItem(new IClientItemExtensions() {
+                private SolarSystemItemRenderer renderer;
+
+                @Override
+                public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                    if (renderer == null) {
+                        renderer = new SolarSystemItemRenderer(holo);
+                    }
+                    return renderer;
+                }
+            }, holo ? ModItems.PLANETARIUM.get() : ModItems.ORRERY.get());
         }
         for (int shape = 0; shape < 3; shape++) {
             final int kind = shape;
