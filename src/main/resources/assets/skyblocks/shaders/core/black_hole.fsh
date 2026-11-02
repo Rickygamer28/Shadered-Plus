@@ -20,6 +20,7 @@ uniform mat4 ModelViewMat;
 uniform mat4 ProjMat;
 uniform float HoleTime;
 uniform float ItemMode;
+uniform float Debug;
 
 out vec4 fragColor;
 
@@ -52,6 +53,7 @@ void main() {
     vec3 oc = lp - C;
     float b = dot(oc, rd), c = dot(oc, oc) - reach * reach, h = b * b - c;
     if (h < 0.0) {
+        if (!big && ItemMode < 0.5 && Debug > 0.5) { fragColor = vec4(1.0, 0.0, 1.0, 1.0); return; }
         discard;
     }
     float t0 = max(-b - sqrt(h), 0.0);

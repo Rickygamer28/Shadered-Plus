@@ -63,7 +63,7 @@ void main() {
     vec3 tint = vColor.rgb;
     // the whole surface creeps slowly, with a gentle swirl
     vec2 flow = vec2(t * 0.018, t * 0.011) + vec2(fbm(wpos * 0.6 + t * 0.03), fbm(wpos * 0.6 - t * 0.025 + 5.0)) * 0.35;
-    vec2 p = wpos * 1.7 + flow;
+    vec2 p = wpos * 2.3 + flow;
     vec3 pl = plates(p, t);
     // the cracks: wider where the plates pull apart (slowly, plate by plate), with ragged edges
     float open = 0.10 + 0.22 * smoothstep(0.15, 0.85, vnoise(p * 0.7 + t * 0.05)) + 0.06 * (pl.z - 0.5);
@@ -73,7 +73,7 @@ void main() {
 
     // seen a little below: the molten lava under the crust shifts with the view (depth)
     vec2 under = wpos + rd.xz / max(-rd.y, 0.25) * 0.035;
-    vec2 pu = under * 1.7 + flow;
+    vec2 pu = under * 2.3 + flow;
     float swirl = fbm(pu * 2.3 + vec2(t * 0.12, -t * 0.09));
     float heat = clamp(0.35 + 0.65 * (1.0 - smoothstep(0.0, open, plates(pu, t).x + rag)) + (swirl - 0.5) * 0.5, 0.0, 1.0);
     float pulse = 0.85 + 0.15 * sin(t * 1.7 + swirl * 6.0); // (it breathes)
