@@ -2,7 +2,7 @@
   "textures": {
     "particle": "skyblocks:block/round_mirror",
     "front": "skyblocks:block/round_mirror",
-    "back": "minecraft:block/dark_oak_planks"
+    "back": "skyblocks:block/round_mirror"
   },
   "elements": [
     {
@@ -29,12 +29,11 @@
         "north": {
           "texture": "#back",
           "uv": [
-            0,
-            0,
             16,
+            0,
+            0,
             16
-          ],
-          "cullface": "north"
+          ]
         },
         "east": {
           "texture": "#back",
@@ -74,5 +73,6 @@
         }
       }
     }
-  ]
+  ],
+  "render_type": "minecraft:cutout"
 }

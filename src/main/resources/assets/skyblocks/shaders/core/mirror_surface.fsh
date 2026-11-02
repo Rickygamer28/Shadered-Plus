@@ -33,11 +33,11 @@ void main() {
 
     if (kind == 1) { // round
         float r = length(p - 0.5);
-        if (r > 0.475) {
+        if (r > 0.5) {
             discard;
         }
         if (r > 0.43) {
-            float k = (r - 0.43) / 0.045;
+            float k = (r - 0.43) / 0.07;
             vec2 dir = normalize(p - 0.5);
             float bevel = 0.55 + 0.45 * dot(dir * (k < 0.5 ? -1.0 : 1.0), normalize(vec2(-0.6, 0.8)));
             vec3 gold = mix(vec3(0.55, 0.38, 0.1), vec3(1.0, 0.85, 0.4), bevel) * (0.8 + 0.2 * sin(k * 3.14159));

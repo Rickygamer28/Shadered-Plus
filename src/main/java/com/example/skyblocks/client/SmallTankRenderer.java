@@ -132,7 +132,7 @@ public class SmallTankRenderer implements BlockEntityRenderer<SmallTankBlockEnti
     /** The box round the tank, in its own space turned to its wall (the same numbers as the shader's), faces out. */
     static void box(VertexConsumer vc, Matrix4f m, int shape, int face, int w, int h, float lit, int variant, float seed) {
         float[] lo = shape == SmallTankBlock.BOWL ? new float[] {0.1F, 0.0F, 0.1F} : shape == SmallTankBlock.TALL ? new float[] {0.07F, 0.125F, 0.07F} : new float[] {0, 0, 0};
-        float[] hi = shape == SmallTankBlock.BOWL ? new float[] {0.9F, 0.72F, 0.9F} : shape == SmallTankBlock.TALL ? new float[] {0.93F, h - 0.125F, 0.93F} : new float[] {w, h, 0.3125F};
+        float[] hi = shape == SmallTankBlock.BOWL ? new float[] {0.9F, 0.72F, 0.9F} : shape == SmallTankBlock.TALL ? new float[] {w - 0.07F, h - 0.125F, w - 0.07F} : new float[] {w, h, 0.3125F};
         // (x along the wall, z out of it: the tank's axes and corner in the block's space)
         float[][] ex = {{1, 0, 0}, {0, 0, 1}, {-1, 0, 0}, {0, 0, -1}};
         float[][] ez = {{0, 0, 1}, {-1, 0, 0}, {0, 0, -1}, {1, 0, 0}};

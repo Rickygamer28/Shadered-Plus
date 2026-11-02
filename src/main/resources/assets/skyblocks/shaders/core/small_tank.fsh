@@ -41,10 +41,13 @@ float hash12(vec2 p) {
 const float SLIM_D = 0.3125; // (the slim tank's depth; client/SmallTankRenderer's box)
 const vec3 BOWL_C = vec3(0.5, 0.4, 0.5);
 const float BOWL_R = 0.38;
-const float CYL_R = 0.42;
 
 int gShape;
 float gW, gH;
+
+// (the tall tank: as wide as its footprint, gW blocks; its middle and radius)
+vec2 cylC() { return vec2(gW * 0.5); }
+float cylR() { return gW * 0.5 - 0.08; }
 
 float waterTop() {
     return gShape == 0 ? 0.56 : gShape == 1 ? gH - 0.3 : gH - 0.2;
@@ -74,8 +77,8 @@ vec2 container(vec3 ro, vec3 rd) {
         return vec2(max(s.x, y.x), min(s.y, y.y));
     }
     if (gShape == 1) {
-        vec2 o = ro.xz - 0.5, d = rd.xz;
-        float a = dot(d, d), b = dot(o, d), c = dot(o, o) - CYL_R * CYL_R;
+        vec2 o = ro.xz - cylC(), d = rd.xz;
+        float a = dot(d, d), b = dot(o, d), c = dot(o, o) - cylR() * cylR();
         vec2 s;
         if (a < 1e-8) {
             s = c < 0.0 ? vec2(-1e9, 1e9) : vec2(1e9, -1e9);
@@ -94,7 +97,7 @@ vec2 container(vec3 ro, vec3 rd) {
 
 vec3 glassNormal(vec3 p) {
     if (gShape == 0) return normalize(p - BOWL_C);
-    if (gShape == 1) return normalize(vec3(p.x - 0.5, 0.0, p.z - 0.5));
+    if (gShape == 1) return normalize(vec3(p.x - cylC().x, 0.0, p.z - cylC().y));
     return vec3(0.0, 0.0, 1.0);
 }
 
@@ -103,17 +106,38 @@ vec3 glassNormal(vec3 p) {
 int fishCount() {
     int v = int(info.w + 0.5);
     if (gShape == 0) return v == 0 ? 2 : v == 1 ? 1 : 3;
-    if (gShape == 1) return min(2 + 2 * int(gH + 0.5), v == 1 ? 5 : 8);
+    if (gShape == 1) {
+        int S = int(gW + 0.5);
+        if (S <= 1) return min(2 + 2 * int(gH + 0.5), v == 1 ? 4 : 7);
+        if (S == 2) return min(4 + 2 * int(gH + 0.5), 10);
+        return min(5 + 2 * int(gH + 0.5), 12);
+    }
     return min(int(gW * gH * 2.5 + 2.0), 9);
 }
 
 int fishKind(int i) {
     int v = int(info.w + 0.5);
     if (gShape == 0) return v == 0 ? 5 : v == 1 ? 6 : 8;                                 // goldfish / a betta / guppies
-    if (gShape == 1) {
-        if (v == 0) return i == 0 ? 4 : i == 1 ? 9 : i < 5 ? 3 : 8;                        // angelfish, discus, tetras, guppies
-        if (v == 1) return i == 0 ? 6 : 5;                                                  // goldfish and a betta
-        return i == 0 ? 1 : i == 1 ? 2 : 0;                                                 // a tang or two and clownfish
+    if (gShape == 1) { // (what lives in it goes by how wide it is)
+        int S = int(gW + 0.5);
+        if (S <= 1) {
+            if (v == 0) return i < 4 ? 3 : 8;                                               // neon tetras and guppies
+            if (v == 1) return i == 0 ? 6 : 8;                                              // a betta and guppies
+            return 5;                                                                       // goldfish
+        }
+        if (S == 2) {
+            if (v == 0) return i == 0 ? 4 : i == 1 ? 9 : i == 2 ? 4 : i < 7 ? 3 : 8;        // angelfish, discus, tetras, guppies
+            if (v == 1) return i == 0 ? 1 : i == 1 ? 2 : i == 2 ? 7 : i < 6 ? 0 : 28;       // reef: tangs, a pufferfish, clownfish
+            return i == 0 ? 6 : 5;                                                          // goldfish and a betta
+        }
+        if (S == 3) {
+            if (v == 0) return i == 0 ? 13 : i == 1 ? 14 : 17;                              // a sea turtle, a grouper, sardines
+            if (v == 1) return 15;                                                          // jellyfish
+            return i == 0 ? 7 : i < 3 ? 1 : i < 5 ? 2 : 0;                                  // a big reef
+        }
+        if (v == 0) return i == 0 ? 10 : 17;                                                // a little shark and a school of sardines
+        if (v == 1) return 15;                                                              // jellyfish
+        return i == 0 ? 12 : i == 1 ? 13 : 17;                                              // a manta ray, a turtle, sardines
     }
     if (v == 0) return 3;                                                                   // a school of neon tetras
     if (v == 1) return i == 0 ? 6 : 8;                                                      // guppies and a betta
@@ -121,13 +145,22 @@ int fishKind(int i) {
 }
 
 float fishSize(int kind) {
+    if (kind == 10) return 0.55;              // (the sea's big ones, scaled down to the tank)
+    if (kind == 12) return 0.5;
+    if (kind == 13) return 0.6;
+    if (kind == 14) return 0.5;
+    if (kind == 15) return 0.75;
+    if (kind == 17) return 0.45;
     return kind == 3 || kind == 8 ? 0.5 : kind == 4 || kind == 9 ? 0.62 : kind == 5 ? 0.62 : 0.58;
 }
+
+float gSqueeze = 0.0; // (a jellyfish's squeeze, for the fish just placed)
 
 void tankFish(int i, float t, out int kind, out vec3 c, out vec3 fwd, out vec3 up, out vec3 side, out float size) {
     float fi = float(i), s = extra.x * 37.0;
     kind = fishKind(i);
     size = fishSize(kind) * (0.9 + 0.2 * hash11(fi * 3.3 + s));
+    if (gShape == 1) size *= 1.0 + 0.3 * (gW - 1.0); // (the wider the tank, the bigger its fish)
     float dir = hash11(fi * 7.1 + s) > 0.5 ? 1.0 : -1.0;
     vec3 vel;
     if (gShape == 2) {
@@ -153,15 +186,30 @@ void tankFish(int i, float t, out int kind, out vec3 c, out vec3 fwd, out vec3 u
             r = 0.15 + 0.04 * sin(t * 0.31 + fi * 2.0);
             y = 0.3 + 0.08 * sin(t * 0.23 + fi * 1.7);
         } else {
-            r = 0.13 + 0.12 * hash11(fi * 8.3 + s) + 0.03 * sin(t * 0.3 + fi);
+            float R = cylR();
+            bool sardine = kind == 17;
+            if (sardine) { // (a school: round together, close)
+                w = 0.45 * (hash11(s) > 0.5 ? 1.0 : -1.0);
+                dir = w > 0.0 ? 1.0 : -1.0;
+                a = s + t * w + fi * 0.13;
+            }
+            r = (sardine ? 0.55 + 0.08 * sin(fi * 2.1) : 0.25 + 0.4 * hash11(fi * 8.3 + s)) * R + 0.03 * sin(t * 0.3 + fi);
             float yl = floorY() + 0.25, yh = waterTop() - 0.15;
-            y = mix(yl, yh, hash11(fi * 4.1 + s)) + 0.12 * sin(t * 0.17 + fi * 1.9);
+            y = mix(yl, yh, sardine ? 0.5 + 0.08 * sin(fi * 1.7) : hash11(fi * 4.1 + s)) + 0.12 * sin(t * 0.17 + (sardine ? 0.0 : fi * 1.9));
             y = clamp(y, yl, yh);
         }
-        c = vec3(0.5 + r * cos(a), y, 0.5 + r * sin(a));
+        c = vec3(cylC().x + r * cos(a), y, cylC().y + r * sin(a));
         vel = vec3(-sin(a), 0.05 * cos(t * 0.23 + fi * 1.7), cos(a)) * dir;
     }
     fwd = normalize(vel);
+    gSqueeze = 0.0;
+    if (kind == 15) { // (a jellyfish upright, drifting, squeezing and relaxing)
+        float jph = fract(t * 0.4 + fi * 0.37);
+        gSqueeze = smoothstep(0.0, 0.12, jph) * (1.0 - smoothstep(0.12, 0.9, jph));
+        c.xz = cylC() + (c.xz - cylC()) * 0.8 + 0.05 * vec2(sin(t * 0.13 + fi), cos(t * 0.11 + fi * 2.0));
+        c.y += 0.05 * gSqueeze;
+        fwd = vec3(1.0, 0.0, 0.0);
+    }
     up = vec3(0.0, 1.0, 0.0);
     side = normalize(cross(fwd, up));
     up = cross(side, fwd);
@@ -172,13 +220,13 @@ void tankSwim(int i, int kind, Species sp, float t, out float wave, out float fl
     wave = t * (9.0 - 5.0 * clamp(sp.body.x, 0.0, 1.0)) + fi * 2.0;
     flap = sin(t * 3.0 + fi * 1.3);
     gBeat = 1.0; gBend = 0.0; gFinSway = sin(t * 1.6 + fi); gMouth = 0.5 + 0.5 * sin(t * 2.3 + fi * 1.7);
-    gTime = t; gWalk = 0.0; gPulse = 0.0;
+    gTime = t; gWalk = 0.0; gPulse = gSqueeze;
 }
 
 // ---- the plants: blades of weed swaying ----
 
 int plantCount() {
-    return gShape == 0 ? 3 : gShape == 1 ? 7 : min(int(gW * 4.0), 16);
+    return gShape == 0 ? 3 : gShape == 1 ? min(7 * int(gW + 0.5), 16) : min(int(gW * 4.0), 16);
 }
 
 // blade j: its foot (x, z), height, and lean
@@ -187,8 +235,8 @@ vec4 blade(int j) {
     if (gShape == 0) return vec4(0.62 + 0.03 * fj, 0.42 + 0.04 * fj, 0.16 + 0.05 * hash11(fj + s), fj - 1.0);
     if (gShape == 1) {
         float a = fj * 2.1 + s;
-        float r = 0.27 + 0.06 * hash11(fj * 3.0 + s);
-        return vec4(0.5 + r * cos(a), 0.5 + r * sin(a), min(0.5 + (gH - 1.0) * (0.35 + 0.4 * hash11(fj * 5.0 + s)), waterTop() - floorY() - 0.1), hash11(fj * 7.0) - 0.5);
+        float r = cylR() * (0.62 + 0.18 * hash11(fj * 3.0 + s));
+        return vec4(cylC().x + r * cos(a), cylC().y + r * sin(a), min(0.5 + (gH - 1.0) * (0.35 + 0.4 * hash11(fj * 5.0 + s)), waterTop() - floorY() - 0.1), hash11(fj * 7.0) - 0.5);
     }
     float x = (fj + 0.5 + 0.6 * (hash11(fj * 3.0 + s) - 0.5)) * gW / float(plantCount());
     return vec4(x, 0.05 + 0.08 * hash11(fj * 9.0 + s), min(0.3 + (gH - 0.4) * 0.6 * hash11(fj * 5.0 + s), waterTop() - floorY() - 0.08), hash11(fj * 7.0) - 0.5);
@@ -209,13 +257,13 @@ float plantSDF(vec3 p, float t, out float along) {
         if (j >= n) break;
         vec4 b = blade(j);
         vec3 base = vec3(b.x, fl - 0.02, b.y);
-        if (abs(p.x - base.x) > 0.2 || abs(p.z - base.z) > 0.2 || p.y > fl + b.z + 0.05) continue;
+        if (abs(p.x - base.x) > 0.2 * (gShape == 1 ? gW : 1.0) || abs(p.z - base.z) > 0.2 * (gShape == 1 ? gW : 1.0) || p.y > fl + b.z + 0.05) continue;
         vec3 prev = base;
         for (int k = 1; k <= 3; k++) {
             float u = float(k) / 3.0;
             float sw = (0.03 + 0.04 * b.z) * u * u * sin(t * 0.8 + float(j) * 1.7 + u * 2.0);
             vec3 q = base + vec3(b.w * 0.08 * u + sw, b.z * u, 0.5 * sw * (gShape == 2 ? 0.3 : 1.0));
-            float r = mix(0.014, 0.004, u);
+            float r = mix(0.014, 0.004, u) * (gShape == 1 ? sqrt(gW) : 1.0);
             float d = sdSeg(p, prev, q) - r;
             if (d < best) {
                 best = d;
@@ -336,14 +384,14 @@ void main() {
     int fishI = -1;
     {
         int n = fishCount();
-        for (int i = 0; i < 9; i++) {
+        for (int i = 0; i < 12; i++) {
             if (i >= n) break;
             int kind;
             vec3 c, fwd, up, side;
             float size;
             tankFish(i, t, kind, c, fwd, up, side, size);
             Species sp = species(kind);
-            float reach = size * (length(sp.body) + sp.tail.x * 2.5 + sp.tail.y * 0.6 + sp.fin.z + sp.fin.y + 0.03);
+            float reach = size * (length(sp.body) + sp.tail.x * 2.5 + sp.tail.y * (kind == 15 ? 2.5 : 0.6) + sp.fin.z + sp.fin.y + 0.03);
             vec3 oc = ro - c;
             float bq = dot(oc, rd), cq = dot(oc, oc) - reach * reach, disc = bq * bq - cq;
             if (disc < 0.0) continue;
@@ -357,7 +405,7 @@ void main() {
             int part;
             vec3 q;
             for (int k = 0; k < 64; k++) {
-                float dd = fishSDF(kind, sp, lo + ld * (tm / size), wave, flap, 0.0, part, q) * size;
+                float dd = fishSDF(kind, sp, lo + ld * (tm / size), wave, flap, gSqueeze, part, q) * size;
                 if (dd < 0.0006) { hitT = tm; what = 4; fishI = i; break; }
                 tm += max(dd * 0.75, 0.0006);
                 if (tm > f1) break;
@@ -396,13 +444,13 @@ void main() {
         vec3 pl = lo + ld * (hitT / size);
         int part;
         vec3 q;
-        fishSDF(kind, sp, pl, wave, flap, 0.0, part, q);
+        fishSDF(kind, sp, pl, wave, flap, gSqueeze, part, q);
         float ee = max(0.0007, 0.008 * min(sp.body.x, sp.body.y));
         vec2 e = vec2(ee, -ee);
         int dt2;
         vec3 dq;
-        vec3 g = e.xyy * fishSDF(kind, sp, pl + e.xyy, wave, flap, 0.0, dt2, dq) + e.yyx * fishSDF(kind, sp, pl + e.yyx, wave, flap, 0.0, dt2, dq)
-               + e.yxy * fishSDF(kind, sp, pl + e.yxy, wave, flap, 0.0, dt2, dq) + e.xxx * fishSDF(kind, sp, pl + e.xxx, wave, flap, 0.0, dt2, dq);
+        vec3 g = e.xyy * fishSDF(kind, sp, pl + e.xyy, wave, flap, gSqueeze, dt2, dq) + e.yyx * fishSDF(kind, sp, pl + e.yyx, wave, flap, gSqueeze, dt2, dq)
+               + e.yxy * fishSDF(kind, sp, pl + e.yxy, wave, flap, gSqueeze, dt2, dq) + e.xxx * fishSDF(kind, sp, pl + e.xxx, wave, flap, gSqueeze, dt2, dq);
         vec3 n = normalize(fwd * g.x + up * g.y + side * g.z);
         vec3 base = fishColour(kind, q, part, hash11(fi * 13.3 + extra.x * 5.0));
         bool isEye = false;
@@ -433,7 +481,7 @@ void main() {
         under = max(b - a, 0.0);
     }
     vec3 tint = gShape == 2 && int(info.w + 0.5) == 2 ? vec3(0.25, 0.6, 0.7) : vec3(0.42, 0.66, 0.6);
-    float absorb = gShape == 2 ? 2.2 : 1.4;
+    float absorb = gShape == 2 ? 2.2 : gShape == 1 ? 1.4 / pow(gW, 0.8) : 1.4; // (a wide tank no murkier for being wide)
     float T = exp(-under * absorb);
     vec3 waterCol = tint * lit * 0.55;
     if (opaque) {
@@ -465,7 +513,7 @@ void main() {
 
     // ---- an air stone's bubbles, rising up the middle (the tall and slim tanks) ----
     if (gShape != 0) {
-        vec3 src = gShape == 1 ? vec3(0.5, fy, 0.5) : vec3(gW * 0.15 + 0.1, fy, SLIM_D * 0.4);
+        vec3 src = gShape == 1 ? vec3(cylC().x, fy, cylC().y) : vec3(gW * 0.15 + 0.1, fy, SLIM_D * 0.4);
         float height = wt - fy;
         for (int k = 0; k < 10; k++) {
             float fk = float(k);

@@ -27,7 +27,7 @@ void main() {
     extra = vec2(UV0.y, Color.b);
     // (client/SmallTankRenderer's boxes)
     vec3 lo = shape == 0 ? vec3(0.1, 0.0, 0.1) : shape == 1 ? vec3(0.07, 0.125, 0.07) : vec3(0.0);
-    vec3 hi = shape == 0 ? vec3(0.9, 0.72, 0.9) : shape == 1 ? vec3(0.93, h - 0.125, 0.93) : vec3(w, h, 0.3125);
+    vec3 hi = shape == 0 ? vec3(0.9, 0.72, 0.9) : shape == 1 ? vec3(w - 0.07, h - 0.125, w - 0.07) : vec3(w, h, 0.3125);
     lp = mix(lo, hi, vec3(float(corner & 1), float((corner >> 1) & 1), float((corner >> 2) & 1)));
     mat4 iv = inverse(ModelViewMat);
     bool persp = ProjMat[2][3] < -0.5;

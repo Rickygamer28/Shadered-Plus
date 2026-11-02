@@ -36,7 +36,8 @@ import org.jetbrains.annotations.Nullable;
  * The small fish tanks (client/SmallTankRenderer, shaders/core/small_tank):
  * <ul>
  * <li>BOWL - a fishbowl: a round glass bowl on its own;</li>
- * <li>TALL - a tall cylinder tank: stacked, they make one taller glass column;</li>
+ * <li>TALL - a tall cylinder tank: stacked, they make one taller glass column; a square of them (up to 4 x 4) a wider
+ * one, with bigger fish the wider it is;</li>
  * <li>SLIM - a slim wall tank: hung on a wall; side by side and on top of each other they make one wider, taller tank.</li>
  * </ul>
  * Right-click: the next set of fish.
@@ -48,6 +49,8 @@ public class SmallTankBlock extends BaseEntityBlock {
     public static final BooleanProperty DOWN = BlockStateProperties.DOWN;
     /** The biggest a joined tank gets (blocks, each way). */
     public static final int MAX = 8;
+    /** The widest a tall tank gets (blocks: a square this wide). */
+    public static final int WIDE = 4;
     private static final VoxelShape BOWL_SHAPE = Block.box(2, 0, 2, 14, 12, 14);
     private static final VoxelShape TALL_SHAPE = Block.box(1, 0, 1, 15, 16, 15);
     private static final VoxelShape SLIM_S = Block.box(0, 0, 0, 16, 16, 5);
@@ -136,12 +139,20 @@ public class SmallTankBlock extends BaseEntityBlock {
             return new int[] {pos.getX(), pos.getY(), pos.getZ(), 1, 1};
         }
         BlockPos a = pos;
-        for (int i = 0; i < MAX * 2 && joins(state, level.getBlockState(a.below())); i++) a = a.below();
         if (t.shape == TALL) {
-            int h = 1;
+            // a square of columns side by side makes one wider tank: its corner the lowest, most west, most north
+            for (int pass = 0; pass < 3; pass++) {
+                for (int i = 0; i < MAX * 2 && joins(state, level.getBlockState(a.below())); i++) a = a.below();
+                for (int i = 0; i < WIDE * 2 && joins(state, level.getBlockState(a.west())); i++) a = a.west();
+                for (int i = 0; i < WIDE * 2 && joins(state, level.getBlockState(a.north())); i++) a = a.north();
+            }
+            int w = 1, d = 1, h = 1;
+            while (w < WIDE && joins(state, level.getBlockState(a.east(w)))) w++;
+            while (d < WIDE && joins(state, level.getBlockState(a.south(d)))) d++;
             while (h < MAX && joins(state, level.getBlockState(a.above(h)))) h++;
-            return new int[] {a.getX(), a.getY(), a.getZ(), 1, h};
+            return new int[] {a.getX(), a.getY(), a.getZ(), Math.min(w, d), h};
         }
+        for (int i = 0; i < MAX * 2 && joins(state, level.getBlockState(a.below())); i++) a = a.below();
         Direction facing = state.getValue(FACING);
         Direction left = facing.getClockWise(), right = facing.getCounterClockWise();
         for (int i = 0; i < MAX * 2 && joins(state, level.getBlockState(a.relative(left))); i++) a = a.relative(left);
@@ -157,7 +168,9 @@ public class SmallTankBlock extends BaseEntityBlock {
             int[] g = group(level, pos, state);
             if (level.getBlockEntity(new BlockPos(g[0], g[1], g[2])) instanceof SmallTankBlockEntity be) {
                 be.cycle();
-                player.displayClientMessage(Component.translatable("message.skyblocks.small_tank." + shape + "." + be.variant())
+                String key = shape == TALL ? "message.skyblocks.tall_tank." + Math.min(g[3], WIDE) + "." + be.variant()
+                        : "message.skyblocks.small_tank." + shape + "." + be.variant();
+                player.displayClientMessage(Component.translatable(key)
                         .withStyle(ChatFormatting.AQUA), true);
                 level.playSound(null, pos, SoundEvents.BUCKET_EMPTY_FISH, SoundSource.BLOCKS, 0.6F, 1.1F);
             }
