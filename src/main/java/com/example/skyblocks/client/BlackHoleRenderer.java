@@ -163,15 +163,19 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         }
     }
 
-    private static int[] centre() {
+    private static int[] centre(Pending job) {
         int[] vp = new int[4];
         GL11.glGetIntegerv(GL11.GL_VIEWPORT, vp);
+        org.joml.Vector4f c = new org.joml.Vector4f(0.5F, 0.5F, 0.5F, 1.0F);
+        job.pose().transform(c);
+        new Matrix4f(job.projection()).mul(job.modelView()).transform(c);
+        int x = (int) ((c.x / c.w * 0.5F + 0.5F) * vp[2]) + vp[0], y = (int) ((c.y / c.w * 0.5F + 0.5F) * vp[3]) + vp[1];
         java.nio.ByteBuffer px = org.lwjgl.BufferUtils.createByteBuffer(4);
         int read = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
         GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING));
-        GL11.glReadPixels(vp[0] + vp[2] / 2, vp[1] + vp[3] / 2, 1, 1, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, px);
+        GL11.glReadPixels(Math.max(0, Math.min(x, vp[2] - 1)), Math.max(0, Math.min(y, vp[3] - 1)), 1, 1, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, px);
         GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, read);
-        return new int[] {px.get(0) & 255, px.get(1) & 255, px.get(2) & 255};
+        return new int[] {x, y, (int) (c.w * 100), px.get(0) & 255, px.get(1) & 255, px.get(2) & 255};
     }
 
     private record Pending(Matrix4f pose, Matrix4f modelView, Matrix4f projection, int framebuffer, boolean inside, boolean big, int colour, float seed) {}
@@ -221,14 +225,14 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                 RenderSystem.applyModelViewMatrix();
                 RenderType type = job.inside() ? Types.HOLE_INSIDE : Types.HOLE;
                 MultiBufferSource.BufferSource main = mc.renderBuffers().bufferSource();
-                boolean dbg = RenderTest.ON && debugDraws < 4;
-                int[] before = dbg ? centre() : null;
+                boolean dbg = RenderTest.ON && job.big() && (debugDraws % 100) == 1;
+                int[] before = dbg ? centre(job) : null;
                 int e0 = dbg ? GL11.glGetError() : 0;
                 box(main.getBuffer(type), job.pose(), job.big(), job.colour(), job.seed());
                 main.endBatch(type); // (each its own copy of the picture: one hole bends another)
                 if (dbg) {
                     int e1 = GL11.glGetError();
-                    int[] after = centre();
+                    int[] after = centre(job);
                     int[] mask = new int[4];
                     java.nio.ByteBuffer cm = org.lwjgl.BufferUtils.createByteBuffer(16);
                     GL11.glGetBooleanv(GL11.GL_COLOR_WRITEMASK, cm);
