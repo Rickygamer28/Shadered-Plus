@@ -75,7 +75,6 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                             if (shader != null) {
                                 shader.safeGetUniform("HoleTime").set(LavaLampRenderer.seconds());
                                 shader.safeGetUniform("ItemMode").set(0.0F);
-                                shader.safeGetUniform("Debug").set(RenderTest.ON ? 1.0F : 0.0F);
                             }
                         }, () -> {}))
                         .setTransparencyState(NO_TRANSPARENCY)

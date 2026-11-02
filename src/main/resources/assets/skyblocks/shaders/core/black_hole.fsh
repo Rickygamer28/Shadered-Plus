@@ -20,7 +20,6 @@ uniform mat4 ModelViewMat;
 uniform mat4 ProjMat;
 uniform float HoleTime;
 uniform float ItemMode;
-uniform float Debug;
 
 out vec4 fragColor;
 
@@ -46,21 +45,20 @@ void main() {
     bool big = kind > 0.5;
     vec3 C = big ? vec3(0.5) : vec3(0.5, 0.62, 0.5);
     float reach = big ? 1.5 : 0.36;
-    float rs = big ? 0.26 : 0.07;  // (the shadow's radius)
+    float rs = big ? 0.21 : 0.07;  // (the shadow's radius)
     float t = HoleTime + seedIn * 50.0;
 
     vec3 rd = normalize(lray);
     vec3 oc = lp - C;
     float b = dot(oc, rd), c = dot(oc, oc) - reach * reach, h = b * b - c;
     if (h < 0.0) {
-        if (!big && ItemMode < 0.5 && Debug > 0.5) { fragColor = vec4(1.0, 0.0, 1.0, 1.0); return; }
         discard;
     }
     float t0 = max(-b - sqrt(h), 0.0);
     vec3 p = lp + rd * t0;
     vec3 dir = rd;
     // the disk's plane: tilted a little, so it is never seen exactly edge-on
-    vec3 dn = normalize(vec3(0.12, 1.0, 0.07));
+    vec3 dn = normalize(vec3(0.1, 1.0, 0.32)); // (tilted: from the side, its top is seen)
 
     vec3 acc = vec3(0.0);
     float trans = 1.0;
@@ -114,8 +112,8 @@ void main() {
             float swirl = fbm(vec2(ang * 2.0 - t * 1.5 / (rr / rs), rr * 30.0));
             float dens = exp(-pow(hgt / (0.12 * rr + 0.008), 2.0)) * smoothstep(reach * 0.8, reach * 0.35, rr) * smoothstep(rs * 1.15, rs * 2.2, rr)
                        * (0.25 + 0.75 * arms * swirl);
-            float a = clamp(dens * dt * 28.0, 0.0, 1.0);
-            vec3 col = mix(vColor.rgb, vec3(1.0), smoothstep(rs * 3.5, rs * 1.3, rr) * 0.6) * (1.0 + 1.5 * smoothstep(rs * 3.0, rs * 1.2, rr));
+            float a = clamp(dens * dt * 45.0, 0.0, 1.0);
+            vec3 col = mix(vColor.rgb, vec3(1.0), smoothstep(rs * 3.5, rs * 1.3, rr) * 0.6) * (1.4 + 2.0 * smoothstep(rs * 3.0, rs * 1.2, rr));
             acc += trans * col * a;
             trans *= 1.0 - a * 0.85;
         }
