@@ -93,6 +93,9 @@ public final class RenderTest {
             // tesla coils (two near each other), and a galaxy projector in a closed stone room
             "setblock 10 -60 -4 skyblocks:tesla_coil",
             "setblock 13 -60 -4 skyblocks:tesla_coil",
+            "setblock 8 -60 -3 minecraft:iron_block",
+            "setblock 15 -60 -3 minecraft:anvil",
+            "setblock 11 -58 -3 minecraft:copper_block",
             "fill 10 -61 2 18 -55 10 minecraft:stone_bricks hollow",
             "fill 10 -60 2 18 -60 10 minecraft:oak_planks",
             "setblock 14 -59 6 skyblocks:galaxy_projector",

@@ -300,7 +300,7 @@
   "message.skyblocks.tall_tank.4.1": "Jellyfish",
   "message.skyblocks.tall_tank.4.2": "A manta ray, a sea turtle and sardines",
   "block.skyblocks.tesla_coil": "Tesla Coil",
-  "tooltip.skyblocks.tesla_coil": "Lightning that reaches for you, jumps between coils and goes wild with music. Powered: zaps hostile mobs nearby. Right-click: on / off. With a dye: colour. Sneak + right-click: RGB",
+  "tooltip.skyblocks.tesla_coil": "Lightning that reaches for you, arcs to metal blocks near it (any mod's) and to other coils, and goes wild with music. Powered: zaps hostile mobs nearby. Right-click: on / off. With a dye: colour. Sneak + right-click: RGB",
   "block.skyblocks.galaxy_projector": "Galaxy Projector",
   "tooltip.skyblocks.galaxy_projector": "Throws a slowly turning sky on the room round it - best in the dark. Right-click: another sky. Sneak + right-click: on / off",
   "message.skyblocks.galaxy_projector.0": "Galaxy",

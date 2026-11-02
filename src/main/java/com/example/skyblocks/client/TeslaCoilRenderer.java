@@ -17,6 +17,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -109,6 +110,13 @@ public class TeslaCoilRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                 arcs.add(new Arc(start(top, at.subtract(top)), at, 900.0 + e.getId() * 17.0, 1.0));
             }
         }
+        // to metal blocks near (any metal: iron, copper, gold, chains, anvils... and other mods' metals), coming and going
+        for (Vec3 at : metalNear(be.getLevel(), pos, gameTime)) {
+            Vec3 target = at.subtract(origin);
+            double key = 2000.0 + (long) (at.x * 7.0 + at.y * 131.0 + at.z * 977.0) % 4096;
+            double on = smooth(-0.6, 0.1, noise(t * 0.55 + key)); // (on most of the time)
+            arcs.add(new Arc(start(top, target.subtract(top)), target, key, on));
+        }
         // between coils (drawn by one of each pair), coming and going
         for (Map.Entry<BlockPos, Long> e : COILS.entrySet()) {
             BlockPos o = e.getKey();
@@ -148,6 +156,113 @@ public class TeslaCoilRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         }
         // the ring glowing where they leave it
         ring(vc, m, top, cam, r, g, b, (int) (50 + 60 * boost));
+    }
+
+    // ---- the metal blocks near a coil ----
+
+    private static final double METAL_REACH = 4.5;
+    private static final int METAL_MAX = 4;
+    private static final Map<BlockPos, long[]> SCANNED = new HashMap<>();
+    private static final Map<BlockPos, List<Vec3>> METAL = new HashMap<>();
+    private static final Map<BlockState, Boolean> IS_METAL = new java.util.IdentityHashMap<>();
+    /** Words in a block's name, or its tags', that make it metal. */
+    private static final java.util.Set<String> METAL_WORDS = java.util.Set.of("iron", "steel", "copper", "gold", "golden", "tin", "bronze",
+            "aluminum", "aluminium", "lead", "silver", "nickel", "zinc", "brass", "titanium", "platinum", "osmium", "uranium", "cobalt",
+            "netherite", "invar", "electrum", "constantan", "metal", "metallic", "tungsten", "chrome", "chromium", "signalum", "lumium",
+            "enderium", "manasteel", "terrasteel", "elementium", "refined", "anvil", "chain", "lantern", "rail", "bars", "cauldron", "hopper");
+
+    /** The nearest metal blocks round a coil (the closest point of each to its ring), looked for again every second. */
+    private static List<Vec3> metalNear(net.minecraft.world.level.Level level, BlockPos pos, long gameTime) {
+        long[] scanned = SCANNED.get(pos);
+        List<Vec3> found = METAL.get(pos);
+        if (scanned != null && found != null && gameTime - scanned[0] < 20 && gameTime >= scanned[0]) {
+            return found;
+        }
+        if (SCANNED.size() > 512) {
+            SCANNED.clear();
+            METAL.clear();
+        }
+        Vec3 top = Vec3.atLowerCornerOf(pos).add(0.5, TOP_Y, 0.5);
+        List<Vec3> list = new ArrayList<>();
+        List<Double> dist = new ArrayList<>();
+        BlockPos.MutableBlockPos q = new BlockPos.MutableBlockPos();
+        int r = (int) Math.ceil(METAL_REACH);
+        for (int dy = -r; dy <= r; dy++) {
+            for (int dz = -r; dz <= r; dz++) {
+                for (int dx = -r; dx <= r; dx++) {
+                    if (dx == 0 && dy == 0 && dz == 0) continue;
+                    q.set(pos.getX() + dx, pos.getY() + dy, pos.getZ() + dz);
+                    BlockState st = level.getBlockState(q);
+                    if (st.isAir() || st.getBlock() instanceof TeslaCoilBlock || !isMetal(st)) continue;
+                    // the block's closest point to the ring (its shape's box)
+                    net.minecraft.world.phys.shapes.VoxelShape shape = st.getShape(level, q);
+                    AABB box = shape.isEmpty() ? new AABB(q) : shape.bounds().move(q);
+                    Vec3 c = new Vec3(Math.max(box.minX, Math.min(top.x, box.maxX)), Math.max(box.minY, Math.min(top.y, box.maxY)),
+                            Math.max(box.minZ, Math.min(top.z, box.maxZ)));
+                    double d = c.distanceTo(top);
+                    if (d > METAL_REACH || d < 0.3) continue;
+                    int i = 0;
+                    while (i < dist.size() && dist.get(i) < d) i++;
+                    if (i < METAL_MAX) {
+                        list.add(i, c);
+                        dist.add(i, d);
+                        if (list.size() > METAL_MAX) {
+                            list.remove(METAL_MAX);
+                            dist.remove(METAL_MAX);
+                        }
+                    }
+                }
+            }
+        }
+        SCANNED.put(pos.immutable(), new long[] {gameTime});
+        METAL.put(pos.immutable(), list);
+        return list;
+    }
+
+    /**
+     * Whether a block is metal: by the sound it makes (metal, copper, chains, anvils, lanterns, netherite - most mods'
+     * metal blocks use these), by its name (iron_block, steel_casing, tin_block, ... - not ores), or by its tags
+     * (c:storage_blocks/silver and the like).
+     */
+    static boolean isMetal(BlockState st) {
+        Boolean known = IS_METAL.get(st);
+        if (known != null) {
+            return known;
+        }
+        boolean metal = false;
+        net.minecraft.world.level.block.SoundType sound = st.getSoundType();
+        if (sound == net.minecraft.world.level.block.SoundType.METAL || sound == net.minecraft.world.level.block.SoundType.COPPER
+                || sound == net.minecraft.world.level.block.SoundType.ANVIL || sound == net.minecraft.world.level.block.SoundType.CHAIN
+                || sound == net.minecraft.world.level.block.SoundType.LANTERN || sound == net.minecraft.world.level.block.SoundType.NETHERITE_BLOCK
+                || sound == net.minecraft.world.level.block.SoundType.COPPER_BULB || sound == net.minecraft.world.level.block.SoundType.COPPER_GRATE) {
+            metal = true;
+        }
+        if (!metal) {
+            net.minecraft.resources.ResourceLocation id = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(st.getBlock());
+            metal = metalName(id.getPath());
+        }
+        if (!metal) {
+            metal = st.getTags().anyMatch(tag -> {
+                String path = tag.location().getPath();
+                return path.startsWith("storage_blocks/") && metalName(path.substring("storage_blocks/".length()));
+            });
+        }
+        IS_METAL.put(st, metal);
+        return metal;
+    }
+
+    private static boolean metalName(String path) {
+        String[] words = path.split("[_/]");
+        boolean metal = false;
+        for (String w : words) {
+            if (w.equals("ore") || w.equals("ores") || w.equals("nugget") || w.equals("glass") || w.equals("wool")) {
+                return false; // (an ore isn't a block of metal; nor golden glass, ...)
+            }
+            if (METAL_WORDS.contains(w)) {
+                metal = true;
+            }
+        }
+        return metal;
     }
 
     private static Vec3 start(Vec3 top, Vec3 toward) {
