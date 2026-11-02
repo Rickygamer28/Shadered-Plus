@@ -15,6 +15,30 @@ public abstract class ComplexPassTimingMixin {
     @Inject(method = "render", at = @At("HEAD"), require = 0, remap = false)
     private void skyblocks$timeStart(RenderStage stage, PoseStack poseStack, int renderTick, float partialTick, CallbackInfo ci) {
         WorldTiming.shaderedStart(stage);
+        skyblocks$matchDepthFormat((ComplexPassRenderer) (Object) this);
+    }
+
+    /**
+     * Shadered copies the screen's depth into its own pictures before drawing its sky blocks and models, so they're
+     * hidden behind what's in front of them - but our screen has a stencil (for the Island Paintings), a different
+     * depth format, and the copy failed: its models and sky blocks were drawn over everything (through black holes,
+     * walls). Its pictures get a stencil too, so the copy works.
+     */
+    private static void skyblocks$matchDepthFormat(ComplexPassRenderer renderer) {
+        for (java.lang.reflect.Field f : ComplexPassRenderer.class.getDeclaredFields()) {
+            if (!com.mojang.blaze3d.pipeline.RenderTarget.class.isAssignableFrom(f.getType()) || java.lang.reflect.Modifier.isStatic(f.getModifiers())) {
+                continue;
+            }
+            try {
+                f.setAccessible(true);
+                com.mojang.blaze3d.pipeline.RenderTarget target = (com.mojang.blaze3d.pipeline.RenderTarget) f.get(renderer);
+                if (target != null && !target.isStencilEnabled()) {
+                    target.enableStencil();
+                }
+            } catch (ReflectiveOperationException | RuntimeException ignored) {
+                // (left as it is)
+            }
+        }
     }
 
     @Inject(method = "render", at = @At("RETURN"), require = 0, remap = false)
