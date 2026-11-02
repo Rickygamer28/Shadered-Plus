@@ -31,7 +31,7 @@ import org.joml.Matrix4f;
  */
 public class TeslaCoilRenderer implements BlockEntityRenderer<GlowColourBlockEntity> {
     /** Where the bolts start: the ring's middle (block units) and its radius. */
-    static final double TOP_Y = 13.5 / 16.0, RING = 0.36;
+    static final double TOP_Y = 13.25 / 16.0, RING = 0.46;
     private static final double PLAYER_REACH = 5.0, MOB_REACH = 4.0, COIL_REACH = 8.0;
     /** The coils drawn lately (pos -> frame), for the arcs between them. */
     private static final Map<BlockPos, Long> COILS = new HashMap<>();

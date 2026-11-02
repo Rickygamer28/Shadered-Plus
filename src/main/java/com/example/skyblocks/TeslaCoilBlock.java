@@ -46,7 +46,7 @@ public class TeslaCoilBlock extends BaseEntityBlock {
     public static final BooleanProperty LIT = BlockStateProperties.LIT;
     /** How far it zaps hostile mobs when powered (blocks). */
     public static final double ZAP_RANGE = 4.5;
-    private static final VoxelShape SHAPE = Shapes.or(Block.box(3, 0, 3, 13, 2, 13), Block.box(6, 2, 6, 10, 12, 10), Block.box(2, 12, 2, 14, 15, 14));
+    private static final VoxelShape SHAPE = Shapes.or(Block.box(1.5, 0, 1.5, 14.5, 2.5, 14.5), Block.box(6, 2.5, 6, 10, 11.5, 10), Block.box(0.5, 11.5, 0.5, 15.5, 15, 15.5));
 
     public TeslaCoilBlock(Properties properties) {
         super(properties);
