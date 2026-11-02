@@ -119,7 +119,7 @@ final class VanillaPondRenderer {
                 boolean flower = !frogged && KoiPondBlock.u01(KoiPondBlock.hashu(cx(pos), cz(pos), 100 + k)) > 0.72F;
                 float open = 1.0F;
                 if (flower && be.getLevel() != null) { // (open by day, a closed bud at night - each in its own time)
-                    float day = Math.max(0.0F, Math.min(1.0F, (be.getLevel().getSkyDarken(1.0F) - 0.2F) / 0.8F));
+                    float day = Math.max(0.0F, Math.min(1.0F, (((net.minecraft.client.multiplayer.ClientLevel) be.getLevel()).getSkyDarken(1.0F) - 0.2F) / 0.8F));
                     float h = KoiPondBlock.u01(KoiPondBlock.hashu(cx(pos), cz(pos), 200 + k));
                     float lo = 0.15F + 0.3F * h, hi = 0.45F + 0.3F * h;
                     float u = Math.max(0.0F, Math.min(1.0F, (day - lo) / (hi - lo)));
