@@ -60,6 +60,12 @@ jobs:
               print('::%s::%s' % (lvl, p.replace('%', '%25').replace('\r', '').replace('\n', '%0A')))
           PY
 
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadered-plus-1.20.1
+          path: build/libs/*.jar
+
       # Quick look inside the finished jar (shown as notices on the run).
       - name: Check jar
         if: success()
@@ -129,8 +135,3 @@ jobs:
             && git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "render test ${GITHUB_SHA}" \
             && git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" ci-shots-1.20.1
 
-      - name: Upload jar
-        uses: actions/upload-artifact@v4
-        with:
-          name: shadered-plus-1.20.1
-          path: build/libs/*.jar
