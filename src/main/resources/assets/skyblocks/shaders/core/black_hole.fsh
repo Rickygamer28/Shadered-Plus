@@ -70,7 +70,7 @@ void main() {
     }
     float t0 = max(-b - sqrt(h), 0.0);
     vec3 p = ro + rd * t0;
-    vec3 p0 = p; // (where the ray meets its reach: what's drawn later behind it is hidden from here)
+    vec3 p0 = ro + rd * max(t0, 0.25); // (where the ray meets its reach - just ahead, from inside it: what's drawn later behind is hidden from here)
     vec3 dir = rd;
     // the disk's plane: tilted a little, so it is never seen exactly edge-on
     vec3 dn = normalize(vec3(0.1, 1.0, 0.32)); // (tilted: from the side, its top is seen)

@@ -85,7 +85,7 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                                 }
                             }, () -> {}))
                             .setTransparencyState(NO_TRANSPARENCY)
-                            .setWriteMaskState(inside ? COLOR_WRITE : COLOR_DEPTH_WRITE) // (its depth: see the shader)
+                            .setWriteMaskState(COLOR_DEPTH_WRITE) // (its depth: see the shader)
                             .setDepthTestState(inside ? NO_DEPTH_TEST : LEQUAL_DEPTH_TEST)
                             .setCullState(NO_CULL) // (both sides: still there with the eye inside the box)
                             .createCompositeState(false));
