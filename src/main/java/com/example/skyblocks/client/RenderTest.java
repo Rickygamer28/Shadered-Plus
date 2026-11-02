@@ -134,6 +134,8 @@ public final class RenderTest {
                             if (where.startsWith("rain ")) {
                                 run(mc.getSingleplayerServer(), "weather rain");
                                 where = where.substring(5);
+                            } else {
+                                run(mc.getSingleplayerServer(), "weather clear");
                             }
                             run(mc.getSingleplayerServer(), "tp @a " + where);
                             mc.setScreen(null);
