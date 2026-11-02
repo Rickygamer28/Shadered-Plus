@@ -51,6 +51,7 @@ public class WallFireRenderer implements BlockEntityRenderer<GlowColourBlockEnti
                             if (shader != null) {
                                 shader.safeGetUniform("FireTime").set(LavaLampRenderer.seconds());
                                 shader.safeGetUniform("ItemMode").set(0.0F);
+                                MusicReactor.tick();
                                 shader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.2F, 1.0F));
                             }
                         }, () -> {}))

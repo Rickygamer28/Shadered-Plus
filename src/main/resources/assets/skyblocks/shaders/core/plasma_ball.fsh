@@ -92,11 +92,11 @@ void main() {
     // the thin gas: a faint glow, stronger near the middle
     vec3 mid = lp + rd * clamp(dot(C - lp, rd), t0, tEnd);
     float gas = smoothstep(R, 0.0, length(mid - C));
-    emit += pc * gas * gas * (0.12 + 0.4 * on) * (tEnd - t0) / R;
+    emit += pc * gas * gas * (0.12 + (0.4 + 0.35 * boost) * on) * (tEnd - t0) / R;
 
     // the filaments
     if (on > 0.5) {
-        int n = 8 + int(boost * 4.0);
+        int n = 7 + int(boost * 5.0 + 0.5);
         for (int i = 0; i < 12; i++) {
             if (i >= n) {
                 break;
@@ -106,20 +106,24 @@ void main() {
             float u = fract(hash11(fi * 3.1 + seedIn * 7.0) + 0.08 * sin(t * (0.21 + 0.05 * fi) + fi));
             float v = fract(hash11(fi * 5.7 + seedIn * 3.0) + t * (0.015 + 0.012 * hash11(fi)) * (hash11(fi * 9.1) > 0.5 ? 1.0 : -1.0));
             vec3 e = sphereDir(u, v);
-            if (i < 2) {
-                e = normalize(mix(e, target.xyz, target.w * (i == 0 ? 0.95 : 0.7)));
-            }
+            // a player near: the first one jumps to the glass right by them (a thick bright bolt, as a real plasma
+            // ball with a hand on it), the second follows it closely, the rest lean their way
+            float near = clamp(target.w, 0.0, 1.0);
+            float grab = i == 0 ? smoothstep(0.0, 0.35, near) : i == 1 ? 0.85 * smoothstep(0.1, 0.6, near) : 0.3 * near;
+            vec3 toward = near > 0.01 ? normalize(target.xyz + (i == 1 ? 0.18 * vec3(sin(t * 1.7), cos(t * 1.3), sin(t * 2.1)) : vec3(0.0))) : e;
+            e = normalize(mix(e, toward, grab));
+            float hand = i < 2 ? grab : 0.0;
             // across the filament, two directions to bend it in
             vec3 s1 = normalize(cross(e, abs(e.y) < 0.9 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
             vec3 s2 = cross(e, s1);
             float flick = 0.55 + 0.45 * vnoise1(t * 9.0 + fi * 13.0); // (each one flickers)
-            float wid = (0.0055 + 0.003 * boost) * (0.8 + 0.4 * flick);
+            float wid = (0.0055 + 0.0025 * boost) * (0.8 + 0.4 * flick) * (1.0 + 0.9 * hand);
             vec3 prev = C + e * CORE;
             const int K = 7;
             float glow = 0.0;
             for (int k = 1; k <= K; k++) {
                 float s = float(k) / float(K);
-                float bend = sin(3.14159 * s) * (0.035 + 0.02 * boost);
+                float bend = sin(3.14159 * s) * (0.035 + 0.035 * boost) * (1.0 - 0.4 * hand);
                 // a slow sway plus a fast crackle, more of it away from both ends
                 vec2 j = vec2(vnoise1(s * 3.0 + t * 1.3 + fi * 7.0) - 0.5, vnoise1(s * 3.0 - t * 1.1 + fi * 3.0 + 40.0) - 0.5) * 2.0
                        + vec2(vnoise1(s * 11.0 + t * 17.0 + fi) - 0.5, vnoise1(s * 11.0 - t * 15.0 + fi * 2.0 + 9.0) - 0.5) * 0.7;
@@ -131,8 +135,9 @@ void main() {
             }
             // the bright spot where it touches the glass
             vec2 ds = raySeg(lp, rd, t0, t1, prev, prev);
-            glow += 0.9 * exp(-ds.x * ds.x / (0.02 * 0.02));
-            emit += mix(pc, vec3(1.0), clamp(glow * 0.35, 0.0, 0.85)) * glow * flick * (1.2 + 0.8 * boost);
+            float spot = 0.02 * (1.0 + 1.2 * hand);
+            glow += (0.9 + 1.5 * hand) * exp(-ds.x * ds.x / (spot * spot));
+            emit += mix(pc, vec3(1.0), clamp(glow * 0.35, 0.0, 0.85)) * glow * mix(flick, 1.0, hand * 0.6) * (1.1 + 0.4 * boost) * (1.0 + 0.8 * hand);
         }
     }
 

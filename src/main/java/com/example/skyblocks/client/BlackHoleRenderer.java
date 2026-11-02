@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.joml.Matrix4fStack;
+import com.mojang.blaze3d.vertex.VertexSorting;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -142,7 +143,7 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         if (IrisCompat.renderingShadowPass()) {
             return;
         }
-        if (MirrorRenderer.isRenderingReflection()) { // (a mirror's picture: drawn with it, right away)
+        if (MirrorRenderer.isRenderingReflection() || IrisCompat.shaderPackInUse()) { // (a mirror's picture, or a shader pack's: right away)
             box(buffers.getBuffer(inside ? Types.HOLE_INSIDE : Types.HOLE), poseStack.last().pose(), big, colour, seed);
             return;
         }
@@ -178,10 +179,15 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                 bytes = new ByteBufferBuilder(8192);
             }
             MultiBufferSource.BufferSource source = MultiBufferSource.immediate(bytes);
+            // the world's own view and projection, and its picture's drawing state (none of it is certain here)
+            Matrix4f savedProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
+            VertexSorting savedSorting = RenderSystem.getVertexSorting();
+            RenderSystem.setProjectionMatrix(new Matrix4f(event.getProjectionMatrix()), VertexSorting.DISTANCE_TO_ORIGIN);
             Matrix4fStack stack = RenderSystem.getModelViewStack();
             stack.pushMatrix();
             stack.set(event.getModelViewMatrix());
             RenderSystem.applyModelViewMatrix();
+            MirrorRenderer.mainDrawState(Minecraft.getInstance().getMainRenderTarget());
             try {
                 for (Pending job : jobs) {
                     RenderType type = job.inside() ? Types.HOLE_INSIDE : Types.HOLE;
@@ -189,8 +195,10 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                     source.endBatch(type); // (each its own copy of the screen: one hole bends the other)
                 }
             } finally {
+                RenderSystem.depthMask(true);
                 stack.popMatrix();
                 RenderSystem.applyModelViewMatrix();
+                RenderSystem.setProjectionMatrix(savedProjection, savedSorting);
             }
         }
     }

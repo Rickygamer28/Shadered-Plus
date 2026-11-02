@@ -32,7 +32,7 @@ import org.joml.Matrix4f;
 public class PlasmaBallRenderer implements BlockEntityRenderer<GlowColourBlockEntity> {
     static ShaderInstance shader;
     /** How near a player has to be for the filaments to reach for them (blocks from the globe's middle). */
-    private static final double REACH = 3.5;
+    private static final double REACH = 4.0;
 
     @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
@@ -60,8 +60,9 @@ public class PlasmaBallRenderer implements BlockEntityRenderer<GlowColourBlockEn
                         .setShaderState(new ShaderStateShard(() -> shader))
                         .setTexturingState(new TexturingStateShard("skyblocks_plasma_ball_time", () -> {
                             if (shader != null) {
+                                MusicReactor.tick(); // (the music's bands up to date, even with nothing else listening)
                                 shader.safeGetUniform("PlasmaTime").set(LavaLampRenderer.seconds());
-                                shader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.3F, 1.0F));
+                                shader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.6F, 1.0F));
                                 shader.safeGetUniform("ItemMode").set(0.0F);
                             }
                         }, () -> {}))
@@ -111,7 +112,7 @@ public class PlasmaBallRenderer implements BlockEntityRenderer<GlowColourBlockEn
                 Vec3 hand = p.getEyePosition(partialTick).add(0.0, -0.45, 0.0).subtract(centre);
                 double d = hand.length();
                 if (d > 1.0e-3) {
-                    float near = (float) Math.max(0.0, Math.min(1.0, 1.0 - (d - 0.6) / (REACH - 0.6)));
+                    float near = (float) Math.max(0.0, Math.min(1.0, 1.15 - (d - 0.6) / (REACH - 0.6)));
                     tx = (float) (hand.x / d) * near;
                     ty = (float) (hand.y / d) * near;
                     tz = (float) (hand.z / d) * near;
