@@ -149,12 +149,66 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         // and drawn now (left waiting, the last one would only be drawn at the very end of the frame, too late)
         RenderType type = inside ? Types.HOLE_INSIDE : Types.HOLE;
         boolean main = buffers == Minecraft.getInstance().renderBuffers().bufferSource();
+        if (main && !MirrorRenderer.isRenderingReflection() && !IrisCompat.shaderPackInUse()) {
+            // the world's view: drawn in Shadered's pass, once its sky blocks and models (the cats) are drawn, so they
+            // are in the picture the hole bends (see drawPending)
+            if (PENDING.size() < 256) {
+                PENDING.add(new Pending(new Matrix4f(poseStack.last().pose()), new Matrix4f(RenderSystem.getModelViewMatrix()),
+                        new Matrix4f(RenderSystem.getProjectionMatrix()), inside, big, colour, seed));
+            }
+            return;
+        }
         if (main) {
             Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
         }
         box(buffers.getBuffer(type), poseStack.last().pose(), big, colour, seed);
         if (main) {
             Minecraft.getInstance().renderBuffers().bufferSource().endBatch(type);
+        }
+    }
+
+    private record Pending(Matrix4f pose, Matrix4f modelView, Matrix4f projection, boolean inside, boolean big, int colour, float seed) {}
+    private static final java.util.List<Pending> PENDING = new java.util.ArrayList<>();
+    private static int debugDraws;
+
+    /**
+     * Draws the holes waiting, into whatever picture is being drawn now: called inside Shadered's pass after the
+     * block entities - its sky blocks and models drawn, its picture not yet put back on the screen - so they're bent
+     * too (or, if that pass didn't run, at its end). Each with the view and projection it was given among the block
+     * entities.
+     */
+    public static void drawPending(String why) {
+        if (PENDING.isEmpty()) {
+            return;
+        }
+        java.util.List<Pending> jobs = new java.util.ArrayList<>(PENDING);
+        PENDING.clear();
+        if (shader == null) {
+            return;
+        }
+        if (RenderTest.ON && (debugDraws++ % 300) == 0) {
+            SkyBlocksMod.LOGGER.info("black holes drawn {}: {}", why, jobs.size());
+        }
+        Minecraft mc = Minecraft.getInstance();
+        MultiBufferSource.BufferSource main = mc.renderBuffers().bufferSource();
+        main.endBatch();
+        Matrix4f savedProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
+        com.mojang.blaze3d.vertex.VertexSorting savedSorting = RenderSystem.getVertexSorting();
+        org.joml.Matrix4fStack stack = RenderSystem.getModelViewStack();
+        stack.pushMatrix();
+        try {
+            for (Pending job : jobs) {
+                RenderSystem.setProjectionMatrix(job.projection(), com.mojang.blaze3d.vertex.VertexSorting.DISTANCE_TO_ORIGIN);
+                stack.set(job.modelView());
+                RenderSystem.applyModelViewMatrix();
+                RenderType type = job.inside() ? Types.HOLE_INSIDE : Types.HOLE;
+                box(main.getBuffer(type), job.pose(), job.big(), job.colour(), job.seed());
+                main.endBatch(type); // (each its own copy of the picture: one hole bends another)
+            }
+        } finally {
+            stack.popMatrix();
+            RenderSystem.applyModelViewMatrix();
+            RenderSystem.setProjectionMatrix(savedProjection, savedSorting);
         }
     }
 

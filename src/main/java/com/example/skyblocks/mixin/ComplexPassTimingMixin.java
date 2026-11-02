@@ -44,5 +44,21 @@ public abstract class ComplexPassTimingMixin {
     @Inject(method = "render", at = @At("RETURN"), require = 0, remap = false)
     private void skyblocks$timeEnd(RenderStage stage, PoseStack poseStack, int renderTick, float partialTick, CallbackInfo ci) {
         WorldTiming.shaderedEnd();
+        if (skyblocks$afterBlockEntities(stage)) {
+            com.example.skyblocks.client.BlackHoleRenderer.drawPending("after Shadered's pass");
+        }
+    }
+
+    /** The black holes: drawn in Shadered's pass, its sky blocks and models drawn, before its picture goes back on screen. */
+    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lcom/noodlegamer76/shadered/client/renderer/ComplexPassRenderer;postRender()V"),
+            require = 0, remap = false)
+    private void skyblocks$beforePutBack(RenderStage stage, PoseStack poseStack, int renderTick, float partialTick, CallbackInfo ci) {
+        if (skyblocks$afterBlockEntities(stage)) {
+            com.example.skyblocks.client.BlackHoleRenderer.drawPending("in Shadered's pass");
+        }
+    }
+
+    private static boolean skyblocks$afterBlockEntities(RenderStage stage) {
+        return String.valueOf(stage).contains("BLOCK") && !com.example.skyblocks.client.MirrorRenderer.isRenderingReflection();
     }
 }
