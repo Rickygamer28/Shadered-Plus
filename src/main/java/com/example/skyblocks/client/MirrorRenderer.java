@@ -78,7 +78,7 @@ public final class MirrorRenderer {
     private static final float OUT = 0.0F;
 
     /** A flat wall of mirror faces: which way it faces and where it is on that axis. */
-    record Wall(Direction facing, int coord) {
+    record Wall(Direction facing, double coord) {
         double nx() { return facing.getStepX(); }
         double ny() { return facing.getStepY(); }
         double nz() { return facing.getStepZ(); }
@@ -1483,6 +1483,8 @@ public final class MirrorRenderer {
         Direction upward = d.getAxis() == Direction.Axis.Y ? Direction.SOUTH : Direction.UP;
         for (BlockPos pos : faces) {
             float x = (float) (pos.getX() - cx), y = (float) (pos.getY() - cy), z = (float) (pos.getZ() - cz);
+            // (on the wall's own plane: a block's face, or a pane's glass out from its wall)
+            float plane = (float) (wall.coord() - (d.getAxis() == Direction.Axis.X ? cx : d.getAxis() == Direction.Axis.Y ? cy : cz));
             if (uv) {
                 int kind = level == null ? 0 : Math.max(0, mirrorKind(level.getBlockState(pos)));
                 int edges = 0;
@@ -1498,12 +1500,12 @@ public final class MirrorRenderer {
             }
             faceUv = uv;
             switch (d) {
-                case UP -> quad(b, x, y + 1 + OUT, z, x + 1, y + 1 + OUT, z, x + 1, y + 1 + OUT, z + 1, x, y + 1 + OUT, z + 1);
-                case DOWN -> quad(b, x, y - OUT, z, x + 1, y - OUT, z, x + 1, y - OUT, z + 1, x, y - OUT, z + 1);
-                case NORTH -> quad(b, x, y, z - OUT, x + 1, y, z - OUT, x + 1, y + 1, z - OUT, x, y + 1, z - OUT);
-                case SOUTH -> quad(b, x, y, z + 1 + OUT, x + 1, y, z + 1 + OUT, x + 1, y + 1, z + 1 + OUT, x, y + 1, z + 1 + OUT);
-                case WEST -> quad(b, x - OUT, y, z, x - OUT, y, z + 1, x - OUT, y + 1, z + 1, x - OUT, y + 1, z);
-                case EAST -> quad(b, x + 1 + OUT, y, z, x + 1 + OUT, y, z + 1, x + 1 + OUT, y + 1, z + 1, x + 1 + OUT, y + 1, z);
+                case UP -> quad(b, x, plane + OUT, z, x + 1, plane + OUT, z, x + 1, plane + OUT, z + 1, x, plane + OUT, z + 1);
+                case DOWN -> quad(b, x, plane - OUT, z, x + 1, plane - OUT, z, x + 1, plane - OUT, z + 1, x, plane - OUT, z + 1);
+                case NORTH -> quad(b, x, y, plane - OUT, x + 1, y, plane - OUT, x + 1, y + 1, plane - OUT, x, y + 1, plane - OUT);
+                case SOUTH -> quad(b, x, y, plane + OUT, x + 1, y, plane + OUT, x + 1, y + 1, plane + OUT, x, y + 1, plane + OUT);
+                case WEST -> quad(b, plane - OUT, y, z, plane - OUT, y, z + 1, plane - OUT, y + 1, z + 1, plane - OUT, y + 1, z);
+                case EAST -> quad(b, plane + OUT, y, z, plane + OUT, y, z + 1, plane + OUT, y + 1, z + 1, plane + OUT, y + 1, z);
             }
         }
         return b.build();
@@ -1613,10 +1615,19 @@ public final class MirrorRenderer {
                                     continue;
                                 }
                                 BlockPos pos = new BlockPos(baseX + x, baseY + y, baseZ + z);
+                                BlockState here = section.getBlockState(x, y, z);
+                                if (here.getBlock() instanceof com.example.skyblocks.RoundMirrorBlock) {
+                                    // a pane on a wall: only its front, a little out from the wall
+                                    Direction d = here.getValue(com.example.skyblocks.RoundMirrorBlock.FACING);
+                                    double coord = pos.get(d.getAxis()) + (d.getAxisDirection() == Direction.AxisDirection.POSITIVE
+                                            ? com.example.skyblocks.RoundMirrorBlock.THICK : 1.0 - com.example.skyblocks.RoundMirrorBlock.THICK);
+                                    WALLS.computeIfAbsent(new Wall(d, coord), w -> new ArrayList<>()).add(pos);
+                                    continue;
+                                }
                                 for (Direction d : Direction.values()) {
                                     neighbour.setWithOffset(pos, d);
                                     BlockState next = level.getBlockState(neighbour);
-                                    if (isMirror(next) || next.isSolidRender(level, neighbour)) {
+                                    if ((isMirror(next) && !(next.getBlock() instanceof com.example.skyblocks.RoundMirrorBlock)) || next.isSolidRender(level, neighbour)) {
                                         continue; // a hidden face
                                     }
                                     int coord = pos.get(d.getAxis()) + (d.getAxisDirection() == Direction.AxisDirection.POSITIVE ? 1 : 0);

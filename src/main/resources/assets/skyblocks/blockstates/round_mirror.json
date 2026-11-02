@@ -1,7 +1,19 @@
 {
   "variants": {
-    "": {
+    "facing=south": {
       "model": "skyblocks:block/round_mirror"
+    },
+    "facing=west": {
+      "model": "skyblocks:block/round_mirror",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "skyblocks:block/round_mirror",
+      "y": 180
+    },
+    "facing=east": {
+      "model": "skyblocks:block/round_mirror",
+      "y": 270
     }
   }
 }

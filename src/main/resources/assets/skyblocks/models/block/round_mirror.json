@@ -1,6 +1,78 @@
 {
-  "parent": "minecraft:block/cube_all",
   "textures": {
-    "all": "skyblocks:block/round_mirror"
-  }
+    "particle": "skyblocks:block/round_mirror",
+    "front": "skyblocks:block/round_mirror",
+    "back": "minecraft:block/dark_oak_planks"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        1
+      ],
+      "faces": {
+        "south": {
+          "texture": "#front",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "north": {
+          "texture": "#back",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "cullface": "north"
+        },
+        "east": {
+          "texture": "#back",
+          "uv": [
+            15,
+            0,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#back",
+          "uv": [
+            0,
+            0,
+            1,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#back",
+          "uv": [
+            0,
+            0,
+            16,
+            1
+          ]
+        },
+        "down": {
+          "texture": "#back",
+          "uv": [
+            0,
+            15,
+            16,
+            16
+          ]
+        }
+      }
+    }
+  ]
 }

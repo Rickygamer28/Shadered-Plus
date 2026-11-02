@@ -78,7 +78,8 @@ public final class RenderTest {
             "fill 2 -59 43 3 -58 43 skyblocks:slim_tank[facing=north]",
             "setblock 5 -59 43 skyblocks:slim_tank[facing=north]{variant:1}",
             // the mirrors: a round one, a cracked wall of them, a vanity mirror 3 x 2 (facing the camera, north)
-            "setblock -9 -59 50 skyblocks:round_mirror",
+            "setblock -9 -59 51 minecraft:stone_bricks",
+            "setblock -9 -59 50 skyblocks:round_mirror[facing=north]",
             "fill -7 -60 50 -6 -59 50 skyblocks:cracked_mirror",
             "fill -4 -60 50 -2 -59 50 skyblocks:vanity_mirror",
             "setblock -5 -60 46 minecraft:red_concrete",

@@ -41,8 +41,8 @@ public final class ModBlocks {
                     .mapColor(net.minecraft.world.level.material.MapColor.ICE).isValidSpawn((s, l, p, e) -> false));
 
     /** The mirror's variants: a round mirror in a gold ring, a cracked mirror, a vanity mirror framed with bulbs. */
-    public static final DeferredBlock<net.minecraft.world.level.block.Block> ROUND_MIRROR = BLOCKS.registerSimpleBlock("round_mirror",
-            BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS)
+    public static final DeferredBlock<RoundMirrorBlock> ROUND_MIRROR = BLOCKS.registerBlock("round_mirror", RoundMirrorBlock::new,
+            BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS).noOcclusion()
                     .mapColor(net.minecraft.world.level.material.MapColor.GOLD).isValidSpawn((s, l, p, e) -> false));
     public static final DeferredBlock<net.minecraft.world.level.block.Block> CRACKED_MIRROR = BLOCKS.registerSimpleBlock("cracked_mirror",
             BlockBehaviour.Properties.of().strength(0.4F).sound(SoundType.GLASS)

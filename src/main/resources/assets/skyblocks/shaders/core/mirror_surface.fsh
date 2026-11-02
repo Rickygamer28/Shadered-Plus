@@ -50,36 +50,82 @@ void main() {
         return;
     }
 
-    if (kind == 2) { // cracked: shards round the point it was hit
-        vec2 hit = vec2(0.3 + 0.4 * hash11(seed * 3.1 + 1.0), 0.3 + 0.4 * hash11(seed * 5.7 + 2.0));
+    if (kind == 2) { // cracked: hit hard in one spot - straight cracks running out from it, rings of cracks round it
+        // joining them, every shard tilted its own way (its reflection jumps across the cracks), some fallen out
+        const int N = 10;
+        const float TAU = 6.2831853;
+        vec2 hit = vec2(0.32 + 0.36 * hash11(seed * 3.1 + 1.0), 0.32 + 0.36 * hash11(seed * 5.7 + 2.0));
         vec2 d = p - hit;
         float r = length(d);
-        float a = atan(d.y, d.x) + 0.06 * sin(r * 40.0 + seed);
-        float n = 7.0;
-        float sector = floor((a + 3.14159) / 6.28318 * n + hash11(seed) * 0.5);
-        float ring = r < 0.11 ? 0.0 : r < 0.27 ? 1.0 : 2.0;
-        float shard = sector + ring * 13.0 + seed * 31.0;
-        // how near a crack: the spokes, and the rings round the hit
-        float fa = fract((a + 3.14159) / 6.28318 * n + hash11(seed) * 0.5);
-        float spoke = min(fa, 1.0 - fa) * 6.28318 / n * r;
-        float rings = min(abs(r - 0.11 - 0.02 * sin(a * 3.0 + seed)), abs(r - 0.27 - 0.03 * sin(a * 5.0 + seed * 2.0)));
-        float crack = min(spoke, rings);
-        crack = min(crack, r * 0.5); // (the crushed middle)
-        vec2 shift = (vec2(hash11(shard * 1.3), hash11(shard * 2.7)) - 0.5) * 0.012 * smoothstep(0.0, 0.05, r);
-        vec3 c = reflection(shift) * (0.86 + 0.14 * hash11(shard * 4.1));
-        float line = 1.0 - smoothstep(0.002, 0.007, crack);
-        c = mix(c, vec3(0.92, 0.95, 1.0), line * 0.75);
-        c = mix(c, vec3(0.75, 0.8, 0.85), smoothstep(0.035, 0.0, r) * 0.6); // (the crushed spot)
-        fragColor = vec4(c, 1.0);
+        float a = atan(d.y, d.x) + 3.14159265;
+        // the spokes: each at its own angle; which two this point lies between
+        float u = a / TAU * float(N);
+        float s0 = floor(u);
+        float sec = s0;
+        float b0 = s0 + 0.7 * (hash11(mod(s0, float(N)) + seed * 17.0) - 0.5);
+        if (u < b0) {
+            sec = s0 - 1.0;
+        } else {
+            float b1 = s0 + 1.0 + 0.7 * (hash11(mod(s0 + 1.0, float(N)) + seed * 17.0) - 0.5);
+            if (u >= b1) sec = s0 + 1.0;
+        }
+        float sA = sec, sB = sec + 1.0;
+        float angA = (sA + 0.7 * (hash11(mod(sA, float(N)) + seed * 17.0) - 0.5)) / float(N) * TAU;
+        float angB = (sB + 0.7 * (hash11(mod(sB, float(N)) + seed * 17.0) - 0.5)) / float(N) * TAU;
+        vec2 dA = -vec2(cos(angA), sin(angA)), dB = -vec2(cos(angB), sin(angB)); // (atan + pi: the angle's turned round)
+        float crack = min(abs(d.x * dA.y - d.y * dA.x), abs(d.x * dB.y - d.y * dB.x)); // (straight out from the hit)
+        // the rings: straight pieces from spoke to spoke
+        float ring = 0.0;
+        for (int k = 0; k < 3; k++) {
+            float fk = float(k);
+            float ra = (0.07 + 0.13 * fk) * (0.75 + 0.5 * hash11(mod(sA, float(N)) * 7.0 + fk * 3.0 + seed * 5.0));
+            float rb = (0.07 + 0.13 * fk) * (0.75 + 0.5 * hash11(mod(sB, float(N)) * 7.0 + fk * 3.0 + seed * 5.0));
+            if (k == 2 && hash11(sec * 3.7 + seed) < 0.35) continue; // (the outer ring not all the way round)
+            vec2 A = dA * ra, B = dB * rb;
+            vec2 e = B - A;
+            vec2 nrm = normalize(vec2(e.y, -e.x));
+            if (dot(nrm, -A) > 0.0) nrm = -nrm; // (pointing away from the hit)
+            float side = dot(d - A, nrm);
+            if (side > 0.0) ring += 1.0;
+            float h = clamp(dot(d - A, e) / dot(e, e), 0.0, 1.0);
+            crack = min(crack, length(d - A - e * h));
+        }
+        float shard = mod(sec, float(N)) * 5.0 + ring + seed * 53.0;
+        vec2 rnd = vec2(hash11(shard * 1.3), hash11(shard * 2.7)) - 0.5;
+        // each shard tilted: its reflection shifted, and turned a little across it
+        vec2 shift = rnd * 0.035 + vec2(-d.y, d.x) * (hash11(shard * 5.3) - 0.5) * 0.06;
+        shift *= smoothstep(0.0, 0.04, r);
+        vec3 c = reflection(shift) * (0.82 + 0.25 * hash11(shard * 4.1));
+        // fallen out: the dark back of the frame showing
+        bool gone = ring >= 1.0 && ring <= 2.0 && hash11(shard * 9.1) < 0.1;
+        if (gone) {
+            c = vec3(0.07, 0.065, 0.06) * (0.8 + 0.4 * hash11(floor(p.x * 32.0) + floor(p.y * 32.0) * 31.0));
+        }
+        // the crushed middle: tiny chips, every which way, white with powdered glass
+        if (r < 0.05) {
+            float ua = a / TAU * 26.0, ur = r * 70.0 + 0.5 * hash11(floor(ua) + seed);
+            vec2 cell = vec2(floor(ua), floor(ur));
+            vec2 cr = vec2(hash11(cell.x * 3.1 + cell.y * 7.7 + seed), hash11(cell.x * 5.3 + cell.y * 2.9 + seed)) - 0.5;
+            c = reflection(cr * 0.05) * (0.7 + 0.3 * hash11(cell.x + cell.y * 13.0)) + vec3(0.3) * (1.0 - r / 0.05);
+            vec2 f = fract(vec2(ua, ur));
+            crack = min(crack, min(min(f.x, 1.0 - f.x) * r * TAU / 26.0, min(f.y, 1.0 - f.y) / 70.0));
+        }
+        // the cracks: a dark line, the broken edge beside it catching the light
+        float line = 1.0 - smoothstep(0.0012, 0.0028, crack);
+        float glint = (1.0 - smoothstep(0.0028, 0.0065, crack)) * (1.0 - line);
+        c = mix(c, vec3(0.04), line * 0.85);
+        c += vec3(0.85, 0.9, 1.0) * glint * 0.45 * (0.6 + 0.4 * hash11(shard * 6.6));
+        fragColor = vec4(min(c, vec3(1.0)), 1.0);
         return;
     }
 
     if (kind == 3) { // vanity: a frame round the outside, bulbs on it
         const float B = 0.16;
-        float left = (edges & 1) != 0 ? 1.0 : p.x / B;
-        float right = (edges & 2) != 0 ? 1.0 : (1.0 - p.x) / B;
-        float bottom = (edges & 4) != 0 ? 1.0 : p.y / B;
-        float top = (edges & 8) != 0 ? 1.0 : (1.0 - p.y) / B;
+        // (how far from each side's frame, in frame widths; a side joined on to more of the mirror has none)
+        float left = (edges & 1) != 0 ? 99.0 : p.x / B;
+        float right = (edges & 2) != 0 ? 99.0 : (1.0 - p.x) / B;
+        float bottom = (edges & 4) != 0 ? 99.0 : p.y / B;
+        float top = (edges & 8) != 0 ? 99.0 : (1.0 - p.y) / B;
         float m = min(min(left, right), min(bottom, top));
         vec3 c;
         if (m < 1.0) {

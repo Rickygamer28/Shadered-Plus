@@ -1,3 +1,6 @@
 {
-  "parent": "skyblocks:block/round_mirror"
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "skyblocks:block/round_mirror"
+  }
 }
