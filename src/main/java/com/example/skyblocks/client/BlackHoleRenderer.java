@@ -139,10 +139,16 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         }
         // drawn after the other block entities (shouldRenderOffScreen: the holes are among the world's "global" ones,
         // drawn last); what's still waiting to be drawn is drawn first - so it's in the picture the hole bends
-        if (buffers == Minecraft.getInstance().renderBuffers().bufferSource()) {
+        // and drawn now (left waiting, the last one would only be drawn at the very end of the frame, too late)
+        RenderType type = inside ? Types.HOLE_INSIDE : Types.HOLE;
+        boolean main = buffers == Minecraft.getInstance().renderBuffers().bufferSource();
+        if (main) {
             Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
         }
-        box(buffers.getBuffer(inside ? Types.HOLE_INSIDE : Types.HOLE), poseStack.last().pose(), big, colour, seed);
+        box(buffers.getBuffer(type), poseStack.last().pose(), big, colour, seed);
+        if (main) {
+            Minecraft.getInstance().renderBuffers().bufferSource().endBatch(type);
+        }
     }
 
     /** A hole as an item, drawn at once with this item's matrix (shrunk to fit for the big one). */
