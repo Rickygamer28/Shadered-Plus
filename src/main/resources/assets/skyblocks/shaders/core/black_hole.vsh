@@ -30,7 +30,8 @@ void main() {
     // (client/BlackHoleRenderer's boxes: the reach round the hole's middle)
     // (kind 2, the singularity: its reach by how full it is, in the colour's alpha)
     vec3 c = kind > 0.5 ? vec3(0.5) : vec3(0.5, 0.62, 0.5);
-    float reach = (kind > 1.5 ? 0.38 + 0.92 * Color.a : kind > 0.5 ? 1.5 : 0.36) * 1.03;
+    // (kind 3, a singularity in its containment chamber: its reach is 4.6 times the alpha)
+    float reach = (kind > 2.5 ? 4.6 * Color.a : kind > 1.5 ? 0.38 + 0.92 * Color.a : kind > 0.5 ? 1.5 : 0.36) * 1.03;
     lp = c + reach * (vec3(float(corner & 1), float((corner >> 1) & 1), float((corner >> 2) & 1)) * 2.0 - 1.0);
     origin = Position - lp;
     mat4 iv = inverse(ModelViewMat);

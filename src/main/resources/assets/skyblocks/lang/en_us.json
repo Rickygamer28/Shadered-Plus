@@ -369,5 +369,7 @@
   "gui.skyblocks.singularity.tag_hint": "a tag, e.g. c:cobblestones",
   "gui.skyblocks.singularity.add_tag": "Add",
   "gui.skyblocks.singularity.no_tags": "(none yet)",
-  "gui.skyblocks.singularity.filter_remove": "Click: out of the filter. Right-click: its tags into the box"
+  "gui.skyblocks.singularity.filter_remove": "Click: out of the filter. Right-click: its tags into the box",
+  "block.skyblocks.containment_frame": "Containment Frame",
+  "tooltip.skyblocks.containment_frame": "Build along the edges of a 5x5x5, 7x7x7 or 9x9x9 cube round a singularity (nothing solid inside): a containment chamber - the black hole grows to fill it, and the frames work as its sides (right-click, hoppers, pipes)"
 }

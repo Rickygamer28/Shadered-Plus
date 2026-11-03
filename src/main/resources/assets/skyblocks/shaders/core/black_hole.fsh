@@ -46,8 +46,8 @@ void main() {
     gl_FragDepth = gl_FragCoord.z;
     bool big = kind > 0.5;
     vec3 C = big ? vec3(0.5) : vec3(0.5, 0.62, 0.5);
-    float reach = kind > 1.5 ? 0.38 + 0.92 * vColor.a : big ? 1.5 : 0.36; // (the singularity: grows as it fills)
-    float rs = kind > 1.5 ? reach * 0.14 : big ? 0.21 : 0.07;  // (the shadow's radius)
+    float reach = kind > 2.5 ? 4.6 * vColor.a : kind > 1.5 ? 0.38 + 0.92 * vColor.a : big ? 1.5 : 0.36; // (the singularity: grows as it fills)
+    float rs = kind > 2.5 ? reach * 0.17 : kind > 1.5 ? reach * 0.14 : big ? 0.21 : 0.07;  // (the shadow's radius)
     float t = HoleTime + seedIn * 50.0;
 
     vec3 rd = normalize(lray);

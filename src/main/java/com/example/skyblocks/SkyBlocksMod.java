@@ -73,6 +73,7 @@ public class SkyBlocksMod {
         event.accept(ModItems.BLACK_HOLE.get());
         event.accept(ModItems.BIG_BLACK_HOLE.get());
         event.accept(ModItems.SINGULARITY.get());
+        event.accept(ModItems.CONTAINMENT_FRAME.get());
         event.accept(ModItems.FIRE_TORNADO.get());
         event.accept(ModItems.BRICK_HEARTH.get());
         event.accept(ModItems.MUSIC_VISUALIZER.get());
@@ -111,6 +112,8 @@ public class SkyBlocksMod {
     private static void registerCapabilities(net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent event) {
         event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, ModBlockEntities.SINGULARITY.get(),
                 (be, side) -> be.handler);
+        event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, ModBlockEntities.CONTAINMENT_FRAME.get(),
+                (be, side) -> be.handler());
     }
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {

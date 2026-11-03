@@ -137,8 +137,11 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         return kind == 0 ? 0.62F : 0.5F;
     }
 
+    /** (kind 3, a singularity in its containment chamber: {@code grow} is its reach over CHAMBER_REACH.) */
+    static final float CHAMBER_REACH = 4.6F;
+
     static float reach(int kind, float grow) {
-        return kind == 0 ? 0.36F : kind == 1 ? 1.5F : 0.38F + 0.92F * grow;
+        return kind == 0 ? 0.36F : kind == 1 ? 1.5F : kind == 3 ? CHAMBER_REACH * grow : 0.38F + 0.92F * grow;
     }
 
     /** A hole (kind 0 the small ornament, 1 the big one, 2 the singularity, {@code grow} 0..1 how full) at this block. */

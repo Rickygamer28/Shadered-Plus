@@ -62,7 +62,7 @@ public class SingularityMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return blockEntity() != null && player.distanceToSqr(pos.getCenter()) <= 8.0 * 8.0;
+        return blockEntity() != null && player.distanceToSqr(pos.getCenter()) <= 11.0 * 11.0; // (from its chamber's frame too)
     }
 
     /** Shift-click in your inventory: the whole stack into the singularity. */

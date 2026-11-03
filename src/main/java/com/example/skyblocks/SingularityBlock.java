@@ -71,6 +71,19 @@ public class SingularityBlock extends BaseEntityBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        return open(state, level, pos, player);
+    }
+
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState now, boolean moving) {
+        if (!now.is(this) && level.getBlockEntity(pos) instanceof SingularityBlockEntity be) {
+            be.unform(); // (its chamber's frames go dark)
+        }
+        super.onRemove(state, level, pos, now, moving);
+    }
+
+    /** Right-click (here or on its chamber's frame): what it holds; sneaking, vacuum mode on / off. */
+    public InteractionResult open(BlockState state, Level level, BlockPos pos, Player player) {
         if (!(level.getBlockEntity(pos) instanceof SingularityBlockEntity be)) {
             return InteractionResult.PASS;
         }

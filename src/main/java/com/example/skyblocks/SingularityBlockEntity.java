@@ -50,8 +50,10 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
 
     /** At most this many kinds (plenty: a big storage block, not a whole storage system). */
     public static final int MAX_KINDS = 1024;
-    /** How far dropped items are pulled in from in vacuum mode. */
+    /** How far dropped items are pulled in from in vacuum mode (further in a containment chamber: + its size). */
     public static final double VACUUM_PULL = 8.0;
+    /** The containment chambers it can be in the middle of: cubes this many blocks across, framed along their edges. */
+    public static final int[] CHAMBERS = {9, 7, 5};
     /** At most this many tags in the destroy filter. */
     public static final int MAX_TAGS = 32;
     /** How full it looks / what a comparator reads: this many items fills it (log scale). */
@@ -61,6 +63,8 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
     private final Set<Item> destroy = new HashSet<>();
     private final List<TagKey<Item>> destroyTags = new ArrayList<>();
     private boolean vacuum;
+    /** The containment chamber round it: how many blocks across (0: none). */
+    private int chamber;
     private int colour = 0x9A6BFF;
     private long total;
     /** Changes since the menus last saw it (server), for sending them the new contents. */
@@ -119,6 +123,113 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
             destroyTags.add(tag);
         }
         changed(false);
+    }
+
+    public int chamber() {
+        return chamber;
+    }
+
+    /** How far the black hole reaches (blocks from its middle): in a chamber, growing to fill it as it fills. */
+    public float reach() {
+        return chamber > 0 ? chamber * 0.5F * (0.45F + 0.55F * fullness()) : 0.38F + 0.92F * fullness();
+    }
+
+    // ---- the containment chamber ----
+
+    /** Whether there's a chamber this size round it: frames along every edge of the cube, nothing solid inside. */
+    private boolean chamberFits(int size) {
+        int r = (size - 1) / 2;
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dy = -r; dy <= r; dy++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    int rims = (Math.abs(dx) == r ? 1 : 0) + (Math.abs(dy) == r ? 1 : 0) + (Math.abs(dz) == r ? 1 : 0);
+                    if (rims == 1 || (dx == 0 && dy == 0 && dz == 0)) {
+                        continue; // (its sides: open, glass, anything)
+                    }
+                    p.set(worldPosition.getX() + dx, worldPosition.getY() + dy, worldPosition.getZ() + dz);
+                    BlockState s = level.getBlockState(p);
+                    if (rims >= 2) {
+                        if (!(s.getBlock() instanceof ContainmentFrameBlock)) {
+                            return false;
+                        }
+                        if (level.getBlockEntity(p) instanceof ContainmentFrameBlockEntity f && f.master() != null && !f.master().equals(worldPosition)
+                                && level.getBlockEntity(f.master()) instanceof SingularityBlockEntity other && other.chamber > 0) {
+                            return false; // (another one's)
+                        }
+                    } else if (!s.getCollisionShape(level, p).isEmpty()) {
+                        return false; // (inside: room for it)
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    /** Its chamber's frames: lit and linked to it (or dark again). */
+    private void setFrames(int size, boolean formed) {
+        int r = (size - 1) / 2;
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dy = -r; dy <= r; dy++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    int rims = (Math.abs(dx) == r ? 1 : 0) + (Math.abs(dy) == r ? 1 : 0) + (Math.abs(dz) == r ? 1 : 0);
+                    if (rims < 2) {
+                        continue;
+                    }
+                    p.set(worldPosition.getX() + dx, worldPosition.getY() + dy, worldPosition.getZ() + dz);
+                    BlockState s = level.getBlockState(p);
+                    if (!(s.getBlock() instanceof ContainmentFrameBlock) || !(level.getBlockEntity(p) instanceof ContainmentFrameBlockEntity f)) {
+                        continue;
+                    }
+                    if (formed) {
+                        f.setMaster(worldPosition);
+                    } else if (f.master() == null || f.master().equals(worldPosition)) {
+                        f.setMaster(null);
+                    } else {
+                        continue;
+                    }
+                    if (s.getValue(ContainmentFrameBlock.FORMED) != formed) {
+                        level.setBlock(p, s.setValue(ContainmentFrameBlock.FORMED, formed), Block.UPDATE_CLIENTS);
+                    }
+                }
+            }
+        }
+    }
+
+    /** Looks for its chamber (the one it's in still there, else the biggest that fits). */
+    private void checkChamber() {
+        int found = 0;
+        if (chamber > 0 && chamberFits(chamber)) {
+            found = chamber;
+        } else {
+            for (int size : CHAMBERS) {
+                if (chamberFits(size)) {
+                    found = size;
+                    break;
+                }
+            }
+        }
+        if (found != chamber) {
+            if (chamber > 0) {
+                setFrames(chamber, false);
+            }
+            boolean grew = found > chamber;
+            chamber = found;
+            if (chamber > 0) {
+                setFrames(chamber, true);
+            }
+            level.playSound(null, worldPosition, grew ? SoundEvents.BEACON_POWER_SELECT : SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 1.0F, grew ? 0.6F : 0.8F);
+            changed(true);
+        }
+    }
+
+    /** It's gone: its chamber's frames dark again. */
+    public void unform() {
+        if (chamber > 0 && level != null && !level.isClientSide) {
+            setFrames(chamber, false);
+            chamber = 0;
+        }
     }
 
     public boolean vacuum() {
@@ -248,10 +359,14 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
     // ---- pulling in what's dropped near it (vacuum mode only) ----
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, SingularityBlockEntity be) {
+        if ((level.getGameTime() + pos.hashCode()) % 20 == 0) {
+            be.checkChamber();
+        }
         if (!be.vacuum || !(level instanceof ServerLevel server) || (level.getGameTime() + pos.hashCode()) % 2 != 0) {
             return;
         }
-        double reach = VACUUM_PULL;
+        double reach = VACUUM_PULL + be.chamber;
+        double swallow = 0.55 + (be.chamber > 0 ? be.reach() * 0.25 : 0.0);
         Vec3 c = Vec3.atCenterOf(pos);
         List<ItemEntity> items = level.getEntitiesOfClass(ItemEntity.class, new AABB(c, c).inflate(reach),
                 e -> e.isAlive() && !e.getItem().isEmpty());
@@ -262,7 +377,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
             if (d > reach || !be.accepts(item.getItem())) {
                 continue;
             }
-            if (d < 0.55) { // over the edge: in
+            if (d < swallow) { // over the edge: in
                 ItemStack left = be.insert(item.getItem().copy(), false);
                 if (left.isEmpty()) {
                     item.discard();
@@ -360,6 +475,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
         tag.put("destroyTags", tags);
         tag.putBoolean("vacuum", vacuum);
         tag.putInt("colour", colour);
+        tag.putInt("chamber", chamber);
     }
 
     @Override
@@ -403,6 +519,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
             }
         }
         vacuum = tag.getBoolean("vacuum");
+        chamber = tag.getInt("chamber");
         if (tag.contains("colour")) {
             colour = tag.getInt("colour") & 0xFFFFFF;
         }
@@ -417,7 +534,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
         List<Entry> top = new ArrayList<>(entries);
         top.sort((a, b) -> Long.compare(b.count, a.count));
         ListTag list = new ListTag();
-        for (int i = 0; i < Math.min(6, top.size()); i++) {
+        for (int i = 0; i < Math.min(12, top.size()); i++) {
             list.add(top.get(i).item.save(registries));
         }
         tag.put("shown", list);
@@ -434,7 +551,9 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
     public ItemStack asItem(HolderLookup.Provider registries) {
         ItemStack stack = new ItemStack(ModItems.SINGULARITY.get());
         if (!entries.isEmpty() || !destroy.isEmpty() || !destroyTags.isEmpty() || vacuum || colour != 0x9A6BFF) {
-            net.minecraft.world.item.BlockItem.setBlockEntityData(stack, ModBlockEntities.SINGULARITY.get(), saveWithoutMetadata(registries));
+            CompoundTag tag = saveWithoutMetadata(registries);
+            tag.remove("chamber"); // (its chamber stays where it was)
+            net.minecraft.world.item.BlockItem.setBlockEntityData(stack, ModBlockEntities.SINGULARITY.get(), tag);
         }
         return stack;
     }

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "formed=false": {
+      "model": "skyblocks:block/containment_frame"
+    },
+    "formed=true": {
+      "model": "skyblocks:block/containment_frame_formed"
+    }
+  }
+}

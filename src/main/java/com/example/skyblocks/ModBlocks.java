@@ -187,6 +187,12 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(5.0F, 1200.0F).sound(SoundType.NETHERITE_BLOCK).noOcclusion().lightLevel(state -> 7)
                     .requiresCorrectToolForDrops().mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
 
+    /** A containment frame: built round a singularity, a chamber the black hole grows to fill (ContainmentFrameBlock). */
+    public static final DeferredBlock<ContainmentFrameBlock> CONTAINMENT_FRAME = BLOCKS.registerBlock("containment_frame", ContainmentFrameBlock::new,
+            BlockBehaviour.Properties.of().strength(5.0F, 1200.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops().noOcclusion()
+                    .lightLevel(state -> state.getValue(ContainmentFrameBlock.FORMED) ? 9 : 2)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+
     /** The big lava lamp: two blocks tall (BigLavaLampBlock). */
     public static final DeferredBlock<BigLavaLampBlock> BIG_LAVA_LAMP = BLOCKS.registerBlock("big_lava_lamp", BigLavaLampBlock::new,
             BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.GLASS).noOcclusion()

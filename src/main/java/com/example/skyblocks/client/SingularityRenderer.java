@@ -13,6 +13,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 /**
@@ -22,9 +23,9 @@ import org.joml.Vector3f;
 public class SingularityRenderer implements BlockEntityRenderer<SingularityBlockEntity> {
     public SingularityRenderer(BlockEntityRendererProvider.Context context) {}
 
-    /** How full it looks (easing towards how full it is). */
-    private static float shownGrow(SingularityBlockEntity be) {
-        float want = be.fullness();
+    /** How far it reaches now (easing towards how far it should: as it fills, or its chamber's formed). */
+    private static float shownReach(SingularityBlockEntity be) {
+        float want = be.reach();
         long now = System.nanoTime();
         if (be.shownGrowAt == 0L) {
             be.shownGrow = want;
@@ -36,38 +37,71 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
         return be.shownGrow;
     }
 
+    /** At most this many items seen in the disk at once (by its chamber's size: 5, 7, 9 across; and none). */
+    private static int maxOrbiting(int chamber) {
+        return chamber >= 9 ? 24 : chamber >= 7 ? 16 : chamber >= 5 ? 10 : 6;
+    }
+
     @Override
     public void render(SingularityBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
-        float grow = shownGrow(be);
-        float reach = BlackHoleRenderer.reach(2, grow);
+        float reach = shownReach(be);
         float t = (float) LavaLampRenderer.seconds();
-        // what it holds, going round in the disk's plane and slowly in (each its own way round), shrinking as it goes
+        // now and then, some of what it holds drifting round in the disk's plane and in, shrinking as it goes (more of
+        // them the bigger it is - not too many: fewer further away)
         List<ItemStack> shown = be.shown();
-        if (!MirrorRenderer.isRenderingReflection()) {
+        Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        double dist = cam.distanceTo(Vec3.atCenterOf(be.getBlockPos()));
+        int slots = (int) Math.round(maxOrbiting(be.chamber()) * (0.4 + 0.6 * be.fullness()) * (dist > 64.0 ? 0.0 : dist > 32.0 ? 0.5 : 1.0));
+        if (!MirrorRenderer.isRenderingReflection() && !shown.isEmpty()) {
             Vector3f dn = new Vector3f(0.1F, 1.0F, 0.32F).normalize();
             Vector3f e1 = new Vector3f(dn).cross(0.0F, 0.0F, 1.0F).normalize(), e2 = new Vector3f(dn).cross(e1);
-            for (int i = 0; i < shown.size(); i++) {
-                float phase = (t * 0.07F + i * 0.618F) % 1.0F; // (0: at the edge, 1: gone in)
-                float r = reach * (0.85F - 0.65F * phase);
-                float ang = t * (0.6F + 1.4F * phase) + i * 2.4F;
+            float sizeScale = be.chamber() > 0 ? 0.6F + be.chamber() * 0.06F : 1.0F;
+            for (int i = 0; i < slots; i++) {
+                // each its own cycle: drifting in for most of it, then gone a while
+                float h = hash(i * 7.31F + be.getBlockPos().asLong() % 1000);
+                float period = 7.0F + 6.0F * h;
+                float cyc = (t + h * 100.0F) / period;
+                int round = (int) Math.floor(cyc);
+                float phase = cyc - round;
+                float showFor = 0.55F + 0.25F * hash(round * 3.7F + i);
+                if (phase > showFor) {
+                    continue;
+                }
+                float p = phase / showFor; // (0: at the edge, 1: gone in)
+                ItemStack stack = shown.get(Math.floorMod(i + round * 5, shown.size()));
+                float r = reach * (0.92F - 0.75F * p);
+                float ang = t * (0.35F + 1.6F * p * p) / Math.max(0.6F, reach * 0.5F) + i * 2.4F + h * 6.0F;
                 float x = (float) (Math.cos(ang) * r), y = (float) (Math.sin(ang) * r);
-                float size = 0.22F * (1.0F - phase * 0.8F) * (0.6F + 0.4F * grow);
+                float lift = (hash(i * 1.3F + round) - 0.5F) * reach * 0.08F * (1.0F - p);
+                float size = 0.22F * sizeScale * (1.0F - p * 0.85F) * Math.min(1.0F, phase * 12.0F);
                 poseStack.pushPose();
-                poseStack.translate(0.5F + e1.x * x + e2.x * y, 0.5F + e1.y * x + e2.y * y, 0.5F + e1.z * x + e2.z * y);
+                poseStack.translate(0.5F + e1.x * x + e2.x * y + dn.x * lift, 0.5F + e1.y * x + e2.y * y + dn.y * lift, 0.5F + e1.z * x + e2.z * y + dn.z * lift);
                 poseStack.mulPose(Axis.YP.rotation(t * 1.3F + i));
                 poseStack.mulPose(Axis.XP.rotation(t * 0.9F + i * 0.7F));
                 poseStack.scale(size, size, size);
-                Minecraft.getInstance().getItemRenderer().renderStatic(shown.get(i), ItemDisplayContext.FIXED, LightTexture.FULL_BRIGHT,
+                Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.FIXED, LightTexture.FULL_BRIGHT,
                         OverlayTexture.NO_OVERLAY, poseStack, buffers, be.getLevel(), i);
                 poseStack.popPose();
             }
         }
-        BlackHoleRenderer.hole(be.getBlockPos(), poseStack, buffers, 2, grow, be.colour());
+        if (be.chamber() > 0) {
+            // (in its containment chamber: as big as it reaches, its alpha a 255th at a time - as the shader reads it)
+            float grow = Math.round(Math.min(1.0F, reach / BlackHoleRenderer.CHAMBER_REACH) * 255.0F) / 255.0F;
+            BlackHoleRenderer.hole(be.getBlockPos(), poseStack, buffers, 3, grow, be.colour());
+        } else {
+            float grow = Math.max(0.0F, Math.min(1.0F, (reach - 0.38F) / 0.92F));
+            BlackHoleRenderer.hole(be.getBlockPos(), poseStack, buffers, 2, grow, be.colour());
+        }
+    }
+
+    private static float hash(float n) {
+        float s = (float) Math.sin(n * 12.9898F + 4.1414F) * 43758.5453F;
+        return s - (float) Math.floor(s);
     }
 
     @Override
     public AABB getRenderBoundingBox(SingularityBlockEntity be) {
-        return new AABB(be.getBlockPos()).inflate(BlackHoleRenderer.reach(2, Math.max(be.fullness(), be.shownGrow)) + 0.1);
+        return new AABB(be.getBlockPos()).inflate(Math.max(be.reach(), be.shownGrow) + 0.1);
     }
 
     @Override

@@ -75,6 +75,8 @@ public final class ModBlockEntities {
     public static final Supplier<BlockEntityType<GalaxyProjectorBlockEntity>> GALAXY_PROJECTOR = TYPES.register("galaxy_projector",
             () -> BlockEntityType.Builder.of(GalaxyProjectorBlockEntity::new, ModBlocks.GALAXY_PROJECTOR.get()).build(null));
 
+    public static final Supplier<BlockEntityType<ContainmentFrameBlockEntity>> CONTAINMENT_FRAME = TYPES.register("containment_frame",
+            () -> BlockEntityType.Builder.of(ContainmentFrameBlockEntity::new, ModBlocks.CONTAINMENT_FRAME.get()).build(null));
     public static final Supplier<BlockEntityType<SingularityBlockEntity>> SINGULARITY = TYPES.register("singularity",
             () -> BlockEntityType.Builder.of(SingularityBlockEntity::new, ModBlocks.SINGULARITY.get()).build(null));
     public static final Supplier<BlockEntityType<KaleidoscopeBlockEntity>> KALEIDOSCOPE = TYPES.register("kaleidoscope",

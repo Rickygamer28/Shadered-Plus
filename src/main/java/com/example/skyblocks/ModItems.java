@@ -70,6 +70,7 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> MAGMA_BASIN = ITEMS.registerSimpleBlockItem("magma_basin", ModBlocks.MAGMA_BASIN);
     public static final DeferredItem<BlockItem> BLACK_HOLE = ITEMS.registerSimpleBlockItem("black_hole", ModBlocks.BLACK_HOLE);
     public static final DeferredItem<BlockItem> BIG_BLACK_HOLE = ITEMS.registerSimpleBlockItem("big_black_hole", ModBlocks.BIG_BLACK_HOLE);
+    public static final DeferredItem<BlockItem> CONTAINMENT_FRAME = ITEMS.registerSimpleBlockItem("containment_frame", ModBlocks.CONTAINMENT_FRAME);
     public static final DeferredItem<BlockItem> SINGULARITY = ITEMS.registerSimpleBlockItem("singularity", ModBlocks.SINGULARITY,
             new net.minecraft.world.item.Item.Properties().stacksTo(1).fireResistant());
     public static final DeferredItem<BlockItem> BIG_LAVA_LAMP = ITEMS.registerSimpleBlockItem("big_lava_lamp", ModBlocks.BIG_LAVA_LAMP);
