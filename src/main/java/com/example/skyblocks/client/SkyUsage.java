@@ -366,6 +366,9 @@ public final class SkyUsage {
                 GlStateManager._scissorBox(box[0], box[1], Math.max(1, box[2] - box[0]), Math.max(1, box[3] - box[1]));
             }
             RenderSystem.setProjectionMatrix(new Matrix4f(skyProjection), VertexSorting.DISTANCE_TO_ORIGIN);
+            // (the view's turn comes from the pose stack given to the pass, as at the sky stage: none in the model-view,
+            // which midway through the frame has the camera's turn in it - the picture would be turned twice)
+            RenderSystem.getModelViewMatrix().identity();
             // the same view rotation Shadered gives its sky passes
             Camera camera = mc.gameRenderer.getMainCamera();
             PoseStack view = new PoseStack();
