@@ -17,6 +17,7 @@ flat in vec3 boxLo;
 flat in vec3 boxHi;
 flat in float persp;
 flat in vec3 settings;
+flat in vec3 toView;
 
 uniform float SimYears;  // years gone by in the model
 uniform float SpinTime;  // seconds of turning (stops when it's paused)
@@ -419,7 +420,7 @@ vec3 stars(vec3 d) {
 
 // the depth of a point (block units): what's in front of it in the world hides it
 float depthOf(vec3 p) {
-    vec4 c = ProjMat * ModelViewMat * vec4(p, 1.0);
+    vec4 c = ProjMat * ModelViewMat * vec4(p + toView, 1.0);
     return clamp(c.z / c.w * 0.5 + 0.5, 0.0, 1.0);
 }
 

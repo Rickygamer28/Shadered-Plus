@@ -18,6 +18,7 @@ flat out float kind;
 flat out vec3 boxLo;
 flat out vec3 boxHi;
 flat out float persp;
+flat out vec3 toView; // (from the block's own space to the camera's: its corners come already moved there)
 flat out vec3 settings; // (this one's own: dome, real sizes, size - carried by its corners, not uniforms)
 
 void main() {
@@ -35,6 +36,7 @@ void main() {
     boxLo = lo;
     boxHi = hi;
     lp = mix(lo, hi, vec3(float(corner & 1), float((corner >> 1) & 1), float((corner >> 2) & 1)));
+    toView = Position - lp;
     mat4 iv = inverse(ModelViewMat);
     persp = ProjMat[2][3] < -0.5 ? 1.0 : 0.0;
     vec4 e = inverse(ProjMat * ModelViewMat) * vec4(0.0, 0.0, 1.0, 0.0);
