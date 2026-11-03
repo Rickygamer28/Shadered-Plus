@@ -16,15 +16,19 @@ flat in float kind;
 flat in vec3 boxLo;
 flat in vec3 boxHi;
 flat in float persp;
+flat in vec3 settings;
 
 uniform float SimYears;  // years gone by in the model
 uniform float SpinTime;  // seconds of turning (stops when it's paused)
-uniform float Dome;      // the planetarium: 1 in its glass dome full of dark starry space, 0 just the planets in the open
-uniform float SizeMode;  // 0 sizes to see them by, 1 real sizes
+// (this one's own settings, from its corners: set in main)
+float Dome = 1.0;      // the planetarium: 1 in its glass dome full of dark starry space, 0 just the planets in the open
+float SizeMode = 0.0;  // 0 sizes to see them by, 1 real sizes
+float HoloScale = 1.0; // the planetarium's size: 1, 2 or 4 times
+uniform mat4 ModelViewMat;
+uniform mat4 ProjMat;
 uniform float Boost;     // music: the Sun pulsing
 uniform float Glow;      // the hologram's brightness (dimmer by day)
 uniform float ItemMode;
-uniform float HoloScale; // the planetarium's size: 1, 2 or 4 times
 
 out vec4 fragColor;
 
@@ -413,7 +417,17 @@ vec3 stars(vec3 d) {
     return col;
 }
 
+// the depth of a point (block units): what's in front of it in the world hides it
+float depthOf(vec3 p) {
+    vec4 c = ProjMat * ModelViewMat * vec4(p, 1.0);
+    return clamp(c.z / c.w * 0.5 + 0.5, 0.0, 1.0);
+}
+
 void main() {
+    gl_FragDepth = gl_FragCoord.z;
+    Dome = settings.x;
+    SizeMode = settings.y;
+    HoloScale = settings.z;
     bool holo = kind > 0.5;
     float S = holo ? HoloScale : 1.0;
     gC = holo ? vec3(0.5, 0.3 + 1.15 * S, 0.5) : vec3(0.5, 0.74, 0.5);
@@ -641,6 +655,8 @@ void main() {
             alpha = clamp(alpha + fres + spec * 0.5, 0.0, 1.0);
         }
         if (alpha < 0.004) discard; // (no dome: nothing here)
+        // (the depth of a planet hit, else of the dome's near side: the world in front of it hides it, not the box's)
+        if (ItemMode < 0.5) gl_FragDepth = depthOf(ro + rd * (hit >= 0 ? hitT : max(tIn, 0.1)));
         fragColor = vec4(clamp(col, 0.0, 1.0), clamp(alpha, 0.0, 1.0));
         return;
     }
@@ -649,5 +665,6 @@ void main() {
     col = col + add;
     alpha = clamp(alpha + addA, 0.0, 1.0);
     if (alpha < 0.004) discard;
+    if (ItemMode < 0.5) gl_FragDepth = depthOf(ro + rd * (hit >= 0 ? hitT : max(tIn, 0.1)));
     fragColor = vec4(clamp(col, 0.0, 1.0), alpha);
 }

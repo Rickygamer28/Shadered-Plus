@@ -38,7 +38,7 @@ import org.joml.Matrix4f;
 public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlockEntity> {
     static ShaderInstance shader;
     // the model being drawn now (for the uniforms)
-    private static float years, spin, sizes, glow = 1.0F, itemMode, dome = 1.0F, holoScale = 1.0F;
+    private static float years, spin, glow = 1.0F, itemMode;
     static final Matrix4f ITEM_INV = new Matrix4f();
 
     @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
@@ -56,11 +56,8 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
             MusicReactor.tick();
             shader.safeGetUniform("SimYears").set(years);
             shader.safeGetUniform("SpinTime").set(spin);
-            shader.safeGetUniform("SizeMode").set(sizes);
             shader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.5F, 1.0F));
             shader.safeGetUniform("Glow").set(glow);
-            shader.safeGetUniform("Dome").set(dome);
-            shader.safeGetUniform("HoloScale").set(holoScale);
             shader.safeGetUniform("ItemMode").set(itemMode);
             shader.safeGetUniform("LampInv").set(ITEM_INV);
         }
@@ -106,18 +103,15 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
         long time = level.getGameTime();
         years = (float) (be.years(time, partialTick) % 100000.0);
         spin = (float) (be.spin(time, partialTick) % 36000.0);
-        sizes = be.realSizes() ? 1.0F : 0.0F;
-        dome = be.dome() ? 1.0F : 0.0F;
-        holoScale = holo ? be.scale() : 1.0F;
         itemMode = 0.0F;
         // the hologram: dimmer in daylight
         float day = Math.max(0.0F, Math.min(1.0F, (level.getSkyDarken(partialTick) - 0.2F) / 0.8F));
         float sky = LightTexture.sky(light) / 15.0F;
         glow = holo ? 1.0F - 0.3F * day * sky : 1.0F;
-        box(buffers.getBuffer(Types.MODEL), poseStack.last().pose(), holo, holoScale);
-        if (buffers instanceof MultiBufferSource.BufferSource source) {
-            source.endBatch(Types.MODEL); // (now: its own time and sizes)
-        }
+        // drawn now, with its own time and brightness (the main buffers if these can't be drawn at once)
+        MultiBufferSource.BufferSource source = buffers instanceof MultiBufferSource.BufferSource s ? s : Minecraft.getInstance().renderBuffers().bufferSource();
+        box(source.getBuffer(Types.MODEL), poseStack.last().pose(), holo, holo ? be.size() : 0, be.dome(), be.realSizes());
+        source.endBatch(Types.MODEL);
         if (!MirrorRenderer.isRenderingReflection()) {
             label(be, holo, poseStack, buffers);
         }
@@ -140,28 +134,26 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
         float t = mc.level == null ? 0.0F : (mc.level.getGameTime() % 72000L) / 20.0F;
         years = 26.3F + t / 120.0F;
         spin = t;
-        sizes = 0.0F;
         glow = 1.0F;
-        dome = 1.0F;
-        holoScale = 1.0F;
         itemMode = 1.0F;
-        box(buffers.getBuffer(Types.MODEL), m, holo, 1.0F);
-        if (buffers instanceof MultiBufferSource.BufferSource source) {
-            source.endBatch(Types.MODEL);
-        }
+        MultiBufferSource.BufferSource source = buffers instanceof MultiBufferSource.BufferSource s ? s : mc.renderBuffers().bufferSource();
+        box(source.getBuffer(Types.MODEL), m, holo, 0, true, false);
+        source.endBatch(Types.MODEL);
         itemMode = 0.0F;
         poseStack.popPose();
     }
 
     /** The box round the model, its faces facing out (the same numbers as the shader's). */
-    static void box(VertexConsumer vc, Matrix4f m, boolean holo, float s) {
+    static void box(VertexConsumer vc, Matrix4f m, boolean holo, int size, boolean dome, boolean real) {
+        float s = size == 2 ? 4.0F : size == 1 ? 2.0F : 1.0F;
+        int extra = (dome ? 1 : 0) + (real ? 2 : 0) + 4 * size;
         float[] lo = holo ? new float[] {0.5F - 1.55F * s, 0.12F, 0.5F - 1.55F * s} : new float[] {-0.18F, 0.3F, -0.18F};
         float[] hi = holo ? new float[] {0.5F + 1.55F * s, 0.3F + 2.65F * s, 0.5F + 1.55F * s} : new float[] {1.18F, 1.08F, 1.18F};
         int[][] faces = {{4, 5, 7, 6}, {1, 0, 2, 3}, {5, 1, 3, 7}, {0, 4, 6, 2}, {6, 7, 3, 2}, {0, 1, 5, 4}};
         for (int[] f : faces) {
             for (int k : f) {
                 vc.addVertex(m, (k & 1) != 0 ? hi[0] : lo[0], (k & 2) != 0 ? hi[1] : lo[1], (k & 4) != 0 ? hi[2] : lo[2])
-                        .setUv(k + (holo ? 8 : 0), 0.0F).setColor(255, 255, 255, 255);
+                        .setUv(k + (holo ? 8 : 0), extra).setColor(255, 255, 255, 255);
             }
         }
     }

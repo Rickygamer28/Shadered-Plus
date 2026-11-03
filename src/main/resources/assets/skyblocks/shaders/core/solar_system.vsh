@@ -11,7 +11,6 @@ uniform mat4 ModelViewMat;
 uniform mat4 ProjMat;
 uniform float ItemMode;
 uniform mat4 LampInv;
-uniform float HoloScale; // the planetarium's size: 1, 2 or 4 times
 
 out vec3 lp;
 out vec3 lray;
@@ -19,6 +18,7 @@ flat out float kind;
 flat out vec3 boxLo;
 flat out vec3 boxHi;
 flat out float persp;
+flat out vec3 settings; // (this one's own: dome, real sizes, size - carried by its corners, not uniforms)
 
 void main() {
     gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
@@ -26,7 +26,10 @@ void main() {
     int corner = code & 7;
     kind = float(code >> 3);
     // (client/SolarSystemRenderer's boxes)
-    float s = HoloScale;
+    int extra = int(UV0.y + 0.5); // dome + 2 * real sizes + 4 * size (0, 1, 2)
+    int size = extra >> 2;
+    float s = size == 2 ? 4.0 : size == 1 ? 2.0 : 1.0;
+    settings = vec3(float(extra & 1), float((extra >> 1) & 1), s);
     vec3 lo = kind < 0.5 ? vec3(-0.18, 0.3, -0.18) : vec3(0.5 - 1.55 * s, 0.12, 0.5 - 1.55 * s);
     vec3 hi = kind < 0.5 ? vec3(1.18, 1.08, 1.18) : vec3(0.5 + 1.55 * s, 0.3 + 2.65 * s, 0.5 + 1.55 * s);
     boxLo = lo;

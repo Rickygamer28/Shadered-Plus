@@ -71,30 +71,6 @@
             ]
         },
         {
-            "name": "Dome",
-            "type": "float",
-            "count": 1,
-            "values": [
-                1.0
-            ]
-        },
-        {
-            "name": "HoloScale",
-            "type": "float",
-            "count": 1,
-            "values": [
-                1.0
-            ]
-        },
-        {
-            "name": "SizeMode",
-            "type": "float",
-            "count": 1,
-            "values": [
-                0.0
-            ]
-        },
-        {
             "name": "Boost",
             "type": "float",
             "count": 1,
