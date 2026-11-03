@@ -480,11 +480,68 @@ public final class SkyUsage {
     }
 
     /**
+     * Where a flat convex shape is in the skies' pictures (as {@link #rectOfBox}): its corners ({x, y, z} each, in order
+     * round it) put on screen with {@code toClip}, which it's drawn with now. Null unless drawn onto the screen itself.
+     */
+    @Nullable
+    public static int[] rectOfShape(Matrix4f toClip, float[][] corners) {
+        Minecraft mc = Minecraft.getInstance();
+        if (skyProjection == null || GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING) != mc.getMainRenderTarget().frameBufferId) {
+            return null;
+        }
+        int n = corners.length;
+        float[][] c = new float[n][];
+        int all = 0x1F;
+        for (int i = 0; i < n; i++) {
+            org.joml.Vector4f v = new org.joml.Vector4f(corners[i][0], corners[i][1], corners[i][2], 1.0F);
+            toClip.transform(v);
+            c[i] = new float[] {v.x, v.y, v.w};
+            all &= (v.x < -v.w ? 1 : 0) | (v.x > v.w ? 2 : 0) | (v.y < -v.w ? 4 : 0) | (v.y > v.w ? 8 : 0) | (v.w < NEAR_W ? 16 : 0);
+        }
+        if (all != 0) {
+            return OFF;
+        }
+        float minX = 2.0F, minY = 2.0F, maxX = -2.0F, maxY = -2.0F;
+        for (int i = 0; i < n; i++) {
+            float[] a = c[i], b = c[(i + 1) % n];
+            if (a[2] >= NEAR_W) {
+                minX = Math.min(minX, a[0] / a[2]);
+                maxX = Math.max(maxX, a[0] / a[2]);
+                minY = Math.min(minY, a[1] / a[2]);
+                maxY = Math.max(maxY, a[1] / a[2]);
+            }
+            if ((a[2] >= NEAR_W) != (b[2] >= NEAR_W)) { // (an edge crossing into view: where it does)
+                float k = (NEAR_W - a[2]) / (b[2] - a[2]);
+                float x = (a[0] + (b[0] - a[0]) * k) / NEAR_W, y = (a[1] + (b[1] - a[1]) * k) / NEAR_W;
+                minX = Math.min(minX, x);
+                maxX = Math.max(maxX, x);
+                minY = Math.min(minY, y);
+                maxY = Math.max(maxY, y);
+            }
+        }
+        if (minX > maxX) {
+            return OFF;
+        }
+        ComplexPassRenderer renderer = ComplexPassRenderer.getInstance();
+        int width = Math.max(1, renderer.getPreviousWidth()), height = Math.max(1, renderer.getPreviousHeight());
+        int margin = 4;
+        int rx0 = Math.max(0, (int) Math.floor((Math.max(minX, -1.0F) * 0.5F + 0.5F) * width) - margin);
+        int ry0 = Math.max(0, (int) Math.floor((Math.max(minY, -1.0F) * 0.5F + 0.5F) * height) - margin);
+        int rx1 = Math.min(width, (int) Math.ceil((Math.min(maxX, 1.0F) * 0.5F + 0.5F) * width) + margin);
+        int ry1 = Math.min(height, (int) Math.ceil((Math.min(maxY, 1.0F) * 0.5F + 0.5F) * height) + margin);
+        return rx1 <= rx0 || ry1 <= ry0 ? OFF : new int[] {rx0, ry0, rx1, ry1};
+    }
+
+    /**
      * A sky shown by something whose place on screen is known ({@code rect}, from {@link #rectOfBox}; not
      * {@link #OFF}): its picture brought up to date there only, not all of it. In a mirror, or not knowing where: all
      * of it, as {@link #ensureFresh}.
      */
     public static void ensurePart(@Nullable SkyblockBatchData data, @Nullable int[] rect) {
+        if (rect == OFF && !MirrorRenderer.isRenderingReflection()) {
+            markLight(data); // (not on screen: nothing to bring up to date)
+            return;
+        }
         if (rect == null || MirrorRenderer.isRenderingReflection()) {
             ensureFresh(data);
             return;
