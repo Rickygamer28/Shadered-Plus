@@ -503,8 +503,11 @@ public final class SkyUsage {
      * already). Not in a mirror, the HUD, an open screen, a painting's picture or with a shader pack (drawn somewhere
      * else than the screen): as before, the whole picture.
      */
+    /** Off: the whole picture for them, as before (the render test compares). */
+    public static boolean itemParts = true;
+
     public static void itemsDrawn(RenderType type, com.mojang.blaze3d.vertex.MeshData mesh) {
-        if (drawing || inHud || MirrorRenderer.isRenderingReflection() || !RenderSystem.isOnRenderThread()) {
+        if (!itemParts || drawing || inHud || MirrorRenderer.isRenderingReflection() || !RenderSystem.isOnRenderThread()) {
             return;
         }
         if (itemTypes == null) {

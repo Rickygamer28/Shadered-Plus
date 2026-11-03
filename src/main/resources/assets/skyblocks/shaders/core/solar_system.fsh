@@ -652,8 +652,10 @@ void main() {
         col += add;
         alpha = clamp(alpha + addA, 0.0, 1.0);
         // the hologram's shimmer: faint lines going up, a cool rim of light round the planets
-        col *= (0.92 + 0.08 * sin(gl_FragCoord.y * 1.5 + t * 6.0)) * Glow;
-        alpha *= Glow;
+        // (the planets themselves solid: not dimmed or see-through by day, only the light round them)
+        float solid = hit >= 0 ? 1.0 : 0.0;
+        col *= (0.92 + 0.08 * sin(gl_FragCoord.y * 1.5 + t * 6.0)) * mix(Glow, 1.0, solid);
+        alpha = mix(alpha * Glow, 1.0, solid);
         // the glass: a sheen at its edge, a highlight
         vec3 pe = ro + rd * tIn;
         vec3 n = normalize(pe - gC);
