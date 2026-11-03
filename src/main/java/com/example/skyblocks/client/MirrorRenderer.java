@@ -113,6 +113,9 @@ public final class MirrorRenderer {
         return link == null ? w : link.dest();
     }
 
+    /** (The render test: every portal drawn from its last pictures, as if its other end were far away.) */
+    public static boolean forceFarPortals;
+
     /** The server's list of portal mirrors changed: the walls found again. */
     public static void portalsChanged() {
         dirty = true;
@@ -2158,7 +2161,7 @@ public final class MirrorRenderer {
             if (b == null) {
                 continue; // (none: its swirl shows)
             }
-            boolean far = !level.hasChunkAt(BlockPos.containing(b.origin()));
+            boolean far = forceFarPortals || !level.hasChunkAt(BlockPos.containing(b.origin()));
             int turns = com.example.skyblocks.PortalMirrors.turns(a, b);
             double planeA = com.example.skyblocks.PortalMirrors.plane(a.min(), a.facing());
             double planeB = com.example.skyblocks.PortalMirrors.plane(b.min(), b.facing());
