@@ -108,7 +108,8 @@ public final class RenderTest {
             "fill -20 -60 20 -17 -56 20 skyblocks:underwater_liquid", "fill -16 -60 20 -14 -56 20 skyblocks:aurora_liquid",
     };
     /** Where the player stands for each picture: x y z yaw pitch ("night " first: at night). */
-    private static final String[] SPOTS = {"0.5 -60 -6.5 0 15", "0.5 -60 1.6 0 20", "night 0.5 -60 1.6 0 20", "0.5 -59 5.6 0 40", "night 0.5 -59 5.6 0 40", "0.5 -59.5 8.5 0 8", "night 0.5 -59.5 8.5 0 8", "-2.5 -59.3 10.4 0 30", "-4 -58 18.3 0 55", "night -4 -58 18.3 0 55", "rain -4 -58 18.3 0 55", "4.5 -58 18.3 0 55", "night 4.5 -58 18.3 0 55", "night 0.5 -57 20.5 0 -8", "0.5 -59 27 0 10", "night 0.5 -59 27 0 10", "-4 -59.5 33.3 0 15", "3 -59.5 33.3 0 15", "-4.3 -59.4 34.7 0 22", "3.3 -59.4 34.7 0 22", "2.5 -59.6 12.3 0 23", "1 -59.3 2.9 0 45", "-3 -60 40 0 30", "1 -59.5 39.5 0 10", "night 1 -59.5 39.5 0 10", "-5.5 -60 45 0 5", "0.5 -59.5 52 0 12", "9 -55.5 45 0 6", "-30.5 -57 1 0 10", "-12.6 -58.9 10.1 0 10", "night 11.5 -60 -8 0 5", "11.5 -59 3.5 -45 15", "11.5 -59 3.5 -45 -25", "10.5 -59.6 -7.8 0 8", "-12.5 -59.3 2.7 0 38", "-12.5 -59.0 5.6 0 15", "night -12.5 -59.0 5.6 0 15", "-17 -59 16 -10 0", "-17 -59 16 10 0"};
+    private static net.minecraft.core.BlockPos clickAt;
+    private static final String[] SPOTS = {"0.5 -60 -6.5 0 15", "0.5 -60 1.6 0 20", "night 0.5 -60 1.6 0 20", "0.5 -59 5.6 0 40", "night 0.5 -59 5.6 0 40", "0.5 -59.5 8.5 0 8", "night 0.5 -59.5 8.5 0 8", "-2.5 -59.3 10.4 0 30", "-4 -58 18.3 0 55", "night -4 -58 18.3 0 55", "rain -4 -58 18.3 0 55", "4.5 -58 18.3 0 55", "night 4.5 -58 18.3 0 55", "night 0.5 -57 20.5 0 -8", "0.5 -59 27 0 10", "night 0.5 -59 27 0 10", "-4 -59.5 33.3 0 15", "3 -59.5 33.3 0 15", "-4.3 -59.4 34.7 0 22", "3.3 -59.4 34.7 0 22", "2.5 -59.6 12.3 0 23", "1 -59.3 2.9 0 45", "-3 -60 40 0 30", "1 -59.5 39.5 0 10", "night 1 -59.5 39.5 0 10", "-5.5 -60 45 0 5", "0.5 -59.5 52 0 12", "9 -55.5 45 0 6", "-30.5 -57 1 0 10", "-12.6 -58.9 10.1 0 10", "click -12 -60 10 -11.5 -60 8 0 25", "night 11.5 -60 -8 0 5", "11.5 -59 3.5 -45 15", "11.5 -59 3.5 -45 -25", "10.5 -59.6 -7.8 0 8", "-12.5 -59.3 2.7 0 38", "-12.5 -59.0 5.6 0 15", "night -12.5 -59.0 5.6 0 15", "-17 -59 16 -10 0", "-17 -59 16 10 0"};
 
     private static void run(MinecraftServer server, String command) {
         server.execute(() -> {
@@ -169,6 +170,14 @@ public final class RenderTest {
                         int spot = stage - 2;
                         if (ticks == 1) {
                             String where = SPOTS[spot];
+                            if (where.startsWith("click ")) { // (then: right-click a block with glass, as a player would)
+                                String[] w = where.split(" ");
+                                clickAt = new net.minecraft.core.BlockPos(Integer.parseInt(w[1]), Integer.parseInt(w[2]), Integer.parseInt(w[3]));
+                                where = String.join(" ", java.util.Arrays.copyOfRange(w, 4, w.length));
+                                run(mc.getSingleplayerServer(), "item replace entity @a weapon.mainhand with minecraft:glass");
+                            } else {
+                                clickAt = null;
+                            }
                             if (where.startsWith("night ")) {
                                 run(mc.getSingleplayerServer(), "time set 18000");
                                 where = where.substring(6);
@@ -183,6 +192,19 @@ public final class RenderTest {
                             }
                             run(mc.getSingleplayerServer(), "tp @a " + where);
                             mc.setScreen(null);
+                        }
+                        if (ticks == 30 && clickAt != null && mc.player != null && mc.gameMode != null) {
+                            net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+                                    net.minecraft.world.phys.Vec3.atCenterOf(clickAt).add(0.0, 0.4, 0.0), net.minecraft.core.Direction.UP, clickAt, false);
+                            var r = mc.gameMode.useItemOn(mc.player, net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+                            SkyBlocksMod.LOGGER.info("Shadered+ render test: clicked {} with {}: {}", clickAt, mc.player.getMainHandItem(), r);
+                        }
+                        if (ticks == 80 && clickAt != null) {
+                            var sbe = mc.getSingleplayerServer().overworld().getBlockEntity(clickAt);
+                            var cbe = mc.level.getBlockEntity(clickAt);
+                            SkyBlocksMod.LOGGER.info("Shadered+ render test: after the click - server {} dome {}, client {} dome {}",
+                                    sbe, sbe instanceof com.example.skyblocks.SolarSystemBlockEntity a ? a.dome() : null,
+                                    cbe, cbe instanceof com.example.skyblocks.SolarSystemBlockEntity b ? b.dome() : null);
                         }
                         if (ticks == 100) { // (the chunks built, the shaders warmed up)
                             String name = "rendertest_" + TAG + "_" + spot + ".png";
