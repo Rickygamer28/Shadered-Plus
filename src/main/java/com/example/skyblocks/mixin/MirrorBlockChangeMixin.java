@@ -15,5 +15,6 @@ public abstract class MirrorBlockChangeMixin {
     @Inject(method = "sendBlockUpdated", at = @At("HEAD"), require = 0)
     private void skyblocks$mirrorChanged(BlockPos pos, BlockState oldState, BlockState newState, int flags, CallbackInfo ci) {
         MirrorRenderer.blockChanged((ClientLevel) (Object) this, pos, oldState, newState);
+        com.example.skyblocks.client.SkyLiquidRenderer.blockChanged();
     }
 }

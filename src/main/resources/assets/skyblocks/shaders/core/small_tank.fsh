@@ -399,6 +399,20 @@ void main() {
             if (f0 >= f1) continue;
             vec3 lo = vec3(dot(oc, fwd), dot(oc, up), dot(oc, side)) / size;
             vec3 ld = vec3(dot(rd, fwd), dot(rd, up), dot(rd, side));
+            if (isFish(kind)) { // a much tighter box round it, in its own frame (the aquariums' own): far less tracing
+                float L = sp.body.x;
+                float tallest = sp.body.y + max(sp.fin.y * 1.3, sp.body.y * 0.45 * fishShape(kind).w) + (kind == 4 ? sp.body.y : 0.0);
+                float xb = -(0.92 * L + 2.3 * sp.tail.x) - 0.01, xf = 1.2 * L;
+                float bigP = kind == 10 || kind == 16 || kind == 19 ? 1.7 : 1.0;
+                float zb = max(sp.body.z, 0.85 * sp.body.z + 0.4 * L * bigP) + 0.35 * L + 0.01 + (kind == 18 ? 0.3 * sp.fin.y : 0.0);
+                float yb = max(max(tallest, 1.25 * sp.tail.y), kind == 7 ? 1.2 * sp.body.y : 0.0) + (kind == 16 ? 0.3 * L : 0.0) + 0.01;
+                vec3 lds = mix(ld, vec3(1.0e-6), lessThan(abs(ld), vec3(1.0e-6)));
+                vec3 ta = (vec3(xb, -yb, -zb) - lo) / lds, tb = (vec3(xf, yb, zb) - lo) / lds;
+                vec3 tn = min(ta, tb), tx = max(ta, tb);
+                f0 = max(f0, max(max(tn.x, tn.y), tn.z) * size);
+                f1 = min(f1, min(min(tx.x, tx.y), tx.z) * size);
+                if (f0 >= f1) continue;
+            }
             float wave, flap;
             tankSwim(i, kind, sp, t, wave, flap);
             float tm = f0;

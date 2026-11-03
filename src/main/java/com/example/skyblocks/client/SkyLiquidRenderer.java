@@ -52,6 +52,13 @@ public final class SkyLiquidRenderer {
     private static ClientLevel lastLevel;
     private static int lastChunkX, lastChunkZ;
     private static ByteBufferBuilder memory;
+    /** What the last search found (the liquids' places and levels, hashed), what the faces were made from, and blocks changed. */
+    private static long foundHash, builtHash = 1L, changes, builtChanges = -1L;
+
+    /** A block changed on the client (MirrorBlockChangeMixin): the faces next to it may change. */
+    public static void blockChanged() {
+        changes++;
+    }
 
     @SubscribeEvent
     public static void onStage(RenderLevelStageEvent event) {
@@ -70,7 +77,12 @@ public final class SkyLiquidRenderer {
         if (level != lastLevel || time - lastScan >= RESCAN_TICKS || time < lastScan
                 || chunkX != lastChunkX || chunkZ != lastChunkZ) {
             scan(level, chunkX, chunkZ, Math.min(RADIUS, mc.options.getEffectiveRenderDistance()));
-            buildGeometry(level, chunkX, chunkZ, camera.y);
+            // (the faces worked out again only if the liquids or a block changed, or a new chunk is the middle)
+            if (level != lastLevel || chunkX != lastChunkX || chunkZ != lastChunkZ || foundHash != builtHash || changes != builtChanges) {
+                buildGeometry(level, chunkX, chunkZ, camera.y);
+                builtHash = foundHash;
+                builtChanges = changes;
+            }
             lastLevel = level;
             lastScan = time;
             lastChunkX = chunkX;
@@ -343,6 +355,7 @@ public final class SkyLiquidRenderer {
     private static void scan(ClientLevel level, int centerX, int centerZ, int radius) {
         FOUND.clear();
         foundCount = 0;
+        foundHash = 17L;
         // nearest rings first, so the cap drops the far ones
         for (int ring = 0; ring <= radius && foundCount < MAX_BLOCKS; ring++) {
             for (int dx = -ring; dx <= ring; dx++) {
@@ -371,8 +384,11 @@ public final class SkyLiquidRenderer {
             for (int y = 0; y < 16; y++) {
                 for (int z = 0; z < 16; z++) {
                     for (int x = 0; x < 16; x++) {
-                        ModFluids.SkyLiquid liquid = liquid(section.getFluidState(x, y, z));
+                        net.minecraft.world.level.material.FluidState fluid = section.getFluidState(x, y, z);
+                        ModFluids.SkyLiquid liquid = liquid(fluid);
                         if (liquid != null) {
+                            foundHash = foundHash * 31L + (BlockPos.asLong(baseX + x, baseY + y, baseZ + z) ^ ((long) fluid.getAmount() << 58) ^ (fluid.isSource() ? 1L << 63 : 0L)
+                                    ^ ((long) System.identityHashCode(liquid) << 20));
                             FOUND.computeIfAbsent(liquid, l -> new ArrayList<>()).add(new BlockPos(baseX + x, baseY + y, baseZ + z));
                             if (++foundCount >= MAX_BLOCKS) {
                                 return;
