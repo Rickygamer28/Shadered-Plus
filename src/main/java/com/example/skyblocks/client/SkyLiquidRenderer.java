@@ -92,8 +92,20 @@ public final class SkyLiquidRenderer {
         java.util.Set<ModFluids.SkyLiquid> inView = new java.util.HashSet<>();
         for (ModFluids.SkyLiquid liquid : GEOMETRY.keySet()) {
             com.noodlegamer76.shadered.client.util.skyblock.SkyblockBatchData data = com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(liquid.sky);
-            float[] b = BOXES.get(liquid);
-            int[] rect = defer || b == null ? null : SkyUsage.rectOfBox(b[0] + ox, b[1] + oy, b[2] + oz, b[3] + ox, b[4] + oy, b[5] + oz);
+            int[] rect = defer ? null : SkyUsage.OFF;
+            List<float[]> cells = BOXES.get(liquid);
+            if (cells == null) {
+                rect = null;
+            }
+            for (int c = 0; rect != null && c < cells.size(); c++) { // (each bit of it: those in view, together)
+                float[] b = cells.get(c);
+                int[] r = SkyUsage.rectOfBox(b[0] + ox, b[1] + oy, b[2] + oz, b[3] + ox, b[4] + oy, b[5] + oz);
+                if (r == null) {
+                    rect = null;
+                } else if (r != SkyUsage.OFF) {
+                    rect = rect == SkyUsage.OFF ? r : new int[] {Math.min(rect[0], r[0]), Math.min(rect[1], r[1]), Math.max(rect[2], r[2]), Math.max(rect[3], r[3])};
+                }
+            }
             if (rect == SkyUsage.OFF) {
                 continue;
             }
@@ -135,8 +147,11 @@ public final class SkyLiquidRenderer {
 
     /** The liquid faces found by the last search, per liquid (x, y, z relative to the origin, u, v per vertex). */
     private static final Map<ModFluids.SkyLiquid, float[]> GEOMETRY = new LinkedHashMap<>();
-    /** Each liquid's faces' bounds (x0, y0, z0, x1, y1, z1, relative to the origin): where on screen its sky is needed. */
-    private static final Map<ModFluids.SkyLiquid, float[]> BOXES = new LinkedHashMap<>();
+    /**
+     * Each liquid's faces' bounds, by 8-block cells (x0, y0, z0, x1, y1, z1, relative to the origin): where on screen
+     * its sky is needed.
+     */
+    private static final Map<ModFluids.SkyLiquid, List<float[]>> BOXES = new LinkedHashMap<>();
     private static int originX, originY, originZ;
 
     /** Works out the faces of the blocks just found, relative to the camera's chunk. */
@@ -155,14 +170,20 @@ public final class SkyLiquidRenderer {
             if (collector.size > 0) {
                 float[] d = java.util.Arrays.copyOf(collector.data, collector.size);
                 GEOMETRY.put(entry.getKey(), d);
-                float[] b = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+                Map<Long, float[]> cells = new java.util.HashMap<>();
                 for (int i = 0; i < d.length; i += 5) {
+                    int f = i - (i / 5 % 4) * 5; // (a face's four corners all in its first corner's cell)
+                    long key = (((long) Math.floorDiv((int) Math.floor(d[f]), 8)) & 0xFFFFF) << 40
+                            | (((long) Math.floorDiv((int) Math.floor(d[f + 1]), 8)) & 0xFFFFF) << 20
+                            | (((long) Math.floorDiv((int) Math.floor(d[f + 2]), 8)) & 0xFFFFF);
+                    float[] b = cells.computeIfAbsent(key, k -> new float[] {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE,
+                            -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE});
                     for (int a = 0; a < 3; a++) {
                         b[a] = Math.min(b[a], d[i + a]);
                         b[a + 3] = Math.max(b[a + 3], d[i + a]);
                     }
                 }
-                BOXES.put(entry.getKey(), b);
+                BOXES.put(entry.getKey(), new ArrayList<>(cells.values()));
             }
         }
     }
