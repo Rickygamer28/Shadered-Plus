@@ -37,6 +37,7 @@ public class SkyBlocksMod {
         ModFluids.FLUIDS.register(modEventBus);
         ModFluids.RECIPES.register(modEventBus);
         SingularityMenu.MENUS.register(modEventBus);
+        PortalMirrors.POI.register(modEventBus);
         modEventBus.addListener(SkyBlocksMod::addToShaderedTab);
         modEventBus.addListener(SkyBlocksMod::registerCapabilities);
         modEventBus.addListener(SkyBlocksMod::registerPayloads);
@@ -67,6 +68,7 @@ public class SkyBlocksMod {
         event.accept(ModItems.GALAXY_PROJECTOR.get());
         event.accept(ModItems.ORRERY.get());
         event.accept(ModItems.KALEIDOSCOPE.get());
+        event.accept(ModItems.PORTAL_MIRROR.get());
         event.accept(ModItems.PLANETARIUM.get());
         event.accept(ModItems.MAGMA_BASIN.get());
         event.accept(ModItems.BLACK_HOLE.get());
@@ -117,6 +119,7 @@ public class SkyBlocksMod {
                 .playToServer(FogAreaPayload.TYPE, FogAreaPayload.STREAM_CODEC, FogAreaPayload::handle)
                 .playToServer(NeonSignPayload.TYPE, NeonSignPayload.STREAM_CODEC, NeonSignPayload::handle)
                 .playToServer(PondMaterialsPayload.TYPE, PondMaterialsPayload.STREAM_CODEC, PondMaterialsPayload::handle)
+                .playToServer(PortalCrossPayload.TYPE, PortalCrossPayload.STREAM_CODEC, PortalCrossPayload::handle)
                 .playToServer(SingularityPayloads.Action.TYPE, SingularityPayloads.Action.STREAM_CODEC, SingularityPayloads.Action::handle)
                 .playToClient(SingularityPayloads.Contents.TYPE, SingularityPayloads.Contents.STREAM_CODEC, SingularityPayloads.Contents::handle)
                 .playToClient(IslandMobsPayload.TYPE, IslandMobsPayload.STREAM_CODEC, IslandMobsPayload::handle)

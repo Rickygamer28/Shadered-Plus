@@ -7,6 +7,7 @@
     "SodiumMirrorBatchMixin",
     "SodiumMirrorCullMixin",
     "SodiumMirrorIrisMixin",
+    "SodiumPortalOcclusionMixin",
     "SodiumViewportMixin"
   ],
   "injectors": {

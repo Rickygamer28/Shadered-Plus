@@ -359,5 +359,7 @@
   "message.skyblocks.kaleidoscope.palette.ocean": "Ocean",
   "message.skyblocks.kaleidoscope.palette.sunset": "Sunset",
   "message.skyblocks.kaleidoscope.palette.autumn": "Autumn",
-  "message.skyblocks.kaleidoscope.palette.frost": "Frost"
+  "message.skyblocks.kaleidoscope.palette.frost": "Frost",
+  "block.skyblocks.portal_mirror": "Portal Mirror",
+  "tooltip.skyblocks.portal_mirror": "Links to the nearest other portal mirror of its colour (up to 96 blocks away): look through it to see what's past the other, walk through to come out there. Panes side by side make one bigger portal. A dye: its colour"
 }

@@ -170,7 +170,7 @@ public class SingularityScreen extends AbstractContainerScreen<SingularityMenu> 
                 long n = countAt(k);
                 if (n > 0) {
                     String s = SingularityMenu.amount(n);
-                    float k2 = font.width(s) * 0.75F <= 17.0F ? 0.75F : 0.5F; // (smaller when it wouldn't fit in the slot)
+                    float k2 = font.width(s) * 0.75F <= 12.0F ? 0.75F : 0.5F; // (smaller when it wouldn't fit in the slot)
                     g.pose().translate(cx + 17.0F, cy + 17.0F, 0.0F);
                     g.pose().scale(k2, k2, 1.0F);
                     g.drawString(font, s, -font.width(s), -font.lineHeight + 1, 0xFFFFFFFF, true);

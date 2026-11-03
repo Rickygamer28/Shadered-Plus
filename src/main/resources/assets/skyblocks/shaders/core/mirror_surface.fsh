@@ -4,11 +4,13 @@
 // a picture from a few frames ago still lines up with the mirror). The variants (our own code):
 //   round   - a round mirror in a gold ring (the block's wood showing in the corners);
 //   cracked - split into shards round where it was hit, each a little askew, bright cracks between;
-//   vanity  - a white lacquered frame round the outside of the whole mirror, warm bulbs along its sides and top.
+//   vanity  - a white lacquered frame round the outside of the whole mirror, warm bulbs along its sides and top;
+//   portal  - the world past the linked portal (client/MirrorRenderer), its edge glowing in its colour, shimmering.
 
 uniform sampler2D Sampler0;
 // how far into the picture it was drawn (the rest is left over from before)
 uniform vec2 MirrorTexMax;
+uniform float GameTime;
 
 in vec4 pictureClip;
 in vec2 faceUv;
@@ -30,6 +32,30 @@ void main() {
     float seed = faceCode.y;
     int edges = int(faceCode.z + 0.5);
     vec2 p = faceUv;
+
+    if (kind == 4) { // portal: its colour (seed: the dye's number) glowing round the outside of the whole portal
+        const vec3 DYES[16] = vec3[16](vec3(0.976, 1.0, 0.996), vec3(0.976, 0.502, 0.114), vec3(0.78, 0.306, 0.741), vec3(0.227, 0.702, 0.855),
+            vec3(0.996, 0.847, 0.239), vec3(0.502, 0.78, 0.122), vec3(0.953, 0.545, 0.667), vec3(0.278, 0.31, 0.322),
+            vec3(0.616, 0.616, 0.592), vec3(0.086, 0.612, 0.612), vec3(0.537, 0.196, 0.722), vec3(0.235, 0.267, 0.667),
+            vec3(0.514, 0.329, 0.196), vec3(0.369, 0.486, 0.086), vec3(0.69, 0.18, 0.149), vec3(0.114, 0.114, 0.129));
+        vec3 tint = DYES[int(clamp(seed, 0.0, 15.0) + 0.5)];
+        float left = (edges & 1) != 0 ? 9.0 : p.x;
+        float right = (edges & 2) != 0 ? 9.0 : 1.0 - p.x;
+        float bottom = (edges & 4) != 0 ? 9.0 : p.y;
+        float top = (edges & 8) != 0 ? 9.0 : 1.0 - p.y;
+        float m = min(min(left, right), min(bottom, top)); // (how far in from the portal's edge, in blocks)
+        float t = GameTime * 1200.0;
+        float rim = exp(-m * 9.0);
+        // the world through it ripples a little near the edge
+        vec2 wob = vec2(sin(p.y * 23.0 + t * 2.1 + p.x * 7.0), cos(p.x * 19.0 - t * 1.7 + p.y * 5.0)) * 0.006 * rim;
+        vec3 c = reflection(wob);
+        float spark = pow(max(0.0, sin(p.x * 40.0 + t * 3.0) * sin(p.y * 37.0 - t * 2.3)), 12.0);
+        float glow = rim * (0.75 + 0.25 * sin(t * 2.0 + (p.x + p.y) * 9.0));
+        c = mix(c, tint * 1.2, clamp(glow * 0.8, 0.0, 1.0)) + tint * (pow(rim, 4.0) * 0.8 + spark * rim * 0.6);
+        c += tint * 0.04; // (a faint tint over all of it)
+        fragColor = vec4(min(c, vec3(1.0)), 1.0);
+        return;
+    }
 
     if (kind == 1) { // round
         float r = length(p - 0.5);

@@ -17,6 +17,6 @@ void main() {
     pictureClip = MirrorTexMat * vec4(Position, 1.0);
     vec2 hi = floor(UV0 / 4.0 + 0.0001);
     faceUv = UV0 - hi * 4.0;
-    float kind = mod(hi.x, 4.0);
-    faceCode = vec3(kind, floor(hi.x / 4.0), hi.y);
+    float kind = mod(hi.x, 8.0);
+    faceCode = vec3(kind, floor(hi.x / 8.0), hi.y);
 }

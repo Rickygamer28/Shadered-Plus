@@ -50,7 +50,7 @@ public final class MirrorCulling {
         return false;
     }
 
-    private static void scheduleTerrainUpdate() {
+    static void scheduleTerrainUpdate() {
         try {
             Class<?> sodium = Class.forName("net.caffeinemc.mods.sodium.client.render.SodiumWorldRenderer");
             Object renderer = sodium.getMethod("instanceNullable").invoke(null);

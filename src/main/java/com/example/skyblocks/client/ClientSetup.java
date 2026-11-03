@@ -376,6 +376,19 @@ public final class ClientSetup {
         }, com.example.skyblocks.ModBlocks.VANILLA_KOI_POND.get());
     }
 
+    /** Portal mirrors: their colour. */
+    @SubscribeEvent
+    public static void portalColours(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Block event) {
+        event.register((state, level, pos, tint) -> state.getValue(com.example.skyblocks.PortalMirrorBlock.COLOR).getTextureDiffuseColor(),
+                com.example.skyblocks.ModBlocks.PORTAL_MIRROR.get());
+    }
+
+    @SubscribeEvent
+    public static void portalItemColour(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Item event) {
+        event.register((stack, tint) -> tint == 0 ? net.minecraft.world.item.DyeColor.PURPLE.getTextureDiffuseColor() : 0xFFFFFFFF,
+                com.example.skyblocks.ModItems.PORTAL_MIRROR.get());
+    }
+
     /** The vanilla aquariums' water: the biome's water colour, as any water. */
     @SubscribeEvent
     public static void aquariumWater(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Block event) {
