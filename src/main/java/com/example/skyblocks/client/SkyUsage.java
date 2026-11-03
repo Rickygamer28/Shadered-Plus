@@ -407,11 +407,11 @@ public final class SkyUsage {
     public static boolean placeKnown;
     /** {@link #rectOfBox}: not on screen at all. */
     public static final int[] OFF = {0, 0, 0, 0};
+    private static final float NEAR_W = 0.05F;
 
     /**
      * Where a box (relative to the camera) is in the skies' pictures (pixels, from the lower left, a few pixels'
-     * margin): {@link #OFF} if it's nowhere on screen, null if that can't be told (partly behind the camera: then all
-     * of the picture).
+     * margin): {@link #OFF} if it's nowhere on screen; partly behind the camera, the part in front of it.
      */
     @Nullable
     public static int[] rectOfBox(float x0, float y0, float z0, float x1, float y1, float z1) {
@@ -422,30 +422,48 @@ public final class SkyUsage {
         Matrix4f toClip = new Matrix4f(skyProjection)
                 .rotateX(camera.getXRot() * net.minecraft.util.Mth.DEG_TO_RAD)
                 .rotateY((camera.getYRot() + 180.0F) * net.minecraft.util.Mth.DEG_TO_RAD);
-        org.joml.Vector4f v = new org.joml.Vector4f();
+        float[][] c = new float[8][];
         int all = 0x1F;
-        boolean behind = false;
-        float minX = 2.0F, minY = 2.0F, maxX = -2.0F, maxY = -2.0F;
+        boolean anyBehind = false;
         for (int i = 0; i < 8; i++) {
-            v.set((i & 1) == 0 ? x0 : x1, (i & 2) == 0 ? y0 : y1, (i & 4) == 0 ? z0 : z1, 1.0F);
+            org.joml.Vector4f v = new org.joml.Vector4f((i & 1) == 0 ? x0 : x1, (i & 2) == 0 ? y0 : y1, (i & 4) == 0 ? z0 : z1, 1.0F);
             toClip.transform(v);
-            int out = (v.x < -v.w ? 1 : 0) | (v.x > v.w ? 2 : 0) | (v.y < -v.w ? 4 : 0) | (v.y > v.w ? 8 : 0) | (v.w < 0.05F ? 16 : 0);
+            c[i] = new float[] {v.x, v.y, v.w};
+            int out = (v.x < -v.w ? 1 : 0) | (v.x > v.w ? 2 : 0) | (v.y < -v.w ? 4 : 0) | (v.y > v.w ? 8 : 0) | (v.w < NEAR_W ? 16 : 0);
             all &= out;
-            if (v.w < 0.05F) {
-                behind = true;
-                continue;
-            }
-            float x = v.x / v.w, y = v.y / v.w;
-            minX = Math.min(minX, x);
-            maxX = Math.max(maxX, x);
-            minY = Math.min(minY, y);
-            maxY = Math.max(maxY, y);
+            anyBehind |= v.w < NEAR_W;
         }
         if (all != 0) {
             return OFF; // (every corner beyond the same edge of the view)
         }
-        if (behind) {
-            return null;
+        // what of it is in front of the camera: the corners there, and where its edges cross into view
+        float minX = 2.0F, minY = 2.0F, maxX = -2.0F, maxY = -2.0F;
+        for (int i = 0; i < 8; i++) {
+            if (c[i][2] >= NEAR_W) {
+                minX = Math.min(minX, c[i][0] / c[i][2]);
+                maxX = Math.max(maxX, c[i][0] / c[i][2]);
+                minY = Math.min(minY, c[i][1] / c[i][2]);
+                maxY = Math.max(maxY, c[i][1] / c[i][2]);
+            }
+        }
+        if (anyBehind) {
+            for (int i = 0; i < 8; i++) {
+                for (int bit = 1; bit <= 4; bit <<= 1) {
+                    int j = i | bit;
+                    if (j == i || (c[i][2] >= NEAR_W) == (c[j][2] >= NEAR_W)) {
+                        continue;
+                    }
+                    float k = (NEAR_W - c[i][2]) / (c[j][2] - c[i][2]);
+                    float x = (c[i][0] + (c[j][0] - c[i][0]) * k) / NEAR_W, y = (c[i][1] + (c[j][1] - c[i][1]) * k) / NEAR_W;
+                    minX = Math.min(minX, x);
+                    maxX = Math.max(maxX, x);
+                    minY = Math.min(minY, y);
+                    maxY = Math.max(maxY, y);
+                }
+            }
+        }
+        if (minX > maxX) {
+            return OFF;
         }
         ComplexPassRenderer renderer = ComplexPassRenderer.getInstance();
         int width = Math.max(1, renderer.getPreviousWidth()), height = Math.max(1, renderer.getPreviousHeight());
