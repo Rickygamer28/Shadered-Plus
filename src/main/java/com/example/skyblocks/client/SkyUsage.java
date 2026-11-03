@@ -14,6 +14,7 @@ import java.util.Map;
 import com.noodlegamer76.shadered.client.renderer.ComplexPassRenderer;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.ShaderInstance;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
@@ -487,6 +488,110 @@ public final class SkyUsage {
         }
         markLight(data);
         ensure(data, rect);
+    }
+
+    // ---- Shadered's sky render types (items, ores... in the world): only where each batch is on screen ----
+
+    /** Each of Shadered's sky render types, by the sky it shows (made on first use). */
+    @Nullable
+    private static Map<RenderType, SkyblockBatchData> itemTypes;
+    private static boolean itemPlaceKnown;
+
+    /**
+     * Just before a batch of one of Shadered's sky render types is drawn (SkyRenderTypeDrawMixin): where its faces are
+     * on screen, with the matrices it's drawn with now, and its sky's picture brought up to date there (if it isn't
+     * already). Not in a mirror, the HUD, an open screen, a painting's picture or with a shader pack (drawn somewhere
+     * else than the screen): as before, the whole picture.
+     */
+    public static void itemsDrawn(RenderType type, com.mojang.blaze3d.vertex.MeshData mesh) {
+        if (drawing || inHud || MirrorRenderer.isRenderingReflection() || !RenderSystem.isOnRenderThread()) {
+            return;
+        }
+        if (itemTypes == null) {
+            itemTypes = new IdentityHashMap<>();
+            try {
+                for (com.noodlegamer76.shadered.client.util.SkyblockType sky : com.noodlegamer76.shadered.client.util.SkyblockType.values()) {
+                    for (com.noodlegamer76.shadered.client.util.skyblock.SkyblockPass pass : com.noodlegamer76.shadered.client.util.skyblock.SkyblockPass.values()) {
+                        try {
+                            RenderType t = com.noodlegamer76.shadered.client.util.ModRenderTypes.getSkyblockRenderType(sky, pass);
+                            if (t != null) {
+                                itemTypes.put(t, SkyblockRenderer.getData(sky));
+                            }
+                        } catch (RuntimeException e) {
+                            // (no render type for this one)
+                        }
+                    }
+                }
+            } catch (RuntimeException e) {
+                // (not found: as before)
+            }
+        }
+        SkyblockBatchData data = itemTypes.get(type);
+        Minecraft mc = Minecraft.getInstance();
+        if (data == null || mc.screen != null || skyProjection == null
+                || GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING) != mc.getMainRenderTarget().frameBufferId) {
+            return;
+        }
+        int[] rect = rectOfMesh(mesh);
+        itemPlaceKnown = true;
+        placeKnown = true; // (its render type then doesn't ask for the whole picture)
+        if (rect != OFF) {
+            ensurePart(data, rect);
+        } else {
+            markLight(data);
+        }
+    }
+
+    public static void itemsDrawnDone() {
+        if (itemPlaceKnown) {
+            itemPlaceKnown = false;
+            placeKnown = false;
+        }
+    }
+
+    /** Where a batch's vertices are on screen (as rectOfBox), with the projection and view it's drawn with now. */
+    @Nullable
+    private static int[] rectOfMesh(com.mojang.blaze3d.vertex.MeshData mesh) {
+        com.mojang.blaze3d.vertex.MeshData.DrawState state = mesh.drawState();
+        java.nio.ByteBuffer buf = mesh.vertexBuffer().duplicate().order(java.nio.ByteOrder.nativeOrder());
+        int stride = state.format().getVertexSize(), n = state.vertexCount();
+        if (n <= 0 || stride < 12 || buf.limit() < n * stride) {
+            return OFF;
+        }
+        Matrix4f toClip = new Matrix4f(RenderSystem.getProjectionMatrix()).mul(RenderSystem.getModelViewMatrix());
+        org.joml.Vector4f v = new org.joml.Vector4f();
+        int all = 0x1F;
+        float minX = 2.0F, minY = 2.0F, maxX = -2.0F, maxY = -2.0F;
+        boolean behind = false;
+        for (int i = 0; i < n; i++) {
+            int at = i * stride;
+            v.set(buf.getFloat(at), buf.getFloat(at + 4), buf.getFloat(at + 8), 1.0F);
+            toClip.transform(v);
+            int out = (v.x < -v.w ? 1 : 0) | (v.x > v.w ? 2 : 0) | (v.y < -v.w ? 4 : 0) | (v.y > v.w ? 8 : 0) | (v.w < NEAR_W ? 16 : 0);
+            all &= out;
+            if (v.w < NEAR_W) {
+                behind = true;
+                continue;
+            }
+            minX = Math.min(minX, v.x / v.w);
+            maxX = Math.max(maxX, v.x / v.w);
+            minY = Math.min(minY, v.y / v.w);
+            maxY = Math.max(maxY, v.y / v.w);
+        }
+        if (all != 0) {
+            return OFF;
+        }
+        if (behind || minX > maxX) {
+            return null; // (partly behind the camera: all of it)
+        }
+        ComplexPassRenderer renderer = ComplexPassRenderer.getInstance();
+        int width = Math.max(1, renderer.getPreviousWidth()), height = Math.max(1, renderer.getPreviousHeight());
+        int margin = 4;
+        int rx0 = Math.max(0, (int) Math.floor((Math.max(minX, -1.0F) * 0.5F + 0.5F) * width) - margin);
+        int ry0 = Math.max(0, (int) Math.floor((Math.max(minY, -1.0F) * 0.5F + 0.5F) * height) - margin);
+        int rx1 = Math.min(width, (int) Math.ceil((Math.min(maxX, 1.0F) * 0.5F + 0.5F) * width) + margin);
+        int ry1 = Math.min(height, (int) Math.ceil((Math.min(maxY, 1.0F) * 0.5F + 0.5F) * height) + margin);
+        return rx1 <= rx0 || ry1 <= ry0 ? OFF : new int[] {rx0, ry0, rx1, ry1};
     }
 
     /** Before Shadered draws the queued sky blocks: brings the picture of every sky with blocks queued up to date. */

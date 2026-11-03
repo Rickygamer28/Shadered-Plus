@@ -28,6 +28,7 @@
     "SkyblockRendererMixin",
     "SkyblockRenderPassMixin",
     "SkyPassMixin",
+    "SkyRenderTypeDrawMixin",
     "SkyboxSeamMixin"
   ],
   "injectors": {
