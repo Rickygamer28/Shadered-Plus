@@ -639,7 +639,7 @@ public final class MirrorRenderer {
         } catch (RuntimeException ex) {
             skipped("portal picture failed: " + ex, LAST_DRAWN.isEmpty() ? new Wall(Direction.UP, 0) : LAST_DRAWN.iterator().next());
         }
-        List<MirrorCulling.View> views = new ArrayList<>();
+        List<MirrorCulling.View> views = new ArrayList<>(SNAPSHOT_VIEWS);
         for (Node node : all) {
             if (node.valid && node.view != null && node.depth <= 2) {
                 views.add(node.view);
@@ -710,9 +710,9 @@ public final class MirrorRenderer {
                 if (d <= 0.05 || d >= WALL_RANGE || link == null) {
                     continue;
                 }
-                Snapshot snap = snapshot(level, w, link, e.getValue(), false);
+                Snapshot snap = snapshot(level, w, link);
                 if (snap != null) {
-                    drawFaces(w, e.getValue(), cam.x, cam.y, cam.z, snap.texture(), snap.shot, snap.fromDisk);
+                    drawFarFaces(w, link, e.getValue(), cam, snap);
                 }
             }
             LAST_DRAWN.clear();
@@ -1830,149 +1830,313 @@ public final class MirrorRenderer {
 
     // ---- portals' last pictures ----
 
-    /** A portal's picture from just in front of it, looking straight in (its front filling the picture). */
+    /**
+     * What's at the other end of a portal, taken now and then while it's drawn live: five pictures from just in front
+     * of the other end (straight out, right, left, up, down), each with how far away every pixel is (in its alpha). A
+     * portal whose other end is too far to draw live is drawn from them (shaders/core/portal_far): its view rays
+     * followed out through them, so walking past it you still see round things. Saved with the world's name, so
+     * they're there next time.
+     */
     private static final class Snapshot {
-        TextureTarget target;
-        net.minecraft.client.renderer.texture.DynamicTexture loaded;
-        Shot shot = new Shot();
+        final TextureTarget[] packed = new TextureTarget[5];
+        final net.minecraft.client.renderer.texture.DynamicTexture[] loaded = new net.minecraft.client.renderer.texture.DynamicTexture[5];
         boolean fromDisk;
         long frame = -100000L, savedFrame = -100000L;
+        /** Being taken: from this frame on, a picture a frame (the chunks it needs asked for first). */
+        long startedFrame = -1L;
+        int next;
 
-        int texture() {
-            return loaded != null ? loaded.getId() : target.getColorTextureId();
+        int texture(int k) {
+            return loaded[k] != null ? loaded[k].getId() : packed[k] != null ? packed[k].getColorTextureId() : 0;
+        }
+
+        boolean complete() {
+            for (int k = 0; k < 5; k++) {
+                if (texture(k) == 0) return false;
+            }
+            return true;
+        }
+
+        void closeLoaded() {
+            for (int k = 0; k < 5; k++) {
+                if (loaded[k] != null) {
+                    loaded[k].close();
+                    loaded[k] = null;
+                }
+            }
         }
     }
 
     private static final Map<String, Snapshot> SNAPSHOTS = new HashMap<>();
     private static final Set<String> LOOKED_ON_DISK = new HashSet<>();
-    private static final int SNAPSHOT_EVERY = 120, SAVE_EVERY = 2400, SNAPSHOT_SIZE = 384;
+    private static final int SNAPSHOT_EVERY = 200, SAVE_EVERY = 3000, SNAPSHOT_SIZE = 256, SNAPSHOT_LEAD = 3;
+    private static final float SNAPSHOT_FAR = 256.0F;
+    private static TextureTarget snapshotScratch;
+    private static ShaderInstance packShader, farShader;
 
-    /** How a portal's picture is taken: from in front of its middle, looking in, its front exactly filling the view. */
-    private record Canon(Vec3 eye, Matrix4f view, Matrix4f projection, int width, int height) {}
+    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    public static final class PortalShaders {
+        private PortalShaders() {}
 
-    private static Canon canon(Wall wall, Link link, List<BlockPos> faces) {
-        AABB b = bounds(wall, faces);
-        Direction f = wall.facing();
-        double w = f.getAxis() == Direction.Axis.X ? b.maxZ - b.minZ : b.maxX - b.minX, h = b.maxY - b.minY;
-        double d = Math.max(w, h) * 0.8 + 0.3;
-        Vec3 n = new Vec3(f.getStepX(), 0.0, f.getStepZ());
-        Vec3 eye = link.from().add(n.scale(d));
-        Matrix4f view = new Matrix4f().lookAt(0.0F, 0.0F, 0.0F, (float) -n.x, 0.0F, (float) -n.z, 0.0F, 1.0F, 0.0F);
-        float aspect = (float) (w / h);
-        Matrix4f projection = new Matrix4f().setPerspective((float) (2.0 * Math.atan(h * 0.5 / d)), aspect, 0.05F,
-                Math.max(64.0F, Minecraft.getInstance().gameRenderer.getDepthFar()));
-        int pw = aspect >= 1.0F ? SNAPSHOT_SIZE : Math.max(32, Math.round(SNAPSHOT_SIZE * aspect));
-        int ph = aspect >= 1.0F ? Math.max(32, Math.round(SNAPSHOT_SIZE / aspect)) : SNAPSHOT_SIZE;
-        return new Canon(eye, view, projection, pw, ph);
+        @SubscribeEvent
+        public static void registerPortalShaders(net.neoforged.neoforge.client.event.RegisterShadersEvent event) {
+            ShaderLoad.register(event, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "portal_pack"),
+                    DefaultVertexFormat.POSITION, sh -> packShader = sh);
+            ShaderLoad.register(event, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "portal_far"),
+                    DefaultVertexFormat.POSITION_TEX, sh -> farShader = sh);
+        }
+    }
+
+    /** Where the pictures are taken from: just in front of the other end's middle. */
+    private static Vec3 snapshotEye(Link link) {
+        Wall d = link.dest();
+        return link.to().add(d.nx() * 0.05, 0.0, d.nz() * 0.05);
+    }
+
+    /** Picture k's view: straight out, right, left, up, down (the same as portal_far's look()). */
+    private static Matrix4f snapshotView(Link link, int k) {
+        Wall d = link.dest();
+        org.joml.Vector3f f = new org.joml.Vector3f((float) d.nx(), 0.0F, (float) d.nz());
+        org.joml.Vector3f y = new org.joml.Vector3f(0.0F, 1.0F, 0.0F);
+        org.joml.Vector3f r = new org.joml.Vector3f(f).cross(y).normalize();
+        org.joml.Vector3f a, up;
+        switch (k) {
+            case 0 -> { a = f; up = y; }
+            case 1 -> { a = r; up = y; }
+            case 2 -> { a = new org.joml.Vector3f(r).negate(); up = y; }
+            case 3 -> { a = y; up = new org.joml.Vector3f(f).negate(); }
+            default -> { a = new org.joml.Vector3f(y).negate(); up = f; }
+        }
+        return new Matrix4f().lookAt(0.0F, 0.0F, 0.0F, a.x, a.y, a.z, up.x, up.y, up.z);
+    }
+
+    private static Matrix4f snapshotProjection() {
+        return new Matrix4f().setPerspective((float) (Math.PI / 2.0), 1.0F, 0.05F, SNAPSHOT_FAR);
     }
 
     private static String snapshotKey(ClientLevel level, Wall wall, Link link) {
         return level.dimension().location().toString().replace(':', '_').replace('/', '_') + "_" + wall.portal() + "_" + link.dest().portal();
     }
 
-    private static java.io.File snapshotFile(String key) {
+    private static java.io.File snapshotFile(String key, int k) {
         Minecraft mc = Minecraft.getInstance();
         String world = mc.getSingleplayerServer() != null ? mc.getSingleplayerServer().getWorldData().getLevelName()
                 : mc.getCurrentServer() != null ? mc.getCurrentServer().ip : "unknown";
         java.io.File dir = new java.io.File(mc.gameDirectory, "shaderedplus/portal_pictures/" + world.replaceAll("[^A-Za-z0-9._-]", "_"));
-        return new java.io.File(dir, key + ".png");
+        return new java.io.File(dir, key + "_" + k + ".png");
     }
 
-    /** A portal's last picture: in memory, or read from its file (null: none yet). */
-    private static Snapshot snapshot(ClientLevel level, Wall wall, Link link, List<BlockPos> faces, boolean create) {
+    /** A portal's pictures: in memory, or read from their files (null: none yet). */
+    private static Snapshot snapshot(ClientLevel level, Wall wall, Link link) {
         String key = snapshotKey(level, wall, link);
         Snapshot snap = SNAPSHOTS.get(key);
-        if (snap != null || create) {
-            return snap;
+        if (snap != null) {
+            return snap.complete() ? snap : null;
         }
         if (!LOOKED_ON_DISK.add(key)) {
             return null;
         }
-        java.io.File file = snapshotFile(key);
-        if (!file.isFile()) {
-            return null;
-        }
-        try (java.io.InputStream in = new java.io.FileInputStream(file)) {
-            com.mojang.blaze3d.platform.NativeImage image = com.mojang.blaze3d.platform.NativeImage.read(in);
-            snap = new Snapshot();
-            snap.loaded = new net.minecraft.client.renderer.texture.DynamicTexture(image);
-            snap.loaded.setFilter(true, false);
-            snap.fromDisk = true;
-            // (how it was taken: worked out again from the portals, as when it was drawn)
-            Canon c = canon(wall, link, faces);
-            snap.shot.projModel.set(c.projection()).mul(c.view()).mul(turn(link.turns()).invert());
-            Vec3 eye = com.example.skyblocks.PortalMirrors.rotate(c.eye().subtract(link.from()), link.turns()).add(link.to());
-            snap.shot.rx = eye.x;
-            snap.shot.ry = eye.y;
-            snap.shot.rz = eye.z;
-            SNAPSHOTS.put(key, snap);
-            return snap;
+        Snapshot read = new Snapshot();
+        read.fromDisk = true;
+        try {
+            for (int k = 0; k < 5; k++) {
+                java.io.File file = snapshotFile(key, k);
+                if (!file.isFile()) {
+                    read.closeLoaded();
+                    return null;
+                }
+                try (java.io.InputStream in = new java.io.FileInputStream(file)) {
+                    // (saved as read back from the graphics card, bottom row first: put back the same way)
+                    read.loaded[k] = new net.minecraft.client.renderer.texture.DynamicTexture(com.mojang.blaze3d.platform.NativeImage.read(in));
+                    read.loaded[k].setFilter(true, false);
+                }
+            }
         } catch (java.io.IOException | RuntimeException e) {
+            read.closeLoaded();
             return null;
         }
+        SNAPSHOTS.put(key, read);
+        return read;
     }
 
-    /** One portal in view a frame (each now and then): its picture taken from in front of it, kept, saved now and then. */
+    /** The views of the pictures being taken (for the chunk search: the chunks they need are drawn for them). */
+    private static final List<MirrorCulling.View> SNAPSHOT_VIEWS = new ArrayList<>();
+
+    /** A picture a frame for one portal being drawn live (each portal every so often); saved now and then. */
     private static void snapshots(Minecraft mc, ClientLevel level, Camera camera, Vec3 cam, RenderTarget main, Matrix4f projection, float partialTick) {
-        Wall best = null;
-        Snapshot bestSnap = null;
+        SNAPSHOT_VIEWS.clear();
+        if (packShader == null) {
+            return;
+        }
+        // the one being taken, else the stalest of those drawn live this frame
+        Wall wall = null;
+        Snapshot snap = null;
         long oldest = Long.MAX_VALUE;
         for (Map.Entry<Wall, Link> e : LINKS.entrySet()) {
             Wall w = e.getKey();
-            List<BlockPos> faces = WALLS.get(w);
-            Node live = NODES.get(List.of(w));
-            if (faces == null || live == null || !live.valid || live.renderedFrame != frame) {
-                continue; // (only while it's being drawn live: the chunks it shows are there)
+            if (!WALLS.containsKey(w)) {
+                continue;
             }
-            Snapshot snap = SNAPSHOTS.get(snapshotKey(level, w, e.getValue()));
-            long at = snap == null || snap.fromDisk ? Long.MIN_VALUE : snap.frame;
+            Snapshot s = SNAPSHOTS.get(snapshotKey(level, w, e.getValue()));
+            if (s != null && s.startedFrame >= 0) {
+                wall = w;
+                snap = s;
+                break;
+            }
+            Node live = NODES.get(List.of(w));
+            if (live == null || !live.valid || live.renderedFrame != frame) {
+                continue; // (only while it's drawn live: the chunks it shows are there)
+            }
+            long at = s == null || s.fromDisk ? Long.MIN_VALUE : s.frame;
             if (frame - at >= SNAPSHOT_EVERY && at < oldest) {
                 oldest = at;
-                best = w;
-                bestSnap = snap;
+                wall = w;
+                snap = s;
             }
         }
-        if (best == null) {
+        if (wall == null) {
             return;
         }
-        Link link = LINKS.get(best);
-        List<BlockPos> faces = WALLS.get(best);
-        Canon c = canon(best, link, faces);
-        String key = snapshotKey(level, best, link);
-        Snapshot snap = bestSnap;
+        Link link = LINKS.get(wall);
+        String key = snapshotKey(level, wall, link);
         if (snap == null || snap.fromDisk) {
-            if (snap != null && snap.loaded != null) {
-                snap.loaded.close();
+            if (snap != null) {
+                snap.closeLoaded();
             }
             snap = new Snapshot();
             SNAPSHOTS.put(key, snap);
         }
-        if (snap.target == null) {
-            snap.target = newTarget(c.width(), c.height());
-        } else {
-            resize(snap.target, c.width(), c.height());
+        Vec3 eye = snapshotEye(link);
+        Matrix4f proj = snapshotProjection();
+        if (snap.startedFrame < 0) {
+            snap.startedFrame = frame;
+            snap.next = 0;
         }
-        Node n = new Node(List.of(best));
-        n.target = snap.target;
+        // (the chunk search sees what they'll show, a few frames ahead)
+        for (int k = 0; k < 5; k++) {
+            SNAPSHOT_VIEWS.add(new MirrorCulling.View(new FrustumIntersection(new Matrix4f(proj).mul(snapshotView(link, k))
+                    .translate((float) (cam.x - eye.x), (float) (cam.y - eye.y), (float) (cam.z - eye.z)))));
+        }
+        if (frame - snap.startedFrame < SNAPSHOT_LEAD) {
+            return;
+        }
+        int k = snap.next;
+        if (snapshotScratch == null) {
+            snapshotScratch = newTarget(SNAPSHOT_SIZE, SNAPSHOT_SIZE);
+        }
+        if (snap.packed[k] == null) {
+            snap.packed[k] = new TextureTarget(SNAPSHOT_SIZE, SNAPSHOT_SIZE, false, Minecraft.ON_OSX);
+            snap.packed[k].setFilterMode(GL11.GL_LINEAR);
+        }
+        Node n = new Node(List.of(wall));
+        n.target = snapshotScratch;
         n.picRect = FULL;
         n.rect = FULL;
         n.area = 1.0F;
         n.scale = 1.0F;
         n.usedW = 1.0F;
         n.usedH = 1.0F;
-        n.chain = chain(best, c.eye().x, c.eye().y, c.eye().z, c.view(), false, infiniteFar(c.projection()));
+        Chain c = new Chain();
+        c.rx = eye.x;
+        c.ry = eye.y;
+        c.rz = eye.z;
+        c.modelView = snapshotView(link, k);
+        c.clipped = new Matrix4f(proj);
+        c.seen = new FrustumIntersection(new Matrix4f(proj).mul(c.modelView));
+        c.flipped = false;
+        n.chain = c;
         try {
-            renderNode(mc, level, camera, n, c.projection(), partialTick, true);
-            snap.shot = n.shot;
-            snap.frame = frame;
+            renderNode(mc, level, camera, n, proj, partialTick, true);
+            // packed: its colour, and how far each pixel is in the alpha
+            snap.packed[k].bindWrite(true);
+            RenderSystem.disableDepthTest();
+            RenderSystem.depthMask(false);
+            RenderSystem.disableBlend();
+            RenderSystem.disableCull();
+            packShader.safeGetUniform("Near").set(0.05F);
+            packShader.safeGetUniform("Far").set(SNAPSHOT_FAR);
+            RenderSystem.setShader(() -> packShader);
+            RenderSystem.setShaderTexture(0, snapshotScratch.getColorTextureId());
+            RenderSystem.setShaderTexture(1, snapshotScratch.getDepthTextureId());
+            BufferBuilder b = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
+            b.addVertex(-1.0F, -1.0F, 0.0F);
+            b.addVertex(1.0F, -1.0F, 0.0F);
+            b.addVertex(1.0F, 1.0F, 0.0F);
+            b.addVertex(-1.0F, 1.0F, 0.0F);
+            BufferUploader.drawWithShader(b.buildOrThrow());
+            RenderSystem.enableDepthTest();
+            RenderSystem.depthMask(true);
+            RenderSystem.enableCull();
         } finally {
             MirrorTiming.end();
             restore(mc, main, camera, projection, partialTick);
         }
-        if (frame - snap.savedFrame >= SAVE_EVERY) {
-            snap.savedFrame = frame;
-            dump(snap.target, null, snapshotFile(key));
+        snap.next++;
+        if (snap.next >= 5) {
+            snap.startedFrame = -1L;
+            snap.frame = frame;
+            if (frame - snap.savedFrame >= SAVE_EVERY) {
+                snap.savedFrame = frame;
+                for (int i = 0; i < 5; i++) {
+                    save(snap.packed[i], snapshotFile(key, i));
+                }
+            }
         }
+    }
+
+    /** A packed picture to its file (as read back, bottom row first, its alpha kept). */
+    private static void save(TextureTarget target, java.io.File file) {
+        try {
+            com.mojang.blaze3d.platform.NativeImage image = new com.mojang.blaze3d.platform.NativeImage(target.width, target.height, false);
+            RenderSystem.bindTexture(target.getColorTextureId());
+            image.downloadTexture(0, false);
+            file.getParentFile().mkdirs();
+            net.minecraft.Util.ioPool().execute(() -> {
+                try (image) {
+                    image.writeToFile(file);
+                } catch (java.io.IOException e) {
+                    SkyBlocksMod.LOGGER.warn("Shadered+: couldn't save {}", file, e);
+                }
+            });
+        } catch (RuntimeException e) {
+            SkyBlocksMod.LOGGER.warn("Shadered+: couldn't read a portal's picture", e);
+        }
+    }
+
+    /** A far portal's face, drawn from its other end's pictures (portal_far). */
+    private static void drawFarFaces(Wall wall, Link link, List<BlockPos> faces, Vec3 cam, Snapshot snap) {
+        ShaderInstance shader = farShader;
+        if (shader == null) {
+            return;
+        }
+        Vec3 eye = snapshotEye(link);
+        // (camera-relative points -> carried through the portal, relative to where the pictures were taken)
+        Vec3 t = com.example.skyblocks.PortalMirrors.rotate(cam.subtract(link.from()), link.turns()).add(link.to()).subtract(eye);
+        Matrix4f portalMat = new Matrix4f().translation((float) t.x, (float) t.y, (float) t.z).mul(turn(link.turns()));
+        shader.safeGetUniform("PortalMat").set(portalMat);
+        shader.safeGetUniform("EyeQ").set((float) t.x, (float) t.y, (float) t.z);
+        shader.safeGetUniform("Front").set((float) link.dest().nx(), 0.0F, (float) link.dest().nz());
+        RenderSystem.setShader(() -> shader);
+        for (int k = 0; k < 5; k++) {
+            RenderSystem.setShaderTexture(k, snap.texture(k));
+        }
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthFunc(GL11.GL_LEQUAL);
+        RenderSystem.depthMask(!overlayFaces);
+        RenderSystem.disableBlend();
+        RenderSystem.disableCull();
+        MeshData mesh = faceMesh(wall, faces, cam.x, cam.y, cam.z, true);
+        if (mesh != null) {
+            RenderSystem.enablePolygonOffset();
+            RenderSystem.polygonOffset(-2.0F, -20.0F);
+            try {
+                BufferUploader.drawWithShader(mesh);
+            } finally {
+                RenderSystem.polygonOffset(0.0F, 0.0F);
+                RenderSystem.disablePolygonOffset();
+            }
+        }
+        RenderSystem.enableCull();
     }
 
     /** The portal mirrors found: each linked one's two sides become walls whose pictures look through the other. */
