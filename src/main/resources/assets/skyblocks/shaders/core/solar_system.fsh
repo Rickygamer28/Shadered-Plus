@@ -30,6 +30,7 @@ uniform mat4 ProjMat;
 uniform float Boost;     // music: the Sun pulsing
 uniform float Glow;      // the hologram's brightness (dimmer by day)
 uniform float ItemMode;
+uniform float DepthOnly; // 1: only the solid things' depth (a second pass: what's drawn later is hidden behind the planets)
 
 out vec4 fragColor;
 
@@ -39,7 +40,6 @@ const float TAU = 6.2831853;
 // ---- the system's place and size in the block ----
 vec3 gC;   // the Sun's middle
 float gR;  // the system's radius (Neptune's orbit)
-float gBody = 1.0; // (the planets a little bigger on the orrery)
 
 // ---- noise ----
 float hash13(vec3 p) {
@@ -84,20 +84,21 @@ float fbm3(vec3 p) {
 // orbit radius (of R), radius shown, radius real (of R), period (years), where it starts (turns), axial tilt (radians),
 // one turn on its axis (seconds, negative: backwards)
 float orbitOf(int i) {
-    return i == 1 ? 0.15 : i == 2 ? 0.23 : i == 3 ? 0.31 : i == 4 ? 0.40 : i == 5 ? 0.60 : i == 6 ? 0.74 : i == 7 ? 0.86 : 0.97;
+    // (spaced so that no two bodies - with their moons - ever touch: the moons of the big planets go round tilted)
+    return i == 1 ? 0.15 : i == 2 ? 0.23 : i == 3 ? 0.32 : i == 4 ? 0.435 : i == 5 ? 0.61 : i == 6 ? 0.765 : i == 7 ? 0.885 : 0.985;
 }
 
 float sizeOf(int i) {
     bool real = SizeMode > 0.5;
-    if (i == 0) return real ? 0.12 : 0.105;
-    if (i == 1) return real ? 0.006 : 0.028;
-    if (i == 2) return real ? 0.014 : 0.046;
-    if (i == 3) return real ? 0.015 : 0.050;
-    if (i == 4) return real ? 0.008 : 0.036;
-    if (i == 5) return real ? 0.055 : 0.105;
-    if (i == 6) return real ? 0.046 : 0.085;
-    if (i == 7) return real ? 0.020 : 0.060;
-    if (i == 8) return real ? 0.019 : 0.058;
+    if (i == 0) return real ? 0.12 : 0.1;
+    if (i == 1) return real ? 0.006 : 0.026;
+    if (i == 2) return real ? 0.014 : 0.042;
+    if (i == 3) return real ? 0.015 : 0.045;
+    if (i == 4) return real ? 0.008 : 0.032;
+    if (i == 5) return real ? 0.055 : 0.085;
+    if (i == 6) return real ? 0.046 : 0.065;
+    if (i == 7) return real ? 0.020 : 0.05;
+    if (i == 8) return real ? 0.019 : 0.048;
     if (i == 9) return real ? 0.004 : 0.015;
     if (i >= 10 && i <= 13) return real ? 0.003 : (i == 12 ? 0.010 : 0.008);
     if (i == 14) return real ? 0.004 : 0.011;
@@ -148,7 +149,7 @@ vec3 bodyAt(int i) {
         vec3 e = planetAt(3);
         float a = TAU * SimYears / 0.0748;
         float node = TAU * SimYears / 18.6;
-        float r = (SizeMode > 0.5 ? 0.05 : 0.085) * gR;
+        float r = (SizeMode > 0.5 ? 0.05 : 0.062) * gR; // (close round the Earth: clear of Mars's orbit)
         vec3 p = vec3(cos(a), 0.0, sin(a)) * r;
         p.y = sin(a - node) * sin(0.09) * r;
         return e + p;
@@ -156,14 +157,17 @@ vec3 bodyAt(int i) {
     if (i >= 10 && i <= 13) {
         vec3 j = planetAt(5);
         float per = i == 10 ? 0.0048 : i == 11 ? 0.0097 : i == 12 ? 0.0196 : 0.0457;
-        float r = (i == 10 ? 0.13 : i == 11 ? 0.15 : i == 12 ? 0.172 : 0.195) * gR;
+        float r = (i == 10 ? 0.1 : i == 11 ? 0.11 : i == 12 ? 0.122 : 0.135) * gR;
         float a = TAU * (SimYears / per + float(i) * 0.37);
-        return j + vec3(cos(a) * r, 0.0, sin(a) * r);
+        // (their orbits tilted up on the Sun's side and the far side: never out as far as Mars's or Saturn's orbits)
+        vec3 u = normalize(vec3(j.x - gC.x, 0.0, j.z - gC.z));
+        vec3 ax = u * cos(0.6) + vec3(0.0, sin(0.6), 0.0);
+        return j + (ax * cos(a) + vec3(-u.z, 0.0, u.x) * sin(a)) * r;
     }
     if (i == 14) {
         vec3 s = planetAt(6);
         float a = TAU * (SimYears / 0.0437 + 0.2);
-        float r = 0.22 * gR;
+        float r = 0.175 * gR;
         float t = tiltOf(6);
         return s + vec3(cos(a) * r, sin(a) * r * sin(t), sin(a) * r * cos(t));
     }
@@ -171,7 +175,7 @@ vec3 bodyAt(int i) {
 }
 
 float radiusOf(int i) {
-    return sizeOf(i) * gR * (i == 0 ? 1.0 : i == 5 ? mix(1.0, gBody, 0.5) : gBody);
+    return sizeOf(i) * gR;
 }
 
 float sphere(vec3 ro, vec3 rd, vec3 c, float r) {
@@ -432,8 +436,7 @@ void main() {
     bool holo = kind > 0.5;
     float S = holo ? HoloScale : 1.0;
     gC = holo ? vec3(0.5, 0.3 + 1.15 * S, 0.5) : vec3(0.5, 0.74, 0.5);
-    gR = holo ? 1.38 * S : 0.62;
-    gBody = holo ? 1.0 : 1.2;
+    gR = holo ? 1.38 * S : 0.74;
     float t = SpinTime;
     vec3 ro = lp;
     vec3 rd = normalize(lray);
@@ -495,6 +498,12 @@ void main() {
         // the shaft from the base up to the Sun
         float ts = capsule(ro, rd, vec3(gC.x, 0.3, gC.z), gC, 0.012);
         if (ts > 0.0 && ts < hitT) { hitT = ts; hit = 20; }
+    }
+    if (DepthOnly > 0.5) { // (the depth pass: the solid things only)
+        if (hit < 0 || hit == 15 || ItemMode > 0.5) discard;
+        gl_FragDepth = depthOf(ro + rd * hitT);
+        fragColor = vec4(0.0);
+        return;
     }
 
     vec3 col = vec3(0.0);
@@ -608,7 +617,7 @@ void main() {
             float rr = length(d) / gR;
             float ang = atan(d.y, d.x);
             // the belt: specks of rock going round
-            if (rr > 0.45 && rr < 0.54) {
+            if (rr > 0.48 && rr < 0.52) {
                 float a2 = ang - TAU * SimYears / 4.6;
                 vec2 cell = vec2(floor(a2 / TAU * 260.0), floor(rr * 90.0));
                 float hh = hash13(vec3(cell, 3.0));

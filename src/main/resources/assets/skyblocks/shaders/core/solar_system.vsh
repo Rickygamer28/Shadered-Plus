@@ -31,8 +31,8 @@ void main() {
     int size = extra >> 2;
     float s = size == 2 ? 4.0 : size == 1 ? 2.0 : 1.0;
     settings = vec3(float(extra & 1), float((extra >> 1) & 1), s);
-    vec3 lo = kind < 0.5 ? vec3(-0.18, 0.3, -0.18) : vec3(0.5 - 1.55 * s, 0.12, 0.5 - 1.55 * s);
-    vec3 hi = kind < 0.5 ? vec3(1.18, 1.08, 1.18) : vec3(0.5 + 1.55 * s, 0.3 + 2.65 * s, 0.5 + 1.55 * s);
+    vec3 lo = kind < 0.5 ? vec3(-0.3, 0.3, -0.3) : vec3(0.5 - 1.55 * s, 0.12, 0.5 - 1.55 * s);
+    vec3 hi = kind < 0.5 ? vec3(1.3, 1.1, 1.3) : vec3(0.5 + 1.55 * s, 0.3 + 2.65 * s, 0.5 + 1.55 * s);
     boxLo = lo;
     boxHi = hi;
     lp = mix(lo, hi, vec3(float(corner & 1), float((corner >> 1) & 1), float((corner >> 2) & 1)));

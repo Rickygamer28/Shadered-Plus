@@ -330,5 +330,11 @@
   "solar.skyblocks.saturn": "Saturn",
   "solar.skyblocks.uranus": "Uranus",
   "solar.skyblocks.neptune": "Neptune",
-  "solar.skyblocks.moon": "Moon"
+  "solar.skyblocks.moon": "Moon",
+  "solar.skyblocks.io": "Io",
+  "solar.skyblocks.europa": "Europa",
+  "solar.skyblocks.ganymede": "Ganymede",
+  "solar.skyblocks.callisto": "Callisto",
+  "solar.skyblocks.titan": "Titan",
+  "solar.skyblocks.comet": "Comet"
 }
