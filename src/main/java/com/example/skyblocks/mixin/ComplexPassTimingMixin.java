@@ -12,6 +12,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /** Times Shadered's passes at each of its stages, for the F3 screen (WorldTiming). */
 @Mixin(ComplexPassRenderer.class)
 public abstract class ComplexPassTimingMixin {
+    @org.spongepowered.asm.mixin.Unique
+    private static java.lang.reflect.Field[] skyblocks$targetFields;
+
     @Inject(method = "render", at = @At("HEAD"), require = 0, remap = false)
     private void skyblocks$timeStart(RenderStage stage, PoseStack poseStack, int renderTick, float partialTick, CallbackInfo ci) {
         WorldTiming.shaderedStart(stage);
@@ -25,12 +28,23 @@ public abstract class ComplexPassTimingMixin {
      * walls). Its pictures get a stencil too, so the copy works.
      */
     private static void skyblocks$matchDepthFormat(ComplexPassRenderer renderer) {
-        for (java.lang.reflect.Field f : ComplexPassRenderer.class.getDeclaredFields()) {
-            if (!com.mojang.blaze3d.pipeline.RenderTarget.class.isAssignableFrom(f.getType()) || java.lang.reflect.Modifier.isStatic(f.getModifiers())) {
-                continue;
+        if (skyblocks$targetFields == null) { // (looked up once: this runs at every stage of every frame)
+            java.util.List<java.lang.reflect.Field> found = new java.util.ArrayList<>();
+            for (java.lang.reflect.Field f : ComplexPassRenderer.class.getDeclaredFields()) {
+                if (!com.mojang.blaze3d.pipeline.RenderTarget.class.isAssignableFrom(f.getType()) || java.lang.reflect.Modifier.isStatic(f.getModifiers())) {
+                    continue;
+                }
+                try {
+                    f.setAccessible(true);
+                    found.add(f);
+                } catch (RuntimeException ignored) {
+                    // (left as it is)
+                }
             }
+            skyblocks$targetFields = found.toArray(new java.lang.reflect.Field[0]);
+        }
+        for (java.lang.reflect.Field f : skyblocks$targetFields) {
             try {
-                f.setAccessible(true);
                 com.mojang.blaze3d.pipeline.RenderTarget target = (com.mojang.blaze3d.pipeline.RenderTarget) f.get(renderer);
                 if (target != null && !target.isStencilEnabled()) {
                     target.enableStencil();

@@ -401,6 +401,76 @@ public final class SkyUsage {
         }
     }
 
+    // ---- things whose place on screen is known (Sky Liquids, portals): only their part of the picture ----
+
+    /** True while such things are drawn: their skies' render types don't ask for the whole picture (ModRenderTypesMixin). */
+    public static boolean placeKnown;
+    /** {@link #rectOfBox}: not on screen at all. */
+    public static final int[] OFF = {0, 0, 0, 0};
+
+    /**
+     * Where a box (relative to the camera) is in the skies' pictures (pixels, from the lower left, a few pixels'
+     * margin): {@link #OFF} if it's nowhere on screen, null if that can't be told (partly behind the camera: then all
+     * of the picture).
+     */
+    @Nullable
+    public static int[] rectOfBox(float x0, float y0, float z0, float x1, float y1, float z1) {
+        if (skyProjection == null) {
+            return null;
+        }
+        Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+        Matrix4f toClip = new Matrix4f(skyProjection)
+                .rotateX(camera.getXRot() * net.minecraft.util.Mth.DEG_TO_RAD)
+                .rotateY((camera.getYRot() + 180.0F) * net.minecraft.util.Mth.DEG_TO_RAD);
+        org.joml.Vector4f v = new org.joml.Vector4f();
+        int all = 0x1F;
+        boolean behind = false;
+        float minX = 2.0F, minY = 2.0F, maxX = -2.0F, maxY = -2.0F;
+        for (int i = 0; i < 8; i++) {
+            v.set((i & 1) == 0 ? x0 : x1, (i & 2) == 0 ? y0 : y1, (i & 4) == 0 ? z0 : z1, 1.0F);
+            toClip.transform(v);
+            int out = (v.x < -v.w ? 1 : 0) | (v.x > v.w ? 2 : 0) | (v.y < -v.w ? 4 : 0) | (v.y > v.w ? 8 : 0) | (v.w < 0.05F ? 16 : 0);
+            all &= out;
+            if (v.w < 0.05F) {
+                behind = true;
+                continue;
+            }
+            float x = v.x / v.w, y = v.y / v.w;
+            minX = Math.min(minX, x);
+            maxX = Math.max(maxX, x);
+            minY = Math.min(minY, y);
+            maxY = Math.max(maxY, y);
+        }
+        if (all != 0) {
+            return OFF; // (every corner beyond the same edge of the view)
+        }
+        if (behind) {
+            return null;
+        }
+        ComplexPassRenderer renderer = ComplexPassRenderer.getInstance();
+        int width = Math.max(1, renderer.getPreviousWidth()), height = Math.max(1, renderer.getPreviousHeight());
+        int margin = 4;
+        int rx0 = Math.max(0, (int) Math.floor((Math.max(minX, -1.0F) * 0.5F + 0.5F) * width) - margin);
+        int ry0 = Math.max(0, (int) Math.floor((Math.max(minY, -1.0F) * 0.5F + 0.5F) * height) - margin);
+        int rx1 = Math.min(width, (int) Math.ceil((Math.min(maxX, 1.0F) * 0.5F + 0.5F) * width) + margin);
+        int ry1 = Math.min(height, (int) Math.ceil((Math.min(maxY, 1.0F) * 0.5F + 0.5F) * height) + margin);
+        return rx1 <= rx0 || ry1 <= ry0 ? OFF : new int[] {rx0, ry0, rx1, ry1};
+    }
+
+    /**
+     * A sky shown by something whose place on screen is known ({@code rect}, from {@link #rectOfBox}; not
+     * {@link #OFF}): its picture brought up to date there only, not all of it. In a mirror, or not knowing where: all
+     * of it, as {@link #ensureFresh}.
+     */
+    public static void ensurePart(@Nullable SkyblockBatchData data, @Nullable int[] rect) {
+        if (rect == null || MirrorRenderer.isRenderingReflection()) {
+            ensureFresh(data);
+            return;
+        }
+        markLight(data);
+        ensure(data, rect);
+    }
+
     /** Before Shadered draws the queued sky blocks: brings the picture of every sky with blocks queued up to date. */
     public static void ensureQueuedFresh() {
         onDemandOk = true;

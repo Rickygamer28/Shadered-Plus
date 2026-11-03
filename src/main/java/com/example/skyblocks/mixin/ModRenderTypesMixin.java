@@ -17,7 +17,9 @@ public abstract class ModRenderTypesMixin {
     private static void skyblocks$ourTexture(SkyblockType type, CallbackInfoReturnable<Integer> cir) {
         // something is drawn with this sky's render type: keep its picture up to date (see SkyUsage)
         com.noodlegamer76.shadered.client.util.skyblock.SkyblockBatchData data = com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(type);
-        if (com.example.skyblocks.client.SkyUsage.inHud) {
+        if (com.example.skyblocks.client.SkyUsage.placeKnown) {
+            com.example.skyblocks.client.SkyUsage.markLight(data); // (liquids, portals: they bring their own part up to date)
+        } else if (com.example.skyblocks.client.SkyUsage.inHud) {
             com.example.skyblocks.client.SkyUsage.markHud(data); // (the hotbar: only its strip of the picture)
         } else {
             com.example.skyblocks.client.SkyUsage.mark(data, net.minecraft.client.Minecraft.getInstance().screen != null

@@ -135,9 +135,31 @@ public final class PortalSkyRenderer {
             memory = new ByteBufferBuilder(1 << 16);
         }
         MultiBufferSource.BufferSource buffers = defer ? null : MultiBufferSource.immediate(memory);
+        SkyUsage.placeKnown = !defer;
+        try {
         for (Map.Entry<SkyblockType, List<float[]>> entry : faces.entrySet()) {
-            // a resting sky gets its picture drawn first (see SkyUsage)
-            SkyUsage.ensureFresh(com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(entry.getKey()));
+            // a resting sky gets its picture drawn first (see SkyUsage): only where its portals are on screen (none
+            // in view: neither)
+            List<float[]> qs = entry.getValue();
+            float[] b = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+            for (float[] q : qs) {
+                for (int i = 0; i < 12; i += 3) {
+                    for (int a = 0; a < 3; a++) {
+                        b[a] = Math.min(b[a], q[i + a]);
+                        b[a + 3] = Math.max(b[a + 3], q[i + a]);
+                    }
+                }
+            }
+            com.noodlegamer76.shadered.client.util.skyblock.SkyblockBatchData data = com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(entry.getKey());
+            int[] rect = defer ? null : SkyUsage.rectOfBox(b[0], b[1], b[2], b[3], b[4], b[5]);
+            if (rect == SkyUsage.OFF && !MirrorRenderer.isRenderingReflection()) {
+                continue;
+            }
+            if (defer) {
+                SkyUsage.ensureFresh(data);
+            } else {
+                SkyUsage.ensurePart(data, rect);
+            }
             RenderType type = SkyLiquidRenderer.skyType(entry.getKey());
             if (type == null) {
                 continue;
@@ -152,6 +174,9 @@ public final class PortalSkyRenderer {
         }
         if (buffers != null) {
             buffers.endBatch();
+        }
+        } finally {
+            SkyUsage.placeKnown = false;
         }
     }
 

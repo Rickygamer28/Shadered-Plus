@@ -82,19 +82,34 @@ public final class SkyLiquidRenderer {
         if (memory == null) {
             memory = new ByteBufferBuilder(1 << 18);
         }
-        // a liquid's sky that was resting gets its picture drawn first (see SkyUsage)
-        for (ModFluids.SkyLiquid liquid : GEOMETRY.keySet()) {
-            SkyUsage.ensureFresh(com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(liquid.sky));
-        }
         // the faces were worked out when the blocks were looked up (every few ticks): just place them
         float ox = (float) (originX - camera.x), oy = (float) (originY - camera.y), oz = (float) (originZ - camera.z);
         // With a shader pack the pack's final pass would paint over anything drawn into the world now: kept and drawn
         // at the end of the frame instead (client/iris/IrisIslandTarget), depth-tested against the final depth.
         boolean defer = com.example.skyblocks.client.iris.IrisIslandTarget.deferSky();
+        // a liquid's sky gets its picture brought up to date first (see SkyUsage): only where the liquid is on screen
+        // (a liquid out of view: neither its sky's picture nor the liquid drawn)
+        java.util.Set<ModFluids.SkyLiquid> inView = new java.util.HashSet<>();
+        for (ModFluids.SkyLiquid liquid : GEOMETRY.keySet()) {
+            com.noodlegamer76.shadered.client.util.skyblock.SkyblockBatchData data = com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(liquid.sky);
+            float[] b = BOXES.get(liquid);
+            int[] rect = defer || b == null ? null : SkyUsage.rectOfBox(b[0] + ox, b[1] + oy, b[2] + oz, b[3] + ox, b[4] + oy, b[5] + oz);
+            if (rect == SkyUsage.OFF) {
+                continue;
+            }
+            inView.add(liquid);
+            if (defer) {
+                SkyUsage.ensureFresh(data);
+            } else {
+                SkyUsage.ensurePart(data, rect);
+            }
+        }
         MultiBufferSource.BufferSource buffers = defer ? null : MultiBufferSource.immediate(memory);
+        SkyUsage.placeKnown = !defer;
+        try {
         for (Map.Entry<ModFluids.SkyLiquid, float[]> entry : GEOMETRY.entrySet()) {
             RenderType sky = skyType(entry.getKey().sky);
-            if (sky == null) {
+            if (sky == null || !inView.contains(entry.getKey())) {
                 continue;
             }
             float[] d = entry.getValue();
@@ -107,6 +122,9 @@ public final class SkyLiquidRenderer {
         if (buffers != null) {
             buffers.endBatch();
         }
+        } finally {
+            SkyUsage.placeKnown = false;
+        }
     }
 
     private static void emit(VertexConsumer c, float[] d, float ox, float oy, float oz) {
@@ -117,11 +135,14 @@ public final class SkyLiquidRenderer {
 
     /** The liquid faces found by the last search, per liquid (x, y, z relative to the origin, u, v per vertex). */
     private static final Map<ModFluids.SkyLiquid, float[]> GEOMETRY = new LinkedHashMap<>();
+    /** Each liquid's faces' bounds (x0, y0, z0, x1, y1, z1, relative to the origin): where on screen its sky is needed. */
+    private static final Map<ModFluids.SkyLiquid, float[]> BOXES = new LinkedHashMap<>();
     private static int originX, originY, originZ;
 
     /** Works out the faces of the blocks just found, relative to the camera's chunk. */
     private static void buildGeometry(ClientLevel level, int chunkX, int chunkZ, double cameraY) {
         GEOMETRY.clear();
+        BOXES.clear();
         originX = chunkX << 4;
         originZ = chunkZ << 4;
         originY = (int) Math.floor(cameraY);
@@ -132,7 +153,16 @@ public final class SkyLiquidRenderer {
                 drawBlock(level, pos, pos.getX() - originX, pos.getY() - originY, pos.getZ() - originZ, collector);
             }
             if (collector.size > 0) {
-                GEOMETRY.put(entry.getKey(), java.util.Arrays.copyOf(collector.data, collector.size));
+                float[] d = java.util.Arrays.copyOf(collector.data, collector.size);
+                GEOMETRY.put(entry.getKey(), d);
+                float[] b = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+                for (int i = 0; i < d.length; i += 5) {
+                    for (int a = 0; a < 3; a++) {
+                        b[a] = Math.min(b[a], d[i + a]);
+                        b[a + 3] = Math.max(b[a + 3], d[i + a]);
+                    }
+                }
+                BOXES.put(entry.getKey(), b);
             }
         }
     }
