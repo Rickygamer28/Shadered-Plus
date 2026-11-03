@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:block/block",
-  "render_type": "minecraft:translucent",
+  "render_type": "minecraft:cutout",
   "ambientocclusion": false,
   "textures": {
     "particle": "skyblocks:block/portal_mirror",
