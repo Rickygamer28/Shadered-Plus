@@ -157,6 +157,11 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 9)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLUE));
 
+    /** A kaleidoscope: coloured glass turning in windows on every side of a brass frame (KaleidoscopeBlock). */
+    public static final DeferredBlock<KaleidoscopeBlock> KALEIDOSCOPE = BLOCKS.registerBlock("kaleidoscope", KaleidoscopeBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.COPPER).lightLevel(state -> 10)
+                    .mapColor(net.minecraft.world.level.material.MapColor.GOLD));
+
     /** A magma basin: churning lava in a stone basin, basins side by side make one pool (MagmaBasinBlock). */
     public static final DeferredBlock<MagmaBasinBlock> MAGMA_BASIN = BLOCKS.registerBlock("magma_basin", MagmaBasinBlock::new,
             BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.POLISHED_DEEPSLATE).noOcclusion().requiresCorrectToolForDrops()

@@ -60,6 +60,7 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.MAGMA_BASIN.get(), MagmaBasinRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.BLACK_HOLE.get(), BlackHoleRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SINGULARITY.get(), SingularityRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.KALEIDOSCOPE.get(), KaleidoscopeRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.FIRE.get(), WallFireRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.BRICK_HEARTH.get(), ClientSetup::hearthRenderer);
         event.registerBlockEntityRenderer(ModBlockEntities.VISUALIZER.get(), VisualizerRenderer::new);
@@ -192,6 +193,17 @@ public final class ClientSetup {
                 return renderer;
             }
         }, ModItems.SINGULARITY.get());
+        event.registerItem(new IClientItemExtensions() {
+            private KaleidoscopeItemRenderer renderer;
+
+            @Override
+            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (renderer == null) {
+                    renderer = new KaleidoscopeItemRenderer();
+                }
+                return renderer;
+            }
+        }, ModItems.KALEIDOSCOPE.get());
         for (boolean bigHole : new boolean[] {false, true}) {
             event.registerItem(new IClientItemExtensions() {
                 private BlackHoleItemRenderer renderer;

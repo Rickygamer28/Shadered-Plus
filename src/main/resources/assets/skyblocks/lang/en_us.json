@@ -349,5 +349,15 @@
   "solar.skyblocks.ganymede": "Ganymede",
   "solar.skyblocks.callisto": "Callisto",
   "solar.skyblocks.titan": "Titan",
-  "solar.skyblocks.comet": "Comet"
+  "solar.skyblocks.comet": "Comet",
+  "block.skyblocks.kaleidoscope": "Kaleidoscope",
+  "tooltip.skyblocks.kaleidoscope": "Coloured glass turning in a window on every side. Right-click: its symmetry. Sneak + right-click: its colours. A redstone signal stops it; it pulses with music",
+  "message.skyblocks.kaleidoscope.symmetry": "Symmetry: %s-fold",
+  "message.skyblocks.kaleidoscope.palette": "Colours: %s",
+  "message.skyblocks.kaleidoscope.palette.jewels": "Jewels",
+  "message.skyblocks.kaleidoscope.palette.cathedral": "Cathedral glass",
+  "message.skyblocks.kaleidoscope.palette.ocean": "Ocean",
+  "message.skyblocks.kaleidoscope.palette.sunset": "Sunset",
+  "message.skyblocks.kaleidoscope.palette.autumn": "Autumn",
+  "message.skyblocks.kaleidoscope.palette.frost": "Frost"
 }
