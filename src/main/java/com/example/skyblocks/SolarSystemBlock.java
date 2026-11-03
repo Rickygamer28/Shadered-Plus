@@ -66,9 +66,20 @@ public class SolarSystemBlock extends BaseEntityBlock {
         return hologram ? PLANETARIUM : ORRERY;
     }
 
-    /** The planetarium: right-click with glass (any glass block or pane, any mod's) to take its dome off or put it back. */
+    /**
+     * The planetarium: right-click with glass (any glass block or pane, any mod's) to take its dome off or put it back;
+     * with an amethyst shard to make it bigger (normal, bigger, a lot bigger).
+     */
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+        if (hologram && stack.is(net.minecraft.world.item.Items.AMETHYST_SHARD)) {
+            if (!level.isClientSide && level.getBlockEntity(pos) instanceof SolarSystemBlockEntity be) {
+                be.cycleSize();
+                player.displayClientMessage(Component.translatable("message.skyblocks.solar.size." + be.size()).withStyle(ChatFormatting.GOLD), true);
+                level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.8F, 1.3F - 0.25F * be.size());
+            }
+            return ItemInteractionResult.sidedSuccess(level.isClientSide);
+        }
         if (!hologram || stack.isEmpty() || !BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath().contains("glass")) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }

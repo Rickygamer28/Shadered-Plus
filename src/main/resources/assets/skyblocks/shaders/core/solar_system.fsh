@@ -13,6 +13,9 @@
 in vec3 lp;
 in vec3 lray;
 flat in float kind;
+flat in vec3 boxLo;
+flat in vec3 boxHi;
+flat in float persp;
 
 uniform float SimYears;  // years gone by in the model
 uniform float SpinTime;  // seconds of turning (stops when it's paused)
@@ -21,6 +24,7 @@ uniform float SizeMode;  // 0 sizes to see them by, 1 real sizes
 uniform float Boost;     // music: the Sun pulsing
 uniform float Glow;      // the hologram's brightness (dimmer by day)
 uniform float ItemMode;
+uniform float HoloScale; // the planetarium's size: 1, 2 or 4 times
 
 out vec4 fragColor;
 
@@ -410,11 +414,21 @@ vec3 stars(vec3 d) {
 
 void main() {
     bool holo = kind > 0.5;
-    gC = holo ? vec3(0.5, 1.45, 0.5) : vec3(0.5, 0.64, 0.5);
-    gR = holo ? 1.38 : 0.45;
+    float S = holo ? HoloScale : 1.0;
+    gC = holo ? vec3(0.5, 0.3 + 1.15 * S, 0.5) : vec3(0.5, 0.64, 0.5);
+    gR = holo ? 1.38 * S : 0.45;
     float t = SpinTime;
     vec3 ro = lp;
     vec3 rd = normalize(lray);
+    // standing inside its box (in the planetarium): traced from the eye, on the box's far side; outside, on its near
+    // side only (both sides are drawn)
+    vec3 eyeL = lp - lray;
+    bool inside = persp > 0.5 && ItemMode < 0.5 && all(greaterThan(eyeL, boxLo)) && all(lessThan(eyeL, boxHi));
+    if (inside) {
+        ro = eyeL;
+    } else if (!gl_FrontFacing) {
+        discard;
+    }
 
     // the hologram's dome: a glass bubble round it (a flat floor at the base)
     float domeR = gR * 1.08;
@@ -589,7 +603,7 @@ void main() {
             if (holo) {
                 for (int i = 1; i <= 8; i++) {
                     float w = abs(rr - orbitOf(i)) * gR;
-                    float line = exp(-pow(w / 0.004, 2.0));
+                    float line = exp(-pow(w / (0.004 * S), 2.0));
                     add += vec3(0.3, 0.75, 1.0) * line * 0.35;
                     addA += line * 0.2;
                 }

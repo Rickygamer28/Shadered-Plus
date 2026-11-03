@@ -19,6 +19,7 @@ public class SolarSystemBlockEntity extends BlockEntity {
     public static final int PAUSED = 0, SLOW = 1, FAST = 2, REAL = 3, SPEEDS = 4;
     private int speed = SLOW;
     private boolean realSizes;
+    private int size; // (the planetarium: 0 normal, 1 bigger, 2 a lot bigger)
     private boolean dome = true; // (the planetarium's glass dome, with its dark starry space inside)
     private boolean powered;
     private double baseYears = 26.3, baseSpin;
@@ -51,6 +52,20 @@ public class SolarSystemBlockEntity extends BlockEntity {
 
     public int speed() {
         return speed;
+    }
+
+    /** The planetarium's size: 1, 2 or 4 times. */
+    public float scale() {
+        return size == 2 ? 4.0F : size == 1 ? 2.0F : 1.0F;
+    }
+
+    public int size() {
+        return size;
+    }
+
+    public void cycleSize() {
+        size = (size + 1) % 3;
+        changed();
     }
 
     public boolean dome() {
@@ -122,6 +137,7 @@ public class SolarSystemBlockEntity extends BlockEntity {
         tag.putInt("speed", speed);
         tag.putBoolean("realSizes", realSizes);
         tag.putBoolean("dome", dome);
+        tag.putInt("size", size);
         tag.putBoolean("powered", powered);
         tag.putDouble("years", baseYears);
         tag.putDouble("spin", baseSpin);
@@ -134,6 +150,7 @@ public class SolarSystemBlockEntity extends BlockEntity {
         if (tag.contains("speed")) speed = Math.floorMod(tag.getInt("speed"), SPEEDS);
         realSizes = tag.getBoolean("realSizes");
         dome = !tag.contains("dome") || tag.getBoolean("dome");
+        size = Math.floorMod(tag.getInt("size"), 3);
         powered = tag.getBoolean("powered");
         if (tag.contains("years")) baseYears = tag.getDouble("years");
         baseSpin = tag.getDouble("spin");

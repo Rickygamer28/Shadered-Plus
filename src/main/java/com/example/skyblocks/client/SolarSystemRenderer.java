@@ -38,7 +38,7 @@ import org.joml.Matrix4f;
 public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlockEntity> {
     static ShaderInstance shader;
     // the model being drawn now (for the uniforms)
-    private static float years, spin, sizes, glow = 1.0F, itemMode, dome = 1.0F;
+    private static float years, spin, sizes, glow = 1.0F, itemMode, dome = 1.0F, holoScale = 1.0F;
     static final Matrix4f ITEM_INV = new Matrix4f();
 
     @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
@@ -60,6 +60,7 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
             shader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.5F, 1.0F));
             shader.safeGetUniform("Glow").set(glow);
             shader.safeGetUniform("Dome").set(dome);
+            shader.safeGetUniform("HoloScale").set(holoScale);
             shader.safeGetUniform("ItemMode").set(itemMode);
             shader.safeGetUniform("LampInv").set(ITEM_INV);
         }
@@ -82,7 +83,7 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
                         .setTexturingState(new TexturingStateShard("skyblocks_solar_system_time", SolarSystemRenderer::setUp, () -> {}))
                         .setTransparencyState(new TransparencyStateShard("skyblocks_solar_system_premultiplied", SolarSystemRenderer::premultipliedOn, SolarSystemRenderer::premultipliedOff))
                         .setWriteMaskState(COLOR_WRITE)
-                        .setCullState(CULL)
+                        .setCullState(NO_CULL) // (from inside the planetarium: its box's far side; the shader keeps one side)
                         .createCompositeState(false));
 
         private Types() {
@@ -107,12 +108,13 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
         spin = (float) (be.spin(time, partialTick) % 36000.0);
         sizes = be.realSizes() ? 1.0F : 0.0F;
         dome = be.dome() ? 1.0F : 0.0F;
+        holoScale = holo ? be.scale() : 1.0F;
         itemMode = 0.0F;
         // the hologram: dimmer in daylight
         float day = Math.max(0.0F, Math.min(1.0F, (level.getSkyDarken(partialTick) - 0.2F) / 0.8F));
         float sky = LightTexture.sky(light) / 15.0F;
         glow = holo ? 1.0F - 0.3F * day * sky : 1.0F;
-        box(buffers.getBuffer(Types.MODEL), poseStack.last().pose(), holo);
+        box(buffers.getBuffer(Types.MODEL), poseStack.last().pose(), holo, holoScale);
         if (buffers instanceof MultiBufferSource.BufferSource source) {
             source.endBatch(Types.MODEL); // (now: its own time and sizes)
         }
@@ -141,8 +143,9 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
         sizes = 0.0F;
         glow = 1.0F;
         dome = 1.0F;
+        holoScale = 1.0F;
         itemMode = 1.0F;
-        box(buffers.getBuffer(Types.MODEL), m, holo);
+        box(buffers.getBuffer(Types.MODEL), m, holo, 1.0F);
         if (buffers instanceof MultiBufferSource.BufferSource source) {
             source.endBatch(Types.MODEL);
         }
@@ -151,9 +154,9 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
     }
 
     /** The box round the model, its faces facing out (the same numbers as the shader's). */
-    static void box(VertexConsumer vc, Matrix4f m, boolean holo) {
-        float[] lo = holo ? new float[] {-1.05F, 0.12F, -1.05F} : new float[] {0.0F, 0.3F, 0.0F};
-        float[] hi = holo ? new float[] {2.05F, 2.95F, 2.05F} : new float[] {1.0F, 0.86F, 1.0F};
+    static void box(VertexConsumer vc, Matrix4f m, boolean holo, float s) {
+        float[] lo = holo ? new float[] {0.5F - 1.55F * s, 0.12F, 0.5F - 1.55F * s} : new float[] {0.0F, 0.3F, 0.0F};
+        float[] hi = holo ? new float[] {0.5F + 1.55F * s, 0.3F + 2.65F * s, 0.5F + 1.55F * s} : new float[] {1.0F, 0.86F, 1.0F};
         int[][] faces = {{4, 5, 7, 6}, {1, 0, 2, 3}, {5, 1, 3, 7}, {0, 4, 6, 2}, {6, 7, 3, 2}, {0, 1, 5, 4}};
         for (int[] f : faces) {
             for (int k : f) {
@@ -191,12 +194,13 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
         Camera camera = mc.gameRenderer.getMainCamera();
         BlockPos pos = be.getBlockPos();
         Vec3 ro = camera.getPosition().subtract(Vec3.atLowerCornerOf(pos));
-        if (ro.distanceToSqr(0.5, 1.0, 0.5) > (holo ? 14.0 * 14.0 : 7.0 * 7.0)) {
+        double sc = holo ? be.scale() : 1.0;
+        if (ro.distanceToSqr(0.5, 1.0, 0.5) > (holo ? 14.0 * 14.0 * sc * sc : 7.0 * 7.0)) {
             return;
         }
         Vec3 rd = new Vec3(camera.getLookVector());
-        Vec3 c = holo ? new Vec3(0.5, 1.45, 0.5) : new Vec3(0.5, 0.64, 0.5);
-        double r = holo ? 1.38 : 0.45;
+        Vec3 c = holo ? new Vec3(0.5, 0.3 + 1.15 * sc, 0.5) : new Vec3(0.5, 0.64, 0.5);
+        double r = holo ? 1.38 * sc : 0.45;
         double y = be.years(be.getLevel().getGameTime(), mc.getTimer().getGameTimeDeltaPartialTick(false));
         double best = Double.MAX_VALUE;
         int hit = -1;
@@ -222,9 +226,9 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
         Font font = mc.font;
         Component name = Component.translatable("solar.skyblocks." + NAMES[hit]);
         poseStack.pushPose();
-        poseStack.translate(at.x, at.y + atR + (holo ? 0.06 : 0.03), at.z);
+        poseStack.translate(at.x, at.y + atR + (holo ? 0.06 * sc : 0.03), at.z);
         poseStack.mulPose(camera.rotation());
-        float s = holo ? 0.012F : 0.0055F;
+        float s = holo ? 0.012F * (float) Math.sqrt(sc) : 0.0055F;
         poseStack.scale(s, -s, s);
         float x = -font.width(name) / 2.0F;
         font.drawInBatch(name, x, 0.0F, 0xFFFFE6A0, false, poseStack.last().pose(), buffers, Font.DisplayMode.SEE_THROUGH, 0x55000000, LightTexture.FULL_BRIGHT);
@@ -233,7 +237,9 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
 
     @Override
     public AABB getRenderBoundingBox(SolarSystemBlockEntity be) {
-        return hologram(be) ? new AABB(be.getBlockPos()).inflate(1.1, 0.0, 1.1).expandTowards(0.0, 2.0, 0.0) : new AABB(be.getBlockPos());
+        if (!hologram(be)) return new AABB(be.getBlockPos());
+        double s = be.scale();
+        return new AABB(be.getBlockPos()).inflate(1.55 * s - 0.4, 0.0, 1.55 * s - 0.4).expandTowards(0.0, 2.65 * s - 0.7, 0.0);
     }
 
     @Override
