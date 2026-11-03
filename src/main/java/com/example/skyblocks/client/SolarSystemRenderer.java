@@ -229,6 +229,7 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
         poseStack.translate(at.x, at.y + atR + (holo ? 0.06 * sc : 0.03), at.z);
         poseStack.mulPose(camera.rotation());
         float s = holo ? 0.012F * (float) Math.sqrt(sc) : 0.0055F;
+        s = Math.min(s, 0.004F * (float) ro.distanceTo(at)); // (close up - standing in the planetarium - no bigger on screen)
         poseStack.scale(s, -s, s);
         float x = -font.width(name) / 2.0F;
         font.drawInBatch(name, x, 0.0F, 0xFFFFE6A0, false, poseStack.last().pose(), buffers, Font.DisplayMode.SEE_THROUGH, 0x55000000, LightTexture.FULL_BRIGHT);
