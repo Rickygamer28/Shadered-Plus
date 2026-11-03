@@ -72,24 +72,34 @@ public class SolarSystemBlock extends BaseEntityBlock {
      */
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-        if (hologram && stack.is(net.minecraft.world.item.Items.AMETHYST_SHARD)) {
-            if (!level.isClientSide && level.getBlockEntity(pos) instanceof SolarSystemBlockEntity be) {
-                be.cycleSize();
-                player.displayClientMessage(Component.translatable("message.skyblocks.solar.size." + be.size()).withStyle(ChatFormatting.GOLD), true);
-                level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.8F, 1.3F - 0.25F * be.size());
-            }
+        if (hologram && isTool(stack)) {
+            useTool(stack, level, pos, player);
             return ItemInteractionResult.sidedSuccess(level.isClientSide);
         }
-        if (!hologram || stack.isEmpty() || !BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath().contains("glass")) {
-            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
+    /** Glass (any glass block or pane, any mod's) or an amethyst shard: something to use on a planetarium. */
+    public static boolean isTool(ItemStack stack) {
+        return !stack.isEmpty() && (stack.is(net.minecraft.world.item.Items.AMETHYST_SHARD)
+                || BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath().contains("glass"));
+    }
+
+    /** Glass on a planetarium: its dome off or back on; an amethyst shard: the next size. */
+    public static void useTool(ItemStack stack, Level level, BlockPos pos, Player player) {
+        if (level.isClientSide || !(level.getBlockEntity(pos) instanceof SolarSystemBlockEntity be)) {
+            return;
         }
-        if (!level.isClientSide && level.getBlockEntity(pos) instanceof SolarSystemBlockEntity be) {
+        if (stack.is(net.minecraft.world.item.Items.AMETHYST_SHARD)) {
+            be.cycleSize();
+            player.displayClientMessage(Component.translatable("message.skyblocks.solar.size." + be.size()).withStyle(ChatFormatting.GOLD), true);
+            level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.8F, 1.3F - 0.25F * be.size());
+        } else {
             be.toggleDome();
             player.displayClientMessage(Component.translatable(be.dome() ? "message.skyblocks.solar.dome_on" : "message.skyblocks.solar.dome_off")
                     .withStyle(ChatFormatting.GOLD), true);
             level.playSound(null, pos, be.dome() ? SoundEvents.GLASS_PLACE : SoundEvents.GLASS_BREAK, SoundSource.BLOCKS, 0.6F, 1.2F);
         }
-        return ItemInteractionResult.sidedSuccess(level.isClientSide);
     }
 
     @Override

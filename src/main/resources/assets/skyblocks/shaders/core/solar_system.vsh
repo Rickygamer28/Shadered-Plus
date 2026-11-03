@@ -27,8 +27,8 @@ void main() {
     kind = float(code >> 3);
     // (client/SolarSystemRenderer's boxes)
     float s = HoloScale;
-    vec3 lo = kind < 0.5 ? vec3(0.0, 0.3, 0.0) : vec3(0.5 - 1.55 * s, 0.12, 0.5 - 1.55 * s);
-    vec3 hi = kind < 0.5 ? vec3(1.0, 0.86, 1.0) : vec3(0.5 + 1.55 * s, 0.3 + 2.65 * s, 0.5 + 1.55 * s);
+    vec3 lo = kind < 0.5 ? vec3(-0.18, 0.3, -0.18) : vec3(0.5 - 1.55 * s, 0.12, 0.5 - 1.55 * s);
+    vec3 hi = kind < 0.5 ? vec3(1.18, 1.08, 1.18) : vec3(0.5 + 1.55 * s, 0.3 + 2.65 * s, 0.5 + 1.55 * s);
     boxLo = lo;
     boxHi = hi;
     lp = mix(lo, hi, vec3(float(corner & 1), float((corner >> 1) & 1), float((corner >> 2) & 1)));

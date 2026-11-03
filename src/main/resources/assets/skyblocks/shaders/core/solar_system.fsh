@@ -34,6 +34,7 @@ const float TAU = 6.2831853;
 // ---- the system's place and size in the block ----
 vec3 gC;   // the Sun's middle
 float gR;  // the system's radius (Neptune's orbit)
+float gBody = 1.0; // (the planets a little bigger on the orrery)
 
 // ---- noise ----
 float hash13(vec3 p) {
@@ -165,7 +166,7 @@ vec3 bodyAt(int i) {
 }
 
 float radiusOf(int i) {
-    return sizeOf(i) * gR;
+    return sizeOf(i) * gR * (i == 0 ? 1.0 : i == 5 ? mix(1.0, gBody, 0.5) : gBody);
 }
 
 float sphere(vec3 ro, vec3 rd, vec3 c, float r) {
@@ -415,16 +416,20 @@ vec3 stars(vec3 d) {
 void main() {
     bool holo = kind > 0.5;
     float S = holo ? HoloScale : 1.0;
-    gC = holo ? vec3(0.5, 0.3 + 1.15 * S, 0.5) : vec3(0.5, 0.64, 0.5);
-    gR = holo ? 1.38 * S : 0.45;
+    gC = holo ? vec3(0.5, 0.3 + 1.15 * S, 0.5) : vec3(0.5, 0.74, 0.5);
+    gR = holo ? 1.38 * S : 0.62;
+    gBody = holo ? 1.0 : 1.2;
     float t = SpinTime;
     vec3 ro = lp;
     vec3 rd = normalize(lray);
-    // standing inside its box (in the planetarium): traced from the eye, on the box's far side; outside, on its near
-    // side only (both sides are drawn)
+    // standing inside its box, or close to it (in the planetarium): traced from the eye, on the box's far side
+    // (its near side, right by the eye, is partly cut away by the screen's near plane); further out, on its near side
+    // only (both sides are drawn)
     vec3 eyeL = lp - lray;
-    bool inside = persp > 0.5 && ItemMode < 0.5 && all(greaterThan(eyeL, boxLo)) && all(lessThan(eyeL, boxHi));
+    const float NEAR = 0.6;
+    bool inside = persp > 0.5 && ItemMode < 0.5 && all(greaterThan(eyeL, boxLo - NEAR)) && all(lessThan(eyeL, boxHi + NEAR));
     if (inside) {
+        if (gl_FrontFacing) discard;
         ro = eyeL;
     } else if (!gl_FrontFacing) {
         discard;

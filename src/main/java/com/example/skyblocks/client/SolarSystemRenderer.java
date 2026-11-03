@@ -155,8 +155,8 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
 
     /** The box round the model, its faces facing out (the same numbers as the shader's). */
     static void box(VertexConsumer vc, Matrix4f m, boolean holo, float s) {
-        float[] lo = holo ? new float[] {0.5F - 1.55F * s, 0.12F, 0.5F - 1.55F * s} : new float[] {0.0F, 0.3F, 0.0F};
-        float[] hi = holo ? new float[] {0.5F + 1.55F * s, 0.3F + 2.65F * s, 0.5F + 1.55F * s} : new float[] {1.0F, 0.86F, 1.0F};
+        float[] lo = holo ? new float[] {0.5F - 1.55F * s, 0.12F, 0.5F - 1.55F * s} : new float[] {-0.18F, 0.3F, -0.18F};
+        float[] hi = holo ? new float[] {0.5F + 1.55F * s, 0.3F + 2.65F * s, 0.5F + 1.55F * s} : new float[] {1.18F, 1.08F, 1.18F};
         int[][] faces = {{4, 5, 7, 6}, {1, 0, 2, 3}, {5, 1, 3, 7}, {0, 4, 6, 2}, {6, 7, 3, 2}, {0, 1, 5, 4}};
         for (int[] f : faces) {
             for (int k : f) {
@@ -199,8 +199,8 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
             return;
         }
         Vec3 rd = new Vec3(camera.getLookVector());
-        Vec3 c = holo ? new Vec3(0.5, 0.3 + 1.15 * sc, 0.5) : new Vec3(0.5, 0.64, 0.5);
-        double r = holo ? 1.38 * sc : 0.45;
+        Vec3 c = holo ? new Vec3(0.5, 0.3 + 1.15 * sc, 0.5) : new Vec3(0.5, 0.74, 0.5);
+        double r = holo ? 1.38 * sc : 0.62;
         double y = be.years(be.getLevel().getGameTime(), mc.getTimer().getGameTimeDeltaPartialTick(false));
         double best = Double.MAX_VALUE;
         int hit = -1;
@@ -208,7 +208,7 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
         double atR = 0.0;
         for (int i = 0; i <= 9; i++) {
             Vec3 p = planet(i, y, c, r);
-            double pr = (be.realSizes() ? REAL[i] : SHOWN[i]) * r * 1.5 + 0.01; // (a little bigger: easier to point at)
+            double pr = (be.realSizes() ? REAL[i] : SHOWN[i]) * r * (holo || i == 0 ? 1.0 : 1.2) * 1.5 + 0.01; // (a little bigger: easier to point at)
             Vec3 oc = ro.subtract(p);
             double b = oc.dot(rd), q = oc.lengthSqr() - pr * pr, h = b * b - q;
             if (h < 0.0) continue;
@@ -238,14 +238,14 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
 
     @Override
     public AABB getRenderBoundingBox(SolarSystemBlockEntity be) {
-        if (!hologram(be)) return new AABB(be.getBlockPos());
+        if (!hologram(be)) return new AABB(be.getBlockPos()).inflate(0.2, 0.1, 0.2);
         double s = be.scale();
         return new AABB(be.getBlockPos()).inflate(1.55 * s - 0.4, 0.0, 1.55 * s - 0.4).expandTowards(0.0, 2.65 * s - 0.7, 0.0);
     }
 
     @Override
     public boolean shouldRenderOffScreen(SolarSystemBlockEntity be) {
-        return false;
+        return true; // (drawn whether or not the base's part of the world is: a planetarium reaches far past it)
     }
 
     @Override
