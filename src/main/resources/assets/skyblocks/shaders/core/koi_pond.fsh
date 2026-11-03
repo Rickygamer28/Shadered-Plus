@@ -938,19 +938,21 @@ void main() {
     gStart = start;
     float light = 0.18 + 0.82 * day;
 
-    // a frog sitting on a lily pad, in front of this point
+    // a frog sitting on a lily pad, and a duck (now and then one or two drop in for a while), in front of this
+    // point: whichever is nearer
     vec4 frog = frogHit(p0, rd, t, light);
-    if (frog.a > 0.0) {
-        fragColor = vec4(frog.rgb, 1.0);
-        gl_FragDepth = depthOf(gHit, entry);
-        return;
-    }
-    // a duck (now and then one or two drop in for a while)
+    vec3 frogAt = gHit;
     float ripple;
     vec4 duck = duckHit(p0, rd, t, light, ripple);
+    vec3 duckAt = gHit;
+    if (frog.a > 0.0 && (duck.a <= 0.0 || dot(frogAt - start, rd) < dot(duckAt - start, rd))) {
+        fragColor = vec4(frog.rgb, 1.0);
+        gl_FragDepth = depthOf(frogAt, entry);
+        return;
+    }
     if (duck.a > 0.0) {
         fragColor = vec4(duck.rgb, 1.0);
-        gl_FragDepth = depthOf(gHit, entry);
+        gl_FragDepth = depthOf(duckAt, entry);
         return;
     }
     // no water there (the view leaves by a side, over the rim to beyond the pond): nothing to draw. Water is seen
