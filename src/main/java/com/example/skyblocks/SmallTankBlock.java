@@ -107,11 +107,6 @@ public class SmallTankBlock extends BaseEntityBlock {
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         BlockState s = defaultBlockState();
-        if (shape == TALL) {
-            Level level = context.getLevel();
-            BlockPos pos = context.getClickedPos();
-            s = s.setValue(UP, level.getBlockState(pos.above()).is(this)).setValue(DOWN, level.getBlockState(pos.below()).is(this));
-        }
         if (shape == SLIM) {
             Direction face = context.getClickedFace();
             s = s.setValue(FACING, face.getAxis().isHorizontal() ? face : context.getHorizontalDirection().getOpposite());
@@ -119,10 +114,49 @@ public class SmallTankBlock extends BaseEntityBlock {
         return s;
     }
 
+    // ---- the tall tank's rims: a base under the bottom block of each tank, a cap on its top - where a column is
+    // taller than a tank can be, it's split into tanks of MAX blocks (from the bottom up), each with its own base and
+    // cap. Adding or taking away a block moves those splits, so the whole column is looked at again ----
+
+    @Override
+    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moving) {
+        super.onPlace(state, level, pos, old, moving);
+        if (shape == TALL && !level.isClientSide && !old.is(this)) {
+            refreshColumn(level, pos);
+        }
+    }
+
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState now, boolean moving) {
+        super.onRemove(state, level, pos, now, moving);
+        if (shape == TALL && !level.isClientSide && !now.is(this)) {
+            if (level.getBlockState(pos.above()).is(this)) refreshColumn(level, pos.above());
+            if (level.getBlockState(pos.below()).is(this)) refreshColumn(level, pos.below());
+        }
+    }
+
+    /** Sets the base and cap of every block in this column of tall tanks. */
+    private void refreshColumn(Level level, BlockPos pos) {
+        BlockPos b = pos;
+        for (int i = 0; i < COLUMN && level.getBlockState(b.below()).is(this); i++) b = b.below();
+        for (int i = 0; i < COLUMN; i++) {
+            BlockPos p = b.above(i);
+            BlockState st = level.getBlockState(p);
+            if (!st.is(this)) break;
+            boolean above = level.getBlockState(p.above()).is(this);
+            BlockState want = st.setValue(DOWN, i % MAX != 0).setValue(UP, above && i % MAX != MAX - 1);
+            if (want != st) level.setBlock(p, want, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+        }
+    }
+
     @Override
     protected BlockState updateShape(BlockState state, Direction dir, BlockState next, LevelAccessor level, BlockPos pos, BlockPos nextPos) {
-        if (shape == TALL && dir == Direction.UP) return state.setValue(UP, next.is(this));
-        if (shape == TALL && dir == Direction.DOWN) return state.setValue(DOWN, next.is(this));
+        if (shape == TALL && dir.getAxis() == Direction.Axis.Y) {
+            int i = 0;
+            for (BlockPos b = pos; i < COLUMN && level.getBlockState(b.below()).is(this); b = b.below()) i++;
+            boolean above = level.getBlockState(pos.above()).is(this);
+            return state.setValue(DOWN, i % MAX != 0).setValue(UP, above && i % MAX != MAX - 1);
+        }
         return state;
     }
 
@@ -130,36 +164,153 @@ public class SmallTankBlock extends BaseEntityBlock {
         return b.getBlock() == a.getBlock() && (!(a.getBlock() instanceof SmallTankBlock t) || t.shape != SLIM || b.getValue(FACING) == a.getValue(FACING));
     }
 
+    /** The longest column looked at (blocks). */
+    private static final int COLUMN = 512;
+    /** The most columns side by side looked at, to share them out into tanks. */
+    private static final int SPREAD = 400;
+
+    // (worked out once a tick on the client: every block's renderer asks)
+    private static final java.util.Map<Long, int[]> CACHE = new java.util.HashMap<>();
+    private static Object cacheLevel;
+    private static long cacheTick = Long.MIN_VALUE;
+
+    /**
+     * A column of blocks split into tanks of up to MAX: {the bottom of the tank this block is in, its height}.
+     * {@code y} is the block's height; {@code at} steps along the column (x, z fixed).
+     */
+    private static int[] span(BlockGetter level, BlockState state, BlockPos pos) {
+        int i = 0;
+        BlockPos b = pos;
+        while (i < COLUMN && joins(state, level.getBlockState(b.below()))) {
+            b = b.below();
+            i++;
+        }
+        int y0 = pos.getY() - i % MAX;
+        int h = 1;
+        while (h < MAX && joins(state, level.getBlockState(new BlockPos(pos.getX(), y0 + h, pos.getZ())))) h++;
+        return new int[] {y0, h};
+    }
+
     /**
      * The tank this block is part of: its corner block (the bottom one; for a slim tank the bottom left, seen from in
-     * front) and its size - {x, y, z, width, height}.
+     * front) and its size - {x, y, z, width, height}. Blocks join only into whole tanks no bigger than they can be:
+     * a column taller than MAX is split into tanks MAX high (from the bottom up); columns side by side (of the same
+     * height, from the same height) are shared out into squares at most WIDE across (a slim tank: rows at most MAX
+     * long), whatever's left over making tanks of its own.
      */
     public static int[] group(BlockGetter level, BlockPos pos, BlockState state) {
         if (!(state.getBlock() instanceof SmallTankBlock t) || t.shape == BOWL) {
             return new int[] {pos.getX(), pos.getY(), pos.getZ(), 1, 1};
         }
-        BlockPos a = pos;
-        if (t.shape == TALL) {
-            // a square of columns side by side makes one wider tank: its corner the lowest, most west, most north
-            for (int pass = 0; pass < 3; pass++) {
-                for (int i = 0; i < MAX * 2 && joins(state, level.getBlockState(a.below())); i++) a = a.below();
-                for (int i = 0; i < WIDE * 2 && joins(state, level.getBlockState(a.west())); i++) a = a.west();
-                for (int i = 0; i < WIDE * 2 && joins(state, level.getBlockState(a.north())); i++) a = a.north();
+        int[] sp = span(level, state, pos);
+        boolean cache = level instanceof Level l && l.isClientSide();
+        long key = new BlockPos(pos.getX(), sp[0], pos.getZ()).asLong();
+        if (cache) {
+            long tick = ((Level) level).getGameTime();
+            if (cacheLevel != level || cacheTick != tick) {
+                CACHE.clear();
+                cacheLevel = level;
+                cacheTick = tick;
             }
-            int w = 1, d = 1, h = 1;
-            while (w < WIDE && joins(state, level.getBlockState(a.east(w)))) w++;
-            while (d < WIDE && joins(state, level.getBlockState(a.south(d)))) d++;
-            while (h < MAX && joins(state, level.getBlockState(a.above(h)))) h++;
-            return new int[] {a.getX(), a.getY(), a.getZ(), Math.min(w, d), h};
+            int[] g = CACHE.get(key);
+            if (g != null) return g;
         }
-        for (int i = 0; i < MAX * 2 && joins(state, level.getBlockState(a.below())); i++) a = a.below();
+        int[] g = t.shape == TALL ? tallGroup(level, state, pos, sp, cache) : slimGroup(level, state, pos, sp);
+        if (cache) CACHE.put(key, g);
+        return g;
+    }
+
+    /** A column's piece at (x, y0, z) of the same height and from the same height as this one: joined to it. */
+    private static boolean sameSpan(BlockGetter level, BlockState state, int x, int y0, int z, int h) {
+        BlockPos p = new BlockPos(x, y0, z);
+        if (!joins(state, level.getBlockState(p))) return false;
+        int[] o = span(level, state, p);
+        return o[0] == y0 && o[1] == h;
+    }
+
+    private static int[] tallGroup(BlockGetter level, BlockState state, BlockPos pos, int[] sp, boolean cache) {
+        int y0 = sp[0], h = sp[1];
+        // the columns joined to this one (side by side, of the same span)
+        java.util.Set<Long> cells = new java.util.HashSet<>();
+        java.util.ArrayDeque<long[]> todo = new java.util.ArrayDeque<>();
+        cells.add(xz(pos.getX(), pos.getZ()));
+        todo.add(new long[] {pos.getX(), pos.getZ()});
+        int[][] steps = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        while (!todo.isEmpty() && cells.size() < SPREAD) {
+            long[] c = todo.poll();
+            for (int[] st : steps) {
+                int x = (int) c[0] + st[0], z = (int) c[1] + st[1];
+                long k = xz(x, z);
+                if (cells.contains(k) || !sameSpan(level, state, x, y0, z, h)) continue;
+                cells.add(k);
+                todo.add(new long[] {x, z});
+            }
+        }
+        // shared out into squares: north to south, west to east, each the biggest square that fits from there
+        long[] order = new long[cells.size()];
+        int n = 0;
+        for (long k : cells) order[n++] = k;
+        java.util.Arrays.sort(order, 0, n);
+        java.util.Set<Long> used = new java.util.HashSet<>();
+        int[] mine = null;
+        for (int i = 0; i < n; i++) {
+            if (used.contains(order[i])) continue;
+            int x = xzX(order[i]), z = xzZ(order[i]);
+            int s = 1;
+            grow:
+            while (s < WIDE) {
+                for (int d = 0; d <= s; d++) { // (the next row and column: all there, and free)
+                    long a = xz(x + s, z + d), b = xz(x + d, z + s);
+                    if (!cells.contains(a) || used.contains(a) || !cells.contains(b) || used.contains(b)) break grow;
+                }
+                s++;
+            }
+            int[] g = {x, y0, z, s, h};
+            for (int dz = 0; dz < s; dz++) {
+                for (int dx = 0; dx < s; dx++) {
+                    used.add(xz(x + dx, z + dz));
+                    if (cache) CACHE.put(new BlockPos(x + dx, y0, z + dz).asLong(), g);
+                    if (x + dx == pos.getX() && z + dz == pos.getZ()) mine = g;
+                }
+            }
+        }
+        return mine != null ? mine : new int[] {pos.getX(), y0, pos.getZ(), 1, h};
+    }
+
+    // a column's place as one number, in order north to south, then west to east
+    private static long xz(int x, int z) {
+        return (long) z * 0x1_0000_0000L + x;
+    }
+
+    private static int xzZ(long k) {
+        return (int) Math.floorDiv(k + 0x8000_0000L, 0x1_0000_0000L);
+    }
+
+    private static int xzX(long k) {
+        return (int) (k - (long) xzZ(k) * 0x1_0000_0000L);
+    }
+
+    private static int[] slimGroup(BlockGetter level, BlockState state, BlockPos pos, int[] sp) {
+        int y0 = sp[0], h = sp[1];
         Direction facing = state.getValue(FACING);
         Direction left = facing.getClockWise(), right = facing.getCounterClockWise();
-        for (int i = 0; i < MAX * 2 && joins(state, level.getBlockState(a.relative(left))); i++) a = a.relative(left);
-        int w = 1, h = 1;
-        while (w < MAX && joins(state, level.getBlockState(a.relative(right, w)))) w++;
-        while (h < MAX && joins(state, level.getBlockState(a.above(h)))) h++;
-        return new int[] {a.getX(), a.getY(), a.getZ(), w, h};
+        // the row along the wall, from its left end, split into tanks at most MAX long
+        BlockPos at = new BlockPos(pos.getX(), y0, pos.getZ());
+        int i = 0;
+        while (i < COLUMN) {
+            BlockPos n = at.relative(left);
+            if (!sameSpan(level, state, n.getX(), y0, n.getZ(), h)) break;
+            at = n;
+            i++;
+        }
+        BlockPos a = at.relative(right, i - i % MAX);
+        int w = 1;
+        while (w < MAX) {
+            BlockPos n = a.relative(right, w);
+            if (!sameSpan(level, state, n.getX(), y0, n.getZ(), h)) break;
+            w++;
+        }
+        return new int[] {a.getX(), y0, a.getZ(), w, h};
     }
 
     @Override
