@@ -91,7 +91,7 @@ public final class RenderTest {
             "fill 2 -60 56 3 -59 57 skyblocks:tall_tank{variant:1}",
             "fill -3 -60 56 -1 -59 58 skyblocks:tall_tank{variant:1}",
             // past the biggest a tank gets: a row 5 x 2 (two 2 x 2 tanks, two single columns) and a column 10 high (8 + 2)
-            "fill 6 -60 56 10 -60 57 skyblocks:tall_tank", "summon item_frame 1 -59 -4 {Facing:2,Fixed:1b,Item:{id:\"shadered:space_block\",count:1}}", "setblock -30 -60 10 skyblocks:planetarium{size:1}", "fill -32 -60 13 -29 -58 13 minecraft:stone_bricks", "fill 12 -60 56 12 -51 56 skyblocks:tall_tank",
+            "fill 6 -60 56 10 -60 57 skyblocks:tall_tank", "setblock 3 -60 -3 skyblocks:singularity{items:[{item:{id:\"minecraft:diamond\",count:1},count:250000L},{item:{id:\"minecraft:gold_ingot\",count:1},count:9000L},{item:{id:\"minecraft:emerald\",count:1},count:420L}],colour:3847130}", "summon item_frame 1 -59 -4 {Facing:2,Fixed:1b,Item:{id:\"shadered:space_block\",count:1}}", "setblock -30 -60 10 skyblocks:planetarium{size:1}", "fill -32 -60 13 -29 -58 13 minecraft:stone_bricks", "fill 12 -60 56 12 -51 56 skyblocks:tall_tank",
             // tesla coils (two near each other), and a galaxy projector in a closed stone room
             "setblock 10 -60 -4 skyblocks:tesla_coil",
             "setblock 13 -60 -4 skyblocks:tesla_coil",

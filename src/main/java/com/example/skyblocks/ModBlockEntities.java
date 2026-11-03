@@ -75,6 +75,8 @@ public final class ModBlockEntities {
     public static final Supplier<BlockEntityType<GalaxyProjectorBlockEntity>> GALAXY_PROJECTOR = TYPES.register("galaxy_projector",
             () -> BlockEntityType.Builder.of(GalaxyProjectorBlockEntity::new, ModBlocks.GALAXY_PROJECTOR.get()).build(null));
 
+    public static final Supplier<BlockEntityType<SingularityBlockEntity>> SINGULARITY = TYPES.register("singularity",
+            () -> BlockEntityType.Builder.of(SingularityBlockEntity::new, ModBlocks.SINGULARITY.get()).build(null));
     public static final Supplier<BlockEntityType<SolarSystemBlockEntity>> SOLAR_SYSTEM = TYPES.register("solar_system",
             () -> BlockEntityType.Builder.of(SolarSystemBlockEntity::new, ModBlocks.ORRERY.get(), ModBlocks.PLANETARIUM.get()).build(null));
 

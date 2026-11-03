@@ -36,7 +36,9 @@ public class SkyBlocksMod {
         ModFluids.TYPES.register(modEventBus);
         ModFluids.FLUIDS.register(modEventBus);
         ModFluids.RECIPES.register(modEventBus);
+        SingularityMenu.MENUS.register(modEventBus);
         modEventBus.addListener(SkyBlocksMod::addToShaderedTab);
+        modEventBus.addListener(SkyBlocksMod::registerCapabilities);
         modEventBus.addListener(SkyBlocksMod::registerPayloads);
     }
 
@@ -68,6 +70,7 @@ public class SkyBlocksMod {
         event.accept(ModItems.MAGMA_BASIN.get());
         event.accept(ModItems.BLACK_HOLE.get());
         event.accept(ModItems.BIG_BLACK_HOLE.get());
+        event.accept(ModItems.SINGULARITY.get());
         event.accept(ModItems.FIRE_TORNADO.get());
         event.accept(ModItems.BRICK_HEARTH.get());
         event.accept(ModItems.MUSIC_VISUALIZER.get());
@@ -102,11 +105,19 @@ public class SkyBlocksMod {
         }
     }
 
+    /** Hoppers and pipes (any mod's) put things into the singularity and take them out. */
+    private static void registerCapabilities(net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent event) {
+        event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, ModBlockEntities.SINGULARITY.get(),
+                (be, side) -> be.handler);
+    }
+
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
         event.registrar("1").playToServer(ScanIslandPayload.TYPE, ScanIslandPayload.STREAM_CODEC, ScanIslandPayload::handle)
                 .playToServer(FogAreaPayload.TYPE, FogAreaPayload.STREAM_CODEC, FogAreaPayload::handle)
                 .playToServer(NeonSignPayload.TYPE, NeonSignPayload.STREAM_CODEC, NeonSignPayload::handle)
                 .playToServer(PondMaterialsPayload.TYPE, PondMaterialsPayload.STREAM_CODEC, PondMaterialsPayload::handle)
+                .playToServer(SingularityPayloads.Action.TYPE, SingularityPayloads.Action.STREAM_CODEC, SingularityPayloads.Action::handle)
+                .playToClient(SingularityPayloads.Contents.TYPE, SingularityPayloads.Contents.STREAM_CODEC, SingularityPayloads.Contents::handle)
                 .playToClient(IslandMobsPayload.TYPE, IslandMobsPayload.STREAM_CODEC, IslandMobsPayload::handle)
                 .playToClient(com.example.skyblocks.portal.PortalSkiesPayload.TYPE,
                         com.example.skyblocks.portal.PortalSkiesPayload.STREAM_CODEC,

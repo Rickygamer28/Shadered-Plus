@@ -41,6 +41,11 @@ public final class ClientSetup {
     }
 
     @SubscribeEvent
+    public static void registerScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
+        event.register(com.example.skyblocks.SingularityMenu.TYPE.get(), SingularityScreen::new);
+    }
+
+    @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.OIIA_CAT.get(), OiiaCatRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.WATER_CAUSTICS.get(), WaterCausticsRenderer::new);
@@ -54,6 +59,7 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.GALAXY_PROJECTOR.get(), GalaxyProjectorRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.MAGMA_BASIN.get(), MagmaBasinRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.BLACK_HOLE.get(), BlackHoleRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.SINGULARITY.get(), SingularityRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.FIRE.get(), WallFireRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.BRICK_HEARTH.get(), ClientSetup::hearthRenderer);
         event.registerBlockEntityRenderer(ModBlockEntities.VISUALIZER.get(), VisualizerRenderer::new);
@@ -175,6 +181,17 @@ public final class ClientSetup {
                 return renderer;
             }
         }, ModItems.JELLYFISH_TANK.get());
+        event.registerItem(new IClientItemExtensions() {
+            private SingularityItemRenderer renderer;
+
+            @Override
+            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (renderer == null) {
+                    renderer = new SingularityItemRenderer();
+                }
+                return renderer;
+            }
+        }, ModItems.SINGULARITY.get());
         for (boolean bigHole : new boolean[] {false, true}) {
             event.registerItem(new IClientItemExtensions() {
                 private BlackHoleItemRenderer renderer;

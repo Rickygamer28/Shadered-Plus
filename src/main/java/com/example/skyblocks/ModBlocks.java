@@ -172,6 +172,11 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(3.0F, 9.0F).sound(SoundType.AMETHYST).noOcclusion().lightLevel(state -> 11)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
 
+    /** The singularity: a black hole in a containment frame that stores items (SingularityBlock). */
+    public static final DeferredBlock<SingularityBlock> SINGULARITY = BLOCKS.registerBlock("singularity", SingularityBlock::new,
+            BlockBehaviour.Properties.of().strength(5.0F, 1200.0F).sound(SoundType.NETHERITE_BLOCK).noOcclusion().lightLevel(state -> 7)
+                    .requiresCorrectToolForDrops().mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+
     /** The big lava lamp: two blocks tall (BigLavaLampBlock). */
     public static final DeferredBlock<BigLavaLampBlock> BIG_LAVA_LAMP = BLOCKS.registerBlock("big_lava_lamp", BigLavaLampBlock::new,
             BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.GLASS).noOcclusion()

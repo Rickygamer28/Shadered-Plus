@@ -1,6 +1,6 @@
 #version 150
 
-// Shadered+'s black holes: a box round the hole's reach. UV0.x: which corner; UV0.y: 10 * kind (0 small, 1 big) +
+// Shadered+'s black holes: a box round the hole's reach. UV0.x: which corner; UV0.y: 10 * kind (0 small, 1 big, 2 singularity) +
 // seed. Works out the position on the box in the block's own space, the view ray there, and (flat) where the block's
 // corner is in the drawn space - so the fragment shader can find any point's place on the screen.
 
@@ -28,8 +28,9 @@ void main() {
     kind = floor(UV0.y / 10.0 + 0.001);
     seedIn = UV0.y - 10.0 * kind;
     // (client/BlackHoleRenderer's boxes: the reach round the hole's middle)
+    // (kind 2, the singularity: its reach by how full it is, in the colour's alpha)
     vec3 c = kind > 0.5 ? vec3(0.5) : vec3(0.5, 0.62, 0.5);
-    float reach = (kind > 0.5 ? 1.5 : 0.36) * 1.03;
+    float reach = (kind > 1.5 ? 0.38 + 0.92 * Color.a : kind > 0.5 ? 1.5 : 0.36) * 1.03;
     lp = c + reach * (vec3(float(corner & 1), float((corner >> 1) & 1), float((corner >> 2) & 1)) * 2.0 - 1.0);
     origin = Position - lp;
     mat4 iv = inverse(ModelViewMat);

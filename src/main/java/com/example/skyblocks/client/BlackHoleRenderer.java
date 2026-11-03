@@ -129,18 +129,30 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
 
     @Override
     public void render(GlowColourBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
+        hole(be.getBlockPos(), poseStack, buffers, big(be) ? 1 : 0, 0.0F, GlowColourBlockEntity.shown(be, LavaLampRenderer.seconds()));
+    }
+
+    /** Where a hole of this kind sits in its block, and how far it reaches (kind 2, the singularity: by how full it is). */
+    static float centreY(int kind) {
+        return kind == 0 ? 0.62F : 0.5F;
+    }
+
+    static float reach(int kind, float grow) {
+        return kind == 0 ? 0.36F : kind == 1 ? 1.5F : 0.38F + 0.92F * grow;
+    }
+
+    /** A hole (kind 0 the small ornament, 1 the big one, 2 the singularity, {@code grow} 0..1 how full) at this block. */
+    static void hole(net.minecraft.core.BlockPos pos, PoseStack poseStack, MultiBufferSource buffers, int kind, float grow, int colour) {
         if (shader == null) {
             return;
         }
-        long h = be.getBlockPos().asLong() * 0x9E3779B97F4A7C15L;
+        long h = pos.asLong() * 0x9E3779B97F4A7C15L;
         float seed = (float) ((h >>> 40) & 0xFFFF) / 65536.0F * 0.9F;
         // the eye inside the box? (the main camera's; the box as in box())
-        boolean big = big(be);
         Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-        double reach = (big ? 1.5 : 0.36) * 1.03;
-        boolean inside = Math.abs(cam.x - (be.getBlockPos().getX() + 0.5)) < reach && Math.abs(cam.z - (be.getBlockPos().getZ() + 0.5)) < reach
-                && Math.abs(cam.y - (be.getBlockPos().getY() + (big ? 0.5 : 0.62))) < reach;
-        int colour = GlowColourBlockEntity.shown(be, LavaLampRenderer.seconds());
+        double reach = reach(kind, grow) * 1.03;
+        boolean inside = Math.abs(cam.x - (pos.getX() + 0.5)) < reach && Math.abs(cam.z - (pos.getZ() + 0.5)) < reach
+                && Math.abs(cam.y - (pos.getY() + centreY(kind))) < reach;
         if (IrisCompat.renderingShadowPass()) {
             return;
         }
@@ -154,20 +166,20 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
             // are in the picture the hole bends (see drawPending)
             if (PENDING.size() < 256) {
                 PENDING.add(new Pending(new Matrix4f(poseStack.last().pose()), new Matrix4f(RenderSystem.getModelViewMatrix()),
-                        new Matrix4f(RenderSystem.getProjectionMatrix()), inside, big, colour, seed));
+                        new Matrix4f(RenderSystem.getProjectionMatrix()), inside, kind, grow, colour, seed));
             }
             return;
         }
         if (main) {
             Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
         }
-        box(buffers.getBuffer(type), poseStack.last().pose(), big, colour, seed);
+        box(buffers.getBuffer(type), poseStack.last().pose(), kind, grow, colour, seed);
         if (main) {
             Minecraft.getInstance().renderBuffers().bufferSource().endBatch(type);
         }
     }
 
-    private record Pending(Matrix4f pose, Matrix4f modelView, Matrix4f projection, boolean inside, boolean big, int colour, float seed) {}
+    private record Pending(Matrix4f pose, Matrix4f modelView, Matrix4f projection, boolean inside, int kind, float grow, int colour, float seed) {}
     private static final java.util.List<Pending> PENDING = new java.util.ArrayList<>();
     private static int debugDraws;
 
@@ -202,7 +214,7 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                 stack.set(job.modelView());
                 RenderSystem.applyModelViewMatrix();
                 RenderType type = job.inside() ? Types.HOLE_INSIDE : Types.HOLE;
-                box(main.getBuffer(type), job.pose(), job.big(), job.colour(), job.seed());
+                box(main.getBuffer(type), job.pose(), job.kind(), job.grow(), job.colour(), job.seed());
                 main.endBatch(type); // (each its own copy of the picture: one hole bends another)
             }
         } finally {
@@ -219,22 +231,35 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         }
         Matrix4f m = poseStack.last().pose();
         ITEM_INV.set(m).invert();
-        box(buffers.getBuffer(Types.ITEM), m, big, big ? 0xFFB070 : 0x9A6BFF, 0.3F);
+        box(buffers.getBuffer(Types.ITEM), m, big ? 1 : 0, 0.0F, big ? 0xFFB070 : 0x9A6BFF, 0.3F);
+        if (buffers instanceof MultiBufferSource.BufferSource source) {
+            source.endBatch(Types.ITEM);
+        }
+    }
+
+    /** A hole of any kind as an item (the singularity: as it looks with {@code grow} filled). */
+    static void drawItem(PoseStack poseStack, MultiBufferSource buffers, int kind, float grow, int colour) {
+        if (shader == null) {
+            return;
+        }
+        Matrix4f m = poseStack.last().pose();
+        ITEM_INV.set(m).invert();
+        box(buffers.getBuffer(Types.ITEM), m, kind, grow, colour, 0.3F);
         if (buffers instanceof MultiBufferSource.BufferSource source) {
             source.endBatch(Types.ITEM);
         }
     }
 
     /** The box round the hole's reach, its faces facing out (the same numbers as the shader's). */
-    static void box(VertexConsumer vc, Matrix4f m, boolean big, int colour, float seed) {
+    static void box(VertexConsumer vc, Matrix4f m, int kind, float grow, int colour, float seed) {
         // (a little bigger than the reach: so its faces never lie flat on a floor, flickering against it)
-        float cx = 0.5F, cy = big ? 0.5F : 0.62F, cz = 0.5F, reach = (big ? 1.5F : 0.36F) * 1.03F;
-        int r = (colour >> 16) & 255, g = (colour >> 8) & 255, b = colour & 255;
+        float cx = 0.5F, cy = centreY(kind), cz = 0.5F, reach = reach(kind, grow) * 1.03F;
+        int r = (colour >> 16) & 255, g = (colour >> 8) & 255, b = colour & 255, a = Math.round(Math.max(0.0F, Math.min(1.0F, grow)) * 255.0F);
         int[][] faces = {{4, 5, 7, 6}, {1, 0, 2, 3}, {5, 1, 3, 7}, {0, 4, 6, 2}, {6, 7, 3, 2}, {0, 1, 5, 4}};
         for (int[] f : faces) {
             for (int k : f) {
                 vc.addVertex(m, cx + ((k & 1) != 0 ? reach : -reach), cy + ((k & 2) != 0 ? reach : -reach), cz + ((k & 4) != 0 ? reach : -reach))
-                        .setUv(k, (big ? 10.0F : 0.0F) + seed).setColor(r, g, b, 255);
+                        .setUv(k, kind * 10.0F + seed).setColor(r, g, b, a);
             }
         }
     }

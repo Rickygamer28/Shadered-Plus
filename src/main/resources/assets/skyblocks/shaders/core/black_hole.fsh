@@ -46,8 +46,8 @@ void main() {
     gl_FragDepth = gl_FragCoord.z;
     bool big = kind > 0.5;
     vec3 C = big ? vec3(0.5) : vec3(0.5, 0.62, 0.5);
-    float reach = big ? 1.5 : 0.36;
-    float rs = big ? 0.21 : 0.07;  // (the shadow's radius)
+    float reach = kind > 1.5 ? 0.38 + 0.92 * vColor.a : big ? 1.5 : 0.36; // (the singularity: grows as it fills)
+    float rs = kind > 1.5 ? reach * 0.14 : big ? 0.21 : 0.07;  // (the shadow's radius)
     float t = HoleTime + seedIn * 50.0;
 
     vec3 rd = normalize(lray);
@@ -173,7 +173,7 @@ void main() {
     }
     // the photon ring: a thin bright line where light can just circle the hole
     float ring = exp(-pow((minR - rs * 1.25) / (rs * 0.09), 2.0)) * (swallowed ? 0.0 : 1.0);
-    vec3 ringCol = big ? vec3(1.0, 0.85, 0.6) : mix(vColor.rgb, vec3(1.0), 0.5);
+    vec3 ringCol = kind > 1.5 ? mix(vColor.rgb, vec3(1.0), 0.6) : big ? vec3(1.0, 0.85, 0.6) : mix(vColor.rgb, vec3(1.0), 0.5);
     acc += trans * ringCol * ring * (big ? 0.9 : 0.6);
 
     vec3 col = acc + trans * bg * bgA;
