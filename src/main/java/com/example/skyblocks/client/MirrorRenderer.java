@@ -1990,7 +1990,7 @@ public final class MirrorRenderer {
             if (live == null || !live.valid || live.renderedFrame != frame) {
                 continue; // (only while it's drawn live: the chunks it shows are there)
             }
-            long at = s == null || s.fromDisk ? Long.MIN_VALUE : s.frame;
+            long at = s == null || s.fromDisk ? -1_000_000_000L : s.frame; // (none yet: oldest of all - without overflowing)
             if (frame - at >= SNAPSHOT_EVERY && at < oldest) {
                 oldest = at;
                 wall = w;
