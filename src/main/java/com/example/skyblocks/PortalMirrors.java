@@ -251,7 +251,7 @@ public final class PortalMirrors {
                 }
                 Direction facing = Direction.from3DDataValue(c.getInt("facing"));
                 if (!blocks.isEmpty() && facing.getAxis().isHorizontal()) {
-                    r.portals.add(of(blocks, facing, DyeColor.byId(c.getInt("colour"))));
+                    r.portals.add(PortalMirrors.of(blocks, facing, DyeColor.byId(c.getInt("colour"))));
                 }
             }
             return r;
