@@ -848,7 +848,8 @@ public final class MirrorRenderer {
         c.modelView = new Matrix4f(eyeView).mul(turn(link.turns()).invert());
         Wall d = link.dest();
         Matrix4f inverseTranspose = new Matrix4f(c.modelView).invert().transpose();
-        float planeW = (float) (d.nx() * c.rx + d.ny() * c.ry + d.nz() * c.rz - d.k());
+        // (a hair past the linked portal's plane: its own pane, right on the plane, isn't in the picture)
+        float planeW = (float) (d.nx() * c.rx + d.ny() * c.ry + d.nz() * c.rz - d.k() - 0.02);
         Vector4f plane = inverseTranspose.transform(new Vector4f((float) d.nx(), (float) d.ny(), (float) d.nz(), planeW));
         c.clipped = oblique(new Matrix4f(projection), plane);
         c.seen = new FrustumIntersection(new Matrix4f(c.clipped).mul(c.modelView));
