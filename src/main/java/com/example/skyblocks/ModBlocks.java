@@ -164,7 +164,7 @@ public final class ModBlocks {
 
     /** A portal mirror: look through it into the world past the other one of its colour, walk through it to get there (PortalMirrorBlock). */
     public static final DeferredBlock<PortalMirrorBlock> PORTAL_MIRROR = BLOCKS.registerBlock("portal_mirror", PortalMirrorBlock::new,
-            BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.AMETHYST).noOcclusion().noCollission().lightLevel(state -> 8)
+            BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.AMETHYST).lightLevel(state -> 8)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE));
 
     /** A magma basin: churning lava in a stone basin, basins side by side make one pool (MagmaBasinBlock). */

@@ -17,6 +17,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -30,8 +32,9 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The singularity: a black hole that keeps what falls into it. Any number of any item (each kind one entry with its
  * count), items dropped near it pulled in round its disk, hoppers and pipes put things in and take them out (an item
- * handler: a slot per kind, and an empty one to put new kinds in); the more it holds, the bigger it grows. Items marked
- * to be destroyed are crushed to nothing instead of kept. Vacuum mode: it pulls in dropped items from much further.
+ * handler: a slot per kind, and an empty one to put new kinds in); the more it holds, the bigger it grows. Items in its
+ * destroy filter (marked kinds, or item tags) are crushed to nothing instead of kept. Vacuum mode: it pulls in dropped
+ * items round it (off: it only takes what's put in).
  */
 public class SingularityBlockEntity extends net.minecraft.world.level.block.entity.BlockEntity {
     /** One kind of item kept, and how many. */
@@ -47,13 +50,16 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
 
     /** At most this many kinds (plenty: a big storage block, not a whole storage system). */
     public static final int MAX_KINDS = 1024;
-    /** How far dropped items are pulled in from: always, and in vacuum mode. */
-    public static final double PULL = 2.5, VACUUM_PULL = 8.0;
+    /** How far dropped items are pulled in from in vacuum mode. */
+    public static final double VACUUM_PULL = 8.0;
+    /** At most this many tags in the destroy filter. */
+    public static final int MAX_TAGS = 32;
     /** How full it looks / what a comparator reads: this many items fills it (log scale). */
     private static final double FULL = 1.0e6;
 
     private final List<Entry> entries = new ArrayList<>();
     private final Set<Item> destroy = new HashSet<>();
+    private final List<TagKey<Item>> destroyTags = new ArrayList<>();
     private boolean vacuum;
     private int colour = 0x9A6BFF;
     private long total;
@@ -76,6 +82,43 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
 
     public Set<Item> destroyed() {
         return destroy;
+    }
+
+    public List<TagKey<Item>> destroyTags() {
+        return destroyTags;
+    }
+
+    /** Whether this is crushed to nothing when put in (a marked kind, or in a marked tag). */
+    public boolean destroys(ItemStack stack) {
+        if (destroy.contains(stack.getItem())) {
+            return true;
+        }
+        for (TagKey<Item> tag : destroyTags) {
+            if (stack.is(tag)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Adds a tag ("c:cobblestones", "#minecraft:logs") to the destroy filter, or takes it out if it's there. */
+    public void toggleDestroyTag(String text) {
+        String t = text.trim();
+        if (t.startsWith("#")) {
+            t = t.substring(1);
+        }
+        ResourceLocation id = ResourceLocation.tryParse(t);
+        if (id == null) {
+            return;
+        }
+        TagKey<Item> tag = TagKey.create(Registries.ITEM, id);
+        if (!destroyTags.remove(tag)) {
+            if (destroyTags.size() >= MAX_TAGS) {
+                return;
+            }
+            destroyTags.add(tag);
+        }
+        changed(false);
     }
 
     public boolean vacuum() {
@@ -121,7 +164,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
 
     /** Whether it would take any of this (destroyed items: always). */
     public boolean accepts(ItemStack stack) {
-        return !stack.isEmpty() && (destroy.contains(stack.getItem()) || find(stack) != null || entries.size() < MAX_KINDS);
+        return !stack.isEmpty() && (destroys(stack) || find(stack) != null || entries.size() < MAX_KINDS);
     }
 
     /** Puts in as much of {@code stack} as it can (all of it, unless there are too many kinds); returns what's left. */
@@ -129,7 +172,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
         if (stack.isEmpty()) {
             return ItemStack.EMPTY;
         }
-        if (destroy.contains(stack.getItem())) {
+        if (destroys(stack)) {
             if (!simulate) {
                 changed(false);
             }
@@ -202,13 +245,13 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
         }
     }
 
-    // ---- pulling in what's dropped near it ----
+    // ---- pulling in what's dropped near it (vacuum mode only) ----
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, SingularityBlockEntity be) {
-        if (!(level instanceof ServerLevel server) || (level.getGameTime() + pos.hashCode()) % 2 != 0) {
+        if (!be.vacuum || !(level instanceof ServerLevel server) || (level.getGameTime() + pos.hashCode()) % 2 != 0) {
             return;
         }
-        double reach = be.vacuum ? VACUUM_PULL : PULL;
+        double reach = VACUUM_PULL;
         Vec3 c = Vec3.atCenterOf(pos);
         List<ItemEntity> items = level.getEntitiesOfClass(ItemEntity.class, new AABB(c, c).inflate(reach),
                 e -> e.isAlive() && !e.getItem().isEmpty());
@@ -235,8 +278,11 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
             Vec3 round = new Vec3(-in.z, 0.0, in.x).normalize();
             double pull = 0.06 + 0.5 / Math.max(d * d, 0.6);
             Vec3 v = in.scale(Math.min(pull, 0.6)).add(round.scale(Math.min(0.25, 0.35 / Math.max(d, 0.8))));
-            item.setDeltaMovement(item.getDeltaMovement().scale(0.5).add(v.scale(0.6)));
-            item.setNoGravity(d < reach * 0.9);
+            // (held up against its fall while it's pulled: no gravity switched off, nothing left floating when it stops)
+            item.setDeltaMovement(item.getDeltaMovement().scale(0.5).add(v.scale(0.6)).add(0.0, d < reach * 0.9 ? 0.04 : 0.0, 0.0));
+            if (item.isNoGravity()) {
+                item.setNoGravity(false); // (left floating by an older version)
+            }
             item.hurtMarked = true;
         }
         if (ate && level.getRandom().nextInt(3) == 0) {
@@ -307,6 +353,11 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
             gone.add(StringTag.valueOf(BuiltInRegistries.ITEM.getKey(item).toString()));
         }
         tag.put("destroy", gone);
+        ListTag tags = new ListTag();
+        for (TagKey<Item> t : destroyTags) {
+            tags.add(StringTag.valueOf(t.location().toString()));
+        }
+        tag.put("destroyTags", tags);
         tag.putBoolean("vacuum", vacuum);
         tag.putInt("colour", colour);
     }
@@ -344,6 +395,13 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
                 BuiltInRegistries.ITEM.getOptional(id).ifPresent(destroy::add);
             }
         }
+        destroyTags.clear();
+        for (Tag t : tag.getList("destroyTags", Tag.TAG_STRING)) {
+            ResourceLocation id = ResourceLocation.tryParse(t.getAsString());
+            if (id != null && destroyTags.size() < MAX_TAGS) {
+                destroyTags.add(TagKey.create(Registries.ITEM, id));
+            }
+        }
         vacuum = tag.getBoolean("vacuum");
         if (tag.contains("colour")) {
             colour = tag.getInt("colour") & 0xFFFFFF;
@@ -375,7 +433,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
     /** Itself as an item, keeping everything it holds (broken, it doesn't spill out: it goes with it, like a shulker box). */
     public ItemStack asItem(HolderLookup.Provider registries) {
         ItemStack stack = new ItemStack(ModItems.SINGULARITY.get());
-        if (!entries.isEmpty() || !destroy.isEmpty() || vacuum || colour != 0x9A6BFF) {
+        if (!entries.isEmpty() || !destroy.isEmpty() || !destroyTags.isEmpty() || vacuum || colour != 0x9A6BFF) {
             net.minecraft.world.item.BlockItem.setBlockEntityData(stack, ModBlockEntities.SINGULARITY.get(), saveWithoutMetadata(registries));
         }
         return stack;

@@ -111,9 +111,9 @@ public final class MirrorRenderer {
         return link == null ? w : link.dest();
     }
 
-    /** (client) The portal a portal mirror is linked to, as the pictures have it (null: none found). */
-    public static com.example.skyblocks.PortalMirrors.Portal partnerOf(com.example.skyblocks.PortalMirrors.Portal a) {
-        return com.example.skyblocks.PortalMirrors.nearest(a, PORTALS);
+    /** The server's list of portal mirrors changed: the walls found again. */
+    public static void portalsChanged() {
+        dirty = true;
     }
 
     public static boolean portalInView() {
@@ -241,6 +241,7 @@ public final class MirrorRenderer {
         InfinityMirrorRenderer.blockChanged(level, pos, oldState, newState);
         DanceFloorRenderer.blockChanged(oldState, newState);
         AquariumRenderer.blockChanged(oldState, newState);
+        KaleidoscopeRenderer.blockChanged(oldState, newState);
         KoiPondRenderer.blockChanged(oldState, newState);
         boolean mirror = isMirror(oldState) || isMirror(newState)
                 || com.example.skyblocks.PortalMirrors.isPortal(oldState) || com.example.skyblocks.PortalMirrors.isPortal(newState);
@@ -1725,7 +1726,7 @@ public final class MirrorRenderer {
         List<BlockPos> portalBlocks = new ArrayList<>();
         BlockPos.MutableBlockPos neighbour = new BlockPos.MutableBlockPos();
         // (portal mirrors further out too: the one a portal near you is linked to can be a way off)
-        int portalRadius = Math.max(SCAN_RADIUS, Math.min(Minecraft.getInstance().options.getEffectiveRenderDistance(), 10));
+        int portalRadius = SCAN_RADIUS + 1; // (which one each links to: the server's list, PortalClient)
         for (int dx = -portalRadius; dx <= portalRadius; dx++) {
             for (int dz = -portalRadius; dz <= portalRadius; dz++) {
                 boolean mirrorsToo = Math.abs(dx) <= SCAN_RADIUS && Math.abs(dz) <= SCAN_RADIUS;
@@ -1795,21 +1796,17 @@ public final class MirrorRenderer {
             PORTALS.add(p);
         }
         for (com.example.skyblocks.PortalMirrors.Portal a : PORTALS) {
-            com.example.skyblocks.PortalMirrors.Portal b = partnerOf(a);
-            if (b == null) {
-                continue;
+            com.example.skyblocks.PortalMirrors.Portal b = PortalClient.partnerOf(a);
+            if (b == null || !level.hasChunkAt(BlockPos.containing(b.origin()))) {
+                continue; // (none, or too far to be seen: its swirl shows)
             }
-            int turns = com.example.skyblocks.PortalMirrors.turns(a.facing(), b.facing());
+            int turns = com.example.skyblocks.PortalMirrors.turns(a, b);
             double planeA = com.example.skyblocks.PortalMirrors.plane(a.min(), a.facing());
             double planeB = com.example.skyblocks.PortalMirrors.plane(b.min(), b.facing());
-            List<BlockPos> faces = new ArrayList<>(a.blocks());
-            for (Direction side : new Direction[] {a.facing(), a.facing().getOpposite()}) {
-                Wall wall = new Wall(side, planeA, a.min().asLong());
-                // (looking at this side, you look the other way: through to the far side of the linked portal)
-                Direction past = Direction.from2DDataValue(side.getOpposite().get2DDataValue() + turns);
-                WALLS.put(wall, faces);
-                LINKS.put(wall, new Link(new Wall(past, planeB, b.min().asLong()), turns, a.origin(), b.origin()));
-            }
+            Wall wall = new Wall(a.facing(), planeA, a.min().asLong());
+            // (looking into its front: out of the front of the linked portal)
+            WALLS.put(wall, new ArrayList<>(a.blocks()));
+            LINKS.put(wall, new Link(new Wall(b.facing(), planeB, b.min().asLong()), turns, a.origin(), b.origin()));
         }
     }
 }

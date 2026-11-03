@@ -1,7 +1,3 @@
 {
-  "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "skyblocks:item/portal_mirror_glass",
-    "layer1": "skyblocks:item/portal_mirror_frame"
-  }
+  "parent": "skyblocks:block/portal_mirror"
 }

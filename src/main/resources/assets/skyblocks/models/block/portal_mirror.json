@@ -1,19 +1,21 @@
 {
   "parent": "minecraft:block/block",
-  "render_type": "minecraft:cutout",
-  "ambientocclusion": false,
   "textures": {
-    "particle": "skyblocks:block/portal_mirror",
-    "portal": "skyblocks:block/portal_mirror"
+    "particle": "skyblocks:block/portal_mirror_side",
+    "portal": "skyblocks:block/portal_mirror",
+    "side": "skyblocks:block/portal_mirror_side"
   },
   "elements": [
     {
-      "from": [0, 0, 8],
-      "to": [16, 16, 8],
-      "shade": false,
+      "from": [0, 0, 0],
+      "to": [16, 16, 16],
       "faces": {
-        "north": {"uv": [0, 0, 16, 16], "texture": "#portal", "tintindex": 0},
-        "south": {"uv": [0, 0, 16, 16], "texture": "#portal", "tintindex": 0}
+        "north": {"uv": [0, 0, 16, 16], "texture": "#portal", "tintindex": 0, "cullface": "north"},
+        "south": {"uv": [0, 0, 16, 16], "texture": "#side", "cullface": "south"},
+        "east": {"uv": [0, 0, 16, 16], "texture": "#side", "cullface": "east"},
+        "west": {"uv": [0, 0, 16, 16], "texture": "#side", "cullface": "west"},
+        "up": {"uv": [0, 0, 16, 16], "texture": "#side", "cullface": "up"},
+        "down": {"uv": [0, 0, 16, 16], "texture": "#side", "cullface": "down"}
       }
     }
   ]

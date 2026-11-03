@@ -1,8 +1,8 @@
 {
   "variants": {
     "facing=north": {"model": "skyblocks:block/portal_mirror"},
-    "facing=south": {"model": "skyblocks:block/portal_mirror"},
     "facing=east": {"model": "skyblocks:block/portal_mirror", "y": 90},
-    "facing=west": {"model": "skyblocks:block/portal_mirror", "y": 90}
+    "facing=south": {"model": "skyblocks:block/portal_mirror", "y": 180},
+    "facing=west": {"model": "skyblocks:block/portal_mirror", "y": 270}
   }
 }

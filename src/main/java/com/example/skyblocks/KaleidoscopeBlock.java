@@ -56,14 +56,46 @@ public class KaleidoscopeBlock extends BaseEntityBlock {
                         KaleidoscopeBlockEntity.FOLDS[be.symmetry()]).withStyle(ChatFormatting.GOLD), true);
             }
             level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 0.8F, 0.8F + 0.1F * be.symmetry());
+            // (the kaleidoscopes joined to it: one big one, all the same)
+            for (BlockPos p : joined(level, pos)) {
+                if (!p.equals(pos) && level.getBlockEntity(p) instanceof KaleidoscopeBlockEntity other) {
+                    other.copyFrom(be);
+                }
+            }
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    /** The kaleidoscopes joined to this one (touching, any way), it included. */
+    public static java.util.Set<BlockPos> joined(Level level, BlockPos start) {
+        java.util.Set<BlockPos> found = new java.util.HashSet<>();
+        java.util.ArrayDeque<BlockPos> queue = new java.util.ArrayDeque<>();
+        found.add(start.immutable());
+        queue.add(start.immutable());
+        while (!queue.isEmpty() && found.size() < 1024) {
+            BlockPos p = queue.poll();
+            for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+                BlockPos n = p.relative(d);
+                if (!found.contains(n) && level.getBlockState(n).getBlock() instanceof KaleidoscopeBlock) {
+                    found.add(n);
+                    queue.add(n);
+                }
+            }
+        }
+        return found;
     }
 
     @Override
     protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moving) {
         super.onPlace(state, level, pos, old, moving);
-        if (!level.isClientSide && level.getBlockEntity(pos) instanceof KaleidoscopeBlockEntity be) {
+        if (!level.isClientSide && level.getBlockEntity(pos) instanceof KaleidoscopeBlockEntity be && !old.is(this)) {
+            // put against another: joins it (its settings, turning with it)
+            for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+                if (level.getBlockEntity(pos.relative(d)) instanceof KaleidoscopeBlockEntity other) {
+                    be.copyFrom(other);
+                    return;
+                }
+            }
             be.setPowered(level.hasNeighborSignal(pos));
         }
     }

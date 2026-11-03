@@ -38,6 +38,7 @@ public class SingularityMenu extends AbstractContainerMenu {
     public final List<ItemStack> items = new ArrayList<>();
     public final List<Long> counts = new ArrayList<>();
     public final Set<Item> destroyed = new HashSet<>();
+    public final List<String> tags = new ArrayList<>();
     public boolean vacuum;
     public int contentsVersion;
 
@@ -94,16 +95,20 @@ public class SingularityMenu extends AbstractContainerMenu {
             for (Item item : be.destroyed()) {
                 gone.add(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item).toString());
             }
-            PacketDistributor.sendToPlayer(sp, new SingularityPayloads.Contents(containerId, list, amounts, gone, be.vacuum()));
+            List<String> tagNames = new ArrayList<>();
+            for (net.minecraft.tags.TagKey<Item> t : be.destroyTags()) {
+                tagNames.add(t.location().toString());
+            }
+            PacketDistributor.sendToPlayer(sp, new SingularityPayloads.Contents(containerId, list, amounts, gone, tagNames, be.vacuum()));
         }
     }
 
     // ---- the actions from the menu (SingularityPayloads.Action, on the server) ----
 
-    public static final int TAKE = 0, PUT = 1, DESTROY = 2, VACUUM = 3;
+    public static final int TAKE = 0, PUT = 1, DESTROY = 2, VACUUM = 3, DESTROY_TAG = 4;
 
     /** button: 0 left (a stack / all you hold), 1 right (one), 2 shift (a stack into your inventory). */
-    public void act(int action, ItemStack item, int button) {
+    public void act(int action, ItemStack item, int button, String text) {
         SingularityBlockEntity be = blockEntity();
         if (be == null) {
             return;
@@ -132,6 +137,7 @@ public class SingularityMenu extends AbstractContainerMenu {
                 if (!which.isEmpty()) be.toggleDestroy(which.getItem());
             }
             case VACUUM -> be.toggleVacuum();
+            case DESTROY_TAG -> be.toggleDestroyTag(text);
             default -> {
             }
         }
@@ -169,6 +175,8 @@ public class SingularityMenu extends AbstractContainerMenu {
             net.minecraft.resources.ResourceLocation rl = net.minecraft.resources.ResourceLocation.tryParse(id);
             if (rl != null) net.minecraft.core.registries.BuiltInRegistries.ITEM.getOptional(rl).ifPresent(destroyed::add);
         }
+        tags.clear();
+        tags.addAll(c.tags());
         vacuum = c.vacuum();
         contentsVersion++;
     }

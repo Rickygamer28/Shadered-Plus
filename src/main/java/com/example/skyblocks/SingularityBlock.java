@@ -145,7 +145,7 @@ public class SingularityBlock extends BaseEntityBlock {
         double reach = 0.5 + be.fullness() * 1.2;
         int n = be.vacuum() ? 3 : 1;
         for (int i = 0; i < n; i++) {
-            if (random.nextInt(be.vacuum() ? 1 : 3) == 0) { // (dust falling in, from further in vacuum mode)
+            if (random.nextInt(be.vacuum() ? 1 : 3) == 0) { // (dust falling in, from far round in vacuum mode)
                 double a = random.nextDouble() * Math.PI * 2.0, r = (be.vacuum() ? 3.0 : reach) * (0.7 + random.nextDouble() * 0.6);
                 level.addParticle(ParticleTypes.PORTAL, cx, cy, cz, Math.cos(a) * r, (random.nextDouble() - 0.5) * r * 0.4, Math.sin(a) * r);
             }

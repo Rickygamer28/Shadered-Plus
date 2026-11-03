@@ -1,7 +1,9 @@
 #version 150
 
-// Shadered+'s kaleidoscope: a window on each face of the block, looked into in the block's own space. UV0.x: face
-// (0 down, 1 up, 2 north, 3 south, 4 west, 5 east) * 4 + corner; UV0.y: symmetry + 8 * palette + 64 * seed.
+// Shadered+'s kaleidoscope: a window on each face of the block, looked into in the block's own space. UV0.x: which
+// sides join the next block's window (1 before it across, 2 after, 4 below, 8 above) * 24 + face (0 down, 1 up,
+// 2 north, 3 south, 4 west, 5 east) * 4 + corner; UV0.y: symmetry + 8 * palette + 64 * seed. Color: the joined window
+// it's part of - its middle from this block's (128 + half blocks, across and up), its size in blocks (across, up).
 
 in vec3 Position;
 in vec4 Color;
@@ -16,16 +18,22 @@ out vec3 lp;
 out vec3 lray;
 flat out vec3 normal;
 flat out vec3 settings; // symmetry, palette, seed
+flat out vec4 region;   // the joined window: its middle from this block's (blocks), its size (blocks)
 
 const float W0 = 2.0 / 16.0, W1 = 14.0 / 16.0; // (the window, inside the brass frame)
 
 void main() {
     gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
     int code = int(UV0.x + 0.5);
-    int face = code >> 2, corner = code & 3;
+    int joined = code / 24, rest = code - joined * 24;
+    int face = rest >> 2, corner = rest & 3;
+    vec4 rc = floor(Color * 255.0 + 0.5);
+    region = vec4((rc.x - 128.0) * 0.5, (rc.y - 128.0) * 0.5, max(rc.z, 1.0), max(rc.w, 1.0));
     int s = int(UV0.y + 0.5);
     settings = vec3(float(s & 7), float((s >> 3) & 7), float(s >> 6));
-    vec2 c = vec2(corner == 1 || corner == 2 ? W1 : W0, corner >= 2 ? W1 : W0);
+    bool hiU = corner == 1 || corner == 2, hiV = corner >= 2;
+    vec2 c = vec2(hiU ? ((joined & 2) != 0 ? 1.0 : W1) : ((joined & 1) != 0 ? 0.0 : W0),
+                  hiV ? ((joined & 8) != 0 ? 1.0 : W1) : ((joined & 4) != 0 ? 0.0 : W0));
     vec3 n;
     if (face == 0) { lp = vec3(c.x, 0.0, c.y); n = vec3(0, -1, 0); }
     else if (face == 1) { lp = vec3(c.x, 1.0, c.y); n = vec3(0, 1, 0); }

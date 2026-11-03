@@ -10,6 +10,7 @@ in vec3 lp;
 in vec3 lray;
 flat in vec3 normal;
 flat in vec3 settings;
+flat in vec4 region;
 
 uniform float Turn;  // seconds of turning (this one's own: stops when it's powered)
 uniform float Boost; // music
@@ -98,18 +99,24 @@ vec4 glassLayer(vec2 f, float layer, float palette, float seed) {
     return vec4(through, cover);
 }
 
-// the box's walls are mirrors too: points past them seen in the mirrors (folded back), a little darker each time
-vec2 mirrorWalls(vec2 q, out float dim) {
-    vec2 k = floor((abs(q) + 1.0) * 0.5);
+// the box's walls are mirrors too: points past them (at +-L) seen in the mirrors (folded back), a little darker each time
+vec2 mirrorWalls(vec2 q, vec2 L, out float dim) {
+    vec2 k = floor((abs(q) + L) / (2.0 * L));
     dim = pow(0.78, k.x + k.y);
-    return abs(mod(q - 1.0, 4.0) - 2.0) - 1.0;
+    return abs(mod(q - L, 4.0 * L) - 2.0 * L) - L;
 }
 
-// where p is on this face (-1..1 across the window)
+// the window's middle and half its size (block units, on the side's own axes), its scale (the shorter half)
+vec2 gCentre, gHalf;
+float gS;
+
+// where p is on the side, across the (joined) window: -1..1 across its shorter way
+vec2 faceUv(vec3 p, vec3 n) {
+    return abs(n.y) > 0.5 ? p.xz : abs(n.z) > 0.5 ? p.xy : p.zy;
+}
+
 vec2 faceCoords(vec3 p, vec3 n) {
-    vec2 uv = abs(n.y) > 0.5 ? p.xz : abs(n.z) > 0.5 ? vec2(p.x * n.z, p.y) : vec2(-p.z * n.x, p.y);
-    vec2 c = abs(n.y) > 0.5 ? vec2(0.5) : abs(n.z) > 0.5 ? vec2(0.5 * n.z, 0.5) : vec2(-0.5 * n.x, 0.5);
-    return (uv - c) / 0.375;
+    return (faceUv(p, n) - gCentre) / gS;
 }
 
 void main() {
@@ -125,26 +132,33 @@ void main() {
     float palette = min(settings.y, 5.0);
     float seed = settings.z;
     float zoom = 1.0 - 0.05 * Boost;
+    // the window (joined with the ones beside it: one big one)
+    gCentre = vec2(0.5) + region.xy;
+    gHalf = region.zw * 0.5 - 0.125;
+    gS = min(gHalf.x, gHalf.y);
+    vec2 L = gHalf / gS;
+    float deep = gS / 0.375;                // (a bigger window: deeper inside)
+    float detail = sqrt(deep);              // (and more pieces of glass)
 
     vec2 q0 = faceCoords(lp, n);
     // the frosted plate at the back, lit from behind
-    vec2 qb = faceCoords(lp + rd * (0.42 / cosd), n);
+    vec2 qb = faceCoords(lp + rd * (0.42 * deep / cosd), n);
     vec3 col = vec3(1.0, 0.96, 0.88) * (1.0 + 0.6 * Boost) * (1.0 - 0.1 * min(dot(qb, qb), 2.0));
     // the layers, back to front
     for (int i = 0; i < 3; i++) {
         float layer = float(i);
-        float depth = 0.33 - 0.1 * layer;
+        float depth = (0.33 - 0.1 * layer) * deep;
         vec2 q = faceCoords(lp + rd * (depth / cosd), n);
         float wd;
-        q = mirrorWalls(q, wd);
+        q = mirrorWalls(q, L, wd);
         float dir = i == 1 ? -1.0 : 1.0;
-        q = rot(dir * Turn * (0.1 + 0.045 * layer) + seed * 0.7) * q * zoom;
+        q = rot(dir * Turn * (0.1 + 0.045 * layer) + seed * 0.7) * q * zoom * detail;
         vec4 g = glassLayer(fold(q, n2), layer, palette, seed);
         col *= mix(vec3(1.0), g.rgb, g.a) * mix(1.0, wd, 0.5);
     }
     // the window: a little shadow from the frame round it, the glass in front catching the light
-    float e = 1.0 - max(abs(q0.x), abs(q0.y));
-    col *= mix(0.5, 1.0, smoothstep(0.0, 0.14, e));
+    vec2 toEdge = gHalf - abs(faceUv(lp, n) - gCentre); // (blocks)
+    col *= mix(0.5, 1.0, smoothstep(0.0, 0.05, min(toEdge.x, toEdge.y)));
     float glint = pow(max(0.0, 1.0 - abs(q0.x * 0.8 + q0.y - 0.35 + rd.y * 0.4) * 2.5), 6.0);
     col += vec3(0.06) * glint;
     col = mix(col, vec3(0.04, 0.035, 0.03), pow(1.0 - cosd, 5.0) * 0.6);

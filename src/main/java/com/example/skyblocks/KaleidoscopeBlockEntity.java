@@ -59,6 +59,16 @@ public class KaleidoscopeBlockEntity extends BlockEntity {
         }
     }
 
+    /** The same settings and turning as another (kaleidoscopes side by side are one). */
+    public void copyFrom(KaleidoscopeBlockEntity other) {
+        symmetry = other.symmetry;
+        palette = other.palette;
+        powered = other.powered;
+        baseTurn = other.baseTurn;
+        since = other.since;
+        changed();
+    }
+
     private void changed() {
         setChanged();
         if (level != null) {

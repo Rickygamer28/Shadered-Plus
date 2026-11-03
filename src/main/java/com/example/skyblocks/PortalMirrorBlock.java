@@ -27,21 +27,23 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
-import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A portal mirror: a pane in the middle of the block, linked to the nearest other portal mirror of its colour (within
- * PortalMirrors.PAIR_RANGE): look through it and you see what's past the other one, walk through it and you come out
- * of the other one (PortalMirrors). Next to each other, panes facing the same way make one bigger portal. A dye: the
- * colour of the whole portal.
+ * A portal mirror: a block whose front (FACING: the way it faces, towards you when placed) is a portal, linked to the
+ * nearest other portal mirror of its colour, however far (PortalMirrors): look into it and you see what's in front of
+ * the other one, walk into it and you come out of the other one. Set into a wall, it's a doorway to wherever the other
+ * is. Side by side, facing the same way, they make one bigger portal. A dye: the colour of the whole portal. Only its
+ * back half is solid (its front half walked into).
  */
 public class PortalMirrorBlock extends HorizontalDirectionalBlock {
     public static final MapCodec<PortalMirrorBlock> CODEC = simpleCodec(PortalMirrorBlock::new);
     public static final EnumProperty<DyeColor> COLOR = EnumProperty.create("color", DyeColor.class);
-    private static final VoxelShape ALONG_X = Block.box(0, 0, 7.5, 16, 16, 8.5);
-    private static final VoxelShape ALONG_Z = Block.box(7.5, 0, 0, 8.5, 16, 16);
+    private static final VoxelShape BACK_NORTH = Block.box(0, 0, 8, 16, 16, 16);
+    private static final VoxelShape BACK_SOUTH = Block.box(0, 0, 0, 16, 16, 8);
+    private static final VoxelShape BACK_WEST = Block.box(8, 0, 0, 16, 16, 16);
+    private static final VoxelShape BACK_EAST = Block.box(0, 0, 0, 8, 16, 16);
 
     public PortalMirrorBlock(Properties properties) {
         super(properties);
@@ -59,13 +61,29 @@ public class PortalMirrorBlock extends HorizontalDirectionalBlock {
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return state.getValue(FACING).getAxis() == Direction.Axis.Z ? ALONG_X : ALONG_Z;
+    protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return switch (state.getValue(FACING)) { // (the front half walked into: through the portal)
+            case NORTH -> BACK_NORTH;
+            case SOUTH -> BACK_SOUTH;
+            case WEST -> BACK_WEST;
+            default -> BACK_EAST;
+        };
     }
 
     @Override
-    protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return Shapes.empty(); // (walked through)
+    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moving) {
+        super.onPlace(state, level, pos, old, moving);
+        if (level instanceof net.minecraft.server.level.ServerLevel server && old != state) {
+            PortalMirrors.Registry.of(server).refresh(server, pos);
+        }
+    }
+
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState now, boolean moving) {
+        super.onRemove(state, level, pos, now, moving);
+        if (level instanceof net.minecraft.server.level.ServerLevel server && !now.is(this)) {
+            PortalMirrors.Registry.of(server).refresh(server, pos);
+        }
     }
 
     /** Facing you; put against another portal mirror (beside, above or below it): its way and colour, one bigger portal. */

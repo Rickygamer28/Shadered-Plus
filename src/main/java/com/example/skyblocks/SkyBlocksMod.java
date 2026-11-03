@@ -37,7 +37,6 @@ public class SkyBlocksMod {
         ModFluids.FLUIDS.register(modEventBus);
         ModFluids.RECIPES.register(modEventBus);
         SingularityMenu.MENUS.register(modEventBus);
-        PortalMirrors.POI.register(modEventBus);
         modEventBus.addListener(SkyBlocksMod::addToShaderedTab);
         modEventBus.addListener(SkyBlocksMod::registerCapabilities);
         modEventBus.addListener(SkyBlocksMod::registerPayloads);
@@ -122,6 +121,7 @@ public class SkyBlocksMod {
                 .playToServer(PortalCrossPayload.TYPE, PortalCrossPayload.STREAM_CODEC, PortalCrossPayload::handle)
                 .playToServer(SingularityPayloads.Action.TYPE, SingularityPayloads.Action.STREAM_CODEC, SingularityPayloads.Action::handle)
                 .playToClient(SingularityPayloads.Contents.TYPE, SingularityPayloads.Contents.STREAM_CODEC, SingularityPayloads.Contents::handle)
+                .playToClient(PortalListPayload.TYPE, PortalListPayload.STREAM_CODEC, PortalListPayload::handle)
                 .playToClient(IslandMobsPayload.TYPE, IslandMobsPayload.STREAM_CODEC, IslandMobsPayload::handle)
                 .playToClient(com.example.skyblocks.portal.PortalSkiesPayload.TYPE,
                         com.example.skyblocks.portal.PortalSkiesPayload.STREAM_CODEC,

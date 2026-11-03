@@ -15,7 +15,7 @@ public final class SingularityPayloads {
     private SingularityPayloads() {}
 
     /** What it holds (each kind, count 1, and how many), what's marked to be destroyed, vacuum mode. */
-    public record Contents(int containerId, List<ItemStack> items, List<Long> counts, List<String> destroyed, boolean vacuum)
+    public record Contents(int containerId, List<ItemStack> items, List<Long> counts, List<String> destroyed, List<String> tags, boolean vacuum)
             implements CustomPacketPayload {
         public static final Type<Contents> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "singularity_contents"));
         public static final StreamCodec<RegistryFriendlyByteBuf, Contents> STREAM_CODEC = StreamCodec.of((buf, c) -> {
@@ -27,6 +27,10 @@ public final class SingularityPayloads {
             }
             buf.writeVarInt(c.destroyed.size());
             for (String s : c.destroyed) {
+                buf.writeUtf(s);
+            }
+            buf.writeVarInt(c.tags.size());
+            for (String s : c.tags) {
                 buf.writeUtf(s);
             }
             buf.writeBoolean(c.vacuum);
@@ -44,7 +48,12 @@ public final class SingularityPayloads {
             for (int i = 0; i < m; i++) {
                 destroyed.add(buf.readUtf());
             }
-            return new Contents(id, items, counts, destroyed, buf.readBoolean());
+            int k = Math.min(buf.readVarInt(), SingularityBlockEntity.MAX_TAGS);
+            List<String> tags = new ArrayList<>(k);
+            for (int i = 0; i < k; i++) {
+                tags.add(buf.readUtf());
+            }
+            return new Contents(id, items, counts, destroyed, tags, buf.readBoolean());
         });
 
         @Override
@@ -62,15 +71,16 @@ public final class SingularityPayloads {
         }
     }
 
-    /** A click in the menu: take (a stack / one / into your inventory), put in what you hold, mark to destroy, vacuum. */
-    public record Action(int containerId, int action, ItemStack item, int button) implements CustomPacketPayload {
+    /** A click in the menu: take (a stack / one / into your inventory), put in what you hold, mark to destroy, vacuum, a tag. */
+    public record Action(int containerId, int action, ItemStack item, int button, String text) implements CustomPacketPayload {
         public static final Type<Action> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "singularity_action"));
         public static final StreamCodec<RegistryFriendlyByteBuf, Action> STREAM_CODEC = StreamCodec.of((buf, a) -> {
             buf.writeVarInt(a.containerId);
             buf.writeVarInt(a.action);
             ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, a.item);
             buf.writeVarInt(a.button);
-        }, buf -> new Action(buf.readVarInt(), buf.readVarInt(), ItemStack.OPTIONAL_STREAM_CODEC.decode(buf), buf.readVarInt()));
+            buf.writeUtf(a.text, 256);
+        }, buf -> new Action(buf.readVarInt(), buf.readVarInt(), ItemStack.OPTIONAL_STREAM_CODEC.decode(buf), buf.readVarInt(), buf.readUtf(256)));
 
         @Override
         public Type<? extends CustomPacketPayload> type() {
@@ -81,7 +91,7 @@ public final class SingularityPayloads {
             context.enqueueWork(() -> {
                 Player player = context.player();
                 if (player.containerMenu instanceof SingularityMenu menu && menu.containerId == payload.containerId() && menu.stillValid(player)) {
-                    menu.act(payload.action(), payload.item(), payload.button());
+                    menu.act(payload.action(), payload.item(), payload.button(), payload.text());
                 }
             });
         }
