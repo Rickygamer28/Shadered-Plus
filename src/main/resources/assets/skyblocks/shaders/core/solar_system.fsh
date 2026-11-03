@@ -16,6 +16,7 @@ flat in float kind;
 
 uniform float SimYears;  // years gone by in the model
 uniform float SpinTime;  // seconds of turning (stops when it's paused)
+uniform float Dome;      // the planetarium: 1 in its glass dome full of dark starry space, 0 just the planets in the open
 uniform float SizeMode;  // 0 sizes to see them by, 1 real sizes
 uniform float Boost;     // music: the Sun pulsing
 uniform float Glow;      // the hologram's brightness (dimmer by day)
@@ -598,7 +599,8 @@ void main() {
 
     if (holo) {
         // the space inside the dome: dark, full of stars
-        if (hit < 0) {
+        bool dome = Dome > 0.5 || ItemMode > 0.5;
+        if (hit < 0 && dome) {
             vec3 bg = vec3(0.01, 0.015, 0.04) + stars(rd) * 0.9;
             float a = 0.72; // (dark space inside the dome)
             col += bg * a * (1.0 - alpha);
@@ -612,13 +614,14 @@ void main() {
         // the glass: a sheen at its edge, a highlight
         vec3 pe = ro + rd * tIn;
         vec3 n = normalize(pe - gC);
-        if (pe.y > 0.31 && length(ro - gC) > domeR) { // (the glass, seen from outside)
+        if (dome && pe.y > 0.31 && length(ro - gC) > domeR) { // (the glass, seen from outside)
             float fres = 0.04 + 0.5 * pow(1.0 - abs(dot(n, rd)), 4.0);
             vec3 rf = reflect(rd, n);
             float spec = pow(max(dot(rf, normalize(vec3(0.4, 1.0, 0.3))), 0.0), 80.0);
             col = col * (1.0 - fres) + vec3(0.55, 0.7, 0.85) * fres + vec3(spec) * 0.6;
             alpha = clamp(alpha + fres + spec * 0.5, 0.0, 1.0);
         }
+        if (alpha < 0.004) discard; // (no dome: nothing here)
         fragColor = vec4(clamp(col, 0.0, 1.0), clamp(alpha, 0.0, 1.0));
         return;
     }

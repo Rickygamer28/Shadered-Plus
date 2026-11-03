@@ -38,7 +38,7 @@ import org.joml.Matrix4f;
 public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlockEntity> {
     static ShaderInstance shader;
     // the model being drawn now (for the uniforms)
-    private static float years, spin, sizes, glow = 1.0F, itemMode;
+    private static float years, spin, sizes, glow = 1.0F, itemMode, dome = 1.0F;
     static final Matrix4f ITEM_INV = new Matrix4f();
 
     @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
@@ -59,6 +59,7 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
             shader.safeGetUniform("SizeMode").set(sizes);
             shader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.5F, 1.0F));
             shader.safeGetUniform("Glow").set(glow);
+            shader.safeGetUniform("Dome").set(dome);
             shader.safeGetUniform("ItemMode").set(itemMode);
             shader.safeGetUniform("LampInv").set(ITEM_INV);
         }
@@ -105,6 +106,7 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
         years = (float) (be.years(time, partialTick) % 100000.0);
         spin = (float) (be.spin(time, partialTick) % 36000.0);
         sizes = be.realSizes() ? 1.0F : 0.0F;
+        dome = be.dome() ? 1.0F : 0.0F;
         itemMode = 0.0F;
         // the hologram: dimmer in daylight
         float day = Math.max(0.0F, Math.min(1.0F, (level.getSkyDarken(partialTick) - 0.2F) / 0.8F));
@@ -138,6 +140,7 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
         spin = t;
         sizes = 0.0F;
         glow = 1.0F;
+        dome = 1.0F;
         itemMode = 1.0F;
         box(buffers.getBuffer(Types.MODEL), m, holo);
         if (buffers instanceof MultiBufferSource.BufferSource source) {

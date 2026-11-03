@@ -7,7 +7,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -61,6 +64,21 @@ public class SolarSystemBlock extends BaseEntityBlock {
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return hologram ? PLANETARIUM : ORRERY;
+    }
+
+    /** The planetarium: right-click with glass (any glass block or pane, any mod's) to take its dome off or put it back. */
+    @Override
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+        if (!hologram || stack.isEmpty() || !BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath().contains("glass")) {
+            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        }
+        if (!level.isClientSide && level.getBlockEntity(pos) instanceof SolarSystemBlockEntity be) {
+            be.toggleDome();
+            player.displayClientMessage(Component.translatable(be.dome() ? "message.skyblocks.solar.dome_on" : "message.skyblocks.solar.dome_off")
+                    .withStyle(ChatFormatting.GOLD), true);
+            level.playSound(null, pos, be.dome() ? SoundEvents.GLASS_PLACE : SoundEvents.GLASS_BREAK, SoundSource.BLOCKS, 0.6F, 1.2F);
+        }
+        return ItemInteractionResult.sidedSuccess(level.isClientSide);
     }
 
     @Override
