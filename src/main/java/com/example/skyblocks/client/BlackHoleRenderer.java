@@ -53,6 +53,9 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
      * drawn into: only then can it be copied), for the shader: what's really there at each pixel (a singularity in
      * its chamber: its frames left as they are, but not what's in front of them). False if it can't.
      */
+    /** (the render test: as if the depth couldn't be copied) */
+    public static boolean noDepth;
+
     private static boolean copyDepth() {
         try {
             int draw = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
@@ -164,7 +167,7 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                                 if (pass != 2) {
                                     copyScreen();
                                 }
-                                boolean depth = pass == 1 && copyDepth();
+                                boolean depth = pass == 1 && !noDepth && copyDepth();
                                 if (shader != null) {
                                     shader.safeGetUniform("HasDepth").set(depth ? 1.0F : 0.0F);
                                 }
