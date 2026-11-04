@@ -102,9 +102,9 @@ public class WhirlpoolBlockEntity extends BlockEntity {
         return total;
     }
 
-    /** How much it holds in all (mB): 256 buckets; in a tank 5, 7, 9 across, 4096, 16384, 65536. */
+    /** How much it holds in all (mB): 1024 buckets; in a tank 5, 7, 9 across, 16384, 65536, 262144. */
     public long capacity() {
-        return tank >= 9 ? 65_536_000L : tank >= 7 ? 16_384_000L : tank >= 5 ? 4_096_000L : 256_000L;
+        return tank >= 9 ? 262_144_000L : tank >= 7 ? 65_536_000L : tank >= 5 ? 16_384_000L : 1_024_000L;
     }
 
     /** How many kinds of fluid: 8; in a tank 16, 32, 64. */
