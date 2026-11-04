@@ -5,7 +5,8 @@
   "pillar": "minecraft:block/dark_prismarine",
   "rim": "minecraft:block/prismarine_bricks",
   "glow": "minecraft:block/sea_lantern",
-  "particle": "minecraft:block/dark_prismarine"
+  "particle": "minecraft:block/dark_prismarine",
+  "floor": "skyblocks:block/tank_frame"
  },
  "elements": [
   {
@@ -21,22 +22,22 @@
    ],
    "faces": {
     "north": {
-     "texture": "#stone"
+     "texture": "#floor"
     },
     "south": {
-     "texture": "#stone"
+     "texture": "#floor"
     },
     "east": {
-     "texture": "#stone"
+     "texture": "#floor"
     },
     "west": {
-     "texture": "#stone"
+     "texture": "#floor"
     },
     "up": {
-     "texture": "#stone"
+     "texture": "#floor"
     },
     "down": {
-     "texture": "#stone"
+     "texture": "#floor"
     }
    }
   },
@@ -53,22 +54,22 @@
    ],
    "faces": {
     "north": {
-     "texture": "#rim"
+     "texture": "#floor"
     },
     "south": {
-     "texture": "#rim"
+     "texture": "#floor"
     },
     "east": {
-     "texture": "#rim"
+     "texture": "#floor"
     },
     "west": {
-     "texture": "#rim"
+     "texture": "#floor"
     },
     "up": {
-     "texture": "#rim"
+     "texture": "#floor"
     },
     "down": {
-     "texture": "#rim"
+     "texture": "#floor"
     }
    }
   },

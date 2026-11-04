@@ -389,7 +389,7 @@
   "block.skyblocks.tank_frame": "Tank Frame",
   "tooltip.skyblocks.whirlpool": "Stores fluids: each kind swirls down the vortex as its own band. Buckets and pipes fill and empty it. Right-click: what it holds; sneak-click: drain mode (drains fluid source blocks around it).",
   "tooltip.skyblocks.whirlpool.holds": "Holds %s of %s fluids",
-  "tooltip.skyblocks.tank_frame": "Build along the edges of a 5x5x5, 7x7x7 or 9x9x9 cube round a whirlpool, with glass on the sides and nothing inside: a containment tank - it holds far more, and fills the tank in layers.",
+  "tooltip.skyblocks.tank_frame": "Build along the edges of a 5x5x5, 7x7x7 or 9x9x9 cube round a whirlpool, with glass on the sides (Tank Glass: no lines between the blocks, one clear pane) and nothing inside: a containment tank - it holds far more.",
   "message.skyblocks.whirlpool.drain_on": "Drain mode on",
   "message.skyblocks.whirlpool.drain_off": "Drain mode off",
   "screen.skyblocks.whirlpool.tank": "In a %s-wide containment tank",
@@ -404,5 +404,6 @@
   "screen.skyblocks.whirlpool.add": "Void",
   "screen.skyblocks.whirlpool.each": "Up to %s of each fluid",
   "screen.skyblocks.whirlpool.view_whirlpool": "Look: whirlpool",
-  "screen.skyblocks.whirlpool.view_tank": "Look: plain tank"
+  "screen.skyblocks.whirlpool.view_tank": "Look: plain tank",
+  "block.skyblocks.tank_glass": "Tank Glass"
 }

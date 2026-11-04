@@ -316,7 +316,7 @@ public class WhirlpoolBlockEntity extends BlockEntity {
                             return false; // (another one's)
                         }
                     } else if (rims == 1) {
-                        if (!s.is(Tags.Blocks.GLASS_BLOCKS) && !(s.getBlock() instanceof TankFrameBlock)) {
+                        if (!s.is(Tags.Blocks.GLASS_BLOCKS) && !s.is(ModBlocks.TANK_GLASS.get()) && !(s.getBlock() instanceof TankFrameBlock)) {
                             return false; // (its sides: glass)
                         }
                     } else if (!s.isAir()) {

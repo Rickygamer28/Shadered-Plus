@@ -175,7 +175,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
         return true;
     }
 
-    /** Its chamber's frames: lit and linked to it (or dark again). */
+    /** Its chamber's frames (its edges', and any on its sides - a floor of frames, say): lit and linked to it (or dark again). */
     private void setFrames(int size, boolean formed) {
         int r = (size - 1) / 2;
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
@@ -183,7 +183,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
             for (int dy = -r; dy <= r; dy++) {
                 for (int dz = -r; dz <= r; dz++) {
                     int rims = (Math.abs(dx) == r ? 1 : 0) + (Math.abs(dy) == r ? 1 : 0) + (Math.abs(dz) == r ? 1 : 0);
-                    if (rims < 2) {
+                    if (rims < 1) {
                         continue;
                     }
                     p.set(worldPosition.getX() + dx, worldPosition.getY() + dy, worldPosition.getZ() + dz);

@@ -154,7 +154,25 @@ public class WhirlpoolBlock extends BaseEntityBlock {
 
     @Override
     public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
-        if (!(level.getBlockEntity(pos) instanceof WhirlpoolBlockEntity be) || be.isEmpty() || state.getValue(IN_TANK)) {
+        if (!(level.getBlockEntity(pos) instanceof WhirlpoolBlockEntity be) || be.isEmpty() || be.still()) {
+            return;
+        }
+        if (state.getValue(IN_TANK) && be.tank() > 0) {
+            // in its tank: spray off the funnel's lip, flung out over the pool (as WhirlpoolRenderer draws it)
+            int r = (be.tank() - 1) / 2;
+            float full = be.fullness(), width = 2 * r - 1;
+            double lo = -(r - 1), surface = lo + width * (0.3 + 0.6 * full), rim = width * (0.25 + 0.17 * full);
+            for (int i = 0; i < 1 + r / 2; i++) {
+                double a = random.nextDouble() * Math.PI * 2.0;
+                level.addParticle(ParticleTypes.SPLASH, pos.getX() + 0.5 + Math.cos(a) * rim, pos.getY() + surface + 0.05,
+                        pos.getZ() + 0.5 + Math.sin(a) * rim, Math.cos(a) * 0.08, 0.1, Math.sin(a) * 0.08);
+            }
+            if (random.nextInt(60) == 0) {
+                level.playLocalSound(pos.getX() + 0.5, pos.getY() + surface, pos.getZ() + 0.5, SoundEvents.WATER_AMBIENT, SoundSource.BLOCKS, 0.5F, 0.7F, false);
+            }
+            return;
+        }
+        if (state.getValue(IN_TANK)) {
             return;
         }
         if (random.nextInt(4) == 0) { // (spray off its rim)

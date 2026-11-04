@@ -77,6 +77,7 @@ public class SkyBlocksMod {
         event.accept(ModItems.PORT_FRAME.get());
         event.accept(ModItems.WHIRLPOOL.get());
         event.accept(ModItems.TANK_FRAME.get());
+        event.accept(ModItems.TANK_GLASS.get());
         event.accept(ModItems.DISPLAY_FRAME.get());
         event.accept(ModItems.MONITOR_FRAME.get());
         event.accept(ModItems.REDSTONE_FRAME.get());

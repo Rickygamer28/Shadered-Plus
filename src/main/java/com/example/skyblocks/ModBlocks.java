@@ -204,6 +204,10 @@ public final class ModBlocks {
                     .lightLevel(state -> state.getValue(TankFrameBlock.FORMED) ? 9 : 2)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_CYAN));
 
+    /** Tank glass: clear glass without a border - a containment tank's sides of it read as one pane. */
+    public static final DeferredBlock<net.minecraft.world.level.block.TransparentBlock> TANK_GLASS = BLOCKS.registerBlock("tank_glass",
+            net.minecraft.world.level.block.TransparentBlock::new, BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS));
+
     /** The special containment frames: a frame that does something more (SpecialFrameBlock). */
     public static final DeferredBlock<SpecialFrameBlock> PORT_FRAME = specialFrame("port_frame", SpecialFrameBlock.Kind.PORT);
     public static final DeferredBlock<SpecialFrameBlock> DISPLAY_FRAME = specialFrame("display_frame", SpecialFrameBlock.Kind.DISPLAY);

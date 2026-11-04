@@ -71,7 +71,9 @@ void main() {
     vec2 local = vec2(swirl / TAU * 6.0, inward * 2.2 - Time * 0.7);
     // which band: stirred along the spiral where they meet
     int count = int(EdgesB.z + 0.5);
-    float stir = (noise(vec2(swirl * 1.6, inward * 3.0 - Time * 0.45)) - 0.5) * 0.16;
+    // (made of whole turns of the spiral: no seam where the funnel's way round starts again)
+    float stir = (sin(swirl * 3.0 + inward * 5.0 - Time * 0.9) * 0.55 + sin(swirl * 5.0 - inward * 3.0 + Time * 0.6) * 0.3
+            + (noise(vec2(cos(swirl), sin(swirl)) * 2.5 + vec2(inward * 3.0 - Time * 0.45)) - 0.5) * 0.6) * 0.09;
     float sb = clamp(s + stir, 0.0, 0.999);
     int band = 0;
     for (int i = 0; i < 5; i++) {
@@ -92,5 +94,9 @@ void main() {
     // lighter arms winding down it, and dark in its throat
     col *= 0.88 + 0.22 * max(0.0, sin(3.0 * swirl));
     col *= mix(1.0, 0.2, smoothstep(0.82, 1.0, s));
+    // foam where the surface pours over the funnel's lip (s round 0: its rim, a splash ring), white, churning
+    float churn = noise(vec2(cos(swirl), sin(swirl)) * 6.0 + vec2(Time * 1.7, -Time * 1.3));
+    float foam = smoothstep(0.09, 0.0, abs(s)) * smoothstep(0.3, 0.7, churn + 0.25);
+    col = mix(col, mix(vec3(1.0), tintOf(0).rgb, 0.2) * mix(lightColor.rgb, vec3(1.0), tintOf(0).a), foam * 0.85);
     fragColor = vec4(col * vertexColor.rgb, vertexColor.a);
 }
