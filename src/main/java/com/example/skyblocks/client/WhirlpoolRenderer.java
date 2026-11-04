@@ -369,9 +369,6 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         float throatY = lo + height * 0.14F, throat = Math.max(0.07F, width * 0.035F);
         PoseStack.Pose pose = poseStack.last();
         List<Look> bands = bands(looks);
-        // the pool: its sides against the glass and its floor (the outermost fluid), see-through
-        box(source.getBuffer(RenderType.entityTranslucent(InventoryMenu.BLOCK_ATLAS)), pose, bands.get(0), lo, lo, lo, hi, surface, hi,
-                true, -1.0F, 0.0F, light, 0.0F, 0.55F);
         VertexConsumer v = source.getBuffer(Types.FUNNEL);
         // its surface: from the walls (s -1) in to the funnel's lip (s 0), round it
         int segments = 48, rings = 8;
@@ -420,6 +417,10 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
             funnelVertex(v, pose, 0.5F + out * ca1, ry, 0.5F + out * sa1, u1, -0.06F, 0xE0FFFFFF, light);
         }
         source.endBatch(Types.FUNNEL);
+        // the pool's sides against the glass and its floor (the outermost fluid), see-through - drawn after the funnel, so
+        // from the side the funnel is seen through the water, not hidden behind it
+        box(source.getBuffer(RenderType.entityTranslucent(InventoryMenu.BLOCK_ATLAS)), pose, bands.get(0), lo, lo, lo, hi, surface, hi,
+                true, -1.0F, 0.0F, light, 0.0F, 0.42F);
     }
 
     /** How far from the tank's middle its wall is, this way round (the tank square, {@code half} to each side). */
