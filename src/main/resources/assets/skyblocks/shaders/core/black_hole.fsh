@@ -132,12 +132,38 @@ void main() {
     // the disk's plane: tilted a little, so it is never seen exactly edge-on
     vec3 dn = normalize(vec3(0.1, 1.0, 0.32)); // (tilted: from the side, its top is seen)
 
+    // a singularity in its containment chamber: how far along the view its frames are. Its frames aren't bent: the
+    // light of the disk in front of one is drawn over it, the shadow too, but the frame itself stays as it is - where
+    // the view meets one, the ray stops there. (Not something in front of a frame, as an item thrown in: that's bent.)
+    float frameT = 1.0e9;
+    if (kind > 2.5 && ItemMode < 0.5) {
+        float size3 = (kind - 3.0) * 2.0 + 5.0;
+        if (HasDepth > 0.5) {
+            mat4 pm3 = ProjMat * ModelViewMat;
+            vec4 ownC = pm3 * vec4(origin + ro + rd * 4.0, 1.0);
+            vec3 here = sceneAt(ownC.xy / max(ownC.w, 1e-4), inverse(pm3));
+            if (inFrame(here - C, size3)) frameT = dot(here - ro, rd);
+        } else {
+            float f = frameHit(ro - C, rd, size3, 0.0);
+            if (f >= 0.0) frameT = f;
+        }
+        if (frameT <= t0) {
+            discard; // (a frame here, in front of all of it: left as it is)
+        }
+    }
+    bool atFrame = false;
+    float travelled = t0;
+
     vec3 acc = vec3(0.0);
     float trans = 1.0;
     bool swallowed = false;
     float minR = 1e9;
     float side = dot(p - C, dn);
     for (int i = 0; i < 90; i++) {
+        if (travelled >= frameT) {
+            atFrame = true; // (the view's met a frame: what's in front of it drawn over it, it as it is)
+            break;
+        }
         vec3 q = p - C;
         float r = length(q);
         minR = min(minR, r);
@@ -192,6 +218,7 @@ void main() {
         }
         side = side2;
         p = pn;
+        travelled += dt;
         if (trans < 0.02) {
             break;
         }
@@ -199,7 +226,12 @@ void main() {
 
     vec3 bg = vec3(0.0);
     float bgA = 1.0;
-    if (!swallowed) {
+    if (atFrame) {
+        // (the frame, not bent: this pixel's own)
+        mat4 pmF = ProjMat * ModelViewMat;
+        vec4 own = pmF * vec4(origin + ro + rd * 4.0, 1.0);
+        bg = texture(Sampler0, clamp(own.xy / max(own.w, 1e-4) * 0.5 + 0.5, vec2(0.001), vec2(0.999))).rgb;
+    } else if (!swallowed) {
         if (ItemMode > 0.5) {
             bgA = 0.0; // (an item: nothing behind to bend)
         } else {
@@ -291,26 +323,8 @@ void main() {
         // halfway in elsewhere: what's in front of its middle is seen, what's behind it hidden)
         vec3 dp = p0;
         if (kind > 2.5) {
-            // (in its containment chamber: its frames aren't bent - where the view meets one, it stays as it is (the
-            // hole just behind it), unless it's behind the shadow; everything else is, things thrown in too. Its
-            // depth isn't kept: a second pass keeps only its shadow's, so what it holds, drawn after, shows in front)
-            float size3 = (kind - 3.0) * 2.0 + 5.0;
-            float tf;
-            if (HasDepth > 0.5) {
-                // (what's really here: a frame - not something in front of one, as an item thrown in - left as it is)
-                mat4 pm3 = ProjMat * ModelViewMat;
-                vec4 ownC = pm3 * vec4(origin + ro + rd * 4.0, 1.0);
-                vec3 here = sceneAt(ownC.xy / max(ownC.w, 1e-4), inverse(pm3));
-                tf = inFrame(here - C, size3) ? dot(here - ro, rd) : -1.0;
-            } else {
-                tf = frameHit(ro - C, rd, size3, 0.0);
-            }
-            if (swallowed && tf > dot(p - ro, rd)) {
-                tf = -1.0;
-            }
-            if (tf > 0.0 && DepthOnly < 0.5) {
-                discard; // (a frame here, in front of the shadow: left as it is - from inside the hole's box too)
-            }
+            // (in its containment chamber: its depth isn't kept - a second pass keeps only its shadow's, so what it
+            // holds, drawn after, shows in front)
             dp = swallowed ? p : p0;
         } else if (kind > 1.5) {
             dp = swallowed ? p : ro + rd * max(dot(C - ro, rd), 0.25);
