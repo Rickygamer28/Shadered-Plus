@@ -420,7 +420,9 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
             double pull = 0.06 + 0.5 / Math.max(d * d, 0.6);
             Vec3 v = in.scale(Math.min(pull, 0.6)).add(round.scale(Math.min(0.25, 0.35 / Math.max(d, 0.8))));
             // (held up against its fall while it's pulled: no gravity switched off, nothing left floating when it stops)
-            item.setDeltaMovement(item.getDeltaMovement().scale(0.5).add(v.scale(0.6)).add(0.0, d < reach * 0.9 ? 0.04 : 0.0, 0.0));
+            // (this runs every other tick: twice a tick's gravity; off the ground with a hop)
+            double lift = d < reach * 0.9 ? 0.08 + (item.onGround() ? 0.25 : 0.0) : 0.0;
+            item.setDeltaMovement(item.getDeltaMovement().scale(0.5).add(v.scale(0.6)).add(0.0, lift, 0.0));
             if (item.isNoGravity()) {
                 item.setNoGravity(false); // (left floating by an older version)
             }
