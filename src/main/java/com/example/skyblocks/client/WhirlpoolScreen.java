@@ -30,7 +30,7 @@ public class WhirlpoolScreen extends Screen {
     private final BlockPos pos;
     private int left, top, scroll;
     private EditBox tagBox;
-    private Button drainButton;
+    private Button drainButton, viewButton;
     /** (Where the void filter's chips were drawn, to click: x, y, w, and what each is.) */
     private final List<int[]> chipBoxes = new ArrayList<>();
     private final List<String[]> chipWhat = new ArrayList<>();
@@ -59,6 +59,8 @@ public class WhirlpoolScreen extends Screen {
         top = (height - H) / 2;
         drainButton = addRenderableWidget(Button.builder(Component.empty(), b -> send(WhirlpoolPayload.DRAIN, ""))
                 .bounds(left + W - 98, top + 6, 90, 18).build());
+        viewButton = addRenderableWidget(Button.builder(Component.empty(), b -> send(WhirlpoolPayload.STILL, ""))
+                .bounds(left + 8, top + H - 24, 130, 18).build());
         tagBox = addRenderableWidget(new EditBox(font, left + 8, top + 168, W - 70, 16, Component.translatable("screen.skyblocks.whirlpool.tag")));
         tagBox.setMaxLength(120);
         tagBox.setHint(Component.translatable("screen.skyblocks.whirlpool.tag_hint"));
@@ -78,6 +80,7 @@ public class WhirlpoolScreen extends Screen {
             return;
         }
         drainButton.setMessage(Component.translatable(be.drain() ? "screen.skyblocks.whirlpool.drain_on" : "screen.skyblocks.whirlpool.drain_off"));
+        viewButton.setMessage(Component.translatable(be.still() ? "screen.skyblocks.whirlpool.view_tank" : "screen.skyblocks.whirlpool.view_whirlpool"));
     }
 
     @Override

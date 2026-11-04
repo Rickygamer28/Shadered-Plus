@@ -9,9 +9,12 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-/** The whirlpool's screen: drain mode on / off, a fluid marked void or not, a fluid tag in the void filter or not. */
+/**
+ * The whirlpool's screen: drain mode on / off, a fluid marked void or not, a fluid tag in the void filter or not, shown
+ * as a whirlpool or as a plain tank.
+ */
 public record WhirlpoolPayload(BlockPos pos, int action, String text) implements CustomPacketPayload {
-    public static final int DRAIN = 0, VOID_FLUID = 1, VOID_TAG = 2;
+    public static final int DRAIN = 0, VOID_FLUID = 1, VOID_TAG = 2, STILL = 3;
     public static final Type<WhirlpoolPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "whirlpool_action"));
     public static final StreamCodec<RegistryFriendlyByteBuf, WhirlpoolPayload> STREAM_CODEC = StreamCodec.of((buf, p) -> {
         buf.writeBlockPos(p.pos);
@@ -41,6 +44,7 @@ public record WhirlpoolPayload(BlockPos pos, int action, String text) implements
                     }
                 }
                 case VOID_TAG -> be.toggleVoidTag(payload.text);
+                case STILL -> be.toggleStill();
                 default -> {}
             }
         });

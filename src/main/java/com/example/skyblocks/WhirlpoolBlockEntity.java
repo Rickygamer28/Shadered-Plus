@@ -63,6 +63,8 @@ public class WhirlpoolBlockEntity extends BlockEntity {
     private final Set<Fluid> voided = new HashSet<>();
     private final List<TagKey<Fluid>> voidTags = new ArrayList<>();
     private boolean drain;
+    /** Shown as a plain tank of what it holds, not a whirlpool (its look only). */
+    private boolean still;
     /** Its containment tank: how many blocks across (0: none). */
     private int tank;
     private long total;
@@ -92,6 +94,15 @@ public class WhirlpoolBlockEntity extends BlockEntity {
 
     public boolean drain() {
         return drain;
+    }
+
+    public boolean still() {
+        return still;
+    }
+
+    public void toggleStill() {
+        still = !still;
+        changed(true);
     }
 
     public int tank() {
@@ -488,6 +499,7 @@ public class WhirlpoolBlockEntity extends BlockEntity {
         }
         tag.put("voidTags", tags);
         tag.putBoolean("drain", drain);
+        tag.putBoolean("still", still);
         tag.putInt("tank", tank);
     }
 
@@ -524,6 +536,7 @@ public class WhirlpoolBlockEntity extends BlockEntity {
             }
         }
         drain = tag.getBoolean("drain");
+        still = tag.getBoolean("still");
         tank = tag.getInt("tank");
     }
 
@@ -543,7 +556,7 @@ public class WhirlpoolBlockEntity extends BlockEntity {
     /** Itself as an item, keeping what it holds. */
     public ItemStack asItem(HolderLookup.Provider registries) {
         ItemStack stack = new ItemStack(ModItems.WHIRLPOOL.get());
-        if (!entries.isEmpty() || !voided.isEmpty() || !voidTags.isEmpty() || drain) {
+        if (!entries.isEmpty() || !voided.isEmpty() || !voidTags.isEmpty() || drain || still) {
             CompoundTag tag = saveWithoutMetadata(registries);
             tag.remove("tank");
             net.minecraft.world.item.BlockItem.setBlockEntityData(stack, ModBlockEntities.WHIRLPOOL.get(), tag);

@@ -402,5 +402,7 @@
   "screen.skyblocks.whirlpool.tag": "Fluid tag",
   "screen.skyblocks.whirlpool.tag_hint": "void a tag, e.g. c:water",
   "screen.skyblocks.whirlpool.add": "Void",
-  "screen.skyblocks.whirlpool.each": "Up to %s of each fluid"
+  "screen.skyblocks.whirlpool.each": "Up to %s of each fluid",
+  "screen.skyblocks.whirlpool.view_whirlpool": "Look: whirlpool",
+  "screen.skyblocks.whirlpool.view_tank": "Look: plain tank"
 }

@@ -56,6 +56,9 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         float seconds = (System.currentTimeMillis() % 3_600_000L) / 1000.0F;
         if (be.tank() > 0) {
             tank(be, looks, poseStack, v, light, seconds);
+        } else if (be.still()) {
+            // (a plain tank: what it holds in layers inside its frame)
+            layers(be, looks, poseStack, v, light, seconds, 0.135F, 0.19F, 0.865F, 0.86F, false);
         } else {
             vortex(looks, Math.max(be.shownFull, 0.05F), poseStack, v, light, seconds);
         }
@@ -128,7 +131,16 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
     private static void tank(WhirlpoolBlockEntity be, List<Look> looks, PoseStack poseStack, VertexConsumer v, int light, float t) {
         int r = (be.tank() - 1) / 2;
         float inset = 0.01F;
-        float x0 = -(r - 1) + inset, x1 = r - inset, z0 = x0, z1 = x1, floor = x0, ceiling = x1;
+        layers(be, looks, poseStack, v, light, t, -(r - 1) + inset, -(r - 1) + inset, r - inset, r - inset, !be.still());
+    }
+
+    /**
+     * What it holds in layers in the box from (lo, lo, lo) to (hi, top, hi): heavy at the bottom, gases at the top; the
+     * whirlpool swirling down from the liquid's surface in the middle, if {@code swirling}.
+     */
+    private static void layers(WhirlpoolBlockEntity be, List<Look> looks, PoseStack poseStack, VertexConsumer v, int light, float t,
+                               float lo, float bottomY, float hi, float topY, boolean swirling) {
+        float x0 = lo, x1 = hi, z0 = lo, z1 = hi, floor = bottomY, ceiling = topY;
         float height = ceiling - floor;
         float filled = height * Math.min(1.0F, be.shownFull);
         // heavy at the bottom, gases hanging from the top
@@ -144,14 +156,14 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         }
         // (how much the surface moves: a while after something came in or went out, then barely)
         float since = (System.currentTimeMillis() - be.rippleAt) / 1000.0F;
-        float ripple = 0.015F + 0.07F * Math.max(0.0F, 1.0F - since / 2.5F);
+        float ripple = (0.015F + 0.07F * Math.max(0.0F, 1.0F - since / 2.5F)) * Math.min(1.0F, (hi - lo) / 3.0F);
         PoseStack.Pose pose = poseStack.last();
         // the whirlpool itself, swirling down from the liquid's surface in the middle of the tank (as wide as most of
         // the tank, as deep as the liquid lets it be)
         float liquidH = filled * liquidShare;
-        float width = 2 * r - 1;
+        float width = hi - lo;
         float scale = width * 0.38F / 0.42F, scaleY = Math.min(scale, liquidH * 0.85F / 0.46F);
-        boolean swirl = !liquids.isEmpty() && liquidH > 0.3F;
+        boolean swirl = swirling && !liquids.isEmpty() && liquidH > 0.3F;
         float hole = swirl ? 0.42F * scale * 0.9F : 0.0F;
         float y = floor;
         for (int i = 0; i < liquids.size(); i++) {
