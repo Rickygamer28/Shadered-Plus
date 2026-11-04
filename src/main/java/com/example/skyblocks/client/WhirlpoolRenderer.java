@@ -101,7 +101,9 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
             float u = (float) k / RINGS;
             r[k] = throat + (rim - throat) * (float) Math.pow(1.0 - u, 1.4);
             y[k] = top - depth * (float) Math.pow(u, 1.8);
-            turn[k] = t * (0.9F / (r[k] + 0.06F)); // (faster further in: the rings slide past each other, a spiral)
+            // (a spiral, turning as one: each ring turned a little further than the one outside it - by a fixed amount, so
+            // the funnel's pieces never twist round on themselves as time goes on)
+            turn[k] = (t * 1.3F) % (float) (Math.PI * 2) + 2.2F * (float) Math.log(rim / r[k]);
         }
         float acc = 0;
         int band = 0;
