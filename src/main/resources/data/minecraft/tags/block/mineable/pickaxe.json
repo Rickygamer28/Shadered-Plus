@@ -26,7 +26,7 @@
     "skyblocks:singularity",
     "skyblocks:port_frame",
     "skyblocks:display_frame",
-    "skyblocks:upgrade_frame",
+    "skyblocks:monitor_frame",
     "skyblocks:redstone_frame"
   ]
 }

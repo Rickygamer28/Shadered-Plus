@@ -72,9 +72,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
     /** (Client: the kinds it holds most of, to show orbiting it; and the total.) */
     private final List<ItemStack> shown = new ArrayList<>();
     private int lastSignal = -1;
-    /** Its chamber's upgrade frames: speed (0..3), range (0..4), silent; its redstone frames (server). */
-    private int speedLevel, rangeLevel;
-    private boolean silent;
+    /** Its chamber's redstone frames (server). */
     private final List<BlockPos> redstoneFrames = new ArrayList<>();
     /** (Client: how many kinds it holds, for display frames.) */
     private int kindsShown;
@@ -208,27 +206,19 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
         }
     }
 
-    public int speedLevel() {
-        return speedLevel;
-    }
-
-    public int rangeLevel() {
-        return rangeLevel;
-    }
-
-    public boolean silent() {
-        return silent;
-    }
-
     /** How many kinds it holds (the client too). */
     public int kinds() {
         return level != null && level.isClientSide ? kindsShown : entries.size();
     }
 
-    /** Looks at its chamber's special frames again: its upgrades, where its redstone frames are. */
+    /** How many of this item it holds (server). */
+    public long countOf(ItemStack like) {
+        Entry e = like.isEmpty() ? null : find(like);
+        return e == null ? 0 : e.count;
+    }
+
+    /** Looks at its chamber's special frames again: where its redstone frames are. */
     public void scanFrames() {
-        int speed = 0, range = 0;
-        boolean quiet = false;
         List<BlockPos> redstone = new ArrayList<>();
         if (chamber > 0 && level != null) {
             int r = (chamber - 1) / 2;
@@ -246,20 +236,11 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
                         }
                         if (f.kind() == SpecialFrameBlock.Kind.REDSTONE) {
                             redstone.add(p.immutable());
-                        } else if (f.kind() == SpecialFrameBlock.Kind.UPGRADE && f.upgrade().getItem() instanceof UpgradeItem u) {
-                            switch (u.type()) {
-                                case SPEED -> speed += f.upgrade().getCount();
-                                case RANGE -> range += f.upgrade().getCount();
-                                case SILENT -> quiet = true;
-                            }
                         }
                     }
                 }
             }
         }
-        speedLevel = Math.min(speed, 3);
-        rangeLevel = Math.min(range, 4);
-        silent = quiet;
         if (!redstone.equals(redstoneFrames)) {
             List<BlockPos> old = new ArrayList<>(redstoneFrames);
             redstoneFrames.clear();
@@ -309,12 +290,10 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
             if (s.getBlock() instanceof SingularityBlock && s.getValue(SingularityBlock.IN_CHAMBER) != (chamber > 0)) {
                 level.setBlock(worldPosition, s.setValue(SingularityBlock.IN_CHAMBER, chamber > 0), Block.UPDATE_CLIENTS);
             }
-            if (!silent) {
-                level.playSound(null, worldPosition, grew ? SoundEvents.BEACON_POWER_SELECT : SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 1.0F, grew ? 0.6F : 0.8F);
-            }
+            level.playSound(null, worldPosition, grew ? SoundEvents.BEACON_POWER_SELECT : SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 1.0F, grew ? 0.6F : 0.8F);
             changed(true);
         } else if (chamber > 0) {
-            scanFrames(); // (upgrades put in or taken out, frames swapped)
+            scanFrames(); // (frames swapped)
         }
     }
 
@@ -474,13 +453,10 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
         if ((level.getGameTime() + pos.hashCode()) % 20 == 0) {
             be.checkChamber();
         }
-        // (speed upgrades: every tick, pulling harder; range upgrades: four blocks further each)
-        int every = be.speedLevel > 0 ? 1 : 2;
-        if (!be.vacuum || !(level instanceof ServerLevel server) || (level.getGameTime() + pos.hashCode()) % every != 0) {
+        if (!be.vacuum || !(level instanceof ServerLevel server) || (level.getGameTime() + pos.hashCode()) % 2 != 0) {
             return;
         }
-        double reach = VACUUM_PULL + be.chamber + 4 * be.rangeLevel;
-        double boost = 1.0 + 0.35 * be.speedLevel;
+        double reach = VACUUM_PULL + be.chamber;
         double swallow = 0.55 + (be.chamber > 0 ? be.reach() * 0.25 : 0.0);
         Vec3 c = Vec3.atCenterOf(pos);
         List<ItemEntity> items = level.getEntitiesOfClass(ItemEntity.class, new AABB(c, c).inflate(reach),
@@ -506,18 +482,18 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
             // spiralling in: round the hole and inwards, faster the nearer it gets
             Vec3 in = to.normalize();
             Vec3 round = new Vec3(-in.z, 0.0, in.x).normalize();
-            double pull = (0.06 + 0.5 / Math.max(d * d, 0.6)) * boost;
-            Vec3 v = in.scale(Math.min(pull, 0.6 * boost)).add(round.scale(Math.min(0.25, 0.35 / Math.max(d, 0.8))));
+            double pull = 0.06 + 0.5 / Math.max(d * d, 0.6);
+            Vec3 v = in.scale(Math.min(pull, 0.6)).add(round.scale(Math.min(0.25, 0.35 / Math.max(d, 0.8))));
             // (held up against its fall while it's pulled: no gravity switched off, nothing left floating when it stops)
-            // (this runs every other tick: twice a tick's gravity - every tick, once; off the ground with a hop)
-            double lift = d < reach * 0.9 ? 0.04 * every + (item.onGround() ? 0.25 : 0.0) : 0.0;
+            // (this runs every other tick: twice a tick's gravity; off the ground with a hop)
+            double lift = d < reach * 0.9 ? 0.08 + (item.onGround() ? 0.25 : 0.0) : 0.0;
             item.setDeltaMovement(item.getDeltaMovement().scale(0.5).add(v.scale(0.6)).add(0.0, lift, 0.0));
             if (item.isNoGravity()) {
                 item.setNoGravity(false); // (left floating by an older version)
             }
             item.hurtMarked = true;
         }
-        if (ate && !be.silent && level.getRandom().nextInt(3) == 0) {
+        if (ate && level.getRandom().nextInt(3) == 0) {
             level.playSound(null, pos, SoundEvents.ENDERMAN_TELEPORT, SoundSource.BLOCKS, 0.25F, 0.4F + level.getRandom().nextFloat() * 0.3F);
         }
     }

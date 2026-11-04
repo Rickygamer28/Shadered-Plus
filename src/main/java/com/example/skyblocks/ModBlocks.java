@@ -196,7 +196,7 @@ public final class ModBlocks {
     /** The special containment frames: a frame that does something more (SpecialFrameBlock). */
     public static final DeferredBlock<SpecialFrameBlock> PORT_FRAME = specialFrame("port_frame", SpecialFrameBlock.Kind.PORT);
     public static final DeferredBlock<SpecialFrameBlock> DISPLAY_FRAME = specialFrame("display_frame", SpecialFrameBlock.Kind.DISPLAY);
-    public static final DeferredBlock<SpecialFrameBlock> UPGRADE_FRAME = specialFrame("upgrade_frame", SpecialFrameBlock.Kind.UPGRADE);
+    public static final DeferredBlock<SpecialFrameBlock> MONITOR_FRAME = specialFrame("monitor_frame", SpecialFrameBlock.Kind.MONITOR);
     public static final DeferredBlock<SpecialFrameBlock> REDSTONE_FRAME = specialFrame("redstone_frame", SpecialFrameBlock.Kind.REDSTONE);
 
     private static DeferredBlock<SpecialFrameBlock> specialFrame(String name, SpecialFrameBlock.Kind kind) {

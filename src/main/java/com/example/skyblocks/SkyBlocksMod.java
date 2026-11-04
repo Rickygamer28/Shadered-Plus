@@ -76,11 +76,8 @@ public class SkyBlocksMod {
         event.accept(ModItems.CONTAINMENT_FRAME.get());
         event.accept(ModItems.PORT_FRAME.get());
         event.accept(ModItems.DISPLAY_FRAME.get());
-        event.accept(ModItems.UPGRADE_FRAME.get());
+        event.accept(ModItems.MONITOR_FRAME.get());
         event.accept(ModItems.REDSTONE_FRAME.get());
-        event.accept(ModItems.SPEED_UPGRADE.get());
-        event.accept(ModItems.RANGE_UPGRADE.get());
-        event.accept(ModItems.SILENT_UPGRADE.get());
         event.accept(ModItems.FIRE_TORNADO.get());
         event.accept(ModItems.BRICK_HEARTH.get());
         event.accept(ModItems.MUSIC_VISUALIZER.get());

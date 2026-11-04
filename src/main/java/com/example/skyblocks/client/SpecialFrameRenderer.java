@@ -24,7 +24,7 @@ import org.joml.Matrix4f;
 
 /**
  * The special frames' faces: a display frame shows what its singularity holds (how many items, how many kinds of how
- * many it can, how full) on its screen; a port shows the item it's set to, an upgrade frame its upgrades.
+ * many it can, how full) on its screen; a port shows the item it's set to; a monitor its item and how many of it.
  */
 public class SpecialFrameRenderer implements BlockEntityRenderer<SpecialFrameBlockEntity> {
     /** The face's screen sits on the frame's plate, this far out from the block's middle (just past its glow). */
@@ -39,7 +39,7 @@ public class SpecialFrameRenderer implements BlockEntityRenderer<SpecialFrameBlo
         if (kind == null || level == null || kind == SpecialFrameBlock.Kind.REDSTONE) {
             return;
         }
-        ItemStack item = kind == SpecialFrameBlock.Kind.PORT ? be.filter() : kind == SpecialFrameBlock.Kind.UPGRADE ? be.upgrade() : ItemStack.EMPTY;
+        ItemStack item = kind == SpecialFrameBlock.Kind.DISPLAY ? ItemStack.EMPTY : be.filter();
         if (kind != SpecialFrameBlock.Kind.DISPLAY && item.isEmpty()) {
             return;
         }
@@ -62,7 +62,7 @@ public class SpecialFrameRenderer implements BlockEntityRenderer<SpecialFrameBlo
                 screen(poseStack, buffers, s);
             } else {
                 int faceLight = net.minecraft.client.renderer.LevelRenderer.getLightColor(level, n);
-                icon(poseStack, buffers, item, faceLight, overlay, kind == SpecialFrameBlock.Kind.UPGRADE);
+                icon(poseStack, buffers, item, faceLight, overlay, kind == SpecialFrameBlock.Kind.MONITOR ? be.count() : -2);
             }
             poseStack.popPose();
         }
@@ -106,22 +106,20 @@ public class SpecialFrameRenderer implements BlockEntityRenderer<SpecialFrameBlo
         v.addVertex(m, x1, y0, z).setColor(argb).setLight(light);
     }
 
-    /** A port's item, an upgrade frame's upgrades (with how many), flat on its plate. */
-    private static void icon(PoseStack poseStack, MultiBufferSource buffers, ItemStack item, int light, int overlay, boolean count) {
+    /** A port's item, a monitor's item and how many of it there are ({@code count} -2: none shown; -1: not formed). */
+    private static void icon(PoseStack poseStack, MultiBufferSource buffers, ItemStack item, int light, int overlay, long count) {
         Minecraft mc = Minecraft.getInstance();
         poseStack.pushPose();
-        poseStack.translate(0.0, 0.0, 0.01);
+        poseStack.translate(0.0, count > -2 ? 0.07 : 0.0, 0.01);
         poseStack.scale(0.3F, 0.3F, 0.02F);
         mc.getItemRenderer().renderStatic(item, ItemDisplayContext.GUI, light, overlay, poseStack, buffers, mc.level, 0);
         poseStack.popPose();
-        if (count && item.getCount() > 1) {
+        if (count > -2) {
             float px = 0.5F / 56.0F;
             poseStack.pushPose();
             poseStack.translate(0.0, 0.0, 0.03);
             poseStack.scale(px, -px, px);
-            String n = "x" + item.getCount();
-            Font font = mc.font;
-            font.drawInBatch(n, 12.0F, 8.0F, 0xFFFFD36B, true, poseStack.last().pose(), buffers, Font.DisplayMode.POLYGON_OFFSET, 0, LightTexture.FULL_BRIGHT);
+            draw(mc.font, poseStack.last().pose(), buffers, count < 0 ? "-" : shortNumber(count), 0, 12, 0xFFFFD36B, LightTexture.FULL_BRIGHT);
             poseStack.popPose();
         }
     }

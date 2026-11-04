@@ -31,11 +31,11 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A special containment frame: swapped in for any frame of a chamber, it still counts as one, and does something more.
  * A port moves items between the singularity and the containers next to it (in or out: sneak-click; right-click with an
- * item: only that item); a display shows what it holds on its sides; an upgrade frame holds upgrades for it (right-click
- * with one; sneak-click takes one out); a redstone frame gives off a signal by how full it is.
+ * item: only that item); a display shows what it holds on its sides; a monitor shows one item (right-click with it) and
+ * how many of it there are; a redstone frame gives off a signal by how full it is.
  */
 public class SpecialFrameBlock extends ContainmentFrameBlock {
-    public enum Kind { PORT, DISPLAY, UPGRADE, REDSTONE }
+    public enum Kind { PORT, DISPLAY, MONITOR, REDSTONE }
 
     /** (A port: putting out of the singularity, not into it.) */
     public static final BooleanProperty OUTPUT = BooleanProperty.create("output");
@@ -73,7 +73,7 @@ public class SpecialFrameBlock extends ContainmentFrameBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        return kind == Kind.PORT && !level.isClientSide
+        return (kind == Kind.PORT || kind == Kind.MONITOR) && !level.isClientSide
                 ? createTickerHelper(type, ModBlockEntities.SPECIAL_FRAME.get(), SpecialFrameBlockEntity::serverTick) : null;
     }
 
@@ -92,16 +92,11 @@ public class SpecialFrameBlock extends ContainmentFrameBlock {
             }
             return ItemInteractionResult.sidedSuccess(level.isClientSide);
         }
-        if (kind == Kind.UPGRADE && stack.getItem() instanceof UpgradeItem) {
+        if (kind == Kind.MONITOR) {
             if (!level.isClientSide) {
-                if (be.addUpgrade(stack)) {
-                    if (!player.getAbilities().instabuild) {
-                        stack.shrink(1);
-                    }
-                    level.playSound(null, pos, SoundEvents.ARMOR_EQUIP_NETHERITE.value(), SoundSource.BLOCKS, 0.8F, 1.3F);
-                } else {
-                    player.displayClientMessage(Component.translatable("message.skyblocks.upgrade.full"), true);
-                }
+                be.setFilter(stack);
+                be.updateCount();
+                level.playSound(null, pos, SoundEvents.ITEM_FRAME_ADD_ITEM, SoundSource.BLOCKS, 0.8F, 1.2F);
             }
             return ItemInteractionResult.sidedSuccess(level.isClientSide);
         }
@@ -121,26 +116,15 @@ public class SpecialFrameBlock extends ContainmentFrameBlock {
                 }
                 return InteractionResult.sidedSuccess(level.isClientSide);
             }
-            if (kind == Kind.UPGRADE && !be.upgrade().isEmpty()) {
+            if (kind == Kind.MONITOR && !be.filter().isEmpty()) {
                 if (!level.isClientSide) {
-                    ItemStack out = be.takeUpgrade();
-                    if (!player.getInventory().add(out)) {
-                        player.drop(out, false);
-                    }
-                    level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.6F, 1.0F);
+                    be.setFilter(ItemStack.EMPTY);
+                    level.playSound(null, pos, SoundEvents.ITEM_FRAME_REMOVE_ITEM, SoundSource.BLOCKS, 0.8F, 1.0F);
                 }
                 return InteractionResult.sidedSuccess(level.isClientSide);
             }
         }
         return super.useWithoutItem(state, level, pos, player, hit);
-    }
-
-    @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof SpecialFrameBlockEntity be && !be.upgrade().isEmpty()) {
-            Block.popResource(level, pos, be.upgrade().copy()); // (its upgrades aren't lost)
-        }
-        super.onRemove(state, level, pos, newState, moved);
     }
 
     // ---- the redstone frame ----

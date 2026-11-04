@@ -12,10 +12,10 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "skyblocks:upgrade_frame"
+          "name": "skyblocks:monitor_frame"
         }
       ]
     }
   ],
-  "random_sequence": "skyblocks:blocks/upgrade_frame"
+  "random_sequence": "skyblocks:blocks/monitor_frame"
 }

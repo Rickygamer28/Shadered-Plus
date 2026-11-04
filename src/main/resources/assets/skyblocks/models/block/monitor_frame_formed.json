@@ -4,8 +4,8 @@
  "ambientocclusion": true,
  "textures": {
   "particle": "skyblocks:block/containment_frame_edge",
-  "plate": "skyblocks:block/frame_upgrade_plate",
-  "glow": "skyblocks:block/frame_upgrade_dim",
+  "plate": "skyblocks:block/frame_monitor_plate",
+  "glow": "skyblocks:block/frame_monitor_glow",
   "edge": "skyblocks:block/containment_frame_edge",
   "cap": "skyblocks:block/containment_frame_cap"
  },
@@ -145,6 +145,10 @@
       14.15
      ]
     }
+   },
+   "neoforge_data": {
+    "block_light": 15,
+    "sky_light": 15
    }
   },
   {
