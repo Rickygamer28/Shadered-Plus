@@ -17,6 +17,8 @@ flat in float seedIn;
 flat in vec4 vColor;
 
 uniform sampler2D Sampler0;
+uniform sampler2D Sampler1; // (a singularity in its chamber: the depth of what's drawn so far, if HasDepth)
+uniform float HasDepth;
 uniform mat4 ModelViewMat;
 uniform mat4 ProjMat;
 uniform float HoleTime;
@@ -63,6 +65,22 @@ float frameHit(vec3 o, vec3 d, float size) {
         }
     }
     return best < 1.0e8 ? best : -1.0;
+}
+
+// whether the point (relative to the middle) is in one of the chamber's frames
+bool inFrame(vec3 q, float size) {
+    float r = (size - 1.0) * 0.5;
+    vec3 a = abs(q);
+    if (any(greaterThan(a, vec3(r + 0.52)))) return false;
+    vec3 rim = step(vec3(r - 0.52), a);
+    return rim.x + rim.y + rim.z >= 2.0;
+}
+
+// what's drawn so far at this screen position (-1..1), as a point in the block's space
+vec3 sceneAt(vec2 nd, mat4 inv) {
+    float d = texture(Sampler1, clamp(nd * 0.5 + 0.5, vec2(0.001), vec2(0.999))).r;
+    vec4 w = inv * vec4(nd, d * 2.0 - 1.0, 1.0);
+    return w.xyz / w.w - origin;
 }
 
 void main() {
@@ -178,7 +196,7 @@ void main() {
                 // the screen shows what's beyond rather than a frame)
                 float size = (kind - 3.0) * 2.0 + 5.0;
                 float k = 2.0;
-                for (int j = 0; j < 4; j++) {
+                for (int j = 0; j < (HasDepth > 0.5 ? 0 : 4); j++) {
                     vec3 xl = p + dir * k;
                     vec3 toX = xl - ro;
                     float L = length(toX);
@@ -211,12 +229,17 @@ void main() {
             if (kind > 2.5) {
                 // (the point looked up still behind a frame from the eye: this pixel's own, not bent - no frame's
                 // picture bent round the hole)
-                vec4 back = inverse(pm) * vec4(nd, clip.z / max(clip.w, 1e-4), 1.0);
-                vec3 xl = back.xyz / back.w - origin;
-                vec3 toX = xl - ro;
-                float L = length(toX);
-                float hit = frameHit(ro - C, toX / max(L, 1e-4), (kind - 3.0) * 2.0 + 5.0);
-                if (hit > 0.0) { // (a frame anywhere that way: the screen there shows it)
+                bool frameThere;
+                if (HasDepth > 0.5) {
+                    frameThere = inFrame(sceneAt(nd, inverse(pm)) - C, (kind - 3.0) * 2.0 + 5.0);
+                } else {
+                    vec4 back = inverse(pm) * vec4(nd, clip.z / max(clip.w, 1e-4), 1.0);
+                    vec3 xl = back.xyz / back.w - origin;
+                    vec3 toX = xl - ro;
+                    float L = length(toX);
+                    frameThere = frameHit(ro - C, toX / max(L, 1e-4), (kind - 3.0) * 2.0 + 5.0) > 0.0;
+                }
+                if (frameThere) { // (the screen there shows a frame)
                     vec4 own = pm * vec4(eyeW + rd * 4.0, 1.0);
                     nd = own.xy / max(own.w, 1e-4);
                 }
@@ -255,7 +278,17 @@ void main() {
             // (in its containment chamber: its frames aren't bent - where the view meets one, it stays as it is (the
             // hole just behind it), unless it's behind the shadow; everything else is, things thrown in too. Its
             // depth isn't kept: a second pass keeps only its shadow's, so what it holds, drawn after, shows in front)
-            float tf = frameHit(ro - C, rd, (kind - 3.0) * 2.0 + 5.0);
+            float size3 = (kind - 3.0) * 2.0 + 5.0;
+            float tf;
+            if (HasDepth > 0.5) {
+                // (what's really here: a frame - not something in front of one, as an item thrown in - left as it is)
+                mat4 pm3 = ProjMat * ModelViewMat;
+                vec4 ownC = pm3 * vec4(origin + ro + rd * 4.0, 1.0);
+                vec3 here = sceneAt(ownC.xy / max(ownC.w, 1e-4), inverse(pm3));
+                tf = inFrame(here - C, size3) ? dot(here - ro, rd) : -1.0;
+            } else {
+                tf = frameHit(ro - C, rd, size3);
+            }
             if (swallowed && tf > dot(p - ro, rd)) {
                 tf = -1.0;
             }

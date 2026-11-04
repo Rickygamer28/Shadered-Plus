@@ -4,6 +4,9 @@
     "samplers": [
         {
             "name": "Sampler0"
+        },
+        {
+            "name": "Sampler1"
         }
     ],
     "uniforms": [
@@ -94,6 +97,14 @@
         },
         {
             "name": "DepthOnly",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
+            ]
+        },
+        {
+            "name": "HasDepth",
             "type": "float",
             "count": 1,
             "values": [

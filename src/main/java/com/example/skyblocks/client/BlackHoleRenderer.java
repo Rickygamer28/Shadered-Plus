@@ -46,6 +46,75 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         }
     }
 
+    private static int depthTex, depthFbo, depthW, depthH, depthFormat;
+
+    /**
+     * Copies the depth of the picture being drawn now into our own texture (made in the same format as the one being
+     * drawn into: only then can it be copied), for the shader: what's really there at each pixel (a singularity in
+     * its chamber: its frames left as they are, but not what's in front of them). False if it can't.
+     */
+    private static boolean copyDepth() {
+        try {
+            int draw = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+            int read = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
+            int type = GL30.glGetFramebufferAttachmentParameteri(GL30.GL_DRAW_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL30.GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE);
+            int name = type == GL11.GL_NONE ? 0 : GL30.glGetFramebufferAttachmentParameteri(GL30.GL_DRAW_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL30.GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME);
+            int format;
+            if (type == GL11.GL_TEXTURE) {
+                int prev = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+                GL11.glBindTexture(GL11.GL_TEXTURE_2D, name);
+                format = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_INTERNAL_FORMAT);
+                GL11.glBindTexture(GL11.GL_TEXTURE_2D, prev);
+            } else if (type == GL30.GL_RENDERBUFFER) {
+                int prev = GL11.glGetInteger(GL30.GL_RENDERBUFFER_BINDING);
+                GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER, name);
+                format = GL30.glGetRenderbufferParameteri(GL30.GL_RENDERBUFFER, GL30.GL_RENDERBUFFER_INTERNAL_FORMAT);
+                GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER, prev);
+            } else {
+                return false;
+            }
+            int[] vp = new int[4];
+            GL11.glGetIntegerv(GL11.GL_VIEWPORT, vp);
+            int w = Math.max(vp[2], 1), h = Math.max(vp[3], 1);
+            boolean stencil = format == GL30.GL_DEPTH24_STENCIL8 || format == GL30.GL_DEPTH32F_STENCIL8 || format == GL30.GL_DEPTH_STENCIL;
+            if (depthTex == 0 || depthW != w || depthH != h || depthFormat != format) {
+                if (depthTex == 0) {
+                    depthTex = GL11.glGenTextures();
+                    depthFbo = GL30.glGenFramebuffers();
+                }
+                int prev = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+                GL11.glBindTexture(GL11.GL_TEXTURE_2D, depthTex);
+                int fmt = stencil ? GL30.GL_DEPTH_STENCIL : GL11.GL_DEPTH_COMPONENT;
+                int ty = format == GL30.GL_DEPTH32F_STENCIL8 ? GL30.GL_FLOAT_32_UNSIGNED_INT_24_8_REV : stencil ? GL30.GL_UNSIGNED_INT_24_8 : GL11.GL_FLOAT;
+                GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, format, w, h, 0, fmt, ty, (java.nio.ByteBuffer) null);
+                GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
+                GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
+                GL11.glTexParameteri(GL11.GL_TEXTURE_2D, org.lwjgl.opengl.GL14.GL_TEXTURE_COMPARE_MODE, GL11.GL_NONE);
+                GL11.glBindTexture(GL11.GL_TEXTURE_2D, prev);
+                GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, depthFbo);
+                GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, stencil ? GL30.GL_DEPTH_STENCIL_ATTACHMENT : GL30.GL_DEPTH_ATTACHMENT, GL11.GL_TEXTURE_2D, depthTex, 0);
+                GL11.glDrawBuffer(GL11.GL_NONE);
+                GL11.glReadBuffer(GL11.GL_NONE);
+                depthW = w;
+                depthH = h;
+                depthFormat = format;
+            }
+            for (int i = 0; i < 16 && GL11.glGetError() != GL11.GL_NO_ERROR; i++) {
+                // (earlier errors cleared: the copy's own is what's checked)
+            }
+            GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, draw);
+            GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, depthFbo);
+            GL30.glBlitFramebuffer(vp[0], vp[1], vp[0] + w, vp[1] + h, 0, 0, w, h, GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
+            GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, read);
+            GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, draw);
+            boolean ok = GL11.glGetError() == GL11.GL_NO_ERROR;
+            RenderSystem.setShaderTexture(1, depthTex);
+            return ok;
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
     /** Copies the picture being drawn now (its colour) into our texture, and hands it to the shader. */
     private static void copyScreen() {
         int[] vp = new int[4];
@@ -91,6 +160,10 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                             .setTexturingState(new TexturingStateShard(name + "_copy", () -> {
                                 if (pass != 2) {
                                     copyScreen();
+                                }
+                                boolean depth = pass == 1 && copyDepth();
+                                if (shader != null) {
+                                    shader.safeGetUniform("HasDepth").set(depth ? 1.0F : 0.0F);
                                 }
                                 if (shader != null) {
                                     shader.safeGetUniform("HoleTime").set(LavaLampRenderer.seconds());
