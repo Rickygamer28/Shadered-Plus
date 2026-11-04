@@ -83,13 +83,18 @@ void main() {
     }
     vec3 col = fluid(band, local);
     // soft into the neighbours on either side
+    // (a neighbour's picture only looked up where it's mixed in)
     if (band > 0) {
         float w = 1.0 - smoothstep(0.0, 0.06, sb - edgeOf(band - 1));
-        col = mix(col, fluid(band - 1, local), w * 0.5);
+        if (w > 0.002) {
+            col = mix(col, fluid(band - 1, local), w * 0.5);
+        }
     }
     if (band < count - 1) {
         float w = 1.0 - smoothstep(0.0, 0.06, edgeOf(band) - sb);
-        col = mix(col, fluid(band + 1, local), w * 0.5);
+        if (w > 0.002) {
+            col = mix(col, fluid(band + 1, local), w * 0.5);
+        }
     }
     // lighter arms winding down it, and dark in its throat
     col *= 0.88 + 0.22 * max(0.0, sin(3.0 * swirl));

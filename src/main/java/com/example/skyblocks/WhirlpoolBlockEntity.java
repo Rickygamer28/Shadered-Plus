@@ -69,6 +69,12 @@ public class WhirlpoolBlockEntity extends BlockEntity {
     private int tank;
     private long total;
     private int lastSignal = -1;
+    /** (Server: a tank frame was put down near it; changes not yet sent to the client.) */
+    private boolean relink, syncPending;
+
+    public void relinkSoon() {
+        relink = true;
+    }
     /** (Drain mode, server: source blocks found, waiting to be drained; which layer of its range is looked at next.) */
     private final java.util.ArrayDeque<BlockPos> sources = new java.util.ArrayDeque<>();
     private int scanLayer;
@@ -282,7 +288,7 @@ public class WhirlpoolBlockEntity extends BlockEntity {
         setChanged();
         if (level != null && !level.isClientSide) {
             if (looks) {
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+                syncPending = true; // (sent at most every few ticks)
             }
             int s = signal();
             if (s != lastSignal) {
@@ -386,8 +392,9 @@ public class WhirlpoolBlockEntity extends BlockEntity {
             // (out of its tank with more than it can hold alone: it keeps it all, but takes no more till it's below)
             level.playSound(null, worldPosition, grew ? SoundEvents.CONDUIT_ACTIVATE : SoundEvents.CONDUIT_DEACTIVATE, SoundSource.BLOCKS, 1.0F, 1.0F);
             changed(true);
-        } else if (tank > 0) {
-            setFrames(tank, true); // (frames swapped in since: linked too)
+        } else if (tank > 0 && relink) {
+            relink = false;
+            setFrames(tank, true); // (frames put in since: linked too)
         }
     }
 
@@ -401,6 +408,10 @@ public class WhirlpoolBlockEntity extends BlockEntity {
     // ---- drain mode: the source blocks round it drained, in streams ----
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, WhirlpoolBlockEntity be) {
+        if (be.syncPending && level.getGameTime() % 4 == 0) {
+            be.syncPending = false;
+            level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
+        }
         long time = level.getGameTime() + pos.hashCode();
         if (time % 20 == 0) {
             be.checkTank();

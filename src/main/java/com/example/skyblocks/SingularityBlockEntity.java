@@ -72,6 +72,14 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
     /** (Client: the kinds it holds most of, to show orbiting it; and the total.) */
     private final List<ItemStack> shown = new ArrayList<>();
     private int lastSignal = -1;
+    /** (Server: a frame was put down near it - its chamber's frames looked at again at its next check; changes not yet sent.) */
+    private boolean relink, syncPending;
+
+    /** A frame was put down near it: links it at its next check, if it's part of its chamber. */
+    public void relinkSoon() {
+        relink = true;
+    }
+
     /** Its chamber's redstone frames (server). */
     private final List<BlockPos> redstoneFrames = new ArrayList<>();
     /** (Client: how many kinds it holds, for display frames.) */
@@ -292,8 +300,9 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
             }
             level.playSound(null, worldPosition, grew ? SoundEvents.BEACON_POWER_SELECT : SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 1.0F, grew ? 0.6F : 0.8F);
             changed(true);
-        } else if (chamber > 0) {
-            setFrames(chamber, true); // (frames swapped in since: linked too)
+        } else if (chamber > 0 && relink) {
+            relink = false;
+            setFrames(chamber, true); // (frames put in since - swapped for special ones, a floor of them: linked too)
             scanFrames();
         }
     }
@@ -437,7 +446,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
         setChanged();
         if (level != null && !level.isClientSide) {
             if (looks) {
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+                syncPending = true; // (sent at most every few ticks: a pipe putting in every tick isn't a packet a tick)
             }
             int s = signal();
             if (s != lastSignal) {
@@ -451,6 +460,10 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
     // ---- pulling in what's dropped near it (vacuum mode only) ----
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, SingularityBlockEntity be) {
+        if (be.syncPending && level.getGameTime() % 4 == 0) {
+            be.syncPending = false;
+            level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
+        }
         if ((level.getGameTime() + pos.hashCode()) % 20 == 0) {
             be.checkChamber();
         }
@@ -627,12 +640,21 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
         saveLooks(tag);
         tag.putLong("total", total);
         tag.putInt("kinds", entries.size());
-        // (the kinds it holds most of: they're seen going round it)
-        List<Entry> top = new ArrayList<>(entries);
+        // (the kinds it holds most of: they're seen going round it - the top twelve picked out, not all its kinds sorted)
+        java.util.PriorityQueue<Entry> heap = new java.util.PriorityQueue<>(13, (a, b) -> Long.compare(a.count, b.count));
+        for (Entry e : entries) {
+            if (heap.size() < 12) {
+                heap.add(e);
+            } else if (e.count > heap.peek().count) {
+                heap.poll();
+                heap.add(e);
+            }
+        }
+        List<Entry> top = new ArrayList<>(heap);
         top.sort((a, b) -> Long.compare(b.count, a.count));
         ListTag list = new ListTag();
-        for (int i = 0; i < Math.min(12, top.size()); i++) {
-            list.add(top.get(i).item.save(registries));
+        for (Entry e : top) {
+            list.add(e.item.save(registries));
         }
         tag.put("shown", list);
         return tag;

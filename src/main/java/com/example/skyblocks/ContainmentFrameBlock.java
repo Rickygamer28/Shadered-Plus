@@ -45,6 +45,19 @@ public class ContainmentFrameBlock extends BaseEntityBlock {
         builder.add(FORMED);
     }
 
+    /** Put down: a singularity near it looks at its chamber's frames again (a frame swapped in, a floor of them). */
+    @Override
+    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moved) {
+        super.onPlace(state, level, pos, old, moved);
+        if (!level.isClientSide && !old.is(state.getBlock())) {
+            for (BlockPos p : BlockPos.betweenClosed(pos.offset(-4, -4, -4), pos.offset(4, 4, 4))) {
+                if (level.getBlockEntity(p) instanceof SingularityBlockEntity s) {
+                    s.relinkSoon();
+                }
+            }
+        }
+    }
+
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;

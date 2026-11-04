@@ -47,6 +47,19 @@ public class TankFrameBlock extends BaseEntityBlock {
         builder.add(FORMED);
     }
 
+    /** Put down: a whirlpool near it looks at its tank's frames again. */
+    @Override
+    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moved) {
+        super.onPlace(state, level, pos, old, moved);
+        if (!level.isClientSide && !old.is(state.getBlock())) {
+            for (BlockPos p : BlockPos.betweenClosed(pos.offset(-4, -4, -4), pos.offset(4, 4, 4))) {
+                if (level.getBlockEntity(p) instanceof WhirlpoolBlockEntity w) {
+                    w.relinkSoon();
+                }
+            }
+        }
+    }
+
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;

@@ -143,4 +143,10 @@ public class SpecialFrameRenderer implements BlockEntityRenderer<SpecialFrameBlo
     public boolean shouldRenderOffScreen(SpecialFrameBlockEntity be) {
         return false;
     }
+
+    /** (Its writing and pictures: too small to read further off than this.) */
+    @Override
+    public int getViewDistance() {
+        return 32;
+    }
 }
