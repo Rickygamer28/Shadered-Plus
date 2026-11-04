@@ -146,6 +146,15 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
 
     /** A hole (kind 0 the small ornament, 1 the big one, 2 the singularity, {@code grow} 0..1 how full) at this block. */
     static void hole(net.minecraft.core.BlockPos pos, PoseStack poseStack, MultiBufferSource buffers, int kind, float grow, int colour) {
+        hole(pos, poseStack, buffers, kind, grow, colour, null);
+    }
+
+    /** Things drawn right after a hole (its own pose; the buffers to draw into): in front of it, not bent by it. */
+    public interface After {
+        void draw(PoseStack poseStack, MultiBufferSource buffers);
+    }
+
+    static void hole(net.minecraft.core.BlockPos pos, PoseStack poseStack, MultiBufferSource buffers, int kind, float grow, int colour, After after) {
         if (shader == null) {
             return;
         }
@@ -169,7 +178,7 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
             // are in the picture the hole bends (see drawPending)
             if (PENDING.size() < 256) {
                 PENDING.add(new Pending(new Matrix4f(poseStack.last().pose()), new Matrix4f(RenderSystem.getModelViewMatrix()),
-                        new Matrix4f(RenderSystem.getProjectionMatrix()), inside, kind, grow, colour, seed));
+                        new Matrix4f(RenderSystem.getProjectionMatrix()), inside, kind, grow, colour, seed, after));
             }
             return;
         }
@@ -179,6 +188,9 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         box(buffers.getBuffer(type), poseStack.last().pose(), kind, grow, colour, seed);
         if (main) {
             Minecraft.getInstance().renderBuffers().bufferSource().endBatch(type);
+        }
+        if (after != null) {
+            after.draw(poseStack, buffers);
         }
     }
 
@@ -200,7 +212,7 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         }
     }
 
-    private record Pending(Matrix4f pose, Matrix4f modelView, Matrix4f projection, boolean inside, int kind, float grow, int colour, float seed) {}
+    private record Pending(Matrix4f pose, Matrix4f modelView, Matrix4f projection, boolean inside, int kind, float grow, int colour, float seed, After after) {}
     private static final java.util.List<Pending> PENDING = new java.util.ArrayList<>();
     private static int debugDraws;
     private static final java.util.Set<String> LOGGED = new java.util.HashSet<>();
@@ -238,6 +250,17 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                 RenderType type = job.inside() ? Types.HOLE_INSIDE : Types.HOLE;
                 box(main.getBuffer(type), job.pose(), job.kind(), job.grow(), job.colour(), job.seed());
                 main.endBatch(type); // (each its own copy of the picture: one hole bends another)
+                if (job.after() != null) {
+                    PoseStack ps = new PoseStack();
+                    ps.last().pose().set(job.pose());
+                    ps.last().normal().set(new org.joml.Matrix3f(job.pose()).invert().transpose());
+                    try {
+                        job.after().draw(ps, main);
+                    } catch (RuntimeException ignored) {
+                        // (left out this frame)
+                    }
+                    main.endBatch();
+                }
             }
         } finally {
             stack.popMatrix();

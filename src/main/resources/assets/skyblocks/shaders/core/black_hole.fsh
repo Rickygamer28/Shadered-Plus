@@ -185,7 +185,13 @@ void main() {
     if (ItemMode < 0.5) {
         // its depth: the edge of its reach (Shadered's models and sky blocks are drawn after it, in their own pass, and
         // can't be bent: behind the hole they're hidden by it, not drawn on top of it)
-        vec4 dc = ProjMat * ModelViewMat * vec4(origin + p0, 1.0);
+        // (a singularity: what it holds drifts round in its disk, drawn after it - its depth there the shadow's, or
+        // halfway in elsewhere: what's in front of its middle is seen, what's behind it hidden)
+        vec3 dp = p0;
+        if (kind > 1.5) {
+            dp = swallowed ? p : ro + rd * max(dot(C - ro, rd), 0.25);
+        }
+        vec4 dc = ProjMat * ModelViewMat * vec4(origin + dp, 1.0);
         if (dc.w > 1e-4) gl_FragDepth = clamp(dc.z / dc.w * 0.5 + 0.5, 0.0, 1.0);
     }
 }

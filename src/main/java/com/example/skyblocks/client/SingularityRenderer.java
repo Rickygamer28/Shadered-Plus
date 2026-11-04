@@ -46,8 +46,22 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
     public void render(SingularityBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
         float reach = shownReach(be);
         float t = (float) LavaLampRenderer.seconds();
-        // now and then, some of what it holds drifting round in the disk's plane and in, shrinking as it goes (more of
-        // them the bigger it is - not too many: fewer further away)
+        // now and then, some of what it holds drifting slowly round in the disk - drawn right after the hole, in front
+        // of it (not bent out of sight by it)
+        BlackHoleRenderer.After items = (ps, bufs) -> drawItems(be, reach, ps, bufs);
+        if (be.chamber() > 0) {
+            // (in its containment chamber: as big as it reaches, its alpha a 255th at a time - as the shader reads it)
+            float grow = Math.round(Math.min(1.0F, reach / BlackHoleRenderer.CHAMBER_REACH) * 255.0F) / 255.0F;
+            BlackHoleRenderer.hole(be.getBlockPos(), poseStack, buffers, 3, grow, be.colour(), items);
+        } else {
+            float grow = Math.max(0.0F, Math.min(1.0F, (reach - 0.38F) / 0.92F));
+            BlackHoleRenderer.hole(be.getBlockPos(), poseStack, buffers, 2, grow, be.colour(), items);
+        }
+    }
+
+    /** Some of what it holds, now and then, going slowly round in the disk's plane and in (more the bigger it is - not too many: fewer further away). */
+    private static void drawItems(SingularityBlockEntity be, float reach, PoseStack poseStack, MultiBufferSource buffers) {
+        float t = (float) LavaLampRenderer.seconds();
         List<ItemStack> shown = be.shown();
         Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         double dist = cam.distanceTo(Vec3.atCenterOf(be.getBlockPos()));
@@ -59,7 +73,7 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
             for (int i = 0; i < slots; i++) {
                 // each its own cycle: drifting in for most of it, then gone a while
                 float h = hash(i * 7.31F + be.getBlockPos().asLong() % 1000);
-                float period = 16.0F + 10.0F * h; // (slowly round, a long while before it falls in)
+                float period = 24.0F + 14.0F * h; // (slowly round, a long while before it falls in)
                 float cyc = (t + h * 100.0F) / period;
                 int round = (int) Math.floor(cyc);
                 float phase = cyc - round;
@@ -70,27 +84,19 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
                 float p = phase / showFor; // (0: at the edge, 1: gone in)
                 ItemStack stack = shown.get(Math.floorMod(i + round * 5, shown.size()));
                 float r = reach * (0.92F - 0.75F * p);
-                float ang = t * (0.12F + 0.55F * p * p) / Math.max(0.6F, reach * 0.4F) + i * 2.4F + h * 6.0F;
+                float ang = t * (0.05F + 0.12F * p) / Math.max(0.6F, reach * 0.4F) + i * 2.4F + h * 6.0F;
                 float x = (float) (Math.cos(ang) * r), y = (float) (Math.sin(ang) * r);
                 float lift = (hash(i * 1.3F + round) - 0.5F) * reach * 0.08F * (1.0F - p);
                 float size = 0.22F * sizeScale * (1.0F - p * 0.85F) * Math.min(1.0F, phase * 12.0F);
                 poseStack.pushPose();
                 poseStack.translate(0.5F + e1.x * x + e2.x * y + dn.x * lift, 0.5F + e1.y * x + e2.y * y + dn.y * lift, 0.5F + e1.z * x + e2.z * y + dn.z * lift);
-                poseStack.mulPose(Axis.YP.rotation(t * 0.35F + i));
-                poseStack.mulPose(Axis.XP.rotation(t * 0.22F + i * 0.7F));
+                poseStack.mulPose(Axis.YP.rotation(t * 0.15F + i));
+                poseStack.mulPose(Axis.XP.rotation(t * 0.08F + i * 0.7F));
                 poseStack.scale(size, size, size);
                 Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.FIXED, LightTexture.FULL_BRIGHT,
                         OverlayTexture.NO_OVERLAY, poseStack, buffers, be.getLevel(), i);
                 poseStack.popPose();
             }
-        }
-        if (be.chamber() > 0) {
-            // (in its containment chamber: as big as it reaches, its alpha a 255th at a time - as the shader reads it)
-            float grow = Math.round(Math.min(1.0F, reach / BlackHoleRenderer.CHAMBER_REACH) * 255.0F) / 255.0F;
-            BlackHoleRenderer.hole(be.getBlockPos(), poseStack, buffers, 3, grow, be.colour());
-        } else {
-            float grow = Math.max(0.0F, Math.min(1.0F, (reach - 0.38F) / 0.92F));
-            BlackHoleRenderer.hole(be.getBlockPos(), poseStack, buffers, 2, grow, be.colour());
         }
     }
 
