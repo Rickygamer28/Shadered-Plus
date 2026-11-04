@@ -14,12 +14,17 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 public final class SingularityPayloads {
     private SingularityPayloads() {}
 
-    /** What it holds (each kind, count 1, and how many), what's marked to be destroyed, vacuum mode. */
-    public record Contents(int containerId, List<ItemStack> items, List<Long> counts, List<String> destroyed, List<String> tags, boolean vacuum)
+    /**
+     * What it holds (each kind, count 1, and how many), what's marked to be destroyed, vacuum mode - in pages (tens of
+     * thousands of kinds don't fit one packet): kinds from {@code start}, {@code total} in all.
+     */
+    public record Contents(int containerId, int start, int total, List<ItemStack> items, List<Long> counts, List<String> destroyed, List<String> tags, boolean vacuum)
             implements CustomPacketPayload {
         public static final Type<Contents> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "singularity_contents"));
         public static final StreamCodec<RegistryFriendlyByteBuf, Contents> STREAM_CODEC = StreamCodec.of((buf, c) -> {
             buf.writeVarInt(c.containerId);
+            buf.writeVarInt(c.start);
+            buf.writeVarInt(c.total);
             buf.writeVarInt(c.items.size());
             for (int i = 0; i < c.items.size(); i++) {
                 ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, c.items.get(i));
@@ -36,6 +41,7 @@ public final class SingularityPayloads {
             buf.writeBoolean(c.vacuum);
         }, buf -> {
             int id = buf.readVarInt();
+            int start = buf.readVarInt(), total = Math.min(buf.readVarInt(), SingularityBlockEntity.MAX_KINDS);
             int n = Math.min(buf.readVarInt(), SingularityBlockEntity.MAX_KINDS);
             List<ItemStack> items = new ArrayList<>(n);
             List<Long> counts = new ArrayList<>(n);
@@ -53,7 +59,7 @@ public final class SingularityPayloads {
             for (int i = 0; i < k; i++) {
                 tags.add(buf.readUtf());
             }
-            return new Contents(id, items, counts, destroyed, tags, buf.readBoolean());
+            return new Contents(id, start, total, items, counts, destroyed, tags, buf.readBoolean());
         });
 
         @Override

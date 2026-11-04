@@ -49,7 +49,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
     }
 
     /** At most this many kinds (plenty: a big storage block, not a whole storage system). */
-    public static final int MAX_KINDS = 8192;
+    public static final int MAX_KINDS = 27648;
     /** How far dropped items are pulled in from in vacuum mode (further in a containment chamber: + its size). */
     public static final double VACUUM_PULL = 8.0;
     /** The containment chambers it can be in the middle of: cubes this many blocks across, framed along their edges. */
@@ -125,9 +125,9 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
         changed(false);
     }
 
-    /** How many kinds it can hold: 1024; in a containment chamber 5, 7, 9 across, 2048, 4096, 8192. */
+    /** How many kinds it can hold: 1024; in a containment chamber 5, 7, 9 across, three times as many each: 3072, 9216, 27648. */
     public int maxKinds() {
-        return chamber >= 9 ? 8192 : chamber >= 7 ? 4096 : chamber >= 5 ? 2048 : 1024;
+        return chamber >= 9 ? 27648 : chamber >= 7 ? 9216 : chamber >= 5 ? 3072 : 1024;
     }
 
     public int chamber() {

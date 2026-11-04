@@ -84,7 +84,9 @@ public class SingularityMenu extends AbstractContainerMenu {
         super.broadcastChanges();
         SingularityBlockEntity be = blockEntity();
         // (what it holds sent when it changed - at most 4 times a second: thousands of kinds, a hopper feeding it)
-        if (be != null && player instanceof ServerPlayer sp && be.version() != sentVersion && (sentVersion == -1 || sp.tickCount - sentAt >= 5)) {
+        // (more often the fewer kinds: a big one's pages take a while to send)
+        int every = 5 + (be == null ? 0 : be.entries().size() / 1024);
+        if (be != null && player instanceof ServerPlayer sp && be.version() != sentVersion && (sentVersion == -1 || sp.tickCount - sentAt >= every)) {
             sentAt = sp.tickCount;
             sentVersion = be.version();
             List<ItemStack> list = new ArrayList<>();
@@ -101,13 +103,24 @@ public class SingularityMenu extends AbstractContainerMenu {
             for (net.minecraft.tags.TagKey<Item> t : be.destroyTags()) {
                 tagNames.add(t.location().toString());
             }
-            PacketDistributor.sendToPlayer(sp, new SingularityPayloads.Contents(containerId, list, amounts, gone, tagNames, be.vacuum()));
+            // in pages of 256 kinds (the first with the filter and vacuum mode)
+            int total = list.size();
+            for (int start = 0; start == 0 || start < total; start += PAGE) {
+                int end = Math.min(total, start + PAGE);
+                PacketDistributor.sendToPlayer(sp, new SingularityPayloads.Contents(containerId, start, total,
+                        new ArrayList<>(list.subList(start, end)), new ArrayList<>(amounts.subList(start, end)),
+                        start == 0 ? gone : List.of(), start == 0 ? tagNames : List.of(), be.vacuum()));
+            }
         }
     }
 
     // ---- the actions from the menu (SingularityPayloads.Action, on the server) ----
 
     public static final int TAKE = 0, PUT = 1, DESTROY = 2, VACUUM = 3, DESTROY_TAG = 4;
+    private static final int PAGE = 256;
+    // (client: the pages coming in)
+    private final List<ItemStack> incomingItems = new ArrayList<>();
+    private final List<Long> incomingCounts = new ArrayList<>();
 
     /** button: 0 left (a stack / all you hold), 1 right (one), 2 shift (a stack into your inventory). */
     public void act(int action, ItemStack item, int button, String text) {
@@ -168,10 +181,28 @@ public class SingularityMenu extends AbstractContainerMenu {
 
     /** (client) The contents sent over. */
     public void setContents(SingularityPayloads.Contents c) {
+        if (c.start() == 0) {
+            incomingItems.clear();
+            incomingCounts.clear();
+        } else if (c.start() != incomingItems.size()) {
+            return; // (a page out of turn: wait for the next whole set)
+        }
+        incomingItems.addAll(c.items());
+        incomingCounts.addAll(c.counts());
+        if (c.start() == 0) {
+            setFilter(c);
+        }
+        if (incomingItems.size() < c.total()) {
+            return; // (more pages to come)
+        }
         items.clear();
-        items.addAll(c.items());
+        items.addAll(incomingItems);
         counts.clear();
-        counts.addAll(c.counts());
+        counts.addAll(incomingCounts);
+        contentsVersion++;
+    }
+
+    private void setFilter(SingularityPayloads.Contents c) {
         destroyed.clear();
         for (String id : c.destroyed()) {
             net.minecraft.resources.ResourceLocation rl = net.minecraft.resources.ResourceLocation.tryParse(id);
