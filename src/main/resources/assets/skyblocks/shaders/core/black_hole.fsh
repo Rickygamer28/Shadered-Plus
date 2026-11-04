@@ -173,6 +173,23 @@ void main() {
             // that as the screen goes - along the way from the straight ray's point to it - not a smear of its edge
             mat4 pm = ProjMat * ModelViewMat;
             vec3 bent = origin + p + dir * 2.0;
+            if (kind > 2.5) {
+                // (in a chamber: not the frames' picture bent round - further along the bent ray, past them, where
+                // the screen shows what's beyond rather than a frame)
+                float size = (kind - 3.0) * 2.0 + 5.0;
+                float k = 2.0;
+                for (int j = 0; j < 4; j++) {
+                    vec3 xl = p + dir * k;
+                    vec3 toX = xl - ro;
+                    float L = length(toX);
+                    float hit = frameHit(ro - C, toX / L, size);
+                    if (hit < 0.0 || hit > L) {
+                        break;
+                    }
+                    k *= 3.0;
+                }
+                bent = origin + p + dir * k;
+            }
             vec3 eyeW = origin + ro;
             vec3 straight = eyeW + rd * length(bent - eyeW);
             vec4 clip = pm * vec4(bent, 1.0);
@@ -222,9 +239,14 @@ void main() {
         // halfway in elsewhere: what's in front of its middle is seen, what's behind it hidden)
         vec3 dp = p0;
         if (kind > 2.5) {
-            // (in its containment chamber: everything in its reach bent - its frames, things thrown in. Its depth
-            // isn't kept: a second pass keeps only its shadow's, so what it holds, drawn after, shows unbent in front)
-            dp = swallowed ? p : p0;
+            // (in its containment chamber: its frames aren't bent - where the view meets one, it stays as it is (the
+            // hole just behind it), unless it's behind the shadow; everything else is, things thrown in too. Its
+            // depth isn't kept: a second pass keeps only its shadow's, so what it holds, drawn after, shows in front)
+            float tf = frameHit(ro - C, rd, (kind - 3.0) * 2.0 + 5.0);
+            if (swallowed && tf > dot(p - ro, rd)) {
+                tf = -1.0;
+            }
+            dp = tf > 0.0 ? ro + rd * (tf + 0.03) : swallowed ? p : p0;
         } else if (kind > 1.5) {
             dp = swallowed ? p : ro + rd * max(dot(C - ro, rd), 0.25);
         }
