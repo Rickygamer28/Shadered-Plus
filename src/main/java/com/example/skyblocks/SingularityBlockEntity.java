@@ -219,6 +219,11 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
             if (chamber > 0) {
                 setFrames(chamber, true);
             }
+            // (in its chamber it loses its own frame: only the black hole)
+            BlockState s = level.getBlockState(worldPosition);
+            if (s.getBlock() instanceof SingularityBlock && s.getValue(SingularityBlock.IN_CHAMBER) != (chamber > 0)) {
+                level.setBlock(worldPosition, s.setValue(SingularityBlock.IN_CHAMBER, chamber > 0), Block.UPDATE_CLIENTS);
+            }
             level.playSound(null, worldPosition, grew ? SoundEvents.BEACON_POWER_SELECT : SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 1.0F, grew ? 0.6F : 0.8F);
             changed(true);
         }

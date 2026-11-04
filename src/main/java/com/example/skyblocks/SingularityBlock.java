@@ -50,8 +50,19 @@ public class SingularityBlock extends BaseEntityBlock {
             Block.box(0, 2, 0, 2, 14, 2), Block.box(14, 2, 0, 16, 14, 2), Block.box(0, 2, 14, 2, 14, 16), Block.box(14, 2, 14, 16, 14, 16),
             Block.box(4, 4, 4, 12, 12, 12));
 
+    /** In its containment chamber: no frame of its own (only the black hole, the chamber its frame). */
+    public static final net.minecraft.world.level.block.state.properties.BooleanProperty IN_CHAMBER =
+            net.minecraft.world.level.block.state.properties.BooleanProperty.create("in_chamber");
+    private static final VoxelShape CORE = Block.box(5, 5, 5, 11, 11, 11);
+
     public SingularityBlock(Properties properties) {
         super(properties);
+        registerDefaultState(stateDefinition.any().setValue(IN_CHAMBER, false));
+    }
+
+    @Override
+    protected void createBlockStateDefinition(net.minecraft.world.level.block.state.StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(IN_CHAMBER);
     }
 
     @Override
@@ -66,7 +77,7 @@ public class SingularityBlock extends BaseEntityBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPE;
+        return state.getValue(IN_CHAMBER) ? CORE : SHAPE;
     }
 
     @Override
