@@ -104,6 +104,12 @@ public class SolarSystemBlock extends BaseEntityBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        return use(level, pos, player);
+    }
+
+    /** Right-click (on its base, or on the model itself - SolarSystemEvents): the next speed; sneaking, real sizes or not. */
+    public static InteractionResult use(Level level, BlockPos pos, Player player) {
+        boolean hologram = level.getBlockState(pos).getBlock() instanceof SolarSystemBlock b && b.hologram();
         if (!level.isClientSide && level.getBlockEntity(pos) instanceof SolarSystemBlockEntity be) {
             if (player.isShiftKeyDown()) {
                 be.toggleSizes();
