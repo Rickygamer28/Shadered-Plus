@@ -39,7 +39,7 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
 
     /** At most this many items seen in the disk at once (by its chamber's size: 5, 7, 9 across; and none). */
     private static int maxOrbiting(int chamber) {
-        return chamber >= 9 ? 24 : chamber >= 7 ? 16 : chamber >= 5 ? 10 : 6;
+        return chamber >= 9 ? 12 : chamber >= 7 ? 9 : chamber >= 5 ? 6 : 4;
     }
 
     @Override
@@ -73,7 +73,7 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
             for (int i = 0; i < slots; i++) {
                 // each its own cycle: drifting in for most of it, then gone a while
                 float h = hash(i * 7.31F + be.getBlockPos().asLong() % 1000);
-                float period = 24.0F + 14.0F * h; // (slowly round, a long while before it falls in)
+                float period = 45.0F + 25.0F * h; // (very slowly round, a long while before it falls in)
                 float cyc = (t + h * 100.0F) / period;
                 int round = (int) Math.floor(cyc);
                 float phase = cyc - round;
@@ -84,14 +84,14 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
                 float p = phase / showFor; // (0: at the edge, 1: gone in)
                 ItemStack stack = shown.get(Math.floorMod(i + round * 5, shown.size()));
                 float r = reach * (0.92F - 0.75F * p);
-                float ang = t * (0.05F + 0.12F * p) / Math.max(0.6F, reach * 0.4F) + i * 2.4F + h * 6.0F;
+                float ang = t * 0.02F + i * 2.4F + h * 6.0F; // (about five minutes a turn)
                 float x = (float) (Math.cos(ang) * r), y = (float) (Math.sin(ang) * r);
                 float lift = (hash(i * 1.3F + round) - 0.5F) * reach * 0.08F * (1.0F - p);
                 float size = 0.22F * sizeScale * (1.0F - p * 0.85F) * Math.min(1.0F, phase * 12.0F);
                 poseStack.pushPose();
                 poseStack.translate(0.5F + e1.x * x + e2.x * y + dn.x * lift, 0.5F + e1.y * x + e2.y * y + dn.y * lift, 0.5F + e1.z * x + e2.z * y + dn.z * lift);
-                poseStack.mulPose(Axis.YP.rotation(t * 0.15F + i));
-                poseStack.mulPose(Axis.XP.rotation(t * 0.08F + i * 0.7F));
+                poseStack.mulPose(Axis.YP.rotation(t * 0.03F + i * 1.3F)); // (each tilted its own way, barely turning)
+                poseStack.mulPose(Axis.XP.rotation(0.4F + h * 0.8F));
                 poseStack.scale(size, size, size);
                 Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.FIXED, LightTexture.FULL_BRIGHT,
                         OverlayTexture.NO_OVERLAY, poseStack, buffers, be.getLevel(), i);
