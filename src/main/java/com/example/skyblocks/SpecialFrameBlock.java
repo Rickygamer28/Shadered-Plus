@@ -79,8 +79,8 @@ public class SpecialFrameBlock extends ContainmentFrameBlock {
 
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-        if (!(level.getBlockEntity(pos) instanceof SpecialFrameBlockEntity be)) {
-            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (stack.isEmpty() || !(level.getBlockEntity(pos) instanceof SpecialFrameBlockEntity be)) {
+            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION; // (an empty hand: sneak-click, or open it)
         }
         if (kind == Kind.PORT) {
             if (!level.isClientSide) {
