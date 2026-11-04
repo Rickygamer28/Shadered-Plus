@@ -293,7 +293,8 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
             level.playSound(null, worldPosition, grew ? SoundEvents.BEACON_POWER_SELECT : SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 1.0F, grew ? 0.6F : 0.8F);
             changed(true);
         } else if (chamber > 0) {
-            scanFrames(); // (frames swapped)
+            setFrames(chamber, true); // (frames swapped in since: linked too)
+            scanFrames();
         }
     }
 

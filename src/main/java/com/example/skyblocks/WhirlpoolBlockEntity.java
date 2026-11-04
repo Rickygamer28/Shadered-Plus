@@ -374,6 +374,8 @@ public class WhirlpoolBlockEntity extends BlockEntity {
             // (out of its tank with more than it can hold alone: it keeps it all, but takes no more till it's below)
             level.playSound(null, worldPosition, grew ? SoundEvents.CONDUIT_ACTIVATE : SoundEvents.CONDUIT_DEACTIVATE, SoundSource.BLOCKS, 1.0F, 1.0F);
             changed(true);
+        } else if (tank > 0) {
+            setFrames(tank, true); // (frames swapped in since: linked too)
         }
     }
 

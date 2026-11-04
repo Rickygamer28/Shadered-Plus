@@ -74,7 +74,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         for (Look l : bands) {
             sum += l.share;
         }
-        float rim = 0.22F + 0.2F * full, depth = 0.12F + 0.22F * full, top = 0.66F, throat = 0.035F;
+        float rim = 0.25F + 0.17F * full, depth = 0.16F + 0.3F * full, top = 0.72F, throat = 0.035F;
         PoseStack.Pose pose = poseStack.last();
         float[] r = new float[RINGS + 1], y = new float[RINGS + 1], turn = new float[RINGS + 1];
         for (int k = 0; k <= RINGS; k++) {
@@ -102,8 +102,9 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
                 float x10 = 0.5F + r[k + 1] * (float) Math.cos(a0 + turn[k + 1]), z10 = 0.5F + r[k + 1] * (float) Math.sin(a0 + turn[k + 1]);
                 float x11 = 0.5F + r[k + 1] * (float) Math.cos(a1 + turn[k + 1]), z11 = 0.5F + r[k + 1] * (float) Math.sin(a1 + turn[k + 1]);
                 float u0 = (s % 4) / 4.0F, u1 = u0 + 0.25F, v0 = (k % 4) / 4.0F, v1 = v0 + 0.25F;
-                // (darker deeper in)
-                int shade = shade(argb, 1.0F - 0.55F * k / RINGS);
+                // (darker deeper in; lighter spiral arms of foam winding down it)
+                double arm = Math.sin(3.0 * (a0 + turn[k]) + Math.log(r[k] / rim) * 6.0);
+                int shade = shade(argb, (1.0F - 0.55F * k / RINGS) * (0.8F + 0.35F * (float) Math.max(0.0, arm)));
                 vertex(v, pose, x00, y[k], z00, l.sprite, u0, v0, shade, lit);
                 vertex(v, pose, x10, y[k + 1], z10, l.sprite, u0, v1, shade, lit);
                 vertex(v, pose, x11, y[k + 1], z11, l.sprite, u1, v1, shade, lit);
