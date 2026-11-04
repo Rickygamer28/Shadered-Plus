@@ -83,6 +83,20 @@ vec3 sceneAt(vec2 nd, mat4 inv) {
     return w.xyz / w.w - origin;
 }
 
+// whether a frame is at or right beside this screen position (-1..1): a pixel or so round it too, so a frame's
+// outline - its edge pixels, half frame and half what's behind - isn't picked up and bent round the hole either
+bool frameNear(vec2 nd, mat4 inv, float size) {
+    vec2 px = 2.0 / vec2(textureSize(Sampler1, 0));
+    vec3 C = vec3(0.5);
+    for (int j = 0; j < 9; j++) {
+        vec2 o = vec2(float(j % 3) - 1.0, float(j / 3) - 1.0) * 1.75;
+        if (inFrame(sceneAt(nd + o * px, inv) - C, size)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void main() {
     gl_FragDepth = gl_FragCoord.z;
     bool big = kind > 0.5;
@@ -231,7 +245,7 @@ void main() {
                 // picture bent round the hole)
                 bool frameThere;
                 if (HasDepth > 0.5) {
-                    frameThere = inFrame(sceneAt(nd, inverse(pm)) - C, (kind - 3.0) * 2.0 + 5.0);
+                    frameThere = frameNear(nd, inverse(pm), (kind - 3.0) * 2.0 + 5.0);
                 } else {
                     vec4 back = inverse(pm) * vec4(nd, clip.z / max(clip.w, 1e-4), 1.0);
                     vec3 xl = back.xyz / back.w - origin;
