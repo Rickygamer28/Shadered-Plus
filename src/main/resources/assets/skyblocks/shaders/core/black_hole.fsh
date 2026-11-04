@@ -226,6 +226,9 @@ void main() {
 
     vec3 bg = vec3(0.0);
     float bgA = 1.0;
+    if (!swallowed && frameT < 1.0e8) {
+        atFrame = true; // (out of its reach again with a frame further along the view: that frame, not bent)
+    }
     if (atFrame) {
         // (the frame, not bent: this pixel's own)
         mat4 pmF = ProjMat * ModelViewMat;
