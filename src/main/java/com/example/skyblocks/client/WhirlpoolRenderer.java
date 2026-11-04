@@ -148,7 +148,19 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
     private static void tank(WhirlpoolBlockEntity be, List<Look> looks, PoseStack poseStack, VertexConsumer v, int light, float t) {
         int r = (be.tank() - 1) / 2;
         float inset = 0.01F;
-        layers(be, looks, poseStack, v, light, t, -(r - 1) + inset, -(r - 1) + inset, r - inset, r - inset, !be.still());
+        if (be.still()) {
+            layers(be, looks, poseStack, v, light, t, -(r - 1) + inset, -(r - 1) + inset, r - inset, r - inset, false);
+            return;
+        }
+        // the whirlpool look: just the whirlpool, filling the tank - rising from its floor, wider and taller the more it holds
+        float width = 2 * r - 1, full = Math.max(be.shownFull, 0.05F);
+        poseStack.pushPose();
+        poseStack.translate(0.5F, -(r - 1), 0.5F);
+        poseStack.scale(width, width, width);
+        poseStack.translate(-0.5F, 0.0F, -0.5F);
+        float depth = 0.1F + 0.82F * full;
+        vortex(looks, rim(full), depth, 0.03F + depth, poseStack, v, light, t);
+        poseStack.popPose();
     }
 
     /**
