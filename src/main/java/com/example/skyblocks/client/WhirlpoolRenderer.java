@@ -27,6 +27,8 @@ import net.neoforged.neoforge.fluids.FluidStack;
  */
 public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEntity> {
     private static final int SEGMENTS = 24, RINGS = 14;
+    /** (In a tank: the vortex's shape, scaled up to the tank.) */
+    private static final float TANK_RIM = 0.42F, TANK_DEPTH = 0.46F;
     /** The vortex's throat: just over its frame's floor. */
     private static final float BOTTOM = 0.2F;
 
@@ -72,13 +74,16 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
             // (a plain tank: what it holds in layers inside its frame)
             layers(be, looks, poseStack, v, light, seconds, 0.135F, 0.19F, 0.865F, 0.86F, false);
         } else {
-            vortex(looks, Math.max(be.shownFull, 0.05F), poseStack, v, light, seconds);
+            // (alone: it starts small at the bottom of its frame, and grows wider and taller the more it holds)
+            float full = Math.max(be.shownFull, 0.05F);
+            vortex(looks, rim(full), depth(full), BOTTOM + depth(full), poseStack, v, light, seconds);
         }
     }
 
     // ---- alone: the vortex ----
 
-    private static void vortex(List<Look> looks, float full, PoseStack poseStack, VertexConsumer v, int light, float t) {
+    /** The vortex, its rim this wide round the block's middle at {@code top}, its throat {@code depth} below. */
+    private static void vortex(List<Look> looks, float rim, float depth, float top, PoseStack poseStack, VertexConsumer v, int light, float t) {
         // bands from the rim inwards: the most first
         List<Look> bands = new ArrayList<>(looks);
         bands.sort((a, b) -> Float.compare(b.share, a.share));
@@ -89,8 +94,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         for (Look l : bands) {
             sum += l.share;
         }
-        // (it starts small at the bottom of its frame, and grows wider and taller the more it holds)
-        float rim = rim(full), depth = depth(full), top = BOTTOM + depth, throat = 0.035F;
+        float throat = 0.035F;
         PoseStack.Pose pose = poseStack.last();
         float[] r = new float[RINGS + 1], y = new float[RINGS + 1], turn = new float[RINGS + 1];
         for (int k = 0; k <= RINGS; k++) {
@@ -175,9 +179,9 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         // the tank, as deep as the liquid lets it be)
         float liquidH = filled * liquidShare;
         float width = hi - lo;
-        float scale = width * 0.38F / rim(1.0F), scaleY = Math.min(scale, liquidH * 0.85F / depth(1.0F));
+        float scale = width * 0.38F / TANK_RIM, scaleY = Math.min(scale, liquidH * 0.85F / TANK_DEPTH);
         boolean swirl = swirling && !liquids.isEmpty() && liquidH > 0.3F;
-        float hole = swirl ? rim(1.0F) * scale * 0.9F : 0.0F;
+        float hole = swirl ? TANK_RIM * scale * 0.9F : 0.0F;
         float y = floor;
         for (int i = 0; i < liquids.size(); i++) {
             Look l = liquids.get(i);
@@ -190,8 +194,8 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
             poseStack.pushPose();
             poseStack.translate(0.5F, floor + liquidH + 0.01F, 0.5F);
             poseStack.scale(scale, scaleY, scale);
-            poseStack.translate(-0.5F, -(BOTTOM + depth(1.0F)), -0.5F);
-            vortex(liquids, 1.0F, poseStack, v, light, t);
+            poseStack.translate(-0.5F, -TANK_DEPTH, -0.5F);
+            vortex(liquids, TANK_RIM, TANK_DEPTH, TANK_DEPTH, poseStack, v, light, t);
             poseStack.popPose();
         }
         float yTop = ceiling;
