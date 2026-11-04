@@ -396,7 +396,7 @@
   "screen.skyblocks.whirlpool.kinds": "Fluids: %s",
   "screen.skyblocks.whirlpool.empty": "Empty: use a bucket or a pipe",
   "screen.skyblocks.whirlpool.void": "VOID",
-  "screen.skyblocks.whirlpool.hint": "Click a fluid to void it. Void filter (click to remove):",
+  "screen.skyblocks.whirlpool.hint": "Click a fluid to void it; click a chip to un-void.",
   "screen.skyblocks.whirlpool.drain_on": "Drain: on",
   "screen.skyblocks.whirlpool.drain_off": "Drain: off",
   "screen.skyblocks.whirlpool.tag": "Fluid tag",

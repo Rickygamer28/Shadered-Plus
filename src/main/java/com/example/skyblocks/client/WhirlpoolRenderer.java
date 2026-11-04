@@ -74,7 +74,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         for (Look l : bands) {
             sum += l.share;
         }
-        float rim = 0.25F + 0.17F * full, depth = 0.16F + 0.3F * full, top = 0.72F, throat = 0.035F;
+        float rim = 0.25F + 0.17F * full, depth = 0.16F + 0.3F * full, top = 0.78F, throat = 0.035F;
         PoseStack.Pose pose = poseStack.last();
         float[] r = new float[RINGS + 1], y = new float[RINGS + 1], turn = new float[RINGS + 1];
         for (int k = 0; k <= RINGS; k++) {
