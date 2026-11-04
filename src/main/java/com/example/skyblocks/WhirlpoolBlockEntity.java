@@ -102,7 +102,7 @@ public class WhirlpoolBlockEntity extends BlockEntity {
         return total;
     }
 
-    /** How much it holds in all (mB): 1024 buckets; in a tank 5, 7, 9 across, 16384, 65536, 262144. */
+    /** How much it holds of each fluid (mB): 1024 buckets; in a tank 5, 7, 9 across, 16384, 65536, 262144. */
     public long capacity() {
         return tank >= 9 ? 262_144_000L : tank >= 7 ? 65_536_000L : tank >= 5 ? 16_384_000L : 1_024_000L;
     }
@@ -113,7 +113,8 @@ public class WhirlpoolBlockEntity extends BlockEntity {
     }
 
     public float fullness() {
-        return (float) Math.min(1.0, (double) total / capacity());
+        // (each fluid has its own limit: how full they are, on average)
+        return entries.isEmpty() ? 0.0F : (float) Math.min(1.0, (double) total / ((double) capacity() * entries.size()));
     }
 
     public int signal() {
@@ -190,7 +191,7 @@ public class WhirlpoolBlockEntity extends BlockEntity {
         if (e == null && entries.size() >= maxKinds()) {
             return 0;
         }
-        int n = (int) Math.min(stack.getAmount(), capacity() - total);
+        int n = (int) Math.min(stack.getAmount(), capacity() - (e == null ? 0 : e.amount)); // (the limit: each fluid's own)
         if (n <= 0) {
             return 0;
         }

@@ -92,12 +92,12 @@ public class WhirlpoolScreen extends Screen {
             g.drawString(font, Component.translatable("screen.skyblocks.whirlpool.tank", be.tank()), left + 8, top + 18, 0xFF7FD4FF, false);
         }
         // how full
-        String holds = WhirlpoolBlock.buckets(be.total()) + " / " + WhirlpoolBlock.buckets(be.capacity());
-        g.drawString(font, holds, left + 8, top + 32, 0xFFCFE0EE, false);
+        g.drawString(font, Component.translatable("screen.skyblocks.whirlpool.each", WhirlpoolBlock.buckets(be.capacity())), left + 8, top + 32, 0xFFCFE0EE, false);
         String kinds = be.entries().size() + " / " + be.maxKinds();
         g.drawString(font, Component.translatable("screen.skyblocks.whirlpool.kinds", kinds), left + W - 8 - font.width(Component.translatable("screen.skyblocks.whirlpool.kinds", kinds)), top + 32, 0xFFCFE0EE, false);
+        // (kinds used out of the most it can hold)
         g.fill(left + 8, top + 44, left + W - 8, top + 50, 0xFF1A2A3A);
-        g.fill(left + 8, top + 44, left + 8 + (int) ((W - 16) * be.fullness()), top + 50, 0xFF2F8FE0);
+        g.fill(left + 8, top + 44, left + 8 + (int) ((W - 16) * Math.min(1.0F, (float) be.entries().size() / be.maxKinds())), top + 50, 0xFF2F8FE0);
         // the fluids
         List<WhirlpoolBlockEntity.Entry> list = be.entries();
         scroll = Math.max(0, Math.min(scroll, list.size() - ROWS));
@@ -110,10 +110,12 @@ public class WhirlpoolScreen extends Screen {
             int y = y0 + i * ROW;
             boolean hover = mouseX >= left + 6 && mouseX < left + W - 6 && mouseY >= y && mouseY < y + ROW - 2;
             g.fill(left + 6, y, left + W - 6, y + ROW - 2, hover ? 0xFF233B52 : 0xFF16232F);
+            // (how full this fluid is, of its own limit)
+            g.fill(left + 6, y + ROW - 4, left + 6 + (int) ((W - 12) * Math.min(1.0, (double) e.amount / be.capacity())), y + ROW - 2, 0xFF2F8FE0);
             drawFluid(g, e.fluid, left + 9, y + 1);
             boolean voided = be.voids(e.fluid);
             g.drawString(font, e.fluid.getHoverName(), left + 30, y + 5, voided ? 0xFFFF8A8A : 0xFFE6F4FF, false);
-            String amount = WhirlpoolBlock.buckets(e.amount);
+            String amount = WhirlpoolBlock.buckets(e.amount) + " / " + WhirlpoolBlock.buckets(be.capacity());
             g.drawString(font, amount, left + W - 10 - font.width(amount), y + 5, 0xFFA9BFD2, false);
             if (voided) {
                 g.drawString(font, Component.translatable("screen.skyblocks.whirlpool.void"), left + W - 70 - font.width(amount), y + 5, 0xFFFF6A6A, false);
