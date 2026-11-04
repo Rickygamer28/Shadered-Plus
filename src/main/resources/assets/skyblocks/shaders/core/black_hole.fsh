@@ -183,8 +183,8 @@ void main() {
                     vec3 toX = xl - ro;
                     float L = length(toX);
                     float hit = frameHit(ro - C, toX / L, size);
-                    if (hit < 0.0 || hit > L) {
-                        break;
+                    if (hit < 0.0) {
+                        break; // (the screen there shows no frame, near or far)
                     }
                     k *= 3.0;
                 }
@@ -216,7 +216,7 @@ void main() {
                 vec3 toX = xl - ro;
                 float L = length(toX);
                 float hit = frameHit(ro - C, toX / max(L, 1e-4), (kind - 3.0) * 2.0 + 5.0);
-                if (hit > 0.0 && hit < L) {
+                if (hit > 0.0) { // (a frame anywhere that way: the screen there shows it)
                     vec4 own = pm * vec4(eyeW + rd * 4.0, 1.0);
                     nd = own.xy / max(own.w, 1e-4);
                 }

@@ -85,7 +85,7 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
                 float p = phase / showFor; // (0: at the edge, 1: gone in)
                 ItemStack stack = shown.get(i);
                 float r = reach * (0.92F - 0.75F * p);
-                float ang = t * 0.02F + i * 2.4F + h * 6.0F; // (about five minutes a turn)
+                float ang = t * 0.07F + i * 2.4F + h * 6.0F; // (about a minute and a half a turn)
                 float x = (float) (Math.cos(ang) * r), y = (float) (Math.sin(ang) * r);
                 float lift = (hash(i * 1.3F + round) - 0.5F) * reach * 0.08F * (1.0F - p);
                 float size = 0.22F * sizeScale * (1.0F - p * 0.85F) * Math.min(1.0F, phase * 12.0F);
