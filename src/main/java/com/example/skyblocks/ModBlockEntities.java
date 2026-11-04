@@ -77,6 +77,9 @@ public final class ModBlockEntities {
 
     public static final Supplier<BlockEntityType<ContainmentFrameBlockEntity>> CONTAINMENT_FRAME = TYPES.register("containment_frame",
             () -> BlockEntityType.Builder.of(ContainmentFrameBlockEntity::new, ModBlocks.CONTAINMENT_FRAME.get()).build(null));
+    public static final Supplier<BlockEntityType<SpecialFrameBlockEntity>> SPECIAL_FRAME = TYPES.register("special_frame",
+            () -> BlockEntityType.Builder.of(SpecialFrameBlockEntity::new, ModBlocks.PORT_FRAME.get(), ModBlocks.DISPLAY_FRAME.get(),
+                    ModBlocks.UPGRADE_FRAME.get(), ModBlocks.REDSTONE_FRAME.get()).build(null));
     public static final Supplier<BlockEntityType<SingularityBlockEntity>> SINGULARITY = TYPES.register("singularity",
             () -> BlockEntityType.Builder.of(SingularityBlockEntity::new, ModBlocks.SINGULARITY.get()).build(null));
     public static final Supplier<BlockEntityType<KaleidoscopeBlockEntity>> KALEIDOSCOPE = TYPES.register("kaleidoscope",

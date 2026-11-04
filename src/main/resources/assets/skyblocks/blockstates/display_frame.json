@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "formed=false,output=false": {
+      "model": "skyblocks:block/display_frame"
+    },
+    "formed=false,output=true": {
+      "model": "skyblocks:block/display_frame"
+    },
+    "formed=true,output=false": {
+      "model": "skyblocks:block/display_frame_formed"
+    },
+    "formed=true,output=true": {
+      "model": "skyblocks:block/display_frame_formed"
+    }
+  }
+}

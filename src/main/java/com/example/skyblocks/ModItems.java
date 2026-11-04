@@ -71,6 +71,16 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> BLACK_HOLE = ITEMS.registerSimpleBlockItem("black_hole", ModBlocks.BLACK_HOLE);
     public static final DeferredItem<BlockItem> BIG_BLACK_HOLE = ITEMS.registerSimpleBlockItem("big_black_hole", ModBlocks.BIG_BLACK_HOLE);
     public static final DeferredItem<BlockItem> CONTAINMENT_FRAME = ITEMS.registerSimpleBlockItem("containment_frame", ModBlocks.CONTAINMENT_FRAME);
+    public static final DeferredItem<BlockItem> PORT_FRAME = ITEMS.registerSimpleBlockItem("port_frame", ModBlocks.PORT_FRAME);
+    public static final DeferredItem<BlockItem> DISPLAY_FRAME = ITEMS.registerSimpleBlockItem("display_frame", ModBlocks.DISPLAY_FRAME);
+    public static final DeferredItem<BlockItem> UPGRADE_FRAME = ITEMS.registerSimpleBlockItem("upgrade_frame", ModBlocks.UPGRADE_FRAME);
+    public static final DeferredItem<BlockItem> REDSTONE_FRAME = ITEMS.registerSimpleBlockItem("redstone_frame", ModBlocks.REDSTONE_FRAME);
+    public static final DeferredItem<UpgradeItem> SPEED_UPGRADE = ITEMS.registerItem("speed_upgrade",
+            p -> new UpgradeItem(p.stacksTo(16), UpgradeItem.Type.SPEED));
+    public static final DeferredItem<UpgradeItem> RANGE_UPGRADE = ITEMS.registerItem("range_upgrade",
+            p -> new UpgradeItem(p.stacksTo(16), UpgradeItem.Type.RANGE));
+    public static final DeferredItem<UpgradeItem> SILENT_UPGRADE = ITEMS.registerItem("silent_upgrade",
+            p -> new UpgradeItem(p.stacksTo(16), UpgradeItem.Type.SILENT));
     public static final DeferredItem<BlockItem> SINGULARITY = ITEMS.registerSimpleBlockItem("singularity", ModBlocks.SINGULARITY,
             new net.minecraft.world.item.Item.Properties().stacksTo(1).fireResistant());
     public static final DeferredItem<BlockItem> BIG_LAVA_LAMP = ITEMS.registerSimpleBlockItem("big_lava_lamp", ModBlocks.BIG_LAVA_LAMP);

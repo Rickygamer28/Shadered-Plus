@@ -17,6 +17,10 @@ public class ContainmentFrameBlockEntity extends BlockEntity {
         super(ModBlockEntities.CONTAINMENT_FRAME.get(), pos, state);
     }
 
+    protected ContainmentFrameBlockEntity(net.minecraft.world.level.block.entity.BlockEntityType<?> type, BlockPos pos, BlockState state) {
+        super(type, pos, state);
+    }
+
     @Nullable
     public BlockPos master() {
         return master;
@@ -26,6 +30,9 @@ public class ContainmentFrameBlockEntity extends BlockEntity {
         if (master == null ? this.master != null : !master.equals(this.master)) {
             this.master = master == null ? null : master.immutable();
             setChanged();
+            if (level != null && !level.isClientSide) { // (the client too: a display frame shows its singularity's)
+                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+            }
         }
     }
 
@@ -50,5 +57,25 @@ public class ContainmentFrameBlockEntity extends BlockEntity {
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         master = tag.contains("master") ? BlockPos.of(tag.getLong("master")) : null;
+    }
+
+    /** Its singularity, while the chamber is formed. */
+    @Nullable
+    public SingularityBlockEntity singularity() {
+        if (master != null && level != null && level.getBlockEntity(master) instanceof SingularityBlockEntity s && s.chamber() > 0) {
+            return s;
+        }
+        return null;
+    }
+
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        return saveWithoutMetadata(registries);
+    }
+
+    @Nullable
+    @Override
+    public net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
     }
 }

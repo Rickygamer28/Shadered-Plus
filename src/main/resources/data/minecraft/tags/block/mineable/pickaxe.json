@@ -23,6 +23,10 @@
     "skyblocks:portal_mirror",
     "skyblocks:containment_frame",
     "skyblocks:planetarium",
-    "skyblocks:singularity"
+    "skyblocks:singularity",
+    "skyblocks:port_frame",
+    "skyblocks:display_frame",
+    "skyblocks:upgrade_frame",
+    "skyblocks:redstone_frame"
   ]
 }

@@ -193,6 +193,19 @@ public final class ModBlocks {
                     .lightLevel(state -> state.getValue(ContainmentFrameBlock.FORMED) ? 9 : 2)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
 
+    /** The special containment frames: a frame that does something more (SpecialFrameBlock). */
+    public static final DeferredBlock<SpecialFrameBlock> PORT_FRAME = specialFrame("port_frame", SpecialFrameBlock.Kind.PORT);
+    public static final DeferredBlock<SpecialFrameBlock> DISPLAY_FRAME = specialFrame("display_frame", SpecialFrameBlock.Kind.DISPLAY);
+    public static final DeferredBlock<SpecialFrameBlock> UPGRADE_FRAME = specialFrame("upgrade_frame", SpecialFrameBlock.Kind.UPGRADE);
+    public static final DeferredBlock<SpecialFrameBlock> REDSTONE_FRAME = specialFrame("redstone_frame", SpecialFrameBlock.Kind.REDSTONE);
+
+    private static DeferredBlock<SpecialFrameBlock> specialFrame(String name, SpecialFrameBlock.Kind kind) {
+        return BLOCKS.registerBlock(name, p -> new SpecialFrameBlock(p, kind),
+                BlockBehaviour.Properties.of().strength(5.0F, 1200.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops().noOcclusion()
+                        .lightLevel(state -> state.getValue(ContainmentFrameBlock.FORMED) ? 9 : 2)
+                        .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+    }
+
     /** The big lava lamp: two blocks tall (BigLavaLampBlock). */
     public static final DeferredBlock<BigLavaLampBlock> BIG_LAVA_LAMP = BLOCKS.registerBlock("big_lava_lamp", BigLavaLampBlock::new,
             BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.GLASS).noOcclusion()

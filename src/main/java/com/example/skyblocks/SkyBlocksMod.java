@@ -74,6 +74,13 @@ public class SkyBlocksMod {
         event.accept(ModItems.BIG_BLACK_HOLE.get());
         event.accept(ModItems.SINGULARITY.get());
         event.accept(ModItems.CONTAINMENT_FRAME.get());
+        event.accept(ModItems.PORT_FRAME.get());
+        event.accept(ModItems.DISPLAY_FRAME.get());
+        event.accept(ModItems.UPGRADE_FRAME.get());
+        event.accept(ModItems.REDSTONE_FRAME.get());
+        event.accept(ModItems.SPEED_UPGRADE.get());
+        event.accept(ModItems.RANGE_UPGRADE.get());
+        event.accept(ModItems.SILENT_UPGRADE.get());
         event.accept(ModItems.FIRE_TORNADO.get());
         event.accept(ModItems.BRICK_HEARTH.get());
         event.accept(ModItems.MUSIC_VISUALIZER.get());
@@ -113,6 +120,8 @@ public class SkyBlocksMod {
         event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, ModBlockEntities.SINGULARITY.get(),
                 (be, side) -> be.handler);
         event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, ModBlockEntities.CONTAINMENT_FRAME.get(),
+                (be, side) -> be.handler());
+        event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, ModBlockEntities.SPECIAL_FRAME.get(),
                 (be, side) -> be.handler());
     }
 
