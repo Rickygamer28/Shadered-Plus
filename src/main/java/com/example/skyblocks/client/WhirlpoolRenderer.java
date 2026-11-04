@@ -75,8 +75,8 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
             layers(be, looks, poseStack, v, light, seconds, 0.135F, 0.19F, 0.865F, 0.86F, false);
         } else {
             // (alone: it starts small at the bottom of its frame, and grows wider and taller the more it holds)
-            float full = Math.max(be.shownFull, 0.05F);
-            vortex(looks, rim(full), depth(full), BOTTOM + depth(full), poseStack, v, light, seconds);
+            float grown = Math.max(be.shownFull, 0.05F);
+            vortex(looks, rim(grown), depth(grown), BOTTOM + depth(grown), poseStack, v, light, seconds);
         }
     }
 
