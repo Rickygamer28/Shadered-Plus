@@ -65,7 +65,8 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
         List<ItemStack> shown = be.shown();
         Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         double dist = cam.distanceTo(Vec3.atCenterOf(be.getBlockPos()));
-        int slots = (int) Math.round(maxOrbiting(be.chamber()) * (0.4 + 0.6 * be.fullness()) * (dist > 64.0 ? 0.0 : dist > 32.0 ? 0.5 : 1.0));
+        // (one of each kind at most: each slot its own kind)
+        int slots = Math.min(shown.size(), (int) Math.round(maxOrbiting(be.chamber()) * (0.4 + 0.6 * be.fullness()) * (dist > 64.0 ? 0.0 : dist > 32.0 ? 0.5 : 1.0)));
         if (!MirrorRenderer.isRenderingReflection() && !shown.isEmpty()) {
             Vector3f dn = new Vector3f(0.1F, 1.0F, 0.32F).normalize();
             Vector3f e1 = new Vector3f(dn).cross(0.0F, 0.0F, 1.0F).normalize(), e2 = new Vector3f(dn).cross(e1);
@@ -82,7 +83,7 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
                     continue;
                 }
                 float p = phase / showFor; // (0: at the edge, 1: gone in)
-                ItemStack stack = shown.get(Math.floorMod(i + round * 5, shown.size()));
+                ItemStack stack = shown.get(i);
                 float r = reach * (0.92F - 0.75F * p);
                 float ang = t * 0.02F + i * 2.4F + h * 6.0F; // (about five minutes a turn)
                 float x = (float) (Math.cos(ang) * r), y = (float) (Math.sin(ang) * r);
@@ -90,7 +91,7 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
                 float size = 0.22F * sizeScale * (1.0F - p * 0.85F) * Math.min(1.0F, phase * 12.0F);
                 poseStack.pushPose();
                 poseStack.translate(0.5F + e1.x * x + e2.x * y + dn.x * lift, 0.5F + e1.y * x + e2.y * y + dn.y * lift, 0.5F + e1.z * x + e2.z * y + dn.z * lift);
-                poseStack.mulPose(Axis.YP.rotation(t * 0.03F + i * 1.3F)); // (each tilted its own way, barely turning)
+                poseStack.mulPose(Axis.YP.rotation(t * 0.7F + i * 1.3F)); // (each tilted its own way, turning)
                 poseStack.mulPose(Axis.XP.rotation(0.4F + h * 0.8F));
                 poseStack.scale(size, size, size);
                 Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.FIXED, LightTexture.FULL_BRIGHT,

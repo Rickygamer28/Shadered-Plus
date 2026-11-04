@@ -208,6 +208,19 @@ void main() {
                 clip = pm * vec4(mix(straight, bent, lo), 1.0);
                 nd = clip.xy / max(clip.w, 1e-4);
             }
+            if (kind > 2.5) {
+                // (the point looked up still behind a frame from the eye: this pixel's own, not bent - no frame's
+                // picture bent round the hole)
+                vec4 back = inverse(pm) * vec4(nd, clip.z / max(clip.w, 1e-4), 1.0);
+                vec3 xl = back.xyz / back.w - origin;
+                vec3 toX = xl - ro;
+                float L = length(toX);
+                float hit = frameHit(ro - C, toX / max(L, 1e-4), (kind - 3.0) * 2.0 + 5.0);
+                if (hit > 0.0 && hit < L) {
+                    vec4 own = pm * vec4(eyeW + rd * 4.0, 1.0);
+                    nd = own.xy / max(own.w, 1e-4);
+                }
+            }
             bg = texture(Sampler0, clamp(nd * 0.5 + 0.5, vec2(0.001), vec2(0.999))).rgb;
         }
     }
@@ -246,7 +259,10 @@ void main() {
             if (swallowed && tf > dot(p - ro, rd)) {
                 tf = -1.0;
             }
-            dp = tf > 0.0 ? ro + rd * (tf + 0.03) : swallowed ? p : p0;
+            if (tf > 0.0 && DepthOnly < 0.5) {
+                discard; // (a frame here, in front of the shadow: left as it is - from inside the hole's box too)
+            }
+            dp = swallowed ? p : p0;
         } else if (kind > 1.5) {
             dp = swallowed ? p : ro + rd * max(dot(C - ro, rd), 0.25);
         }
