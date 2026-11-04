@@ -24,7 +24,7 @@ import org.joml.Matrix4f;
 
 /**
  * The special frames' faces: a display frame shows what its singularity holds (how many items, how many kinds of how
- * many it can, how full) on its screen; a port shows the item it's set to; a monitor its item and how many of it.
+ * many it can, a bar of how many of those kinds are used) on its screen; a port shows the item it's set to; a monitor its item and how many of it.
  */
 public class SpecialFrameRenderer implements BlockEntityRenderer<SpecialFrameBlockEntity> {
     /** The face's screen sits on the frame's plate, this far out from the block's middle (just past its glow). */
@@ -83,8 +83,9 @@ public class SpecialFrameRenderer implements BlockEntityRenderer<SpecialFrameBlo
         String kinds = s.kinds() + "/" + shortNumber(s.maxKinds());
         draw(font, m, buffers, total, 0, -19, 0xFF7CFFB8, bright);
         draw(font, m, buffers, kinds, 0, -6, 0xFF49C98A, bright);
-        // how full: a bar (green, going red near the top)
-        float full = s.fullness();
+        // how full: a bar of the kinds used out of the most it can hold (its real limit: there's no limit on how many
+        // of each), green, going red near the top
+        float full = Math.min(1.0F, (float) s.kinds() / Math.max(1, s.maxKinds()));
         int colour = full > 0.85F ? 0xFFFF6A4A : full > 0.6F ? 0xFFFFC83D : 0xFF3CCF7A;
         rect(m, buffers, -22, 8, 22, 14, 0xFF10251A, bright, 0.0F);
         rect(m, buffers, -21, 9, -21 + 42 * full, 13, colour, bright, 0.3F);
