@@ -108,6 +108,9 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
             GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, read);
             GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, draw);
             boolean ok = GL11.glGetError() == GL11.GL_NO_ERROR;
+            if (RenderTest.ON && LOGGED.add("depth copy " + ok + " " + format)) {
+                SkyBlocksMod.LOGGER.info("black hole depth copy: format {} ({}), {}", Integer.toHexString(format), type == GL11.GL_TEXTURE ? "texture" : "renderbuffer", ok ? "ok" : "failed");
+            }
             RenderSystem.setShaderTexture(1, depthTex);
             return ok;
         } catch (RuntimeException e) {
