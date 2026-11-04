@@ -47,7 +47,7 @@ vec3 blackbody(float k) { // (0 cool red .. 1 white-hot)
 
 // where the straight ray (from o, relative to the middle) first meets the chamber's frames - the twelve edges of a
 // cube this many blocks across - or -1
-float frameHit(vec3 o, vec3 d, float size) {
+float frameHit(vec3 o, vec3 d, float size, float m) {
     float r = (size - 1.0) * 0.5;
     float best = 1.0e9;
     vec3 inv = 1.0 / (sign(d) * max(abs(d), vec3(1e-6)));
@@ -58,6 +58,8 @@ float frameHit(vec3 o, vec3 d, float size) {
             if (axis == 0) { lo = vec3(-r - 0.5, s.x * r - 0.5, s.y * r - 0.5); hi = vec3(r + 0.5, s.x * r + 0.5, s.y * r + 0.5); }
             else if (axis == 1) { lo = vec3(s.x * r - 0.5, -r - 0.5, s.y * r - 0.5); hi = vec3(s.x * r + 0.5, r + 0.5, s.y * r + 0.5); }
             else { lo = vec3(s.x * r - 0.5, s.y * r - 0.5, -r - 0.5); hi = vec3(s.x * r + 0.5, s.y * r + 0.5, r + 0.5); }
+            lo -= m;
+            hi += m;
             vec3 ta = (lo - o) * inv, tb = (hi - o) * inv;
             float tn = max(max(min(ta.x, tb.x), min(ta.y, tb.y)), min(ta.z, tb.z));
             float tx = min(min(max(ta.x, tb.x), max(ta.y, tb.y)), max(ta.z, tb.z));
@@ -210,11 +212,11 @@ void main() {
                 // the screen shows what's beyond rather than a frame)
                 float size = (kind - 3.0) * 2.0 + 5.0;
                 float k = 2.0;
-                for (int j = 0; j < (HasDepth > 0.5 ? 0 : 4); j++) {
+                for (int j = 0; j < 4; j++) {
                     vec3 xl = p + dir * k;
                     vec3 toX = xl - ro;
                     float L = length(toX);
-                    float hit = frameHit(ro - C, toX / L, size);
+                    float hit = frameHit(ro - C, toX / L, size, 0.06);
                     if (hit < 0.0) {
                         break; // (the screen there shows no frame, near or far)
                     }
@@ -243,15 +245,15 @@ void main() {
             if (kind > 2.5) {
                 // (the point looked up still behind a frame from the eye: this pixel's own, not bent - no frame's
                 // picture bent round the hole)
-                bool frameThere;
-                if (HasDepth > 0.5) {
-                    frameThere = frameNear(nd, inverse(pm), (kind - 3.0) * 2.0 + 5.0);
-                } else {
+                // (worked out from where the frames are - a little wider than they are, for their edge pixels - and,
+                // if there's a copy of the depth, from what's really drawn there too)
+                bool frameThere = HasDepth > 0.5 && frameNear(nd, inverse(pm), (kind - 3.0) * 2.0 + 5.0);
+                {
                     vec4 back = inverse(pm) * vec4(nd, clip.z / max(clip.w, 1e-4), 1.0);
                     vec3 xl = back.xyz / back.w - origin;
                     vec3 toX = xl - ro;
                     float L = length(toX);
-                    frameThere = frameHit(ro - C, toX / max(L, 1e-4), (kind - 3.0) * 2.0 + 5.0) > 0.0;
+                    frameThere = frameThere || frameHit(ro - C, toX / max(L, 1e-4), (kind - 3.0) * 2.0 + 5.0, 0.06) >= 0.0;
                 }
                 if (frameThere) { // (the screen there shows a frame)
                     vec4 own = pm * vec4(eyeW + rd * 4.0, 1.0);
@@ -301,7 +303,7 @@ void main() {
                 vec3 here = sceneAt(ownC.xy / max(ownC.w, 1e-4), inverse(pm3));
                 tf = inFrame(here - C, size3) ? dot(here - ro, rd) : -1.0;
             } else {
-                tf = frameHit(ro - C, rd, size3);
+                tf = frameHit(ro - C, rd, size3, 0.0);
             }
             if (swallowed && tf > dot(p - ro, rd)) {
                 tf = -1.0;

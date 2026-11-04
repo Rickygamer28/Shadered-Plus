@@ -108,7 +108,7 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
             GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, read);
             GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, draw);
             boolean ok = GL11.glGetError() == GL11.GL_NO_ERROR;
-            if (RenderTest.ON && LOGGED.add("depth copy " + ok + " " + format)) {
+            if (LOGGED.add("depth copy " + ok + " " + format)) { // (once each: what a player's log shows)
                 SkyBlocksMod.LOGGER.info("black hole depth copy: format {} ({}), {}", Integer.toHexString(format), type == GL11.GL_TEXTURE ? "texture" : "renderbuffer", ok ? "ok" : "failed");
             }
             RenderSystem.setShaderTexture(1, depthTex);
@@ -329,7 +329,7 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         if (shader == null) {
             return;
         }
-        if (RenderTest.ON && ((debugDraws++ % 300) == 0 || LOGGED.add(why))) {
+        if (LOGGED.add(why) || (RenderTest.ON && (debugDraws++ % 300) == 0)) {
             SkyBlocksMod.LOGGER.info("black holes drawn {}: {}", why, jobs.size());
         }
         Minecraft mc = Minecraft.getInstance();
