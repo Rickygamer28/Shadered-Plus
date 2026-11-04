@@ -182,9 +182,28 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         }
     }
 
+    /**
+     * Any hole still waiting at the end of the world's drawing (Shadered's pass didn't run this frame - it skips frames
+     * with nothing of its own to draw): drawn now, not left out of this frame (it blinked while moving).
+     */
+    @net.neoforged.fml.common.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = net.neoforged.fml.common.EventBusSubscriber.Bus.GAME,
+            value = net.neoforged.api.distmarker.Dist.CLIENT)
+    public static final class Fallback {
+        private Fallback() {}
+
+        @net.neoforged.bus.api.SubscribeEvent
+        public static void afterWorld(net.neoforged.neoforge.client.event.RenderLevelStageEvent event) {
+            if (event.getStage() == net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_WEATHER
+                    && !MirrorRenderer.isRenderingReflection()) {
+                drawPending("at the end of the world's drawing");
+            }
+        }
+    }
+
     private record Pending(Matrix4f pose, Matrix4f modelView, Matrix4f projection, boolean inside, int kind, float grow, int colour, float seed) {}
     private static final java.util.List<Pending> PENDING = new java.util.ArrayList<>();
     private static int debugDraws;
+    private static final java.util.Set<String> LOGGED = new java.util.HashSet<>();
 
     /**
      * Draws the holes waiting, into whatever picture is being drawn now: called inside Shadered's pass after the
@@ -201,7 +220,7 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         if (shader == null) {
             return;
         }
-        if (RenderTest.ON && (debugDraws++ % 300) == 0) {
+        if (RenderTest.ON && ((debugDraws++ % 300) == 0 || LOGGED.add(why))) {
             SkyBlocksMod.LOGGER.info("black holes drawn {}: {}", why, jobs.size());
         }
         Minecraft mc = Minecraft.getInstance();
