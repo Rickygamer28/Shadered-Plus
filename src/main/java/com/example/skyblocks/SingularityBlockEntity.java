@@ -49,7 +49,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
     }
 
     /** At most this many kinds (plenty: a big storage block, not a whole storage system). */
-    public static final int MAX_KINDS = 1024;
+    public static final int MAX_KINDS = 8192;
     /** How far dropped items are pulled in from in vacuum mode (further in a containment chamber: + its size). */
     public static final double VACUUM_PULL = 8.0;
     /** The containment chambers it can be in the middle of: cubes this many blocks across, framed along their edges. */
@@ -123,6 +123,11 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
             destroyTags.add(tag);
         }
         changed(false);
+    }
+
+    /** How many kinds it can hold: 1024; in a containment chamber 5, 7, 9 across, 2048, 4096, 8192. */
+    public int maxKinds() {
+        return chamber >= 9 ? 8192 : chamber >= 7 ? 4096 : chamber >= 5 ? 2048 : 1024;
     }
 
     public int chamber() {
@@ -268,11 +273,25 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
 
     // ---- putting in and taking out ----
 
+    /** Its kinds by item (thousands of kinds: not each looked through for every item put in); rebuilt when kinds come or go. */
+    private final java.util.Map<Item, List<Entry>> index = new java.util.HashMap<>();
+    private boolean indexDirty = true;
+
     @Nullable
     private Entry find(ItemStack stack) {
-        for (Entry e : entries) {
-            if (ItemStack.isSameItemSameComponents(e.item, stack)) {
-                return e;
+        if (indexDirty) {
+            index.clear();
+            for (Entry e : entries) {
+                index.computeIfAbsent(e.item.getItem(), k -> new ArrayList<>(1)).add(e);
+            }
+            indexDirty = false;
+        }
+        List<Entry> same = index.get(stack.getItem());
+        if (same != null) {
+            for (Entry e : same) {
+                if (ItemStack.isSameItemSameComponents(e.item, stack)) {
+                    return e;
+                }
             }
         }
         return null;
@@ -280,7 +299,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
 
     /** Whether it would take any of this (destroyed items: always). */
     public boolean accepts(ItemStack stack) {
-        return !stack.isEmpty() && (destroys(stack) || find(stack) != null || entries.size() < MAX_KINDS);
+        return !stack.isEmpty() && (destroys(stack) || find(stack) != null || entries.size() < maxKinds());
     }
 
     /** Puts in as much of {@code stack} as it can (all of it, unless there are too many kinds); returns what's left. */
@@ -295,12 +314,13 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
             return ItemStack.EMPTY; // (crushed to nothing)
         }
         Entry e = find(stack);
-        if (e == null && entries.size() >= MAX_KINDS) {
+        if (e == null && entries.size() >= maxKinds()) {
             return stack;
         }
         if (!simulate) {
             if (e == null) {
                 entries.add(new Entry(stack, stack.getCount()));
+                indexDirty = true;
             } else {
                 e.count += stack.getCount();
             }
@@ -323,6 +343,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
             total -= n;
             if (e.count <= 0) {
                 entries.remove(e);
+                indexDirty = true;
             }
             changed(true);
         }
@@ -488,6 +509,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
         super.loadAdditional(tag, registries);
         if (tag.contains("items")) {
             entries.clear();
+            indexDirty = true;
             total = 0;
             for (Tag t : tag.getList("items", Tag.TAG_COMPOUND)) {
                 CompoundTag c = (CompoundTag) t;

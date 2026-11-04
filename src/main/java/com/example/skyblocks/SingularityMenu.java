@@ -32,7 +32,7 @@ public class SingularityMenu extends AbstractContainerMenu {
 
     public final BlockPos pos;
     private final Player player;
-    private int sentVersion = -1;
+    private int sentVersion = -1, sentAt;
 
     // (client: what it holds, as last sent)
     public final List<ItemStack> items = new ArrayList<>();
@@ -83,7 +83,9 @@ public class SingularityMenu extends AbstractContainerMenu {
     public void broadcastChanges() {
         super.broadcastChanges();
         SingularityBlockEntity be = blockEntity();
-        if (be != null && player instanceof ServerPlayer sp && be.version() != sentVersion) {
+        // (what it holds sent when it changed - at most 4 times a second: thousands of kinds, a hopper feeding it)
+        if (be != null && player instanceof ServerPlayer sp && be.version() != sentVersion && (sentVersion == -1 || sp.tickCount - sentAt >= 5)) {
+            sentAt = sp.tickCount;
             sentVersion = be.version();
             List<ItemStack> list = new ArrayList<>();
             List<Long> amounts = new ArrayList<>();
