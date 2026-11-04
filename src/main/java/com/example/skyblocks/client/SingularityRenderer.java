@@ -69,7 +69,7 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
         if (!MirrorRenderer.isRenderingReflection() && !shown.isEmpty()) {
             Vector3f dn = new Vector3f(0.1F, 1.0F, 0.32F).normalize();
             Vector3f e1 = new Vector3f(dn).cross(0.0F, 0.0F, 1.0F).normalize(), e2 = new Vector3f(dn).cross(e1);
-            float sizeScale = be.chamber() > 0 ? 0.6F + be.chamber() * 0.06F : 1.0F;
+            float sizeScale = be.chamber() > 0 ? 0.9F + be.chamber() * 0.1F : 1.0F;
             for (int i = 0; i < slots; i++) {
                 // each its own cycle: drifting in for most of it, then gone a while
                 float h = hash(i * 7.31F + be.getBlockPos().asLong() % 1000);

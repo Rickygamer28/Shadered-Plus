@@ -222,15 +222,9 @@ void main() {
         // halfway in elsewhere: what's in front of its middle is seen, what's behind it hidden)
         vec3 dp = p0;
         if (kind > 2.5) {
-            // (in its containment chamber: where its frames are, just behind them - they stay as they are, not bent;
-            // everything else, things thrown in too, bent as ever. Its depth isn't kept: a second pass keeps only
-            // its shadow's, so what it holds, drawn after, shows in front of what's bent)
-            float tf = frameHit(ro - C, rd, (kind - 3.0) * 2.0 + 5.0);
-            // (a frame behind its shadow: hidden by the shadow, as anything else behind it)
-            if (swallowed && tf > dot(p - ro, rd)) {
-                tf = -1.0;
-            }
-            dp = tf > 0.0 ? ro + rd * (tf + 0.03) : swallowed ? p : p0;
+            // (in its containment chamber: everything in its reach bent - its frames, things thrown in. Its depth
+            // isn't kept: a second pass keeps only its shadow's, so what it holds, drawn after, shows unbent in front)
+            dp = swallowed ? p : p0;
         } else if (kind > 1.5) {
             dp = swallowed ? p : ro + rd * max(dot(C - ro, rd), 0.25);
         }

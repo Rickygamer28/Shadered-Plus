@@ -415,10 +415,11 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
                 continue;
             }
             // spiralling in: round the hole and inwards, faster the nearer it gets
+            // (slowly: a lazy spiral, faster only right at the end)
             Vec3 in = to.normalize();
             Vec3 round = new Vec3(-in.z, 0.0, in.x).normalize();
-            double pull = 0.06 + 0.5 / Math.max(d * d, 0.6);
-            Vec3 v = in.scale(Math.min(pull, 0.6)).add(round.scale(Math.min(0.25, 0.35 / Math.max(d, 0.8))));
+            double pull = 0.025 + 0.12 / Math.max(d * d, 0.6);
+            Vec3 v = in.scale(Math.min(pull, 0.22)).add(round.scale(Math.min(0.06, 0.12 / Math.max(d, 1.0))));
             // (held up against its fall while it's pulled: no gravity switched off, nothing left floating when it stops)
             item.setDeltaMovement(item.getDeltaMovement().scale(0.5).add(v.scale(0.6)).add(0.0, d < reach * 0.9 ? 0.04 : 0.0, 0.0));
             if (item.isNoGravity()) {
