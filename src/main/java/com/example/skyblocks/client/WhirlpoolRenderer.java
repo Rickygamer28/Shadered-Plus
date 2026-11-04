@@ -22,7 +22,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
  * The whirlpool singularity: alone, a vortex swirling down in its frame - each fluid it holds a band of its own, each
  * ring of the funnel turning at its own speed (faster further in), the funnel wider and deeper the fuller it is. In its
  * containment tank: the tank filled with what it holds, in layers by how heavy each is (the lightest - gases - at the
- * top), its surface rippling when something comes in or goes out.
+ * top), its surface rippling when something comes in or goes out, the whirlpool swirling down from it in the middle.
  */
 public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEntity> {
     private static final int SEGMENTS = 24, RINGS = 14;
@@ -146,29 +146,45 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         float since = (System.currentTimeMillis() - be.rippleAt) / 1000.0F;
         float ripple = 0.015F + 0.07F * Math.max(0.0F, 1.0F - since / 2.5F);
         PoseStack.Pose pose = poseStack.last();
+        // the whirlpool itself, swirling down from the liquid's surface in the middle of the tank (as wide as most of
+        // the tank, as deep as the liquid lets it be)
+        float liquidH = filled * liquidShare;
+        float width = 2 * r - 1;
+        float scale = width * 0.38F / 0.42F, scaleY = Math.min(scale, liquidH * 0.85F / 0.46F);
+        boolean swirl = !liquids.isEmpty() && liquidH > 0.3F;
+        float hole = swirl ? 0.42F * scale * 0.9F : 0.0F;
         float y = floor;
         for (int i = 0; i < liquids.size(); i++) {
             Look l = liquids.get(i);
             float h = filled * l.share;
             boolean topmost = i == liquids.size() - 1;
-            box(v, pose, l, x0, y, z0, x1, y + h, z1, i == 0, topmost ? ripple : -1.0F, light, t, 0.85F);
+            box(v, pose, l, x0, y, z0, x1, y + h, z1, i == 0, topmost ? ripple : -1.0F, hole, light, t, 0.85F);
             y += h;
+        }
+        if (swirl) {
+            poseStack.pushPose();
+            poseStack.translate(0.5F, floor + liquidH + 0.01F, 0.5F);
+            poseStack.scale(scale, scaleY, scale);
+            poseStack.translate(-0.5F, -0.78F, -0.5F);
+            vortex(liquids, 1.0F, poseStack, v, light, t);
+            poseStack.popPose();
         }
         float yTop = ceiling;
         for (int i = 0; i < gases.size(); i++) {
             Look l = gases.get(i);
             float h = filled * l.share;
-            box(v, pose, l, x0, yTop - h, z0, x1, yTop, z1, true, -1.0F, light, t, 0.45F);
+            box(v, pose, l, x0, yTop - h, z0, x1, yTop, z1, true, -1.0F, 0.0F, light, t, 0.45F);
             yTop -= h;
         }
     }
 
     /**
      * A box of one fluid, its sides cut into block-sized squares (its picture once a block). {@code ripple} >= 0: its
-     * top drawn, rippling that much; {@code bottom}: its bottom drawn.
+     * top drawn, rippling that much, with a round hole {@code hole} wide round the block's middle (the whirlpool's);
+     * {@code bottom}: its bottom drawn.
      */
     private static void box(VertexConsumer v, PoseStack.Pose pose, Look l, float x0, float y0, float z0, float x1, float y1, float z1,
-                            boolean bottom, float ripple, int light, float t, float alpha) {
+                            boolean bottom, float ripple, float hole, int light, float t, float alpha) {
         if (y1 - y0 < 0.002F) {
             return;
         }
@@ -186,19 +202,31 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
             column(v, pose, l, x0, b, x0, a, y0, y1, side, lit);
             column(v, pose, l, x1, a, x1, b, y0, y1, side, lit);
         }
-        // top (rippling) and bottom, a square a block
-        for (float a = x0; a < x1 - 0.001F; a = Math.min(x1, (float) Math.floor(a) + 1)) {
-            float b = Math.min(x1, (float) Math.floor(a) + 1);
-            for (float c = z0; c < z1 - 0.001F; c = Math.min(z1, (float) Math.floor(c) + 1)) {
-                float d = Math.min(z1, (float) Math.floor(c) + 1);
-                float u0 = frac(a), u1 = u0 + (b - a), v0 = frac(c), v1 = v0 + (d - c);
-                if (ripple >= 0) {
+        // top (rippling, a quarter block a square, round the whirlpool's hole)
+        if (ripple >= 0) {
+            for (float a = x0; a < x1 - 0.001F; a = Math.min(x1, (float) Math.floor(a * 4) / 4 + 0.25F)) {
+                float b = Math.min(x1, (float) Math.floor(a * 4) / 4 + 0.25F);
+                for (float c = z0; c < z1 - 0.001F; c = Math.min(z1, (float) Math.floor(c * 4) / 4 + 0.25F)) {
+                    float d = Math.min(z1, (float) Math.floor(c * 4) / 4 + 0.25F);
+                    float mx = (a + b) * 0.5F - 0.5F, mz = (c + d) * 0.5F - 0.5F;
+                    if (mx * mx + mz * mz < hole * hole) {
+                        continue;
+                    }
+                    float u0 = frac(a), u1 = u0 + (b - a), v0 = frac(c), v1 = v0 + (d - c);
                     float yaa = y1 + wave(a, c, t, ripple), yab = y1 + wave(a, d, t, ripple), ybb = y1 + wave(b, d, t, ripple), yba = y1 + wave(b, c, t, ripple);
                     vertex(v, pose, a, yaa, c, l.sprite, u0, v0, argb, lit);
                     vertex(v, pose, a, yab, d, l.sprite, u0, v1, argb, lit);
                     vertex(v, pose, b, ybb, d, l.sprite, u1, v1, argb, lit);
                     vertex(v, pose, b, yba, c, l.sprite, u1, v0, argb, lit);
                 }
+            }
+        }
+        // bottom, a square a block
+        for (float a = x0; a < x1 - 0.001F; a = Math.min(x1, (float) Math.floor(a) + 1)) {
+            float b = Math.min(x1, (float) Math.floor(a) + 1);
+            for (float c = z0; c < z1 - 0.001F; c = Math.min(z1, (float) Math.floor(c) + 1)) {
+                float d = Math.min(z1, (float) Math.floor(c) + 1);
+                float u0 = frac(a), u1 = u0 + (b - a), v0 = frac(c), v1 = v0 + (d - c);
                 if (bottom) {
                     int under = shade(argb, 0.6F);
                     vertex(v, pose, a, y0, c, l.sprite, u0, v0, under, lit);
