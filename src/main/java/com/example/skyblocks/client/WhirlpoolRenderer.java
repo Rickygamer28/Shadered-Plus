@@ -1,6 +1,15 @@
 package com.example.skyblocks.client;
 
+import com.example.skyblocks.SkyBlocksMod;
 import com.example.skyblocks.WhirlpoolBlockEntity;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.client.renderer.ShaderInstance;
+import net.minecraft.resources.ResourceLocation;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.util.ArrayList;
@@ -19,9 +28,9 @@ import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtension
 import net.neoforged.neoforge.fluids.FluidStack;
 
 /**
- * The whirlpool singularity: alone, a vortex swirling down in its frame - each fluid it holds a band of its own, each
- * ring of the funnel turning at its own speed (faster further in), rising from the bottom of its frame, wider and taller
- * the fuller it is. In its
+ * The whirlpool singularity: alone, a vortex swirling down in its frame - each fluid it holds a band of its own, flowing
+ * round and down the funnel in a spiral (shaders/core/whirlpool), the bands stirred into each other where they meet -
+ * rising from the bottom of its frame, wider and taller the fuller it is. In its
  * containment tank: the tank filled with what it holds, in layers by how heavy each is (the lightest - gases - at the
  * top), its surface rippling when something comes in or goes out, the whirlpool swirling down from it in the middle.
  */
@@ -66,24 +75,76 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         }
         float full = be.fullness();
         be.shownFull = be.shownFull < 0 ? full : be.shownFull + (full - be.shownFull) * 0.05F;
-        VertexConsumer v = buffers.getBuffer(RenderType.entityTranslucent(InventoryMenu.BLOCK_ATLAS));
         float seconds = (System.currentTimeMillis() % 3_600_000L) / 1000.0F;
         if (be.tank() > 0) {
-            tank(be, looks, poseStack, v, light, seconds);
+            tank(be, looks, poseStack, buffers, light, seconds);
         } else if (be.still()) {
             // (a plain tank: what it holds in layers inside its frame)
-            layers(be, looks, poseStack, v, light, seconds, 0.135F, 0.19F, 0.865F, 0.86F, false);
+            layers(be, looks, poseStack, buffers.getBuffer(RenderType.entityTranslucent(InventoryMenu.BLOCK_ATLAS)), light, seconds,
+                    0.135F, 0.19F, 0.865F, 0.86F, false);
         } else {
             // (alone: it starts small at the bottom of its frame, and grows wider and taller the more it holds)
             float grown = Math.max(be.shownFull, 0.05F);
-            vortex(looks, rim(grown), depth(grown), BOTTOM + depth(grown), poseStack, v, light, seconds);
+            vortex(looks, rim(grown), depth(grown), BOTTOM + depth(grown), poseStack, buffers, light, seconds);
         }
     }
 
     // ---- alone: the vortex ----
 
+    // ---- the whirlpool shader: the funnel's fluids flowing round and down it, their bands stirred into each other ----
+
+    static ShaderInstance shader;
+    /** (This whirlpool's bands, for the shader: their pictures' rectangles, tints, where each ends; how many.) */
+    private static final float[] RECTS = new float[24], TINTS = new float[24], EDGES = new float[8];
+
+    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    public static final class Shaders {
+        private Shaders() {}
+
+        @SubscribeEvent
+        public static void register(RegisterShadersEvent event) throws java.io.IOException {
+            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "whirlpool"), DefaultVertexFormat.PARTICLE, s -> shader = s);
+        }
+    }
+
+    abstract static class Types extends RenderType {
+        static final RenderType FUNNEL = create("skyblocks_whirlpool", DefaultVertexFormat.PARTICLE, VertexFormat.Mode.QUADS, 8192,
+                false, true, CompositeState.builder()
+                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setTextureState(new TextureStateShard(InventoryMenu.BLOCK_ATLAS, false, false))
+                        .setTexturingState(new TexturingStateShard("skyblocks_whirlpool_bands", () -> {
+                            if (shader != null) {
+                                shader.safeGetUniform("Time").set((System.currentTimeMillis() % 3_600_000L) / 1000.0F);
+                                for (int i = 0; i < 6; i++) {
+                                    shader.safeGetUniform("Rect" + i).set(RECTS[i * 4], RECTS[i * 4 + 1], RECTS[i * 4 + 2], RECTS[i * 4 + 3]);
+                                    shader.safeGetUniform("Tint" + i).set(TINTS[i * 4], TINTS[i * 4 + 1], TINTS[i * 4 + 2], TINTS[i * 4 + 3]);
+                                }
+                                shader.safeGetUniform("EdgesA").set(EDGES[0], EDGES[1], EDGES[2], EDGES[3]);
+                                shader.safeGetUniform("EdgesB").set(EDGES[4], EDGES[5], EDGES[6], EDGES[7]);
+                            }
+                        }, () -> {}))
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .setLightmapState(LIGHTMAP)
+                        .setCullState(NO_CULL)
+                        .setWriteMaskState(COLOR_DEPTH_WRITE)
+                        .createCompositeState(true));
+
+        private Types() {
+            super("", DefaultVertexFormat.POSITION, VertexFormat.Mode.QUADS, 0, false, false, () -> {}, () -> {});
+        }
+    }
+
     /** The vortex, its rim this wide round the block's middle at {@code top}, its throat {@code depth} below. */
-    private static void vortex(List<Look> looks, float rim, float depth, float top, PoseStack poseStack, VertexConsumer v, int light, float t) {
+    private static void vortex(List<Look> looks, float rim, float depth, float top, PoseStack poseStack, MultiBufferSource buffers, int light, float t) {
+        if (shader != null && buffers instanceof MultiBufferSource.BufferSource source) {
+            funnel(looks, rim, depth, top, poseStack, source, light);
+            return;
+        }
+        vortexWith(looks, rim, depth, top, poseStack, buffers.getBuffer(RenderType.entityTranslucent(InventoryMenu.BLOCK_ATLAS)), light, t);
+    }
+
+    /** (Without the shader: the funnel's rings, each band its fluid's picture.) */
+    private static void vortexWith(List<Look> looks, float rim, float depth, float top, PoseStack poseStack, VertexConsumer v, int light, float t) {
         // bands from the rim inwards: the most first
         List<Look> bands = new ArrayList<>(looks);
         bands.sort((a, b) -> Float.compare(b.share, a.share));
@@ -145,13 +206,78 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         }
     }
 
+    /** The funnel, drawn now with the whirlpool shader: still rings, the fluids flowing over them in the shader. */
+    private static void funnel(List<Look> looks, float rim, float depth, float top, PoseStack poseStack, MultiBufferSource.BufferSource source, int light) {
+        List<Look> bands = new ArrayList<>(looks);
+        bands.sort((a, b) -> Float.compare(b.share, a.share));
+        if (bands.size() > 6) {
+            bands = bands.subList(0, 6);
+        }
+        float sum = 0;
+        for (Look l : bands) {
+            sum += l.share;
+        }
+        float acc = 0;
+        java.util.Arrays.fill(EDGES, 1.0F);
+        for (int i = 0; i < 6; i++) {
+            Look l = bands.get(Math.min(i, bands.size() - 1));
+            RECTS[i * 4] = l.sprite.getU0();
+            RECTS[i * 4 + 1] = l.sprite.getV0();
+            RECTS[i * 4 + 2] = l.sprite.getU1();
+            RECTS[i * 4 + 3] = l.sprite.getV1();
+            TINTS[i * 4] = ((l.argb >> 16) & 0xFF) / 255.0F;
+            TINTS[i * 4 + 1] = ((l.argb >> 8) & 0xFF) / 255.0F;
+            TINTS[i * 4 + 2] = (l.argb & 0xFF) / 255.0F;
+            TINTS[i * 4 + 3] = l.glows ? 1.0F : 0.0F;
+            if (i < bands.size()) {
+                acc += l.share;
+                EDGES[i] = sum > 0 ? acc / sum : 1.0F;
+            }
+        }
+        EDGES[6] = bands.size();
+        source.endBatch(); // (what's waiting drawn first: its own uniforms are this whirlpool's)
+        VertexConsumer v = source.getBuffer(Types.FUNNEL);
+        PoseStack.Pose pose = poseStack.last();
+        float throat = 0.035F;
+        float[] r = new float[RINGS + 1], y = new float[RINGS + 1];
+        for (int k = 0; k <= RINGS; k++) {
+            float u = (float) k / RINGS;
+            r[k] = throat + (rim - throat) * (float) Math.pow(1.0 - u, 1.4);
+            y[k] = top - depth * (float) Math.pow(u, 1.8);
+        }
+        int segments = 32;
+        for (int k = 0; k < RINGS; k++) {
+            int c0 = funnelColour(k), c1 = funnelColour(k + 1);
+            for (int s = 0; s < segments; s++) {
+                double a0 = Math.PI * 2 * s / segments, a1 = Math.PI * 2 * (s + 1) / segments;
+                float u0 = (float) s / segments, u1 = (float) (s + 1) / segments;
+                funnelVertex(v, pose, 0.5F + r[k] * (float) Math.cos(a0), y[k], 0.5F + r[k] * (float) Math.sin(a0), u0, (float) k / RINGS, c0, light);
+                funnelVertex(v, pose, 0.5F + r[k + 1] * (float) Math.cos(a0), y[k + 1], 0.5F + r[k + 1] * (float) Math.sin(a0), u0, (float) (k + 1) / RINGS, c1, light);
+                funnelVertex(v, pose, 0.5F + r[k + 1] * (float) Math.cos(a1), y[k + 1], 0.5F + r[k + 1] * (float) Math.sin(a1), u1, (float) (k + 1) / RINGS, c1, light);
+                funnelVertex(v, pose, 0.5F + r[k] * (float) Math.cos(a1), y[k], 0.5F + r[k] * (float) Math.sin(a1), u1, (float) k / RINGS, c0, light);
+            }
+        }
+        source.endBatch(Types.FUNNEL);
+    }
+
+    /** (Darker deeper in.) */
+    private static int funnelColour(int ring) {
+        int g = (int) (255 * (1.0F - 0.5F * ring / RINGS));
+        return 0xE6000000 | (g << 16) | (g << 8) | g;
+    }
+
+    private static void funnelVertex(VertexConsumer v, PoseStack.Pose pose, float x, float y, float z, float u, float w, int argb, int light) {
+        v.addVertex(pose, x, y, z).setUv(u, w).setColor(argb).setLight(light);
+    }
+
     // ---- in its tank: the tank filled, in layers ----
 
-    private static void tank(WhirlpoolBlockEntity be, List<Look> looks, PoseStack poseStack, VertexConsumer v, int light, float t) {
+    private static void tank(WhirlpoolBlockEntity be, List<Look> looks, PoseStack poseStack, MultiBufferSource buffers, int light, float t) {
         int r = (be.tank() - 1) / 2;
         float inset = 0.01F;
         if (be.still()) {
-            layers(be, looks, poseStack, v, light, t, -(r - 1) + inset, -(r - 1) + inset, r - inset, r - inset, false);
+            layers(be, looks, poseStack, buffers.getBuffer(RenderType.entityTranslucent(InventoryMenu.BLOCK_ATLAS)), light, t,
+                    -(r - 1) + inset, -(r - 1) + inset, r - inset, r - inset, false);
             return;
         }
         // the whirlpool look: just the whirlpool, filling the tank - rising from its floor, wider and taller the more it holds
@@ -161,7 +287,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         poseStack.scale(width, width, width);
         poseStack.translate(-0.5F, 0.0F, -0.5F);
         float depth = 0.1F + 0.82F * full;
-        vortex(looks, rim(full), depth, 0.03F + depth, poseStack, v, light, t);
+        vortex(looks, rim(full), depth, 0.03F + depth, poseStack, buffers, light, t);
         poseStack.popPose();
     }
 
@@ -209,7 +335,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
             poseStack.translate(0.5F, floor + liquidH + 0.01F, 0.5F);
             poseStack.scale(scale, scaleY, scale);
             poseStack.translate(-0.5F, -TANK_DEPTH, -0.5F);
-            vortex(liquids, TANK_RIM, TANK_DEPTH, TANK_DEPTH, poseStack, v, light, t);
+            vortexWith(liquids, TANK_RIM, TANK_DEPTH, TANK_DEPTH, poseStack, v, light, t);
             poseStack.popPose();
         }
         float yTop = ceiling;
