@@ -193,6 +193,17 @@ public final class ModBlocks {
                     .lightLevel(state -> state.getValue(ContainmentFrameBlock.FORMED) ? 9 : 2)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
 
+    /** The whirlpool singularity: a vortex in a frame that stores fluids (WhirlpoolBlock). */
+    public static final DeferredBlock<WhirlpoolBlock> WHIRLPOOL = BLOCKS.registerBlock("whirlpool", WhirlpoolBlock::new,
+            BlockBehaviour.Properties.of().strength(5.0F, 1200.0F).sound(SoundType.NETHERITE_BLOCK).noOcclusion().lightLevel(state -> 6)
+                    .requiresCorrectToolForDrops().mapColor(net.minecraft.world.level.material.MapColor.WATER));
+
+    /** A tank frame: built round a whirlpool with glass sides, a containment tank it fills (TankFrameBlock). */
+    public static final DeferredBlock<TankFrameBlock> TANK_FRAME = BLOCKS.registerBlock("tank_frame", TankFrameBlock::new,
+            BlockBehaviour.Properties.of().strength(5.0F, 1200.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops().noOcclusion()
+                    .lightLevel(state -> state.getValue(TankFrameBlock.FORMED) ? 9 : 2)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_CYAN));
+
     /** The special containment frames: a frame that does something more (SpecialFrameBlock). */
     public static final DeferredBlock<SpecialFrameBlock> PORT_FRAME = specialFrame("port_frame", SpecialFrameBlock.Kind.PORT);
     public static final DeferredBlock<SpecialFrameBlock> DISPLAY_FRAME = specialFrame("display_frame", SpecialFrameBlock.Kind.DISPLAY);

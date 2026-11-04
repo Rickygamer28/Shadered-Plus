@@ -61,6 +61,7 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.BLACK_HOLE.get(), BlackHoleRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SINGULARITY.get(), SingularityRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SPECIAL_FRAME.get(), SpecialFrameRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.WHIRLPOOL.get(), WhirlpoolRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.KALEIDOSCOPE.get(), KaleidoscopeRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.FIRE.get(), WallFireRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.BRICK_HEARTH.get(), ClientSetup::hearthRenderer);

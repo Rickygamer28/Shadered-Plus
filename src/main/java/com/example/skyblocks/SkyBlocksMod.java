@@ -75,6 +75,8 @@ public class SkyBlocksMod {
         event.accept(ModItems.SINGULARITY.get());
         event.accept(ModItems.CONTAINMENT_FRAME.get());
         event.accept(ModItems.PORT_FRAME.get());
+        event.accept(ModItems.WHIRLPOOL.get());
+        event.accept(ModItems.TANK_FRAME.get());
         event.accept(ModItems.DISPLAY_FRAME.get());
         event.accept(ModItems.MONITOR_FRAME.get());
         event.accept(ModItems.REDSTONE_FRAME.get());
@@ -120,6 +122,11 @@ public class SkyBlocksMod {
                 (be, side) -> be.handler());
         event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, ModBlockEntities.SPECIAL_FRAME.get(),
                 (be, side) -> be.handler());
+        // (the whirlpool's fluids: buckets, pipes; on its tank's frames too)
+        event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK, ModBlockEntities.WHIRLPOOL.get(),
+                (be, side) -> be.handler);
+        event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK, ModBlockEntities.TANK_FRAME.get(),
+                (be, side) -> be.handler());
     }
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
@@ -129,6 +136,7 @@ public class SkyBlocksMod {
                 .playToServer(PondMaterialsPayload.TYPE, PondMaterialsPayload.STREAM_CODEC, PondMaterialsPayload::handle)
                 .playToServer(SolarSystemClickPayload.TYPE, SolarSystemClickPayload.STREAM_CODEC, SolarSystemClickPayload::handle)
                 .playToServer(PortalCrossPayload.TYPE, PortalCrossPayload.STREAM_CODEC, PortalCrossPayload::handle)
+                .playToServer(WhirlpoolPayload.TYPE, WhirlpoolPayload.STREAM_CODEC, WhirlpoolPayload::handle)
                 .playToServer(SingularityPayloads.Action.TYPE, SingularityPayloads.Action.STREAM_CODEC, SingularityPayloads.Action::handle)
                 .playToClient(SingularityPayloads.Contents.TYPE, SingularityPayloads.Contents.STREAM_CODEC, SingularityPayloads.Contents::handle)
                 .playToClient(PortalListPayload.TYPE, PortalListPayload.STREAM_CODEC, PortalListPayload::handle)

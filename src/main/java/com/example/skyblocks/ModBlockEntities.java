@@ -77,6 +77,10 @@ public final class ModBlockEntities {
 
     public static final Supplier<BlockEntityType<ContainmentFrameBlockEntity>> CONTAINMENT_FRAME = TYPES.register("containment_frame",
             () -> BlockEntityType.Builder.of(ContainmentFrameBlockEntity::new, ModBlocks.CONTAINMENT_FRAME.get()).build(null));
+    public static final Supplier<BlockEntityType<WhirlpoolBlockEntity>> WHIRLPOOL = TYPES.register("whirlpool",
+            () -> BlockEntityType.Builder.of(WhirlpoolBlockEntity::new, ModBlocks.WHIRLPOOL.get()).build(null));
+    public static final Supplier<BlockEntityType<TankFrameBlockEntity>> TANK_FRAME = TYPES.register("tank_frame",
+            () -> BlockEntityType.Builder.of(TankFrameBlockEntity::new, ModBlocks.TANK_FRAME.get()).build(null));
     public static final Supplier<BlockEntityType<SpecialFrameBlockEntity>> SPECIAL_FRAME = TYPES.register("special_frame",
             () -> BlockEntityType.Builder.of(SpecialFrameBlockEntity::new, ModBlocks.PORT_FRAME.get(), ModBlocks.DISPLAY_FRAME.get(),
                     ModBlocks.MONITOR_FRAME.get(), ModBlocks.REDSTONE_FRAME.get()).build(null));

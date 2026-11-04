@@ -27,6 +27,8 @@
     "skyblocks:port_frame",
     "skyblocks:display_frame",
     "skyblocks:monitor_frame",
-    "skyblocks:redstone_frame"
+    "skyblocks:redstone_frame",
+    "skyblocks:whirlpool",
+    "skyblocks:tank_frame"
   ]
 }

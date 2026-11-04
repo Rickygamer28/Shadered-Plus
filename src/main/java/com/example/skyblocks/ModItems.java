@@ -71,6 +71,9 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> BLACK_HOLE = ITEMS.registerSimpleBlockItem("black_hole", ModBlocks.BLACK_HOLE);
     public static final DeferredItem<BlockItem> BIG_BLACK_HOLE = ITEMS.registerSimpleBlockItem("big_black_hole", ModBlocks.BIG_BLACK_HOLE);
     public static final DeferredItem<BlockItem> CONTAINMENT_FRAME = ITEMS.registerSimpleBlockItem("containment_frame", ModBlocks.CONTAINMENT_FRAME);
+    public static final DeferredItem<BlockItem> WHIRLPOOL = ITEMS.registerSimpleBlockItem("whirlpool", ModBlocks.WHIRLPOOL,
+            new net.minecraft.world.item.Item.Properties().stacksTo(1).fireResistant());
+    public static final DeferredItem<BlockItem> TANK_FRAME = ITEMS.registerSimpleBlockItem("tank_frame", ModBlocks.TANK_FRAME);
     public static final DeferredItem<BlockItem> PORT_FRAME = ITEMS.registerSimpleBlockItem("port_frame", ModBlocks.PORT_FRAME);
     public static final DeferredItem<BlockItem> DISPLAY_FRAME = ITEMS.registerSimpleBlockItem("display_frame", ModBlocks.DISPLAY_FRAME);
     public static final DeferredItem<BlockItem> MONITOR_FRAME = ITEMS.registerSimpleBlockItem("monitor_frame", ModBlocks.MONITOR_FRAME);
