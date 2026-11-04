@@ -69,6 +69,7 @@ void main() {
         discard;
     }
     float t0 = max(-b - sqrt(h), 0.0);
+    float tFar = -b + sqrt(h);
     vec3 p = ro + rd * t0;
     vec3 p0 = ro + rd * max(t0, 0.25); // (where the ray meets its reach - just ahead, from inside it: what's drawn later behind is hidden from here)
     vec3 dir = rd;
@@ -188,7 +189,11 @@ void main() {
         // (a singularity: what it holds drifts round in its disk, drawn after it - its depth there the shadow's, or
         // halfway in elsewhere: what's in front of its middle is seen, what's behind it hidden)
         vec3 dp = p0;
-        if (kind > 1.5) {
+        if (kind > 2.5) {
+            // (in its containment chamber: its depth the far side of its reach - its frames, and anything else in
+            // there, in front of it: they stay as they are, not bent; only what's beyond the chamber is)
+            dp = swallowed ? p : ro + rd * max(tFar, 0.25);
+        } else if (kind > 1.5) {
             dp = swallowed ? p : ro + rd * max(dot(C - ro, rd), 0.25);
         }
         vec4 dc = ProjMat * ModelViewMat * vec4(origin + dp, 1.0);
