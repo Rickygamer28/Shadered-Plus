@@ -91,6 +91,14 @@
                 0,
                 1
             ]
+        },
+        {
+            "name": "DepthOnly",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
+            ]
         }
     ]
 }

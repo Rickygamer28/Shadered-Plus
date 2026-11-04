@@ -21,6 +21,7 @@ uniform mat4 ModelViewMat;
 uniform mat4 ProjMat;
 uniform float HoleTime;
 uniform float ItemMode;
+uniform float DepthOnly; // (a singularity in its chamber, second pass: only its shadow's depth)
 
 out vec4 fragColor;
 
@@ -40,6 +41,28 @@ float fbm(vec2 p) {
 
 vec3 blackbody(float k) { // (0 cool red .. 1 white-hot)
     return mix(mix(vec3(0.6, 0.1, 0.02), vec3(1.0, 0.55, 0.15), smoothstep(0.0, 0.5, k)), vec3(1.0, 0.95, 0.85), smoothstep(0.5, 1.0, k));
+}
+
+// where the straight ray (from o, relative to the middle) first meets the chamber's frames - the twelve edges of a
+// cube this many blocks across - or -1
+float frameHit(vec3 o, vec3 d, float size) {
+    float r = (size - 1.0) * 0.5;
+    float best = 1.0e9;
+    vec3 inv = 1.0 / (sign(d) * max(abs(d), vec3(1e-6)));
+    for (int axis = 0; axis < 3; axis++) {
+        for (int k = 0; k < 4; k++) {
+            vec2 s = vec2(k & 1, k >> 1) * 2.0 - 1.0;
+            vec3 lo, hi;
+            if (axis == 0) { lo = vec3(-r - 0.5, s.x * r - 0.5, s.y * r - 0.5); hi = vec3(r + 0.5, s.x * r + 0.5, s.y * r + 0.5); }
+            else if (axis == 1) { lo = vec3(s.x * r - 0.5, -r - 0.5, s.y * r - 0.5); hi = vec3(s.x * r + 0.5, r + 0.5, s.y * r + 0.5); }
+            else { lo = vec3(s.x * r - 0.5, s.y * r - 0.5, -r - 0.5); hi = vec3(s.x * r + 0.5, s.y * r + 0.5, r + 0.5); }
+            vec3 ta = (lo - o) * inv, tb = (hi - o) * inv;
+            float tn = max(max(min(ta.x, tb.x), min(ta.y, tb.y)), min(ta.z, tb.z));
+            float tx = min(min(max(ta.x, tb.x), max(ta.y, tb.y)), max(ta.z, tb.z));
+            if (tx >= max(tn, 0.0) && tn < best) best = max(tn, 0.0);
+        }
+    }
+    return best < 1.0e8 ? best : -1.0;
 }
 
 void main() {
@@ -69,7 +92,6 @@ void main() {
         discard;
     }
     float t0 = max(-b - sqrt(h), 0.0);
-    float tFar = -b + sqrt(h);
     vec3 p = ro + rd * t0;
     vec3 p0 = ro + rd * max(t0, 0.25); // (where the ray meets its reach - just ahead, from inside it: what's drawn later behind is hidden from here)
     vec3 dir = rd;
@@ -182,6 +204,16 @@ void main() {
     if (ItemMode > 0.5 && alpha < 0.02) {
         discard;
     }
+    if (DepthOnly > 0.5) {
+        // (its shadow's depth only: what's drawn after it - what it holds, drifting round - hidden behind the shadow)
+        if (!swallowed) {
+            discard;
+        }
+        vec4 sc = ProjMat * ModelViewMat * vec4(origin + p, 1.0);
+        gl_FragDepth = sc.w > 1e-4 ? clamp(sc.z / sc.w * 0.5 + 0.5, 0.0, 1.0) : gl_FragCoord.z;
+        fragColor = vec4(0.0);
+        return;
+    }
     fragColor = vec4(col, ItemMode > 0.5 ? alpha : 1.0);
     if (ItemMode < 0.5) {
         // its depth: the edge of its reach (Shadered's models and sky blocks are drawn after it, in their own pass, and
@@ -190,9 +222,11 @@ void main() {
         // halfway in elsewhere: what's in front of its middle is seen, what's behind it hidden)
         vec3 dp = p0;
         if (kind > 2.5) {
-            // (in its containment chamber: its depth the far side of its reach - its frames, and anything else in
-            // there, in front of it: they stay as they are, not bent; only what's beyond the chamber is)
-            dp = swallowed ? p : ro + rd * max(tFar, 0.25);
+            // (in its containment chamber: where its frames are, just behind them - they stay as they are, not bent;
+            // everything else, things thrown in too, bent as ever. Its depth isn't kept: a second pass keeps only
+            // its shadow's, so what it holds, drawn after, shows in front of what's bent)
+            float tf = frameHit(ro - C, rd, (kind - 3.0) * 2.0 + 5.0);
+            dp = tf > 0.0 ? ro + rd * (tf + 0.03) : p0;
         } else if (kind > 1.5) {
             dp = swallowed ? p : ro + rd * max(dot(C - ro, rd), 0.25);
         }

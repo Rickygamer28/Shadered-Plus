@@ -52,7 +52,7 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
         if (be.chamber() > 0) {
             // (in its containment chamber: as big as it reaches, its alpha a 255th at a time - as the shader reads it)
             float grow = Math.round(Math.min(1.0F, reach / BlackHoleRenderer.CHAMBER_REACH) * 255.0F) / 255.0F;
-            BlackHoleRenderer.hole(be.getBlockPos(), poseStack, buffers, 3, grow, be.colour(), items);
+            BlackHoleRenderer.hole(be.getBlockPos(), poseStack, buffers, 3 + (be.chamber() - 5) / 2, grow, be.colour(), items);
         } else {
             float grow = Math.max(0.0F, Math.min(1.0F, (reach - 0.38F) / 0.92F));
             BlackHoleRenderer.hole(be.getBlockPos(), poseStack, buffers, 2, grow, be.colour(), items);

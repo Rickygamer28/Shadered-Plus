@@ -73,15 +73,29 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         /** With the eye inside the hole's box: not hidden by what's in the box (the floor under it, say) - all of it bent. */
         static final RenderType HOLE_INSIDE = hole("skyblocks_black_hole_inside", true);
 
+        /** A singularity in its containment chamber: its colour (its depth not kept), then its shadow's depth only. */
+        static final RenderType CHAMBER = hole("skyblocks_black_hole_chamber", false, 1);
+        static final RenderType CHAMBER_INSIDE = hole("skyblocks_black_hole_chamber_inside", true, 1);
+        static final RenderType CHAMBER_DEPTH = hole("skyblocks_black_hole_chamber_depth", false, 2);
+        static final RenderType CHAMBER_DEPTH_INSIDE = hole("skyblocks_black_hole_chamber_depth_inside", true, 2);
+
         private static RenderType hole(String name, boolean inside) {
+            return hole(name, inside, 0);
+        }
+
+        /** pass: 0 colour and depth, 1 colour only, 2 its shadow's depth only. */
+        private static RenderType hole(String name, boolean inside, int pass) {
             return create(name, DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 4096,
                     false, false, CompositeState.builder()
                             .setShaderState(new ShaderStateShard(() -> shader))
                             .setTexturingState(new TexturingStateShard(name + "_copy", () -> {
-                                copyScreen();
+                                if (pass != 2) {
+                                    copyScreen();
+                                }
                                 if (shader != null) {
                                     shader.safeGetUniform("HoleTime").set(LavaLampRenderer.seconds());
                                     shader.safeGetUniform("ItemMode").set(0.0F);
+                                    shader.safeGetUniform("DepthOnly").set(pass == 2 ? 1.0F : 0.0F);
                                 }
                                 if (inside) { // (in front of everything, but its depth still written: the test on, always passing)
                                     RenderSystem.depthFunc(GL11.GL_ALWAYS);
@@ -90,9 +104,12 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                                 if (inside) {
                                     RenderSystem.depthFunc(GL11.GL_LEQUAL);
                                 }
+                                if (shader != null) {
+                                    shader.safeGetUniform("DepthOnly").set(0.0F);
+                                }
                             }))
                             .setTransparencyState(NO_TRANSPARENCY)
-                            .setWriteMaskState(COLOR_DEPTH_WRITE) // (its depth: see the shader)
+                            .setWriteMaskState(pass == 1 ? COLOR_WRITE : pass == 2 ? DEPTH_WRITE : COLOR_DEPTH_WRITE) // (its depth: see the shader)
                             .setDepthTestState(LEQUAL_DEPTH_TEST)
                             .setCullState(NO_CULL) // (both sides: still there with the eye inside the box)
                             .createCompositeState(false));
@@ -137,11 +154,11 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         return kind == 0 ? 0.62F : 0.5F;
     }
 
-    /** (kind 3, a singularity in its containment chamber: {@code grow} is its reach over CHAMBER_REACH.) */
+    /** (kinds 3, 4, 5: a singularity in its 5, 7 or 9 across containment chamber: {@code grow} is its reach over CHAMBER_REACH.) */
     static final float CHAMBER_REACH = 4.6F;
 
     static float reach(int kind, float grow) {
-        return kind == 0 ? 0.36F : kind == 1 ? 1.5F : kind == 3 ? CHAMBER_REACH * grow : 0.38F + 0.92F * grow;
+        return kind == 0 ? 0.36F : kind == 1 ? 1.5F : kind >= 3 ? CHAMBER_REACH * grow : 0.38F + 0.92F * grow;
     }
 
     /** A hole (kind 0 the small ornament, 1 the big one, 2 the singularity, {@code grow} 0..1 how full) at this block. */
@@ -185,9 +202,13 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         if (main) {
             Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
         }
-        box(buffers.getBuffer(type), poseStack.last().pose(), kind, grow, colour, seed);
-        if (main) {
-            Minecraft.getInstance().renderBuffers().bufferSource().endBatch(type);
+        if (kind >= 3) {
+            drawChamber(buffers, poseStack.last().pose(), inside, kind, grow, colour, seed);
+        } else {
+            box(buffers.getBuffer(type), poseStack.last().pose(), kind, grow, colour, seed);
+            if (main) {
+                Minecraft.getInstance().renderBuffers().bufferSource().endBatch(type);
+            }
         }
         if (after != null) {
             after.draw(poseStack, buffers);
@@ -247,9 +268,13 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                 RenderSystem.setProjectionMatrix(job.projection(), com.mojang.blaze3d.vertex.VertexSorting.DISTANCE_TO_ORIGIN);
                 stack.set(job.modelView());
                 RenderSystem.applyModelViewMatrix();
-                RenderType type = job.inside() ? Types.HOLE_INSIDE : Types.HOLE;
-                box(main.getBuffer(type), job.pose(), job.kind(), job.grow(), job.colour(), job.seed());
-                main.endBatch(type); // (each its own copy of the picture: one hole bends another)
+                if (job.kind() >= 3) {
+                    drawChamber(main, job.pose(), job.inside(), job.kind(), job.grow(), job.colour(), job.seed());
+                } else {
+                    RenderType type = job.inside() ? Types.HOLE_INSIDE : Types.HOLE;
+                    box(main.getBuffer(type), job.pose(), job.kind(), job.grow(), job.colour(), job.seed());
+                    main.endBatch(type); // (each its own copy of the picture: one hole bends another)
+                }
                 if (job.after() != null) {
                     PoseStack ps = new PoseStack();
                     ps.last().pose().set(job.pose());
@@ -292,6 +317,20 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         box(buffers.getBuffer(Types.ITEM), m, kind, grow, colour, 0.3F);
         if (buffers instanceof MultiBufferSource.BufferSource source) {
             source.endBatch(Types.ITEM);
+        }
+    }
+
+    /** A singularity in its chamber: its colour (bending what's beyond, its frames left as they are), then its shadow's depth. */
+    private static void drawChamber(MultiBufferSource buffers, Matrix4f pose, boolean inside, int kind, float grow, int colour, float seed) {
+        RenderType colourPass = inside ? Types.CHAMBER_INSIDE : Types.CHAMBER;
+        RenderType depthPass = inside ? Types.CHAMBER_DEPTH_INSIDE : Types.CHAMBER_DEPTH;
+        box(buffers.getBuffer(colourPass), pose, kind, grow, colour, seed);
+        if (buffers instanceof MultiBufferSource.BufferSource source) {
+            source.endBatch(colourPass);
+        }
+        box(buffers.getBuffer(depthPass), pose, kind, grow, colour, seed);
+        if (buffers instanceof MultiBufferSource.BufferSource source) {
+            source.endBatch(depthPass);
         }
     }
 
