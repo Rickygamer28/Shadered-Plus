@@ -142,6 +142,9 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
                         .setCullState(NO_CULL)
                         .setLightmapState(LIGHTMAP)
                         .setOverlayState(OVERLAY)
+                        // (its depth not kept: whatever order it's drawn in - some mods put everything off to be drawn
+                        // together later - the whirlpool behind the water is never hidden by it)
+                        .setWriteMaskState(COLOR_WRITE)
                         .createCompositeState(true));
 
         private Types() {
@@ -405,6 +408,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         // from the side the funnel is seen through the water, not hidden behind it
         box(source.getBuffer(Types.POOL), pose, bands.get(0), lo, lo, lo, hi, surface, hi,
                 true, -1.0F, 0.0F, light, 0.0F, 0.42F);
+        source.endBatch(Types.POOL); // (right after the whirlpool, over it)
     }
 
     /** How far from the tank's middle its wall is, this way round (the tank square, {@code half} to each side). */
