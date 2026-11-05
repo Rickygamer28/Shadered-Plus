@@ -428,10 +428,11 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         // where it lands: a low crown of foam round its foot, thinning out across the floor (s 2 and up: the shader's
         // crown - the spout's fluid, foaming; fading to nothing at its edge)
         float foot = pr[count - 1], footXi = px[count - 1];
-        float[] cr = {foot * 0.95F, foot * 1.6F, foot * 2.6F, foot * 3.8F};
-        float[] cy = {lo + 0.16F, lo + 0.07F, lo + 0.025F, lo + 0.01F};
-        float[] cs = {2.0F, 2.04F, 2.08F, 2.12F};
-        int[] ca = {0xF0, 0xD0, 0x80, 0x00};
+        // (starting right at the spout's foot: no gap between them; a little lip of splash, then thinning out)
+        float[] cr = {foot, foot * 1.45F, foot * 2.1F, foot * 2.9F};
+        float[] cy = {py[count - 1], lo + 0.09F, lo + 0.035F, lo + 0.01F};
+        float[] cs = {2.0F, 2.03F, 2.07F, 2.12F};
+        int[] ca = {0xE6, 0xC0, 0x50, 0x00};
         for (int m = 0; m < 3; m++) {
             float x0 = footXi - (float) Math.log(cr[m] / foot), x1 = footXi - (float) Math.log(cr[m + 1] / foot);
             for (int j = 0; j < SEG; j += 2) {

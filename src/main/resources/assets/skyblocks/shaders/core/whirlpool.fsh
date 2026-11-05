@@ -181,7 +181,7 @@ void tank() {
     col *= 0.9 + 0.18 * max(0.0, sin(3.0 * swirl));
     // foam: where the surface pours over the funnel's lip, and the crown round the spout's foot
     float churn = noise(vec2(cos(swirl), sin(swirl)) * 7.0 + vec2(xi * 2.0 + Time * 1.7, -Time * 1.3));
-    float foam = crown ? smoothstep(0.14, 0.0, sRaw - 2.0) * smoothstep(0.15, 0.6, churn + 0.3)
+    float foam = crown ? smoothstep(0.13, 0.02, sRaw - 2.0) * smoothstep(0.1, 0.5, churn + 0.35)
             : smoothstep(0.09, 0.0, abs(s)) * smoothstep(0.3, 0.7, churn + 0.25);
     col = mix(col * shade, foamColour(), foam * 0.85);
     fragColor = vec4(col, vertexColor.a);
