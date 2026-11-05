@@ -80,7 +80,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
             tank(be, looks, poseStack, buffers, light, seconds);
         } else if (be.still()) {
             // (a plain tank: what it holds in layers inside its frame)
-            layers(be, looks, poseStack, buffers.getBuffer(RenderType.entityTranslucent(InventoryMenu.BLOCK_ATLAS)), light, seconds,
+            layers(be, looks, poseStack, buffers.getBuffer(Types.POOL), light, seconds,
                     0.135F, 0.19F, 0.865F, 0.86F, false);
         } else {
             // (alone: it starts small at the bottom of its frame, and grows wider and taller the more it holds)
@@ -129,6 +129,21 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
                         .setWriteMaskState(COLOR_DEPTH_WRITE)
                         .createCompositeState(true));
 
+        /**
+         * The fluids' textured pieces (the pool, the plain tank's layers): like an entity's see-through skin, but drawn into
+         * the main picture - with Fabulous graphics an entity's goes to a picture of its own, mixed in afterwards by
+         * depth, and the glass round the tank came out wrong (parts of the pool missing behind it).
+         */
+        static final RenderType POOL = create("skyblocks_whirlpool_pool", DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 1536,
+                true, true, CompositeState.builder()
+                        .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_SHADER)
+                        .setTextureState(new TextureStateShard(InventoryMenu.BLOCK_ATLAS, false, false))
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .setCullState(NO_CULL)
+                        .setLightmapState(LIGHTMAP)
+                        .setOverlayState(OVERLAY)
+                        .createCompositeState(true));
+
         private Types() {
             super("", DefaultVertexFormat.POSITION, VertexFormat.Mode.QUADS, 0, false, false, () -> {}, () -> {});
         }
@@ -140,7 +155,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
             funnel(looks, rim, depth, top, poseStack, source, light);
             return;
         }
-        vortexWith(looks, rim, depth, top, poseStack, buffers.getBuffer(RenderType.entityTranslucent(InventoryMenu.BLOCK_ATLAS)), light, t);
+        vortexWith(looks, rim, depth, top, poseStack, buffers.getBuffer(Types.POOL), light, t);
     }
 
     /** (Without the shader: the funnel's rings, each band its fluid's picture.) */
@@ -298,50 +313,14 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
 
     private static void tank(WhirlpoolBlockEntity be, List<Look> looks, PoseStack poseStack, MultiBufferSource buffers, int light, float t) {
         tankInside(be, looks, poseStack, buffers, light, t);
-        if (!noShine) {
-            shine(be, poseStack, buffers);
-        }
-    }
 
-    /**
-     * The tank's glass as one pane: a couple of long highlights right across each side (whichever glass it's made of, its
-     * blocks read as one sheet).
-     */
-    /** (The render test: without the highlights.) */
-    public static boolean noShine;
-
-    private static void shine(WhirlpoolBlockEntity be, PoseStack poseStack, MultiBufferSource buffers) {
-        int r = (be.tank() - 1) / 2;
-        float a = -(r - 1), b = r, out = 0.006F;
-        VertexConsumer v = buffers.getBuffer(RenderType.lightning());
-        org.joml.Matrix4f m = poseStack.last().pose();
-        float span = b - a;
-        // each side: (its plane's fixed coordinate, which axis, which way out)
-        float[][] sides = {{-r - out, 0, -1}, {r + 1 + out, 0, 1}, {-r - out, 1, -1}, {r + 1 + out, 1, 1}};
-        for (float[] side : sides) {
-            for (int k = 0; k < 2; k++) {
-                float w = k == 0 ? 0.32F * span : 0.1F * span, at = k == 0 ? 0.18F * span : 0.62F * span;
-                int alpha = k == 0 ? 0x16 : 0x12;
-                // a band from lower left to upper right, clipped to the side
-                float x0 = a + at, x1 = x0 + w;
-                float[][] quad = {{x0, a}, {x1, a}, {Math.min(b, x1 + span * 0.55F), b}, {Math.min(b, x0 + span * 0.55F), b}};
-                for (int pass = 0; pass < 2; pass++) { // (both ways round: seen from outside or in)
-                    for (int i = 0; i < 4; i++) {
-                        float[] q = quad[pass == 0 ? i : 3 - i];
-                        float along = Math.max(a, Math.min(b, q[0]));
-                        float x = side[1] == 0 ? side[0] : along, z = side[1] == 0 ? along : side[0];
-                        v.addVertex(m, x, q[1], z).setColor(255, 255, 255, alpha);
-                    }
-                }
-            }
-        }
     }
 
     private static void tankInside(WhirlpoolBlockEntity be, List<Look> looks, PoseStack poseStack, MultiBufferSource buffers, int light, float t) {
         int r = (be.tank() - 1) / 2;
         float inset = 0.01F;
         if (be.still()) {
-            layers(be, looks, poseStack, buffers.getBuffer(RenderType.entityTranslucent(InventoryMenu.BLOCK_ATLAS)), light, t,
+            layers(be, looks, poseStack, buffers.getBuffer(Types.POOL), light, t,
                     -(r - 1) + inset, -(r - 1) + inset, r - inset, r - inset, false);
             return;
         }
@@ -424,7 +403,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         source.endBatch(Types.FUNNEL);
         // the pool's sides against the glass and its floor (the outermost fluid), see-through - drawn after the funnel, so
         // from the side the funnel is seen through the water, not hidden behind it
-        box(source.getBuffer(RenderType.entityTranslucent(InventoryMenu.BLOCK_ATLAS)), pose, bands.get(0), lo, lo, lo, hi, surface, hi,
+        box(source.getBuffer(Types.POOL), pose, bands.get(0), lo, lo, lo, hi, surface, hi,
                 true, -1.0F, 0.0F, light, 0.0F, 0.42F);
     }
 
