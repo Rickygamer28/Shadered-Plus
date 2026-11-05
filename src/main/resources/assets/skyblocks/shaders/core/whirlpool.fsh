@@ -22,6 +22,9 @@ uniform vec4 Tint5;
 // where each band ends, down the funnel (0..1); EdgesB.z: how many bands
 uniform vec4 EdgesA;
 uniform vec4 EdgesB;
+// x: how many times its pictures go round it (6 alone; more round a tank's big funnel, so they're about a block across);
+// y: how dark its throat (1 alone, a hole; 0 in a tank, where it pours on down as a spout - s past 1: how far down that)
+uniform vec4 Shape;
 
 in vec2 texCoord0;
 in vec4 vertexColor;
@@ -66,11 +69,12 @@ vec3 fluid(int i, vec2 local) {
 void main() {
     float a = texCoord0.x * TAU;
     float s = texCoord0.y;
-    float r = max(1.0 - s * 0.93, 0.07);
-    float inward = log(1.0 / r); // (0 at its rim, growing fast towards its throat)
+    float r = max(1.0 - min(s, 1.0) * 0.93, 0.07);
+    float inward = log(1.0 / r) + max(s - 1.0, 0.0); // (0 at its rim, growing fast towards its throat, on down a spout)
     // the spiral: turning as one, twisted a fixed amount further in; the picture sliding in along it
     float swirl = a + Time * 1.1 + 2.2 * inward;
-    vec2 local = vec2(swirl / TAU * 6.0, inward * 2.2 - Time * 0.7);
+    float k = Shape.x / 6.0;
+    vec2 local = vec2(swirl / TAU * Shape.x, (inward * 2.2 - Time * 0.7) * k);
     // which band: stirred along the spiral where they meet
     int count = int(EdgesB.z + 0.5);
     // (made of whole turns of the spiral: no seam where the funnel's way round starts again)
@@ -100,7 +104,7 @@ void main() {
     }
     // lighter arms winding down it, and dark in its throat
     col *= 0.88 + 0.22 * max(0.0, sin(3.0 * swirl));
-    col *= mix(1.0, 0.2, smoothstep(0.82, 1.0, s));
+    col *= mix(1.0, 0.2, smoothstep(0.82, 1.0, s) * Shape.y);
     // foam where the surface pours over the funnel's lip (s round 0: its rim, a splash ring), white, churning
     float churn = noise(vec2(cos(swirl), sin(swirl)) * 6.0 + vec2(Time * 1.7, -Time * 1.3));
     float foam = smoothstep(0.09, 0.0, abs(s)) * smoothstep(0.3, 0.7, churn + 0.25);
