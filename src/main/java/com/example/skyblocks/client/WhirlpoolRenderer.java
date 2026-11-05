@@ -298,13 +298,18 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
 
     private static void tank(WhirlpoolBlockEntity be, List<Look> looks, PoseStack poseStack, MultiBufferSource buffers, int light, float t) {
         tankInside(be, looks, poseStack, buffers, light, t);
-        shine(be, poseStack, buffers);
+        if (!noShine) {
+            shine(be, poseStack, buffers);
+        }
     }
 
     /**
      * The tank's glass as one pane: a couple of long highlights right across each side (whichever glass it's made of, its
      * blocks read as one sheet).
      */
+    /** (The render test: without the highlights.) */
+    public static boolean noShine;
+
     private static void shine(WhirlpoolBlockEntity be, PoseStack poseStack, MultiBufferSource buffers) {
         int r = (be.tank() - 1) / 2;
         float a = -(r - 1), b = r, out = 0.006F;
