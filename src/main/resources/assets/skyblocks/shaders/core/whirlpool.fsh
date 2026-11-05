@@ -53,10 +53,12 @@ float noise(vec2 p) {
     return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
 }
 
-// one band's fluid at this point of its picture (wrapped inside its rectangle), lit
+// one band's fluid at this point of its picture (wrapped inside its rectangle), lit - its mipmap level chosen from how
+// fast the unwrapped picture moves across the screen, not the wrapped one (no line of blurred texture where it wraps)
 vec3 fluid(int i, vec2 local) {
     vec4 r = rectOf(i);
-    vec4 c = texture(Sampler0, mix(r.xy, r.zw, fract(local)));
+    vec2 size = r.zw - r.xy;
+    vec4 c = textureGrad(Sampler0, r.xy + size * fract(local), dFdx(local) * size, dFdy(local) * size);
     vec4 t = tintOf(i);
     return c.rgb * t.rgb * mix(lightColor.rgb, vec3(1.0), t.a);
 }
