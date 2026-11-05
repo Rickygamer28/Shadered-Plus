@@ -96,8 +96,11 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
     static ShaderInstance shader;
     /** (This whirlpool's bands, for the shader: their pictures' rectangles, tints, where each ends; how many.) */
     private static final float[] RECTS = new float[24], TINTS = new float[24], EDGES = new float[8];
-    /** (Its shape, for the shader: how many times its fluids' pictures go round it; how dark its throat is.) */
-    private static final float[] SHAPE = {6.0F, 1.0F};
+    /**
+     * (Its shape, for the shader: how many times its fluids' pictures go round it; how dark its throat is; 1: turning
+     * like water, faster further in - else as one.)
+     */
+    private static final float[] SHAPE = {6.0F, 1.0F, 0.0F};
 
     @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
@@ -123,7 +126,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
                                 }
                                 shader.safeGetUniform("EdgesA").set(EDGES[0], EDGES[1], EDGES[2], EDGES[3]);
                                 shader.safeGetUniform("EdgesB").set(EDGES[4], EDGES[5], EDGES[6], EDGES[7]);
-                                shader.safeGetUniform("Shape").set(SHAPE[0], SHAPE[1], 0.0F, 0.0F);
+                                shader.safeGetUniform("Shape").set(SHAPE[0], SHAPE[1], SHAPE[2], 0.0F);
                             }
                         }, () -> {}))
                         .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
@@ -233,6 +236,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         // (nothing else flushed: only its own batch, drawn at once below with this whirlpool's uniforms)
         SHAPE[0] = 6.0F;
         SHAPE[1] = 1.0F;
+        SHAPE[2] = 0.0F;
         VertexConsumer v = source.getBuffer(Types.FUNNEL);
         funnelMesh(v, poseStack.last(), 0.5F, 0.5F, rim, 0.035F, depth, top, light, RINGS, 2, 0.5F);
         source.endBatch(Types.FUNNEL);
@@ -371,6 +375,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         float around = Math.max(6.0F, Math.round((float) (Math.PI * 2 * width * 0.33F) / 1.2F));
         SHAPE[0] = around;
         SHAPE[1] = 0.0F;
+        SHAPE[2] = 1.0F;
         float darken = 0.3F, throatShade = 1.0F - darken;
         VertexConsumer v = source.getBuffer(Types.FUNNEL);
         // its surface: from the walls (s -1) in to the funnel's lip (s 0), round it (the same pieces round as the funnel:

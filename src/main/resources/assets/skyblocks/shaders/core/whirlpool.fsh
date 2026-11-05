@@ -57,50 +57,79 @@ float noise(vec2 p) {
 }
 
 // one band's fluid at this point of its picture (wrapped inside its rectangle), lit - its mipmap level chosen from how
-// fast the unwrapped picture moves across the screen, not the wrapped one (no line of blurred texture where it wraps)
-vec3 fluid(int i, vec2 local) {
+// fast the unwrapped picture moves across the screen (dx, dy: worked out where every pixel does it), not the wrapped
+// one (no line of blurred texture where it wraps)
+vec3 fluid(int i, vec2 local, vec2 dx, vec2 dy) {
     vec4 r = rectOf(i);
     vec2 size = r.zw - r.xy;
-    vec4 c = textureGrad(Sampler0, r.xy + size * fract(local), dFdx(local) * size, dFdy(local) * size);
+    vec4 c = textureGrad(Sampler0, r.xy + size * fract(local), dx * size, dy * size);
     vec4 t = tintOf(i);
     return c.rgb * t.rgb * mix(lightColor.rgb, vec3(1.0), t.a);
 }
+
+// which band this pixel is in, and how much of each neighbour is mixed in
+int band;
+float wPrev;
+float wNext;
+
+vec3 mixed(vec2 local) {
+    vec2 dx = dFdx(local), dy = dFdy(local);
+    vec3 col = fluid(band, local, dx, dy);
+    // (a neighbour's picture only looked up where it's mixed in)
+    if (wPrev > 0.002) {
+        col = mix(col, fluid(band - 1, local, dx, dy), wPrev * 0.5);
+    }
+    if (wNext > 0.002) {
+        col = mix(col, fluid(band + 1, local, dx, dy), wNext * 0.5);
+    }
+    return col;
+}
+
+// (in a tank: how long each of the two pictures flows before fading out for the other, starting again)
+const float PERIOD = 2.0;
 
 void main() {
     float a = texCoord0.x * TAU;
     float s = texCoord0.y;
     float r = max(1.0 - min(s, 1.0) * 0.93, 0.07);
     float inward = log(1.0 / r) + max(s - 1.0, 0.0); // (0 at its rim, growing fast towards its throat, on down a spout)
-    // the spiral: turning as one, twisted a fixed amount further in; the picture sliding in along it
-    float swirl = a + Time * 1.1 + 2.2 * inward;
     float k = Shape.x / 6.0;
-    vec2 local = vec2(swirl / TAU * Shape.x, (inward * 2.2 - Time * 0.7) * k);
+    // in a tank, it turns like water does: slowly out at the walls, faster and faster further in (alone: as one)
+    bool flowing = Shape.z > 0.5;
+    float spin = flowing ? 0.12 + 0.9 * pow(clamp(inward + 0.66, 0.0, 3.3), 1.3) : 1.1;
+    // the spiral's pattern (its arms, where its bands meet, its foam): turning as one, twisted a fixed amount further in
+    float swirl = a + Time * (flowing ? 0.6 : 1.1) + 2.2 * inward;
     // which band: stirred along the spiral where they meet
     int count = int(EdgesB.z + 0.5);
     // (made of whole turns of the spiral: no seam where the funnel's way round starts again)
     float stir = (sin(swirl * 3.0 + inward * 5.0 - Time * 0.9) * 0.55 + sin(swirl * 5.0 - inward * 3.0 + Time * 0.6) * 0.3
             + (noise(vec2(cos(swirl), sin(swirl)) * 2.5 + vec2(inward * 3.0 - Time * 0.45)) - 0.5) * 0.6) * 0.09;
     float sb = clamp(s + stir, 0.0, 0.999);
-    int band = 0;
+    band = 0;
     for (int i = 0; i < 5; i++) {
         if (i < count - 1 && sb > edgeOf(i)) {
             band = i + 1;
         }
     }
-    vec3 col = fluid(band, local);
     // soft into the neighbours on either side
-    // (a neighbour's picture only looked up where it's mixed in)
-    if (band > 0) {
-        float w = 1.0 - smoothstep(0.0, 0.06, sb - edgeOf(band - 1));
-        if (w > 0.002) {
-            col = mix(col, fluid(band - 1, local), w * 0.5);
+    wPrev = band > 0 ? 1.0 - smoothstep(0.0, 0.06, sb - edgeOf(band - 1)) : 0.0;
+    wNext = band < count - 1 ? 1.0 - smoothstep(0.0, 0.06, edgeOf(band) - sb) : 0.0;
+    // the fluids' pictures flowing round and in along it. Alone: turning as one. In a tank, each part at its own speed -
+    // which would wind the picture tighter and tighter for ever, so two copies of it take turns: each flows for a while
+    // from where it started, fading in and out again, while the other (half a turn behind) takes over
+    vec3 col = vec3(0.0);
+    for (int i = 0; i < 2; i++) {
+        float t = Time, w = 1.0;
+        if (flowing) {
+            float ph = fract(Time / PERIOD + 0.5 * float(i));
+            w = 1.0 - abs(2.0 * ph - 1.0);
+            t = ph * PERIOD;
+        } else if (i > 0) {
+            break;
         }
-    }
-    if (band < count - 1) {
-        float w = 1.0 - smoothstep(0.0, 0.06, edgeOf(band) - sb);
-        if (w > 0.002) {
-            col = mix(col, fluid(band + 1, local), w * 0.5);
-        }
+        // (the second copy shifted, round and along: the two never the same picture)
+        float sw = a + spin * t + 2.2 * inward + 2.4 * float(i);
+        col += w * mixed(vec2(sw / TAU * Shape.x, (inward * 2.2 - 0.7 * t) * k + 0.5 * float(i)));
     }
     // lighter arms winding down it, and dark in its throat
     col *= 0.88 + 0.22 * max(0.0, sin(3.0 * swirl));
