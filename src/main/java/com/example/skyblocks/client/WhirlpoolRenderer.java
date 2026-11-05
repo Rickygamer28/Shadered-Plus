@@ -97,10 +97,10 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
     /** (This whirlpool's bands, for the shader: their pictures' rectangles, tints, where each ends; how many.) */
     private static final float[] RECTS = new float[24], TINTS = new float[24], EDGES = new float[8];
     /**
-     * (Its shape, for the shader: how many times its fluids' pictures go round it; how dark its throat is; 1: turning
-     * like water, faster further in - else as one.)
+     * (Its shape, for the shader: alone, 6 times its fluids' pictures round it, its throat dark; in a tank (z 1) see
+     * tankWhirlpool and the shader's tank().)
      */
-    private static final float[] SHAPE = {6.0F, 1.0F, 0.0F};
+    private static final float[] SHAPE = {6.0F, 1.0F, 0.0F, 0.0F};
 
     @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
@@ -126,7 +126,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
                                 }
                                 shader.safeGetUniform("EdgesA").set(EDGES[0], EDGES[1], EDGES[2], EDGES[3]);
                                 shader.safeGetUniform("EdgesB").set(EDGES[4], EDGES[5], EDGES[6], EDGES[7]);
-                                shader.safeGetUniform("Shape").set(SHAPE[0], SHAPE[1], SHAPE[2], 0.0F);
+                                shader.safeGetUniform("Shape").set(SHAPE[0], SHAPE[1], SHAPE[2], SHAPE[3]);
                             }
                         }, () -> {}))
                         .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
@@ -237,6 +237,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         SHAPE[0] = 6.0F;
         SHAPE[1] = 1.0F;
         SHAPE[2] = 0.0F;
+        SHAPE[3] = 0.0F;
         VertexConsumer v = source.getBuffer(Types.FUNNEL);
         funnelMesh(v, poseStack.last(), 0.5F, 0.5F, rim, 0.035F, depth, top, light, RINGS, 2, 0.5F);
         source.endBatch(Types.FUNNEL);
@@ -317,11 +318,6 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         return 0xE6000000 | (g << 16) | (g << 8) | g;
     }
 
-    private static int shadeOf(float k) {
-        int g = (int) (255 * Math.min(1.0F, k));
-        return 0xE6000000 | (g << 16) | (g << 8) | g;
-    }
-
     private static void funnelVertex(VertexConsumer v, PoseStack.Pose pose, float x, float y, float z, float u, float w, int argb, int light) {
         v.addVertex(pose, x, y, z).setUv(u, w).setColor(argb).setLight(light);
     }
@@ -370,16 +366,15 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         float throatY = lo + height * 0.14F, throat = Math.max(0.07F, width * 0.035F);
         PoseStack.Pose pose = poseStack.last();
         List<Look> bands = bands(looks);
-        // (its fluids' pictures about a block across round its lip, however big; no dark hole at its throat: it pours on down)
-        // (set by the tank's size, not how full it is: its pictures don't jump as it fills)
-        float around = Math.max(6.0F, Math.round((float) (Math.PI * 2 * width * 0.33F) / 1.2F));
-        SHAPE[0] = around;
+        // (for the shader: its pictures at most 32 times round, out at the walls; how far out its furthest corner is)
+        float far = half * 1.45F;
+        SHAPE[0] = 32.0F;
         SHAPE[1] = 0.0F;
         SHAPE[2] = 1.0F;
-        float darken = 0.3F, throatShade = 1.0F - darken;
+        SHAPE[3] = far;
         VertexConsumer v = source.getBuffer(Types.FUNNEL);
-        // its surface: from the walls (s -1) in to the funnel's lip (s 0), round it (the same pieces round as the funnel:
-        // no cracks where they meet)
+        // its surface: from the walls (s -1) in to the funnel's lip (s 0), round it - flat, so how far in (xi) is
+        // log(lip / how far out)
         int rings = 8;
         for (int j = 0; j < SEG; j++) {
             float ca0 = COS[j], sa0 = SIN[j], ca1 = COS[j + 1], sa1 = SIN[j + 1];
@@ -388,56 +383,64 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
             for (int m = 0; m < rings; m++) {
                 float f0 = (float) m / rings, f1 = (float) (m + 1) / rings;
                 float ra0 = w0 + (rim - w0) * f0, rb0 = w0 + (rim - w0) * f1, ra1 = w1 + (rim - w1) * f0, rb1 = w1 + (rim - w1) * f1;
-                int c = 0xD8FFFFFF;
-                funnelVertex(v, pose, 0.5F + ra0 * ca0, surface, 0.5F + ra0 * sa0, u0, f0 - 1.0F, c, light);
-                funnelVertex(v, pose, 0.5F + rb0 * ca0, surface, 0.5F + rb0 * sa0, u0, f1 - 1.0F, c, light);
-                funnelVertex(v, pose, 0.5F + rb1 * ca1, surface, 0.5F + rb1 * sa1, u1, f1 - 1.0F, c, light);
-                funnelVertex(v, pose, 0.5F + ra1 * ca1, surface, 0.5F + ra1 * sa1, u1, f0 - 1.0F, c, light);
+                tankVertex(v, pose, ra0, ca0, sa0, surface, u0, (float) Math.log(rim / ra0), 1.0F, f0 - 1.0F, far, 0xD8, light);
+                tankVertex(v, pose, rb0, ca0, sa0, surface, u0, (float) Math.log(rim / rb0), 1.0F, f1 - 1.0F, far, 0xD8, light);
+                tankVertex(v, pose, rb1, ca1, sa1, surface, u1, (float) Math.log(rim / rb1), 1.0F, f1 - 1.0F, far, 0xD8, light);
+                tankVertex(v, pose, ra1, ca1, sa1, surface, u1, (float) Math.log(rim / ra1), 1.0F, f0 - 1.0F, far, 0xD8, light);
             }
         }
-        // the funnel, from the lip down to its throat
-        funnelMesh(v, pose, 0.5F, 0.5F, rim, throat, surface - throatY, surface, light, 20, 1, darken);
-        // the spout: the funnel going on down from its throat to the floor, one surface with it (its pictures carrying on
-        // down it, twisting - s past 1: how far down, so they're about a block apart), flaring out where it lands
-        float drop = throatY - lo;
-        int pieces = Math.max(4, Math.round(drop * 3.0F));
-        float perBlock = 1.0F / (2.2F * around / 6.0F);
-        float[] sr = new float[pieces + 1], sy = new float[pieces + 1], ss = new float[pieces + 1];
-        for (int k = 0; k <= pieces; k++) {
-            float f = (float) k / pieces;
-            sy[k] = throatY - drop * f;
-            sr[k] = throat * (1.0F - 0.3F * f + 0.9F * (float) Math.pow(f, 8));
-            ss[k] = 1.0F + drop * f * perBlock;
+        // the funnel from its lip down to its throat, then on down as the spout to the floor, flaring where it lands: one
+        // surface turned round its middle, its profile worked out here - how far out, how high, which band (s), how
+        // light, and how far in along it (xi: each bit of the way over how far out it is there)
+        int funnelRings = 20, drop = Math.max(4, Math.round((throatY - lo) * 3.0F));
+        int count = funnelRings + drop + 1;
+        float[] pr = new float[count], py = new float[count], ps = new float[count], pl = new float[count], px = new float[count];
+        float darken = 0.3F;
+        for (int k = 0; k <= funnelRings; k++) {
+            float u = (float) k / funnelRings;
+            pr[k] = throat + (rim - throat) * (float) Math.pow(1.0 - u, 1.4);
+            py[k] = surface - (surface - throatY) * (float) Math.pow(u, 1.8);
+            ps[k] = u;
+            pl[k] = 1.0F - darken * u;
         }
-        for (int k = 0; k < pieces; k++) {
-            // (from the throat's shade, lighter towards the floor)
-            int c0 = shadeOf(throatShade + (1.0F - throatShade) * 0.5F * k / pieces);
-            int c1 = shadeOf(throatShade + (1.0F - throatShade) * 0.5F * (k + 1) / pieces);
+        for (int k = 1; k <= drop; k++) {
+            float f = (float) k / drop;
+            int i = funnelRings + k;
+            py[i] = throatY - (throatY - lo) * f;
+            pr[i] = throat * (1.0F - 0.3F * f + 0.9F * (float) Math.pow(f, 8));
+            ps[i] = 1.0F;
+            pl[i] = 1.0F - darken + darken * 0.5F * f; // (lighter towards the floor)
+        }
+        for (int k = 1; k < count; k++) {
+            float dr = pr[k] - pr[k - 1], dy = py[k] - py[k - 1];
+            px[k] = px[k - 1] + (float) Math.sqrt(dr * dr + dy * dy) / ((pr[k] + pr[k - 1]) * 0.5F);
+        }
+        for (int k = 0; k < count - 1; k++) {
             for (int j = 0; j < SEG; j++) {
                 float ca0 = COS[j], sa0 = SIN[j], ca1 = COS[j + 1], sa1 = SIN[j + 1];
                 float u0 = (float) j / SEG, u1 = (float) (j + 1) / SEG;
-                funnelVertex(v, pose, 0.5F + sr[k] * ca0, sy[k], 0.5F + sr[k] * sa0, u0, ss[k], c0, light);
-                funnelVertex(v, pose, 0.5F + sr[k + 1] * ca0, sy[k + 1], 0.5F + sr[k + 1] * sa0, u0, ss[k + 1], c1, light);
-                funnelVertex(v, pose, 0.5F + sr[k + 1] * ca1, sy[k + 1], 0.5F + sr[k + 1] * sa1, u1, ss[k + 1], c1, light);
-                funnelVertex(v, pose, 0.5F + sr[k] * ca1, sy[k], 0.5F + sr[k] * sa1, u1, ss[k], c0, light);
+                tankVertex(v, pose, pr[k], ca0, sa0, py[k], u0, px[k], pl[k], ps[k], far, 0xE6, light);
+                tankVertex(v, pose, pr[k + 1], ca0, sa0, py[k + 1], u0, px[k + 1], pl[k + 1], ps[k + 1], far, 0xE6, light);
+                tankVertex(v, pose, pr[k + 1], ca1, sa1, py[k + 1], u1, px[k + 1], pl[k + 1], ps[k + 1], far, 0xE6, light);
+                tankVertex(v, pose, pr[k], ca1, sa1, py[k], u1, px[k], pl[k], ps[k], far, 0xE6, light);
             }
         }
-        // where it lands: a low crown of foam round its foot, thinning out across the floor (s round 0: the shader's
-        // foam; fading to nothing at its edge)
-        float foot = sr[pieces];
+        // where it lands: a low crown of foam round its foot, thinning out across the floor (s 2 and up: the shader's
+        // crown - the spout's fluid, foaming; fading to nothing at its edge)
+        float foot = pr[count - 1], footXi = px[count - 1];
         float[] cr = {foot * 0.95F, foot * 1.6F, foot * 2.6F, foot * 3.8F};
         float[] cy = {lo + 0.16F, lo + 0.07F, lo + 0.025F, lo + 0.01F};
-        float[] cs = {0.0F, -0.03F, -0.06F, -0.09F};
+        float[] cs = {2.0F, 2.04F, 2.08F, 2.12F};
         int[] ca = {0xF0, 0xD0, 0x80, 0x00};
         for (int m = 0; m < 3; m++) {
-            int k0 = (ca[m] << 24) | 0xFFFFFF, k1 = (ca[m + 1] << 24) | 0xFFFFFF;
+            float x0 = footXi - (float) Math.log(cr[m] / foot), x1 = footXi - (float) Math.log(cr[m + 1] / foot);
             for (int j = 0; j < SEG; j += 2) {
                 float c0 = COS[j], s0 = SIN[j], c1 = COS[j + 2], s1 = SIN[j + 2];
                 float u0 = (float) j / SEG, u1 = (float) (j + 2) / SEG;
-                funnelVertex(v, pose, 0.5F + cr[m + 1] * c0, cy[m + 1], 0.5F + cr[m + 1] * s0, u0, cs[m + 1], k1, light);
-                funnelVertex(v, pose, 0.5F + cr[m] * c0, cy[m], 0.5F + cr[m] * s0, u0, cs[m], k0, light);
-                funnelVertex(v, pose, 0.5F + cr[m] * c1, cy[m], 0.5F + cr[m] * s1, u1, cs[m], k0, light);
-                funnelVertex(v, pose, 0.5F + cr[m + 1] * c1, cy[m + 1], 0.5F + cr[m + 1] * s1, u1, cs[m + 1], k1, light);
+                tankVertex(v, pose, cr[m + 1], c0, s0, cy[m + 1], u0, x1, 1.0F, cs[m + 1], far, ca[m + 1], light);
+                tankVertex(v, pose, cr[m], c0, s0, cy[m], u0, x0, 1.0F, cs[m], far, ca[m], light);
+                tankVertex(v, pose, cr[m], c1, s1, cy[m], u1, x0, 1.0F, cs[m], far, ca[m], light);
+                tankVertex(v, pose, cr[m + 1], c1, s1, cy[m + 1], u1, x1, 1.0F, cs[m + 1], far, ca[m + 1], light);
             }
         }
         source.endBatch(Types.FUNNEL);
@@ -446,6 +449,18 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         box(source.getBuffer(Types.POOL), pose, bands.get(0), lo, lo, lo, hi, surface, hi,
                 true, -1.0F, 0.0F, light, 0.0F, 0.42F);
         source.endBatch(Types.POOL); // (right after the whirlpool, over it)
+    }
+
+    /**
+     * One point of the whirlpool in its tank, {@code r} out from its middle this way round ({@code c}, {@code sn}), for
+     * the shader: round it ({@code u}), how far in along it ({@code xi}); in its colour how light, which band ({@code s}),
+     * how far out (of {@code far}), how see-through.
+     */
+    private static void tankVertex(VertexConsumer v, PoseStack.Pose pose, float r, float c, float sn, float y, float u, float xi,
+                                   float shade, float s, float far, int alpha, int light) {
+        int red = Math.round(255 * Math.min(1.0F, shade)), green = Math.round(255 * Math.max(0.0F, Math.min(1.0F, (s + 1.0F) / 3.2F))),
+                blue = Math.round(255 * Math.min(1.0F, r / far));
+        v.addVertex(pose, 0.5F + r * c, y, 0.5F + r * sn).setUv(u, xi).setColor(red, green, blue, alpha).setLight(light);
     }
 
     /** How far from the tank's middle its wall is, this way round (the tank square, {@code half} to each side). */
