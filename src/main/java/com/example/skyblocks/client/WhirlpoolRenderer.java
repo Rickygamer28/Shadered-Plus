@@ -613,7 +613,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
 
     private static void vertex(VertexConsumer v, PoseStack.Pose pose, float x, float y, float z, TextureAtlasSprite sprite, float u, float w,
                                int argb, int light) {
-        v.vertex(pose.pose(), x, y, z).color(argb).uv(sprite.getU(Math.min(1.0F, u)), sprite.getV(Math.min(1.0F, w)))
+        v.vertex(pose.pose(), x, y, z).color(argb).uv(sprite.getU(16.0F * Math.min(1.0F, u)), sprite.getV(16.0F * Math.min(1.0F, w)))
                 .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(pose.normal(), 0.0F, 1.0F, 0.0F).endVertex();
     }
 

@@ -105,7 +105,7 @@ public class MagmaBasinBlock extends BaseEntityBlock {
         // like a magma block: it burns what stands in it (not sneaking players, not the fire-proof)
         if (!entity.isSteppingCarefully() && entity instanceof LivingEntity && !entity.fireImmune()) {
             entity.hurt(level.damageSources().hotFloor(), 1.0F);
-            entity.igniteForSeconds(3.0F);
+            entity.setSecondsOnFire(3);
         }
         super.stepOn(level, pos, state, entity);
     }

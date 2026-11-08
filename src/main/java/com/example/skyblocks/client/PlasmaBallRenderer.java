@@ -148,7 +148,7 @@ public class PlasmaBallRenderer implements BlockEntityRenderer<GlowColourBlockEn
         for (int[] f : faces) {
             for (int k : f) {
                 vc.vertex(m, (k & 1) != 0 ? x1 : x0, (k & 2) != 0 ? y1 : y0, (k & 4) != 0 ? z1 : z0)
-                        .uv(k, seed).color(r, g, b, a).normal(tx.normal(), ty, tz).endVertex();
+                        .uv(k, seed).color(r, g, b, a).normal(tx, ty, tz).endVertex();
             }
         }
     }

@@ -278,7 +278,8 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
         if (known != null) {
             return known;
         }
-        java.util.UUID id = net.minecraft.core.UUIDUtil.getOrCreatePlayerUUID(profile);
+        java.util.UUID id = profile.getId() != null ? profile.getId() : java.util.UUID.nameUUIDFromBytes(
+                ("OfflinePlayer:" + profile.getName()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
         Skin skin = new Skin(net.minecraft.client.resources.DefaultPlayerSkin.getDefaultSkin(id),
                 "slim".equals(net.minecraft.client.resources.DefaultPlayerSkin.getSkinModelName(id)));
         try {

@@ -233,8 +233,7 @@ public class TeslaCoilRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         net.minecraft.world.level.block.SoundType sound = st.getSoundType();
         if (sound == net.minecraft.world.level.block.SoundType.METAL || sound == net.minecraft.world.level.block.SoundType.COPPER
                 || sound == net.minecraft.world.level.block.SoundType.ANVIL || sound == net.minecraft.world.level.block.SoundType.CHAIN
-                || sound == net.minecraft.world.level.block.SoundType.LANTERN || sound == net.minecraft.world.level.block.SoundType.NETHERITE_BLOCK
-                || sound == net.minecraft.world.level.block.SoundType.COPPER_BULB || sound == net.minecraft.world.level.block.SoundType.COPPER_GRATE) {
+                || sound == net.minecraft.world.level.block.SoundType.LANTERN || sound == net.minecraft.world.level.block.SoundType.NETHERITE_BLOCK) {
             metal = true;
         }
         if (!metal) {

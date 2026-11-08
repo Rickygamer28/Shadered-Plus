@@ -5,7 +5,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -668,7 +667,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
     }
 
     /** Itself as an item, keeping everything it holds (broken, it doesn't spill out: it goes with it, like a shulker box). */
-    public ItemStack asItem(HolderLookup.Provider registries) {
+    public ItemStack asItem() {
         ItemStack stack = new ItemStack(ModItems.SINGULARITY.get());
         if (!entries.isEmpty() || !destroy.isEmpty() || !destroyTags.isEmpty() || vacuum || colour != 0x9A6BFF) {
             CompoundTag tag = saveWithoutMetadata();

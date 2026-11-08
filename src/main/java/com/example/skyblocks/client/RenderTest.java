@@ -24,7 +24,7 @@ import net.minecraftforge.fml.common.Mod;
  */
 @Mod.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public final class RenderTest {
-    private static final boolean ON = System.getenv("SKYBLOCKS_RENDER_TEST") != null;
+    static final boolean ON = System.getenv("SKYBLOCKS_RENDER_TEST") != null;
     private static final String TAG = System.getenv().getOrDefault("SKYBLOCKS_RENDER_TEST", "x");
     private static int stage = 0;
     private static int ticks = 0;

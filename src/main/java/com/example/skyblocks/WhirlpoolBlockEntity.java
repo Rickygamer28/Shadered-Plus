@@ -5,7 +5,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -565,7 +564,7 @@ public class WhirlpoolBlockEntity extends BlockEntity {
     }
 
     /** Itself as an item, keeping what it holds. */
-    public ItemStack asItem(HolderLookup.Provider registries) {
+    public ItemStack asItem() {
         ItemStack stack = new ItemStack(ModItems.WHIRLPOOL.get());
         if (!entries.isEmpty() || !voided.isEmpty() || !voidTags.isEmpty() || drain || still) {
             CompoundTag tag = saveWithoutMetadata();

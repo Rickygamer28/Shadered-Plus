@@ -117,7 +117,7 @@ public class WhirlpoolBlock extends BaseEntityBlock {
     public List<ItemStack> getDrops(BlockState state, LootParams.Builder params) {
         BlockEntity be = params.getOptionalParameter(LootContextParams.BLOCK_ENTITY);
         if (be instanceof WhirlpoolBlockEntity w && be.getLevel() != null) {
-            return List.of(w.asItem(be.getLevel().registryAccess()));
+            return List.of(w.asItem());
         }
         return List.of(new ItemStack(this));
     }
@@ -126,7 +126,7 @@ public class WhirlpoolBlock extends BaseEntityBlock {
     public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide && player.isCreative() && level.getBlockEntity(pos) instanceof WhirlpoolBlockEntity be && !be.isEmpty()) {
             net.minecraft.world.entity.item.ItemEntity item = new net.minecraft.world.entity.item.ItemEntity(level, pos.getX() + 0.5, pos.getY() + 0.5,
-                    pos.getZ() + 0.5, be.asItem(level.registryAccess()));
+                    pos.getZ() + 0.5, be.asItem());
             item.setDefaultPickUpDelay();
             level.addFreshEntity(item);
         }

@@ -124,7 +124,7 @@ public class SingularityBlock extends BaseEntityBlock {
     public List<ItemStack> getDrops(BlockState state, LootParams.Builder params) {
         BlockEntity be = params.getOptionalParameter(LootContextParams.BLOCK_ENTITY);
         if (be instanceof SingularityBlockEntity s && be.getLevel() != null) {
-            return List.of(s.asItem(be.getLevel().registryAccess()));
+            return List.of(s.asItem());
         }
         return List.of(new ItemStack(this));
     }
@@ -134,7 +134,7 @@ public class SingularityBlock extends BaseEntityBlock {
         // (creative: no drops - but not losing what it held either)
         if (!level.isClientSide && player.isCreative() && level.getBlockEntity(pos) instanceof SingularityBlockEntity be && !be.isEmpty()) {
             net.minecraft.world.entity.item.ItemEntity item = new net.minecraft.world.entity.item.ItemEntity(level, pos.getX() + 0.5, pos.getY() + 0.5,
-                    pos.getZ() + 0.5, be.asItem(level.registryAccess()));
+                    pos.getZ() + 0.5, be.asItem());
             item.setDefaultPickUpDelay();
             level.addFreshEntity(item);
         }
