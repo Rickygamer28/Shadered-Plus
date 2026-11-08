@@ -183,8 +183,8 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
     public HologramRenderer(BlockEntityRendererProvider.Context context) {}
 
     @Override
-    public void render(HologramBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
-        buffers = DrawNow.into(buffers); // (Iris's: drawn later, together - each hologram drawn now, in its own colour)
+    public void render(HologramBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource given, int light, int overlay) {
+        MultiBufferSource buffers = DrawNow.into(given); // (Iris's: drawn later, together - each hologram drawn now, in its own colour)
         int c = com.example.skyblocks.GlowColourBlockEntity.shown(be, LavaLampRenderer.seconds());
         float r = ((c >> 16) & 255) / 255.0F, g = ((c >> 8) & 255) / 255.0F, b = (c & 255) / 255.0F;
         ItemStack stack = be.shown();
