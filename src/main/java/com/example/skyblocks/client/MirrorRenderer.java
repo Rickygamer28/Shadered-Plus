@@ -115,6 +115,8 @@ public final class MirrorRenderer {
 
     /** (The render test: every portal drawn from its last pictures, as if its other end were far away.) */
     public static boolean forceFarPortals;
+    /** (The render test: what the last frame did with the mirrors.) */
+    public static String lastFrameInfo = "";
 
     /** The server's list of portal mirrors changed: the walls found again. */
     public static void portalsChanged() {
@@ -720,6 +722,20 @@ public final class MirrorRenderer {
             }
             LAST_DRAWN.clear();
             LAST_DRAWN.addAll(drawnNow);
+            if (RenderTest.ON) { // (the render test's frame-by-frame look at the mirrors: what each frame did)
+                StringBuilder sb = new StringBuilder();
+                sb.append("visible ").append(visible.size()).append(", pictures ").append(all.size()).append(", drawn now ").append(chosen.size());
+                for (Node node : all) {
+                    int[] o = OCCLUSION.get(node.wall);
+                    sb.append(String.format(java.util.Locale.ROOT, "%n    %s depth %d valid %b chosen %b rect %s area %.4f scale %.2f age %d occ %s face %b",
+                            node.wall, node.depth, node.valid, chosen.contains(node), java.util.Arrays.toString(node.rect), node.area, scaleFor(node),
+                            frame - node.renderedFrame, o == null ? "-" : o[1] + "/" + o[2], drawnNow.contains(node.wall)));
+                }
+                for (Wall w : FAR_WALLS.keySet()) {
+                    sb.append("\n    far ").append(w);
+                }
+                lastFrameInfo = sb.toString();
+            }
             if (overlay != null && dumpOverlay) {
                 dump(com.example.skyblocks.client.iris.IrisIslandTarget.overlayTarget(), "shaderedplus_mirror_overlay.png");
             }

@@ -110,7 +110,40 @@ public final class RenderTest {
     /** Where the player stands for each picture: x y z yaw pitch ("night " first: at night). */
     private static net.minecraft.core.BlockPos clickAt;
     private static long timedFrames, timedFrom;
-    private static final String[] SPOTS = {"0.5 -60 -6.5 0 15", "itemswhole 0.5 -60 -6.5 0 15", "0.5 -60 1.6 0 20", "night 0.5 -60 1.6 0 20", "0.5 -59 5.6 0 40", "night 0.5 -59 5.6 0 40", "0.5 -59.5 8.5 0 8", "night 0.5 -59.5 8.5 0 8", "-2.5 -59.3 10.4 0 30", "-4 -58 18.3 0 55", "night -4 -58 18.3 0 55", "rain -4 -58 18.3 0 55", "4.5 -58 18.3 0 55", "night 4.5 -58 18.3 0 55", "night 0.5 -57 20.5 0 -8", "0.5 -59 27 0 10", "night 0.5 -59 27 0 10", "-4 -59.5 33.3 0 15", "3 -59.5 33.3 0 15", "-4.3 -59.4 34.7 0 22", "3.3 -59.4 34.7 0 22", "2.5 -59.6 12.3 0 23", "1 -59.3 2.9 0 45", "-3 -60 40 0 30", "1 -59.5 39.5 0 10", "night 1 -59.5 39.5 0 10", "-5.5 -60 45 0 5", "0.5 -59.5 52 0 12", "9 -55.5 45 0 6", "-30.5 -57 1 0 10", "-12.6 -58.9 10.1 0 10", "click -12 -60 10 -11.5 -60 8 0 25", "open 3 -60 -3 3.5 -60 -5.5 0 20", "open -12 -60 4 -11.5 -60 2 0 25", "-2 -60 -6.2 0 28", "-5 -59.5 -7.6 0 12", "1 -60 -10.5 180 5", "night 1 -60 -10.5 180 5", "1 -60 -10.5 180 5", "farportal 1 -60 -10.5 180 5", "farportal 3.6 -60 -11.8 160 5", "farportal -1.8 -60 -11.5 200 5", "20.5 -59 -15.5 180 8", "night 20.5 -59 -15.5 180 8", "22.4 -57.2 -20.2 160 22", "20.5 -60 -21.2 180 -12", "20.5 -59.5 -20.2 180 -18", "62.5 -59 -16 180 8", "62.5 -51 -20.5 180 72", "72.5 -45 -11 180 45", "fabulous 72.5 -45 -11 180 45", "81 -45 -14 136 45", "fabulous 81 -45 -14 136 45", "fabulous 72.5 -51 -21.5 180 80", "fabulous 72.5 -57 -17.9 180 -5", "72.5 -60 -17.8 180 -14", "75.5 -60 -17.8 205 -8", "72.5 -59 -20.3 180 35", "74 -59 -20.5 220 10", "62.5 -59 -30 0 8", "69 -59 -22.5 90 8", "56 -59 -22.5 -90 8", "67 -60 -18 135 2", "57.5 -57 -28 -45 20", "58.5 -59 -11.5 180 40", "open 58 -60 -14 58.5 -60 -11.5 180 30", "41.5 -59 -42.5 18 -42", "43.5 -59 -43 37 -30", "40.5 -59 -39.2 0 -88", "40.5 -59 -43.2 0 -18", "42.4 -59 -39.5 70 -40", "42.9 -59 -39.5 70 -40", "43.4 -59 -39.5 70 -40", "37.5 -59 -42.6 -35 -8", "nodepth 41.5 -59 -42.5 18 -42", "nodepth 43.5 -59 -43 37 -30", "38 -59 -33 175 -20", "night 11.5 -60 -8 0 5", "11.5 -59 3.5 -45 15", "11.5 -59 3.5 -45 -25", "10.5 -59.6 -7.8 0 8", "-12.5 -59.3 2.7 0 38", "-12.5 -59.0 5.6 0 15", "night -12.5 -59.0 5.6 0 15", "-17 -59 16 -10 0", "-17 -59 16 10 0"};
+    private static final String[] SPOTS = {"0.5 -60 -6.5 0 15", "itemswhole 0.5 -60 -6.5 0 15", "0.5 -60 1.6 0 20", "night 0.5 -60 1.6 0 20", "0.5 -59 5.6 0 40", "night 0.5 -59 5.6 0 40", "0.5 -59.5 8.5 0 8", "night 0.5 -59.5 8.5 0 8", "-2.5 -59.3 10.4 0 30", "-4 -58 18.3 0 55", "night -4 -58 18.3 0 55", "rain -4 -58 18.3 0 55", "4.5 -58 18.3 0 55", "night 4.5 -58 18.3 0 55", "night 0.5 -57 20.5 0 -8", "0.5 -59 27 0 10", "night 0.5 -59 27 0 10", "-4 -59.5 33.3 0 15", "3 -59.5 33.3 0 15", "-4.3 -59.4 34.7 0 22", "3.3 -59.4 34.7 0 22", "2.5 -59.6 12.3 0 23", "1 -59.3 2.9 0 45", "-3 -60 40 0 30", "1 -59.5 39.5 0 10", "night 1 -59.5 39.5 0 10", "-5.5 -60 45 0 5", "0.5 -59.5 52 0 12", "9 -55.5 45 0 6", "-30.5 -57 1 0 10", "-12.6 -58.9 10.1 0 10", "click -12 -60 10 -11.5 -60 8 0 25", "open 3 -60 -3 3.5 -60 -5.5 0 20", "open -12 -60 4 -11.5 -60 2 0 25", "-2 -60 -6.2 0 28", "-5 -59.5 -7.6 0 12", "1 -60 -10.5 180 5", "night 1 -60 -10.5 180 5", "1 -60 -10.5 180 5", "farportal 1 -60 -10.5 180 5", "farportal 3.6 -60 -11.8 160 5", "farportal -1.8 -60 -11.5 200 5", "20.5 -59 -15.5 180 8", "night 20.5 -59 -15.5 180 8", "22.4 -57.2 -20.2 160 22", "20.5 -60 -21.2 180 -12", "20.5 -59.5 -20.2 180 -18", "62.5 -59 -16 180 8", "62.5 -51 -20.5 180 72", "72.5 -45 -11 180 45", "fabulous 72.5 -45 -11 180 45", "81 -45 -14 136 45", "fabulous 81 -45 -14 136 45", "fabulous 72.5 -51 -21.5 180 80", "fabulous 72.5 -57 -17.9 180 -5", "72.5 -60 -17.8 180 -14", "75.5 -60 -17.8 205 -8", "72.5 -59 -20.3 180 35", "74 -59 -20.5 220 10", "62.5 -59 -30 0 8", "69 -59 -22.5 90 8", "56 -59 -22.5 -90 8", "67 -60 -18 135 2", "57.5 -57 -28 -45 20", "58.5 -59 -11.5 180 40", "open 58 -60 -14 58.5 -60 -11.5 180 30", "41.5 -59 -42.5 18 -42", "43.5 -59 -43 37 -30", "40.5 -59 -39.2 0 -88", "40.5 -59 -43.2 0 -18", "42.4 -59 -39.5 70 -40", "42.9 -59 -39.5 70 -40", "43.4 -59 -39.5 70 -40", "37.5 -59 -42.6 -35 -8", "nodepth 41.5 -59 -42.5 18 -42", "nodepth 43.5 -59 -43 37 -30", "38 -59 -33 175 -20", "night 11.5 -60 -8 0 5", "11.5 -59 3.5 -45 15", "11.5 -59 3.5 -45 -25", "10.5 -59.6 -7.8 0 8", "-12.5 -59.3 2.7 0 38", "-12.5 -59.0 5.6 0 15", "night -12.5 -59.0 5.6 0 15", "-17 -59 16 -10 0", "-17 -59 16 10 0", "burst 1 -56 -2 180 10", "burst 1 -53 8 180 12", "burst 1 -50 20 180 13", "burst move 1 -56 -2 180 10", "burst move 1 -53 8 180 12", "farportal burst 1 -53 8 180 12", "farportal burst move 1 -53 8 180 12"};
+
+    private static boolean burst, moving, burstOn;
+    private static int burstFrame;
+
+    /**
+     * A burst spot: every frame (not every tick) for a while, the middle of the screen saved and what the mirrors did
+     * written to the log - a picture that flickers shows up as one frame unlike the ones either side of it.
+     */
+    @SubscribeEvent
+    public static void onRenderTestFrame(net.neoforged.neoforge.client.event.RenderFrameEvent.Post event) {
+        if (!ON || !burstOn) {
+            if (!burstOn) {
+                burstFrame = 0;
+            }
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        int spot = stage - 2;
+        try (com.mojang.blaze3d.platform.NativeImage full = Screenshot.takeScreenshot(mc.getMainRenderTarget())) {
+            int cw = Math.min(full.getWidth(), 640), ch = Math.min(full.getHeight(), 400);
+            int x0 = (full.getWidth() - cw) / 2, y0 = (full.getHeight() - ch) / 2;
+            try (com.mojang.blaze3d.platform.NativeImage crop = new com.mojang.blaze3d.platform.NativeImage(cw, ch, false)) {
+                full.resizeSubRectTo(x0, y0, cw, ch, crop);
+                java.io.File dir = new java.io.File(mc.gameDirectory, "screenshots");
+                dir.mkdirs();
+                crop.writeToFile(new java.io.File(dir, String.format(java.util.Locale.ROOT, "rendertest_%s_%d_f%02d.png", TAG, spot, burstFrame)));
+            }
+        } catch (Exception ex) {
+            SkyBlocksMod.LOGGER.warn("Shadered+ render test: burst frame failed", ex);
+        }
+        SkyBlocksMod.LOGGER.info("Shadered+ render test: burst {} frame {}: {}", spot, burstFrame, MirrorRenderer.lastFrameInfo);
+        burstFrame++;
+    }
 
     private static void run(MinecraftServer server, String command) {
         server.execute(() -> {
@@ -180,6 +213,14 @@ public final class RenderTest {
                             if (farPortal) {
                                 where = where.substring("farportal ".length());
                             }
+                            burst = where.startsWith("burst ");
+                            if (burst) {
+                                where = where.substring("burst ".length());
+                            }
+                            moving = where.startsWith("move ");
+                            if (moving) {
+                                where = where.substring("move ".length());
+                            }
                             if (where.startsWith("itemswhole ")) {
                                 where = where.substring("itemswhole ".length());
                             }
@@ -240,6 +281,16 @@ public final class RenderTest {
                                     cbe, cbe instanceof com.example.skyblocks.SolarSystemBlockEntity b ? b.dome() : null,
                                     cbe instanceof com.example.skyblocks.SolarSystemBlockEntity b2 ? b2.speed() : null);
                         }
+                        if (burst && ticks == 2 && mc.player != null) { // (flying: standing still in the air)
+                            mc.player.getAbilities().flying = true;
+                            mc.player.onUpdateAbilities();
+                        }
+                        if (moving && ticks >= 50 && ticks < 100 && mc.player != null) {
+                            // (walking sideways, as a player would: the camera between ticks follows smoothly)
+                            mc.player.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+                            mc.player.setPos(mc.player.getX() + 0.12, mc.player.getY(), mc.player.getZ());
+                        }
+                        burstOn = burst && ticks >= 70 && ticks < 100;
                         if (ticks == 60) {
                             WorldTiming.force = true;
                             timedFrames = WorldTiming.frames;

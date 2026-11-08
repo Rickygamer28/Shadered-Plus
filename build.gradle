@@ -43,6 +43,13 @@ dependencies {
     // only for running the game from Gradle (and the CI load test), not part of our jar
     runtimeOnly "maven.modrinth:shadered:${shadered_version}"
     runtimeOnly "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
+    // (the CI render test's second run: with Sodium and Iris, no shader pack - versions found on Modrinth by the CI)
+    if (project.hasProperty('sodiumVersion')) {
+        runtimeOnly "maven.modrinth:sodium:${project.sodiumVersion}"
+    }
+    if (project.hasProperty('irisVersion')) {
+        runtimeOnly "maven.modrinth:iris:${project.irisVersion}"
+    }
 }
 
 tasks.withType(ProcessResources).configureEach {

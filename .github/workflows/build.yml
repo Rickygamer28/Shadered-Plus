@@ -72,21 +72,29 @@ jobs:
           set +e
           sudo apt-get update -qq && sudo apt-get install -y -qq xvfb mesa-utils libgl1-mesa-dri > /dev/null
           export LIBGL_ALWAYS_SOFTWARE=1 MESA_GL_VERSION_OVERRIDE=4.5
-          (SKYBLOCKS_RENDER_TEST=plain xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient --no-daemon > client.log 2>&1 &)
-          for i in $(seq 1 160); do
-            sleep 5
-            if grep -qE "render test done|Crash report saved|BUILD FAILED" client.log; then sleep 5; break; fi
+          # the newest Sodium and Iris for NeoForge 1.21.1 (the second run: with them, no shader pack)
+          SODIUM=$(curl -s 'https://api.modrinth.com/v2/project/sodium/version?loaders=%5B%22neoforge%22%5D&game_versions=%5B%221.21.1%22%5D' | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['version_number'])")
+          IRIS=$(curl -s 'https://api.modrinth.com/v2/project/iris/version?loaders=%5B%22neoforge%22%5D&game_versions=%5B%221.21.1%22%5D' | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['version_number'])")
+          echo "::notice::sodium $SODIUM, iris $IRIS"
+          for v in plain sodium; do
+            EXTRA=""; [ $v = sodium ] && EXTRA="-PsodiumVersion=$SODIUM -PirisVersion=$IRIS"
+            (SKYBLOCKS_RENDER_TEST=$v xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient $EXTRA --no-daemon > client_$v.log 2>&1 &)
+            for i in $(seq 1 200); do
+              sleep 5
+              if grep -qE "render test done|Crash report saved|BUILD FAILED" client_$v.log; then sleep 5; break; fi
+            done
+            pkill -f "runClient|DevLaunch|minecraft" ; sleep 5
+            echo "::notice::render test $v: $(grep -E 'render test|Shadered\+ shaders after' client_$v.log | grep -v 'burst' | head -25 | sed ':a;N;$!ba;s/\n/%0A/g' | cut -c1-5000)"
           done
-          pkill -f "runClient|DevLaunch|minecraft" ; sleep 5
-          echo "::notice::render test: $(grep -E 'render test|Shadered\+ shaders after' client.log | head -25 | sed ':a;N;$!ba;s/\n/%0A/g' | cut -c1-5000)"
+          cp client_plain.log client.log
           grep -E "skyblocks|Shadered\+|mixin.*(fail|error)|Exception|ERROR|FATAL|Caused by" client.log \
             | grep -vE "DEBUG|Mixin subsystem|SpongePowered MIXIN|Narrator|narrator|OpenAL|ALSA|Failed to load library|realms|Realms|telemetry" \
             | awk '!seen[$0]++' | head -45 > summary.txt
           split -l 15 summary.txt cli_
           for f in $(ls cli_* 2>/dev/null | head -3); do echo "::notice::$(sed ':a;N;$!ba;s/\n/%0A/g' $f | cut -c1-7000)"; done
           mkdir -p shots && cp run/screenshots/rendertest_*.png shots/ 2>/dev/null
-          cp client.log shots/render.log; cp server.log shots/server.log 2>/dev/null
-          echo "::notice::screenshots: $(ls shots | tr '\n' ' ')"
+          cp client.log shots/render.log; cp client_sodium.log shots/render_sodium.log; cp server.log shots/server.log 2>/dev/null
+          echo "::notice::screenshots: $(ls shots | grep -v _f | tr '\n' ' ')"
           cd shots && git init -q && git checkout -q -b ci-shots-1.21.1 && git add . \
             && git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "render test ${GITHUB_SHA}" \
             && git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" ci-shots-1.21.1
