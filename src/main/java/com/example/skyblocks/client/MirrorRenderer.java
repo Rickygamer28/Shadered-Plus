@@ -106,6 +106,8 @@ public final class MirrorRenderer {
     private static final List<com.example.skyblocks.PortalMirrors.Portal> PORTALS = new ArrayList<>();
     /** A portal seen this frame (Sodium: its chunk search without occlusion culling then, mixin/sodium). */
     private static volatile boolean portalInView;
+    /** Last frame's portals' other ends (Sodium's chunk search: MirrorCulling's bridges). */
+    private static final List<Vec3> LAST_BRIDGES = new ArrayList<>();
 
     /** The wall whose front a node's picture shows: a mirror's own, a portal's linked one. */
     private static Wall viewWall(Wall w) {
@@ -664,7 +666,30 @@ public final class MirrorRenderer {
         kept.addAll(LAST_VIEWS);
         LAST_VIEWS.clear();
         LAST_VIEWS.addAll(views);
-        MirrorCulling.set(kept, cam);
+        // (Sodium's chunk search only goes outwards from you, through sections in some view: a portal's other end, off
+        // to one side or behind you, was never reached - its ground missing from the picture, coming and going as you
+        // moved. A line of sections from you to each portal's other end joins them up: MirrorCulling)
+        List<Vec3> bridges = new ArrayList<>();
+        for (Node node : all) {
+            Link link = LINKS.get(node.wall);
+            if (link != null && !bridges.contains(link.to())) {
+                bridges.add(link.to());
+            }
+        }
+        for (Map.Entry<Wall, Link> e : LINKS.entrySet()) { // (a portal's picture being taken: its other end too)
+            if (!SNAPSHOT_VIEWS.isEmpty() && WALLS.containsKey(e.getKey()) && !bridges.contains(e.getValue().to())) {
+                bridges.add(e.getValue().to());
+            }
+        }
+        List<Vec3> keptBridges = new ArrayList<>(bridges);
+        for (Vec3 b : LAST_BRIDGES) {
+            if (!keptBridges.contains(b)) {
+                keptBridges.add(b);
+            }
+        }
+        LAST_BRIDGES.clear();
+        LAST_BRIDGES.addAll(bridges);
+        MirrorCulling.set(kept, cam, keptBridges);
         Matrix4fStack stack = RenderSystem.getModelViewStack();
         stack.pushMatrix();
         stack.set(view); // (the camera's turn; at this stage it may not be in RenderSystem's model-view yet)
