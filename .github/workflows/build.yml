@@ -72,9 +72,24 @@ jobs:
           set +e
           sudo apt-get update -qq && sudo apt-get install -y -qq xvfb mesa-utils libgl1-mesa-dri > /dev/null
           export LIBGL_ALWAYS_SOFTWARE=1 MESA_GL_VERSION_OVERRIDE=4.5
-          # the newest Sodium 0.6 (what Iris 1.8 is made for) and Iris for NeoForge 1.21.1 (the second run: with them, no shader pack)
-          SODIUM=$(curl -s 'https://api.modrinth.com/v2/project/sodium/version?loaders=%5B%22neoforge%22%5D&game_versions=%5B%221.21.1%22%5D' | python3 -c "import json,sys; print([v['version_number'] for v in json.load(sys.stdin) if '-0.6.' in v['version_number']][0])")
-          IRIS=$(curl -s 'https://api.modrinth.com/v2/project/iris/version?loaders=%5B%22neoforge%22%5D&game_versions=%5B%221.21.1%22%5D' | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['version_number'])")
+          # Sodium 0.6 and the newest Iris made for it, for NeoForge 1.21.1 (the second run: with them, no shader pack)
+          cat > pick.py <<'PY'
+          import json, sys, urllib.request
+          q = '?loaders=%5B%22neoforge%22%5D&game_versions=%5B%221.21.1%22%5D'
+          get = lambda p: json.load(urllib.request.urlopen('https://api.modrinth.com/v2/project/' + p + '/version' + q))
+          allsodium = get('sodium')
+          sodium = {v['id']: v['version_number'] for v in allsodium if '-0.6.' in v['version_number']}
+          newest06 = [v['version_number'] for v in allsodium if '-0.6.' in v['version_number']][0]
+          iris = get('iris')
+          for v in iris:
+              for d in v.get('dependencies', []):
+                  if d.get('version_id') in sodium:
+                      print(sodium[d['version_id']], v['version_number']); sys.exit()
+          # (no exact pairing listed: the newest Iris from before Sodium moved past 0.6)
+          later = min([v['date_published'] for v in allsodium if '-0.6.' not in v['version_number'] and '-0.5.' not in v['version_number']] or ['9999'])
+          print(newest06, [v['version_number'] for v in iris if v['date_published'] < later][0])
+          PY
+          read SODIUM IRIS < <(sed 's/^          //' pick.py | python3)
           echo "::notice::sodium $SODIUM, iris $IRIS"
           for v in plain sodium; do
             EXTRA=""; [ $v = sodium ] && EXTRA="-PsodiumVersion=$SODIUM -PirisVersion=$IRIS"
