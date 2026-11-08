@@ -133,3 +133,21 @@
   method name and event type: two @SubscribeEvent methods with the same four (e.g. nested `Shaders.register
   (RegisterShadersEvent)` in several renderers of one package) collide and only one of them ever runs. Give every
   listener a unique class-or-method name (e.g. registerKoiPondRenderer). NeoForge 1.21.1 doesn't have this.
+
+## 1.20.1 catch-up 3 (8 Nov 2026)
+- Everything from 1.21.1 since c6514bb (up to the singularity chamber / near-plane fixes on iris-paintings) ported:
+  plasma ball, magma basin, black holes, tesla coil, galaxy projector, kaleidoscope, orrery / planetarium, small
+  tanks, portal mirrors (live and far pictures), containment frames + singularity (menu, display / port / monitor /
+  redstone frames), tank frames + whirlpool, hologram players / mobs, the new render test scene.
+- Packets on the SimpleChannel: 6 SolarSystemClick, 7 PortalCross, 8 Whirlpool, 9 Singularity action (to server),
+  10 Singularity contents, 11 PortalList (to client). SingularityMenu: ForgeRegistries.MENU_TYPES + IForgeMenuType,
+  NetworkHooks.openScreen; capabilities through each block entity's getCapability (ForgeCapabilities).
+- Forge FluidStack: FluidName / Amount NBT, getDisplayName, new FluidStack(stack, n); common tags are forge:
+  (forge:glass_panes in the kaleidoscope recipe, Tags.Blocks.GLASS for the whirlpool's tank walls).
+- New shaders: "attributes" in format order, blend for whirlpool (alpha) and galaxy projector (add); black hole,
+  plasma ball, magma basin, kaleidoscope, small tank, solar system take ViewRot out like the older ones (black hole and
+  solar system also in their fragment shaders, where they project points back on screen). Items drawn in the world:
+  LampInv = pose^-1 * ViewRot (lava lamp and jelly tank had only pose^-1: wrong for items in frames / on the ground).
+- Screens: 1.20.1 Screen.render doesn't draw the background (render calls renderBackground(g)); 3-argument
+  mouseScrolled; TextureAtlasSprite.getU/getV take 0..16.
+- Hologram players: skin from SkinManager.getInsecureSkinInformation + registerTexture (DefaultPlayerSkin otherwise).
