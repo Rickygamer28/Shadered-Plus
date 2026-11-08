@@ -32,8 +32,8 @@ import org.joml.Matrix4f;
  */
 public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity> {
     static ShaderInstance shader;
-    /** This hologram's colour (each is drawn at once, so each can have its own). */
-    private static final float[] COLOUR = {0.3F, 0.9F, 1.0F};
+    /** This hologram's colour, 5 bits a channel (each colour its own render types: right whenever the batch is drawn). */
+    private static int colourKey;
 
     @Mod.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
@@ -46,17 +46,31 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
     }
 
     abstract static class Types extends RenderType {
-        private static final java.util.Map<ResourceLocation, RenderType> BY_TEXTURE = new java.util.HashMap<>();
+        private record Key(ResourceLocation texture, int colour) {}
 
-        /** The hologram look, on a texture (the block atlas for most items; their own for chests, shields, heads ...). */
+        /** (Kept to the last few hundred used: a rainbow hologram goes through many colours.) */
+        private static final java.util.Map<Key, RenderType> BY_TEXTURE = new java.util.LinkedHashMap<>(64, 0.75F, true) {
+            @Override
+            protected boolean removeEldestEntry(java.util.Map.Entry<Key, RenderType> eldest) {
+                return size() > 512;
+            }
+        };
+
+        /**
+         * The hologram look, on a texture (the block atlas for most items; their own for chests, shields, heads ...), in
+         * the colour being drawn now. 1.20.1: the colour is part of the render type (with Embeddium a hologram's batch
+         * can be drawn after the next one has set a shared colour).
+         */
         static RenderType holo(ResourceLocation texture) {
-            return BY_TEXTURE.computeIfAbsent(texture, tex -> create("skyblocks_hologram", DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 262144,
+            int key = colourKey;
+            float cr = ((key >> 10) & 31) / 31.0F, cg = ((key >> 5) & 31) / 31.0F, cb = (key & 31) / 31.0F;
+            return BY_TEXTURE.computeIfAbsent(new Key(texture, key), k -> create("skyblocks_hologram", DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 262144,
                     false, true, CompositeState.builder()
                             .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
-                            .setTextureState(new TextureStateShard(tex, false, false))
+                            .setTextureState(new TextureStateShard(k.texture(), false, false))
                             .setTexturingState(new TexturingStateShard("skyblocks_hologram_look", () -> {
                                 if (shader != null) {
-                                    shader.safeGetUniform("HoloColor").set(COLOUR[0], COLOUR[1], COLOUR[2]);
+                                    shader.safeGetUniform("HoloColor").set(cr, cg, cb);
                                     shader.safeGetUniform("HoloTime").set(LavaLampRenderer.seconds());
                                 }
                             }, () -> {}))
@@ -190,6 +204,8 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
         }
     }
 
+    private static final java.util.Set<String> LOGGED_BUFFERS = new java.util.HashSet<>();
+
     public HologramRenderer(BlockEntityRendererProvider.Context context) {}
 
     @Override
@@ -209,9 +225,10 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
         if (!be.showing() || shader == null) {
             return;
         }
-        COLOUR[0] = r;
-        COLOUR[1] = g;
-        COLOUR[2] = b;
+        colourKey = (Math.round(r * 31.0F) << 10) | (Math.round(g * 31.0F) << 5) | Math.round(b * 31.0F);
+        if (RenderTest.ON && LOGGED_BUFFERS.add(buffers.getClass().getName())) {
+            SkyBlocksMod.LOGGER.info("Shadered+ render test: hologram buffers {}", buffers.getClass().getName());
+        }
         // whatever it draws with: the hologram look on that same texture (chests, shields, heads, skins: their own)
         java.util.Set<RenderType> used = new java.util.LinkedHashSet<>();
         java.util.List<AtlasGuard> guards = new java.util.ArrayList<>();
