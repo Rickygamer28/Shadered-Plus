@@ -2,6 +2,7 @@ package com.example.skyblocks.mixin.sodium;
 
 import com.example.skyblocks.client.MirrorCulling;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
@@ -12,6 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * ground missing in the picture, coming and going as you moved). While a portal is in view the search may go every
  * way - only through sections some view sees (yours, a mirror's, or the line to a portal's other end: MirrorCulling).
  */
+@Pseudo
 @Mixin(targets = "me.jellysquid.mods.sodium.client.render.chunk.occlusion.OcclusionCuller", remap = false)
 public abstract class SodiumPortalSearchMixin {
     @Inject(method = "getOutwardDirections", at = @At("RETURN"), cancellable = true, require = 0)
