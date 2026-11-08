@@ -148,7 +148,8 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
 
     /** How far the black hole reaches (blocks from its middle): in a chamber, growing to fill it as it fills. */
     public float reach() {
-        return chamber > 0 ? chamber * 0.5F * (0.45F + 0.55F * fullness()) : 0.38F + 0.92F * fullness();
+        // (in its chamber: inside it, never reaching through its walls - up to just short of the frames' inner faces)
+        return chamber > 0 ? (chamber * 0.5F - 1.0F) * 0.97F * (0.45F + 0.55F * fullness()) : 0.38F + 0.92F * fullness();
     }
 
     // ---- the containment chamber ----

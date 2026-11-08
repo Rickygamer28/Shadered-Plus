@@ -69,13 +69,13 @@ float frameHit(vec3 o, vec3 d, float size, float m) {
     return best < 1.0e8 ? best : -1.0;
 }
 
-// whether the point (relative to the middle) is in one of the chamber's frames
-bool inFrame(vec3 q, float size) {
+// whether the point (relative to the middle) is in the chamber's shell: its edges, or anything on its sides (a floor
+// of frames, say) - the chamber's walls, as the depth shows them: not bent
+bool inShell(vec3 q, float size) {
     float r = (size - 1.0) * 0.5;
     vec3 a = abs(q);
     if (any(greaterThan(a, vec3(r + 0.52)))) return false;
-    vec3 rim = step(vec3(r - 0.52), a);
-    return rim.x + rim.y + rim.z >= 2.0;
+    return max(a.x, max(a.y, a.z)) >= r - 0.52;
 }
 
 // what's drawn so far at this screen position (-1..1), as a point in the block's space
@@ -92,7 +92,7 @@ bool frameNear(vec2 nd, mat4 inv, float size) {
     vec3 C = vec3(0.5);
     for (int j = 0; j < 9; j++) {
         vec2 o = vec2(float(j % 3) - 1.0, float(j / 3) - 1.0) * 1.75;
-        if (inFrame(sceneAt(nd + o * px, inv) - C, size)) {
+        if (inShell(sceneAt(nd + o * px, inv) - C, size)) {
             return true;
         }
     }
@@ -142,7 +142,7 @@ void main() {
             mat4 pm3 = ProjMat * ModelViewMat;
             vec4 ownC = pm3 * vec4(origin + ro + rd * 4.0, 1.0);
             vec3 here = sceneAt(ownC.xy / max(ownC.w, 1e-4), inverse(pm3));
-            if (inFrame(here - C, size3)) frameT = dot(here - ro, rd);
+            if (inShell(here - C, size3)) frameT = dot(here - ro, rd);
         } else {
             float f = frameHit(ro - C, rd, size3, 0.0);
             if (f >= 0.0) frameT = f;
@@ -278,21 +278,31 @@ void main() {
                 nd = clip.xy / max(clip.w, 1e-4);
             }
             if (kind > 2.5) {
-                // (the point looked up still behind a frame from the eye: this pixel's own, not bent - no frame's
-                // picture bent round the hole)
-                // (worked out from where the frames are - a little wider than they are, for their edge pixels - and,
-                // if there's a copy of the depth, from what's really drawn there too)
-                bool frameThere = HasDepth > 0.5 && frameNear(nd, inverse(pm), (kind - 3.0) * 2.0 + 5.0);
-                {
-                    vec4 back = inverse(pm) * vec4(nd, clip.z / max(clip.w, 1e-4), 1.0);
-                    vec3 xl = back.xyz / back.w - origin;
-                    vec3 toX = xl - ro;
-                    float L = length(toX);
-                    frameThere = frameThere || frameHit(ro - C, toX / max(L, 1e-4), (kind - 3.0) * 2.0 + 5.0, 0.06) >= 0.0;
-                }
-                if (frameThere) { // (the screen there shows a frame)
-                    vec4 own = pm * vec4(eyeW + rd * 4.0, 1.0);
-                    nd = own.xy / max(own.w, 1e-4);
+                // (the point looked up a frame - the screen shows one there, or one stands in the way from the eye: no
+                // frame's picture bent round the hole. Not this pixel's own instead (a patch of the view unbent, with a
+                // hard edge): as much of the bend as lands clear of the frames - between the straight view, never on
+                // one here, and the bent one)
+                float size = (kind - 3.0) * 2.0 + 5.0;
+                mat4 ipm = inverse(pm);
+                vec4 back = ipm * vec4(nd, clip.z / max(clip.w, 1e-4), 1.0);
+                vec3 xl = back.xyz / back.w - origin;
+                if ((HasDepth > 0.5 && frameNear(nd, ipm, size)) || frameHit(ro - C, normalize(xl - ro), size, 0.06) >= 0.0) {
+                    vec3 far = origin + xl;
+                    float lo = 0.0, hi = 1.0;
+                    for (int k = 0; k < 6; k++) {
+                        float m = 0.5 * (lo + hi);
+                        vec3 at = mix(straight, far, m);
+                        vec4 cm = pm * vec4(at, 1.0);
+                        vec2 ndm = cm.xy / max(cm.w, 1e-4);
+                        bool frame = (HasDepth > 0.5 && frameNear(ndm, ipm, size)) || frameHit(ro - C, normalize(at - eyeW), size, 0.06) >= 0.0;
+                        if (frame) {
+                            hi = m;
+                        } else {
+                            lo = m;
+                        }
+                    }
+                    vec4 cl = pm * vec4(mix(straight, far, lo), 1.0);
+                    nd = cl.xy / max(cl.w, 1e-4);
                 }
             }
             bg = texture(Sampler0, clamp(nd * 0.5 + 0.5, vec2(0.001), vec2(0.999))).rgb;
