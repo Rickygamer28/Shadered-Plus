@@ -103,6 +103,8 @@ public final class MirrorRenderer {
     private static final List<com.example.skyblocks.PortalMirrors.Portal> PORTALS = new ArrayList<>();
     /** A portal seen this frame (Sodium: its chunk search without occlusion culling then, mixin/sodium). */
     private static volatile boolean portalInView;
+    /** Last frame's portals' other ends (Sodium's chunk search: MirrorCulling's bridges). */
+    private static final List<Vec3> LAST_BRIDGES = new ArrayList<>();
 
     /** The wall whose front a node's picture shows: a mirror's own, a portal's linked one. */
     private static Wall viewWall(Wall w) {
@@ -112,6 +114,8 @@ public final class MirrorRenderer {
 
     /** (The render test: every portal drawn from its last pictures, as if its other end were far away.) */
     public static boolean forceFarPortals;
+    /** (The render test: what the last frame did with the mirrors.) */
+    public static String lastFrameInfo = "";
 
     /** The server's list of portal mirrors changed: the walls found again. */
     public static void portalsChanged() {
@@ -669,7 +673,30 @@ public final class MirrorRenderer {
         kept.addAll(LAST_VIEWS);
         LAST_VIEWS.clear();
         LAST_VIEWS.addAll(views);
-        MirrorCulling.set(kept, cam);
+        // (Sodium's chunk search only goes outwards from you, through sections in some view: a portal's other end, off
+        // to one side or behind you, was never reached - its ground missing from the picture, coming and going as you
+        // moved. A line of sections from you to each portal's other end joins them up: MirrorCulling)
+        List<Vec3> bridges = new ArrayList<>();
+        for (Node node : all) {
+            Link link = LINKS.get(node.wall);
+            if (link != null && !bridges.contains(link.to())) {
+                bridges.add(link.to());
+            }
+        }
+        for (Map.Entry<Wall, Link> e : LINKS.entrySet()) { // (a portal's picture being taken: its other end too)
+            if (!SNAPSHOT_VIEWS.isEmpty() && WALLS.containsKey(e.getKey()) && !bridges.contains(e.getValue().to())) {
+                bridges.add(e.getValue().to());
+            }
+        }
+        List<Vec3> keptBridges = new ArrayList<>(bridges);
+        for (Vec3 b : LAST_BRIDGES) {
+            if (!keptBridges.contains(b)) {
+                keptBridges.add(b);
+            }
+        }
+        LAST_BRIDGES.clear();
+        LAST_BRIDGES.addAll(bridges);
+        MirrorCulling.set(kept, cam, keptBridges);
         PoseStack stack = RenderSystem.getModelViewStack();
         stack.pushPose();
         stack.setIdentity();
@@ -728,6 +755,20 @@ public final class MirrorRenderer {
             }
             LAST_DRAWN.clear();
             LAST_DRAWN.addAll(drawnNow);
+            if (RenderTest.ON) { // (the render test's frame-by-frame look at the mirrors: what each frame did)
+                StringBuilder sb = new StringBuilder();
+                sb.append("visible ").append(visible.size()).append(", pictures ").append(all.size()).append(", drawn now ").append(chosen.size());
+                for (Node node : all) {
+                    int[] o = OCCLUSION.get(node.wall);
+                    sb.append(String.format(java.util.Locale.ROOT, "%n    %s depth %d valid %b chosen %b rect %s area %.4f scale %.2f age %d occ %s face %b",
+                            node.wall, node.depth, node.valid, chosen.contains(node), java.util.Arrays.toString(node.rect), node.area, scaleFor(node),
+                            frame - node.renderedFrame, o == null ? "-" : o[1] + "/" + o[2], drawnNow.contains(node.wall)));
+                }
+                for (Wall w : FAR_WALLS.keySet()) {
+                    sb.append("\n    far ").append(w);
+                }
+                lastFrameInfo = sb.toString();
+            }
             if (overlay != null && dumpOverlay) {
                 dump(com.example.skyblocks.client.iris.IrisIslandTarget.overlayTarget(), "shaderedplus_mirror_overlay.png");
             }
