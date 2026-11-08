@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "down=false,up=false": {
+      "model": "skyblocks:block/jungle_aquarium"
+    },
+    "down=false,up=true": {
+      "model": "skyblocks:block/jungle_aquarium_bottom"
+    },
+    "down=true,up=false": {
+      "model": "skyblocks:block/jungle_aquarium_top"
+    },
+    "down=true,up=true": {
+      "model": "skyblocks:block/jungle_aquarium_middle"
+    }
+  }
+}

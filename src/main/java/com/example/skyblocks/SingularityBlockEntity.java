@@ -117,7 +117,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
         return false;
     }
 
-    /** Adds a tag ("c:cobblestones", "#minecraft:logs") to the destroy filter, or takes it out if it's there. */
+    /** Adds a tag ("forge:cobblestone", "#minecraft:logs") to the destroy filter, or takes it out if it's there. */
     public void toggleDestroyTag(String text) {
         String t = text.trim();
         if (t.startsWith("#")) {

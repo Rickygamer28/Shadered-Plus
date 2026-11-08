@@ -107,7 +107,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         private Shaders() {}
 
         @SubscribeEvent
-        public static void register(RegisterShadersEvent event) throws java.io.IOException {
+        public static void registerWhirlpoolRenderer(RegisterShadersEvent event) throws java.io.IOException {
             ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "whirlpool"), DefaultVertexFormat.PARTICLE, s -> shader = s);
         }
     }

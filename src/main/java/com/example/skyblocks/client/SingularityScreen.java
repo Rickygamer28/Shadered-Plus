@@ -299,6 +299,7 @@ public class SingularityScreen extends AbstractContainerScreen<SingularityMenu> 
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        renderBackground(g); // (1.20.1: a screen draws its own background first)
         super.render(g, mouseX, mouseY, partialTick);
         if (filterView) {
             int f = filterSlotAt(mouseX, mouseY);
@@ -390,7 +391,7 @@ public class SingularityScreen extends AbstractContainerScreen<SingularityMenu> 
     }
 
     @Override
-    public boolean mouseScrolled(double mx, double my, double dx, double dy) {
+    public boolean mouseScrolled(double mx, double my, double dy) {
         if (filterView) {
             if (my < topPos + TAG_Y) {
                 filterScroll = Math.max(0, filterScroll - (int) Math.signum(dy));
@@ -404,7 +405,7 @@ public class SingularityScreen extends AbstractContainerScreen<SingularityMenu> 
             scroll = Math.max(0, Math.min(max, scroll - (int) Math.signum(dy)));
             return true;
         }
-        return super.mouseScrolled(mx, my, dx, dy);
+        return super.mouseScrolled(mx, my, dy);
     }
 
     @Override

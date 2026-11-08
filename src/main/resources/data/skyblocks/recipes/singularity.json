@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "ONO",
+    "EBE",
+    "ONO"
+  ],
+  "key": {
+    "O": {
+      "item": "minecraft:crying_obsidian"
+    },
+    "N": {
+      "item": "minecraft:netherite_ingot"
+    },
+    "E": {
+      "item": "minecraft:ender_chest"
+    },
+    "B": {
+      "item": "skyblocks:black_hole"
+    }
+  },
+  "result": {
+    "count": 1,
+    "item": "skyblocks:singularity"
+  }
+}

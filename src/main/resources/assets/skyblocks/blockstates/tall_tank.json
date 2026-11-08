@@ -1,0 +1,25 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "skyblocks:block/tall_tank_inside"
+      }
+    },
+    {
+      "when": {
+        "down": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/tall_tank_base"
+      }
+    },
+    {
+      "when": {
+        "up": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/tall_tank_cap"
+      }
+    }
+  ]
+}

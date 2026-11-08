@@ -345,12 +345,13 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         main.endBatch();
         Matrix4f savedProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
         com.mojang.blaze3d.vertex.VertexSorting savedSorting = RenderSystem.getVertexSorting();
-        org.joml.Matrix4fStack stack = RenderSystem.getModelViewStack();
-        stack.pushMatrix();
+        PoseStack stack = RenderSystem.getModelViewStack();
+        stack.pushPose();
         try {
             for (Pending job : jobs) {
                 RenderSystem.setProjectionMatrix(job.projection(), com.mojang.blaze3d.vertex.VertexSorting.DISTANCE_TO_ORIGIN);
-                stack.set(job.modelView());
+                stack.setIdentity();
+                stack.mulPoseMatrix(job.modelView());
                 RenderSystem.applyModelViewMatrix();
                 if (job.kind() >= 3) {
                     drawChamber(main, job.pose(), job.inside(), job.kind(), job.grow(), job.colour(), job.seed());
@@ -372,7 +373,7 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
                 }
             }
         } finally {
-            stack.popMatrix();
+            stack.popPose();
             RenderSystem.applyModelViewMatrix();
             RenderSystem.setProjectionMatrix(savedProjection, savedSorting);
         }

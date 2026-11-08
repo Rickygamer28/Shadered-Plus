@@ -169,17 +169,5 @@ public final class ModItems {
     public static final RegistryObject<BlockItem> PLANETARIUM = ITEMS.register("planetarium",
             () -> new RenderedBlockItem(ModBlocks.PLANETARIUM.get(), new Item.Properties(), "planetarium"));
 
-    public static final DeferredItem<BlockItem> FISHBOWL = ITEMS.registerSimpleBlockItem("fishbowl", ModBlocks.FISHBOWL);
-    public static final DeferredItem<BlockItem> TALL_TANK = ITEMS.registerSimpleBlockItem("tall_tank", ModBlocks.TALL_TANK);
-    public static final DeferredItem<BlockItem> SLIM_TANK = ITEMS.registerSimpleBlockItem("slim_tank", ModBlocks.SLIM_TANK);
-
-    public static final DeferredItem<BlockItem> TESLA_COIL = ITEMS.registerSimpleBlockItem("tesla_coil", ModBlocks.TESLA_COIL);
-    public static final DeferredItem<BlockItem> GALAXY_PROJECTOR = ITEMS.registerSimpleBlockItem("galaxy_projector", ModBlocks.GALAXY_PROJECTOR);
-
-    public static final DeferredItem<BlockItem> PORTAL_MIRROR = ITEMS.registerSimpleBlockItem("portal_mirror", ModBlocks.PORTAL_MIRROR);
-    public static final DeferredItem<BlockItem> KALEIDOSCOPE = ITEMS.registerSimpleBlockItem("kaleidoscope", ModBlocks.KALEIDOSCOPE);
-    public static final DeferredItem<BlockItem> ORRERY = ITEMS.registerSimpleBlockItem("orrery", ModBlocks.ORRERY);
-    public static final DeferredItem<BlockItem> PLANETARIUM = ITEMS.registerSimpleBlockItem("planetarium", ModBlocks.PLANETARIUM);
-
     private ModItems() {}
 }

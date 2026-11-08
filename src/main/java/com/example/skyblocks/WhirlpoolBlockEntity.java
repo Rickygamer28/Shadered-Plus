@@ -158,7 +158,7 @@ public class WhirlpoolBlockEntity extends BlockEntity {
         changed(true);
     }
 
-    /** Adds a fluid tag ("c:water", "#minecraft:lava") to the void filter, or takes it out. */
+    /** Adds a fluid tag ("forge:water", "#minecraft:lava") to the void filter, or takes it out. */
     public void toggleVoidTag(String text) {
         String t = text.trim();
         if (t.startsWith("#")) {
@@ -322,7 +322,7 @@ public class WhirlpoolBlockEntity extends BlockEntity {
                             return false; // (another one's)
                         }
                     } else if (rims == 1) {
-                        if (!s.is(Tags.Blocks.GLASS_BLOCKS) && !s.is(ModBlocks.TANK_GLASS.get()) && !(s.getBlock() instanceof TankFrameBlock)) {
+                        if (!s.is(Tags.Blocks.GLASS) && !s.is(ModBlocks.TANK_GLASS.get()) && !(s.getBlock() instanceof TankFrameBlock)) {
                             return false; // (its sides: glass)
                         }
                     } else if (!s.isAir()) {

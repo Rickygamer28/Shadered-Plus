@@ -117,7 +117,7 @@ public class LavaLampRenderer implements BlockEntityRenderer<GlowColourBlockEnti
             return;
         }
         Matrix4f m = poseStack.last().pose();
-        ITEM_INV.set(m).invert();
+        ITEM_INV.set(m).invert().mul(ViewState.current()); // (1.20.1: the pose holds the camera's turn, which the shader takes out first)
         int r = (colour >> 16) & 255, g = (colour >> 8) & 255, b = colour & 255;
         VertexConsumer vc = buffers.getBuffer(Types.ITEM);
         if (big) {

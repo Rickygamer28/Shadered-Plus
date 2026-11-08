@@ -1,0 +1,22 @@
+{
+  "variants": {
+    "lit=true,mode=0": {
+      "model": "skyblocks:block/galaxy_projector"
+    },
+    "lit=true,mode=1": {
+      "model": "skyblocks:block/galaxy_projector"
+    },
+    "lit=true,mode=2": {
+      "model": "skyblocks:block/galaxy_projector"
+    },
+    "lit=false,mode=0": {
+      "model": "skyblocks:block/galaxy_projector"
+    },
+    "lit=false,mode=1": {
+      "model": "skyblocks:block/galaxy_projector"
+    },
+    "lit=false,mode=2": {
+      "model": "skyblocks:block/galaxy_projector"
+    }
+  }
+}

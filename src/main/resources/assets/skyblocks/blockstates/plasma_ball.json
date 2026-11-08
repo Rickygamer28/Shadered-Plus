@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "lit=true": {
+      "model": "skyblocks:block/plasma_ball"
+    },
+    "lit=false": {
+      "model": "skyblocks:block/plasma_ball"
+    }
+  }
+}

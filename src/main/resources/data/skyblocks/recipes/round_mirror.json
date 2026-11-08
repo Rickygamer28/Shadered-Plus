@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    " N ",
+    "NMN",
+    " N "
+  ],
+  "key": {
+    "N": {
+      "item": "minecraft:gold_nugget"
+    },
+    "M": {
+      "item": "skyblocks:mirror"
+    }
+  },
+  "result": {
+    "count": 1,
+    "item": "skyblocks:round_mirror"
+  }
+}

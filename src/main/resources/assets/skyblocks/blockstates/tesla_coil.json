@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "lit=true": {
+      "model": "skyblocks:block/tesla_coil"
+    },
+    "lit=false": {
+      "model": "skyblocks:block/tesla_coil"
+    }
+  }
+}

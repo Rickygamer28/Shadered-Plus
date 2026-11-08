@@ -84,6 +84,9 @@ public class WhirlpoolScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        renderBackground(g); // (1.20.1: a screen draws its own background first)
+        g.fill(left - 1, top - 1, left + W + 1, top + H + 1, 0xFF2F8FE0);
+        g.fill(left, top, left + W, top + H, 0xF00D1621);
         super.render(g, mouseX, mouseY, partialTick);
         WhirlpoolBlockEntity be = be();
         if (be == null) {
@@ -116,7 +119,7 @@ public class WhirlpoolScreen extends Screen {
             g.fill(left + 6, y + ROW - 4, left + 6 + (int) ((W - 12) * Math.min(1.0, (double) e.amount / be.capacity())), y + ROW - 2, 0xFF2F8FE0);
             drawFluid(g, e.fluid, left + 9, y + 1);
             boolean voided = be.voids(e.fluid);
-            g.drawString(font, e.fluid.getHoverName(), left + 30, y + 5, voided ? 0xFFFF8A8A : 0xFFE6F4FF, false);
+            g.drawString(font, e.fluid.getDisplayName(), left + 30, y + 5, voided ? 0xFFFF8A8A : 0xFFE6F4FF, false);
             String amount = WhirlpoolBlock.buckets(e.amount) + " / " + WhirlpoolBlock.buckets(be.capacity());
             g.drawString(font, amount, left + W - 10 - font.width(amount), y + 5, 0xFFA9BFD2, false);
             if (voided) {
@@ -133,7 +136,7 @@ public class WhirlpoolScreen extends Screen {
         int x = left + 8, y = top + 190;
         for (Fluid f : be.voided()) {
             String id = BuiltInRegistries.FLUID.getKey(f).toString();
-            int[] at = chip(g, new FluidStack(f, 1).getHoverName().getString(), x, y, mouseX, mouseY);
+            int[] at = chip(g, new FluidStack(f, 1).getDisplayName().getString(), x, y, mouseX, mouseY);
             chipBoxes.add(at);
             chipWhat.add(new String[] {"fluid", id});
             x = at[0] + at[2] + 4;
@@ -167,14 +170,9 @@ public class WhirlpoolScreen extends Screen {
         IClientFluidTypeExtensions ext = IClientFluidTypeExtensions.of(fluid.getFluid());
         TextureAtlasSprite sprite = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(ext.getStillTexture(fluid));
         int tint = ext.getTintColor(fluid);
-        g.blit(x, y, 0, 16, 16, sprite, ((tint >> 16) & 0xFF) / 255.0F, ((tint >> 8) & 0xFF) / 255.0F, (tint & 0xFF) / 255.0F, 1.0F);
-    }
-
-    @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.renderBackground(g, mouseX, mouseY, partialTick);
-        g.fill(left - 1, top - 1, left + W + 1, top + H + 1, 0xFF2F8FE0);
-        g.fill(left, top, left + W, top + H, 0xF00D1621);
+        g.setColor(((tint >> 16) & 0xFF) / 255.0F, ((tint >> 8) & 0xFF) / 255.0F, (tint & 0xFF) / 255.0F, 1.0F);
+        g.blit(x, y, 0, 16, 16, sprite);
+        g.setColor(1.0F, 1.0F, 1.0F, 1.0F);
     }
 
     @Override
@@ -210,7 +208,7 @@ public class WhirlpoolScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double dx, double dy) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double dy) {
         scroll -= (int) Math.signum(dy);
         return true;
     }

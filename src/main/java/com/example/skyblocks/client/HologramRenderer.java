@@ -265,15 +265,37 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
     // ---- a player: their own skin, standing on the beam, turning slowly, looking about ----
 
     private static net.minecraft.client.model.PlayerModel<?> wide, slim;
-    private static final java.util.Map<java.util.UUID, java.util.concurrent.CompletableFuture<net.minecraft.client.resources.PlayerSkin>> SKINS = new java.util.HashMap<>();
+    /** (1.20.1: a skin's texture and whether it's the slim model.) */
+    private record Skin(net.minecraft.resources.ResourceLocation texture, boolean slim) {}
+    private static final java.util.Map<java.util.UUID, Skin> SKINS = new java.util.HashMap<>();
 
-    private static net.minecraft.client.resources.PlayerSkin skinOf(com.mojang.authlib.GameProfile profile) {
+    private static Skin skinOf(com.mojang.authlib.GameProfile profile) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.level.getPlayerByUUID(profile.getId()) instanceof net.minecraft.client.player.AbstractClientPlayer p) {
-            return p.getSkin(); // (they're here: the skin as the game already has it)
+            return new Skin(p.getSkinTextureLocation(), "slim".equals(p.getModelName())); // (they're here: the skin as the game already has it)
         }
-        var future = SKINS.computeIfAbsent(profile.getId(), id -> mc.getSkinManager().getOrLoad(profile));
-        return future.getNow(net.minecraft.client.resources.DefaultPlayerSkin.get(profile));
+        Skin known = SKINS.get(profile.getId());
+        if (known != null) {
+            return known;
+        }
+        java.util.UUID id = net.minecraft.core.UUIDUtil.getOrCreatePlayerUUID(profile);
+        Skin skin = new Skin(net.minecraft.client.resources.DefaultPlayerSkin.getDefaultSkin(id),
+                "slim".equals(net.minecraft.client.resources.DefaultPlayerSkin.getSkinModelName(id)));
+        try {
+            java.util.Map<com.mojang.authlib.minecraft.MinecraftProfileTexture.Type, com.mojang.authlib.minecraft.MinecraftProfileTexture> textures =
+                    mc.getSkinManager().getInsecureSkinInformation(profile);
+            com.mojang.authlib.minecraft.MinecraftProfileTexture tex = textures.get(com.mojang.authlib.minecraft.MinecraftProfileTexture.Type.SKIN);
+            if (tex != null) {
+                skin = new Skin(mc.getSkinManager().registerTexture(tex, com.mojang.authlib.minecraft.MinecraftProfileTexture.Type.SKIN),
+                        "slim".equals(tex.getMetadata("model")));
+            }
+        } catch (RuntimeException ignored) {
+            // (the default skin)
+        }
+        if (profile.getId() != null) {
+            SKINS.put(profile.getId(), skin);
+        }
+        return skin;
     }
 
     private static void drawPlayer(HologramBlockEntity be, PoseStack poseStack, MultiBufferSource holo, float scale, float t) {
@@ -282,7 +304,7 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
             return;
         }
         var skin = skinOf(profile);
-        boolean thin = skin.model() == net.minecraft.client.resources.PlayerSkin.Model.SLIM;
+        boolean thin = skin.slim();
         var models = Minecraft.getInstance().getEntityModels();
         if (wide == null) {
             wide = new net.minecraft.client.model.PlayerModel<>(models.bakeLayer(net.minecraft.client.model.geom.ModelLayers.PLAYER), false);
@@ -310,7 +332,7 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
         poseStack.scale(s, s, s);
         poseStack.scale(-1.0F, -1.0F, 1.0F);
         poseStack.translate(0.0F, -1.501F, 0.0F);
-        model.renderToBuffer(poseStack, holo.getBuffer(RenderType.entityTranslucent(skin.texture())), 0xF000F0, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
+        model.renderToBuffer(poseStack, holo.getBuffer(RenderType.entityTranslucent(skin.texture())), 0xF000F0, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
     }
 
     // ---- a mob: the real mob's model, turning, in a cage of light ----

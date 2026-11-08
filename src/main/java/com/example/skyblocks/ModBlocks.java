@@ -168,7 +168,7 @@ public final class ModBlocks {
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_CYAN)));
 
     /** Tank glass: clear glass without a border - a containment tank's sides of it read as one pane. */
-    public static final RegistryObject<net.minecraft.world.level.block.TransparentBlock> TANK_GLASS = BLOCKS.register("tank_glass", () -> new net.minecraft.world.level.block.TransparentBlock(BlockBehaviour.Properties.copy(net.minecraft.world.level.block.Blocks.GLASS)));
+    public static final RegistryObject<net.minecraft.world.level.block.GlassBlock> TANK_GLASS = BLOCKS.register("tank_glass", () -> new net.minecraft.world.level.block.GlassBlock(BlockBehaviour.Properties.copy(net.minecraft.world.level.block.Blocks.GLASS)));
 
     /** The special containment frames: a frame that does something more (SpecialFrameBlock). */
     public static final RegistryObject<SpecialFrameBlock> PORT_FRAME = specialFrame("port_frame", SpecialFrameBlock.Kind.PORT);
