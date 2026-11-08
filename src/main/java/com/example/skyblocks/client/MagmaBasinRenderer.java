@@ -15,10 +15,10 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.client.event.RegisterShadersEvent;
 import org.joml.Matrix4f;
 
 /**
@@ -28,20 +28,20 @@ import org.joml.Matrix4f;
 public class MagmaBasinRenderer implements BlockEntityRenderer<GlowColourBlockEntity> {
     static ShaderInstance shader;
 
-    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    @Mod.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
         private Shaders() {}
 
         @SubscribeEvent
         public static void registerMagmaBasinRenderer(RegisterShadersEvent event) {
-            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "magma_basin"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> shader = s);
+            ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "magma_basin"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> shader = s);
         }
     }
 
     abstract static class Types extends RenderType {
         static final RenderType LAVA = create("skyblocks_magma_basin", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 4096,
                 false, false, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                         .setTexturingState(new TexturingStateShard("skyblocks_magma_time", () -> {
                             if (shader != null) {
                                 shader.safeGetUniform("MagmaTime").set(LavaLampRenderer.seconds());
@@ -80,10 +80,10 @@ public class MagmaBasinRenderer implements BlockEntityRenderer<GlowColourBlockEn
         int r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
         VertexConsumer vc = buffers.getBuffer(Types.LAVA);
         Matrix4f m = poseStack.last().pose();
-        vc.addVertex(m, x0, y, z1).setUv(wx + x0, wz + z1).setColor(r, g, b, 255);
-        vc.addVertex(m, x1, y, z1).setUv(wx + x1, wz + z1).setColor(r, g, b, 255);
-        vc.addVertex(m, x1, y, z0).setUv(wx + x1, wz + z0).setColor(r, g, b, 255);
-        vc.addVertex(m, x0, y, z0).setUv(wx + x0, wz + z0).setColor(r, g, b, 255);
+        vc.vertex(m, x0, y, z1).uv(wx + x0, wz + z1).color(r, g, b, 255).endVertex();
+        vc.vertex(m, x1, y, z1).uv(wx + x1, wz + z1).color(r, g, b, 255).endVertex();
+        vc.vertex(m, x1, y, z0).uv(wx + x1, wz + z0).color(r, g, b, 255).endVertex();
+        vc.vertex(m, x0, y, z0).uv(wx + x0, wz + z0).color(r, g, b, 255).endVertex();
     }
 
     @Override

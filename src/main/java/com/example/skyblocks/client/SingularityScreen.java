@@ -14,7 +14,6 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
 /**
@@ -94,7 +93,7 @@ public class SingularityScreen extends AbstractContainerScreen<SingularityMenu> 
     }
 
     private void send(int action, ItemStack item, int button, String text) {
-        PacketDistributor.sendToServer(new SingularityPayloads.Action(menu.containerId, action, item.copyWithCount(Math.max(1, item.getCount())), button, text));
+        com.example.skyblocks.SkyBlocksMod.NETWORK.sendToServer(new SingularityPayloads.Action(menu.containerId, action, item.copyWithCount(Math.max(1, item.getCount())), button, text));
     }
 
     /** The marked kinds, in a steady order (by name). */

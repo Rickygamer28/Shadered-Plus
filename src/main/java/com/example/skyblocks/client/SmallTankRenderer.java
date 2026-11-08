@@ -20,10 +20,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.client.event.RegisterShadersEvent;
 import org.joml.Matrix4f;
 
 /**
@@ -33,13 +33,13 @@ import org.joml.Matrix4f;
 public class SmallTankRenderer implements BlockEntityRenderer<SmallTankBlockEntity> {
     static ShaderInstance shader;
 
-    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    @Mod.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
         private Shaders() {}
 
         @SubscribeEvent
         public static void registerSmallTankRenderer(RegisterShadersEvent event) {
-            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "small_tank"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> shader = s);
+            ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "small_tank"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> shader = s);
         }
     }
 
@@ -56,7 +56,7 @@ public class SmallTankRenderer implements BlockEntityRenderer<SmallTankBlockEnti
     abstract static class Types extends RenderType {
         static final RenderType TANK = create("skyblocks_small_tank", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 4096,
                 false, true, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                         .setTexturingState(new TexturingStateShard("skyblocks_small_tank_time", () -> {
                             if (shader != null) {
                                 shader.safeGetUniform("TankTime").set(LavaLampRenderer.seconds());
@@ -69,7 +69,7 @@ public class SmallTankRenderer implements BlockEntityRenderer<SmallTankBlockEnti
                         .createCompositeState(false));
         static final RenderType ITEM = create("skyblocks_small_tank_item", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 256,
                 false, false, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                         .setTexturingState(new TexturingStateShard("skyblocks_small_tank_item", () -> {
                             if (shader != null) {
                                 shader.safeGetUniform("TankTime").set(LavaLampRenderer.seconds());
@@ -122,7 +122,7 @@ public class SmallTankRenderer implements BlockEntityRenderer<SmallTankBlockEnti
             return;
         }
         Matrix4f m = poseStack.last().pose();
-        ITEM_INV.set(m).invert();
+        ITEM_INV.set(m).invert().mul(ViewState.current()); // (1.20.1: the pose holds the camera's turn, which the shader takes out first)
         box(buffers.getBuffer(Types.ITEM), m, shape, 0, 1, 1, 1.0F, 0, 0.37F);
         if (buffers instanceof MultiBufferSource.BufferSource source) {
             source.endBatch(Types.ITEM);
@@ -143,13 +143,13 @@ public class SmallTankRenderer implements BlockEntityRenderer<SmallTankBlockEnti
         for (int[] f : faces) {
             for (int k : f) {
                 float lx = (k & 1) != 0 ? hi[0] : lo[0], ly = (k & 2) != 0 ? hi[1] : lo[1], lz = (k & 4) != 0 ? hi[2] : lo[2];
-                vc.addVertex(m, o[0] + x[0] * lx + z[0] * lz, o[1] + ly, o[2] + x[2] * lx + z[2] * lz)
-                        .setUv(k + 8 * shape + 32 * face, seed).setColor(r, gg, b, a);
+                vc.vertex(m, o[0] + x[0] * lx + z[0] * lz, o[1] + ly, o[2] + x[2] * lx + z[2] * lz)
+                        .uv(k + 8 * shape + 32 * face, seed).color(r, gg, b, a).endVertex();
             }
         }
     }
 
-    @Override
+    /** (1.20.1: the block entity's getRenderBoundingBox says - kept for reference.) */
     public AABB getRenderBoundingBox(SmallTankBlockEntity be) {
         BlockPos p = be.getBlockPos();
         return new AABB(p).expandTowards(0, SmallTankBlock.MAX, 0).inflate(SmallTankBlock.MAX, 0, SmallTankBlock.MAX);

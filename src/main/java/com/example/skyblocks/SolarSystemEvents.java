@@ -9,9 +9,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -19,7 +19,7 @@ import org.jetbrains.annotations.Nullable;
  * big planetarium is mostly hologram) - pointing at it, or standing in it: as if clicking the block itself. An empty
  * hand: the next speed (sneaking: real sizes); glass or an amethyst shard on a planetarium: its dome, its size.
  */
-@EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
+@Mod.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class SolarSystemEvents {
     private SolarSystemEvents() {}
 
@@ -52,7 +52,7 @@ public final class SolarSystemEvents {
         }
         BlockPos pos = aimed(event.getLevel(), event.getEntity(), Double.MAX_VALUE, true);
         if (pos != null) {
-            net.neoforged.neoforge.network.PacketDistributor.sendToServer(new SolarSystemClickPayload(pos));
+            com.example.skyblocks.SkyBlocksMod.NETWORK.sendToServer(new SolarSystemClickPayload(pos));
         }
     }
 

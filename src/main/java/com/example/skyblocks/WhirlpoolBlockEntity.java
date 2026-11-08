@@ -30,9 +30,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.Tags;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.common.Tags;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -49,7 +49,7 @@ public class WhirlpoolBlockEntity extends BlockEntity {
         public long amount;
 
         Entry(FluidStack fluid, long amount) {
-            this.fluid = fluid.copyWithAmount(1);
+            this.fluid = new FluidStack(fluid, 1);
             this.amount = amount;
         }
     }
@@ -189,7 +189,7 @@ public class WhirlpoolBlockEntity extends BlockEntity {
     @Nullable
     private Entry find(FluidStack stack) {
         for (Entry e : entries) {
-            if (FluidStack.isSameFluidSameComponents(e.fluid, stack)) {
+            if (e.fluid.isFluidEqual(stack)) {
                 return e;
             }
         }
@@ -231,7 +231,7 @@ public class WhirlpoolBlockEntity extends BlockEntity {
             return FluidStack.EMPTY;
         }
         int n = (int) Math.min(amount, e.amount);
-        FluidStack out = e.fluid.copyWithAmount(n);
+        FluidStack out = new FluidStack(e.fluid, n);
         if (!simulate) {
             e.amount -= n;
             total -= n;
@@ -255,7 +255,7 @@ public class WhirlpoolBlockEntity extends BlockEntity {
                 return FluidStack.EMPTY;
             }
             Entry e = entries.get(tank);
-            return e.fluid.copyWithAmount((int) Math.min(e.amount, Integer.MAX_VALUE));
+            return new FluidStack(e.fluid, (int) Math.min(e.amount, Integer.MAX_VALUE));
         }
 
         @Override
@@ -485,16 +485,16 @@ public class WhirlpoolBlockEntity extends BlockEntity {
     // ---- saving, and what the client sees ----
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        save(tag, registries);
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        saveFluids(tag);
     }
 
-    private void save(CompoundTag tag, HolderLookup.Provider registries) {
+    private void saveFluids(CompoundTag tag) {
         ListTag list = new ListTag();
         for (Entry e : entries) {
             CompoundTag t = new CompoundTag();
-            t.put("fluid", e.fluid.save(registries));
+            t.put("fluid", e.fluid.writeToNBT(new CompoundTag()));
             t.putLong("amount", e.amount);
             list.add(t);
         }
@@ -515,14 +515,14 @@ public class WhirlpoolBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    public void load(CompoundTag tag) {
+        super.load(tag);
         long before = total;
         entries.clear();
         total = 0;
         for (Tag t : tag.getList("fluids", Tag.TAG_COMPOUND)) {
             CompoundTag c = (CompoundTag) t;
-            FluidStack f = FluidStack.parseOptional(registries, c.getCompound("fluid"));
+            FluidStack f = FluidStack.loadFluidStackFromNBT(c.getCompound("fluid"));
             long amount = c.getLong("amount");
             if (!f.isEmpty() && amount > 0) {
                 entries.add(new Entry(f, amount));
@@ -552,9 +552,9 @@ public class WhirlpoolBlockEntity extends BlockEntity {
     }
 
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+    public CompoundTag getUpdateTag() {
         CompoundTag tag = new CompoundTag();
-        save(tag, registries);
+        saveFluids(tag);
         return tag;
     }
 
@@ -568,7 +568,7 @@ public class WhirlpoolBlockEntity extends BlockEntity {
     public ItemStack asItem(HolderLookup.Provider registries) {
         ItemStack stack = new ItemStack(ModItems.WHIRLPOOL.get());
         if (!entries.isEmpty() || !voided.isEmpty() || !voidTags.isEmpty() || drain || still) {
-            CompoundTag tag = saveWithoutMetadata(registries);
+            CompoundTag tag = saveWithoutMetadata();
             tag.remove("tank");
             net.minecraft.world.item.BlockItem.setBlockEntityData(stack, ModBlockEntities.WHIRLPOOL.get(), tag);
         }
@@ -577,5 +577,22 @@ public class WhirlpoolBlockEntity extends BlockEntity {
 
     public boolean isEmpty() {
         return entries.isEmpty();
+    }
+
+    /** 1.20.1: hoppers and pipes find this through Forge's capabilities (1.21.1 registers it in an event). */
+    @Override
+    public <T> net.minecraftforge.common.util.LazyOptional<T> getCapability(net.minecraftforge.common.capabilities.Capability<T> cap,
+                                                                             @org.jetbrains.annotations.Nullable net.minecraft.core.Direction side) {
+        if (cap == net.minecraftforge.common.capabilities.ForgeCapabilities.FLUID_HANDLER) {
+            net.minecraftforge.fluids.capability.IFluidHandler h = handler;
+            return net.minecraftforge.common.util.LazyOptional.of(() -> h).cast();
+        }
+        return super.getCapability(cap, side);
+    }
+
+    /** What its renderer draws (1.20.1: the block entity says, not the renderer). */
+    @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox() {
+        return new net.minecraft.world.phys.AABB(getBlockPos()).inflate(tank() > 0 ? tank() / 2.0 + 0.5 : 0.1);
     }
 }

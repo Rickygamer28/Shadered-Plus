@@ -367,8 +367,8 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
             float[] a = c[e[0]], z = c[e[1]];
             float nx = z[0] - a[0], ny = z[1] - a[1], nz = z[2] - a[2];
             float len = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
-            vc.addVertex(pose, a[0], a[1], a[2]).setColor(r, g, b, 0.7F).setNormal(pose, nx / len, ny / len, nz / len);
-            vc.addVertex(pose, z[0], z[1], z[2]).setColor(r, g, b, 0.7F).setNormal(pose, nx / len, ny / len, nz / len);
+            vc.vertex(pose.pose(), a[0], a[1], a[2]).color(r, g, b, 0.7F).normal(pose.normal(), nx / len, ny / len, nz / len).endVertex();
+            vc.vertex(pose.pose(), z[0], z[1], z[2]).color(r, g, b, 0.7F).normal(pose.normal(), nx / len, ny / len, nz / len).endVertex();
         }
     }
 

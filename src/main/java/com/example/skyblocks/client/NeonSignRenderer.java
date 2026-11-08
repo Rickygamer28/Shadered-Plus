@@ -302,10 +302,10 @@ public class NeonSignRenderer implements BlockEntityRenderer<NeonSignBlockEntity
                                   float u0, float v0, float u1, float v1, int r, int g, int b, int code) {
         float base = py0 + 2.0F + MARGIN; // (the baseline: the glyph's v = 0)
         float s0 = slant * (py0 - base), s1 = slant * (py1 - base);
-        vc.addVertex(m, px0 + s0, py0, 0.0F).setUv(u0, v0).setColor(r, g, b, code);
-        vc.addVertex(m, px1 + s0, py0, 0.0F).setUv(u1, v0).setColor(r, g, b, code);
-        vc.addVertex(m, px1 + s1, py1, 0.0F).setUv(u1, v1).setColor(r, g, b, code);
-        vc.addVertex(m, px0 + s1, py1, 0.0F).setUv(u0, v1).setColor(r, g, b, code);
+        vc.vertex(m, px0 + s0, py0, 0.0F).uv(u0, v0).color(r, g, b, code).endVertex();
+        vc.vertex(m, px1 + s0, py0, 0.0F).uv(u1, v0).color(r, g, b, code).endVertex();
+        vc.vertex(m, px1 + s1, py1, 0.0F).uv(u1, v1).color(r, g, b, code).endVertex();
+        vc.vertex(m, px0 + s1, py1, 0.0F).uv(u0, v1).color(r, g, b, code).endVertex();
     }
 
     private static void quad(VertexConsumer vc, Matrix4f m, float px0, float py0, float px1, float py1,

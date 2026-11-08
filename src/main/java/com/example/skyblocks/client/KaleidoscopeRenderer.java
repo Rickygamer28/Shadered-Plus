@@ -16,10 +16,10 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.client.event.RegisterShadersEvent;
 import org.joml.Matrix4f;
 
 /**
@@ -34,13 +34,13 @@ public class KaleidoscopeRenderer implements BlockEntityRenderer<KaleidoscopeBlo
     private static final Matrix4f ITEM_INV = new Matrix4f();
     private static final float W0 = 2.0F / 16.0F, W1 = 14.0F / 16.0F, OUT = 0.002F;
 
-    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    @Mod.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
         private Shaders() {}
 
         @SubscribeEvent
         public static void registerKaleidoscopeShader(RegisterShadersEvent event) {
-            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "kaleidoscope"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> shader = s);
+            ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "kaleidoscope"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> shader = s);
         }
     }
 
@@ -57,7 +57,7 @@ public class KaleidoscopeRenderer implements BlockEntityRenderer<KaleidoscopeBlo
     abstract static class Types extends RenderType {
         static final RenderType WINDOWS = create("skyblocks_kaleidoscope", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 256,
                 false, false, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                         .setTexturingState(new TexturingStateShard("skyblocks_kaleidoscope_turn", KaleidoscopeRenderer::setUp, () -> {}))
                         .setCullState(NO_CULL) // (the shader keeps the side facing you: items' matrices can turn them inside out)
                         .createCompositeState(false));
@@ -181,7 +181,7 @@ public class KaleidoscopeRenderer implements BlockEntityRenderer<KaleidoscopeBlo
             return;
         }
         Matrix4f m = poseStack.last().pose();
-        ITEM_INV.set(m).invert();
+        ITEM_INV.set(m).invert().mul(ViewState.current()); // (1.20.1: the pose holds the camera's turn, which the shader takes out first)
         Minecraft mc = Minecraft.getInstance();
         turn = mc.level == null ? 0.0F : (mc.level.getGameTime() % 72000L) / 20.0F;
         itemMode = 1.0F;
@@ -214,7 +214,7 @@ public class KaleidoscopeRenderer implements BlockEntityRenderer<KaleidoscopeBlo
                     case 4 -> { x = -OUT; y = cy; z = cx; }
                     default -> { x = 1.0F + OUT; y = cy; z = cx; }
                 }
-                vc.addVertex(m, x, y, z).setUv(joined * 24 + face * 4 + corner, settings).setColor(region[0], region[1], region[2], region[3]);
+                vc.vertex(m, x, y, z).uv(joined * 24 + face * 4 + corner, settings).color(region[0], region[1], region[2], region[3]).endVertex();
             }
         }
     }

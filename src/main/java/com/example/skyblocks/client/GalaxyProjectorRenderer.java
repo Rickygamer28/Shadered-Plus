@@ -28,10 +28,10 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.client.event.RegisterShadersEvent;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL30;
@@ -57,13 +57,13 @@ public class GalaxyProjectorRenderer implements BlockEntityRenderer<GalaxyProjec
     private static float cx, cy, cz, gx, gy, gz, mode, strength;
     private static int gridTexture;
 
-    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    @Mod.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
         private Shaders() {}
 
         @SubscribeEvent
         public static void registerGalaxyProjectorRenderer(RegisterShadersEvent event) {
-            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "galaxy_projector"), DefaultVertexFormat.POSITION, s -> shader = s);
+            ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "galaxy_projector"), DefaultVertexFormat.POSITION, s -> shader = s);
         }
     }
 
@@ -169,7 +169,7 @@ public class GalaxyProjectorRenderer implements BlockEntityRenderer<GalaxyProjec
         gx = (float) (pos.getX() - RANGE - cam.x);
         gy = (float) (pos.getY() - RANGE - cam.y);
         gz = (float) (pos.getZ() - RANGE - cam.z);
-        INV.set(RenderSystem.getProjectionMatrix()).mul(RenderSystem.getModelViewMatrix()).invert();
+        INV.set(RenderSystem.getProjectionMatrix()).mul(RenderSystem.getModelViewMatrix()).mul(ViewState.current()).invert(); // (1.20.1: the camera's turn is in the poses: put back in)
         gridTexture = grid.texture.getId();
         // the box round its reach (in the block's space), drawn at once with this projector's settings
         VertexConsumer vc = buffers.getBuffer(Types.LIGHT);
@@ -178,7 +178,7 @@ public class GalaxyProjectorRenderer implements BlockEntityRenderer<GalaxyProjec
         int[][] faces = {{4, 5, 7, 6}, {1, 0, 2, 3}, {5, 1, 3, 7}, {0, 4, 6, 2}, {6, 7, 3, 2}, {0, 1, 5, 4}};
         for (int[] f : faces) {
             for (int k : f) {
-                vc.addVertex(m, (k & 1) != 0 ? hi : lo, (k & 2) != 0 ? hi : lo, (k & 4) != 0 ? hi : lo);
+                vc.vertex(m, (k & 1) != 0 ? hi : lo, (k & 2) != 0 ? hi : lo, (k & 4) != 0 ? hi : lo).endVertex();
             }
         }
         mc.renderBuffers().bufferSource().endBatch(Types.LIGHT);
@@ -204,7 +204,7 @@ public class GalaxyProjectorRenderer implements BlockEntityRenderer<GalaxyProjec
         grid.texture.upload();
     }
 
-    @Override
+    /** (1.20.1: the block entity's getRenderBoundingBox says - kept for reference.) */
     public AABB getRenderBoundingBox(GalaxyProjectorBlockEntity be) {
         return new AABB(be.getBlockPos()).inflate(RANGE + 1);
     }

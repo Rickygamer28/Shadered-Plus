@@ -19,10 +19,10 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import com.example.skyblocks.client.iris.IrisCompat;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.client.event.RegisterShadersEvent;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL30;
@@ -36,13 +36,13 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
     static ShaderInstance shader;
     private static TextureTarget copy;
 
-    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    @Mod.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
         private Shaders() {}
 
         @SubscribeEvent
         public static void registerBlackHoleRenderer(RegisterShadersEvent event) {
-            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "black_hole"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> shader = s);
+            ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "black_hole"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> shader = s);
         }
     }
 
@@ -162,7 +162,7 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         private static RenderType hole(String name, boolean inside, int pass) {
             return create(name, DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 4096,
                     false, false, CompositeState.builder()
-                            .setShaderState(new ShaderStateShard(() -> shader))
+                            .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                             .setTexturingState(new TexturingStateShard(name + "_copy", () -> {
                                 if (pass != 2) {
                                     copyScreen();
@@ -197,7 +197,7 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         /** As an item: no world behind it to bend; drawn at once with its own matrix. */
         static final RenderType ITEM = create("skyblocks_black_hole_item", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 256,
                 false, false, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                         .setTexturingState(new TexturingStateShard("skyblocks_black_hole_item", () -> {
                             if (shader != null) {
                                 shader.safeGetUniform("HoleTime").set(LavaLampRenderer.seconds());
@@ -303,14 +303,14 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
      * Any hole still waiting at the end of the world's drawing (Shadered's pass didn't run this frame - it skips frames
      * with nothing of its own to draw): drawn now, not left out of this frame (it blinked while moving).
      */
-    @net.neoforged.fml.common.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = net.neoforged.fml.common.EventBusSubscriber.Bus.GAME,
-            value = net.neoforged.api.distmarker.Dist.CLIENT)
+    @net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus.FORGE,
+            value = net.minecraftforge.api.distmarker.Dist.CLIENT)
     public static final class Fallback {
         private Fallback() {}
 
-        @net.neoforged.bus.api.SubscribeEvent
-        public static void afterWorld(net.neoforged.neoforge.client.event.RenderLevelStageEvent event) {
-            if (event.getStage() == net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_WEATHER
+        @net.minecraftforge.eventbus.api.SubscribeEvent
+        public static void afterWorld(net.minecraftforge.client.event.RenderLevelStageEvent event) {
+            if (event.getStage() == net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_WEATHER
                     && !MirrorRenderer.isRenderingReflection()) {
                 drawPending("at the end of the world's drawing");
             }
@@ -384,7 +384,7 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
             return;
         }
         Matrix4f m = poseStack.last().pose();
-        ITEM_INV.set(m).invert();
+        ITEM_INV.set(m).invert().mul(ViewState.current()); // (1.20.1: the pose holds the camera's turn, which the shader takes out first)
         box(buffers.getBuffer(Types.ITEM), m, big ? 1 : 0, 0.0F, big ? 0xFFB070 : 0x9A6BFF, 0.3F);
         if (buffers instanceof MultiBufferSource.BufferSource source) {
             source.endBatch(Types.ITEM);
@@ -397,7 +397,7 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
             return;
         }
         Matrix4f m = poseStack.last().pose();
-        ITEM_INV.set(m).invert();
+        ITEM_INV.set(m).invert().mul(ViewState.current()); // (1.20.1: the pose holds the camera's turn, which the shader takes out first)
         box(buffers.getBuffer(Types.ITEM), m, kind, grow, colour, 0.3F);
         if (buffers instanceof MultiBufferSource.BufferSource source) {
             source.endBatch(Types.ITEM);
@@ -426,8 +426,8 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         int[][] faces = {{4, 5, 7, 6}, {1, 0, 2, 3}, {5, 1, 3, 7}, {0, 4, 6, 2}, {6, 7, 3, 2}, {0, 1, 5, 4}};
         for (int[] f : faces) {
             for (int k : f) {
-                vc.addVertex(m, cx + ((k & 1) != 0 ? reach : -reach), cy + ((k & 2) != 0 ? reach : -reach), cz + ((k & 4) != 0 ? reach : -reach))
-                        .setUv(k, kind * 10.0F + seed).setColor(r, g, b, a);
+                vc.vertex(m, cx + ((k & 1) != 0 ? reach : -reach), cy + ((k & 2) != 0 ? reach : -reach), cz + ((k & 4) != 0 ? reach : -reach))
+                        .uv(k, kind * 10.0F + seed).color(r, g, b, a).endVertex();
             }
         }
     }

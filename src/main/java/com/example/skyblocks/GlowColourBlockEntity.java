@@ -119,6 +119,8 @@ public class GlowColourBlockEntity extends BlockEntity {
     /** What its renderer draws (1.20.1: the block entity says, not the renderer). */
     @Override
     public net.minecraft.world.phys.AABB getRenderBoundingBox() {
-        return new net.minecraft.world.phys.AABB(getBlockPos()).inflate(1.0);
+        // (the tesla coil's bolts reach further; a big black hole's bent view a little past its block and the next)
+        double grow = getType() == ModBlockEntities.TESLA_COIL.get() ? 2.5 : getType() == ModBlockEntities.BLACK_HOLE.get() ? 1.1 : 1.0;
+        return new net.minecraft.world.phys.AABB(getBlockPos()).inflate(grow);
     }
 }

@@ -14,18 +14,16 @@ import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
+import net.minecraftforge.registries.DeferredRegister;
 
 /**
  * The singularity's menu: your inventory (shift-click puts a stack in), and what it holds - sent over as it changes
  * (SingularityPayloads), shown and clicked on in client/SingularityScreen.
  */
 public class SingularityMenu extends AbstractContainerMenu {
-    public static final DeferredRegister<MenuType<?>> MENUS = DeferredRegister.create(net.minecraft.core.registries.Registries.MENU, SkyBlocksMod.MOD_ID);
-    public static final DeferredHolder<MenuType<?>, MenuType<SingularityMenu>> TYPE = MENUS.register("singularity",
-            () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create((id, inv, buf) -> new SingularityMenu(id, inv, buf.readBlockPos())));
+    public static final DeferredRegister<MenuType<?>> MENUS = DeferredRegister.create(net.minecraftforge.registries.ForgeRegistries.MENU_TYPES, SkyBlocksMod.MOD_ID);
+    public static final net.minecraftforge.registries.RegistryObject<MenuType<SingularityMenu>> TYPE = MENUS.register("singularity",
+            () -> net.minecraftforge.common.extensions.IForgeMenuType.create((id, inv, buf) -> new SingularityMenu(id, inv, buf.readBlockPos())));
 
     /** Where your inventory starts in the menu (pixels; client/SingularityScreen draws round it). */
     public static final int INVENTORY_Y = 140;
@@ -107,7 +105,7 @@ public class SingularityMenu extends AbstractContainerMenu {
             int total = list.size();
             for (int start = 0; start == 0 || start < total; start += PAGE) {
                 int end = Math.min(total, start + PAGE);
-                PacketDistributor.sendToPlayer(sp, new SingularityPayloads.Contents(containerId, start, total,
+                SkyBlocksMod.NETWORK.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> sp), new SingularityPayloads.Contents(containerId, start, total,
                         new ArrayList<>(list.subList(start, end)), new ArrayList<>(amounts.subList(start, end)),
                         start == 0 ? gone : List.of(), start == 0 ? tagNames : List.of(), be.vacuum()));
             }
@@ -139,7 +137,7 @@ public class SingularityMenu extends AbstractContainerMenu {
                     if (moved > 0) be.extract(item, moved, false);
                 } else if (getCarried().isEmpty()) {
                     setCarried(be.extract(item, button == 1 ? 1 : Integer.MAX_VALUE, false));
-                } else if (ItemStack.isSameItemSameComponents(getCarried(), item) && getCarried().getCount() < getCarried().getMaxStackSize()) {
+                } else if (ItemStack.isSameItemSameTags(getCarried(), item) && getCarried().getCount() < getCarried().getMaxStackSize()) {
                     ItemStack more = be.extract(item, button == 1 ? 1 : getCarried().getMaxStackSize() - getCarried().getCount(), false);
                     getCarried().grow(more.getCount());
                 } else {

@@ -1,6 +1,5 @@
 package com.example.skyblocks;
 
-import com.mojang.serialization.MapCodec;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -9,7 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.ItemInteractionResult;
+import com.example.skyblocks.compat.ItemInteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeColor;
@@ -38,7 +37,6 @@ import org.jetbrains.annotations.Nullable;
  * back half is solid (its front half walked into).
  */
 public class PortalMirrorBlock extends HorizontalDirectionalBlock {
-    public static final MapCodec<PortalMirrorBlock> CODEC = simpleCodec(PortalMirrorBlock::new);
     public static final EnumProperty<DyeColor> COLOR = EnumProperty.create("color", DyeColor.class);
     private static final VoxelShape BACK_NORTH = Block.box(0, 0, 8, 16, 16, 16);
     private static final VoxelShape BACK_SOUTH = Block.box(0, 0, 0, 16, 16, 8);
@@ -50,18 +48,14 @@ public class PortalMirrorBlock extends HorizontalDirectionalBlock {
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.SOUTH).setValue(COLOR, DyeColor.PURPLE));
     }
 
-    @Override
-    protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
-        return CODEC;
-    }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(FACING, COLOR);
     }
 
     @Override
-    protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return switch (state.getValue(FACING)) { // (the front half walked into: through the portal)
             case NORTH -> BACK_NORTH;
             case SOUTH -> BACK_SOUTH;
@@ -71,7 +65,7 @@ public class PortalMirrorBlock extends HorizontalDirectionalBlock {
     }
 
     @Override
-    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moving) {
+    public void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moving) {
         super.onPlace(state, level, pos, old, moving);
         if (level instanceof net.minecraft.server.level.ServerLevel server && old != state) {
             PortalMirrors.Registry.of(server).refresh(server, pos);
@@ -79,7 +73,7 @@ public class PortalMirrorBlock extends HorizontalDirectionalBlock {
     }
 
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState now, boolean moving) {
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState now, boolean moving) {
         super.onRemove(state, level, pos, now, moving);
         if (level instanceof net.minecraft.server.level.ServerLevel server && !now.is(this)) {
             PortalMirrors.Registry.of(server).refresh(server, pos);
@@ -97,8 +91,7 @@ public class PortalMirrorBlock extends HorizontalDirectionalBlock {
         return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
     }
 
-    @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    protected com.example.skyblocks.compat.ItemInteractionResult useItemOn121(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (!(stack.getItem() instanceof DyeItem dye)) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
@@ -122,12 +115,29 @@ public class PortalMirrorBlock extends HorizontalDirectionalBlock {
     }
 
     @Override
-    protected void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
+    public void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
         PortalMirrors.entityInside(state, level, pos, entity);
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.BlockGetter context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.skyblocks.portal_mirror").withStyle(ChatFormatting.GRAY));
+    }
+
+    protected net.minecraft.world.InteractionResult useWithoutItem121(BlockState state, net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+            net.minecraft.world.entity.player.Player player, net.minecraft.world.phys.BlockHitResult hit) {
+        return net.minecraft.world.InteractionResult.PASS;
+    }
+
+    /** 1.20.1: one use() - an item first (useItemOn121), then the empty-hand use (useWithoutItem121), as 1.21 does. */
+    @Override
+    public net.minecraft.world.InteractionResult use(BlockState state, net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+                                                      net.minecraft.world.entity.player.Player player, net.minecraft.world.InteractionHand hand,
+                                                      net.minecraft.world.phys.BlockHitResult hit) {
+        com.example.skyblocks.compat.ItemInteractionResult r = useItemOn121(player.getItemInHand(hand), state, level, pos, player, hand, hit);
+        if (r != com.example.skyblocks.compat.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION) {
+            return r.result();
+        }
+        return hand == net.minecraft.world.InteractionHand.MAIN_HAND ? useWithoutItem121(state, level, pos, player, hit) : net.minecraft.world.InteractionResult.PASS;
     }
 }

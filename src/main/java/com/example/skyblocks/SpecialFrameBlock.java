@@ -1,6 +1,5 @@
 package com.example.skyblocks;
 
-import com.mojang.serialization.MapCodec;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -10,7 +9,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
+import com.example.skyblocks.compat.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -41,7 +40,6 @@ public class SpecialFrameBlock extends ContainmentFrameBlock {
     public static final BooleanProperty OUTPUT = BooleanProperty.create("output");
 
     private final Kind kind;
-    private final MapCodec<SpecialFrameBlock> codec = simpleCodec(p -> new SpecialFrameBlock(p, kind()));
 
     public SpecialFrameBlock(Properties properties, Kind kind) {
         super(properties);
@@ -53,13 +51,9 @@ public class SpecialFrameBlock extends ContainmentFrameBlock {
         return kind;
     }
 
-    @Override
-    protected MapCodec<? extends BaseEntityBlock> codec() {
-        return codec;
-    }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         super.createBlockStateDefinition(builder);
         builder.add(OUTPUT);
     }
@@ -77,14 +71,13 @@ public class SpecialFrameBlock extends ContainmentFrameBlock {
                 ? createTickerHelper(type, ModBlockEntities.SPECIAL_FRAME.get(), SpecialFrameBlockEntity::serverTick) : null;
     }
 
-    @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    protected com.example.skyblocks.compat.ItemInteractionResult useItemOn121(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (stack.isEmpty() || !(level.getBlockEntity(pos) instanceof SpecialFrameBlockEntity be)) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION; // (an empty hand: sneak-click, or open it)
         }
         if (kind == Kind.PORT) {
             if (!level.isClientSide) {
-                boolean same = ItemStack.isSameItemSameComponents(be.filter(), stack);
+                boolean same = ItemStack.isSameItemSameTags(be.filter(), stack);
                 be.setFilter(same ? ItemStack.EMPTY : stack);
                 player.displayClientMessage(same ? Component.translatable("message.skyblocks.port.filter_off")
                         : Component.translatable("message.skyblocks.port.filter", stack.getHoverName()), true);
@@ -103,8 +96,7 @@ public class SpecialFrameBlock extends ContainmentFrameBlock {
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
-    @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+    protected net.minecraft.world.InteractionResult useWithoutItem121(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (player.isShiftKeyDown() && level.getBlockEntity(pos) instanceof SpecialFrameBlockEntity be) {
             if (kind == Kind.PORT) {
                 if (!level.isClientSide) {
@@ -124,33 +116,33 @@ public class SpecialFrameBlock extends ContainmentFrameBlock {
                 return InteractionResult.sidedSuccess(level.isClientSide);
             }
         }
-        return super.useWithoutItem(state, level, pos, player, hit);
+        return super.useWithoutItem121(state, level, pos, player, hit);
     }
 
     // ---- the redstone frame ----
 
     @Override
-    protected boolean isSignalSource(BlockState state) {
+    public boolean isSignalSource(BlockState state) {
         return kind == Kind.REDSTONE;
     }
 
     @Override
-    protected int getSignal(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
+    public int getSignal(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
         return kind == Kind.REDSTONE && level.getBlockEntity(pos) instanceof SpecialFrameBlockEntity be ? be.signal() : 0;
     }
 
     @Override
-    protected boolean hasAnalogOutputSignal(BlockState state) {
+    public boolean hasAnalogOutputSignal(BlockState state) {
         return kind == Kind.REDSTONE;
     }
 
     @Override
-    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+    public int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
         return level.getBlockEntity(pos) instanceof SpecialFrameBlockEntity be ? be.signal() : 0;
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.BlockGetter context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.skyblocks." + kind.name().toLowerCase(java.util.Locale.ROOT) + "_frame").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.skyblocks.special_frame").withStyle(ChatFormatting.DARK_GRAY));
     }

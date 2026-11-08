@@ -12,7 +12,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * Portal mirrors on your side: every portal in your world (as the server keeps them: which links to which, however
@@ -54,7 +53,7 @@ public final class PortalClient {
         Vec3 at = p.position();
         Vec3 to = PortalMirrors.apply(a, b, at);
         boolean here = mc.level.hasChunkAt(BlockPos.containing(to));
-        PacketDistributor.sendToServer(new PortalCrossPayload(pos, at.x, at.y, at.z, here));
+        com.example.skyblocks.SkyBlocksMod.NETWORK.sendToServer(new PortalCrossPayload(pos, at.x, at.y, at.z, here));
         p.setPortalCooldown(5);
         if (!here) {
             return; // (the server moves you there)

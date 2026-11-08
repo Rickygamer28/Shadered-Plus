@@ -341,10 +341,10 @@ public class TeslaCoilRenderer implements BlockEntityRenderer<GlowColourBlockEnt
             side = side.normalize().scale(width * 0.5 * Math.min(1.0, 0.25 + toCam / 1.6));
             // (ends tapering off)
             float ta = i == 0 ? 0.5F : 1.0F, tb = i == pts.size() - 2 ? 0.3F : 1.0F;
-            vc.addVertex(m, (float) (p.x - side.x * ta), (float) (p.y - side.y * ta), (float) (p.z - side.z * ta)).setColor(r, g, b, a);
-            vc.addVertex(m, (float) (p.x + side.x * ta), (float) (p.y + side.y * ta), (float) (p.z + side.z * ta)).setColor(r, g, b, a);
-            vc.addVertex(m, (float) (q.x + side.x * tb), (float) (q.y + side.y * tb), (float) (q.z + side.z * tb)).setColor(r, g, b, a);
-            vc.addVertex(m, (float) (q.x - side.x * tb), (float) (q.y - side.y * tb), (float) (q.z - side.z * tb)).setColor(r, g, b, a);
+            vc.vertex(m, (float) (p.x - side.x * ta), (float) (p.y - side.y * ta), (float) (p.z - side.z * ta)).color(r, g, b, a).endVertex();
+            vc.vertex(m, (float) (p.x + side.x * ta), (float) (p.y + side.y * ta), (float) (p.z + side.z * ta)).color(r, g, b, a).endVertex();
+            vc.vertex(m, (float) (q.x + side.x * tb), (float) (q.y + side.y * tb), (float) (q.z + side.z * tb)).color(r, g, b, a).endVertex();
+            vc.vertex(m, (float) (q.x - side.x * tb), (float) (q.y - side.y * tb), (float) (q.z - side.z * tb)).color(r, g, b, a).endVertex();
         }
     }
 
@@ -358,7 +358,7 @@ public class TeslaCoilRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         ribbon(vc, m, pts, cam, 0.12F, r, g, b, a);
     }
 
-    @Override
+    /** (1.20.1: the block entity's getRenderBoundingBox says - kept for reference.) */
     public AABB getRenderBoundingBox(GlowColourBlockEntity be) {
         return new AABB(be.getBlockPos()).inflate(2.5);
     }

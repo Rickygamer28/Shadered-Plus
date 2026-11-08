@@ -2,15 +2,13 @@ package com.example.skyblocks;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.ItemHandlerHelper;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -93,7 +91,9 @@ public class SpecialFrameBlockEntity extends ContainmentFrameBlockEntity {
             if (ns.getBlock() instanceof ContainmentFrameBlock || ns.getBlock() instanceof SingularityBlock || !level.isLoaded(n)) {
                 continue; // (its own chamber: not a container beside it)
             }
-            IItemHandler other = level.getCapability(Capabilities.ItemHandler.BLOCK, n, d.getOpposite());
+            net.minecraft.world.level.block.entity.BlockEntity nbe = level.getBlockEntity(n); // (1.20.1: Forge capabilities on the block entity)
+            IItemHandler other = nbe == null ? null
+                    : nbe.getCapability(net.minecraftforge.common.capabilities.ForgeCapabilities.ITEM_HANDLER, d.getOpposite()).orElse(null);
             if (other == null) {
                 continue;
             }
@@ -142,7 +142,7 @@ public class SpecialFrameBlockEntity extends ContainmentFrameBlockEntity {
     private boolean pullFrom(SingularityBlockEntity s, IItemHandler from) {
         for (int slot = 0; slot < from.getSlots(); slot++) {
             ItemStack there = from.getStackInSlot(slot);
-            if (there.isEmpty() || (!filter.isEmpty() && !ItemStack.isSameItemSameComponents(there, filter)) || !s.accepts(there)) {
+            if (there.isEmpty() || (!filter.isEmpty() && !ItemStack.isSameItemSameTags(there, filter)) || !s.accepts(there)) {
                 continue;
             }
             ItemStack got = from.extractItem(slot, 64, false);
@@ -164,18 +164,18 @@ public class SpecialFrameBlockEntity extends ContainmentFrameBlockEntity {
     // ---- saving ----
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
         if (!filter.isEmpty()) {
-            tag.put("filter", filter.save(registries));
+            tag.put("filter", filter.save(new CompoundTag()));
         }
         tag.putLong("count", count);
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        filter = tag.contains("filter") ? ItemStack.parseOptional(registries, tag.getCompound("filter")) : ItemStack.EMPTY;
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        filter = tag.contains("filter") ? ItemStack.of(tag.getCompound("filter")) : ItemStack.EMPTY;
         count = tag.contains("count") ? tag.getLong("count") : -1;
     }
 }

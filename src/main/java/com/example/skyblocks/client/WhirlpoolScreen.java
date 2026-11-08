@@ -17,9 +17,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.level.material.Fluid;
-import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
+import net.minecraftforge.fluids.FluidStack;
 
 /**
  * The whirlpool's screen: how much it holds, each fluid with how much of it (click one: void it - what comes in of it
@@ -50,7 +49,7 @@ public class WhirlpoolScreen extends Screen {
     }
 
     private void send(int action, String text) {
-        PacketDistributor.sendToServer(new WhirlpoolPayload(pos, action, text));
+        com.example.skyblocks.SkyBlocksMod.NETWORK.sendToServer(new WhirlpoolPayload(pos, action, text));
     }
 
     @Override

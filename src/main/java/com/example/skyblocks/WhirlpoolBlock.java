@@ -1,10 +1,8 @@
 package com.example.skyblocks;
 
-import com.mojang.serialization.MapCodec;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -14,7 +12,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
+import com.example.skyblocks.compat.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -36,7 +34,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.neoforged.neoforge.fluids.FluidUtil;
+import net.minecraftforge.fluids.FluidUtil;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -45,7 +43,6 @@ import org.jetbrains.annotations.Nullable;
  * on / off. A comparator reads how full it is. Broken, everything in it goes with the item.
  */
 public class WhirlpoolBlock extends BaseEntityBlock {
-    public static final MapCodec<WhirlpoolBlock> CODEC = simpleCodec(WhirlpoolBlock::new);
     /** In its containment tank: no frame of its own (the tank its frame). */
     public static final BooleanProperty IN_TANK = BooleanProperty.create("in_tank");
     private static final VoxelShape SHAPE = Shapes.or(Block.box(0, 0, 0, 16, 2, 16), Block.box(0, 14, 0, 16, 16, 16),
@@ -59,27 +56,22 @@ public class WhirlpoolBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(IN_TANK);
     }
 
-    @Override
-    protected MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
-    }
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
+    public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return state.getValue(IN_TANK) ? CORE : SHAPE;
     }
 
-    @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    protected com.example.skyblocks.compat.ItemInteractionResult useItemOn121(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         return useBucket(level, pos, player, hand) ? ItemInteractionResult.sidedSuccess(level.isClientSide)
                 : ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
@@ -89,8 +81,7 @@ public class WhirlpoolBlock extends BaseEntityBlock {
         return FluidUtil.getFluidHandler(player.getItemInHand(hand)).isPresent() && FluidUtil.interactWithFluidHandler(player, hand, level, pos, null);
     }
 
-    @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+    protected net.minecraft.world.InteractionResult useWithoutItem121(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         return open(level, pos, player);
     }
 
@@ -113,7 +104,7 @@ public class WhirlpoolBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState now, boolean moving) {
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState now, boolean moving) {
         if (!now.is(this) && level.getBlockEntity(pos) instanceof WhirlpoolBlockEntity be) {
             be.unform();
         }
@@ -123,7 +114,7 @@ public class WhirlpoolBlock extends BaseEntityBlock {
     // ---- what it holds goes with it ----
 
     @Override
-    protected List<ItemStack> getDrops(BlockState state, LootParams.Builder params) {
+    public List<ItemStack> getDrops(BlockState state, LootParams.Builder params) {
         BlockEntity be = params.getOptionalParameter(LootContextParams.BLOCK_ENTITY);
         if (be instanceof WhirlpoolBlockEntity w && be.getLevel() != null) {
             return List.of(w.asItem(be.getLevel().registryAccess()));
@@ -132,23 +123,23 @@ public class WhirlpoolBlock extends BaseEntityBlock {
     }
 
     @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide && player.isCreative() && level.getBlockEntity(pos) instanceof WhirlpoolBlockEntity be && !be.isEmpty()) {
             net.minecraft.world.entity.item.ItemEntity item = new net.minecraft.world.entity.item.ItemEntity(level, pos.getX() + 0.5, pos.getY() + 0.5,
                     pos.getZ() + 0.5, be.asItem(level.registryAccess()));
             item.setDefaultPickUpDelay();
             level.addFreshEntity(item);
         }
-        return super.playerWillDestroy(level, pos, state, player);
+        super.playerWillDestroy(level, pos, state, player);
     }
 
     @Override
-    protected boolean hasAnalogOutputSignal(BlockState state) {
+    public boolean hasAnalogOutputSignal(BlockState state) {
         return true;
     }
 
     @Override
-    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+    public int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
         return level.getBlockEntity(pos) instanceof WhirlpoolBlockEntity be ? be.signal() : 0;
     }
 
@@ -197,11 +188,10 @@ public class WhirlpoolBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.BlockGetter context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.skyblocks.whirlpool").withStyle(ChatFormatting.GRAY));
-        net.minecraft.world.item.component.CustomData data = stack.get(DataComponents.BLOCK_ENTITY_DATA);
-        if (data != null) {
-            CompoundTag tag = data.copyTag();
+        CompoundTag tag = net.minecraft.world.item.BlockItem.getBlockEntityData(stack); // (1.20.1: the item's BlockEntityTag)
+        if (tag != null) {
             long total = 0;
             int kinds = 0;
             for (Tag t : tag.getList("fluids", Tag.TAG_COMPOUND)) {
@@ -221,5 +211,17 @@ public class WhirlpoolBlock extends BaseEntityBlock {
         }
         double b = mb / 1000.0;
         return b < 100 ? String.format(java.util.Locale.ROOT, "%.1f B", b) : String.format(java.util.Locale.ROOT, "%,d B", (long) b);
+    }
+
+    /** 1.20.1: one use() - an item first (useItemOn121), then the empty-hand use (useWithoutItem121), as 1.21 does. */
+    @Override
+    public net.minecraft.world.InteractionResult use(BlockState state, net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+                                                      net.minecraft.world.entity.player.Player player, net.minecraft.world.InteractionHand hand,
+                                                      net.minecraft.world.phys.BlockHitResult hit) {
+        com.example.skyblocks.compat.ItemInteractionResult r = useItemOn121(player.getItemInHand(hand), state, level, pos, player, hand, hit);
+        if (r != com.example.skyblocks.compat.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION) {
+            return r.result();
+        }
+        return hand == net.minecraft.world.InteractionHand.MAIN_HAND ? useWithoutItem121(state, level, pos, player, hit) : net.minecraft.world.InteractionResult.PASS;
     }
 }

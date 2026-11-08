@@ -18,10 +18,10 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.client.event.RegisterShadersEvent;
 import org.joml.Matrix4f;
 
 /**
@@ -34,13 +34,13 @@ public class PlasmaBallRenderer implements BlockEntityRenderer<GlowColourBlockEn
     /** How near a player has to be for the filaments to reach for them (blocks from the globe's middle). */
     private static final double REACH = 4.0;
 
-    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    @Mod.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
         private Shaders() {}
 
         @SubscribeEvent
         public static void registerPlasmaBallRenderer(RegisterShadersEvent event) {
-            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "plasma_ball"), DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL, s -> shader = s);
+            ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "plasma_ball"), DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL, s -> shader = s);
         }
     }
 
@@ -57,7 +57,7 @@ public class PlasmaBallRenderer implements BlockEntityRenderer<GlowColourBlockEn
     abstract static class Types extends RenderType {
         static final RenderType GLOBE = create("skyblocks_plasma_ball", DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL, VertexFormat.Mode.QUADS, 4096,
                 false, true, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                         .setTexturingState(new TexturingStateShard("skyblocks_plasma_ball_time", () -> {
                             if (shader != null) {
                                 MusicReactor.tick(); // (the music's bands up to date, even with nothing else listening)
@@ -73,7 +73,7 @@ public class PlasmaBallRenderer implements BlockEntityRenderer<GlowColourBlockEn
         /** As an item: drawn at once with its own matrix (see drawItem). */
         static final RenderType ITEM = create("skyblocks_plasma_ball_item", DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL, VertexFormat.Mode.QUADS, 256,
                 false, false, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                         .setTexturingState(new TexturingStateShard("skyblocks_plasma_ball_item", () -> {
                             if (shader != null) {
                                 shader.safeGetUniform("PlasmaTime").set(LavaLampRenderer.seconds());
@@ -133,7 +133,7 @@ public class PlasmaBallRenderer implements BlockEntityRenderer<GlowColourBlockEn
             return;
         }
         Matrix4f m = poseStack.last().pose();
-        ITEM_INV.set(m).invert();
+        ITEM_INV.set(m).invert().mul(ViewState.current()); // (1.20.1: the pose holds the camera's turn, which the shader takes out first)
         box(buffers.getBuffer(Types.ITEM), m, colour, 255, 0.37F, 0.0F, 0.0F, 0.0F);
         if (buffers instanceof MultiBufferSource.BufferSource source) {
             source.endBatch(Types.ITEM);
@@ -147,8 +147,8 @@ public class PlasmaBallRenderer implements BlockEntityRenderer<GlowColourBlockEn
         int[][] faces = {{4, 5, 7, 6}, {1, 0, 2, 3}, {5, 1, 3, 7}, {0, 4, 6, 2}, {6, 7, 3, 2}, {0, 1, 5, 4}};
         for (int[] f : faces) {
             for (int k : f) {
-                vc.addVertex(m, (k & 1) != 0 ? x1 : x0, (k & 2) != 0 ? y1 : y0, (k & 4) != 0 ? z1 : z0)
-                        .setUv(k, seed).setColor(r, g, b, a).setNormal(tx, ty, tz);
+                vc.vertex(m, (k & 1) != 0 ? x1 : x0, (k & 2) != 0 ? y1 : y0, (k & 4) != 0 ? z1 : z0)
+                        .uv(k, seed).color(r, g, b, a).normal(tx.normal(), ty, tz).endVertex();
             }
         }
     }

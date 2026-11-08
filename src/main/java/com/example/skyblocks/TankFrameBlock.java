@@ -1,13 +1,12 @@
 package com.example.skyblocks;
 
-import com.mojang.serialization.MapCodec;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
+import com.example.skyblocks.compat.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -29,7 +28,6 @@ import org.jetbrains.annotations.Nullable;
  * as the whirlpool's own sides: right-click opens it, buckets and pipes on it fill and empty it.
  */
 public class TankFrameBlock extends BaseEntityBlock {
-    public static final MapCodec<TankFrameBlock> CODEC = simpleCodec(TankFrameBlock::new);
     public static final BooleanProperty FORMED = BooleanProperty.create("formed");
 
     public TankFrameBlock(Properties properties) {
@@ -37,19 +35,15 @@ public class TankFrameBlock extends BaseEntityBlock {
         registerDefaultState(stateDefinition.any().setValue(FORMED, false));
     }
 
-    @Override
-    protected MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
-    }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(FORMED);
     }
 
     /** Put down: a whirlpool near it looks at its tank's frames again. */
     @Override
-    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moved) {
+    public void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moved) {
         super.onPlace(state, level, pos, old, moved);
         if (!level.isClientSide && !old.is(state.getBlock())) {
             for (BlockPos p : BlockPos.betweenClosed(pos.offset(-4, -4, -4), pos.offset(4, 4, 4))) {
@@ -61,7 +55,7 @@ public class TankFrameBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
+    public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
 
@@ -74,8 +68,7 @@ public class TankFrameBlock extends BaseEntityBlock {
         return null;
     }
 
-    @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    protected com.example.skyblocks.compat.ItemInteractionResult useItemOn121(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         BlockPos core = core(state, level, pos);
         if (core != null && WhirlpoolBlock.useBucket(level, core, player, hand)) {
             return ItemInteractionResult.sidedSuccess(level.isClientSide);
@@ -83,8 +76,7 @@ public class TankFrameBlock extends BaseEntityBlock {
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
-    @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+    protected net.minecraft.world.InteractionResult useWithoutItem121(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         BlockPos core = core(state, level, pos);
         return core == null ? InteractionResult.PASS : WhirlpoolBlock.open(level, core, player);
     }
@@ -96,7 +88,19 @@ public class TankFrameBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.BlockGetter context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.skyblocks.tank_frame").withStyle(ChatFormatting.GRAY));
+    }
+
+    /** 1.20.1: one use() - an item first (useItemOn121), then the empty-hand use (useWithoutItem121), as 1.21 does. */
+    @Override
+    public net.minecraft.world.InteractionResult use(BlockState state, net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+                                                      net.minecraft.world.entity.player.Player player, net.minecraft.world.InteractionHand hand,
+                                                      net.minecraft.world.phys.BlockHitResult hit) {
+        com.example.skyblocks.compat.ItemInteractionResult r = useItemOn121(player.getItemInHand(hand), state, level, pos, player, hand, hit);
+        if (r != com.example.skyblocks.compat.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION) {
+            return r.result();
+        }
+        return hand == net.minecraft.world.InteractionHand.MAIN_HAND ? useWithoutItem121(state, level, pos, player, hit) : net.minecraft.world.InteractionResult.PASS;
     }
 }

@@ -1,6 +1,5 @@
 package com.example.skyblocks;
 
-import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -18,7 +17,6 @@ import org.jetbrains.annotations.Nullable;
  * (client/MirrorRenderer: its face is a mirror wall of its own, 1/16 out from the wall).
  */
 public class RoundMirrorBlock extends HorizontalDirectionalBlock {
-    public static final MapCodec<RoundMirrorBlock> CODEC = simpleCodec(RoundMirrorBlock::new);
     /** How thick the pane is (block units): its glass is this far out from the wall. */
     public static final double THICK = 1.0 / 16.0;
     private static final VoxelShape SOUTH = Block.box(0, 0, 0, 16, 16, 1);
@@ -31,18 +29,14 @@ public class RoundMirrorBlock extends HorizontalDirectionalBlock {
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.SOUTH));
     }
 
-    @Override
-    protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
-        return CODEC;
-    }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(FACING);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return switch (state.getValue(FACING)) {
             case NORTH -> NORTH;
             case EAST -> EAST;

@@ -1,7 +1,6 @@
 package com.example.skyblocks;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.block.Block;
@@ -77,8 +76,8 @@ public class KaleidoscopeBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
         tag.putInt("symmetry", symmetry);
         tag.putInt("palette", palette);
         tag.putBoolean("powered", powered);
@@ -87,8 +86,8 @@ public class KaleidoscopeBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    public void load(CompoundTag tag) {
+        super.load(tag);
         symmetry = tag.contains("symmetry") ? Math.floorMod(tag.getInt("symmetry"), FOLDS.length) : 3;
         palette = Math.floorMod(tag.getInt("palette"), PALETTES.length);
         powered = tag.getBoolean("powered");
@@ -97,9 +96,9 @@ public class KaleidoscopeBlockEntity extends BlockEntity {
     }
 
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+    public CompoundTag getUpdateTag() {
         CompoundTag tag = new CompoundTag();
-        saveAdditional(tag, registries);
+        saveAdditional(tag);
         return tag;
     }
 

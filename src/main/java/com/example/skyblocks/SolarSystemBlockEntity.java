@@ -1,7 +1,6 @@
 package com.example.skyblocks;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.Level;
@@ -132,8 +131,8 @@ public class SolarSystemBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
         tag.putInt("speed", speed);
         tag.putBoolean("realSizes", realSizes);
         tag.putBoolean("dome", dome);
@@ -145,8 +144,8 @@ public class SolarSystemBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    public void load(CompoundTag tag) {
+        super.load(tag);
         if (tag.contains("speed")) speed = Math.floorMod(tag.getInt("speed"), SPEEDS);
         realSizes = tag.getBoolean("realSizes");
         dome = !tag.contains("dome") || tag.getBoolean("dome");
@@ -158,9 +157,9 @@ public class SolarSystemBlockEntity extends BlockEntity {
     }
 
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+    public CompoundTag getUpdateTag() {
         CompoundTag tag = new CompoundTag();
-        saveAdditional(tag, registries);
+        saveAdditional(tag);
         return tag;
     }
 
@@ -168,5 +167,15 @@ public class SolarSystemBlockEntity extends BlockEntity {
     @Override
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    /** What its renderer draws (1.20.1: the block entity says, not the renderer). */
+    @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox() {
+        if (!(getBlockState().getBlock() instanceof SolarSystemBlock b && b.hologram())) {
+            return new net.minecraft.world.phys.AABB(getBlockPos()).inflate(0.35, 0.15, 0.35);
+        }
+        double s = scale();
+        return new net.minecraft.world.phys.AABB(getBlockPos()).inflate(1.55 * s - 0.4, 0.0, 1.55 * s - 0.4).expandTowards(0.0, 2.65 * s - 0.7, 0.0);
     }
 }

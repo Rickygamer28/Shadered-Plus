@@ -106,7 +106,7 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
         return s - (float) Math.floor(s);
     }
 
-    @Override
+    /** (1.20.1: the block entity's getRenderBoundingBox says - kept for reference.) */
     public AABB getRenderBoundingBox(SingularityBlockEntity be) {
         return new AABB(be.getBlockPos()).inflate(Math.max(be.reach(), be.shownGrow) + 0.1);
     }

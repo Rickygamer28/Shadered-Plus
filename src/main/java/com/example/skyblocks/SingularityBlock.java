@@ -1,10 +1,8 @@
 package com.example.skyblocks;
 
-import com.mojang.serialization.MapCodec;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -15,7 +13,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
+import com.example.skyblocks.compat.ItemInteractionResult;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeItem;
@@ -45,7 +43,6 @@ import org.jetbrains.annotations.Nullable;
  * its disk's colour. A comparator reads how full it is. Broken, everything in it goes with the item.
  */
 public class SingularityBlock extends BaseEntityBlock {
-    public static final MapCodec<SingularityBlock> CODEC = simpleCodec(SingularityBlock::new);
     private static final VoxelShape SHAPE = Shapes.or(Block.box(0, 0, 0, 16, 2, 16), Block.box(0, 14, 0, 16, 16, 16),
             Block.box(0, 2, 0, 2, 14, 2), Block.box(14, 2, 0, 16, 14, 2), Block.box(0, 2, 14, 2, 14, 16), Block.box(14, 2, 14, 16, 14, 16),
             Block.box(4, 4, 4, 12, 12, 12));
@@ -61,32 +58,27 @@ public class SingularityBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected void createBlockStateDefinition(net.minecraft.world.level.block.state.StateDefinition.Builder<Block, BlockState> builder) {
+    public void createBlockStateDefinition(net.minecraft.world.level.block.state.StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(IN_CHAMBER);
     }
 
-    @Override
-    protected MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
-    }
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
+    public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return state.getValue(IN_CHAMBER) ? CORE : SHAPE;
     }
 
-    @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+    protected net.minecraft.world.InteractionResult useWithoutItem121(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         return open(state, level, pos, player);
     }
 
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState now, boolean moving) {
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState now, boolean moving) {
         if (!now.is(this) && level.getBlockEntity(pos) instanceof SingularityBlockEntity be) {
             be.unform(); // (its chamber's frames go dark)
         }
@@ -105,18 +97,17 @@ public class SingularityBlock extends BaseEntityBlock {
                         .withStyle(ChatFormatting.LIGHT_PURPLE), true);
                 level.playSound(null, pos, be.vacuum() ? SoundEvents.BEACON_ACTIVATE : SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 0.7F, 1.4F);
             } else if (player instanceof ServerPlayer sp) {
-                sp.openMenu(new SimpleMenuProvider((id, inventory, p) -> new SingularityMenu(id, inventory, pos),
+                net.minecraftforge.network.NetworkHooks.openScreen(sp, new SimpleMenuProvider((id, inventory, p) -> new SingularityMenu(id, inventory, pos),
                         Component.translatable("block.skyblocks.singularity")), buf -> buf.writeBlockPos(pos));
             }
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    protected com.example.skyblocks.compat.ItemInteractionResult useItemOn121(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (stack.getItem() instanceof DyeItem dye && level.getBlockEntity(pos) instanceof SingularityBlockEntity be) {
             if (!level.isClientSide) {
-                be.setColour(dye.getDyeColor().getTextureDiffuseColor());
+                be.setColour(com.example.skyblocks.compat.Compat.dyeColour(dye.getDyeColor()));
                 if (!player.getAbilities().instabuild) {
                     stack.shrink(1);
                 }
@@ -130,7 +121,7 @@ public class SingularityBlock extends BaseEntityBlock {
     // ---- what it holds goes with it ----
 
     @Override
-    protected List<ItemStack> getDrops(BlockState state, LootParams.Builder params) {
+    public List<ItemStack> getDrops(BlockState state, LootParams.Builder params) {
         BlockEntity be = params.getOptionalParameter(LootContextParams.BLOCK_ENTITY);
         if (be instanceof SingularityBlockEntity s && be.getLevel() != null) {
             return List.of(s.asItem(be.getLevel().registryAccess()));
@@ -139,7 +130,7 @@ public class SingularityBlock extends BaseEntityBlock {
     }
 
     @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         // (creative: no drops - but not losing what it held either)
         if (!level.isClientSide && player.isCreative() && level.getBlockEntity(pos) instanceof SingularityBlockEntity be && !be.isEmpty()) {
             net.minecraft.world.entity.item.ItemEntity item = new net.minecraft.world.entity.item.ItemEntity(level, pos.getX() + 0.5, pos.getY() + 0.5,
@@ -147,16 +138,16 @@ public class SingularityBlock extends BaseEntityBlock {
             item.setDefaultPickUpDelay();
             level.addFreshEntity(item);
         }
-        return super.playerWillDestroy(level, pos, state, player);
+        super.playerWillDestroy(level, pos, state, player);
     }
 
     @Override
-    protected boolean hasAnalogOutputSignal(BlockState state) {
+    public boolean hasAnalogOutputSignal(BlockState state) {
         return true;
     }
 
     @Override
-    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+    public int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
         return level.getBlockEntity(pos) instanceof SingularityBlockEntity be ? be.signal() : 0;
     }
 
@@ -192,11 +183,10 @@ public class SingularityBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.BlockGetter context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.skyblocks.singularity").withStyle(ChatFormatting.GRAY));
-        net.minecraft.world.item.component.CustomData data = stack.get(DataComponents.BLOCK_ENTITY_DATA);
-        if (data != null) {
-            CompoundTag tag = data.copyTag();
+        CompoundTag tag = net.minecraft.world.item.BlockItem.getBlockEntityData(stack); // (1.20.1: the item's BlockEntityTag)
+        if (tag != null) {
             long total = 0;
             int kinds = 0;
             for (Tag t : tag.getList("items", Tag.TAG_COMPOUND)) {
@@ -208,5 +198,17 @@ public class SingularityBlock extends BaseEntityBlock {
                         .withStyle(ChatFormatting.LIGHT_PURPLE));
             }
         }
+    }
+
+    /** 1.20.1: one use() - an item first (useItemOn121), then the empty-hand use (useWithoutItem121), as 1.21 does. */
+    @Override
+    public net.minecraft.world.InteractionResult use(BlockState state, net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+                                                      net.minecraft.world.entity.player.Player player, net.minecraft.world.InteractionHand hand,
+                                                      net.minecraft.world.phys.BlockHitResult hit) {
+        com.example.skyblocks.compat.ItemInteractionResult r = useItemOn121(player.getItemInHand(hand), state, level, pos, player, hand, hit);
+        if (r != com.example.skyblocks.compat.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION) {
+            return r.result();
+        }
+        return hand == net.minecraft.world.InteractionHand.MAIN_HAND ? useWithoutItem121(state, level, pos, player, hit) : net.minecraft.world.InteractionResult.PASS;
     }
 }

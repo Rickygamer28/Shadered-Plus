@@ -1,6 +1,5 @@
 package com.example.skyblocks;
 
-import com.mojang.serialization.MapCodec;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -59,12 +58,10 @@ public class SmallTankBlock extends BaseEntityBlock {
     private static final VoxelShape SLIM_E = Block.box(0, 0, 0, 5, 16, 16);
 
     private final int shape;
-    private final MapCodec<SmallTankBlock> codec;
 
     public SmallTankBlock(Properties properties, int shape) {
         super(properties);
         this.shape = shape;
-        this.codec = simpleCodec(p -> new SmallTankBlock(p, shape));
         BlockState s = stateDefinition.any();
         if (shape == TALL) s = s.setValue(UP, false).setValue(DOWN, false);
         if (shape == SLIM) s = s.setValue(FACING, Direction.SOUTH);
@@ -75,24 +72,20 @@ public class SmallTankBlock extends BaseEntityBlock {
         return shape;
     }
 
-    @Override
-    protected MapCodec<? extends BaseEntityBlock> codec() {
-        return codec;
-    }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         // (called from the constructor before shape is set: every kind gets the properties, only some use them)
         builder.add(FACING, UP, DOWN);
     }
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
+    public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         if (shape == BOWL) return BOWL_SHAPE;
         if (shape == TALL) return TALL_SHAPE;
         return switch (state.getValue(FACING)) {
@@ -119,7 +112,7 @@ public class SmallTankBlock extends BaseEntityBlock {
     // cap. Adding or taking away a block moves those splits, so the whole column is looked at again ----
 
     @Override
-    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moving) {
+    public void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moving) {
         super.onPlace(state, level, pos, old, moving);
         if (shape == TALL && !level.isClientSide && !old.is(this)) {
             refreshColumn(level, pos);
@@ -127,7 +120,7 @@ public class SmallTankBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState now, boolean moving) {
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState now, boolean moving) {
         super.onRemove(state, level, pos, now, moving);
         if (shape == TALL && !level.isClientSide && !now.is(this)) {
             if (level.getBlockState(pos.above()).is(this)) refreshColumn(level, pos.above());
@@ -150,7 +143,7 @@ public class SmallTankBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected BlockState updateShape(BlockState state, Direction dir, BlockState next, LevelAccessor level, BlockPos pos, BlockPos nextPos) {
+    public BlockState updateShape(BlockState state, Direction dir, BlockState next, LevelAccessor level, BlockPos pos, BlockPos nextPos) {
         if (shape == TALL && dir.getAxis() == Direction.Axis.Y) {
             int i = 0;
             for (BlockPos b = pos; i < COLUMN && level.getBlockState(b.below()).is(this); b = b.below()) i++;
@@ -313,8 +306,7 @@ public class SmallTankBlock extends BaseEntityBlock {
         return new int[] {a.getX(), y0, a.getZ(), w, h};
     }
 
-    @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+    protected net.minecraft.world.InteractionResult useWithoutItem121(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide) {
             int[] g = group(level, pos, state);
             if (level.getBlockEntity(new BlockPos(g[0], g[1], g[2])) instanceof SmallTankBlockEntity be) {
@@ -336,7 +328,24 @@ public class SmallTankBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.BlockGetter context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.skyblocks.small_tank." + shape).withStyle(ChatFormatting.GRAY));
+    }
+
+    protected com.example.skyblocks.compat.ItemInteractionResult useItemOn121(net.minecraft.world.item.ItemStack stack, BlockState state, net.minecraft.world.level.Level level,
+            net.minecraft.core.BlockPos pos, net.minecraft.world.entity.player.Player player, net.minecraft.world.InteractionHand hand, net.minecraft.world.phys.BlockHitResult hit) {
+        return com.example.skyblocks.compat.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
+    /** 1.20.1: one use() - an item first (useItemOn121), then the empty-hand use (useWithoutItem121), as 1.21 does. */
+    @Override
+    public net.minecraft.world.InteractionResult use(BlockState state, net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+                                                      net.minecraft.world.entity.player.Player player, net.minecraft.world.InteractionHand hand,
+                                                      net.minecraft.world.phys.BlockHitResult hit) {
+        com.example.skyblocks.compat.ItemInteractionResult r = useItemOn121(player.getItemInHand(hand), state, level, pos, player, hand, hit);
+        if (r != com.example.skyblocks.compat.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION) {
+            return r.result();
+        }
+        return hand == net.minecraft.world.InteractionHand.MAIN_HAND ? useWithoutItem121(state, level, pos, player, hit) : net.minecraft.world.InteractionResult.PASS;
     }
 }

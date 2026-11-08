@@ -2,24 +2,21 @@ package com.example.skyblocks;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraftforge.network.NetworkEvent;
 
-/** The portal mirrors in your world (PortalMirrors.Registry): which links to which, however far. */
-public record PortalListPayload(List<Entry> portals) implements CustomPacketPayload {
+/** The portal mirrors in your world (PortalMirrors.Registry): which links to which, however far. (1.20.1: SimpleChannel id 11) */
+public record PortalListPayload(List<Entry> portals) {
     public record Entry(BlockPos min, Direction facing, DyeColor colour, Vec3 origin) {}
 
-    public static final Type<PortalListPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "portal_list"));
-    public static final StreamCodec<RegistryFriendlyByteBuf, PortalListPayload> STREAM_CODEC = StreamCodec.of((buf, p) -> {
-        buf.writeVarInt(p.portals.size());
-        for (Entry e : p.portals) {
+    public void encode(FriendlyByteBuf buf) {
+        buf.writeVarInt(portals.size());
+        for (Entry e : portals) {
             buf.writeBlockPos(e.min());
             buf.writeVarInt(e.facing().get3DDataValue());
             buf.writeVarInt(e.colour().getId());
@@ -27,7 +24,9 @@ public record PortalListPayload(List<Entry> portals) implements CustomPacketPayl
             buf.writeDouble(e.origin().y);
             buf.writeDouble(e.origin().z);
         }
-    }, buf -> {
+    }
+
+    public static PortalListPayload decode(FriendlyByteBuf buf) {
         int n = Math.min(buf.readVarInt(), 100000);
         List<Entry> list = new ArrayList<>(n);
         for (int i = 0; i < n; i++) {
@@ -35,14 +34,11 @@ public record PortalListPayload(List<Entry> portals) implements CustomPacketPayl
                     new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble())));
         }
         return new PortalListPayload(list);
-    });
-
-    @Override
-    public Type<? extends CustomPacketPayload> type() {
-        return TYPE;
     }
 
-    public static void handle(PortalListPayload payload, IPayloadContext context) {
+    public static void handle(PortalListPayload payload, Supplier<NetworkEvent.Context> ctx) {
+        NetworkEvent.Context context = ctx.get();
+        context.setPacketHandled(true);
         context.enqueueWork(() -> com.example.skyblocks.client.PortalClient.known(payload)); // (client-only class)
     }
 }

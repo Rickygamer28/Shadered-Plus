@@ -26,7 +26,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.minecraftforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -364,7 +364,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
         List<Entry> same = index.get(stack.getItem());
         if (same != null) {
             for (Entry e : same) {
-                if (ItemStack.isSameItemSameComponents(e.item, stack)) {
+                if (ItemStack.isSameItemSameTags(e.item, stack)) {
                     return e;
                 }
             }
@@ -557,12 +557,12 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
     // ---- saving, and what the client sees ----
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
         ListTag list = new ListTag();
         for (Entry e : entries) {
             CompoundTag t = new CompoundTag();
-            t.put("item", e.item.save(registries));
+            t.put("item", e.item.save(new CompoundTag()));
             t.putLong("count", e.count);
             list.add(t);
         }
@@ -587,15 +587,15 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    public void load(CompoundTag tag) {
+        super.load(tag);
         if (tag.contains("items")) {
             entries.clear();
             indexDirty = true;
             total = 0;
             for (Tag t : tag.getList("items", Tag.TAG_COMPOUND)) {
                 CompoundTag c = (CompoundTag) t;
-                ItemStack item = ItemStack.parseOptional(registries, c.getCompound("item"));
+                ItemStack item = ItemStack.of(c.getCompound("item"));
                 long count = c.getLong("count");
                 if (!item.isEmpty() && count > 0) {
                     entries.add(new Entry(item, count));
@@ -608,7 +608,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
             kindsShown = tag.getInt("kinds");
             shown.clear();
             for (Tag t : tag.getList("shown", Tag.TAG_COMPOUND)) {
-                ItemStack s = ItemStack.parseOptional(registries, (CompoundTag) t);
+                ItemStack s = ItemStack.of((CompoundTag) t);
                 if (!s.isEmpty()) {
                     shown.add(s);
                 }
@@ -636,7 +636,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
     }
 
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+    public CompoundTag getUpdateTag() {
         CompoundTag tag = new CompoundTag();
         saveLooks(tag);
         tag.putLong("total", total);
@@ -655,7 +655,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
         top.sort((a, b) -> Long.compare(b.count, a.count));
         ListTag list = new ListTag();
         for (Entry e : top) {
-            list.add(e.item.save(registries));
+            list.add(e.item.save(new CompoundTag()));
         }
         tag.put("shown", list);
         return tag;
@@ -671,7 +671,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
     public ItemStack asItem(HolderLookup.Provider registries) {
         ItemStack stack = new ItemStack(ModItems.SINGULARITY.get());
         if (!entries.isEmpty() || !destroy.isEmpty() || !destroyTags.isEmpty() || vacuum || colour != 0x9A6BFF) {
-            CompoundTag tag = saveWithoutMetadata(registries);
+            CompoundTag tag = saveWithoutMetadata();
             tag.remove("chamber"); // (its chamber stays where it was)
             net.minecraft.world.item.BlockItem.setBlockEntityData(stack, ModBlockEntities.SINGULARITY.get(), tag);
         }
@@ -680,5 +680,22 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
 
     public boolean isEmpty() {
         return entries.isEmpty();
+    }
+
+    /** 1.20.1: hoppers and pipes find this through Forge's capabilities (1.21.1 registers it in an event). */
+    @Override
+    public <T> net.minecraftforge.common.util.LazyOptional<T> getCapability(net.minecraftforge.common.capabilities.Capability<T> cap,
+                                                                             @org.jetbrains.annotations.Nullable net.minecraft.core.Direction side) {
+        if (cap == net.minecraftforge.common.capabilities.ForgeCapabilities.ITEM_HANDLER) {
+            net.minecraftforge.items.IItemHandler h = handler;
+            return net.minecraftforge.common.util.LazyOptional.of(() -> h).cast();
+        }
+        return super.getCapability(cap, side);
+    }
+
+    /** What its renderer draws (1.20.1: the block entity says, not the renderer). */
+    @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox() {
+        return new net.minecraft.world.phys.AABB(getBlockPos()).inflate(Math.max(reach(), shownGrow) + 0.1);
     }
 }

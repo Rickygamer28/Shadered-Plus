@@ -1,6 +1,5 @@
 package com.example.skyblocks;
 
-import com.mojang.serialization.MapCodec;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -10,7 +9,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
+import com.example.skyblocks.compat.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -39,30 +38,24 @@ public class SolarSystemBlock extends BaseEntityBlock {
     private static final VoxelShape ORRERY = Block.box(1, 0, 1, 15, 5, 15);
     private static final VoxelShape PLANETARIUM = Block.box(1, 0, 1, 15, 5, 15);
     private final boolean hologram;
-    private final MapCodec<SolarSystemBlock> codec;
 
     public SolarSystemBlock(Properties properties, boolean hologram) {
         super(properties);
         this.hologram = hologram;
-        this.codec = simpleCodec(p -> new SolarSystemBlock(p, hologram));
     }
 
     public boolean hologram() {
         return hologram;
     }
 
-    @Override
-    protected MapCodec<? extends BaseEntityBlock> codec() {
-        return codec;
-    }
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
+    public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return hologram ? PLANETARIUM : ORRERY;
     }
 
@@ -70,8 +63,7 @@ public class SolarSystemBlock extends BaseEntityBlock {
      * The planetarium: right-click with glass (any glass block or pane, any mod's) to take its dome off or put it back;
      * with an amethyst shard to make it bigger (normal, bigger, a lot bigger).
      */
-    @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    protected com.example.skyblocks.compat.ItemInteractionResult useItemOn121(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (hologram && isTool(stack)) {
             useTool(stack, level, pos, player);
             return ItemInteractionResult.sidedSuccess(level.isClientSide);
@@ -102,8 +94,7 @@ public class SolarSystemBlock extends BaseEntityBlock {
         }
     }
 
-    @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+    protected net.minecraft.world.InteractionResult useWithoutItem121(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         return use(level, pos, player);
     }
 
@@ -125,7 +116,7 @@ public class SolarSystemBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos from, boolean moving) {
+    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos from, boolean moving) {
         super.neighborChanged(state, level, pos, block, from, moving);
         if (!level.isClientSide && level.getBlockEntity(pos) instanceof SolarSystemBlockEntity be) {
             be.setPowered(level.hasNeighborSignal(pos));
@@ -133,12 +124,12 @@ public class SolarSystemBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected boolean hasAnalogOutputSignal(BlockState state) {
+    public boolean hasAnalogOutputSignal(BlockState state) {
         return true;
     }
 
     @Override
-    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+    public int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
         return level.getBlockEntity(pos) instanceof SolarSystemBlockEntity be ? be.signal() : 0;
     }
 
@@ -155,7 +146,19 @@ public class SolarSystemBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.BlockGetter context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable(hologram ? "tooltip.skyblocks.planetarium" : "tooltip.skyblocks.orrery").withStyle(ChatFormatting.GRAY));
+    }
+
+    /** 1.20.1: one use() - an item first (useItemOn121), then the empty-hand use (useWithoutItem121), as 1.21 does. */
+    @Override
+    public net.minecraft.world.InteractionResult use(BlockState state, net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+                                                      net.minecraft.world.entity.player.Player player, net.minecraft.world.InteractionHand hand,
+                                                      net.minecraft.world.phys.BlockHitResult hit) {
+        com.example.skyblocks.compat.ItemInteractionResult r = useItemOn121(player.getItemInHand(hand), state, level, pos, player, hand, hit);
+        if (r != com.example.skyblocks.compat.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION) {
+            return r.result();
+        }
+        return hand == net.minecraft.world.InteractionHand.MAIN_HAND ? useWithoutItem121(state, level, pos, player, hit) : net.minecraft.world.InteractionResult.PASS;
     }
 }

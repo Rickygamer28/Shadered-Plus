@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.LongArrayTag;
@@ -26,7 +25,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.network.PacketDistributor;
 
 /**
  * Portal mirrors (PortalMirrorBlock): which blocks make one portal, which portal it's linked to, and how the world in
@@ -155,7 +154,7 @@ public final class PortalMirrors {
         private final List<Portal> portals = new ArrayList<>();
 
         public static Registry of(ServerLevel level) {
-            return level.getDataStorage().computeIfAbsent(new SavedData.Factory<>(Registry::new, Registry::load, null), "skyblocks_portal_mirrors");
+            return level.getDataStorage().computeIfAbsent(Registry::load, Registry::new, "skyblocks_portal_mirrors");
         }
 
         public List<Portal> portals() {
@@ -211,7 +210,7 @@ public final class PortalMirrors {
 
         /** The portals of this world to everyone in it. */
         public void sendTo(ServerLevel level) {
-            PacketDistributor.sendToPlayersInDimension(level, payload());
+            SkyBlocksMod.NETWORK.send(PacketDistributor.DIMENSION.with(level::dimension), payload());
         }
 
         public PortalListPayload payload() {
@@ -223,7 +222,7 @@ public final class PortalMirrors {
         }
 
         @Override
-        public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
+        public CompoundTag save(CompoundTag tag) {
             ListTag list = new ListTag();
             for (Portal p : portals) {
                 CompoundTag t = new CompoundTag();
@@ -241,7 +240,7 @@ public final class PortalMirrors {
             return tag;
         }
 
-        private static Registry load(CompoundTag tag, HolderLookup.Provider registries) {
+        private static Registry load(CompoundTag tag) {
             Registry r = new Registry();
             for (Tag t : tag.getList("portals", Tag.TAG_COMPOUND)) {
                 CompoundTag c = (CompoundTag) t;

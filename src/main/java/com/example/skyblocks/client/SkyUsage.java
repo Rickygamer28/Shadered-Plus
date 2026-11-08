@@ -566,7 +566,7 @@ public final class SkyUsage {
     /** Off: the whole picture for them, as before (the render test compares). */
     public static boolean itemParts = true;
 
-    public static void itemsDrawn(RenderType type, com.mojang.blaze3d.vertex.MeshData mesh) {
+    public static void itemsDrawn(RenderType type, com.mojang.blaze3d.vertex.BufferBuilder.RenderedBuffer mesh) {
         if (!itemParts || drawing || inHud || MirrorRenderer.isRenderingReflection() || !RenderSystem.isOnRenderThread()) {
             return;
         }
@@ -614,8 +614,8 @@ public final class SkyUsage {
 
     /** Where a batch's vertices are on screen (as rectOfBox), with the projection and view it's drawn with now. */
     @Nullable
-    private static int[] rectOfMesh(com.mojang.blaze3d.vertex.MeshData mesh) {
-        com.mojang.blaze3d.vertex.MeshData.DrawState state = mesh.drawState();
+    private static int[] rectOfMesh(com.mojang.blaze3d.vertex.BufferBuilder.RenderedBuffer mesh) {
+        com.mojang.blaze3d.vertex.BufferBuilder.DrawState state = mesh.drawState();
         java.nio.ByteBuffer buf = mesh.vertexBuffer().duplicate().order(java.nio.ByteOrder.nativeOrder());
         int stride = state.format().getVertexSize(), n = state.vertexCount();
         if (n <= 0 || stride < 12 || buf.limit() < n * stride) {

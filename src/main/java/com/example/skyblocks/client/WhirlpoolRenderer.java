@@ -6,10 +6,10 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.client.event.RegisterShadersEvent;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.util.ArrayList;
@@ -24,8 +24,8 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.phys.AABB;
-import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.neoforged.neoforge.fluids.FluidStack;
+import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
+import net.minecraftforge.fluids.FluidStack;
 
 /**
  * The whirlpool singularity: alone, a vortex swirling down in its frame - each fluid it holds a band of its own, flowing
@@ -59,7 +59,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         IClientFluidTypeExtensions ext = IClientFluidTypeExtensions.of(fluid.getFluid());
         TextureAtlasSprite sprite = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(ext.getStillTexture(fluid));
         int tint = ext.getTintColor(fluid);
-        net.neoforged.neoforge.fluids.FluidType type = fluid.getFluid().getFluidType();
+        net.minecraftforge.fluids.FluidType type = fluid.getFluid().getFluidType();
         return new Look(sprite, tint | 0xFF000000, type.getLightLevel(fluid) > 0, total <= 0 ? 0 : (float) amount / total,
                 type.isLighterThanAir(), type.getDensity(fluid));
     }
@@ -102,13 +102,13 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
      */
     private static final float[] SHAPE = {6.0F, 1.0F, 0.0F, 0.0F};
 
-    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    @Mod.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
         private Shaders() {}
 
         @SubscribeEvent
         public static void register(RegisterShadersEvent event) throws java.io.IOException {
-            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "whirlpool"), DefaultVertexFormat.PARTICLE, s -> shader = s);
+            ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "whirlpool"), DefaultVertexFormat.PARTICLE, s -> shader = s);
         }
     }
 
@@ -319,7 +319,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
     }
 
     private static void funnelVertex(VertexConsumer v, PoseStack.Pose pose, float x, float y, float z, float u, float w, int argb, int light) {
-        v.addVertex(pose, x, y, z).setUv(u, w).setColor(argb).setLight(light);
+        v.vertex(pose.pose(), x, y, z).uv(u, w).color(argb).uv2(light).endVertex();
     }
 
     // ---- in its tank: the tank filled, in layers ----
@@ -461,7 +461,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
                                    float shade, float s, float far, int alpha, int light) {
         int red = Math.round(255 * Math.min(1.0F, shade)), green = Math.round(255 * Math.max(0.0F, Math.min(1.0F, (s + 1.0F) / 3.2F))),
                 blue = Math.round(255 * Math.min(1.0F, r / far));
-        v.addVertex(pose, 0.5F + r * c, y, 0.5F + r * sn).setUv(u, xi).setColor(red, green, blue, alpha).setLight(light);
+        v.vertex(pose.pose(), 0.5F + r * c, y, 0.5F + r * sn).uv(u, xi).color(red, green, blue, alpha).uv2(light).endVertex();
     }
 
     /** How far from the tank's middle its wall is, this way round (the tank square, {@code half} to each side). */
@@ -613,11 +613,11 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
 
     private static void vertex(VertexConsumer v, PoseStack.Pose pose, float x, float y, float z, TextureAtlasSprite sprite, float u, float w,
                                int argb, int light) {
-        v.addVertex(pose, x, y, z).setColor(argb).setUv(sprite.getU(Math.min(1.0F, u)), sprite.getV(Math.min(1.0F, w)))
-                .setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 1.0F, 0.0F);
+        v.vertex(pose.pose(), x, y, z).color(argb).uv(sprite.getU(Math.min(1.0F, u)), sprite.getV(Math.min(1.0F, w)))
+                .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(pose.normal(), 0.0F, 1.0F, 0.0F).endVertex();
     }
 
-    @Override
+    /** (1.20.1: the block entity's getRenderBoundingBox says - kept for reference.) */
     public AABB getRenderBoundingBox(WhirlpoolBlockEntity be) {
         return new AABB(be.getBlockPos()).inflate(be.tank() > 0 ? be.tank() / 2.0 + 0.5 : 0.1);
     }

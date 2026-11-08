@@ -101,10 +101,10 @@ public class SpecialFrameRenderer implements BlockEntityRenderer<SpecialFrameBlo
 
     private static void rect(Matrix4f m, MultiBufferSource buffers, float x0, float y0, float x1, float y1, int argb, int light, float z) {
         VertexConsumer v = buffers.getBuffer(RenderType.textBackground());
-        v.addVertex(m, x0, y0, z).setColor(argb).setLight(light);
-        v.addVertex(m, x0, y1, z).setColor(argb).setLight(light);
-        v.addVertex(m, x1, y1, z).setColor(argb).setLight(light);
-        v.addVertex(m, x1, y0, z).setColor(argb).setLight(light);
+        v.vertex(m, x0, y0, z).color(argb).uv2(light).endVertex();
+        v.vertex(m, x0, y1, z).color(argb).uv2(light).endVertex();
+        v.vertex(m, x1, y1, z).color(argb).uv2(light).endVertex();
+        v.vertex(m, x1, y0, z).color(argb).uv2(light).endVertex();
     }
 
     /** A port's item, a monitor's item and how many of it there are ({@code count} -2: none shown; -1: not formed). */

@@ -198,7 +198,7 @@ public final class ShaderSky {
                 }
                 RenderSystem.setShader(() -> shader);
                 BufferBuilder b = Tesselator.getInstance().getBuilder();
-        b.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
+                b.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
                 // the six faces of a cube from -1 to 1, scaled to the render distance like Shadered's skyboxes: the view
                 // bobbing's small sideways / up-down shift (in the projection) must be tiny next to it, or the whole
                 // picture swims as you walk

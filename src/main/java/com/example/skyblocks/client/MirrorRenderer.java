@@ -1912,15 +1912,15 @@ public final class MirrorRenderer {
     private static TextureTarget snapshotScratch;
     private static ShaderInstance packShader, farShader;
 
-    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    @Mod.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class PortalShaders {
         private PortalShaders() {}
 
         @SubscribeEvent
         public static void registerPortalShaders(net.minecraftforge.client.event.RegisterShadersEvent event) {
-            ShaderLoad.register(event, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "portal_pack"),
+            ShaderLoad.register(event, new net.minecraft.resources.ResourceLocation(SkyBlocksMod.MOD_ID, "portal_pack"),
                     DefaultVertexFormat.POSITION, sh -> packShader = sh);
-            ShaderLoad.register(event, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "portal_far"),
+            ShaderLoad.register(event, new net.minecraft.resources.ResourceLocation(SkyBlocksMod.MOD_ID, "portal_far"),
                     DefaultVertexFormat.POSITION_TEX, sh -> farShader = sh);
         }
     }
@@ -2096,12 +2096,13 @@ public final class MirrorRenderer {
             RenderSystem.setShader(() -> packShader);
             RenderSystem.setShaderTexture(0, snapshotScratch.getColorTextureId());
             RenderSystem.setShaderTexture(1, snapshotScratch.getDepthTextureId());
-            BufferBuilder b = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
-            b.addVertex(-1.0F, -1.0F, 0.0F);
-            b.addVertex(1.0F, -1.0F, 0.0F);
-            b.addVertex(1.0F, 1.0F, 0.0F);
-            b.addVertex(-1.0F, 1.0F, 0.0F);
-            BufferUploader.drawWithShader(b.buildOrThrow());
+            BufferBuilder b = Tesselator.getInstance().getBuilder();
+            b.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
+            b.vertex(-1.0F, -1.0F, 0.0F).endVertex();
+            b.vertex(1.0F, -1.0F, 0.0F).endVertex();
+            b.vertex(1.0F, 1.0F, 0.0F).endVertex();
+            b.vertex(-1.0F, 1.0F, 0.0F).endVertex();
+            BufferUploader.drawWithShader(b.end());
             RenderSystem.enableDepthTest();
             RenderSystem.depthMask(true);
             RenderSystem.enableCull();
@@ -2163,7 +2164,7 @@ public final class MirrorRenderer {
         RenderSystem.depthMask(!overlayFaces);
         RenderSystem.disableBlend();
         RenderSystem.disableCull();
-        MeshData mesh = faceMesh(wall, faces, cam.x, cam.y, cam.z, true);
+        BufferBuilder.RenderedBuffer mesh = faceMesh(wall, faces, cam.x, cam.y, cam.z, true);
         if (mesh != null) {
             RenderSystem.enablePolygonOffset();
             RenderSystem.polygonOffset(-2.0F, -20.0F);

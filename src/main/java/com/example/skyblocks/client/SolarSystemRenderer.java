@@ -24,10 +24,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.client.event.RegisterShadersEvent;
 import org.joml.Matrix4f;
 
 /**
@@ -41,13 +41,13 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
     private static float years, spin, glow = 1.0F, itemMode;
     static final Matrix4f ITEM_INV = new Matrix4f();
 
-    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    @Mod.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
         private Shaders() {}
 
         @SubscribeEvent
         public static void registerSolarSystemRenderer(RegisterShadersEvent event) {
-            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "solar_system"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> shader = s);
+            ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "solar_system"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> shader = s);
         }
     }
 
@@ -77,7 +77,7 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
     abstract static class Types extends RenderType {
         static final RenderType MODEL = create("skyblocks_solar_system", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 256,
                 false, false, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                         .setTexturingState(new TexturingStateShard("skyblocks_solar_system_time", SolarSystemRenderer::setUp, () -> {}))
                         .setTransparencyState(new TransparencyStateShard("skyblocks_solar_system_premultiplied", SolarSystemRenderer::premultipliedOn, SolarSystemRenderer::premultipliedOff))
                         .setWriteMaskState(COLOR_WRITE)
@@ -87,7 +87,7 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
         // then the planets' depth (nothing drawn: what comes later - other blocks' effects - hidden behind them)
         static final RenderType DEPTH = create("skyblocks_solar_system_depth", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 256,
                 false, false, CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setShaderState(new ShaderStateShard(() -> ViewState.upload(shader)))
                         .setTexturingState(new TexturingStateShard("skyblocks_solar_system_depth", () -> {
                             SolarSystemRenderer.setUp();
                             if (shader != null) shader.safeGetUniform("DepthOnly").set(1.0F);
@@ -146,7 +146,7 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
             poseStack.translate(-0.5F, 0.0F, -0.5F);
         }
         Matrix4f m = poseStack.last().pose();
-        ITEM_INV.set(m).invert();
+        ITEM_INV.set(m).invert().mul(ViewState.current()); // (1.20.1: the pose holds the camera's turn, which the shader takes out first)
         Minecraft mc = Minecraft.getInstance();
         float t = mc.level == null ? 0.0F : (mc.level.getGameTime() % 72000L) / 20.0F;
         years = 26.3F + t / 120.0F;
@@ -169,8 +169,8 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
         int[][] faces = {{4, 5, 7, 6}, {1, 0, 2, 3}, {5, 1, 3, 7}, {0, 4, 6, 2}, {6, 7, 3, 2}, {0, 1, 5, 4}};
         for (int[] f : faces) {
             for (int k : f) {
-                vc.addVertex(m, (k & 1) != 0 ? hi[0] : lo[0], (k & 2) != 0 ? hi[1] : lo[1], (k & 4) != 0 ? hi[2] : lo[2])
-                        .setUv(k + (holo ? 8 : 0), extra).setColor(255, 255, 255, 255);
+                vc.vertex(m, (k & 1) != 0 ? hi[0] : lo[0], (k & 2) != 0 ? hi[1] : lo[1], (k & 4) != 0 ? hi[2] : lo[2])
+                        .uv(k + (holo ? 8 : 0), extra).color(255, 255, 255, 255).endVertex();
             }
         }
     }
@@ -273,7 +273,7 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
         poseStack.popPose();
     }
 
-    @Override
+    /** (1.20.1: the block entity's getRenderBoundingBox says - kept for reference.) */
     public AABB getRenderBoundingBox(SolarSystemBlockEntity be) {
         if (!hologram(be)) return new AABB(be.getBlockPos()).inflate(0.35, 0.15, 0.35);
         double s = be.scale();
