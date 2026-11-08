@@ -204,6 +204,11 @@ public final class RenderTest {
                 default -> {
                     if (stage >= 2 && stage < 2 + SPOTS.length) {
                         int spot = stage - 2;
+                        if (ticks == 1 && "shaders".equals(TAG) && (SPOTS[spot].contains("burst ") || SPOTS[spot].startsWith("nobridge "))) {
+                            stage++; // (with a shader pack the frames come slowly: no frame-by-frame spots)
+                            ticks = 0;
+                            return;
+                        }
                         if (ticks == 1) {
                             String where = SPOTS[spot];
                             com.example.skyblocks.client.SkyUsage.itemParts = !where.startsWith("itemswhole ");

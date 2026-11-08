@@ -57,6 +57,23 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
     public static boolean noDepth;
 
     private static boolean copyDepth() {
+        // (with a shader pack the hole is drawn into Shadered+'s own target, over the pack's image: the world's depth is
+        // the main target's)
+        int restoreDraw = -1;
+        if (com.example.skyblocks.client.iris.IrisDefer.drawing()) {
+            restoreDraw = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+            GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, Minecraft.getInstance().getMainRenderTarget().frameBufferId);
+        }
+        try {
+            return copyDepthFromDraw();
+        } finally {
+            if (restoreDraw >= 0) {
+                GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, restoreDraw);
+            }
+        }
+    }
+
+    private static boolean copyDepthFromDraw() {
         try {
             int draw = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
             int read = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
@@ -123,6 +140,15 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
 
     /** Copies the picture being drawn now (its colour) into our texture, and hands it to the shader. */
     private static void copyScreen() {
+        if (com.example.skyblocks.client.iris.IrisDefer.drawing()) {
+            // with a shader pack: what it bends is the pack's finished image (the last frame's, before our overlay)
+            com.example.skyblocks.client.iris.IrisIslandTarget.wantLastFinal = true;
+            int last = com.example.skyblocks.client.iris.IrisIslandTarget.lastFinalTexture();
+            if (last != 0) {
+                RenderSystem.setShaderTexture(0, last);
+                return;
+            }
+        }
         int[] vp = new int[4];
         GL11.glGetIntegerv(GL11.GL_VIEWPORT, vp);
         int w = Math.max(vp[2], 1), h = Math.max(vp[3], 1);
@@ -273,7 +299,9 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         // drawn last); what's still waiting to be drawn is drawn first - so it's in the picture the hole bends
         // and drawn now (left waiting, the last one would only be drawn at the very end of the frame, too late)
         RenderType type = inside ? Types.HOLE_INSIDE : Types.HOLE;
-        boolean main = buffers == Minecraft.getInstance().renderBuffers().bufferSource();
+        // (with Iris and no shader pack on, block entities get Iris's buffers: the world's view all the same)
+        boolean main = buffers == Minecraft.getInstance().renderBuffers().bufferSource()
+                || (DrawNow.isIris(buffers) && !IrisCompat.shaderPackInUse());
         if (main && !MirrorRenderer.isRenderingReflection() && !IrisCompat.shaderPackInUse()) {
             // the world's view: drawn in Shadered's pass, once its sky blocks and models (the cats) are drawn, so they
             // are in the picture the hole bends (see drawPending)
@@ -386,9 +414,10 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         }
         Matrix4f m = poseStack.last().pose();
         ITEM_INV.set(m).invert().mul(ViewState.current()); // (1.20.1: the pose holds the camera's turn, which the shader takes out first)
-        box(buffers.getBuffer(Types.ITEM), m, big ? 1 : 0, 0.0F, big ? 0xFFB070 : 0x9A6BFF, 0.3F);
-        if (buffers instanceof MultiBufferSource.BufferSource source) {
-            source.endBatch(Types.ITEM);
+        MultiBufferSource.BufferSource now = DrawNow.of(buffers);
+        box((now != null ? now : buffers).getBuffer(Types.ITEM), m, big ? 1 : 0, 0.0F, big ? 0xFFB070 : 0x9A6BFF, 0.3F);
+        if (now != null) {
+            now.endBatch(Types.ITEM);
         }
     }
 
@@ -399,9 +428,10 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         }
         Matrix4f m = poseStack.last().pose();
         ITEM_INV.set(m).invert().mul(ViewState.current()); // (1.20.1: the pose holds the camera's turn, which the shader takes out first)
-        box(buffers.getBuffer(Types.ITEM), m, kind, grow, colour, 0.3F);
-        if (buffers instanceof MultiBufferSource.BufferSource source) {
-            source.endBatch(Types.ITEM);
+        MultiBufferSource.BufferSource now = DrawNow.of(buffers);
+        box((now != null ? now : buffers).getBuffer(Types.ITEM), m, kind, grow, colour, 0.3F);
+        if (now != null) {
+            now.endBatch(Types.ITEM);
         }
     }
 
@@ -409,13 +439,15 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
     private static void drawChamber(MultiBufferSource buffers, Matrix4f pose, boolean inside, int kind, float grow, int colour, float seed) {
         RenderType colourPass = inside ? Types.CHAMBER_INSIDE : Types.CHAMBER;
         RenderType depthPass = inside ? Types.CHAMBER_DEPTH_INSIDE : Types.CHAMBER_DEPTH;
-        box(buffers.getBuffer(colourPass), pose, kind, grow, colour, seed);
-        if (buffers instanceof MultiBufferSource.BufferSource source) {
-            source.endBatch(colourPass);
+        MultiBufferSource.BufferSource now = DrawNow.of(buffers);
+        MultiBufferSource into = now != null ? now : buffers;
+        box(into.getBuffer(colourPass), pose, kind, grow, colour, seed);
+        if (now != null) {
+            now.endBatch(colourPass);
         }
-        box(buffers.getBuffer(depthPass), pose, kind, grow, colour, seed);
-        if (buffers instanceof MultiBufferSource.BufferSource source) {
-            source.endBatch(depthPass);
+        box(into.getBuffer(depthPass), pose, kind, grow, colour, seed);
+        if (now != null) {
+            now.endBatch(depthPass);
         }
     }
 

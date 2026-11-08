@@ -15,6 +15,7 @@
     "AssimpRendererBonesMixin",
     "BlockEntityTimingMixin",
     "ComplexPassTimingMixin",
+    "DeferDepthMixin",
     "EntityTimingMixin",
     "EntityAccessor",
     "LevelRendererInvoker",

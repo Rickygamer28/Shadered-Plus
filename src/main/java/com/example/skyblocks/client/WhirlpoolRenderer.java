@@ -160,7 +160,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
 
     /** The vortex, its rim this wide round the block's middle at {@code top}, its throat {@code depth} below. */
     private static void vortex(List<Look> looks, float rim, float depth, float top, PoseStack poseStack, MultiBufferSource buffers, int light, float t) {
-        if (shader != null && buffers instanceof MultiBufferSource.BufferSource source) {
+        if (shader != null && DrawNow.of(buffers) instanceof MultiBufferSource.BufferSource source) {
             funnel(looks, rim, depth, top, poseStack, source, light);
             return;
         }
@@ -338,7 +338,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
             return;
         }
         float lo = -(r - 1) + inset, hi = r - inset;
-        if (shader != null && buffers instanceof MultiBufferSource.BufferSource source) {
+        if (shader != null && DrawNow.of(buffers) instanceof MultiBufferSource.BufferSource source) {
             tankWhirlpool(be, looks, poseStack, source, light, lo, hi);
         } else { // (without the shader: the funnel alone, filling the tank)
             float width = 2 * r - 1, full = Math.max(be.shownFull, 0.05F);

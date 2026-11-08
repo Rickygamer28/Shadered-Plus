@@ -13,6 +13,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /** Times each block entity drawn in the normal view, by kind, for the F3 screen (WorldTiming). */
 @Mixin(BlockEntityRenderDispatcher.class)
 public abstract class BlockEntityTimingMixin {
+    /** With a shader pack: ours with shaders of their own are drawn over the pack's image instead (client/iris/IrisDefer). */
+    @Inject(method = "render(Lnet/minecraft/world/level/block/entity/BlockEntity;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;)V",
+            at = @At("HEAD"), cancellable = true, require = 0)
+    private void skyblocks$overShaderPack(BlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, CallbackInfo ci) {
+        if (com.example.skyblocks.client.iris.IrisDefer.defer(be, partialTick, pose, buffers)) {
+            ci.cancel();
+        }
+    }
+
     @Inject(method = "render(Lnet/minecraft/world/level/block/entity/BlockEntity;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;)V",
             at = @At("HEAD"), require = 0)
     private void skyblocks$timeStart(BlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, CallbackInfo ci) {

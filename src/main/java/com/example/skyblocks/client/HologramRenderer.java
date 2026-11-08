@@ -209,7 +209,8 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
     public HologramRenderer(BlockEntityRendererProvider.Context context) {}
 
     @Override
-    public void render(HologramBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
+    public void render(HologramBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource given, int light, int overlay) {
+        MultiBufferSource buffers = DrawNow.into(given); // (Iris's: drawn later, together - each hologram drawn now, in its own colour)
         int c = com.example.skyblocks.GlowColourBlockEntity.shown(be, LavaLampRenderer.seconds());
         float r = ((c >> 16) & 255) / 255.0F, g = ((c >> 8) & 255) / 255.0F, b = (c & 255) / 255.0F;
         ItemStack stack = be.shown();
@@ -223,6 +224,7 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
         cone(buffers.getBuffer(RenderType.lightning()), poseStack.last().pose(), 4.6F / 16.0F, top, 1.6F / 16.0F, spread, r, g, b,
                 !be.showing() ? 0.12F : 0.2F);
         if (!be.showing() || shader == null) {
+            DrawNow.finish(buffers);
             return;
         }
         colourKey = (Math.round(r * 31.0F) << 10) | (Math.round(g * 31.0F) << 5) | Math.round(b * 31.0F);
@@ -277,6 +279,7 @@ public class HologramRenderer implements BlockEntityRenderer<HologramBlockEntity
                 source.endBatch(h); // (now, with this hologram's colour)
             }
         }
+        DrawNow.finish(buffers);
     }
 
     // ---- a player: their own skin, standing on the beam, turning slowly, looking about ----

@@ -118,10 +118,18 @@ jobs:
         run: |
           set +e
           export LIBGL_ALWAYS_SOFTWARE=1 MESA_GL_VERSION_OVERRIDE=4.5
-          for v in plain embeddium; do
-            EXTRA=""; [ $v = embeddium ] && EXTRA="-PwithEmbeddium"
+          # the third run: with a shader pack (Complementary Reimagined, through Oculus)
+          PACK_URL=$(curl -s 'https://api.modrinth.com/v2/project/complementary-reimagined/version?loaders=%5B%22iris%22%5D' | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['files'][0]['url'])")
+          PACK=$(basename "$PACK_URL" | python3 -c "import sys,urllib.parse; print(urllib.parse.unquote(sys.stdin.read().strip()))")
+          mkdir -p run/shaderpacks run/config && curl -sL "$PACK_URL" -o "run/shaderpacks/$PACK"
+          echo "::notice::shader pack $PACK ($(stat -c %s "run/shaderpacks/$PACK" 2>/dev/null) bytes)"
+          for v in plain embeddium shaders; do
+            EXTRA=""; [ $v != plain ] && EXTRA="-PwithEmbeddium"
+            rm -f run/config/oculus.properties run/config/iris.properties
+            [ $v = shaders ] && printf 'enableShaders=true\nshaderPack=%s\n' "$PACK" | tee run/config/oculus.properties > run/config/iris.properties
+            LIMIT=210; [ $v = shaders ] && LIMIT=500
             (SKYBLOCKS_RENDER_TEST=$v xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient $EXTRA --no-daemon > render_$v.log 2>&1 &)
-            for i in $(seq 1 210); do
+            for i in $(seq 1 $LIMIT); do
               sleep 5
               if grep -qE "render test done|Crash report saved|BUILD FAILED" render_$v.log; then sleep 5; break; fi
             done
@@ -129,7 +137,7 @@ jobs:
             echo "::notice::render test $v: $(grep -E 'render test|GL_RENDERER|OpenGL|Exception|ERROR' render_$v.log | grep -v DEBUG | head -25 | sed ':a;N;$!ba;s/\n/%0A/g' | cut -c1-5000)"
           done
           mkdir -p shots && cp run/screenshots/rendertest_*.png shots/ 2>/dev/null
-          cp render_plain.log render_embeddium.log shots/ 2>/dev/null
+          cp render_plain.log render_embeddium.log render_shaders.log shots/ 2>/dev/null
           echo "::notice::screenshots: $(ls shots | tr '\n' ' ')"
           cd shots && git init -q && git checkout -q -b ci-shots-1.20.1 && git add . \
             && git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "render test ${GITHUB_SHA}" \
