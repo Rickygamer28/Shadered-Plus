@@ -228,6 +228,9 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         hole(be.getBlockPos(), poseStack, buffers, big(be) ? 1 : 0, 0.0F, GlowColourBlockEntity.shown(be, LavaLampRenderer.seconds()));
     }
 
+    /** (How close to its box counts as inside it: the shader's the same.) */
+    static final double NEAR_MARGIN = 0.3;
+
     /** Where a hole of this kind sits in its block, and how far it reaches (kind 2, the singularity: by how full it is). */
     static float centreY(int kind) {
         return kind == 0 ? 0.62F : 0.5F;
@@ -258,7 +261,9 @@ public class BlackHoleRenderer implements BlockEntityRenderer<GlowColourBlockEnt
         float seed = (float) ((h >>> 40) & 0xFFFF) / 65536.0F * 0.9F;
         // the eye inside the box? (the main camera's; the box as in box())
         Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-        double reach = reach(kind, grow) * 1.03;
+        // (or just outside it: its near side too close to the eye is cut off by the near plane - only its far side
+        // drawn there, the hole was cut off along a line; as from inside, then, it's drawn on its far side - see the shader)
+        double reach = reach(kind, grow) * 1.03 + NEAR_MARGIN;
         boolean inside = Math.abs(cam.x - (pos.getX() + 0.5)) < reach && Math.abs(cam.z - (pos.getZ() + 0.5)) < reach
                 && Math.abs(cam.y - (pos.getY() + centreY(kind))) < reach;
         if (IrisCompat.renderingShadowPass()) {
