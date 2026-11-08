@@ -32,6 +32,8 @@ public class AquariumBlock extends AbstractGlassBlock {
 
     private final boolean ocean;
     private final boolean deep;
+    /** 0 the plain aquarium, 1 the coral reef one, 2 the jungle river one. */
+    private final int theme;
 
     public AquariumBlock(Properties properties) {
         this(properties, false);
@@ -44,9 +46,15 @@ public class AquariumBlock extends AbstractGlassBlock {
 
     /** deep: the deep sea aquarium (always dark: anglerfish, lanternfish, glowing jellyfish and squid). */
     public AquariumBlock(Properties properties, boolean ocean, boolean deep) {
+        this(properties, ocean, deep, 0);
+    }
+
+    /** theme: 1 a coral reef (white sand, corals, reef fish), 2 a jungle river (dark water, driftwood, piranhas, tetras). */
+    public AquariumBlock(Properties properties, boolean ocean, boolean deep, int theme) {
         super(properties);
         this.ocean = ocean;
         this.deep = deep;
+        this.theme = theme;
         registerDefaultState(stateDefinition.any().setValue(UP, false).setValue(DOWN, false));
     }
 
@@ -77,19 +85,24 @@ public class AquariumBlock extends AbstractGlassBlock {
         return deep;
     }
 
+    public int theme() {
+        return theme;
+    }
+
     protected InteractionResult useWithoutItem121(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!player.isShiftKeyDown()) {
             return InteractionResult.PASS;
         }
         if (level.isClientSide) { // which fish to show (a setting on this computer: the fish are only drawn there)
-            com.example.skyblocks.client.ClientAccess.openAquarium(ocean, deep); // (client-only class, never loaded on a server)
+            com.example.skyblocks.client.ClientAccess.openAquarium(ocean, deep, theme); // (client-only class, never loaded on a server)
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
     @Override
     public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.BlockGetter context, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable(deep ? "tooltip.skyblocks.deep_sea_aquarium" : ocean ? "tooltip.skyblocks.ocean_aquarium" : "tooltip.skyblocks.aquarium")
+        tooltip.add(Component.translatable(theme == 1 ? "tooltip.skyblocks.reef_aquarium" : theme == 2 ? "tooltip.skyblocks.jungle_aquarium"
+                        : deep ? "tooltip.skyblocks.deep_sea_aquarium" : ocean ? "tooltip.skyblocks.ocean_aquarium" : "tooltip.skyblocks.aquarium")
                 .withStyle(ChatFormatting.GRAY));
     }
 

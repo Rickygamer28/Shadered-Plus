@@ -113,5 +113,73 @@ public final class ModItems {
     public static final RegistryObject<BlockItem> INFINITY_CUBE = ITEMS.register("infinity_cube",
             () -> new BlockItem(ModBlocks.INFINITY_CUBE.get(), new Item.Properties()));
 
+    // ---- from 1.21.1 ----
+    public static final RegistryObject<BlockItem> ROUND_MIRROR = ITEMS.register("round_mirror",
+            () -> new BlockItem(ModBlocks.ROUND_MIRROR.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> CRACKED_MIRROR = ITEMS.register("cracked_mirror",
+            () -> new BlockItem(ModBlocks.CRACKED_MIRROR.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> VANITY_MIRROR = ITEMS.register("vanity_mirror",
+            () -> new BlockItem(ModBlocks.VANITY_MIRROR.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> REEF_AQUARIUM = ITEMS.register("reef_aquarium",
+            () -> new BlockItem(ModBlocks.REEF_AQUARIUM.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> JUNGLE_AQUARIUM = ITEMS.register("jungle_aquarium",
+            () -> new BlockItem(ModBlocks.JUNGLE_AQUARIUM.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> MAGMA_BASIN = ITEMS.register("magma_basin",
+            () -> new BlockItem(ModBlocks.MAGMA_BASIN.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> CONTAINMENT_FRAME = ITEMS.register("containment_frame",
+            () -> new BlockItem(ModBlocks.CONTAINMENT_FRAME.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> TANK_FRAME = ITEMS.register("tank_frame",
+            () -> new BlockItem(ModBlocks.TANK_FRAME.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> TANK_GLASS = ITEMS.register("tank_glass",
+            () -> new BlockItem(ModBlocks.TANK_GLASS.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> PORT_FRAME = ITEMS.register("port_frame",
+            () -> new BlockItem(ModBlocks.PORT_FRAME.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> DISPLAY_FRAME = ITEMS.register("display_frame",
+            () -> new BlockItem(ModBlocks.DISPLAY_FRAME.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> MONITOR_FRAME = ITEMS.register("monitor_frame",
+            () -> new BlockItem(ModBlocks.MONITOR_FRAME.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> REDSTONE_FRAME = ITEMS.register("redstone_frame",
+            () -> new BlockItem(ModBlocks.REDSTONE_FRAME.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> TESLA_COIL = ITEMS.register("tesla_coil",
+            () -> new BlockItem(ModBlocks.TESLA_COIL.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> GALAXY_PROJECTOR = ITEMS.register("galaxy_projector",
+            () -> new BlockItem(ModBlocks.GALAXY_PROJECTOR.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> PORTAL_MIRROR = ITEMS.register("portal_mirror",
+            () -> new BlockItem(ModBlocks.PORTAL_MIRROR.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> WHIRLPOOL = ITEMS.register("whirlpool",
+            () -> new BlockItem(ModBlocks.WHIRLPOOL.get(), new Item.Properties().stacksTo(1).fireResistant()));
+    public static final RegistryObject<BlockItem> SINGULARITY = ITEMS.register("singularity",
+            () -> new RenderedBlockItem(ModBlocks.SINGULARITY.get(), new Item.Properties().stacksTo(1).fireResistant(), "singularity"));
+    public static final RegistryObject<BlockItem> PLASMA_BALL = ITEMS.register("plasma_ball",
+            () -> new RenderedBlockItem(ModBlocks.PLASMA_BALL.get(), new Item.Properties(), "plasma_ball"));
+    public static final RegistryObject<BlockItem> BLACK_HOLE = ITEMS.register("black_hole",
+            () -> new RenderedBlockItem(ModBlocks.BLACK_HOLE.get(), new Item.Properties(), "black_hole"));
+    public static final RegistryObject<BlockItem> BIG_BLACK_HOLE = ITEMS.register("big_black_hole",
+            () -> new RenderedBlockItem(ModBlocks.BIG_BLACK_HOLE.get(), new Item.Properties(), "big_black_hole"));
+    public static final RegistryObject<BlockItem> FISHBOWL = ITEMS.register("fishbowl",
+            () -> new RenderedBlockItem(ModBlocks.FISHBOWL.get(), new Item.Properties(), "fishbowl"));
+    public static final RegistryObject<BlockItem> TALL_TANK = ITEMS.register("tall_tank",
+            () -> new RenderedBlockItem(ModBlocks.TALL_TANK.get(), new Item.Properties(), "tall_tank"));
+    public static final RegistryObject<BlockItem> SLIM_TANK = ITEMS.register("slim_tank",
+            () -> new RenderedBlockItem(ModBlocks.SLIM_TANK.get(), new Item.Properties(), "slim_tank"));
+    public static final RegistryObject<BlockItem> KALEIDOSCOPE = ITEMS.register("kaleidoscope",
+            () -> new RenderedBlockItem(ModBlocks.KALEIDOSCOPE.get(), new Item.Properties(), "kaleidoscope"));
+    public static final RegistryObject<BlockItem> ORRERY = ITEMS.register("orrery",
+            () -> new RenderedBlockItem(ModBlocks.ORRERY.get(), new Item.Properties(), "orrery"));
+    public static final RegistryObject<BlockItem> PLANETARIUM = ITEMS.register("planetarium",
+            () -> new RenderedBlockItem(ModBlocks.PLANETARIUM.get(), new Item.Properties(), "planetarium"));
+
+    public static final DeferredItem<BlockItem> FISHBOWL = ITEMS.registerSimpleBlockItem("fishbowl", ModBlocks.FISHBOWL);
+    public static final DeferredItem<BlockItem> TALL_TANK = ITEMS.registerSimpleBlockItem("tall_tank", ModBlocks.TALL_TANK);
+    public static final DeferredItem<BlockItem> SLIM_TANK = ITEMS.registerSimpleBlockItem("slim_tank", ModBlocks.SLIM_TANK);
+
+    public static final DeferredItem<BlockItem> TESLA_COIL = ITEMS.registerSimpleBlockItem("tesla_coil", ModBlocks.TESLA_COIL);
+    public static final DeferredItem<BlockItem> GALAXY_PROJECTOR = ITEMS.registerSimpleBlockItem("galaxy_projector", ModBlocks.GALAXY_PROJECTOR);
+
+    public static final DeferredItem<BlockItem> PORTAL_MIRROR = ITEMS.registerSimpleBlockItem("portal_mirror", ModBlocks.PORTAL_MIRROR);
+    public static final DeferredItem<BlockItem> KALEIDOSCOPE = ITEMS.registerSimpleBlockItem("kaleidoscope", ModBlocks.KALEIDOSCOPE);
+    public static final DeferredItem<BlockItem> ORRERY = ITEMS.registerSimpleBlockItem("orrery", ModBlocks.ORRERY);
+    public static final DeferredItem<BlockItem> PLANETARIUM = ITEMS.registerSimpleBlockItem("planetarium", ModBlocks.PLANETARIUM);
+
     private ModItems() {}
 }

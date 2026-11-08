@@ -14,6 +14,7 @@ import java.util.Map;
 import com.noodlegamer76.shadered.client.renderer.ComplexPassRenderer;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.ShaderInstance;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
@@ -365,6 +366,9 @@ public final class SkyUsage {
                 GlStateManager._scissorBox(box[0], box[1], Math.max(1, box[2] - box[0]), Math.max(1, box[3] - box[1]));
             }
             RenderSystem.setProjectionMatrix(new Matrix4f(skyProjection), VertexSorting.DISTANCE_TO_ORIGIN);
+            // (the view's turn comes from the pose stack given to the pass, as at the sky stage: none in the model-view,
+            // which midway through the frame has the camera's turn in it - the picture would be turned twice)
+            RenderSystem.getModelViewMatrix().identity();
             // the same view rotation Shadered gives its sky passes
             Camera camera = mc.gameRenderer.getMainCamera();
             PoseStack view = new PoseStack();
@@ -399,6 +403,258 @@ public final class SkyUsage {
             RenderSystem.disableBlend();
             drawing = false;
         }
+    }
+
+    // ---- things whose place on screen is known (Sky Liquids, portals): only their part of the picture ----
+
+    /** True while such things are drawn: their skies' render types don't ask for the whole picture (ModRenderTypesMixin). */
+    public static boolean placeKnown;
+    /** {@link #rectOfBox}: not on screen at all. */
+    public static final int[] OFF = {0, 0, 0, 0};
+    private static final float NEAR_W = 0.05F;
+
+    /**
+     * Where a box (relative to the camera) is in the skies' pictures (pixels, from the lower left, a few pixels'
+     * margin): {@link #OFF} if it's nowhere on screen; partly behind the camera, the part in front of it.
+     */
+    @Nullable
+    public static int[] rectOfBox(float x0, float y0, float z0, float x1, float y1, float z1) {
+        if (skyProjection == null) {
+            return null;
+        }
+        Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+        Matrix4f toClip = new Matrix4f(skyProjection)
+                .rotateX(camera.getXRot() * net.minecraft.util.Mth.DEG_TO_RAD)
+                .rotateY((camera.getYRot() + 180.0F) * net.minecraft.util.Mth.DEG_TO_RAD);
+        float[][] c = new float[8][];
+        int all = 0x1F;
+        boolean anyBehind = false;
+        for (int i = 0; i < 8; i++) {
+            org.joml.Vector4f v = new org.joml.Vector4f((i & 1) == 0 ? x0 : x1, (i & 2) == 0 ? y0 : y1, (i & 4) == 0 ? z0 : z1, 1.0F);
+            toClip.transform(v);
+            c[i] = new float[] {v.x, v.y, v.w};
+            int out = (v.x < -v.w ? 1 : 0) | (v.x > v.w ? 2 : 0) | (v.y < -v.w ? 4 : 0) | (v.y > v.w ? 8 : 0) | (v.w < NEAR_W ? 16 : 0);
+            all &= out;
+            anyBehind |= v.w < NEAR_W;
+        }
+        if (all != 0) {
+            return OFF; // (every corner beyond the same edge of the view)
+        }
+        // what of it is in front of the camera: the corners there, and where its edges cross into view
+        float minX = 2.0F, minY = 2.0F, maxX = -2.0F, maxY = -2.0F;
+        for (int i = 0; i < 8; i++) {
+            if (c[i][2] >= NEAR_W) {
+                minX = Math.min(minX, c[i][0] / c[i][2]);
+                maxX = Math.max(maxX, c[i][0] / c[i][2]);
+                minY = Math.min(minY, c[i][1] / c[i][2]);
+                maxY = Math.max(maxY, c[i][1] / c[i][2]);
+            }
+        }
+        if (anyBehind) {
+            for (int i = 0; i < 8; i++) {
+                for (int bit = 1; bit <= 4; bit <<= 1) {
+                    int j = i | bit;
+                    if (j == i || (c[i][2] >= NEAR_W) == (c[j][2] >= NEAR_W)) {
+                        continue;
+                    }
+                    float k = (NEAR_W - c[i][2]) / (c[j][2] - c[i][2]);
+                    float x = (c[i][0] + (c[j][0] - c[i][0]) * k) / NEAR_W, y = (c[i][1] + (c[j][1] - c[i][1]) * k) / NEAR_W;
+                    minX = Math.min(minX, x);
+                    maxX = Math.max(maxX, x);
+                    minY = Math.min(minY, y);
+                    maxY = Math.max(maxY, y);
+                }
+            }
+        }
+        if (minX > maxX) {
+            return OFF;
+        }
+        ComplexPassRenderer renderer = ComplexPassRenderer.getInstance();
+        int width = Math.max(1, renderer.getPreviousWidth()), height = Math.max(1, renderer.getPreviousHeight());
+        int margin = 4;
+        int rx0 = Math.max(0, (int) Math.floor((Math.max(minX, -1.0F) * 0.5F + 0.5F) * width) - margin);
+        int ry0 = Math.max(0, (int) Math.floor((Math.max(minY, -1.0F) * 0.5F + 0.5F) * height) - margin);
+        int rx1 = Math.min(width, (int) Math.ceil((Math.min(maxX, 1.0F) * 0.5F + 0.5F) * width) + margin);
+        int ry1 = Math.min(height, (int) Math.ceil((Math.min(maxY, 1.0F) * 0.5F + 0.5F) * height) + margin);
+        return rx1 <= rx0 || ry1 <= ry0 ? OFF : new int[] {rx0, ry0, rx1, ry1};
+    }
+
+    /**
+     * Where a flat convex shape is in the skies' pictures (as {@link #rectOfBox}): its corners ({x, y, z} each, in order
+     * round it) put on screen with {@code toClip}, which it's drawn with now. Null unless drawn onto the screen itself.
+     */
+    @Nullable
+    public static int[] rectOfShape(Matrix4f toClip, float[][] corners) {
+        Minecraft mc = Minecraft.getInstance();
+        if (skyProjection == null || GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING) != mc.getMainRenderTarget().frameBufferId) {
+            return null;
+        }
+        int n = corners.length;
+        float[][] c = new float[n][];
+        int all = 0x1F;
+        for (int i = 0; i < n; i++) {
+            org.joml.Vector4f v = new org.joml.Vector4f(corners[i][0], corners[i][1], corners[i][2], 1.0F);
+            toClip.transform(v);
+            c[i] = new float[] {v.x, v.y, v.w};
+            all &= (v.x < -v.w ? 1 : 0) | (v.x > v.w ? 2 : 0) | (v.y < -v.w ? 4 : 0) | (v.y > v.w ? 8 : 0) | (v.w < NEAR_W ? 16 : 0);
+        }
+        if (all != 0) {
+            return OFF;
+        }
+        float minX = 2.0F, minY = 2.0F, maxX = -2.0F, maxY = -2.0F;
+        for (int i = 0; i < n; i++) {
+            float[] a = c[i], b = c[(i + 1) % n];
+            if (a[2] >= NEAR_W) {
+                minX = Math.min(minX, a[0] / a[2]);
+                maxX = Math.max(maxX, a[0] / a[2]);
+                minY = Math.min(minY, a[1] / a[2]);
+                maxY = Math.max(maxY, a[1] / a[2]);
+            }
+            if ((a[2] >= NEAR_W) != (b[2] >= NEAR_W)) { // (an edge crossing into view: where it does)
+                float k = (NEAR_W - a[2]) / (b[2] - a[2]);
+                float x = (a[0] + (b[0] - a[0]) * k) / NEAR_W, y = (a[1] + (b[1] - a[1]) * k) / NEAR_W;
+                minX = Math.min(minX, x);
+                maxX = Math.max(maxX, x);
+                minY = Math.min(minY, y);
+                maxY = Math.max(maxY, y);
+            }
+        }
+        if (minX > maxX) {
+            return OFF;
+        }
+        ComplexPassRenderer renderer = ComplexPassRenderer.getInstance();
+        int width = Math.max(1, renderer.getPreviousWidth()), height = Math.max(1, renderer.getPreviousHeight());
+        int margin = 4;
+        int rx0 = Math.max(0, (int) Math.floor((Math.max(minX, -1.0F) * 0.5F + 0.5F) * width) - margin);
+        int ry0 = Math.max(0, (int) Math.floor((Math.max(minY, -1.0F) * 0.5F + 0.5F) * height) - margin);
+        int rx1 = Math.min(width, (int) Math.ceil((Math.min(maxX, 1.0F) * 0.5F + 0.5F) * width) + margin);
+        int ry1 = Math.min(height, (int) Math.ceil((Math.min(maxY, 1.0F) * 0.5F + 0.5F) * height) + margin);
+        return rx1 <= rx0 || ry1 <= ry0 ? OFF : new int[] {rx0, ry0, rx1, ry1};
+    }
+
+    /**
+     * A sky shown by something whose place on screen is known ({@code rect}, from {@link #rectOfBox}; not
+     * {@link #OFF}): its picture brought up to date there only, not all of it. In a mirror, or not knowing where: all
+     * of it, as {@link #ensureFresh}.
+     */
+    public static void ensurePart(@Nullable SkyblockBatchData data, @Nullable int[] rect) {
+        if (rect == OFF && !MirrorRenderer.isRenderingReflection()) {
+            markLight(data); // (not on screen: nothing to bring up to date)
+            return;
+        }
+        if (rect == null || MirrorRenderer.isRenderingReflection()) {
+            ensureFresh(data);
+            return;
+        }
+        markLight(data);
+        ensure(data, rect);
+    }
+
+    // ---- Shadered's sky render types (items, ores... in the world): only where each batch is on screen ----
+
+    /** Each of Shadered's sky render types, by the sky it shows (made on first use). */
+    @Nullable
+    private static Map<RenderType, SkyblockBatchData> itemTypes;
+    private static boolean itemPlaceKnown;
+
+    /**
+     * Just before a batch of one of Shadered's sky render types is drawn (SkyRenderTypeDrawMixin): where its faces are
+     * on screen, with the matrices it's drawn with now, and its sky's picture brought up to date there (if it isn't
+     * already). Not in a mirror, the HUD, an open screen, a painting's picture or with a shader pack (drawn somewhere
+     * else than the screen): as before, the whole picture.
+     */
+    /** Off: the whole picture for them, as before (the render test compares). */
+    public static boolean itemParts = true;
+
+    public static void itemsDrawn(RenderType type, com.mojang.blaze3d.vertex.MeshData mesh) {
+        if (!itemParts || drawing || inHud || MirrorRenderer.isRenderingReflection() || !RenderSystem.isOnRenderThread()) {
+            return;
+        }
+        if (itemTypes == null) {
+            itemTypes = new IdentityHashMap<>();
+            try {
+                for (com.noodlegamer76.shadered.client.util.SkyblockType sky : com.noodlegamer76.shadered.client.util.SkyblockType.values()) {
+                    for (com.noodlegamer76.shadered.client.util.skyblock.SkyblockPass pass : com.noodlegamer76.shadered.client.util.skyblock.SkyblockPass.values()) {
+                        try {
+                            RenderType t = com.noodlegamer76.shadered.client.util.ModRenderTypes.getSkyblockRenderType(sky, pass);
+                            if (t != null) {
+                                itemTypes.put(t, SkyblockRenderer.getData(sky));
+                            }
+                        } catch (RuntimeException e) {
+                            // (no render type for this one)
+                        }
+                    }
+                }
+            } catch (RuntimeException e) {
+                // (not found: as before)
+            }
+        }
+        SkyblockBatchData data = itemTypes.get(type);
+        Minecraft mc = Minecraft.getInstance();
+        if (data == null || mc.screen != null || skyProjection == null
+                || GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING) != mc.getMainRenderTarget().frameBufferId) {
+            return;
+        }
+        int[] rect = rectOfMesh(mesh);
+        itemPlaceKnown = true;
+        placeKnown = true; // (its render type then doesn't ask for the whole picture)
+        if (rect != OFF) {
+            ensurePart(data, rect);
+        } else {
+            markLight(data);
+        }
+    }
+
+    public static void itemsDrawnDone() {
+        if (itemPlaceKnown) {
+            itemPlaceKnown = false;
+            placeKnown = false;
+        }
+    }
+
+    /** Where a batch's vertices are on screen (as rectOfBox), with the projection and view it's drawn with now. */
+    @Nullable
+    private static int[] rectOfMesh(com.mojang.blaze3d.vertex.MeshData mesh) {
+        com.mojang.blaze3d.vertex.MeshData.DrawState state = mesh.drawState();
+        java.nio.ByteBuffer buf = mesh.vertexBuffer().duplicate().order(java.nio.ByteOrder.nativeOrder());
+        int stride = state.format().getVertexSize(), n = state.vertexCount();
+        if (n <= 0 || stride < 12 || buf.limit() < n * stride) {
+            return OFF;
+        }
+        Matrix4f toClip = new Matrix4f(RenderSystem.getProjectionMatrix()).mul(RenderSystem.getModelViewMatrix());
+        org.joml.Vector4f v = new org.joml.Vector4f();
+        int all = 0x1F;
+        float minX = 2.0F, minY = 2.0F, maxX = -2.0F, maxY = -2.0F;
+        boolean behind = false;
+        for (int i = 0; i < n; i++) {
+            int at = i * stride;
+            v.set(buf.getFloat(at), buf.getFloat(at + 4), buf.getFloat(at + 8), 1.0F);
+            toClip.transform(v);
+            int out = (v.x < -v.w ? 1 : 0) | (v.x > v.w ? 2 : 0) | (v.y < -v.w ? 4 : 0) | (v.y > v.w ? 8 : 0) | (v.w < NEAR_W ? 16 : 0);
+            all &= out;
+            if (v.w < NEAR_W) {
+                behind = true;
+                continue;
+            }
+            minX = Math.min(minX, v.x / v.w);
+            maxX = Math.max(maxX, v.x / v.w);
+            minY = Math.min(minY, v.y / v.w);
+            maxY = Math.max(maxY, v.y / v.w);
+        }
+        if (all != 0) {
+            return OFF;
+        }
+        if (behind || minX > maxX) {
+            return null; // (partly behind the camera: all of it)
+        }
+        ComplexPassRenderer renderer = ComplexPassRenderer.getInstance();
+        int width = Math.max(1, renderer.getPreviousWidth()), height = Math.max(1, renderer.getPreviousHeight());
+        int margin = 4;
+        int rx0 = Math.max(0, (int) Math.floor((Math.max(minX, -1.0F) * 0.5F + 0.5F) * width) - margin);
+        int ry0 = Math.max(0, (int) Math.floor((Math.max(minY, -1.0F) * 0.5F + 0.5F) * height) - margin);
+        int rx1 = Math.min(width, (int) Math.ceil((Math.min(maxX, 1.0F) * 0.5F + 0.5F) * width) + margin);
+        int ry1 = Math.min(height, (int) Math.ceil((Math.min(maxY, 1.0F) * 0.5F + 0.5F) * height) + margin);
+        return rx1 <= rx0 || ry1 <= ry0 ? OFF : new int[] {rx0, ry0, rx1, ry1};
     }
 
     /** Before Shadered draws the queued sky blocks: brings the picture of every sky with blocks queued up to date. */

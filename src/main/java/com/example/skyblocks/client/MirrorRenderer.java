@@ -75,7 +75,12 @@ public final class MirrorRenderer {
     private static final float OUT = 0.0F;
 
     /** A flat wall of mirror faces: which way it faces and where it is on that axis. */
-    record Wall(Direction facing, int coord) {
+    record Wall(Direction facing, double coord, long portal) {
+        /** A mirror's wall (a portal's: {@code portal} is its lowest pane's place, PortalMirrors.Portal.min). */
+        Wall(Direction facing, double coord) {
+            this(facing, coord, -1L);
+        }
+
         double nx() { return facing.getStepX(); }
         double ny() { return facing.getStepY(); }
         double nz() { return facing.getStepZ(); }
@@ -85,6 +90,41 @@ public final class MirrorRenderer {
     }
 
     private static final Map<Wall, List<BlockPos>> WALLS = new HashMap<>();
+    /**
+     * A portal mirror's side, linked: what's seen through it is the world past {@code dest} (the linked portal's
+     * plane, from its other side), turned {@code turns} quarter turns and shifted from {@code from} to {@code to}
+     * (PortalMirrors): its picture is drawn from the eye moved that way, not mirrored.
+     */
+    private record Link(Wall dest, int turns, Vec3 from, Vec3 to) {}
+    private static final Map<Wall, Link> LINKS = new HashMap<>();
+    /** Portals linked to one too far away to draw (its world not loaded here): shown with their last picture (Snapshot). */
+    private static final Map<Wall, List<BlockPos>> FAR_WALLS = new HashMap<>();
+    /** The portal mirrors found round the camera (linked or not). */
+    private static final List<com.example.skyblocks.PortalMirrors.Portal> PORTALS = new ArrayList<>();
+    /** A portal seen this frame (Sodium: its chunk search without occlusion culling then, mixin/sodium). */
+    private static volatile boolean portalInView;
+
+    /** The wall whose front a node's picture shows: a mirror's own, a portal's linked one. */
+    private static Wall viewWall(Wall w) {
+        Link link = LINKS.get(w);
+        return link == null ? w : link.dest();
+    }
+
+    /** (The render test: every portal drawn from its last pictures, as if its other end were far away.) */
+    public static boolean forceFarPortals;
+
+    /** The server's list of portal mirrors changed: the walls found again. */
+    public static void portalsChanged() {
+        dirty = true;
+    }
+
+    public static boolean portalInView() {
+        return portalInView;
+    }
+
+    private static Matrix4f turn(int turns) {
+        return new Matrix4f().rotationY(-turns * (float) (Math.PI / 2.0));
+    }
     private static ClientLevel lastLevel;
     private static long lastScan = Long.MIN_VALUE;
     private static boolean dirty;
@@ -204,8 +244,10 @@ public final class MirrorRenderer {
         InfinityMirrorRenderer.blockChanged(level, pos, oldState, newState);
         DanceFloorRenderer.blockChanged(oldState, newState);
         AquariumRenderer.blockChanged(oldState, newState);
+        KaleidoscopeRenderer.blockChanged(oldState, newState);
         KoiPondRenderer.blockChanged(oldState, newState);
-        boolean mirror = isMirror(oldState) || isMirror(newState);
+        boolean mirror = isMirror(oldState) || isMirror(newState)
+                || com.example.skyblocks.PortalMirrors.isPortal(oldState) || com.example.skyblocks.PortalMirrors.isPortal(newState);
         if (!mirror) {
             BlockPos.MutableBlockPos n = new BlockPos.MutableBlockPos();
             for (Direction d : Direction.values()) {
@@ -273,6 +315,22 @@ public final class MirrorRenderer {
                             "Saving the mirror's pictures to the screenshots folder (shaderedplus_mirror_*.png)"), false);
                     return 1;
                 })));
+    }
+
+    private static void dump(RenderTarget target, String unused, java.io.File file) {
+        try {
+            com.mojang.blaze3d.platform.NativeImage image = net.minecraft.client.Screenshot.takeScreenshot(target);
+            file.getParentFile().mkdirs();
+            net.minecraft.Util.ioPool().execute(() -> {
+                try (image) {
+                    image.writeToFile(file);
+                } catch (java.io.IOException e) {
+                    SkyBlocksMod.LOGGER.warn("Shadered+: couldn't save {}", file, e);
+                }
+            });
+        } catch (RuntimeException e) {
+            SkyBlocksMod.LOGGER.warn("Shadered+: couldn't read a portal's picture", e);
+        }
     }
 
     private static void dump(RenderTarget target, String name) {
@@ -359,7 +417,8 @@ public final class MirrorRenderer {
             lastChunkX = chunkX;
             lastChunkZ = chunkZ;
         }
-        if (WALLS.isEmpty()) {
+        if (WALLS.isEmpty() && FAR_WALLS.isEmpty()) {
+            portalInView = false;
             if (!LAST_DRAWN.isEmpty()) {
                 skipped("no mirrors found (scan)", LAST_DRAWN.iterator().next());
                 LAST_DRAWN.clear();
@@ -444,13 +503,22 @@ public final class MirrorRenderer {
         int irisRead = iris ? GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING) : 0;
         frame++;
         MirrorTiming.beginFrame();
-        gatherBlockEntities(level, cam);
+        // (round you, and round where the portals in view look out: what's there shows in them)
+        List<Vec3> around = new ArrayList<>();
+        around.add(cam);
+        for (Map.Entry<Wall, List<BlockPos>> e : visible) {
+            Link link = LINKS.get(e.getKey());
+            if (link != null && link.to().distanceToSqr(cam) > 16.0 * 16.0 && around.size() < 8) {
+                around.add(link.to());
+            }
+        }
+        gatherBlockEntities(level, around);
         NEARBY_ENTITIES.clear();
         for (Entity entity : level.entitiesForRendering()) {
             double x = Mth.lerp(partialTick, entity.xOld, entity.getX());
             double y = Mth.lerp(partialTick, entity.yOld, entity.getY());
             double z = Mth.lerp(partialTick, entity.zOld, entity.getZ());
-            if (cam.distanceToSqr(x, y, z) <= ENTITY_RANGE * ENTITY_RANGE) {
+            if (near(around, x, y, z, ENTITY_RANGE)) {
                 NEARBY_ENTITIES.add(new Near(entity, x, y, z, Mth.lerp(partialTick, entity.yRotO, entity.getYRot())));
             }
         }
@@ -477,7 +545,8 @@ public final class MirrorRenderer {
             for (Map.Entry<Wall, List<BlockPos>> other : WALLS.entrySet()) {
                 Wall w = other.getKey();
                 double d = w.distance(eye);
-                if (w.equals(parent.wall) || d <= 0.05 || d >= WALL_RANGE || !inFrontOf(parent.wall, other.getValue())) {
+                Wall seenPast = viewWall(parent.wall);
+                if (w.equals(seenPast) || d <= 0.05 || d >= WALL_RANGE || !inFrontOf(seenPast, other.getValue())) {
                     continue;
                 }
                 AABB box = bounds(w, other.getValue()).move(-c.rx, -c.ry, -c.rz);
@@ -513,6 +582,14 @@ public final class MirrorRenderer {
             }
         }
 
+        boolean portals = false;
+        for (Node node : all) {
+            portals |= LINKS.containsKey(node.wall);
+        }
+        if (portals != portalInView) {
+            portalInView = portals;
+            MirrorCulling.scheduleTerrainUpdate(); // (Sodium: its chunk search again, with or without occlusion culling)
+        }
         // ...which of them get a new picture this frame: the biggest mirror on screen always, then any without a
         // picture yet or that now cover much more of the screen, then the oldest (weighted by size)
         for (Node node : all) {
@@ -565,7 +642,14 @@ public final class MirrorRenderer {
                 dump(biggest.target, "shaderedplus_mirror_picture.png");
             }
         }
-        List<MirrorCulling.View> views = new ArrayList<>();
+        // now and then, a picture through a portal from just in front of it, kept (and saved): what it shows once
+        // the other end is too far away to draw
+        try {
+            snapshots(mc, level, camera, cam, main, projection, partialTick);
+        } catch (RuntimeException ex) {
+            skipped("portal picture failed: " + ex, LAST_DRAWN.isEmpty() ? new Wall(Direction.UP, 0) : LAST_DRAWN.iterator().next());
+        }
+        List<MirrorCulling.View> views = new ArrayList<>(SNAPSHOT_VIEWS);
         for (Node node : all) {
             if (node.valid && node.view != null && node.depth <= 2) {
                 views.add(node.view);
@@ -627,6 +711,19 @@ public final class MirrorRenderer {
                     drawFaces(w, e.getValue(), cam.x, cam.y, cam.z, node.target.getColorTextureId(), node.shot);
                     drawnNow.add(w);
                     node.usedFrame = frame;
+                }
+            }
+            // portals whose other end is too far to draw: their last picture
+            for (Map.Entry<Wall, List<BlockPos>> e : FAR_WALLS.entrySet()) {
+                Wall w = e.getKey();
+                double d = w.distance(cam);
+                Link link = LINKS.get(w);
+                if (d <= 0.05 || d >= WALL_RANGE || link == null) {
+                    continue;
+                }
+                Snapshot snap = snapshot(level, w, link);
+                if (snap != null) {
+                    drawFarFaces(w, link, e.getValue(), cam, snap);
                 }
             }
             LAST_DRAWN.clear();
@@ -761,6 +858,10 @@ public final class MirrorRenderer {
      * moved onto the wall (oblique projection) so nothing behind it shows.
      */
     private static Chain chain(Wall wall, double ex, double ey, double ez, Matrix4f eyeView, boolean eyeFlipped, Matrix4f projection) {
+        Link link = LINKS.get(wall);
+        if (link != null) {
+            return portalChain(link, ex, ey, ez, eyeView, eyeFlipped, projection);
+        }
         double nx = wall.nx(), ny = wall.ny(), nz = wall.nz();
         double dist = nx * ex + ny * ey + nz * ez - wall.k();
         Chain c = new Chain();
@@ -785,6 +886,28 @@ public final class MirrorRenderer {
         c.clipped = oblique(new Matrix4f(projection), plane);
         c.seen = new FrustumIntersection(new Matrix4f(c.clipped).mul(c.modelView));
         c.flipped = !eyeFlipped;
+        return c;
+    }
+
+    /**
+     * Seeing through a portal: the eye moved as the portal moves things (turned and shifted onto the linked portal),
+     * the view turned with it, the near plane on the linked portal's plane (only what's past it shows). Not mirrored.
+     */
+    private static Chain portalChain(Link link, double ex, double ey, double ez, Matrix4f eyeView, boolean eyeFlipped, Matrix4f projection) {
+        Vec3 eye = com.example.skyblocks.PortalMirrors.rotate(new Vec3(ex, ey, ez).subtract(link.from()), link.turns()).add(link.to());
+        Chain c = new Chain();
+        c.rx = eye.x;
+        c.ry = eye.y;
+        c.rz = eye.z;
+        c.modelView = new Matrix4f(eyeView).mul(turn(link.turns()).invert());
+        Wall d = link.dest();
+        Matrix4f inverseTranspose = new Matrix4f(c.modelView).invert().transpose();
+        // (a hair past the linked portal's plane: its own pane, right on the plane, isn't in the picture)
+        float planeW = (float) (d.nx() * c.rx + d.ny() * c.ry + d.nz() * c.rz - d.k() - 0.02);
+        Vector4f plane = inverseTranspose.transform(new Vector4f((float) d.nx(), (float) d.ny(), (float) d.nz(), planeW));
+        c.clipped = oblique(new Matrix4f(projection), plane);
+        c.seen = new FrustumIntersection(new Matrix4f(c.clipped).mul(c.modelView));
+        c.flipped = eyeFlipped;
         return c;
     }
 
@@ -955,7 +1078,7 @@ public final class MirrorRenderer {
                                        FrustumIntersection seen, Matrix4f toPicture, float[] rect,
                                        double rx, double ry, double rz, float partialTick,
                                        boolean withBlockEntities) {
-        Wall wall = node.wall;
+        Wall wall = viewWall(node.wall);
         if (entityBuffers == null) {
             entityBuffers = MirrorBuffers.create();
         }
@@ -1101,24 +1224,46 @@ public final class MirrorRenderer {
     /**
      * The block entities near the camera, for mirrors (every mod's: what some queue for later is handled when drawing).
      */
-    private static void gatherBlockEntities(ClientLevel level, Vec3 cam) {
+    private static void gatherBlockEntities(ClientLevel level, List<Vec3> around) {
         NEARBY_BLOCK_ENTITIES.clear();
-        int radius = (int) (ENTITY_RANGE / 16) + 1;
-        int cx = SectionPos.blockToSectionCoord(cam.x), cz = SectionPos.blockToSectionCoord(cam.z);
-        for (int dx = -radius; dx <= radius; dx++) {
-            for (int dz = -radius; dz <= radius; dz++) {
-                LevelChunk chunk = level.getChunkSource().getChunk(cx + dx, cz + dz, false);
-                if (chunk == null) {
-                    continue;
-                }
-                for (BlockEntity be : chunk.getBlockEntities().values()) {
-                    if (be.isRemoved() || Vec3.atCenterOf(be.getBlockPos()).distanceToSqr(cam) > ENTITY_RANGE * ENTITY_RANGE) {
+        Set<Long> chunks = new HashSet<>();
+        for (int i = 0; i < around.size(); i++) {
+            Vec3 c = around.get(i);
+            double range = i == 0 ? ENTITY_RANGE : PORTAL_RANGE;
+            int radius = (int) (range / 16) + 1;
+            int cx = SectionPos.blockToSectionCoord(c.x), cz = SectionPos.blockToSectionCoord(c.z);
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    if (!chunks.add(net.minecraft.world.level.ChunkPos.asLong(cx + dx, cz + dz))) {
+                        continue; // (already gone through, for somewhere else)
+                    }
+                    LevelChunk chunk = level.getChunkSource().getChunk(cx + dx, cz + dz, false);
+                    if (chunk == null) {
                         continue;
                     }
-                    NEARBY_BLOCK_ENTITIES.add(be);
+                    for (BlockEntity be : chunk.getBlockEntities().values()) {
+                        BlockPos p = be.getBlockPos();
+                        if (be.isRemoved() || !near(around, p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5, ENTITY_RANGE)) {
+                            continue;
+                        }
+                        NEARBY_BLOCK_ENTITIES.add(be);
+                    }
                 }
             }
         }
+    }
+
+    /** What's shown round where a portal looks out (as far as that). */
+    private static final double PORTAL_RANGE = 40.0;
+
+    private static boolean near(List<Vec3> around, double x, double y, double z, double range) {
+        for (int i = 0; i < around.size(); i++) {
+            double r = i == 0 ? range : PORTAL_RANGE;
+            if (around.get(i).distanceToSqr(x, y, z) <= r * r) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -1145,7 +1290,12 @@ public final class MirrorRenderer {
         }
         org.joml.Vector3f look = camera.getLookVector();
         Vec3 f = new Vec3(look.x(), look.y(), look.z());
-        for (Wall w : node.path) { // (mirrored in the first wall seen, then the next...)
+        for (Wall w : node.path) { // (mirrored in the first wall seen, then the next... - or turned, through a portal)
+            Link link = LINKS.get(w);
+            if (link != null) {
+                f = com.example.skyblocks.PortalMirrors.rotate(f, link.turns());
+                continue;
+            }
             Vec3 n = new Vec3(w.nx(), w.ny(), w.nz());
             f = f.subtract(n.scale(2.0 * f.dot(n)));
         }
@@ -1465,13 +1615,30 @@ public final class MirrorRenderer {
     }
 
     private static void drawFaces(Wall wall, List<BlockPos> faces, double cx, double cy, double cz, int texture, Shot shot) {
+        drawFaces(wall, faces, cx, cy, cz, texture, shot, false);
+    }
+
+    /** ({@code flipped}: a picture read back from a file, upside down to the ones drawn here.) */
+    private static void drawFaces(Wall wall, List<BlockPos> faces, double cx, double cy, double cz, int texture, Shot shot, boolean flipped) {
         ShaderInstance shader = MirrorShaders.surface;
         if (shader == null || faces == null || faces.isEmpty()) {
             return;
         }
         // positions here are relative to (cx, cy, cz); the picture was taken relative to the mirrored eye
-        shader.safeGetUniform("MirrorTexMat").set(new Matrix4f(shot.projModel)
-                .translate((float) (cx - shot.rx), (float) (cy - shot.ry), (float) (cz - shot.rz)));
+        // (a portal's face: each point where the portal takes it, by the linked portal, as its picture saw it)
+        Link link = LINKS.get(wall);
+        Matrix4f texMat = new Matrix4f(shot.projModel);
+        if (link == null) {
+            texMat.translate((float) (cx - shot.rx), (float) (cy - shot.ry), (float) (cz - shot.rz));
+        } else {
+            Vec3 t = com.example.skyblocks.PortalMirrors.rotate(new Vec3(cx, cy, cz).subtract(link.from()), link.turns()).add(link.to())
+                    .subtract(shot.rx, shot.ry, shot.rz);
+            texMat.translate((float) t.x, (float) t.y, (float) t.z).mul(turn(link.turns()));
+        }
+        if (flipped) {
+            texMat = new Matrix4f().scaling(1.0F, -1.0F, 1.0F).mul(texMat);
+        }
+        shader.safeGetUniform("MirrorTexMat").set(texMat);
         shader.safeGetUniform("MirrorTexMax").set(shot.maxU, shot.maxV);
         RenderSystem.setShader(() -> shader);
         RenderSystem.setShaderTexture(0, texture);
@@ -1482,7 +1649,7 @@ public final class MirrorRenderer {
         RenderSystem.depthMask(!overlayFaces);
         RenderSystem.disableBlend();
         RenderSystem.disableCull();
-        BufferBuilder.RenderedBuffer mesh = faceMesh(wall, faces, cx, cy, cz);
+        BufferBuilder.RenderedBuffer mesh = faceMesh(wall, faces, cx, cy, cz, true);
         if (mesh != null) {
             // pulled towards the camera so the block's own face underneath never flickers through
             RenderSystem.enablePolygonOffset();
@@ -1499,18 +1666,50 @@ public final class MirrorRenderer {
 
     /** The wall's faces as quads (positions relative to (cx, cy, cz)). */
     private static BufferBuilder.RenderedBuffer faceMesh(Wall wall, List<BlockPos> faces, double cx, double cy, double cz) {
+        return faceMesh(wall, faces, cx, cy, cz, false);
+    }
+
+    /**
+     * The wall's faces as quads; with {@code uv}, for the surface shader, each face's own place (0..1 across it) and
+     * what it is: UV = (u + 4 * (kind + 4 * seed), v + 4 * edges) - which mirror, a number of its own (0..15), and which
+     * of its sides join on to another face of the same mirror in this wall (1 before it across, 2 after, 4 below, 8
+     * above): the vanity mirror's frame goes round the outside of the whole mirror, not each block.
+     */
+    private static BufferBuilder.RenderedBuffer faceMesh(Wall wall, List<BlockPos> faces, double cx, double cy, double cz, boolean uv) {
         BufferBuilder b = Tesselator.getInstance().getBuilder();
-        b.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
+        b.begin(VertexFormat.Mode.QUADS, uv ? DefaultVertexFormat.POSITION_TEX : DefaultVertexFormat.POSITION);
         Direction d = wall.facing();
+        ClientLevel level = Minecraft.getInstance().level;
+        Set<BlockPos> here = uv ? new HashSet<>(faces) : null;
+        Direction across = d.getAxis() == Direction.Axis.X ? Direction.SOUTH : Direction.EAST;
+        Direction upward = d.getAxis() == Direction.Axis.Y ? Direction.SOUTH : Direction.UP;
         for (BlockPos pos : faces) {
             float x = (float) (pos.getX() - cx), y = (float) (pos.getY() - cy), z = (float) (pos.getZ() - cz);
+            // (on the wall's own plane: a block's face, or a pane's glass out from its wall)
+            float plane = (float) (wall.coord() - (d.getAxis() == Direction.Axis.X ? cx : d.getAxis() == Direction.Axis.Y ? cy : cz));
+            if (uv) {
+                int kind = level == null ? 0 : Math.max(0, mirrorKind(level.getBlockState(pos)));
+                int edges = 0;
+                if (level != null) {
+                    if (sameMirror(level, here, pos, pos.relative(across.getOpposite()), kind)) edges |= 1;
+                    if (sameMirror(level, here, pos, pos.relative(across), kind)) edges |= 2;
+                    if (sameMirror(level, here, pos, pos.relative(upward.getOpposite()), kind)) edges |= 4;
+                    if (sameMirror(level, here, pos, pos.relative(upward), kind)) edges |= 8;
+                }
+                int seed = kind == PORTAL_KIND && level != null
+                        ? level.getBlockState(pos).getValue(com.example.skyblocks.PortalMirrorBlock.COLOR).getId() // (a portal: its colour)
+                        : (int) ((pos.asLong() * 0x9E3779B97F4A7C15L) >>> 60) & 15;
+                faceU = 4.0F * (kind + 8 * seed);
+                faceV = 4.0F * edges;
+            }
+            faceUv = uv;
             switch (d) {
-                case UP -> quad(b, x, y + 1 + OUT, z, x + 1, y + 1 + OUT, z, x + 1, y + 1 + OUT, z + 1, x, y + 1 + OUT, z + 1);
-                case DOWN -> quad(b, x, y - OUT, z, x + 1, y - OUT, z, x + 1, y - OUT, z + 1, x, y - OUT, z + 1);
-                case NORTH -> quad(b, x, y, z - OUT, x + 1, y, z - OUT, x + 1, y + 1, z - OUT, x, y + 1, z - OUT);
-                case SOUTH -> quad(b, x, y, z + 1 + OUT, x + 1, y, z + 1 + OUT, x + 1, y + 1, z + 1 + OUT, x, y + 1, z + 1 + OUT);
-                case WEST -> quad(b, x - OUT, y, z, x - OUT, y, z + 1, x - OUT, y + 1, z + 1, x - OUT, y + 1, z);
-                case EAST -> quad(b, x + 1 + OUT, y, z, x + 1 + OUT, y, z + 1, x + 1 + OUT, y + 1, z + 1, x + 1 + OUT, y + 1, z);
+                case UP -> quad(b, x, plane + OUT, z, x + 1, plane + OUT, z, x + 1, plane + OUT, z + 1, x, plane + OUT, z + 1);
+                case DOWN -> quad(b, x, plane - OUT, z, x + 1, plane - OUT, z, x + 1, plane - OUT, z + 1, x, plane - OUT, z + 1);
+                case NORTH -> quad(b, x, y, plane - OUT, x + 1, y, plane - OUT, x + 1, y + 1, plane - OUT, x, y + 1, plane - OUT);
+                case SOUTH -> quad(b, x, y, plane + OUT, x + 1, y, plane + OUT, x + 1, y + 1, plane + OUT, x, y + 1, plane + OUT);
+                case WEST -> quad(b, plane - OUT, y, z, plane - OUT, y, z + 1, plane - OUT, y + 1, z + 1, plane - OUT, y + 1, z);
+                case EAST -> quad(b, plane + OUT, y, z, plane + OUT, y, z + 1, plane + OUT, y + 1, z + 1, plane + OUT, y + 1, z);
             }
         }
         return b.end();
@@ -1528,8 +1727,22 @@ public final class MirrorRenderer {
         }
     }
 
+    private static boolean faceUv;
+    private static float faceU, faceV;
+
+    private static boolean sameMirror(ClientLevel level, Set<BlockPos> here, BlockPos pos, BlockPos next, int kind) {
+        return here.contains(next) && mirrorKind(level.getBlockState(next)) == kind;
+    }
+
     private static void quad(BufferBuilder b, float x0, float y0, float z0, float x1, float y1, float z1,
                              float x2, float y2, float z2, float x3, float y3, float z3) {
+        if (faceUv) {
+            b.vertex(x0, y0, z0).uv(faceU, faceV).endVertex();
+            b.vertex(x1, y1, z1).uv(faceU + 1.0F, faceV).endVertex();
+            b.vertex(x2, y2, z2).uv(faceU + 1.0F, faceV + 1.0F).endVertex();
+            b.vertex(x3, y3, z3).uv(faceU, faceV + 1.0F).endVertex();
+            return;
+        }
         b.vertex(x0, y0, z0).endVertex();
         b.vertex(x1, y1, z1).endVertex();
         b.vertex(x2, y2, z2).endVertex();
@@ -1570,14 +1783,38 @@ public final class MirrorRenderer {
     // ---- finding the mirrors near the camera ----
 
     private static boolean isMirror(BlockState state) {
-        return state.is(ModBlocks.MIRROR.get());
+        int kind = mirrorKind(state);
+        return kind >= 0 && kind != PORTAL_KIND;
+    }
+
+    private static boolean isMirrorOrPortal(BlockState state) {
+        return mirrorKind(state) >= 0;
+    }
+
+    static final int PORTAL_KIND = 4;
+
+    /** Which mirror: 0 the plain one, 1 round, 2 cracked, 3 vanity (framed with bulbs), 4 a portal mirror; -1 not a mirror. */
+    static int mirrorKind(BlockState state) {
+        if (state.is(ModBlocks.MIRROR.get())) return 0;
+        if (state.is(ModBlocks.ROUND_MIRROR.get())) return 1;
+        if (state.is(ModBlocks.CRACKED_MIRROR.get())) return 2;
+        if (state.is(ModBlocks.VANITY_MIRROR.get())) return 3;
+        if (state.is(ModBlocks.PORTAL_MIRROR.get())) return PORTAL_KIND;
+        return -1;
     }
 
     private static void scan(ClientLevel level, int centerX, int centerZ) {
         WALLS.clear();
+        FAR_WALLS.clear();
+        LINKS.clear();
+        PORTALS.clear();
+        List<BlockPos> portalBlocks = new ArrayList<>();
         BlockPos.MutableBlockPos neighbour = new BlockPos.MutableBlockPos();
-        for (int dx = -SCAN_RADIUS; dx <= SCAN_RADIUS; dx++) {
-            for (int dz = -SCAN_RADIUS; dz <= SCAN_RADIUS; dz++) {
+        // (portal mirrors further out too: the one a portal near you is linked to can be a way off)
+        int portalRadius = SCAN_RADIUS + 1; // (which one each links to: the server's list, PortalClient)
+        for (int dx = -portalRadius; dx <= portalRadius; dx++) {
+            for (int dz = -portalRadius; dz <= portalRadius; dz++) {
+                boolean mirrorsToo = Math.abs(dx) <= SCAN_RADIUS && Math.abs(dz) <= SCAN_RADIUS;
                 LevelChunk chunk = level.getChunkSource().getChunk(centerX + dx, centerZ + dz, false);
                 if (chunk == null) {
                     continue;
@@ -1586,21 +1823,35 @@ public final class MirrorRenderer {
                 int baseX = chunk.getPos().getMinBlockX(), baseZ = chunk.getPos().getMinBlockZ();
                 for (int i = 0; i < sections.length; i++) {
                     LevelChunkSection section = sections[i];
-                    if (section == null || section.hasOnlyAir() || !section.maybeHas(MirrorRenderer::isMirror)) {
+                    if (section == null || section.hasOnlyAir()
+                            || !section.maybeHas(mirrorsToo ? MirrorRenderer::isMirrorOrPortal : com.example.skyblocks.PortalMirrors::isPortal)) {
                         continue;
                     }
                     int baseY = SectionPos.sectionToBlockCoord(chunk.getSectionYFromSectionIndex(i));
                     for (int y = 0; y < 16; y++) {
                         for (int z = 0; z < 16; z++) {
                             for (int x = 0; x < 16; x++) {
-                                if (!isMirror(section.getBlockState(x, y, z))) {
+                                BlockState here = section.getBlockState(x, y, z);
+                                if (com.example.skyblocks.PortalMirrors.isPortal(here)) {
+                                    portalBlocks.add(new BlockPos(baseX + x, baseY + y, baseZ + z));
+                                    continue;
+                                }
+                                if (!mirrorsToo || !isMirror(here)) {
                                     continue;
                                 }
                                 BlockPos pos = new BlockPos(baseX + x, baseY + y, baseZ + z);
+                                if (here.getBlock() instanceof com.example.skyblocks.RoundMirrorBlock) {
+                                    // a pane on a wall: only its front, a little out from the wall
+                                    Direction d = here.getValue(com.example.skyblocks.RoundMirrorBlock.FACING);
+                                    double coord = pos.get(d.getAxis()) + (d.getAxisDirection() == Direction.AxisDirection.POSITIVE
+                                            ? com.example.skyblocks.RoundMirrorBlock.THICK : 1.0 - com.example.skyblocks.RoundMirrorBlock.THICK);
+                                    WALLS.computeIfAbsent(new Wall(d, coord), w -> new ArrayList<>()).add(pos);
+                                    continue;
+                                }
                                 for (Direction d : Direction.values()) {
                                     neighbour.setWithOffset(pos, d);
                                     BlockState next = level.getBlockState(neighbour);
-                                    if (isMirror(next) || next.isSolidRender(level, neighbour)) {
+                                    if ((isMirror(next) && !(next.getBlock() instanceof com.example.skyblocks.RoundMirrorBlock)) || next.isSolidRender(level, neighbour)) {
                                         continue; // a hidden face
                                     }
                                     int coord = pos.get(d.getAxis()) + (d.getAxisDirection() == Direction.AxisDirection.POSITIVE ? 1 : 0);
@@ -1611,6 +1862,348 @@ public final class MirrorRenderer {
                     }
                 }
             }
+        }
+        linkPortals(level, portalBlocks);
+    }
+
+    // ---- portals' last pictures ----
+
+    /**
+     * What's at the other end of a portal, taken now and then while it's drawn live: five pictures from just in front
+     * of the other end (straight out, right, left, up, down), each with how far away every pixel is (in its alpha). A
+     * portal whose other end is too far to draw live is drawn from them (shaders/core/portal_far): its view rays
+     * followed out through them, so walking past it you still see round things. Saved with the world's name, so
+     * they're there next time.
+     */
+    private static final class Snapshot {
+        final TextureTarget[] packed = new TextureTarget[5];
+        final net.minecraft.client.renderer.texture.DynamicTexture[] loaded = new net.minecraft.client.renderer.texture.DynamicTexture[5];
+        boolean fromDisk;
+        long frame = -100000L, savedFrame = -100000L;
+        /** Being taken: from this frame on, a picture a frame (the chunks it needs asked for first). */
+        long startedFrame = -1L;
+        int next;
+
+        int texture(int k) {
+            return loaded[k] != null ? loaded[k].getId() : packed[k] != null ? packed[k].getColorTextureId() : 0;
+        }
+
+        boolean complete() {
+            for (int k = 0; k < 5; k++) {
+                if (texture(k) == 0) return false;
+            }
+            return true;
+        }
+
+        void closeLoaded() {
+            for (int k = 0; k < 5; k++) {
+                if (loaded[k] != null) {
+                    loaded[k].close();
+                    loaded[k] = null;
+                }
+            }
+        }
+    }
+
+    private static final Map<String, Snapshot> SNAPSHOTS = new HashMap<>();
+    private static final Set<String> LOOKED_ON_DISK = new HashSet<>();
+    private static final int SNAPSHOT_EVERY = 200, SAVE_EVERY = 3000, SNAPSHOT_SIZE = 256, SNAPSHOT_LEAD = 3;
+    private static final float SNAPSHOT_FAR = 256.0F;
+    private static TextureTarget snapshotScratch;
+    private static ShaderInstance packShader, farShader;
+
+    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    public static final class PortalShaders {
+        private PortalShaders() {}
+
+        @SubscribeEvent
+        public static void registerPortalShaders(net.minecraftforge.client.event.RegisterShadersEvent event) {
+            ShaderLoad.register(event, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "portal_pack"),
+                    DefaultVertexFormat.POSITION, sh -> packShader = sh);
+            ShaderLoad.register(event, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "portal_far"),
+                    DefaultVertexFormat.POSITION_TEX, sh -> farShader = sh);
+        }
+    }
+
+    /** Where the pictures are taken from: just in front of the other end's middle. */
+    private static Vec3 snapshotEye(Link link) {
+        Wall d = link.dest();
+        return link.to().add(d.nx() * 0.05, 0.0, d.nz() * 0.05);
+    }
+
+    /** Picture k's view: straight out, right, left, up, down (the same as portal_far's look()). */
+    private static Matrix4f snapshotView(Link link, int k) {
+        Wall d = link.dest();
+        org.joml.Vector3f f = new org.joml.Vector3f((float) d.nx(), 0.0F, (float) d.nz());
+        org.joml.Vector3f y = new org.joml.Vector3f(0.0F, 1.0F, 0.0F);
+        org.joml.Vector3f r = new org.joml.Vector3f(f).cross(y).normalize();
+        org.joml.Vector3f a, up;
+        switch (k) {
+            case 0 -> { a = f; up = y; }
+            case 1 -> { a = r; up = y; }
+            case 2 -> { a = new org.joml.Vector3f(r).negate(); up = y; }
+            case 3 -> { a = y; up = new org.joml.Vector3f(f).negate(); }
+            default -> { a = new org.joml.Vector3f(y).negate(); up = f; }
+        }
+        return new Matrix4f().lookAt(0.0F, 0.0F, 0.0F, a.x, a.y, a.z, up.x, up.y, up.z);
+    }
+
+    private static Matrix4f snapshotProjection() {
+        return new Matrix4f().setPerspective((float) (Math.PI / 2.0), 1.0F, 0.05F, SNAPSHOT_FAR);
+    }
+
+    private static String snapshotKey(ClientLevel level, Wall wall, Link link) {
+        return level.dimension().location().toString().replace(':', '_').replace('/', '_') + "_" + wall.portal() + "_" + link.dest().portal();
+    }
+
+    private static java.io.File snapshotFile(String key, int k) {
+        Minecraft mc = Minecraft.getInstance();
+        String world = mc.getSingleplayerServer() != null ? mc.getSingleplayerServer().getWorldData().getLevelName()
+                : mc.getCurrentServer() != null ? mc.getCurrentServer().ip : "unknown";
+        java.io.File dir = new java.io.File(mc.gameDirectory, "shaderedplus/portal_pictures/" + world.replaceAll("[^A-Za-z0-9._-]", "_"));
+        return new java.io.File(dir, key + "_" + k + ".png");
+    }
+
+    /** A portal's pictures: in memory, or read from their files (null: none yet). */
+    private static Snapshot snapshot(ClientLevel level, Wall wall, Link link) {
+        String key = snapshotKey(level, wall, link);
+        Snapshot snap = SNAPSHOTS.get(key);
+        if (snap != null) {
+            return snap.complete() ? snap : null;
+        }
+        if (!LOOKED_ON_DISK.add(key)) {
+            return null;
+        }
+        Snapshot read = new Snapshot();
+        read.fromDisk = true;
+        try {
+            for (int k = 0; k < 5; k++) {
+                java.io.File file = snapshotFile(key, k);
+                if (!file.isFile()) {
+                    read.closeLoaded();
+                    return null;
+                }
+                try (java.io.InputStream in = new java.io.FileInputStream(file)) {
+                    // (saved as read back from the graphics card, bottom row first: put back the same way)
+                    read.loaded[k] = new net.minecraft.client.renderer.texture.DynamicTexture(com.mojang.blaze3d.platform.NativeImage.read(in));
+                    read.loaded[k].setFilter(true, false);
+                }
+            }
+        } catch (java.io.IOException | RuntimeException e) {
+            read.closeLoaded();
+            return null;
+        }
+        SNAPSHOTS.put(key, read);
+        return read;
+    }
+
+    /** The views of the pictures being taken (for the chunk search: the chunks they need are drawn for them). */
+    private static final List<MirrorCulling.View> SNAPSHOT_VIEWS = new ArrayList<>();
+
+    /** A picture a frame for one portal being drawn live (each portal every so often); saved now and then. */
+    private static void snapshots(Minecraft mc, ClientLevel level, Camera camera, Vec3 cam, RenderTarget main, Matrix4f projection, float partialTick) {
+        SNAPSHOT_VIEWS.clear();
+        if (packShader == null) {
+            return;
+        }
+        // the one being taken, else the stalest of those drawn live this frame
+        Wall wall = null;
+        Snapshot snap = null;
+        long oldest = Long.MAX_VALUE;
+        for (Map.Entry<Wall, Link> e : LINKS.entrySet()) {
+            Wall w = e.getKey();
+            if (!WALLS.containsKey(w)) {
+                continue;
+            }
+            Snapshot s = SNAPSHOTS.get(snapshotKey(level, w, e.getValue()));
+            if (s != null && s.startedFrame >= 0) {
+                wall = w;
+                snap = s;
+                break;
+            }
+            Node live = NODES.get(List.of(w));
+            if (live == null || !live.valid || live.renderedFrame != frame) {
+                continue; // (only while it's drawn live: the chunks it shows are there)
+            }
+            long at = s == null || s.fromDisk ? -1_000_000_000L : s.frame; // (none yet: oldest of all - without overflowing)
+            if (frame - at >= SNAPSHOT_EVERY && at < oldest) {
+                oldest = at;
+                wall = w;
+                snap = s;
+            }
+        }
+        if (wall == null) {
+            return;
+        }
+        Link link = LINKS.get(wall);
+        String key = snapshotKey(level, wall, link);
+        if (snap == null || snap.fromDisk) {
+            if (snap != null) {
+                snap.closeLoaded();
+            }
+            snap = new Snapshot();
+            SNAPSHOTS.put(key, snap);
+        }
+        Vec3 eye = snapshotEye(link);
+        Matrix4f proj = snapshotProjection();
+        if (snap.startedFrame < 0) {
+            snap.startedFrame = frame;
+            snap.next = 0;
+        }
+        // (the chunk search sees what they'll show, a few frames ahead)
+        for (int k = 0; k < 5; k++) {
+            SNAPSHOT_VIEWS.add(new MirrorCulling.View(new FrustumIntersection(new Matrix4f(proj).mul(snapshotView(link, k))
+                    .translate((float) (cam.x - eye.x), (float) (cam.y - eye.y), (float) (cam.z - eye.z)))));
+        }
+        if (frame - snap.startedFrame < SNAPSHOT_LEAD) {
+            return;
+        }
+        int k = snap.next;
+        if (snapshotScratch == null) {
+            snapshotScratch = newTarget(SNAPSHOT_SIZE, SNAPSHOT_SIZE);
+        }
+        if (snap.packed[k] == null) {
+            snap.packed[k] = new TextureTarget(SNAPSHOT_SIZE, SNAPSHOT_SIZE, false, Minecraft.ON_OSX);
+            snap.packed[k].setFilterMode(GL11.GL_LINEAR);
+        }
+        Node n = new Node(List.of(wall));
+        n.target = snapshotScratch;
+        n.picRect = FULL;
+        n.rect = FULL;
+        n.area = 1.0F;
+        n.scale = 1.0F;
+        n.usedW = 1.0F;
+        n.usedH = 1.0F;
+        Chain c = new Chain();
+        c.rx = eye.x;
+        c.ry = eye.y;
+        c.rz = eye.z;
+        c.modelView = snapshotView(link, k);
+        c.clipped = new Matrix4f(proj);
+        c.seen = new FrustumIntersection(new Matrix4f(proj).mul(c.modelView));
+        c.flipped = false;
+        n.chain = c;
+        try {
+            renderNode(mc, level, camera, n, proj, partialTick, true);
+            // packed: its colour, and how far each pixel is in the alpha
+            snap.packed[k].bindWrite(true);
+            RenderSystem.disableDepthTest();
+            RenderSystem.depthMask(false);
+            RenderSystem.disableBlend();
+            RenderSystem.disableCull();
+            packShader.safeGetUniform("Near").set(0.05F);
+            packShader.safeGetUniform("Far").set(SNAPSHOT_FAR);
+            RenderSystem.setShader(() -> packShader);
+            RenderSystem.setShaderTexture(0, snapshotScratch.getColorTextureId());
+            RenderSystem.setShaderTexture(1, snapshotScratch.getDepthTextureId());
+            BufferBuilder b = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
+            b.addVertex(-1.0F, -1.0F, 0.0F);
+            b.addVertex(1.0F, -1.0F, 0.0F);
+            b.addVertex(1.0F, 1.0F, 0.0F);
+            b.addVertex(-1.0F, 1.0F, 0.0F);
+            BufferUploader.drawWithShader(b.buildOrThrow());
+            RenderSystem.enableDepthTest();
+            RenderSystem.depthMask(true);
+            RenderSystem.enableCull();
+        } finally {
+            MirrorTiming.end();
+            restore(mc, main, camera, projection, partialTick);
+        }
+        snap.next++;
+        if (snap.next >= 5) {
+            snap.startedFrame = -1L;
+            snap.frame = frame;
+            if (frame - snap.savedFrame >= SAVE_EVERY) {
+                snap.savedFrame = frame;
+                for (int i = 0; i < 5; i++) {
+                    save(snap.packed[i], snapshotFile(key, i));
+                }
+            }
+        }
+    }
+
+    /** A packed picture to its file (as read back, bottom row first, its alpha kept). */
+    private static void save(TextureTarget target, java.io.File file) {
+        try {
+            com.mojang.blaze3d.platform.NativeImage image = new com.mojang.blaze3d.platform.NativeImage(target.width, target.height, false);
+            RenderSystem.bindTexture(target.getColorTextureId());
+            image.downloadTexture(0, false);
+            file.getParentFile().mkdirs();
+            net.minecraft.Util.ioPool().execute(() -> {
+                try (image) {
+                    image.writeToFile(file);
+                } catch (java.io.IOException e) {
+                    SkyBlocksMod.LOGGER.warn("Shadered+: couldn't save {}", file, e);
+                }
+            });
+        } catch (RuntimeException e) {
+            SkyBlocksMod.LOGGER.warn("Shadered+: couldn't read a portal's picture", e);
+        }
+    }
+
+    /** A far portal's face, drawn from its other end's pictures (portal_far). */
+    private static void drawFarFaces(Wall wall, Link link, List<BlockPos> faces, Vec3 cam, Snapshot snap) {
+        ShaderInstance shader = farShader;
+        if (shader == null) {
+            return;
+        }
+        Vec3 eye = snapshotEye(link);
+        // (camera-relative points -> carried through the portal, relative to where the pictures were taken)
+        Vec3 t = com.example.skyblocks.PortalMirrors.rotate(cam.subtract(link.from()), link.turns()).add(link.to()).subtract(eye);
+        Matrix4f portalMat = new Matrix4f().translation((float) t.x, (float) t.y, (float) t.z).mul(turn(link.turns()));
+        shader.safeGetUniform("PortalMat").set(portalMat);
+        shader.safeGetUniform("EyeQ").set((float) t.x, (float) t.y, (float) t.z);
+        shader.safeGetUniform("Front").set((float) link.dest().nx(), 0.0F, (float) link.dest().nz());
+        RenderSystem.setShader(() -> shader);
+        for (int k = 0; k < 5; k++) {
+            RenderSystem.setShaderTexture(k, snap.texture(k));
+        }
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthFunc(GL11.GL_LEQUAL);
+        RenderSystem.depthMask(!overlayFaces);
+        RenderSystem.disableBlend();
+        RenderSystem.disableCull();
+        MeshData mesh = faceMesh(wall, faces, cam.x, cam.y, cam.z, true);
+        if (mesh != null) {
+            RenderSystem.enablePolygonOffset();
+            RenderSystem.polygonOffset(-2.0F, -20.0F);
+            try {
+                BufferUploader.drawWithShader(mesh);
+            } finally {
+                RenderSystem.polygonOffset(0.0F, 0.0F);
+                RenderSystem.disablePolygonOffset();
+            }
+        }
+        RenderSystem.enableCull();
+    }
+
+    /** The portal mirrors found: each linked one's two sides become walls whose pictures look through the other. */
+    private static void linkPortals(ClientLevel level, List<BlockPos> blocks) {
+        Set<BlockPos> done = new HashSet<>();
+        for (BlockPos pos : blocks) {
+            if (done.contains(pos)) {
+                continue;
+            }
+            com.example.skyblocks.PortalMirrors.Portal p = com.example.skyblocks.PortalMirrors.component(level, pos);
+            if (p == null) {
+                continue;
+            }
+            done.addAll(p.blocks());
+            PORTALS.add(p);
+        }
+        for (com.example.skyblocks.PortalMirrors.Portal a : PORTALS) {
+            com.example.skyblocks.PortalMirrors.Portal b = PortalClient.partnerOf(a);
+            if (b == null) {
+                continue; // (none: its swirl shows)
+            }
+            boolean far = forceFarPortals || !level.hasChunkAt(BlockPos.containing(b.origin()));
+            int turns = com.example.skyblocks.PortalMirrors.turns(a, b);
+            double planeA = com.example.skyblocks.PortalMirrors.plane(a.min(), a.facing());
+            double planeB = com.example.skyblocks.PortalMirrors.plane(b.min(), b.facing());
+            Wall wall = new Wall(a.facing(), planeA, a.min().asLong());
+            // (looking into its front: out of the front of the linked portal)
+            (far ? FAR_WALLS : WALLS).put(wall, new ArrayList<>(a.blocks()));
+            LINKS.put(wall, new Link(new Wall(b.facing(), planeB, b.min().asLong()), turns, a.origin(), b.origin()));
         }
     }
 }

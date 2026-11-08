@@ -49,6 +49,7 @@ public class VisualizerRenderer implements BlockEntityRenderer<GlowColourBlockEn
                         .setTextureState(new TextureStateShard(MusicReactor.HISTORY, true, false))
                         .setTexturingState(new TexturingStateShard("skyblocks_visualizer_music", () -> {
                             if (shader != null) {
+                                MusicReactor.tick();
                                 for (int i = 0; i < 4; i++) {
                                     shader.safeGetUniform("Bands" + i).set(MusicReactor.band(i * 4), MusicReactor.band(i * 4 + 1),
                                             MusicReactor.band(i * 4 + 2), MusicReactor.band(i * 4 + 3));

@@ -22,8 +22,8 @@ public final class ClientAccess {
         }
     }
 
-    public static void openAquarium(boolean ocean, boolean deep) {
-        Minecraft.getInstance().setScreen(new AquariumScreen(ocean, deep));
+    public static void openAquarium(boolean ocean, boolean deep, int theme) {
+        Minecraft.getInstance().setScreen(new AquariumScreen(ocean, deep, theme));
     }
 
     /** An aquarium lid clicked: its tank's new light, said over the hotbar. */
@@ -39,7 +39,8 @@ public final class ClientAccess {
     public static void openNeonSign(net.minecraft.core.BlockPos pos) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.level.getBlockEntity(pos) instanceof com.example.skyblocks.NeonSignBlockEntity sign) {
-            mc.setScreen(new NeonSignScreen(pos, sign.text(), sign.colour(), sign.mode() | (sign.outline() ? com.example.skyblocks.NeonSignBlockEntity.OUTLINE_BIT : 0), sign.size(), sign.background()));
+            mc.setScreen(new NeonSignScreen(pos, sign.text(), sign.colour(), sign.mode() | (sign.outline() ? com.example.skyblocks.NeonSignBlockEntity.OUTLINE_BIT : 0), sign.size(), sign.background(),
+                    sign.font(), sign.colour2()));
         }
     }
 

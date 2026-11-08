@@ -17,8 +17,8 @@ uniform mat4 LampInv;
 
 out vec3 lp;
 out vec3 lray;
-out float seedIn;
-out vec4 vColor;
+flat out float seedIn;
+flat out vec4 vColor;
 out vec2 uv;
 
 void main() {

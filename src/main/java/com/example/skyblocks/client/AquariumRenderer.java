@@ -67,6 +67,8 @@ public final class AquariumRenderer {
         boolean ocean;
         /** The deep sea aquarium: always dark, its own creatures. */
         boolean deep;
+        /** 0 plain, 1 a coral reef, 2 a jungle river. */
+        int theme;
         /** The light a lid on it has set (0 daylight .. 3 reef), or -1: as the aquarium's menu has it. */
         int lidLight = -1;
         /** A vanilla aquarium: only the water, light, sand and frame here (client/VanillaAquariumRenderer puts the game's own fish in it). */
@@ -406,6 +408,8 @@ public final class AquariumRenderer {
             {0.09F, 0.03F, 0.02F, 0.035F, 0.035F, 0.005F, 0.04F, 0.02F, 0.005F, 1.3F, 0.5F},
             // the cleaner shrimp (on the bottom, climbing the glass, cleaning the fish that come to it)
             {0.16F, 0.1F, 0.07F, 0, 0, 0, 0, 0, 0, 0.35F, 0},
+            // the jungle river's piranha
+            {0.14F, 0.1F, 0.04F, 0.05F, 0.06F, 0.01F, 0.07F, 0.045F, 0.008F, 1.1F, 0.9F},
     };
 
     /** The creatures that walk on the bottom (not swimming): 20-25, the axolotl, the cleaner shrimp. */
@@ -696,7 +700,7 @@ public final class AquariumRenderer {
                     int pk = Math.round(floor.decor[d * 4 + 3]);
                     double sz = (pk / 256) / 10.0;
                     int type = pk % 16;
-                    double dr = sz * (type == 8 ? 0.42 : type == 0 || type == 3 ? 0.24 : type == 5 || type == 10 ? 0.17 : 0.12) + 0.02;
+                    double dr = sz * decorFootprint(floor.theme, type) + 0.02;
                     double dx = px[i] + st[i * 3] - floor.decor[d * 4], dz = pz[i] + st[i * 3 + 2] - floor.decor[d * 4 + 2];
                     double m = rad[i] * 0.8 + dr;
                     double d2 = dx * dx + dz * dz;
@@ -1077,6 +1081,7 @@ public final class AquariumRenderer {
         shader.safeGetUniform("Ocean").set(floor.ocean ? 1.0F : 0.0F);
         shader.safeGetUniform("Light").set((float) lightOf(floor));
         shader.safeGetUniform("Deep").set(0.0F);
+        shader.safeGetUniform("Theme").set((float) floor.theme);
         shader.safeGetUniform("Night").set((float) night());
         shader.safeGetUniform("DecoCount").set(0.0F);
     }
@@ -1121,6 +1126,7 @@ public final class AquariumRenderer {
         shader.safeGetUniform("Ocean").set(floor.ocean ? 1.0F : 0.0F);
         shader.safeGetUniform("Light").set((float) lightOf(floor));
         shader.safeGetUniform("Deep").set(floor.deep ? 1.0F : 0.0F);
+        shader.safeGetUniform("Theme").set((float) floor.theme);
         shader.safeGetUniform("Night").set(floor.deep ? 1.0F : (float) night()); // (the deep sea: always night)
         float[] d = floor.decor;
         for (int v = 0; v < MAX_DECOR; v++) {
@@ -1142,7 +1148,7 @@ public final class AquariumRenderer {
         }
         bottom.sort(java.util.Comparator.comparingLong(BlockPos::asLong));
         java.util.Random random = new java.util.Random(floor.min.asLong() * 17L + bottom.size() * 7L + 3L);
-        int count = Math.max(3, Math.min(MAX_DECOR, (int) (bottom.size() * (floor.ocean ? 0.6F : 0.8F)))); // (more, with the seaweed)
+        int count = Math.max(3, Math.min(MAX_DECOR, (int) (bottom.size() * (floor.ocean ? 0.6F : floor.theme == 1 ? 1.4F : floor.theme == 2 ? 1.1F : 0.8F)))); // (more, with the seaweed; a reef packed with coral)
         boolean castle = false, chest = false, ship = false, anchor = false, helmet = false;
         floor.decorCount = 0;
         // an air stone (two in a big tank), its stream of bubbles rising to the surface
@@ -1156,6 +1162,20 @@ public final class AquariumRenderer {
             floor.decor[k * 4 + 3] = 14 + 16 * (random.nextInt(16) + 16 * 10);
         }
         count = Math.min(count, MAX_DECOR - stones);
+        // the reef: first a mound or two of live rock, for corals to grow on
+        int mounds = floor.theme == 1 && !floor.deep ? (bottom.size() >= 6 ? 2 : 1) : 0;
+        int firstMound = floor.decorCount;
+        for (int i = 0; i < mounds && count > 0; i++) {
+            BlockPos cell = bottom.get(random.nextInt(bottom.size()));
+            float size = Math.min(1.3F + random.nextFloat() * 0.8F, 0.5F * Math.min(floor.sizeX, floor.sizeZ) + 0.4F);
+            size = Math.min(size, floor.sizeY * 2.0F);
+            int k = floor.decorCount++;
+            floor.decor[k * 4] = cell.getX() - floor.min.getX() + 0.3F + random.nextFloat() * 0.4F;
+            floor.decor[k * 4 + 1] = cell.getY() - floor.min.getY() + (cell.getY() == floor.min.getY() ? 0.1F : 0.0F);
+            floor.decor[k * 4 + 2] = cell.getZ() - floor.min.getZ() + 0.3F + random.nextFloat() * 0.4F;
+            floor.decor[k * 4 + 3] = 16 * (random.nextInt(16) + 16 * Math.max(1, Math.min(60, Math.round(size * 10.0F))));
+            count--;
+        }
         for (int i = 0; i < count; i++) {
             BlockPos cell = bottom.get(random.nextInt(bottom.size()));
             float r = random.nextFloat();
@@ -1172,6 +1192,18 @@ public final class AquariumRenderer {
                 type = r < 0.55F ? 0 : r < 0.65F && !chest ? 5 : r < 0.8F ? 11 : 0;
                 r3 = 1.0F;
             }
+            if (floor.theme == 1) { // the reef: brain, table, staghorn and branching coral, sea fans, tube sponges, leather
+                // coral, anemones (for the clownfish), live rock, starfish, clams (the shader draws the reef's own corals
+                // for the numbers the other tanks use for their castle, vase, ship...)
+                type = r < 0.13F ? 3 : r < 0.23F ? 7 : r < 0.33F ? 8 : r < 0.45F ? 9 : r < 0.55F ? 10 : r < 0.63F ? 15
+                        : r < 0.71F ? 4 : r < 0.84F ? 6 : r < 0.9F ? 0 : r < 0.95F ? 2 : 11;
+                r3 = r3 < 0.08F ? r3 : 1.0F; // (a little seagrass)
+            }
+            if (floor.theme == 2) { // the river: tree roots, Amazon swords, water lilies, mossy boulders with java fern,
+                // anubias, driftwood, smooth stones, grass (nothing from the sea; the shader draws these for its numbers)
+                type = r < 0.13F ? 8 : r < 0.33F ? 9 : r < 0.45F ? 7 : r < 0.58F ? 3 : r < 0.7F ? 10 : r < 0.8F ? 15 : r < 0.9F ? 0 : 12;
+                r3 = r3 < 0.22F ? r3 : 1.0F;
+            }
             if (r3 < 0.28F) {
                 type = 12;
             } else if (r3 < 0.4F && floor.sizeY >= 2) {
@@ -1180,6 +1212,7 @@ public final class AquariumRenderer {
             }
             // now and then something special instead: a sunken ship (big tanks), an anchor, a diver's helmet, a clam
             float r2 = random.nextFloat();
+            if (floor.theme > 0) r2 = 1.0F; // (no ships, anchors or helmets in a reef or a river)
             if (r2 < 0.07F && !ship && Math.min(floor.sizeX, floor.sizeZ) >= (floor.ocean ? 4 : 3)) type = 8;
             else if (r2 < 0.13F && !anchor) type = 9;
             else if (r2 < 0.19F && !helmet) type = 10;
@@ -1205,7 +1238,51 @@ public final class AquariumRenderer {
             floor.decor[k * 4 + 1] = cell.getY() - floor.min.getY() + (cell.getY() == floor.min.getY() ? 0.12F : 0.0F);
             floor.decor[k * 4 + 2] = cell.getZ() - floor.min.getZ() + 0.2F + random.nextFloat() * 0.6F;
             floor.decor[k * 4 + 3] = type + 16 * (turn + 16 * sizeQ);
+            if (floor.theme == 1 && type != 0) { // (on a rock mound: up on top of it)
+                for (int m = firstMound; m < firstMound + mounds; m++) {
+                    float msz = (Math.round(floor.decor[m * 4 + 3]) / 256) / 10.0F;
+                    float dx = floor.decor[k * 4] - floor.decor[m * 4], dz = floor.decor[k * 4 + 2] - floor.decor[m * 4 + 2];
+                    float d = (float) Math.sqrt(dx * dx + dz * dz) / (0.16F * msz);
+                    if (d < 0.85F && Math.abs(floor.decor[k * 4 + 1] - floor.decor[m * 4 + 1]) < 0.3F) {
+                        floor.decor[k * 4 + 1] = floor.decor[m * 4 + 1] + msz * (0.07F + 0.13F * (float) Math.sqrt(1.0F - d * d)) - 0.02F;
+                        size = Math.min(size, (floor.sizeY - 0.15F - floor.decor[k * 4 + 1]) / 0.65F);
+                        sizeQ = Math.max(1, Math.min(60, Math.round(size * 10.0F)));
+                        floor.decor[k * 4 + 3] = type + 16 * (turn + 16 * sizeQ);
+                        break;
+                    }
+                }
+            }
+            if (floor.theme == 2 && type == 7) { // (a water lily: its size is its height, its pads at the surface)
+                sizeQ = Math.max(1, Math.min(60, (int) Math.floor((floor.sizeY - 0.06F - floor.decor[k * 4 + 1]) * 10.0F)));
+                floor.decor[k * 4 + 3] = type + 16 * (turn + 16 * sizeQ);
+            }
         }
+    }
+
+    /** How far round a decoration the bottom creatures keep (in its own size). */
+    private static double decorFootprint(int theme, int type) {
+        if (theme == 1) { // (the reef's corals: brain, table (its stalk), sea fan, staghorn, sponges, leather coral)
+            switch (type) {
+                case 3: return 0.22;
+                case 7: return 0.08;
+                case 8: return 0.06;
+                case 9: return 0.16;
+                case 10: return 0.12;
+                case 15: return 0.08;
+                default: break;
+            }
+        }
+        if (theme == 2) { // (the river's: boulder, lily stems, roots, sword plant, anubias)
+            switch (type) {
+                case 3: return 0.24;
+                case 7: return 0.03;
+                case 8: return 0.38;
+                case 9: return 0.08;
+                case 10: return 0.1;
+                default: break;
+            }
+        }
+        return type == 8 ? 0.42 : type == 0 || type == 3 ? 0.24 : type == 5 || type == 10 ? 0.17 : 0.12;
     }
 
     /**
@@ -1220,27 +1297,31 @@ public final class AquariumRenderer {
             14.0F, 6.0F, 10.0F, 6.0F, 8.0F, 4.0F, 10.0F, 1.2F, 16.0F, 30.0F,
             0.6F, 0.7F, 6.0F, 1.0F, 3.0F, 0.3F,
             3.0F, 2.5F, 0.8F, 0.25F, 8.0F, 8.0F, 1.2F,
-            1.5F, 0.35F, 0.4F};
+            1.5F, 0.35F, 0.4F, 1.0F};
     /** How often each kind is picked, against the others. */
     private static final float[] WEIGHT = {1, 1, 1, 1.3F, 1, 1, 1, 0.8F, 1.2F, 1,
             0.9F, 1.2F, 0.7F, 1.0F, 0.9F, 0.9F, 0.7F, 2.4F, 0.7F, 0.6F,
             0.8F, 0.8F, 0.7F, 0.7F, 0.6F, 1.0F,
             1.0F, 0.9F, 1.4F, 0.9F, 0.8F, 0.8F, 1.0F,
-            1.0F, 1.5F, 1.0F};
+            1.0F, 1.5F, 1.0F, 1.2F};
     /** Most of each kind in one tank (with every kind on). */
     private static final int[] CAP = {8, 6, 6, 16, 4, 8, 4, 3, 12, 4,
             3, 6, 3, 4, 3, 5, 3, 16, 2, 2,
             3, 3, 2, 2, 2, 4,
             6, 4, 10, 12, 3, 3, 4,
-            3, 16, 3};
+            3, 16, 3, 6};
 
     /** What each aquarium can have: the normal one's fish and bottom creatures, and the ocean one's. */
     static final int[] NORMAL_KINDS = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 28, 27, 29, 32, 20, 21, 23, 25, 35};
     static final int[] OCEAN_KINDS = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 26, 27, 30, 31, 21, 22, 23, 24, 25, 35};
     static final int[] DEEP_KINDS = {33, 34, 15, 31};
+    /** The coral reef's: clownfish, tangs, pufferfish, tropical fish, guppies; hermit crabs, crabs, shrimp, the cleaner. */
+    static final int[] REEF_KINDS = {0, 1, 2, 7, 28, 8, 20, 21, 25, 35};
+    /** The jungle river's: piranhas, neon tetras, angelfish, discus, guppies, bettas; tadpoles, the axolotl, shrimp. */
+    static final int[] JUNGLE_KINDS = {36, 3, 4, 9, 8, 6, 29, 32, 25};
 
     private static int[] kindsFor(Floor floor) {
-        return floor.deep ? DEEP_KINDS : floor.ocean ? OCEAN_KINDS : NORMAL_KINDS;
+        return floor.theme == 1 ? REEF_KINDS : floor.theme == 2 ? JUNGLE_KINDS : floor.deep ? DEEP_KINDS : floor.ocean ? OCEAN_KINDS : NORMAL_KINDS;
     }
 
     /** The smallest tank a kind appears in: how wide (both ways) and how tall, in blocks. */
@@ -1545,8 +1626,11 @@ public final class AquariumRenderer {
     }
 
     /** Touching blocks -> tanks (in the world, or in an island's own blocks). */
-    /** 0 the aquarium, 1 the ocean one, 2 and 3 their vanilla ones, 4 the deep sea one (each kind its own tanks). */
+    /** 0 the aquarium, 1 the ocean one, 2 and 3 their vanilla ones, 4 the deep sea one, 5 the reef, 6 the jungle river (each kind its own tanks). */
     private static int kindOf(AquariumBlock tank) {
+        if (tank.theme() > 0) {
+            return 4 + tank.theme();
+        }
         return tank.deep() ? 4 : (tank.ocean() ? 1 : 0) + (tank instanceof com.example.skyblocks.VanillaAquariumBlock ? 2 : 0);
     }
 
@@ -1564,6 +1648,7 @@ public final class AquariumRenderer {
             floor.ocean = code == 1 || code == 3;
             floor.vanilla = code == 2 || code == 3;
             floor.deep = code == 4;
+            floor.theme = code == 5 ? 1 : code == 6 ? 2 : 0;
             int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
             int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
             ArrayDeque<BlockPos> queue = new ArrayDeque<>();

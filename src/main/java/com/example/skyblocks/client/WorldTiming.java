@@ -62,6 +62,11 @@ public final class WorldTiming {
     private static final long[] beStart = new long[16], mobStart = new long[16];
     private static int beDepth, mobDepth, shaderedDepth, shaderedSpan = -1;
 
+    /** The render test: timed whether or not the F3 screen is open. */
+    public static boolean force;
+    /** Frames of the normal view so far. */
+    public static long frames;
+
     private WorldTiming() {}
 
     private static boolean skip() {
@@ -211,7 +216,8 @@ public final class WorldTiming {
         beDepth = 0;
         mobDepth = 0;
         shaderedDepth = 0;
-        on = supported && Minecraft.getInstance().options.renderDebug;
+        frames++;
+        on = supported && (force || Minecraft.getInstance().options.renderDebug);
         if (!on) {
             BE_NOW.clear();
             MOB_NOW.clear();
@@ -325,6 +331,11 @@ public final class WorldTiming {
         }
         List<String> lines = event.getLeft();
         lines.add("");
+        report(lines);
+    }
+
+    /** What the F3 screen shows: the times now. */
+    public static void report(List<String> lines) {
         lines.add(String.format(Locale.ROOT, "Normal view: world GPU %.1f ms, CPU %.1f ms. By stage:", gpuMs[WORLD], cpuMs[WORLD]));
         for (int i = 1; i < NAMES.size(); i++) {
             if (isStage[i] && (gpuMs[i] >= 0.05 || cpuMs[i] >= 0.05)) {

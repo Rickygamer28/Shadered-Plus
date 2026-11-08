@@ -22,6 +22,8 @@ public final class ClientSetup {
     public static void clientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(ShaderedSkies::register);
         event.enqueueWork(SkyUsage::report);
+        // the singularity's menu (1.20.1: screens are registered here, not in an event of their own)
+        event.enqueueWork(() -> net.minecraft.client.gui.screens.MenuScreens.register(com.example.skyblocks.SingularityMenu.TYPE.get(), SingularityScreen::new));
         // The Island Painting's window needs a stencil buffer (client/island/IslandWindow).
         event.enqueueWork(() -> net.minecraft.client.Minecraft.getInstance().getMainRenderTarget().enableStencil());
         // Sky Liquids' own surface is fully see-through and cut out (nothing drawn, nothing hidden): all you see is
@@ -36,6 +38,7 @@ public final class ClientSetup {
         });
     }
 
+
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.OIIA_CAT.get(), OiiaCatRenderer::new);
@@ -43,6 +46,17 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.DISCO_BALL.get(), DiscoBallRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SPEAKER.get(), SpeakerRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.LAVA_LAMP.get(), LavaLampRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.PLASMA_BALL.get(), PlasmaBallRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.SMALL_TANK.get(), SmallTankRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.TESLA_COIL.get(), TeslaCoilRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.SOLAR_SYSTEM.get(), SolarSystemRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.GALAXY_PROJECTOR.get(), GalaxyProjectorRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.MAGMA_BASIN.get(), MagmaBasinRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.BLACK_HOLE.get(), BlackHoleRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.SINGULARITY.get(), SingularityRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.SPECIAL_FRAME.get(), SpecialFrameRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.WHIRLPOOL.get(), WhirlpoolRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.KALEIDOSCOPE.get(), KaleidoscopeRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.FIRE.get(), WallFireRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.BRICK_HEARTH.get(), ClientSetup::hearthRenderer);
         event.registerBlockEntityRenderer(ModBlockEntities.VISUALIZER.get(), VisualizerRenderer::new);
@@ -162,6 +176,19 @@ public final class ClientSetup {
             net.minecraft.world.level.block.state.BlockState block = tint < PondModel.FLOOR_TINT ? pond.rim() : pond.floor();
             return block == null ? -1 : event.getBlockColors().getColor(block, level, pos, tint % 100);
         }, com.example.skyblocks.ModBlocks.VANILLA_KOI_POND.get());
+    }
+
+    /** Portal mirrors: their colour. */
+    @SubscribeEvent
+    public static void portalColours(net.minecraftforge.client.event.RegisterColorHandlersEvent.Block event) {
+        event.register((state, level, pos, tint) -> com.example.skyblocks.compat.Compat.dyeColour(state.getValue(com.example.skyblocks.PortalMirrorBlock.COLOR)),
+                com.example.skyblocks.ModBlocks.PORTAL_MIRROR.get());
+    }
+
+    @SubscribeEvent
+    public static void portalItemColour(net.minecraftforge.client.event.RegisterColorHandlersEvent.Item event) {
+        event.register((stack, tint) -> tint == 0 ? com.example.skyblocks.compat.Compat.dyeColour(net.minecraft.world.item.DyeColor.PURPLE) : 0xFFFFFFFF,
+                com.example.skyblocks.ModItems.PORTAL_MIRROR.get());
     }
 
     /** The vanilla aquariums' water: the biome's water colour, as any water. */

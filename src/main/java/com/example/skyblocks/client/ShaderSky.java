@@ -177,7 +177,13 @@ public final class ShaderSky {
                                  float ticks) {
             com.mojang.blaze3d.vertex.PoseStack modelView = RenderSystem.getModelViewStack();
             modelView.pushPose();
-            modelView.mulPoseMatrix(view);
+            // just the camera's turn, worked out here: what's in the stack and the pose handed in differ by where it's
+            // drawn (at the sky stage, or in the middle of the world just before the sky blocks showing it - turned by
+            // twice, the sky swung round with the mouse)
+            net.minecraft.client.Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+            modelView.setIdentity();
+            modelView.mulPose(com.mojang.math.Axis.XP.rotationDegrees(camera.getXRot()));
+            modelView.mulPose(com.mojang.math.Axis.YP.rotationDegrees(camera.getYRot() + 180.0F));
             float far = Math.max(16.0F, Minecraft.getInstance().gameRenderer.getRenderDistance());
             modelView.scale(far, far, far);
             RenderSystem.applyModelViewMatrix();

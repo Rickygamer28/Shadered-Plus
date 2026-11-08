@@ -35,6 +35,13 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(GlowColourBlockEntity::visualizer, ModBlocks.MUSIC_VISUALIZER.get()).build(null));
     public static final Supplier<BlockEntityType<HologramBlockEntity>> HOLOGRAM = TYPES.register("hologram_projector",
             () -> BlockEntityType.Builder.of(HologramBlockEntity::new, ModBlocks.HOLOGRAM_PROJECTOR.get()).build(null));
+    public static final Supplier<BlockEntityType<GlowColourBlockEntity>> PLASMA_BALL = TYPES.register("plasma_ball",
+            () -> BlockEntityType.Builder.of(GlowColourBlockEntity::plasmaBall, ModBlocks.PLASMA_BALL.get()).build(null));
+    public static final Supplier<BlockEntityType<GlowColourBlockEntity>> MAGMA_BASIN = TYPES.register("magma_basin",
+            () -> BlockEntityType.Builder.of(GlowColourBlockEntity::magmaBasin, ModBlocks.MAGMA_BASIN.get()).build(null));
+    public static final Supplier<BlockEntityType<GlowColourBlockEntity>> BLACK_HOLE = TYPES.register("black_hole",
+            () -> BlockEntityType.Builder.of((pos, state) -> GlowColourBlockEntity.blackHole(pos, state,
+                    state.getBlock() instanceof BlackHoleBlock b && b.big()), ModBlocks.BLACK_HOLE.get(), ModBlocks.BIG_BLACK_HOLE.get()).build(null));
     public static final Supplier<BlockEntityType<GlowColourBlockEntity>> JELLYFISH_TANK = TYPES.register("jellyfish_tank",
             () -> BlockEntityType.Builder.of(GlowColourBlockEntity::jellyTank, ModBlocks.JELLYFISH_TANK.get()).build(null));
     public static final Supplier<BlockEntityType<KoiPondBlockEntity>> KOI_POND = TYPES.register("koi_pond",
@@ -60,6 +67,30 @@ public final class ModBlockEntities {
 
     public static final Supplier<BlockEntityType<SpeakerBlockEntity>> SPEAKER = TYPES.register("speaker",
             () -> BlockEntityType.Builder.of(SpeakerBlockEntity::new, ModBlocks.SPEAKER.get()).build(null));
+
+    public static final Supplier<BlockEntityType<SmallTankBlockEntity>> SMALL_TANK = TYPES.register("small_tank",
+            () -> BlockEntityType.Builder.of(SmallTankBlockEntity::new, ModBlocks.FISHBOWL.get(), ModBlocks.TALL_TANK.get(), ModBlocks.SLIM_TANK.get()).build(null));
+
+    public static final Supplier<BlockEntityType<GlowColourBlockEntity>> TESLA_COIL = TYPES.register("tesla_coil",
+            () -> BlockEntityType.Builder.of((pos, state) -> new GlowColourBlockEntity(ModBlockEntities.TESLA_COIL.get(), pos, state, 0x9FD8FF), ModBlocks.TESLA_COIL.get()).build(null));
+    public static final Supplier<BlockEntityType<GalaxyProjectorBlockEntity>> GALAXY_PROJECTOR = TYPES.register("galaxy_projector",
+            () -> BlockEntityType.Builder.of(GalaxyProjectorBlockEntity::new, ModBlocks.GALAXY_PROJECTOR.get()).build(null));
+
+    public static final Supplier<BlockEntityType<ContainmentFrameBlockEntity>> CONTAINMENT_FRAME = TYPES.register("containment_frame",
+            () -> BlockEntityType.Builder.of(ContainmentFrameBlockEntity::new, ModBlocks.CONTAINMENT_FRAME.get()).build(null));
+    public static final Supplier<BlockEntityType<WhirlpoolBlockEntity>> WHIRLPOOL = TYPES.register("whirlpool",
+            () -> BlockEntityType.Builder.of(WhirlpoolBlockEntity::new, ModBlocks.WHIRLPOOL.get()).build(null));
+    public static final Supplier<BlockEntityType<TankFrameBlockEntity>> TANK_FRAME = TYPES.register("tank_frame",
+            () -> BlockEntityType.Builder.of(TankFrameBlockEntity::new, ModBlocks.TANK_FRAME.get()).build(null));
+    public static final Supplier<BlockEntityType<SpecialFrameBlockEntity>> SPECIAL_FRAME = TYPES.register("special_frame",
+            () -> BlockEntityType.Builder.of(SpecialFrameBlockEntity::new, ModBlocks.PORT_FRAME.get(), ModBlocks.DISPLAY_FRAME.get(),
+                    ModBlocks.MONITOR_FRAME.get(), ModBlocks.REDSTONE_FRAME.get()).build(null));
+    public static final Supplier<BlockEntityType<SingularityBlockEntity>> SINGULARITY = TYPES.register("singularity",
+            () -> BlockEntityType.Builder.of(SingularityBlockEntity::new, ModBlocks.SINGULARITY.get()).build(null));
+    public static final Supplier<BlockEntityType<KaleidoscopeBlockEntity>> KALEIDOSCOPE = TYPES.register("kaleidoscope",
+            () -> BlockEntityType.Builder.of(KaleidoscopeBlockEntity::new, ModBlocks.KALEIDOSCOPE.get()).build(null));
+    public static final Supplier<BlockEntityType<SolarSystemBlockEntity>> SOLAR_SYSTEM = TYPES.register("solar_system",
+            () -> BlockEntityType.Builder.of(SolarSystemBlockEntity::new, ModBlocks.ORRERY.get(), ModBlocks.PLANETARIUM.get()).build(null));
 
     private ModBlockEntities() {}
 }

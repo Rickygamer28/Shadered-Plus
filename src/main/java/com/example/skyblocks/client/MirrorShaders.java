@@ -23,7 +23,7 @@ public final class MirrorShaders {
 
     @SubscribeEvent
     public static void register(RegisterShadersEvent event) throws IOException {
-        com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "mirror_surface"), DefaultVertexFormat.POSITION, shader -> surface = shader);
+        com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "mirror_surface"), DefaultVertexFormat.POSITION_TEX, shader -> surface = shader);
         com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "infinity_mirror"), DefaultVertexFormat.POSITION, shader -> infinity = shader);
         com.example.skyblocks.client.ShaderLoad.register(event, new ResourceLocation(SkyBlocksMod.MOD_ID, "infinity_cube"), DefaultVertexFormat.POSITION, shader -> infinityCube = shader);
     }
