@@ -59,10 +59,13 @@ void main() {
         float own = texelFetch(CatDepthSampler, pixel, 0).r;
         if (own < 1.0 && !hidden(own, scene)) {
             vec4 cat = texelFetch(CatSampler, pixel, 0);
-            if (cat.a <= 0.0) {
-                cat.a = 1.0;
+            // (nothing drawn there - the clear part of a see-through block's box, which keeps its depth: left out)
+            if (cat.a > 0.0 || dot(cat.rgb, cat.rgb) > 0.0) {
+                if (cat.a <= 0.0) {
+                    cat.a = 1.0;
+                }
+                result = cat + result * (1.0 - cat.a);
             }
-            result = cat + result * (1.0 - cat.a);
         }
     }
 

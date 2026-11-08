@@ -60,6 +60,9 @@ public final class IrisDefer {
 
     /** Ours, drawing with shaders of their own. */
     private static boolean kind(BlockEntity be) {
+        if (be.getBlockState().getBlock() instanceof com.example.skyblocks.TeslaCoilBlock) {
+            return false; // (its arcs are the game's lightning: the pack draws them)
+        }
         return be instanceof com.example.skyblocks.GlowColourBlockEntity
                 || be instanceof com.example.skyblocks.SmallTankBlockEntity
                 || be instanceof com.example.skyblocks.WhirlpoolBlockEntity
