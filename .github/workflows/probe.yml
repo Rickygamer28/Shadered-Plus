@@ -1,0 +1,71 @@
+name: Probe 1.20.1 API
+
+on:
+  push:
+    branches: [ 'probe-1201-api' ]
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.10.2
+      - name: Set up the game's classes
+        run: gradle compileJava --no-daemon -q || true
+      - name: Dump public signatures
+        run: |
+          mkdir -p out
+          find build ~/.gradle -name "*.jar" 2>/dev/null | grep -iE "forge|minecraft|shadered|authlib|geckolib" | grep -v sources > out/jars.txt
+          cat out/jars.txt
+          python3 - <<'PY'
+          import zipfile, subprocess, os, re
+          jars = [l.strip() for l in open('out/jars.txt') if l.strip()]
+          prefixes = ['com/mojang/blaze3d/', 'net/minecraft/client/renderer/', 'net/minecraft/client/gui/', 'net/minecraftforge/',
+                      'net/minecraft/world/level/block/', 'net/minecraft/world/item/', 'net/minecraft/world/inventory/',
+                      'net/minecraft/world/level/saveddata/', 'net/minecraft/world/level/storage/loot/LootParams', 'net/minecraft/nbt/',
+                      'net/minecraft/server/level/ServerPlayer', 'net/minecraft/server/level/ServerLevel', 'net/minecraft/world/entity/Entity.',
+                      'net/minecraft/world/entity/player/', 'net/minecraft/world/entity/item/ItemEntity', 'net/minecraft/client/resources/',
+                      'net/minecraft/client/player/', 'net/minecraft/core/BlockPos', 'net/minecraft/core/HolderLookup', 'net/minecraft/core/Direction',
+                      'net/minecraft/network/FriendlyByteBuf', 'net/minecraft/network/chat/Component', 'net/minecraft/resources/ResourceLocation',
+                      'net/minecraft/client/Minecraft.', 'net/minecraft/client/Camera', 'net/minecraft/client/Options', 'net/minecraft/client/multiplayer/ClientLevel',
+                      'net/minecraft/world/level/Level.', 'net/minecraft/world/level/LevelAccessor', 'net/minecraft/world/level/BlockGetter',
+                      'net/minecraft/world/level/material/', 'net/minecraft/world/phys/', 'net/minecraft/world/level/LevelReader',
+                      'net/minecraft/sounds/SoundEvents', 'net/minecraft/core/particles/ParticleTypes', 'net/minecraft/world/level/block/entity/',
+                      'net/minecraft/client/model/', 'net/minecraft/util/FastColor', 'net/minecraft/util/Mth', 'net/minecraft/world/SimpleMenuProvider',
+                      'net/minecraft/world/Container', 'net/minecraft/world/InteractionResult', 'net/minecraft/world/ItemInteractionResult',
+                      'com/mojang/authlib/', 'net/minecraft/client/KeyMapping', 'net/minecraft/tags/', 'net/minecraft/world/level/ClipContext',
+                      'net/minecraft/server/level/', 'net/minecraft/world/entity/LivingEntity', 'net/minecraft/world/entity/EntityType',
+                      'net/minecraft/world/level/dimension/', 'net/minecraft/world/level/portal/', 'net/minecraft/client/particle/ParticleEngine']
+          for jar in jars:
+              name = os.path.basename(jar)
+              try:
+                  z = zipfile.ZipFile(jar)
+              except Exception:
+                  continue
+              classes = []
+              for n in z.namelist():
+                  if not n.endswith('.class') or 'module-info' in n:
+                      continue
+                  if 'shadered' in name.lower() or 'authlib' in name.lower() or any(n.startswith(p) for p in prefixes):
+                      classes.append(n[:-6].replace('/', '.'))
+              if not classes:
+                  continue
+              print(name, len(classes))
+              with open('out/' + name + '.txt', 'w') as f:
+                  for i in range(0, len(classes), 300):
+                      r = subprocess.run(['javap', '-public', '-cp', jar] + classes[i:i + 300], capture_output=True, text=True)
+                      f.write(r.stdout)
+          PY
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: api-1201
+          path: out/
