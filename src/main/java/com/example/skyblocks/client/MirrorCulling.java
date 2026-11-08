@@ -24,6 +24,7 @@ public final class MirrorCulling {
 
     /** (The render test: as before the bridges, to compare.) */
     public static boolean noBridges;
+    private static boolean hooked;
 
     static void set(List<View> newViews, Vec3 cameraPosition, List<Vec3> portalEnds) {
         if (noBridges) {
@@ -59,6 +60,10 @@ public final class MirrorCulling {
 
     /** Whether a chunk section (its centre in block coordinates) is seen in one of the mirrors. */
     public static boolean visible(int centerX, int centerY, int centerZ) {
+        if (!hooked) { // (the log says whether Sodium's chunk search is hooked at all)
+            hooked = true;
+            com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+: Sodium's chunk search asks about mirrors");
+        }
         List<View> current = views;
         if ((current.isEmpty() && bridges.isEmpty()) || com.example.skyblocks.client.iris.IrisCompat.renderingShadowPass()) {
             return false;

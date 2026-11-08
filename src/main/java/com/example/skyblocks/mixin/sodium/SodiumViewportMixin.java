@@ -20,6 +20,14 @@ public abstract class SodiumViewportMixin {
         }
     }
 
+    /** (Sodium 0.6, what Iris 1.8 for 1.21.1 goes with: the box's size passed in.) */
+    @Inject(method = "isBoxVisible(IIIFFF)Z", at = @At("RETURN"), cancellable = true, require = 0)
+    private void skyblocks$seenInMirrorSized(int x, int y, int z, float sx, float sy, float sz, CallbackInfoReturnable<Boolean> cir) {
+        if (!cir.getReturnValueZ() && MirrorCulling.visible(x, y, z)) {
+            cir.setReturnValue(true);
+        }
+    }
+
     @Inject(method = "isBoxVisibleLooser(III)Z", at = @At("RETURN"), cancellable = true, require = 0)
     private void skyblocks$seenInMirrorLooser(int x, int y, int z, CallbackInfoReturnable<Boolean> cir) {
         if (!cir.getReturnValueZ() && MirrorCulling.visible(x, y, z)) {
