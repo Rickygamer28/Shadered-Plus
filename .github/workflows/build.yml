@@ -121,7 +121,7 @@ jobs:
           for v in plain embeddium; do
             EXTRA=""; [ $v = embeddium ] && EXTRA="-PwithEmbeddium"
             (SKYBLOCKS_RENDER_TEST=$v xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient $EXTRA --no-daemon > render_$v.log 2>&1 &)
-            for i in $(seq 1 150); do
+            for i in $(seq 1 210); do
               sleep 5
               if grep -qE "render test done|Crash report saved|BUILD FAILED" render_$v.log; then sleep 5; break; fi
             done
