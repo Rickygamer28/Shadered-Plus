@@ -123,6 +123,7 @@ public class SmallTankRenderer implements BlockEntityRenderer<SmallTankBlockEnti
         }
         Matrix4f m = poseStack.last().pose();
         ITEM_INV.set(m).invert();
+        buffers = DrawNow.into(buffers); // (Iris's: drawn later, together - this one drawn now, with its own matrix)
         box(buffers.getBuffer(Types.ITEM), m, shape, 0, 1, 1, 1.0F, 0, 0.37F);
         if (buffers instanceof MultiBufferSource.BufferSource source) {
             source.endBatch(Types.ITEM);

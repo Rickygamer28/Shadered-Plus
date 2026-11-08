@@ -134,6 +134,7 @@ public class PlasmaBallRenderer implements BlockEntityRenderer<GlowColourBlockEn
         }
         Matrix4f m = poseStack.last().pose();
         ITEM_INV.set(m).invert();
+        buffers = DrawNow.into(buffers); // (Iris's: drawn later, together - this one drawn now, with its own matrix)
         box(buffers.getBuffer(Types.ITEM), m, colour, 255, 0.37F, 0.0F, 0.0F, 0.0F);
         if (buffers instanceof MultiBufferSource.BufferSource source) {
             source.endBatch(Types.ITEM);

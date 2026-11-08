@@ -577,6 +577,69 @@ public final class IrisIslandTarget {
         }
     }
 
+    /**
+     * Runs {@code body} drawing into the cats' target (its own depth; laid over the pack's image at the end of the frame
+     * where nothing in the frame is in front of it): Shadered+'s block entities with shaders of their own, with a pack on.
+     */
+    public static void drawInCatTarget(Runnable body) {
+        RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
+        boolean ssbo = GL.getCapabilities().OpenGL43;
+        Scope scope = new Scope(GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING), GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING),
+                ssbo ? GL11.glGetInteger(GL43.GL_SHADER_STORAGE_BUFFER_BINDING) : -1,
+                ssbo ? GL30.glGetIntegeri(GL43.GL_SHADER_STORAGE_BUFFER_BINDING, 0) : -1);
+        try {
+            if (catTarget == null) {
+                catTarget = new TextureTarget(main.width, main.height, true, Minecraft.ON_OSX);
+            } else if (catTarget.width != main.width || catTarget.height != main.height) {
+                catTarget.resize(main.width, main.height, Minecraft.ON_OSX);
+            }
+            resetState();
+            catTarget.bindWrite(true);
+            if (!catsUsedThisFrame) {
+                catsUsedThisFrame = true;
+                RenderSystem.clearColor(0.0F, 0.0F, 0.0F, 0.0F);
+                RenderSystem.clearDepth(1.0);
+                RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
+                worldProjection.set(RenderSystem.getProjectionMatrix());
+            }
+            body.run();
+        } catch (RuntimeException e) {
+            warnOnce("Couldn't draw Shadered+'s blocks with the shader pack", e);
+        } finally {
+            end(scope);
+        }
+    }
+
+    /** The world's depth (main target) right now, for a block entity drawn in the cats' target (the black hole). */
+    public static int mainDepthTexture() {
+        return Minecraft.getInstance().getMainRenderTarget().getDepthTextureId();
+    }
+
+    /** The pack's finished image of the last frame (before our overlay), for what a black hole bends; 0 if none yet. */
+    public static int lastFinalTexture() {
+        return lastFinal == null ? 0 : lastFinal.getColorTextureId();
+    }
+
+    private static TextureTarget lastFinal;
+    /** (Set when something wants the pack's finished image: kept from now on, a frame at a time.) */
+    public static boolean wantLastFinal;
+
+    private static void keepLastFinal(RenderTarget main) {
+        if (!wantLastFinal) {
+            return;
+        }
+        if (lastFinal == null) {
+            lastFinal = new TextureTarget(main.width, main.height, false, Minecraft.ON_OSX);
+            lastFinal.setFilterMode(GL11.GL_LINEAR);
+        } else if (lastFinal.width != main.width || lastFinal.height != main.height) {
+            lastFinal.resize(main.width, main.height, Minecraft.ON_OSX);
+            lastFinal.setFilterMode(GL11.GL_LINEAR);
+        }
+        GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, main.frameBufferId);
+        GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, lastFinal.frameBufferId);
+        GL30.glBlitFramebuffer(0, 0, main.width, main.height, 0, 0, lastFinal.width, lastFinal.height, GL11.GL_COLOR_BUFFER_BIT, GL11.GL_LINEAR);
+    }
+
     /** Called right after the level (and Iris's final pass) has rendered: draws the target over the screen. */
     public static void composite() {
         boolean paintings = usedThisFrame && target != null, cats = catsUsedThisFrame && catTarget != null;
@@ -608,6 +671,7 @@ public final class IrisIslandTarget {
         int drawFramebuffer = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
         int readFramebuffer = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
         try {
+            keepLastFinal(main); // (before our overlay goes on: the pack's own image)
             resetState();
             if (snapshot) {
                 addHandToSnapshot(main);
