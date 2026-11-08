@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "formed=false": {
+      "model": "skyblocks:block/tank_frame"
+    },
+    "formed=true": {
+      "model": "skyblocks:block/tank_frame_formed"
+    }
+  }
+}

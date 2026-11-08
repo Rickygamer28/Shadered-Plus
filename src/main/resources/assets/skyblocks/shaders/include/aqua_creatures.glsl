@@ -52,6 +52,8 @@ Species species(int k) {
     // the deep sea's
     if (k == 33) return Species(vec3(0.13, 0.1, 0.09), vec3(0.045, 0.05, 0.006), vec3(0.04, 0.03, 0.006), 0.3);    // anglerfish
     if (k == 34) return Species(vec3(0.09, 0.03, 0.02), vec3(0.035, 0.035, 0.005), vec3(0.04, 0.02, 0.005), 1.3);  // lanternfish
+    // the jungle river's
+    if (k == 36) return Species(vec3(0.14, 0.1, 0.04), vec3(0.05, 0.06, 0.01), vec3(0.07, 0.045, 0.008), 1.1);     // piranha
     return Species(vec3(0.12, 0.035, 0.025), vec3(0.04, 0.035, 0.006), vec3(0.0), 1.5);
 }
 
@@ -246,6 +248,14 @@ vec3 fishColour(int kind, vec3 q, int part, float rnd) {
         vec3 c = mix(vec3(0.12, 0.2, 0.55), vec3(0.62, 0.75, 0.78), smoothstep(-0.2, 0.4, q.x));
         if (q.x < -0.7) c = mix(c, vec3(0.3, 0.75, 0.85), 0.5);
         return q.y < -0.4 ? mix(c, vec3(0.85, 0.85, 0.88), 0.5) : c;
+    }
+    if (kind == 36) { // piranha: silver-grey flecked with glitter, a red-orange belly and throat, a dark-edged tail
+        vec3 silver = mix(vec3(0.42, 0.45, 0.48), vec3(0.72, 0.74, 0.76), smoothstep(0.6, -0.2, q.y)) * (0.85 + 0.25 * fbm(q.xy * 9.0 + rnd * 3.0));
+        silver += vec3(0.25) * step(0.93, fbm(q.xy * 40.0 + rnd * 9.0)); // (glittering scales)
+        vec3 red = vec3(0.85, 0.22, 0.08);
+        if (tail) return mix(vec3(0.3, 0.32, 0.34), vec3(0.06), smoothstep(0.75, 0.9, tk));
+        if (fin) return anal ? red * 0.9 : vec3(0.35, 0.36, 0.38);
+        return mix(silver, red, smoothstep(-0.25, -0.65, q.y) * smoothstep(-0.6, 0.2, q.x));
     }
     if (kind == 9) { // discus: cream with a red net pattern, orange face, red-striped fins, clear tail
         vec3 cream = vec3(0.98, 0.92, 0.85), red = vec3(0.9, 0.22, 0.08);
@@ -445,7 +455,7 @@ float eyeScale(int kind) {
 // the ring round a fish's pupil
 vec3 eyeRing(int kind) {
     if (kind == 10 || kind == 16 || kind == 19 || kind == 1) return vec3(0.05);
-    if (kind == 9 || kind == 4) return vec3(0.75, 0.2, 0.08);
+    if (kind == 9 || kind == 4 || kind == 36) return vec3(0.75, 0.2, 0.08);
     if (kind == 3) return vec3(0.3, 0.8, 0.7);
     if (kind == 18 || kind == 17 || kind == 8 || kind == 27) return vec3(0.9, 0.9, 0.88);
     if (kind == 29) return vec3(0.8, 0.62, 0.25);
@@ -589,6 +599,7 @@ vec4 fishShape(int kind) {
     if (kind == 7) return vec4(0.58, 0.52, 0.0, 0.0);
     if (kind == 8) return vec4(0.62, 0.5, 0.0, 0.4);
     if (kind == 9) return vec4(0.5, 0.6, 0.0, 0.8);
+    if (kind == 36) return vec4(0.55, 0.62, 0.0, 0.9); // (piranha: deep-bodied, blunt-headed)
     if (kind == 10) return vec4(0.6, 0.6, 2.0, 0.35);
     if (kind == 11) return vec4(0.55, 0.35, 1.0, 0.5);
     if (kind == 14) return vec4(0.55, 0.55, 0.0, 0.7);

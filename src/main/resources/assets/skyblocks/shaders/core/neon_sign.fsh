@@ -1350,8 +1350,11 @@ float neonGlyph(int c, vec2 p) {
 
 void main() {
     int c = int(vColor.a * 255.0 + 0.5);
-    float d = c == 1 ? length(vec2(max(abs(uv.x) - 1.0, 0.0), uv.y)) : neonGlyph(c, uv); // (1: a dash of the outline)
-    float r = 0.26;
+    // the tube's thickness, carried in the glyph's v (1000s): 0 normal, 1 fat, 2 thin
+    float kt = floor((uv.y + 500.0) / 1000.0);
+    vec2 q = vec2(uv.x, uv.y - 1000.0 * kt);
+    float d = c == 1 ? length(vec2(max(abs(q.x) - 1.0, 0.0), q.y)) : neonGlyph(c, q); // (1: a dash of the outline)
+    float r = kt > 1.5 ? 0.15 : kt > 0.5 ? 0.42 : 0.26;
     float core = 1.0 - smoothstep(r * 0.3, r, d);
     float g = max(d - r * 0.5, 0.0);
     float glow = exp(-g * 2.4) * 1.05 + exp(-g * 0.8) * 0.35;

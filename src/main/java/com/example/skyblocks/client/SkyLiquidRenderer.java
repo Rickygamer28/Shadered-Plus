@@ -53,6 +53,13 @@ public final class SkyLiquidRenderer {
     private static ClientLevel lastLevel;
     private static int lastChunkX, lastChunkZ;
     private static BufferBuilder memory;
+    /** What the last search found (the liquids' places and levels, hashed), what the faces were made from, and blocks changed. */
+    private static long foundHash, builtHash = 1L, changes, builtChanges = -1L;
+
+    /** A block changed on the client (MirrorBlockChangeMixin): the faces next to it may change. */
+    public static void blockChanged() {
+        changes++;
+    }
 
     @SubscribeEvent
     public static void onStage(RenderLevelStageEvent event) {
@@ -71,7 +78,12 @@ public final class SkyLiquidRenderer {
         if (level != lastLevel || time - lastScan >= RESCAN_TICKS || time < lastScan
                 || chunkX != lastChunkX || chunkZ != lastChunkZ) {
             scan(level, chunkX, chunkZ, Math.min(RADIUS, mc.options.getEffectiveRenderDistance()));
-            buildGeometry(level, chunkX, chunkZ, camera.y);
+            // (the faces worked out again only if the liquids or a block changed, or a new chunk is the middle)
+            if (level != lastLevel || chunkX != lastChunkX || chunkZ != lastChunkZ || foundHash != builtHash || changes != builtChanges) {
+                buildGeometry(level, chunkX, chunkZ, camera.y);
+                builtHash = foundHash;
+                builtChanges = changes;
+            }
             lastLevel = level;
             lastScan = time;
             lastChunkX = chunkX;
@@ -83,10 +95,6 @@ public final class SkyLiquidRenderer {
         if (memory == null) {
             memory = new BufferBuilder(1 << 18);
         }
-        // a liquid's sky that was resting gets its picture drawn first (see SkyUsage)
-        for (ModFluids.SkyLiquid liquid : GEOMETRY.keySet()) {
-            SkyUsage.ensureFresh(com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(liquid.sky));
-        }
         // the faces were worked out when the blocks were looked up (every few ticks): just place them
         float ox = (float) (originX - camera.x), oy = (float) (originY - camera.y), oz = (float) (originZ - camera.z);
         // (1.20.1: the view's rotation is in the stage's pose, not in RenderSystem's model-view matrix)
@@ -94,10 +102,41 @@ public final class SkyLiquidRenderer {
         // With a shader pack the pack's final pass would paint over anything drawn into the world now: kept and drawn
         // at the end of the frame instead (client/iris/IrisIslandTarget), depth-tested against the final depth.
         boolean defer = com.example.skyblocks.client.iris.IrisIslandTarget.deferSky();
+        // a liquid's sky gets its picture brought up to date first (see SkyUsage): only where the liquid is on screen
+        // (a liquid out of view: neither its sky's picture nor the liquid drawn)
+        java.util.Set<ModFluids.SkyLiquid> inView = new java.util.HashSet<>();
+        for (ModFluids.SkyLiquid liquid : GEOMETRY.keySet()) {
+            com.noodlegamer76.shadered.client.util.skyblock.SkyblockBatchData data = com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(liquid.sky);
+            int[] rect = defer ? null : SkyUsage.OFF;
+            List<float[]> cells = BOXES.get(liquid);
+            if (cells == null) {
+                rect = null;
+            }
+            for (int c = 0; rect != null && c < cells.size(); c++) { // (each bit of it: those in view, together)
+                float[] b = cells.get(c);
+                int[] r = SkyUsage.rectOfBox(b[0] + ox, b[1] + oy, b[2] + oz, b[3] + ox, b[4] + oy, b[5] + oz);
+                if (r == null) {
+                    rect = null;
+                } else if (r != SkyUsage.OFF) {
+                    rect = rect == SkyUsage.OFF ? r : new int[] {Math.min(rect[0], r[0]), Math.min(rect[1], r[1]), Math.max(rect[2], r[2]), Math.max(rect[3], r[3])};
+                }
+            }
+            if (rect == SkyUsage.OFF) {
+                continue;
+            }
+            inView.add(liquid);
+            if (defer) {
+                SkyUsage.ensureFresh(data);
+            } else {
+                SkyUsage.ensurePart(data, rect);
+            }
+        }
         MultiBufferSource.BufferSource buffers = defer ? null : MultiBufferSource.immediate(memory);
+        SkyUsage.placeKnown = !defer;
+        try {
         for (Map.Entry<ModFluids.SkyLiquid, float[]> entry : GEOMETRY.entrySet()) {
             RenderType sky = skyType(entry.getKey().sky);
-            if (sky == null) {
+            if (sky == null || !inView.contains(entry.getKey())) {
                 continue;
             }
             float[] d = entry.getValue();
@@ -110,6 +149,9 @@ public final class SkyLiquidRenderer {
         if (buffers != null) {
             buffers.endBatch();
         }
+        } finally {
+            SkyUsage.placeKnown = false;
+        }
     }
 
     private static void emit(VertexConsumer c, Matrix4f view, float[] d, float ox, float oy, float oz) {
@@ -121,11 +163,17 @@ public final class SkyLiquidRenderer {
 
     /** The liquid faces found by the last search, per liquid (x, y, z relative to the origin, u, v per vertex). */
     private static final Map<ModFluids.SkyLiquid, float[]> GEOMETRY = new LinkedHashMap<>();
+    /**
+     * Each liquid's faces' bounds, by 8-block cells (x0, y0, z0, x1, y1, z1, relative to the origin): where on screen
+     * its sky is needed.
+     */
+    private static final Map<ModFluids.SkyLiquid, List<float[]>> BOXES = new LinkedHashMap<>();
     private static int originX, originY, originZ;
 
     /** Works out the faces of the blocks just found, relative to the camera's chunk. */
     private static void buildGeometry(ClientLevel level, int chunkX, int chunkZ, double cameraY) {
         GEOMETRY.clear();
+        BOXES.clear();
         originX = chunkX << 4;
         originZ = chunkZ << 4;
         originY = (int) Math.floor(cameraY);
@@ -136,7 +184,22 @@ public final class SkyLiquidRenderer {
                 drawBlock(level, pos, pos.getX() - originX, pos.getY() - originY, pos.getZ() - originZ, collector);
             }
             if (collector.size > 0) {
-                GEOMETRY.put(entry.getKey(), java.util.Arrays.copyOf(collector.data, collector.size));
+                float[] d = java.util.Arrays.copyOf(collector.data, collector.size);
+                GEOMETRY.put(entry.getKey(), d);
+                Map<Long, float[]> cells = new java.util.HashMap<>();
+                for (int i = 0; i < d.length; i += 5) {
+                    int f = i - (i / 5 % 4) * 5; // (a face's four corners all in its first corner's cell)
+                    long key = (((long) Math.floorDiv((int) Math.floor(d[f]), 8)) & 0xFFFFF) << 40
+                            | (((long) Math.floorDiv((int) Math.floor(d[f + 1]), 8)) & 0xFFFFF) << 20
+                            | (((long) Math.floorDiv((int) Math.floor(d[f + 2]), 8)) & 0xFFFFF);
+                    float[] b = cells.computeIfAbsent(key, k -> new float[] {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE,
+                            -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE});
+                    for (int a = 0; a < 3; a++) {
+                        b[a] = Math.min(b[a], d[i + a]);
+                        b[a + 3] = Math.max(b[a + 3], d[i + a]);
+                    }
+                }
+                BOXES.put(entry.getKey(), new ArrayList<>(cells.values()));
             }
         }
     }
@@ -308,6 +371,7 @@ public final class SkyLiquidRenderer {
     private static void scan(ClientLevel level, int centerX, int centerZ, int radius) {
         FOUND.clear();
         foundCount = 0;
+        foundHash = 17L;
         // nearest rings first, so the cap drops the far ones
         for (int ring = 0; ring <= radius && foundCount < MAX_BLOCKS; ring++) {
             for (int dx = -ring; dx <= ring; dx++) {
@@ -336,8 +400,11 @@ public final class SkyLiquidRenderer {
             for (int y = 0; y < 16; y++) {
                 for (int z = 0; z < 16; z++) {
                     for (int x = 0; x < 16; x++) {
-                        ModFluids.SkyLiquid liquid = liquid(section.getFluidState(x, y, z));
+                        net.minecraft.world.level.material.FluidState fluid = section.getFluidState(x, y, z);
+                        ModFluids.SkyLiquid liquid = liquid(fluid);
                         if (liquid != null) {
+                            foundHash = foundHash * 31L + (BlockPos.asLong(baseX + x, baseY + y, baseZ + z) ^ ((long) fluid.getAmount() << 58) ^ (fluid.isSource() ? 1L << 63 : 0L)
+                                    ^ ((long) System.identityHashCode(liquid) << 20));
                             FOUND.computeIfAbsent(liquid, l -> new ArrayList<>()).add(new BlockPos(baseX + x, baseY + y, baseZ + z));
                             if (++foundCount >= MAX_BLOCKS) {
                                 return;

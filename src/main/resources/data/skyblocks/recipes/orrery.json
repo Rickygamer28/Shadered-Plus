@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "decorations",
+  "pattern": [
+    "GBG",
+    "CSC",
+    "WWW"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:gold_nugget"
+    },
+    "B": {
+      "item": "minecraft:glowstone_dust"
+    },
+    "C": {
+      "item": "minecraft:copper_ingot"
+    },
+    "S": {
+      "item": "minecraft:clock"
+    },
+    "W": {
+      "item": "minecraft:dark_oak_slab"
+    }
+  },
+  "result": {
+    "count": 1,
+    "item": "skyblocks:orrery"
+  }
+}

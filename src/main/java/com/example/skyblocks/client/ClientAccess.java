@@ -22,8 +22,8 @@ public final class ClientAccess {
         }
     }
 
-    public static void openAquarium(boolean ocean, boolean deep) {
-        Minecraft.getInstance().setScreen(new AquariumScreen(ocean, deep));
+    public static void openAquarium(boolean ocean, boolean deep, int theme) {
+        Minecraft.getInstance().setScreen(new AquariumScreen(ocean, deep, theme));
     }
 
     /** An aquarium lid clicked: its tank's new light, said over the hotbar. */
@@ -39,7 +39,8 @@ public final class ClientAccess {
     public static void openNeonSign(net.minecraft.core.BlockPos pos) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.level.getBlockEntity(pos) instanceof com.example.skyblocks.NeonSignBlockEntity sign) {
-            mc.setScreen(new NeonSignScreen(pos, sign.text(), sign.colour(), sign.mode() | (sign.outline() ? com.example.skyblocks.NeonSignBlockEntity.OUTLINE_BIT : 0), sign.size(), sign.background()));
+            mc.setScreen(new NeonSignScreen(pos, sign.text(), sign.colour(), sign.mode() | (sign.outline() ? com.example.skyblocks.NeonSignBlockEntity.OUTLINE_BIT : 0), sign.size(), sign.background(),
+                    sign.font(), sign.colour2()));
         }
     }
 
@@ -59,7 +60,23 @@ public final class ClientAccess {
             case "fire_tornado" -> new FireTornadoItemRenderer();
             case "jellyfish_tank" -> new JellyTankItemRenderer();
             case "big_lava_lamp" -> new LavaLampItemRenderer(true);
+            case "singularity" -> new SingularityItemRenderer();
+            case "kaleidoscope" -> new KaleidoscopeItemRenderer();
+            case "black_hole" -> new BlackHoleItemRenderer(false);
+            case "big_black_hole" -> new BlackHoleItemRenderer(true);
+            case "orrery" -> new SolarSystemItemRenderer(false);
+            case "planetarium" -> new SolarSystemItemRenderer(true);
+            case "fishbowl" -> new SmallTankItemRenderer(0);
+            case "tall_tank" -> new SmallTankItemRenderer(1);
+            case "slim_tank" -> new SmallTankItemRenderer(2);
+            case "plasma_ball" -> new PlasmaBallItemRenderer();
             default -> new LavaLampItemRenderer(false);
         };
+    }
+
+    /** The client's player (for packets the server sends: 1.20.1's packet context has no player on the client). */
+    @org.jetbrains.annotations.Nullable
+    public static net.minecraft.world.entity.player.Player player() {
+        return net.minecraft.client.Minecraft.getInstance().player;
     }
 }

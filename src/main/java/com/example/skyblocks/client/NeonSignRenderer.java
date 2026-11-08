@@ -60,23 +60,62 @@ public class NeonSignRenderer implements BlockEntityRenderer<NeonSignBlockEntity
 
     public NeonSignRenderer(BlockEntityRendererProvider.Context context) {}
 
-    private static float width(char c) {
+    /** How much wider the lettering is drawn (the wide and narrow fonts). */
+    private static float stretch(int font) {
+        return font == NeonSignBlockEntity.WIDE ? 1.35F : font == NeonSignBlockEntity.NARROW ? 0.72F : 1.0F;
+    }
+
+    /** The tube's thickness for the shader: 0 normal, 1 fat, 2 thin (added to the glyph's v as 1000s). */
+    private static int tube(int font) {
+        return font == NeonSignBlockEntity.BOLD ? 1 : font == NeonSignBlockEntity.THIN ? 2 : 0;
+    }
+
+    private static float width(char c, int font) {
         if (c == ' ') {
-            return SPACE;
+            return SPACE * stretch(font);
         }
         int i = CHARS.indexOf(c);
         if (i < 0) {
             i = CHARS.indexOf(Character.toUpperCase(c));
         }
-        return i < 0 ? SPACE : WIDTHS[i] + GAP;
+        float gap = font == NeonSignBlockEntity.BOLD ? GAP + 0.5F : GAP;
+        return i < 0 ? SPACE * stretch(font) : WIDTHS[i] * stretch(font) + gap;
     }
 
-    private static float lineWidth(String s) {
+    private static float lineWidth(String s, int font) {
         float w = 0.0F;
         for (int i = 0; i < s.length(); i++) {
-            w += width(s.charAt(i));
+            w += width(s.charAt(i), font);
         }
-        return Math.max(w - GAP, 0.0F);
+        return Math.max(w - (font == NeonSignBlockEntity.BOLD ? GAP + 0.5F : GAP), 0.0F);
+    }
+
+    /** A broken tube: how lit letter i is now (most letters steady; one or two buzzing, sputtering, now and then out). */
+    private static float broken(NeonSignBlockEntity sign, int i, int count, double t) {
+        long seed = sign.getBlockPos().asLong() * 0x9E3779B97F4A7C15L;
+        long epoch = (long) Math.floor(t / 25.0); // (every so often another letter goes)
+        int bad1 = (int) Math.floorMod((seed >>> 20) + epoch * 7919L, Math.max(count, 1));
+        int bad2 = count > 5 ? (int) Math.floorMod((seed >>> 33) + epoch * 104729L, count) : -1;
+        if (i != bad1 && i != bad2) {
+            return 1.0F;
+        }
+        double w = Math.floor(t * 18.0 + i * 3.7);
+        double h = Math.abs(Math.sin(w * 12.9898 + i * 78.233 + (seed & 1023)) * 43758.5453) % 1.0;
+        double out = Math.sin(t * 0.45 + i * 1.3 + (seed & 255)); // (now and then dead for a moment)
+        if (out > 0.82) {
+            return 0.03F;
+        }
+        return (float) (h < 0.4 ? 0.08 + 0.2 * h : 0.55 + 0.45 * h);
+    }
+
+    /** Fading colours: between the two, a wave of colour moving along the text (u: 0 at the left .. 1 at the right). */
+    private static int fade(int a, int b, float u, double t) {
+        float f = (float) (0.5 + 0.5 * Math.sin((u * 1.4 - t * 0.35) * Math.PI * 2.0));
+        f = f * f * (3.0F - 2.0F * f);
+        int r = (int) (((a >> 16) & 255) * (1.0F - f) + ((b >> 16) & 255) * f);
+        int g = (int) (((a >> 8) & 255) * (1.0F - f) + ((b >> 8) & 255) * f);
+        int bl = (int) ((a & 255) * (1.0F - f) + (b & 255) * f);
+        return (r << 16) | (g << 8) | bl;
     }
 
     /** How brightly it glows now (0..1). */
@@ -161,11 +200,13 @@ public class NeonSignRenderer implements BlockEntityRenderer<NeonSignBlockEntity
         Matrix4f m = poseStack.last().pose();
         VertexConsumer vc = buffers.getBuffer(Types.NEON);
         int mode = sign.mode();
+        int font = sign.font();
+        float slant = font == NeonSignBlockEntity.ITALIC ? 0.24F : 0.0F;
         float total = lines.length * LINE;
         float widest = 0.0F;
         int chars = 0;
         for (String line : lines) {
-            widest = Math.max(widest, lineWidth(line));
+            widest = Math.max(widest, lineWidth(line, font));
             chars += line.length();
         }
         // scrolling: the text runs right to left across the whole row of joined signs (fading in and out at its ends)
@@ -190,26 +231,33 @@ public class NeonSignRenderer implements BlockEntityRenderer<NeonSignBlockEntity
         int index = 0;
         for (int li = 0; li < lines.length; li++) {
             String line = lines[li];
-            float x = -lineWidth(line) * 0.5F + shift;
+            float x = -lineWidth(line, font) * 0.5F + shift;
             float base = total * 0.5F - (li + 1) * LINE + 2.5F; // (each line's baseline, the block centred)
             for (int ci = 0; ci < line.length(); ci++, index++) {
                 char c = line.charAt(ci);
-                float w = width(c);
+                float w = width(c, font);
                 if (c != ' ' && c < 128 && index < shown) {
                     int col = sign.colour();
                     if (mode == NeonSignBlockEntity.RAINBOW) {
                         col = Mth.hsvToRgb((float) ((t * 0.12 + (li * 7 + ci) * 0.06) % 1.0), 0.9F, 1.0F);
+                    } else if (mode == NeonSignBlockEntity.FADE) {
+                        col = fade(sign.colour(), sign.colour2(), (x + w * 0.5F - shift + widest * 0.5F) / Math.max(widest, 1.0F), t);
                     }
                     float k = bright * typeBright;
+                    if (mode == NeonSignBlockEntity.BROKEN) {
+                        k *= broken(sign, index, chars, t);
+                    }
                     if (scroll) {
                         float mid = x + w * 0.5F;
                         k *= (float) (smooth(winL, winL + 4.0, mid) * smooth(winR, winR - 4.0, mid));
                     }
                     if (k > 0.01F) {
                         int r = (int) (((col >> 16) & 255) * k), g = (int) (((col >> 8) & 255) * k), b = (int) ((col & 255) * k);
-                        float gw = w - GAP;
+                        float sx = stretch(font);
+                        float gw = (w - (font == NeonSignBlockEntity.BOLD ? GAP + 0.5F : GAP)) / sx; // (the glyph's own width, font units)
                         float x0 = -MARGIN, x1 = gw + MARGIN, y0 = -2.0F - MARGIN, y1 = 6.5F + MARGIN;
-                        quad(vc, m, x + x0, base + y0, x + x1, base + y1, x0, y0, x1, y1, r, g, b, c);
+                        float v = 1000.0F * tube(font);
+                        quadSlant(vc, m, x + x0 * sx, base + y0, x + x1 * sx, base + y1, slant, x0, y0 + v, x1, y1 + v, r, g, b, c);
                     }
                 }
                 x += w;
@@ -238,7 +286,8 @@ public class NeonSignRenderer implements BlockEntityRenderer<NeonSignBlockEntity
                         case 2 -> { x = cxm + hw - (i + 0.5F) * sx; y = -hh; }
                         default -> { x = cxm - hw; y = -hh + (i + 0.5F) * sy; }
                     }
-                    int col = mode == NeonSignBlockEntity.RAINBOW ? Mth.hsvToRgb((float) ((t * 0.12 + k / (float) perim) % 1.0), 0.9F, 1.0F) : col0;
+                    int col = mode == NeonSignBlockEntity.RAINBOW ? Mth.hsvToRgb((float) ((t * 0.12 + k / (float) perim) % 1.0), 0.9F, 1.0F)
+                            : mode == NeonSignBlockEntity.FADE ? fade(col0, sign.colour2(), k / (float) perim * 2.0F, t) : col0;
                     float lit = Math.floorMod(k - chase, 3) == 0 ? 1.0F : 0.28F;
                     float kk = lit * (mode == NeonSignBlockEntity.TYPING ? 1.0F : bright);
                     dash(vc, m, x, y, vertical, (int) (((col >> 16) & 255) * kk), (int) (((col >> 8) & 255) * kk), (int) ((col & 255) * kk));
@@ -246,6 +295,17 @@ public class NeonSignRenderer implements BlockEntityRenderer<NeonSignBlockEntity
             }
         }
         poseStack.popPose();
+    }
+
+    /** A letter's quad, its top leaning right by slant per unit up from the baseline (italic). */
+    private static void quadSlant(VertexConsumer vc, Matrix4f m, float px0, float py0, float px1, float py1, float slant,
+                                  float u0, float v0, float u1, float v1, int r, int g, int b, int code) {
+        float base = py0 + 2.0F + MARGIN; // (the baseline: the glyph's v = 0)
+        float s0 = slant * (py0 - base), s1 = slant * (py1 - base);
+        vc.vertex(m, px0 + s0, py0, 0.0F).uv(u0, v0).color(r, g, b, code).endVertex();
+        vc.vertex(m, px1 + s0, py0, 0.0F).uv(u1, v0).color(r, g, b, code).endVertex();
+        vc.vertex(m, px1 + s1, py1, 0.0F).uv(u1, v1).color(r, g, b, code).endVertex();
+        vc.vertex(m, px0 + s1, py1, 0.0F).uv(u0, v1).color(r, g, b, code).endVertex();
     }
 
     private static void quad(VertexConsumer vc, Matrix4f m, float px0, float py0, float px1, float py1,

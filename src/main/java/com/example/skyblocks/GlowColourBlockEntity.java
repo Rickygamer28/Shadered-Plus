@@ -36,6 +36,18 @@ public class GlowColourBlockEntity extends BlockEntity {
         return be;
     }
 
+    public static GlowColourBlockEntity plasmaBall(BlockPos pos, BlockState state) {
+        return new GlowColourBlockEntity(ModBlockEntities.PLASMA_BALL.get(), pos, state, 0xC45CFF);
+    }
+
+    public static GlowColourBlockEntity magmaBasin(BlockPos pos, BlockState state) {
+        return new GlowColourBlockEntity(ModBlockEntities.MAGMA_BASIN.get(), pos, state, 0xFF5A12);
+    }
+
+    public static GlowColourBlockEntity blackHole(BlockPos pos, BlockState state, boolean big) {
+        return new GlowColourBlockEntity(ModBlockEntities.BLACK_HOLE.get(), pos, state, big ? 0xFFB070 : 0x9A6BFF);
+    }
+
     public static GlowColourBlockEntity jellyTank(BlockPos pos, BlockState state) {
         return new GlowColourBlockEntity(ModBlockEntities.JELLYFISH_TANK.get(), pos, state, 0x7FB8FF);
     }
@@ -107,6 +119,8 @@ public class GlowColourBlockEntity extends BlockEntity {
     /** What its renderer draws (1.20.1: the block entity says, not the renderer). */
     @Override
     public net.minecraft.world.phys.AABB getRenderBoundingBox() {
-        return new net.minecraft.world.phys.AABB(getBlockPos()).inflate(1.0);
+        // (the tesla coil's bolts reach further; a big black hole's bent view a little past its block and the next)
+        double grow = getType() == ModBlockEntities.TESLA_COIL.get() ? 2.5 : getType() == ModBlockEntities.BLACK_HOLE.get() ? 1.1 : 1.0;
+        return new net.minecraft.world.phys.AABB(getBlockPos()).inflate(grow);
     }
 }

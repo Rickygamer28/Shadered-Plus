@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "in_chamber=false": {
+      "model": "skyblocks:block/singularity"
+    },
+    "in_chamber=true": {
+      "model": "skyblocks:block/singularity_core"
+    }
+  }
+}

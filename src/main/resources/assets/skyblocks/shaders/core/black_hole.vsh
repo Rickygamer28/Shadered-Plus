@@ -1,0 +1,50 @@
+#version 150
+
+// Shadered+'s black holes: a box round the hole's reach. UV0.x: which corner; UV0.y: 10 * kind (0 small, 1 big, 2 singularity) +
+// seed. Works out the position on the box in the block's own space, the view ray there, and (flat) where the block's
+// corner is in the drawn space - so the fragment shader can find any point's place on the screen.
+
+in vec3 Position;
+in vec4 Color;
+in vec2 UV0;
+
+uniform mat4 ModelViewMat;
+uniform mat4 ProjMat;
+// 1.20.1: the camera's turn already in the positions (block entities' poses hold it): taken back out (client/ViewState)
+uniform mat4 ViewRot;
+uniform float ItemMode;
+uniform mat4 LampInv;
+
+out vec3 lp;
+out vec3 lray;
+flat out vec3 origin;
+flat out float kind;
+flat out float seedIn;
+out vec3 eyeLp; // (the eye in the block's space: so the hole is traced from the eye, even from inside its box)
+flat out vec4 vColor;
+
+void main() {
+    vec3 Pos = (inverse(ViewRot) * vec4(Position, 1.0)).xyz;
+    mat4 MVm = ModelViewMat * ViewRot;
+    vColor = Color;
+    gl_Position = ProjMat * MVm * vec4(Pos, 1.0);
+    int corner = int(UV0.x + 0.5);
+    kind = floor(UV0.y / 10.0 + 0.001);
+    seedIn = UV0.y - 10.0 * kind;
+    // (client/BlackHoleRenderer's boxes: the reach round the hole's middle)
+    // (kind 2, the singularity: its reach by how full it is, in the colour's alpha)
+    vec3 c = kind > 0.5 ? vec3(0.5) : vec3(0.5, 0.62, 0.5);
+    // (kind 3, a singularity in its containment chamber: its reach is 4.6 times the alpha)
+    float reach = (kind > 2.5 ? 4.6 * Color.a : kind > 1.5 ? 0.38 + 0.92 * Color.a : kind > 0.5 ? 1.5 : 0.36) * 1.03;
+    lp = c + reach * (vec3(float(corner & 1), float((corner >> 1) & 1), float((corner >> 2) & 1)) * 2.0 - 1.0);
+    origin = Pos - lp;
+    mat4 iv = inverse(MVm);
+    bool persp = ProjMat[2][3] < -0.5;
+    // the true eye: the point the whole projection (view bobbing in it too) sees from - the one that lands on clip
+    // (0, 0, z, 0) - not just the view's origin, so the rays here are the screen's own (the bent picture lines up)
+    vec4 e = inverse(ProjMat * MVm) * vec4(0.0, 0.0, 1.0, 0.0);
+    vec3 eye = abs(e.w) > 1e-6 ? e.xyz / e.w : (iv * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+    vec3 dir = persp ? Pos - eye : (iv * vec4(0.0, 0.0, -1.0, 0.0)).xyz;
+    lray = ItemMode < 0.5 ? dir : (LampInv * vec4(dir, 0.0)).xyz;
+    eyeLp = persp ? lp - lray : lp - normalize(lray) * 8.0;
+}

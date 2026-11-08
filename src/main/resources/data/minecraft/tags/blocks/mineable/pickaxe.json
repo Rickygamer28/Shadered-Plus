@@ -13,6 +13,22 @@
     "skyblocks:koi_pond",
     "skyblocks:vanilla_koi_pond",
     "skyblocks:pond_stepping_stone",
-    "skyblocks:aquarium_lid"
+    "skyblocks:aquarium_lid",
+    "skyblocks:magma_basin",
+    "skyblocks:black_hole",
+    "skyblocks:big_black_hole",
+    "skyblocks:tesla_coil",
+    "skyblocks:orrery",
+    "skyblocks:kaleidoscope",
+    "skyblocks:portal_mirror",
+    "skyblocks:containment_frame",
+    "skyblocks:planetarium",
+    "skyblocks:singularity",
+    "skyblocks:port_frame",
+    "skyblocks:display_frame",
+    "skyblocks:monitor_frame",
+    "skyblocks:redstone_frame",
+    "skyblocks:whirlpool",
+    "skyblocks:tank_frame"
   ]
 }

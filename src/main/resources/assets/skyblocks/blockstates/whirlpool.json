@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "in_tank=false": {
+      "model": "skyblocks:block/whirlpool"
+    },
+    "in_tank=true": {
+      "model": "skyblocks:block/whirlpool_core"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "formed=false,output=false": {
+      "model": "skyblocks:block/port_frame_in"
+    },
+    "formed=false,output=true": {
+      "model": "skyblocks:block/port_frame_out"
+    },
+    "formed=true,output=false": {
+      "model": "skyblocks:block/port_frame_in_formed"
+    },
+    "formed=true,output=true": {
+      "model": "skyblocks:block/port_frame_out_formed"
+    }
+  }
+}

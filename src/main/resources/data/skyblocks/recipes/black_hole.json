@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    " E ",
+    "ONO",
+    " C "
+  ],
+  "key": {
+    "E": {
+      "item": "minecraft:ender_eye"
+    },
+    "O": {
+      "item": "minecraft:crying_obsidian"
+    },
+    "N": {
+      "item": "minecraft:echo_shard"
+    },
+    "C": {
+      "item": "minecraft:polished_blackstone"
+    }
+  },
+  "result": {
+    "count": 1,
+    "item": "skyblocks:black_hole"
+  }
+}

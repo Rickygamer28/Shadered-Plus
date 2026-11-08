@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "GGG",
+    "GFG",
+    "GLG"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:glass"
+    },
+    "F": {
+      "item": "minecraft:tropical_fish_bucket"
+    },
+    "L": {
+      "item": "minecraft:mangrove_roots"
+    }
+  },
+  "result": {
+    "count": 8,
+    "item": "skyblocks:jungle_aquarium"
+  }
+}

@@ -1,9 +1,6 @@
 {
     "vertex": "skyblocks:mirror_surface",
     "fragment": "skyblocks:mirror_surface",
-    "attributes": [
-        "Position"
-    ],
     "samplers": [
         {
             "name": "Sampler0"
@@ -57,6 +54,14 @@
             ]
         },
         {
+            "name": "GameTime",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
+            ]
+        },
+        {
             "name": "MirrorTexMax",
             "type": "float",
             "count": 2,
@@ -88,5 +93,9 @@
                 1.0
             ]
         }
+    ],
+    "attributes": [
+        "Position",
+        "UV0"
     ]
 }

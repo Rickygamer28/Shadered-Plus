@@ -5,8 +5,8 @@
 
 in vec3 lp;
 in vec3 lray;
-in float seedIn;
-in vec4 vColor;
+flat in float seedIn;
+flat in vec4 vColor;
 in vec2 uv; // (big lamp or not, the height in the lamp's block)
 
 uniform float LampTime;

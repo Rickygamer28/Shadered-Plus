@@ -99,6 +99,10 @@ final class IslandWindow {
         poseStack.mulPose(Axis.YP.rotationDegrees(-yRot));
         poseStack.translate(-0.5F, 0.0F, -0.5F);
         Matrix4f picture = new Matrix4f(poseStack.last().pose());
+        // where the window is on screen: the skies seen through it are only needed there
+        int[] myRect = com.example.skyblocks.client.SkyUsage.rectOfShape(
+                new Matrix4f(RenderSystem.getProjectionMatrix()).mul(RenderSystem.getModelViewMatrix()).mul(picture),
+                new float[][] {{box.x0(), box.y0(), PICTURE_Z}, {box.x1(), box.y0(), PICTURE_Z}, {box.x1(), box.y1(), PICTURE_Z}, {box.x0(), box.y1(), PICTURE_Z}});
 
         PaintingTimings.painting();
         PaintingTimings.mark(PaintingTimings.Phase.WINDOW_MASK);
@@ -132,6 +136,7 @@ final class IslandWindow {
             // 3. The room and the island, only inside the mark.
             MultiBufferSource.BufferSource scene = MultiBufferSource.immediate(memory());
             PaintingTimings.mark(PaintingTimings.Phase.ROOM);
+            windowRect = myRect;
             if (!drawSkyRoom(poseStack, background, box)) {
                 drawRoom(poseStack, scene, light, box);
                 scene.endBatch(); // the room first (the island's solid blocks are drawn right away)
@@ -179,6 +184,7 @@ final class IslandWindow {
             }
             scene.endBatch();
             PaintingTimings.mark(PaintingTimings.Phase.SKY_BLOCKS);
+            windowRect = myRect; // (again: a painting inside may have set its own)
             drawSkyBlocks(skies);
             backInside();
             PaintingTimings.mark(PaintingTimings.Phase.WINDOW_MASK);
@@ -283,12 +289,16 @@ final class IslandWindow {
      * Draws the taken sky cubes now (inside the window's mask) the way Shadered's own pass draws them: cube faces
      * showing that sky's picture, which Shadered renders earlier in the frame.
      */
+    /** The painting being drawn: where its window is on screen (SkyUsage.rectOfShape; null: not known). */
+    @org.jetbrains.annotations.Nullable
+    private static int[] windowRect;
+
     private static void drawSkyBlocks(Map<SkyblockBatchData, SkyblockBatchData> skies) {
         if (skies.isEmpty()) {
             return;
         }
         for (SkyblockBatchData data : skies.keySet()) {
-            com.example.skyblocks.client.SkyUsage.ensureFresh(data); // a resting sky: draw its picture first
+            com.example.skyblocks.client.SkyUsage.ensurePart(data, windowRect); // a resting sky: draw its picture first (where the window is)
         }
         backInside(); // drawing a sky picture binds Shadered's own framebuffer
         int passDepth = ComplexPassRenderer.getInstance().getRenderBuffer().getDepthTextureId();
@@ -361,7 +371,7 @@ final class IslandWindow {
             return false;
         }
         SkyblockBatchData batch = SkyblockRenderer.getData(data.type());
-        com.example.skyblocks.client.SkyUsage.ensureFresh(batch); // a resting sky: draw its picture first
+        com.example.skyblocks.client.SkyUsage.ensurePart(batch, windowRect); // a resting sky: draw its picture first (where the window is)
         backInside(); // drawing a sky picture binds Shadered's own framebuffer
         Integer sky = SkyblockRenderer.DATA_LIST.get(batch);
         SkyblockPass pass = data.pass();

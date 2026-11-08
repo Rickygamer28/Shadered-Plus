@@ -1,0 +1,33 @@
+{
+    "vertex": "skyblocks:portal_pack",
+    "fragment": "skyblocks:portal_pack",
+    "attributes": [
+        "Position"
+    ],
+    "samplers": [
+        {
+            "name": "Sampler0"
+        },
+        {
+            "name": "Sampler1"
+        }
+    ],
+    "uniforms": [
+        {
+            "name": "Near",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.05
+            ]
+        },
+        {
+            "name": "Far",
+            "type": "float",
+            "count": 1,
+            "values": [
+                256.0
+            ]
+        }
+    ]
+}

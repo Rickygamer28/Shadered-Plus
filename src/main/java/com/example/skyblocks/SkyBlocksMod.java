@@ -44,6 +44,7 @@ public class SkyBlocksMod {
         ModFluids.TYPES.register(modEventBus);
         ModFluids.FLUIDS.register(modEventBus);
         ModFluids.RECIPES.register(modEventBus);
+        SingularityMenu.MENUS.register(modEventBus);
         modEventBus.addListener(SkyBlocksMod::addToShaderedTab);
         modEventBus.addListener(SkyBlocksMod::commonSetup);
     }
@@ -60,16 +61,41 @@ public class SkyBlocksMod {
         event.accept(ModItems.ISLAND_SCANNER.get());
         event.accept(ModItems.ISLAND_PAINTING.get());
         event.accept(ModItems.MIRROR.get());
+        event.accept(ModItems.ROUND_MIRROR.get());
+        event.accept(ModItems.CRACKED_MIRROR.get());
+        event.accept(ModItems.VANITY_MIRROR.get());
         event.accept(ModItems.INFINITY_MIRROR.get());
         event.accept(ModItems.WATER_CAUSTICS.get());
         event.accept(ModItems.RAIN_GLASS.get());
         event.accept(ModItems.LAVA_LAMP.get());
         event.accept(ModItems.BIG_LAVA_LAMP.get());
+        event.accept(ModItems.PLASMA_BALL.get());
+        event.accept(ModItems.TESLA_COIL.get());
+        event.accept(ModItems.GALAXY_PROJECTOR.get());
+        event.accept(ModItems.ORRERY.get());
+        event.accept(ModItems.KALEIDOSCOPE.get());
+        event.accept(ModItems.PORTAL_MIRROR.get());
+        event.accept(ModItems.PLANETARIUM.get());
+        event.accept(ModItems.MAGMA_BASIN.get());
+        event.accept(ModItems.BLACK_HOLE.get());
+        event.accept(ModItems.BIG_BLACK_HOLE.get());
+        event.accept(ModItems.SINGULARITY.get());
+        event.accept(ModItems.CONTAINMENT_FRAME.get());
+        event.accept(ModItems.PORT_FRAME.get());
+        event.accept(ModItems.WHIRLPOOL.get());
+        event.accept(ModItems.TANK_FRAME.get());
+        event.accept(ModItems.TANK_GLASS.get());
+        event.accept(ModItems.DISPLAY_FRAME.get());
+        event.accept(ModItems.MONITOR_FRAME.get());
+        event.accept(ModItems.REDSTONE_FRAME.get());
         event.accept(ModItems.FIRE_TORNADO.get());
         event.accept(ModItems.BRICK_HEARTH.get());
         event.accept(ModItems.MUSIC_VISUALIZER.get());
         event.accept(ModItems.HOLOGRAM_PROJECTOR.get());
         event.accept(ModItems.JELLYFISH_TANK.get());
+        event.accept(ModItems.FISHBOWL.get());
+        event.accept(ModItems.TALL_TANK.get());
+        event.accept(ModItems.SLIM_TANK.get());
         event.accept(ModItems.KOI_POND.get());
         event.accept(ModItems.VANILLA_KOI_POND.get());
         event.accept(ModItems.BAMBOO_SPOUT.get());
@@ -84,6 +110,8 @@ public class SkyBlocksMod {
         event.accept(ModItems.AQUARIUM.get());
         event.accept(ModItems.OCEAN_AQUARIUM.get());
         event.accept(ModItems.DEEP_SEA_AQUARIUM.get());
+        event.accept(ModItems.REEF_AQUARIUM.get());
+        event.accept(ModItems.JUNGLE_AQUARIUM.get());
         event.accept(ModItems.AQUARIUM_STAND.get());
         event.accept(ModItems.AQUARIUM_LID.get());
         event.accept(ModItems.VANILLA_AQUARIUM.get());
@@ -125,5 +153,24 @@ public class SkyBlocksMod {
                 .decoder(PondMaterialsPayload::decode)
                 .consumerMainThread(PondMaterialsPayload::handle)
                 .add();
+        // (from 1.21.1: the solar systems' clicks, portal mirrors, the whirlpool's and singularity's menus)
+        NETWORK.messageBuilder(SolarSystemClickPayload.class, 6, net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER)
+                .encoder(SolarSystemClickPayload::encode).decoder(SolarSystemClickPayload::decode)
+                .consumerMainThread(SolarSystemClickPayload::handle).add();
+        NETWORK.messageBuilder(PortalCrossPayload.class, 7, net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER)
+                .encoder(PortalCrossPayload::encode).decoder(PortalCrossPayload::decode)
+                .consumerMainThread(PortalCrossPayload::handle).add();
+        NETWORK.messageBuilder(WhirlpoolPayload.class, 8, net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER)
+                .encoder(WhirlpoolPayload::encode).decoder(WhirlpoolPayload::decode)
+                .consumerMainThread(WhirlpoolPayload::handle).add();
+        NETWORK.messageBuilder(SingularityPayloads.Action.class, 9, net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER)
+                .encoder(SingularityPayloads.Action::encode).decoder(SingularityPayloads.Action::decode)
+                .consumerMainThread(SingularityPayloads.Action::handle).add();
+        NETWORK.messageBuilder(SingularityPayloads.Contents.class, 10, net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(SingularityPayloads.Contents::encode).decoder(SingularityPayloads.Contents::decode)
+                .consumerMainThread(SingularityPayloads.Contents::handle).add();
+        NETWORK.messageBuilder(PortalListPayload.class, 11, net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(PortalListPayload::encode).decoder(PortalListPayload::decode)
+                .consumerMainThread(PortalListPayload::handle).add();
     }
 }

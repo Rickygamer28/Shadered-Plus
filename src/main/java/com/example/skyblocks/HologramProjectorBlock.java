@@ -30,8 +30,9 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A hologram projector: right-click it with any item or block to project a slowly turning, flickering hologram of it
- * (a copy: your item isn't used up). Empty hand: clear it; sneak + right-click: small / medium / large; a dye: the
- * hologram's colour. Drawn by client/HologramRenderer.
+ * (a copy: your item isn't used up); with a spawn egg: that mob, in a cage of light; empty-handed on an empty projector:
+ * yourself. Empty hand on a showing one: clear it; sneak + right-click: small / medium / large; a dye: the hologram's
+ * colour. Drawn by client/HologramRenderer.
  */
 public class HologramProjectorBlock extends BaseEntityBlock {
     public static final IntegerProperty SIZE = IntegerProperty.create("size", 0, 2);
@@ -67,6 +68,9 @@ public class HologramProjectorBlock extends BaseEntityBlock {
             if (stack.getItem() instanceof DyeItem dye) {
                 be.setColour(com.example.skyblocks.compat.Compat.dyeColour(dye.getDyeColor()));
                 level.playSound(null, pos, SoundEvents.DYE_USE, SoundSource.BLOCKS, 1.0F, 1.0F);
+            } else if (stack.getItem() instanceof net.minecraft.world.item.SpawnEggItem egg) {
+                be.setMob(net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(egg.getType(stack.getTag())).toString());
+                level.playSound(null, pos, SoundEvents.BEACON_POWER_SELECT, SoundSource.BLOCKS, 0.4F, 1.5F);
             } else {
                 be.setShown(stack);
                 level.playSound(null, pos, SoundEvents.BEACON_POWER_SELECT, SoundSource.BLOCKS, 0.4F, 1.8F);
@@ -80,9 +84,12 @@ public class HologramProjectorBlock extends BaseEntityBlock {
             if (player.isShiftKeyDown()) {
                 level.setBlock(pos, state.cycle(SIZE), Block.UPDATE_ALL);
                 level.playSound(null, pos, SoundEvents.STONE_BUTTON_CLICK_ON, SoundSource.BLOCKS, 0.4F, 1.6F);
-            } else if (!be.shown().isEmpty()) {
-                be.setShown(ItemStack.EMPTY);
+            } else if (be.showing()) {
+                be.clear();
                 level.playSound(null, pos, SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 0.3F, 2.0F);
+            } else { // (nothing shown: project the player themselves)
+                be.setPlayer(player.getGameProfile());
+                level.playSound(null, pos, SoundEvents.BEACON_POWER_SELECT, SoundSource.BLOCKS, 0.4F, 1.3F);
             }
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
