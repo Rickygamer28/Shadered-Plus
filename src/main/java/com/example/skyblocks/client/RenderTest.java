@@ -148,6 +148,15 @@ public final class RenderTest {
         burstFrame++;
     }
 
+    /** (SKYBLOCKS_MAX_SPOTS: only the first so many spots - a quick comparison run.) */
+    private static int spotCount() {
+        try {
+            return Math.min(SPOTS.length, Integer.parseInt(System.getenv().getOrDefault("SKYBLOCKS_MAX_SPOTS", "9999")));
+        } catch (NumberFormatException e) {
+            return SPOTS.length;
+        }
+    }
+
     private static void run(MinecraftServer server, String command) {
         server.execute(() -> {
             try {
@@ -202,7 +211,7 @@ public final class RenderTest {
                     }
                 }
                 default -> {
-                    if (stage >= 2 && stage < 2 + SPOTS.length) {
+                    if (stage >= 2 && stage < 2 + spotCount()) {
                         int spot = stage - 2;
                         if (ticks == 1 && "shaders".equals(TAG) && (SPOTS[spot].contains("burst ") || SPOTS[spot].startsWith("nobridge "))) {
                             stage++; // (with a shader pack the frames come slowly: no frame-by-frame spots)
@@ -322,7 +331,7 @@ public final class RenderTest {
                             stage++;
                             ticks = 0;
                         }
-                    } else if (stage == 2 + SPOTS.length || stage == 99) {
+                    } else if (stage == 2 + spotCount() || stage == 99) {
                         if (ticks == 60) {
                             SkyBlocksMod.LOGGER.info("Shadered+ render test done");
                             mc.stop();

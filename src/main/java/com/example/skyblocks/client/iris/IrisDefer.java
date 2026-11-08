@@ -33,6 +33,8 @@ public final class IrisDefer {
     private record Job(BlockEntity be, float partialTick, Matrix4f pose, Matrix3f normal, int light, Matrix4f modelView, Matrix4f projection) {}
 
     private static final List<Job> JOBS = new ArrayList<>();
+    /** (The render test: as before this, to compare.) */
+    private static final boolean NO_DEFER = System.getenv("SKYBLOCKS_NO_DEFER") != null;
     private static MultiBufferSource.BufferSource own;
     private static boolean drawing;
 
@@ -40,7 +42,7 @@ public final class IrisDefer {
 
     /** Whether the block entities drawn now are drawn later (true: the caller skips drawing it now). */
     public static boolean defer(BlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers) {
-        if (drawing || !IrisCompat.shaderPackInUse() || !com.example.skyblocks.client.DrawNow.isIris(buffers) || !kind(be)) {
+        if (drawing || NO_DEFER || !IrisCompat.shaderPackInUse() || !com.example.skyblocks.client.DrawNow.isIris(buffers) || !kind(be)) {
             return false;
         }
         if (IrisCompat.renderingShadowPass()) {
