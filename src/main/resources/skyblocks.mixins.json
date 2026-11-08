@@ -21,6 +21,7 @@
     "GameRendererIrisMixin",
     "LevelRendererTranslucentMixin",
     "MirrorBlockChangeMixin",
+    "MirrorFrustumMixin",
     "MirrorStageEventsMixin",
     "ModRenderTypesMixin",
     "PortalParticlesMixin",

@@ -44,6 +44,11 @@ public final class MirrorCulling {
         }
     }
 
+    /** Whether any mirror's (or portal's) view is noted now. */
+    public static boolean active() {
+        return !views.isEmpty() || !bridges.isEmpty();
+    }
+
     /** Whether the chunk search may go every way, not only outwards from the camera (a portal in view: its other end). */
     public static boolean searchEveryWay() {
         return !bridges.isEmpty();
@@ -62,7 +67,7 @@ public final class MirrorCulling {
     public static boolean visible(int centerX, int centerY, int centerZ) {
         if (!hooked) { // (the log says whether Sodium's chunk search is hooked at all)
             hooked = true;
-            com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+: Sodium's chunk search asks about mirrors");
+            com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+: the chunk search asks about mirrors");
         }
         List<View> current = views;
         if ((current.isEmpty() && bridges.isEmpty()) || com.example.skyblocks.client.iris.IrisCompat.renderingShadowPass()) {
