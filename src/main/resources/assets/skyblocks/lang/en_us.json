@@ -461,5 +461,7 @@
   "message.skyblocks.laser.pattern.cone": "Turning cone",
   "message.skyblocks.laser.pattern.tunnel": "Tunnel",
   "message.skyblocks.laser.pattern.scan": "Scanners",
-  "message.skyblocks.laser.pattern.music": "With the music"
+  "message.skyblocks.laser.pattern.music": "With the music",
+  "block.skyblocks.arcade": "Arcade Cabinet",
+  "tooltip.skyblocks.arcade": "Two blocks tall. Right-click to play Snake or Breakout - the cabinet keeps the best scores, shown on its screen"
 }

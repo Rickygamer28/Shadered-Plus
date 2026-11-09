@@ -68,6 +68,7 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.LAVA_PILLAR.get(), LavaPillarRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.LIGHT_BRIDGE_EMITTER.get(), LightBridgeRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.LASER_PROJECTOR.get(), LaserProjectorRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.ARCADE.get(), ArcadeRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.FIRE.get(), WallFireRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.BRICK_HEARTH.get(), ClientSetup::hearthRenderer);
         event.registerBlockEntityRenderer(ModBlockEntities.VISUALIZER.get(), VisualizerRenderer::new);

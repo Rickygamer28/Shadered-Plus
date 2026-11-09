@@ -193,6 +193,12 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 5)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
 
+    /** An arcade cabinet, two blocks tall: Snake and Breakout, its best scores kept (ArcadeBlock). */
+    public static final DeferredBlock<ArcadeBlock> ARCADE = BLOCKS.registerBlock("arcade", ArcadeBlock::new,
+            BlockBehaviour.Properties.of().strength(2.0F).sound(SoundType.WOOD).noOcclusion().lightLevel(state -> 7)
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE));
+
     /** A kaleidoscope: coloured glass turning in windows on every side of a brass frame (KaleidoscopeBlock). */
     public static final DeferredBlock<KaleidoscopeBlock> KALEIDOSCOPE = BLOCKS.registerBlock("kaleidoscope", KaleidoscopeBlock::new,
             BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.COPPER).lightLevel(state -> 10)

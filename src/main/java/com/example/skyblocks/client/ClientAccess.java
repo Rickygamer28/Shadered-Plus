@@ -36,6 +36,10 @@ public final class ClientAccess {
         }
     }
 
+    public static void openArcade(net.minecraft.core.BlockPos pos) {
+        Minecraft.getInstance().setScreen(new ArcadeScreen(pos));
+    }
+
     public static void openEffectBlock(net.minecraft.core.BlockPos pos) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.level.getBlockEntity(pos) instanceof com.example.skyblocks.EffectBlockEntity be) {

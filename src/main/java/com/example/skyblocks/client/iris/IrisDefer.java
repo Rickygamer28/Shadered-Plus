@@ -71,6 +71,7 @@ public final class IrisDefer {
                 || be instanceof com.example.skyblocks.WeatherGlobeBlockEntity
                 || be instanceof com.example.skyblocks.LavaPillarBlockEntity
                 || be instanceof com.example.skyblocks.LightBridgeEmitterBlockEntity
+                || be instanceof com.example.skyblocks.ArcadeBlockEntity
                 || be instanceof com.example.skyblocks.SolarSystemBlockEntity
                 || be instanceof com.example.skyblocks.SingularityBlockEntity
                 || be instanceof com.example.skyblocks.HologramBlockEntity

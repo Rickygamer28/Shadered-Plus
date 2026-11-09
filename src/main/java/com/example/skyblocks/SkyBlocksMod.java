@@ -79,7 +79,7 @@ public class SkyBlocksMod {
                 ModItems.KALEIDOSCOPE.get(), ModItems.HOLOGRAM_PROJECTOR.get(), ModItems.GALAXY_PROJECTOR.get(), ModItems.WEATHER_GLOBE.get(),
                 // music and parties
                 ModItems.DANCE_FLOOR.get(), ModItems.DISCO_BALL.get(), ModItems.LASER_PROJECTOR.get(), ModItems.FOG_MACHINE.get(), ModItems.SPEAKER.get(),
-                ModItems.MUSIC_VISUALIZER.get(), ModItems.MUSIC_BOX.get(),
+                ModItems.MUSIC_VISUALIZER.get(), ModItems.MUSIC_BOX.get(), ModItems.ARCADE.get(),
                 // fire and water
                 ModItems.BRICK_HEARTH.get(), ModItems.FIRE_TORNADO.get(), ModItems.MAGMA_BASIN.get(), ModItems.WATER_CAUSTICS.get(),
                 ModItems.RAIN_GLASS.get(),
@@ -126,6 +126,7 @@ public class SkyBlocksMod {
                 .playToServer(FogAreaPayload.TYPE, FogAreaPayload.STREAM_CODEC, FogAreaPayload::handle)
                 .playToServer(NeonSignPayload.TYPE, NeonSignPayload.STREAM_CODEC, NeonSignPayload::handle)
                 .playToServer(EffectBlockPayload.TYPE, EffectBlockPayload.STREAM_CODEC, EffectBlockPayload::handle)
+                .playToServer(ArcadeScorePayload.TYPE, ArcadeScorePayload.STREAM_CODEC, ArcadeScorePayload::handle)
                 .playToServer(PondMaterialsPayload.TYPE, PondMaterialsPayload.STREAM_CODEC, PondMaterialsPayload::handle)
                 .playToServer(SolarSystemClickPayload.TYPE, SolarSystemClickPayload.STREAM_CODEC, SolarSystemClickPayload::handle)
                 .playToServer(PortalCrossPayload.TYPE, PortalCrossPayload.STREAM_CODEC, PortalCrossPayload::handle)
