@@ -493,6 +493,12 @@ void main() {
         c = c * 0.28 + (effectAt(b + vec2(r, r * 0.4), e, t) + effectAt(b + vec2(-r * 0.4, r), e, t)
                 + effectAt(b + vec2(-r, -r * 0.4), e, t) + effectAt(b + vec2(r * 0.4, -r), e, t)) * 0.18;
     }
+    if (HasBgBlock > 0.5 && !(e == 3 || e == 4 || e == 5 || e == 7 || e == 10 || e == 11 || (e >= 13 && e <= 17))) {
+        // the effects that fill the whole side: laid over the block like coloured glass - its dark parts clear, the
+        // block always showing a little through the bright ones
+        float lum = max(max(c.r, c.g), c.b);
+        c = mix(background(b), c, clamp(0.1 + lum * 0.85, 0.1, 0.82));
+    }
     // (a gentle curve: highlights roll off instead of clipping flat)
     c = c / (1.0 + max(max(c.r, c.g), c.b) * 0.15) * 1.15;
     vec3 outc = clamp(c, 0.0, 1.0) * Bright * shade;
