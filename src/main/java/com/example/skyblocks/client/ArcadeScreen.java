@@ -21,11 +21,11 @@ import org.lwjgl.glfw.GLFW;
  */
 public class ArcadeScreen extends Screen {
     private static final int COLS = 24, ROWS = 18, CELL = 8, W = COLS * CELL, H = ROWS * CELL;
-    private static final String[] NAMES = {"SNAKE", "BREAKOUT", "TETRIS", "PAC-MAN", "PONG", "FROGGER", "MINESWEEPER", "FIGHTER"};
+    private static final String[] NAMES = {"SNAKE", "BREAKOUT", "TETRIS", "WHISKER MAZE", "PONG", "FROGGER", "MINESWEEPER", "SHOWDOWN"};
     /** The games after the first three, each its own (client/arcade). */
-    private final com.example.skyblocks.client.arcade.ArcadeGame[] extra = {new com.example.skyblocks.client.arcade.PacMan(),
+    private final com.example.skyblocks.client.arcade.ArcadeGame[] extra = {new com.example.skyblocks.client.arcade.WhiskerMaze(),
             new com.example.skyblocks.client.arcade.Pong(), new com.example.skyblocks.client.arcade.Frogger(),
-            new com.example.skyblocks.client.arcade.Minesweeper(), new com.example.skyblocks.client.arcade.Fighter()};
+            new com.example.skyblocks.client.arcade.Minesweeper(), new com.example.skyblocks.client.arcade.Showdown()};
 
     private com.example.skyblocks.client.arcade.ArcadeGame ext() {
         return game >= 3 ? extra[game - 3] : null;

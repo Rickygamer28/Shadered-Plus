@@ -11,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 
 /** An arcade cabinet: the best score in each of its games, and who got it. */
 public class ArcadeBlockEntity extends BlockEntity {
-    public static final String[] GAMES = {"snake", "breakout", "tetris", "pacman", "pong", "frogger", "minesweeper", "fighter"};
+    public static final String[] GAMES = {"snake", "breakout", "tetris", "whisker_maze", "pong", "frogger", "minesweeper", "showdown"};
     /** The colours of a game's little picture on the screen (ArcadeFramePayload's cells). */
     public static final int[] PALETTE = {0x070B16, 0x3CC85A, 0xBEFF8C, 0xFF3A4A, 0xFFFFFF, 0x9AD8FF, 0xFF4D5E, 0xFF9A2E,
             0xFFE74A, 0x5BFF6A, 0x4DA6FF, 0xB45BFF, 0x00E5FF, 0x3A4A6A, 0x1A2238, 0xFF7AD9};
