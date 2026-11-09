@@ -1,0 +1,30 @@
+{
+  "variants": {
+    "facing=up": {
+      "model": "skyblocks:block/laser_projector"
+    },
+    "facing=down": {
+      "model": "skyblocks:block/laser_projector",
+      "x": 180
+    },
+    "facing=north": {
+      "model": "skyblocks:block/laser_projector",
+      "x": 90
+    },
+    "facing=south": {
+      "model": "skyblocks:block/laser_projector",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west": {
+      "model": "skyblocks:block/laser_projector",
+      "x": 90,
+      "y": 270
+    },
+    "facing=east": {
+      "model": "skyblocks:block/laser_projector",
+      "x": 90,
+      "y": 90
+    }
+  }
+}

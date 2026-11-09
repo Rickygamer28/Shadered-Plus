@@ -78,7 +78,7 @@ public class SkyBlocksMod {
                 ModItems.LAVA_LAMP.get(), ModItems.BIG_LAVA_LAMP.get(), ModItems.LAVA_PILLAR.get(), ModItems.PLASMA_BALL.get(), ModItems.TESLA_COIL.get(),
                 ModItems.KALEIDOSCOPE.get(), ModItems.HOLOGRAM_PROJECTOR.get(), ModItems.GALAXY_PROJECTOR.get(), ModItems.WEATHER_GLOBE.get(),
                 // music and parties
-                ModItems.DANCE_FLOOR.get(), ModItems.DISCO_BALL.get(), ModItems.FOG_MACHINE.get(), ModItems.SPEAKER.get(),
+                ModItems.DANCE_FLOOR.get(), ModItems.DISCO_BALL.get(), ModItems.LASER_PROJECTOR.get(), ModItems.FOG_MACHINE.get(), ModItems.SPEAKER.get(),
                 ModItems.MUSIC_VISUALIZER.get(), ModItems.MUSIC_BOX.get(),
                 // fire and water
                 ModItems.BRICK_HEARTH.get(), ModItems.FIRE_TORNADO.get(), ModItems.MAGMA_BASIN.get(), ModItems.WATER_CAUSTICS.get(),

@@ -188,6 +188,11 @@ public final class ModBlocks {
                     .isValidSpawn((s, l, p, e) -> false).pushReaction(net.minecraft.world.level.material.PushReaction.BLOCK)
                     .mapColor(net.minecraft.world.level.material.MapColor.NONE));
 
+    /** A party laser projector (LaserProjectorBlock, client/LaserProjectorRenderer). */
+    public static final DeferredBlock<LaserProjectorBlock> LASER_PROJECTOR = BLOCKS.registerBlock("laser_projector", LaserProjectorBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 5)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+
     /** A kaleidoscope: coloured glass turning in windows on every side of a brass frame (KaleidoscopeBlock). */
     public static final DeferredBlock<KaleidoscopeBlock> KALEIDOSCOPE = BLOCKS.registerBlock("kaleidoscope", KaleidoscopeBlock::new,
             BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.COPPER).lightLevel(state -> 10)
