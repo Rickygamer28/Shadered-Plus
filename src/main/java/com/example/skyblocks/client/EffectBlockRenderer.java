@@ -130,25 +130,22 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
         source.endBatch(Types.SIDES);
     }
 
-    // ---- the middle of each group (its effects are centred there), worked out now and then ----
+    // ---- the middle and size of each group (its effects are centred there), worked out now and then ----
     private static final java.util.Map<Long, double[]> CENTRES = new java.util.HashMap<>();
     private static long centresAt;
 
-    /** The middle of the block's group: the middle of the box round all its blocks. */
+    /** The middle of the block's group (the box round all its blocks), and that box's size. */
     private static double[] centre(Level level, EffectBlockEntity be) {
         long now = level.getGameTime();
-        if (now - centresAt > 40L || now < centresAt) {
+        if (now - centresAt > 20L || now < centresAt) {
             CENTRES.clear();
             centresAt = now;
         }
-        if (be.group() == 0L) {
-            BlockPos p = be.getBlockPos();
-            return new double[] {p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5, 1, 1, 1};
-        }
-        double[] c = CENTRES.get(be.group());
+        double[] c = CENTRES.get(be.getBlockPos().asLong());
         if (c == null) {
+            java.util.List<BlockPos> blocks = com.example.skyblocks.EffectBlock.group(level, be.getBlockPos());
             int x0 = Integer.MAX_VALUE, y0 = Integer.MAX_VALUE, z0 = Integer.MAX_VALUE, x1 = Integer.MIN_VALUE, y1 = Integer.MIN_VALUE, z1 = Integer.MIN_VALUE;
-            for (BlockPos p : com.example.skyblocks.EffectBlock.group(level, be.getBlockPos())) {
+            for (BlockPos p : blocks) {
                 x0 = Math.min(x0, p.getX());
                 y0 = Math.min(y0, p.getY());
                 z0 = Math.min(z0, p.getZ());
@@ -157,7 +154,9 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
                 z1 = Math.max(z1, p.getZ());
             }
             c = new double[] {(x0 + x1 + 1) / 2.0, (y0 + y1 + 1) / 2.0, (z0 + z1 + 1) / 2.0, x1 - x0 + 1, y1 - y0 + 1, z1 - z0 + 1};
-            CENTRES.put(be.group(), c);
+            for (BlockPos p : blocks) { // (the same for all of them: worked out once)
+                CENTRES.put(p.asLong(), c);
+            }
         }
         return c;
     }

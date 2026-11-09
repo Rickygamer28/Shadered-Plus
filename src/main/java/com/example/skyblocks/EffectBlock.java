@@ -67,17 +67,17 @@ public class EffectBlock extends BaseEntityBlock {
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    /** The blocks of this one's group touching it, through each other (it included). */
+    /**
+     * The blocks of this one's group touching it, through each other (it included): joined to it, or showing the very
+     * same effect (so a wall built of the same settings is one picture, however it was put together).
+     */
     public static List<BlockPos> group(BlockGetter level, BlockPos start) {
         List<BlockPos> out = new ArrayList<>();
         if (!(level.getBlockEntity(start) instanceof EffectBlockEntity first)) {
             return out;
         }
         long id = first.group();
-        if (id == 0L) { // (on its own)
-            out.add(start.immutable());
-            return out;
-        }
+        int key = first.settings().key();
         Set<BlockPos> seen = new HashSet<>();
         ArrayDeque<BlockPos> todo = new ArrayDeque<>();
         seen.add(start.immutable());
@@ -87,7 +87,8 @@ public class EffectBlock extends BaseEntityBlock {
             out.add(p);
             for (Direction d : Direction.values()) {
                 BlockPos n = p.relative(d);
-                if (!seen.contains(n) && level.getBlockEntity(n) instanceof EffectBlockEntity e && e.group() == id) {
+                if (!seen.contains(n) && level.getBlockEntity(n) instanceof EffectBlockEntity e
+                        && (id != 0L && e.group() == id || e.settings().key() == key)) {
                     seen.add(n);
                     todo.add(n);
                 }
