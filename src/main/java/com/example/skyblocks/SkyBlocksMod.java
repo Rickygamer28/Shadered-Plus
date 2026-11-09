@@ -37,83 +37,73 @@ public class SkyBlocksMod {
         ModFluids.FLUIDS.register(modEventBus);
         ModFluids.RECIPES.register(modEventBus);
         SingularityMenu.MENUS.register(modEventBus);
+        TABS.register(modEventBus);
         modEventBus.addListener(SkyBlocksMod::addToShaderedTab);
         modEventBus.addListener(SkyBlocksMod::registerCapabilities);
         modEventBus.addListener(SkyBlocksMod::registerPayloads);
     }
 
-    /** Our skyblock items, like Shadered lists its own (Illusorite ores for our skies are added by Shadered itself). */
+    /** Shadered+'s own creative tab, right after Shadered's: everything, grouped (see {@link #fillTab}). */
+    public static final net.neoforged.neoforge.registries.DeferredRegister<CreativeModeTab> TABS =
+            net.neoforged.neoforge.registries.DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MOD_ID);
+    public static final java.util.function.Supplier<CreativeModeTab> TAB = TABS.register("shadered_plus", () -> CreativeModeTab.builder()
+            .title(net.minecraft.network.chat.Component.translatable("itemGroup.skyblocks.shadered_plus"))
+            .icon(() -> new net.minecraft.world.item.ItemStack(ModItems.EFFECT_BLOCK.get()))
+            .withTabsBefore(SHADERED_TAB)
+            .displayItems((parameters, output) -> fillTab(output::accept))
+            .build());
+
+    /** Our skies and their liquids, in Shadered's tab with its own (Illusorite ores for our skies are added by Shadered). */
     private static void addToShaderedTab(BuildCreativeModeTabContentsEvent event) {
         if (!event.getTabKey().equals(SHADERED_TAB)) {
             return;
         }
+        skies(event::accept);
+    }
+
+    private static void skies(java.util.function.Consumer<net.minecraft.world.item.ItemStack> out) {
         for (int i = 0; i < ModItems.SKY_ITEMS.size(); i++) {
-            event.accept(SkyblockHolderBlockItem.create(SkyTypes.type(i), SkyblockPass.NORMAL, ModItems.SKY_ITEMS.get(i).get()));
+            out.accept(SkyblockHolderBlockItem.create(SkyTypes.type(i), SkyblockPass.NORMAL, ModItems.SKY_ITEMS.get(i).get()));
         }
-        event.accept(ModItems.OIIA_CAT.get());
-        event.accept(ModItems.ISLAND_SCANNER.get());
-        event.accept(ModItems.ISLAND_PAINTING.get());
-        event.accept(ModItems.MIRROR.get());
-        event.accept(ModItems.ROUND_MIRROR.get());
-        event.accept(ModItems.CRACKED_MIRROR.get());
-        event.accept(ModItems.VANITY_MIRROR.get());
-        event.accept(ModItems.INFINITY_MIRROR.get());
-        event.accept(ModItems.WATER_CAUSTICS.get());
-        event.accept(ModItems.RAIN_GLASS.get());
-        event.accept(ModItems.LAVA_LAMP.get());
-        event.accept(ModItems.BIG_LAVA_LAMP.get());
-        event.accept(ModItems.PLASMA_BALL.get());
-        event.accept(ModItems.TESLA_COIL.get());
-        event.accept(ModItems.GALAXY_PROJECTOR.get());
-        event.accept(ModItems.ORRERY.get());
-        event.accept(ModItems.KALEIDOSCOPE.get());
-        event.accept(ModItems.EFFECT_BLOCK.get());
-        event.accept(ModItems.PORTAL_MIRROR.get());
-        event.accept(ModItems.PLANETARIUM.get());
-        event.accept(ModItems.MAGMA_BASIN.get());
-        event.accept(ModItems.BLACK_HOLE.get());
-        event.accept(ModItems.BIG_BLACK_HOLE.get());
-        event.accept(ModItems.SINGULARITY.get());
-        event.accept(ModItems.CONTAINMENT_FRAME.get());
-        event.accept(ModItems.PORT_FRAME.get());
-        event.accept(ModItems.WHIRLPOOL.get());
-        event.accept(ModItems.TANK_FRAME.get());
-        event.accept(ModItems.TANK_GLASS.get());
-        event.accept(ModItems.DISPLAY_FRAME.get());
-        event.accept(ModItems.MONITOR_FRAME.get());
-        event.accept(ModItems.REDSTONE_FRAME.get());
-        event.accept(ModItems.FIRE_TORNADO.get());
-        event.accept(ModItems.BRICK_HEARTH.get());
-        event.accept(ModItems.MUSIC_VISUALIZER.get());
-        event.accept(ModItems.HOLOGRAM_PROJECTOR.get());
-        event.accept(ModItems.JELLYFISH_TANK.get());
-        event.accept(ModItems.FISHBOWL.get());
-        event.accept(ModItems.TALL_TANK.get());
-        event.accept(ModItems.SLIM_TANK.get());
-        event.accept(ModItems.KOI_POND.get());
-        event.accept(ModItems.VANILLA_KOI_POND.get());
-        event.accept(ModItems.BAMBOO_SPOUT.get());
-        event.accept(ModItems.MUSIC_BOX.get());
-        event.accept(ModItems.POND_STEPPING_STONE.get());
-        event.accept(ModItems.POND_BRIDGE.get());
-        event.accept(ModItems.NEON_SIGN.get());
-        event.accept(ModItems.DANCE_FLOOR.get());
-        event.accept(ModItems.DISCO_BALL.get());
-        event.accept(ModItems.SPEAKER.get());
-        event.accept(ModItems.FOG_MACHINE.get());
-        event.accept(ModItems.AQUARIUM.get());
-        event.accept(ModItems.OCEAN_AQUARIUM.get());
-        event.accept(ModItems.DEEP_SEA_AQUARIUM.get());
-        event.accept(ModItems.REEF_AQUARIUM.get());
-        event.accept(ModItems.JUNGLE_AQUARIUM.get());
-        event.accept(ModItems.AQUARIUM_STAND.get());
-        event.accept(ModItems.AQUARIUM_LID.get());
-        event.accept(ModItems.VANILLA_AQUARIUM.get());
-        event.accept(ModItems.VANILLA_OCEAN_AQUARIUM.get());
-        event.accept(ModItems.INFINITY_CUBE.get());
         for (ModFluids.SkyLiquid liquid : ModFluids.ALL) {
-            event.accept(liquid.bucket.get());
+            out.accept(new net.minecraft.world.item.ItemStack(liquid.bucket.get()));
         }
+    }
+
+    /** Shadered+'s tab: like with like - lights, music, fire and water, aquariums, ponds, space, mirrors, islands, skies. */
+    private static void fillTab(java.util.function.Consumer<net.minecraft.world.item.ItemStack> out) {
+        java.util.function.Consumer<net.minecraft.world.level.ItemLike> add = i -> out.accept(new net.minecraft.world.item.ItemStack(i));
+        // lights and decoration
+        for (net.minecraft.world.level.ItemLike i : new net.minecraft.world.level.ItemLike[] {ModItems.EFFECT_BLOCK.get(), ModItems.NEON_SIGN.get(),
+                ModItems.LAVA_LAMP.get(), ModItems.BIG_LAVA_LAMP.get(), ModItems.PLASMA_BALL.get(), ModItems.TESLA_COIL.get(),
+                ModItems.KALEIDOSCOPE.get(), ModItems.HOLOGRAM_PROJECTOR.get(), ModItems.GALAXY_PROJECTOR.get(),
+                // music and parties
+                ModItems.DANCE_FLOOR.get(), ModItems.DISCO_BALL.get(), ModItems.FOG_MACHINE.get(), ModItems.SPEAKER.get(),
+                ModItems.MUSIC_VISUALIZER.get(), ModItems.MUSIC_BOX.get(),
+                // fire and water
+                ModItems.BRICK_HEARTH.get(), ModItems.FIRE_TORNADO.get(), ModItems.MAGMA_BASIN.get(), ModItems.WATER_CAUSTICS.get(),
+                ModItems.RAIN_GLASS.get(),
+                // aquariums and tanks
+                ModItems.AQUARIUM.get(), ModItems.OCEAN_AQUARIUM.get(), ModItems.DEEP_SEA_AQUARIUM.get(), ModItems.REEF_AQUARIUM.get(),
+                ModItems.JUNGLE_AQUARIUM.get(), ModItems.VANILLA_AQUARIUM.get(), ModItems.VANILLA_OCEAN_AQUARIUM.get(),
+                ModItems.AQUARIUM_STAND.get(), ModItems.AQUARIUM_LID.get(), ModItems.FISHBOWL.get(), ModItems.TALL_TANK.get(),
+                ModItems.SLIM_TANK.get(), ModItems.JELLYFISH_TANK.get(),
+                // ponds
+                ModItems.KOI_POND.get(), ModItems.VANILLA_KOI_POND.get(), ModItems.POND_STEPPING_STONE.get(), ModItems.POND_BRIDGE.get(),
+                ModItems.BAMBOO_SPOUT.get(),
+                // space
+                ModItems.ORRERY.get(), ModItems.PLANETARIUM.get(), ModItems.BLACK_HOLE.get(), ModItems.BIG_BLACK_HOLE.get(),
+                ModItems.SINGULARITY.get(), ModItems.CONTAINMENT_FRAME.get(), ModItems.PORT_FRAME.get(), ModItems.DISPLAY_FRAME.get(),
+                ModItems.MONITOR_FRAME.get(), ModItems.REDSTONE_FRAME.get(), ModItems.WHIRLPOOL.get(), ModItems.TANK_FRAME.get(),
+                ModItems.TANK_GLASS.get(),
+                // mirrors and portals
+                ModItems.MIRROR.get(), ModItems.ROUND_MIRROR.get(), ModItems.CRACKED_MIRROR.get(), ModItems.VANITY_MIRROR.get(),
+                ModItems.INFINITY_MIRROR.get(), ModItems.INFINITY_CUBE.get(), ModItems.PORTAL_MIRROR.get(),
+                // sky islands, the cat
+                ModItems.ISLAND_SCANNER.get(), ModItems.ISLAND_PAINTING.get(), ModItems.OIIA_CAT.get()}) {
+            add.accept(i);
+        }
+        skies(out);
     }
 
     /** Hoppers and pipes (any mod's) put things into the singularity and take them out. */

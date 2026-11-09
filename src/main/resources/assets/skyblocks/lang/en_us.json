@@ -440,5 +440,6 @@
   "effect_block.skyblocks.rain": "Digital Rain",
   "effect_block.skyblocks.lava": "Lava Lamp",
   "effect_block.skyblocks.warp": "Starfield Warp",
-  "effect_block.skyblocks.spectrum": "Spectrum"
+  "effect_block.skyblocks.spectrum": "Spectrum",
+  "itemGroup.skyblocks.shadered_plus": "Shadered+"
 }
