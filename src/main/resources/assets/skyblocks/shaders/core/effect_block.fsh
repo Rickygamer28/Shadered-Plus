@@ -93,19 +93,42 @@ float relief(float h, float strength) {
 
 // ---- the effects: p in pattern units (blocks / Size), t in seconds (times Speed) ----
 
-// paint stirred round and round, a whirl in the middle, the colours folded into each other in bands (Balatro-like)
-vec3 swirl(vec2 p, float t) {
+// ---- the Balatro-like vortex: glossy paint pulled round into the middle ----
+
+// how far out a point is in the paint, after the twist and the stirring (0 the middle, about 1 the outside)
+float vortexField(vec2 p, float t) {
     float r = length(p);
-    float a = atan(p.y, p.x) + t * 0.16 - r * 0.42;
-    vec2 w = vec2(cos(a), sin(a)) * r * 1.6;
+    float a = atan(p.y, p.x) + 2.4 / (0.55 + r * 0.45) + t * 0.32; // (twisted harder towards the middle, turning)
+    vec2 w = vec2(cos(a), sin(a)) * r;
+    vec2 d = w * 1.1;
     for (int k = 0; k < 4; k++) {
         float fk = float(k);
-        w += 0.55 * vec2(sin(w.y * 1.1 + t * 0.29 + fk * 1.31), cos(w.x * 1.1 - t * 0.23 + fk * 0.73));
+        d += 0.32 * vec2(sin(d.y * 1.9 + t * 0.55 + fk * 1.7), cos(d.x * 1.9 - t * 0.47 + fk * 2.3));
     }
-    float v = 0.5 + 0.5 * sin(w.x * 0.9 + w.y * 0.7 + t * 0.1 + 0.4 * fbm(w * 0.6));
-    vec3 c = pal(v, 0.07);
-    float fold = 0.5 + 0.5 * sin((w.x - w.y) * 1.6);
-    return c * (0.84 + 0.16 * fold) * relief(v, 0.35);
+    float n = fbm(d * 0.9 + vec2(t * 0.07, -t * 0.05));
+    return r * 0.3 + n * 0.32 + 0.06 * sin(length(d) * 3.0 - t * 0.8);
+}
+
+vec3 swirl(vec2 p, float t) {
+    float v = vortexField(p, t);
+    // the colours from the middle out: the second, then the third (the dark between), ..., the first on the outside
+    float span = float(N - 1);
+    float x = clamp(v, 0.0, 1.0) * span;
+    int i = int(floor(x));
+    float w = max(mix(0.06, 0.5, Blur), AA * span * 1.2);
+    float k = smoothstep(0.5 - w, 0.5 + w, fract(x));
+    vec3 c = N == 1 ? colour(0) : mix(colour(i + 1), colour(i + 2), i + 1 >= N ? 0.0 : k);
+    if (i >= N - 1) c = colour(0);
+    // glossy: lit by the slope of the paint, with bright streaks where it catches the light
+    float e = 0.03;
+    float vx = vortexField(p + vec2(e, 0.0), t), vy = vortexField(p + vec2(0.0, e), t);
+    vec3 n = normalize(vec3((v - vx) / e, (v - vy) / e, 1.4));
+    vec3 L = normalize(vec3(-0.5, 0.6, 0.65));
+    float diff = 0.62 + 0.45 * max(dot(n, L), 0.0);
+    float spec = pow(max(dot(reflect(-L, n), vec3(0.0, 0.0, 1.0)), 0.0), 18.0);
+    float crease = smoothstep(0.0, 0.35, length(vec2(v - vx, v - vy)) / e); // (darker in the steep folds)
+    c = c * diff * mix(1.0, 0.75, crease);
+    return c + mix(c, vec3(1.0), 0.55) * spec * 0.9;
 }
 
 vec3 wave(vec2 p, float t) {

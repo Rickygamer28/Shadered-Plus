@@ -27,7 +27,7 @@ import org.joml.Matrix4f;
 /**
  * The effect block: its sides that can be seen (not against a solid block), drawn with shaders/core/effect_block and
  * its settings - each block drawn at once with its own. A side's texture places are where it is on the group's
- * picture: blocks from the group's anchor, along the side's two axes, so joined blocks show one effect across them.
+ * picture: blocks from the group's middle, along the side's two axes, so joined blocks show one effect across them.
  */
 public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntity> {
     static ShaderInstance shader;
@@ -103,11 +103,11 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
         if (faces == 0) {
             return;
         }
-        BlockPos a = be.anchor();
+        double[] c = centre(level, be);
         current = be.settings();
         time = seconds(partialTick);
         MultiBufferSource.BufferSource source = DrawNow.now(buffers);
-        cube(source.getBuffer(Types.SIDES), poseStack.last().pose(), faces, pos.getX() - a.getX(), pos.getY() - a.getY(), pos.getZ() - a.getZ());
+        cube(source.getBuffer(Types.SIDES), poseStack.last().pose(), faces, (float) (pos.getX() - c[0]), (float) (pos.getY() - c[1]), (float) (pos.getZ() - c[2]));
         source.endBatch(Types.SIDES);
     }
 
@@ -119,12 +119,44 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
         current = EffectBlockEntity.Settings.DEFAULT;
         time = seconds(0.0F);
         MultiBufferSource.BufferSource source = DrawNow.now(buffers);
-        cube(source.getBuffer(Types.SIDES), poseStack.last().pose(), 63, 0, 0, 0);
+        cube(source.getBuffer(Types.SIDES), poseStack.last().pose(), 63, -0.5F, -0.5F, -0.5F);
         source.endBatch(Types.SIDES);
     }
 
-    /** The shown sides of a block {@code dx, dy, dz} from its group's anchor. */
-    private static void cube(VertexConsumer vc, Matrix4f m, int faces, int dx, int dy, int dz) {
+    // ---- the middle of each group (its effects are centred there), worked out now and then ----
+    private static final java.util.Map<Long, double[]> CENTRES = new java.util.HashMap<>();
+    private static long centresAt;
+
+    /** The middle of the block's group: the middle of the box round all its blocks. */
+    private static double[] centre(Level level, EffectBlockEntity be) {
+        long now = level.getGameTime();
+        if (now - centresAt > 40L || now < centresAt) {
+            CENTRES.clear();
+            centresAt = now;
+        }
+        if (be.group() == 0L) {
+            BlockPos p = be.getBlockPos();
+            return new double[] {p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5};
+        }
+        double[] c = CENTRES.get(be.group());
+        if (c == null) {
+            int x0 = Integer.MAX_VALUE, y0 = Integer.MAX_VALUE, z0 = Integer.MAX_VALUE, x1 = Integer.MIN_VALUE, y1 = Integer.MIN_VALUE, z1 = Integer.MIN_VALUE;
+            for (BlockPos p : com.example.skyblocks.EffectBlock.group(level, be.getBlockPos())) {
+                x0 = Math.min(x0, p.getX());
+                y0 = Math.min(y0, p.getY());
+                z0 = Math.min(z0, p.getZ());
+                x1 = Math.max(x1, p.getX());
+                y1 = Math.max(y1, p.getY());
+                z1 = Math.max(z1, p.getZ());
+            }
+            c = new double[] {(x0 + x1 + 1) / 2.0, (y0 + y1 + 1) / 2.0, (z0 + z1 + 1) / 2.0};
+            CENTRES.put(be.group(), c);
+        }
+        return c;
+    }
+
+    /** The shown sides of a block whose corner is {@code dx, dy, dz} from its group's middle. */
+    private static void cube(VertexConsumer vc, Matrix4f m, int faces, float dx, float dy, float dz) {
         for (Direction d : Direction.values()) {
             if ((faces & (1 << d.ordinal())) == 0) {
                 continue;
