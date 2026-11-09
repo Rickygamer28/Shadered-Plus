@@ -35,7 +35,7 @@ public class ArcadeRenderer implements BlockEntityRenderer<ArcadeBlockEntity> {
     /** The picture of someone's game, filled for each cabinet just before it's drawn (they're drawn at once). */
     private static net.minecraft.client.renderer.texture.DynamicTexture picture;
     /** The glass, in the upper half's pixels, its front facing north. */
-    private static final float X0 = 2.5F / 16, X1 = 13.5F / 16, Y0 = 1.0F + 2.0F / 16, Y1 = 1.0F + 11.0F / 16, Z = 3.5F / 16;
+    private static final float X0 = 2.5F / 16, X1 = 13.5F / 16, Y0 = 1.0F + 2.0F / 16, Y1 = 1.0F + 11.0F / 16, Z = 2.45F / 16;
     /** (as the shader's: how long each demo runs) */
     private static final float CYCLE = 18.0F;
 
@@ -120,7 +120,7 @@ public class ArcadeRenderer implements BlockEntityRenderer<ArcadeBlockEntity> {
             String top = best > 0 ? "HI " + best + "  " + be.bestBy(game) : (game == 0 ? "SNAKE" : game == 1 ? "BREAKOUT" : "TETRIS");
             text(poseStack, buffers, top, Y1 - 0.06F, 0xFFE9F27A, 0.0055F);
             if (((int) (time * 1.5F) & 1) == 0) {
-                text(poseStack, buffers, "INSERT COIN", Y0 + 0.035F, 0xFFFFFFFF, 0.0045F);
+                text(poseStack, buffers, "INSERT COIN", Y0 + 0.07F, 0xFFFFFFFF, 0.0045F);
             }
         }
         poseStack.popPose();
