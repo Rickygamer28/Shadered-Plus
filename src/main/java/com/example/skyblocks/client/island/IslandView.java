@@ -468,6 +468,22 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
         return clip == null || clip.test(new net.minecraft.world.phys.Vec3(x, y, z));
     }
 
+    /**
+     * Whether a whole block is shown: block entities are drawn whole (sky blocks, black holes ...) - one cut by the
+     * round cut would stick out past it, so only those all inside are drawn.
+     */
+    boolean wholeShown(int x, int y, int z) {
+        if (cutR > 0.0F) {
+            for (int c = 0; c < 4; c++) {
+                float dx = x + (c & 1) - cutX, dz = z + (c >> 1) - cutZ;
+                if (dx * dx + dz * dz > cutR * cutR) {
+                    return false;
+                }
+            }
+        }
+        return shown(x + 0.5, y + 0.5, z + 0.5);
+    }
+
     IslandMesh mesh() {
         if (mesh == null || meshGeneration != generation) {
             if (mesh != null) {
@@ -521,7 +537,7 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
         IslandRendering.island = this;
         try {
             blockEntities.removeIf(be -> (only == null || only.test(be.blockEntity()))
-                    && shown(be.x + 0.5, be.y + 0.5, be.z + 0.5) // (where it is on the island: its own position is far away)
+                    && wholeShown(be.x, be.y, be.z) // (where it is on the island: its own position is far away)
                     && !be.render(this, dispatcher, poseStack, buffer, partialTick));
         } finally {
             IslandRendering.inIsland = wasInIsland;
