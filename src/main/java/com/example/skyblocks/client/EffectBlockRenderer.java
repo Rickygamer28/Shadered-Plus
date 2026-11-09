@@ -33,6 +33,8 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
     static ShaderInstance shader;
     private static EffectBlockEntity.Settings current = EffectBlockEntity.Settings.DEFAULT;
     private static float time;
+    /** The size of the drawn block's group, in blocks (x, y, z). */
+    private static final float[] extent = {1.0F, 1.0F, 1.0F};
 
     @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
@@ -58,6 +60,7 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
         shader.safeGetUniform("Bright").set(s.brightness() / 100.0F);
         shader.safeGetUniform("Pixel").set(s.pixel() ? 1.0F : 0.0F);
         shader.safeGetUniform("Blur").set(s.blur() / 100.0F);
+        shader.safeGetUniform("Extent").set(extent[0], extent[1], extent[2]);
         shader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.5F, 1.0F));
         for (int i = 0; i < EffectBlockEntity.MAX_COLOURS; i++) {
             int c = s.colours()[i];
@@ -104,6 +107,9 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
             return;
         }
         double[] c = centre(level, be);
+        extent[0] = (float) c[3];
+        extent[1] = (float) c[4];
+        extent[2] = (float) c[5];
         current = be.settings();
         time = seconds(partialTick);
         MultiBufferSource.BufferSource source = DrawNow.now(buffers);
@@ -118,6 +124,7 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
         }
         current = EffectBlockEntity.Settings.DEFAULT;
         time = seconds(0.0F);
+        extent[0] = extent[1] = extent[2] = 1.0F;
         MultiBufferSource.BufferSource source = DrawNow.now(buffers);
         cube(source.getBuffer(Types.SIDES), poseStack.last().pose(), 63, -0.5F, -0.5F, -0.5F);
         source.endBatch(Types.SIDES);
@@ -136,7 +143,7 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
         }
         if (be.group() == 0L) {
             BlockPos p = be.getBlockPos();
-            return new double[] {p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5};
+            return new double[] {p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5, 1, 1, 1};
         }
         double[] c = CENTRES.get(be.group());
         if (c == null) {
@@ -149,7 +156,7 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
                 y1 = Math.max(y1, p.getY());
                 z1 = Math.max(z1, p.getZ());
             }
-            c = new double[] {(x0 + x1 + 1) / 2.0, (y0 + y1 + 1) / 2.0, (z0 + z1 + 1) / 2.0};
+            c = new double[] {(x0 + x1 + 1) / 2.0, (y0 + y1 + 1) / 2.0, (z0 + z1 + 1) / 2.0, x1 - x0 + 1, y1 - y0 + 1, z1 - z0 + 1};
             CENTRES.put(be.group(), c);
         }
         return c;

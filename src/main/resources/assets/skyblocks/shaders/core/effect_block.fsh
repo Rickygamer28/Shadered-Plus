@@ -17,6 +17,7 @@ uniform float Bright; // 0.1-1
 uniform float Pixel;  // 1: pixelated, 32 to a block
 uniform float Blur;   // 0: crisp changes from colour to colour, 1: fully blended
 uniform float Boost;  // the music's bass, 0-1
+uniform vec3 Extent;  // the size of the block's group, in blocks (x, y, z)
 uniform vec3 Col0;
 uniform vec3 Col1;
 uniform vec3 Col2;
@@ -271,20 +272,25 @@ vec3 ink(vec2 p, float t) {
     return c * mix(0.45, 1.0, dark) * relief(v, 0.5);
 }
 
-// the music: bars rising with the bass, half a block wide, glowing at their tops; the rest breathing with it
+// the music: bars rising with the bass from the foot of the group to its top, half a block wide, glowing at their
+// tops; the rest breathing with it. b: blocks from the group's middle along the side's axes
 vec3 music(vec2 b, float t) {
+    vec2 ext = side < 1.5 ? Extent.xz : side < 3.5 ? Extent.xy : Extent.zy;
+    float y = clamp(b.y / max(ext.y, 1.0) + 0.5, 0.0, 1.0); // (0 at the group's foot, 1 at its top)
     float cell = floor(b.x * 2.0);
     float h = hash(vec2(cell, 7.0));
-    float level = clamp(Boost * (0.55 + 0.45 * sin(t * 5.0 + h * TAU)) + 0.06 + 0.04 * sin(t * 1.7 + cell), 0.03, 1.0);
-    float y = fract(b.y);
-    float edge = max(fwidth(y) * 1.5, 0.004);
+    float h2 = hash(vec2(cell, 3.0));
+    float level = clamp(Boost * (0.45 + 0.4 * sin(t * (4.0 + 3.0 * h2) + h * TAU) + 0.25 * h2)
+            + 0.05 + 0.03 * sin(t * 1.7 + cell), 0.03, 1.0);
+    float edge = max(fwidth(y) * 1.5, 0.002);
     float lit = 1.0 - smoothstep(level - edge, level + edge, y);
-    vec3 c = pal(cell * 0.11 + y * 0.25 + t * 0.03, 0.0);
-    float topGlow = exp(-abs(y - level) * 30.0);
+    vec3 c = pal(y * 0.9 + cell * 0.04 + t * 0.02, 0.0);
+    float topGlow = exp(-abs(y - level) * 8.0 * max(ext.y, 1.0));
     float gx = fract(b.x * 2.0);
     float gap = smoothstep(0.04, 0.1, gx) * smoothstep(0.04, 0.1, 1.0 - gx);
-    vec3 bg = palSmooth(t * 0.05) * (0.05 + 0.15 * Boost);
-    return bg + c * gap * (lit * (0.7 + 0.5 * Boost) + topGlow * 0.9);
+    float rows = smoothstep(0.03, 0.08, fract(y * ext.y * 4.0)); // (lit in segments, like a meter)
+    vec3 bg = palSmooth(t * 0.05) * (0.04 + 0.12 * Boost);
+    return bg + c * gap * (lit * rows * (0.7 + 0.5 * Boost) + topGlow * 0.9);
 }
 
 void main() {
