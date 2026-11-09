@@ -435,5 +435,10 @@
   "screen.skyblocks.effect_block.blur": "Blur: %s%%",
   "screen.skyblocks.effect_block.red": "Red: %s",
   "screen.skyblocks.effect_block.green": "Green: %s",
-  "screen.skyblocks.effect_block.blue": "Blue: %s"
+  "screen.skyblocks.effect_block.blue": "Blue: %s",
+  "effect_block.skyblocks.fire": "Fire",
+  "effect_block.skyblocks.rain": "Digital Rain",
+  "effect_block.skyblocks.lava": "Lava Lamp",
+  "effect_block.skyblocks.warp": "Starfield Warp",
+  "effect_block.skyblocks.spectrum": "Spectrum"
 }

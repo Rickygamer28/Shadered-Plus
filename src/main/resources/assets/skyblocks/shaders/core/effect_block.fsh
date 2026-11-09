@@ -18,6 +18,10 @@ uniform float Pixel;  // 1: pixelated, 32 to a block
 uniform float Blur;   // 0: crisp changes from colour to colour, 1: fully blended
 uniform float Boost;  // the music's bass, 0-1
 uniform vec3 Extent;  // the size of the block's group, in blocks (x, y, z)
+uniform vec4 BandsA;  // the music's 16 bands, low to high, 0-1
+uniform vec4 BandsB;
+uniform vec4 BandsC;
+uniform vec4 BandsD;
 uniform vec3 Col0;
 uniform vec3 Col1;
 uniform vec3 Col2;
@@ -293,6 +297,123 @@ vec3 music(vec2 b, float t) {
     return bg + c * gap * (lit * rows * (0.7 + 0.5 * Boost) + topGlow * 0.9);
 }
 
+// ---- (more) ----
+
+// where on the side's group a point is: 0..1 across, 0..1 from its foot up; and the group's size along the side
+vec2 groupPlace(vec2 b, out vec2 ext) {
+    ext = side < 1.5 ? Extent.xz : side < 3.5 ? Extent.xy : Extent.zy;
+    ext = max(ext, vec2(1.0));
+    return clamp(b / ext + 0.5, 0.0, 1.0);
+}
+
+// flames rising from the foot of the group, hottest at the bottom: the colours from the coolest (the first) up
+vec3 fire(vec2 b, vec2 p, float t) {
+    vec2 ext;
+    vec2 g = groupPlace(b, ext);
+    float y = g.y * ext.y; // (blocks up from the foot)
+    vec2 q = vec2(p.x * 1.3, (y - t * 1.4) * 0.9);
+    float n = fbm(q + vec2(0.0, fbm(q * 0.7 + t * 0.2) * 0.8));
+    float heat = 1.25 - y / max(ext.y * 0.85, 1.0) + n * 0.75;
+    heat -= 0.25 * fbm(vec2(p.x * 0.6, t * 0.3)); // (some tongues taller than others)
+    float hot = clamp(heat, 0.0, 1.35);
+    vec3 c = vec3(0.0);
+    if (hot > 0.05) {
+        float x = clamp((hot - 0.05) / 1.0, 0.0, 0.999) * float(N);
+        int i = int(floor(x));
+        vec3 a = i == 0 ? colour(0) * 0.25 : colour(i - 1);
+        c = mix(a, colour(min(i, N - 1)), smoothstep(0.0, 1.0, fract(x)));
+        c += vec3(1.0, 0.9, 0.7) * smoothstep(1.0, 1.35, hot) * 0.6; // (white-hot at the heart)
+        c *= smoothstep(0.05, 0.3, hot);
+    }
+    return c;
+}
+
+// digital rain: columns of changing characters falling, a bright head and a fading tail
+vec3 rain(vec2 b, float t) {
+    float cols = 6.0;
+    vec2 cell = vec2(floor(b.x * cols), floor(b.y * cols));
+    vec2 f = fract(b * cols);
+    float col = cell.x + side * 31.0;
+    float speed = 1.5 + 2.5 * hash(vec2(col, 1.0));
+    float len = 6.0 + 14.0 * hash(vec2(col, 2.0));
+    float head = -t * speed * 3.0 + hash(vec2(col, 3.0)) * 50.0;
+    float d = mod(cell.y - head, len + 12.0);  // (how far above the head this cell is)
+    float trail = d < len ? 1.0 - d / len : 0.0;
+    // a 5 x 7 character, changing now and then
+    vec2 px = floor(f * vec2(5.0, 7.0));
+    float glyph = step(0.45, hash(px + cell * 7.3 + floor(t * (2.0 + 6.0 * hash(cell)))));
+    glyph *= step(0.5, f.x * 5.0 - floor(f.x * 5.0) + 0.3) * step(0.1, f.y) * step(f.x, 0.95);
+    vec3 c = colour(0) * glyph * trail * 0.9;
+    c += mix(colour(0), vec3(1.0), 0.75) * glyph * step(d, 0.99) * 1.2; // (the head, almost white)
+    return c + colour(0) * 0.03;
+}
+
+// a lava lamp: big soft blobs rising and sinking, joining and coming apart
+vec3 lava(vec2 b, float t) {
+    vec2 ext;
+    vec2 g = groupPlace(b, ext);
+    vec2 q = (g - 0.5) * ext; // (blocks from the middle)
+    float field = 0.0;
+    for (int k = 0; k < 7; k++) {
+        float fk = float(k);
+        float x = (hash(vec2(fk, 1.0)) - 0.5) * ext.x * 0.8 + sin(t * 0.21 + fk * 2.0) * 0.4;
+        float y = sin(t * (0.12 + 0.05 * hash(vec2(fk, 2.0))) + fk * 1.7) * ext.y * 0.42;
+        float r = (0.3 + 0.3 * hash(vec2(fk, 3.0))) * min(max(ext.x, ext.y), 4.0) * 0.32;
+        vec2 d = q - vec2(x, y);
+        field += r * r / (dot(d, d) + 0.02);
+    }
+    float edge = max(fwidth(field) * 1.5, 0.02);
+    float blob = smoothstep(1.0 - edge, 1.0 + edge, field);
+    vec3 wax = mix(colour(0), colour(1), clamp((field - 1.0) * 0.35, 0.0, 1.0));
+    vec3 liquid = colour(N > 2 ? 2 : 0) * 0.25 + colour(0) * 0.1 * clamp(field, 0.0, 1.0); // (lit by the wax)
+    float rim = smoothstep(1.0, 1.6, field) * (1.0 - smoothstep(1.6, 3.0, field));
+    return mix(liquid, wax * (0.85 + 0.25 * rim), blob);
+}
+
+// stars streaking out from the middle, as if flying through them
+vec3 warp(vec2 p, float t) {
+    vec3 c = colour(N - 1) * 0.05 * (0.6 + 0.4 * fbm(p * 0.4 + t * 0.05));
+    float r = length(p);
+    float a = atan(p.y, p.x);
+    for (int layer = 0; layer < 3; layer++) {
+        float fl = float(layer);
+        float slices = 70.0 + fl * 40.0;
+        float sa = floor(a / TAU * slices);
+        float h = hash(vec2(sa, fl));
+        float speed = 0.6 + h * 0.8;
+        float z = fract(h * 13.0 + t * speed * 0.25); // (how near: 0 far, 1 here)
+        float sr = z * z * 9.0;                         // (stars speed up as they come)
+        float len = 0.08 + z * z * 1.6;
+        float along = (r - sr) / len;
+        float streak = smoothstep(-1.0, 0.0, along) * (1.0 - smoothstep(0.0, 0.08, along));
+        float across = abs(fract(a / TAU * slices) - 0.5);
+        float thin = 1.0 - smoothstep(0.02, 0.12 + z * 0.1, across);
+        c += colour(int(h * 31.0)) * streak * thin * (0.4 + 1.4 * z);
+    }
+    return c;
+}
+
+// a real equaliser: the low notes on the left, the high on the right, each bar as loud as its part of the music
+vec3 spectrum(vec2 b, float t) {
+    vec2 ext;
+    vec2 g = groupPlace(b, ext);
+    float bars = clamp(floor(ext.x * 2.0), 4.0, 16.0);
+    float i = floor(g.x * bars);
+    float bi = floor(i / bars * 16.0);
+    vec4 sel = bi < 4.0 ? BandsA : bi < 8.0 ? BandsB : bi < 12.0 ? BandsC : BandsD;
+    float m = mod(bi, 4.0);
+    float level = clamp(m < 0.5 ? sel.x : m < 1.5 ? sel.y : m < 2.5 ? sel.z : sel.w, 0.02, 1.0);
+    float y = g.y;
+    float edge = max(fwidth(y) * 1.5, 0.002);
+    float lit = 1.0 - smoothstep(level - edge, level + edge, y);
+    float gx = fract(g.x * bars);
+    float gap = smoothstep(0.06, 0.14, gx) * smoothstep(0.06, 0.14, 1.0 - gx);
+    float rows = smoothstep(0.04, 0.1, fract(y * ext.y * 4.0));
+    vec3 c = pal(y * 0.9 + 0.001, 0.0);
+    float cap = exp(-abs(y - level) * 10.0 * ext.y);
+    return colour(0) * 0.03 + c * gap * (lit * rows + cap * 0.8);
+}
+
 void main() {
     C[0] = Col0; C[1] = Col1; C[2] = Col2; C[3] = Col3; C[4] = Col4; C[5] = Col5; C[6] = Col6; C[7] = Col7;
     N = int(clamp(Count, 1.0, 8.0) + 0.5);
@@ -318,7 +439,12 @@ void main() {
     else if (e == 9) c = gradient(p, t);
     else if (e == 10) c = aurora(p, t);
     else if (e == 11) c = music(b, t);
-    else c = ink(p, t);
+    else if (e == 12) c = ink(p, t);
+    else if (e == 13) c = fire(b, p, t);
+    else if (e == 14) c = rain(b, t);
+    else if (e == 15) c = lava(b, t);
+    else if (e == 16) c = warp(p, t);
+    else c = spectrum(b, t);
     // (a gentle curve: highlights roll off instead of clipping flat)
     c = max(c, 0.0);
     c = c / (1.0 + max(max(c.r, c.g), c.b) * 0.15) * 1.15;

@@ -61,6 +61,10 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
         shader.safeGetUniform("Pixel").set(s.pixel() ? 1.0F : 0.0F);
         shader.safeGetUniform("Blur").set(s.blur() / 100.0F);
         shader.safeGetUniform("Extent").set(extent[0], extent[1], extent[2]);
+        String[] bands = {"BandsA", "BandsB", "BandsC", "BandsD"};
+        for (int k = 0; k < 4; k++) { // (the music's 16 bands, for the spectrum)
+            shader.safeGetUniform(bands[k]).set(MusicReactor.band(4 * k), MusicReactor.band(4 * k + 1), MusicReactor.band(4 * k + 2), MusicReactor.band(4 * k + 3));
+        }
         shader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.5F, 1.0F));
         for (int i = 0; i < EffectBlockEntity.MAX_COLOURS; i++) {
             int c = s.colours()[i];

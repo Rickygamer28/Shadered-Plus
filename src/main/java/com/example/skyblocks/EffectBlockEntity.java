@@ -17,7 +17,8 @@ import org.jetbrains.annotations.Nullable;
 public class EffectBlockEntity extends BlockEntity {
     /** The effects, in the menu's order (the shader's numbers). */
     public static final String[] EFFECTS = {"swirl", "wave", "cycle", "breathe", "strobe", "sparkle", "plasma", "scanner",
-            "ripples", "gradient", "aurora", "music", "ink"};
+            "ripples", "gradient", "aurora", "music", "ink", "fire", "rain",
+            "lava", "warp", "spectrum"};
     public static final int MAX_COLOURS = 8;
     /** (a Balatro-like start: red, blue and a dark teal - then gold, green, purple, white, orange) */
     public static final int[] DEFAULT_COLOURS = {0xDE443B, 0x006BB4, 0x162325, 0xF2B53A, 0x3FBF6F, 0x8E5BD9, 0xF4F4F4, 0xFF7A1A};
