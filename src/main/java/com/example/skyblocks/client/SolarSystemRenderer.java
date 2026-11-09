@@ -124,6 +124,7 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
             lastLogged = time;
             SkyBlocksMod.LOGGER.info("Shadered+ render test: orrery at {} drawn - speed {}, years {}", be.getBlockPos().toShortString(), be.speed(), years);
         }
+        check(be, holo, time);
         // the hologram: dimmer in daylight
         float day = Math.max(0.0F, Math.min(1.0F, (level.getSkyDarken(partialTick) - 0.2F) / 0.8F));
         float sky = LightTexture.sky(light) / 15.0F;
@@ -136,6 +137,37 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
         source.endBatch(Types.DEPTH);
         if (!MirrorRenderer.isRenderingReflection()) {
             label(be, holo, poseStack, buffers, partialTick);
+        }
+    }
+
+    // ---- (test build: what's drawn, written to the log every two seconds - which orreries, at what speed, how far) ----
+    private static final java.util.Map<Integer, String> drawn = new java.util.LinkedHashMap<>();
+    private static final java.util.Map<Integer, Integer> drawnCount = new java.util.HashMap<>();
+    private static long lastReport;
+    private static int itemDraws, reports;
+
+    private static void check(SolarSystemBlockEntity be, boolean holo, long time) {
+        if (reports > 300) {
+            return;
+        }
+        int id = System.identityHashCode(be);
+        Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+        double dist = camera.getPosition().distanceTo(Vec3.atCenterOf(be.getBlockPos()));
+        drawn.put(id, String.format(java.util.Locale.ROOT, "%s at %s (#%x%s) speed %d, years %.4f, %.1f blocks away%s",
+                holo ? "planetarium" : "orrery", be.getBlockPos().toShortString(), id,
+                Minecraft.getInstance().level != null && Minecraft.getInstance().level.getBlockEntity(be.getBlockPos()) == be ? "" : ", NOT the world's",
+                be.speed(), years, dist, MirrorRenderer.isRenderingReflection() ? ", in a mirror" : ""));
+        drawnCount.merge(id, 1, Integer::sum);
+        if (time - lastReport >= 40L || time < lastReport) {
+            lastReport = time;
+            reports++;
+            for (java.util.Map.Entry<Integer, String> e : drawn.entrySet()) {
+                SkyBlocksMod.LOGGER.info("Shadered+ orrery check: {} - drawn {} times", e.getValue(), drawnCount.get(e.getKey()));
+            }
+            SkyBlocksMod.LOGGER.info("Shadered+ orrery check: {} as items", itemDraws);
+            drawn.clear();
+            drawnCount.clear();
+            itemDraws = 0;
         }
     }
 
@@ -158,6 +190,7 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
         spin = t;
         glow = 1.0F;
         itemMode = 1.0F;
+        itemDraws++;
         MultiBufferSource.BufferSource source = buffers instanceof MultiBufferSource.BufferSource s ? s : mc.renderBuffers().bufferSource();
         box(source.getBuffer(Types.MODEL), m, holo, 0, true, false);
         source.endBatch(Types.MODEL);
