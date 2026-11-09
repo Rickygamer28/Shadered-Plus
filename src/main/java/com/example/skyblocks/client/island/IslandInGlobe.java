@@ -20,12 +20,12 @@ public final class IslandInGlobe {
 
     /**
      * Draws {@code data} with its ground's middle at the pose's origin, fitted into {@code width} across and
-     * {@code height} up, and only what's inside the ball {@code clipR} across round {@code (0, clipY, 0)}; returns what
-     * to keep for next time.
+     * {@code height} up, and only what's inside a round column {@code clipR} out from its middle, up to {@code clipTop}
+     * (cut round, like the globe's base); returns what to keep for next time.
      */
     @Nullable
     public static Object draw(@Nullable Object kept, IslandData data, Level level, BlockPos at, PoseStack poseStack, MultiBufferSource buffer,
-                              float partialTick, float width, float height, float clipY, float clipR) {
+                              float partialTick, float width, float height, float clipTop, float clipR) {
         if (kept instanceof Broken b && b.source.equals(data)) {
             return kept;
         }
@@ -46,12 +46,12 @@ public final class IslandInGlobe {
         int across = Math.max(1, view.contentWidth());
         int up = Math.max(1, view.highestLayer() - view.lowestLayer() + 1);
         float scale = Math.min(width / across, height / up);
-        if (view.clip == null) { // (before its mesh is made: just the blocks and mobs inside the ball)
+        if (view.clip == null) { // (before its mesh is made: just the blocks and mobs inside the round column)
             final IslandView v = view;
             final float cx = v.contentCenterX(), cz = v.contentCenterZ(), low = v.lowestLayer();
             v.clip = p -> {
-                double dx = (p.x - cx) * scale, dy = (p.y - low) * scale - clipY, dz = (p.z - cz) * scale;
-                return dx * dx + dy * dy + dz * dz < clipR * clipR;
+                double dx = (p.x - cx) * scale, y = (p.y - low) * scale, dz = (p.z - cz) * scale;
+                return dx * dx + dz * dz < clipR * clipR && y < clipTop;
             };
         }
         IslandMesh mesh;

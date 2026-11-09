@@ -33,6 +33,8 @@ public class WeatherGlobeRenderer implements BlockEntityRenderer<WeatherGlobeBlo
     private static float time, sunY, rain, thunder, snowy, shake, flash, hasIsland, pass;
     /** Where the island's ground sits in the ball (the shader's earth is under it). */
     private static final float ISLAND_Y = 0.37F;
+    /** How far out from the middle the island goes (round): the ball's width at its ground, a little in. */
+    private static final float ISLAND_R = 0.245F;
     private static final float X0 = 0.14F, X1 = 0.86F, Y0 = 0.255F, Y1 = 0.975F;
 
     @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
@@ -119,9 +121,10 @@ public class WeatherGlobeRenderer implements BlockEntityRenderer<WeatherGlobeBlo
         if (island != null) {
             poseStack.pushPose();
             poseStack.translate(0.5F, ISLAND_Y, 0.5F);
-            // (as big as fits the ball's lower part; anything past the glass left out)
+            // (cut round like the base, as wide as the ball is where the island sits, and no higher than fits under the
+            // glass; the island as big as fills that)
             be.clientView = com.example.skyblocks.client.island.IslandInGlobe.draw(be.clientView, island, level, pos, poseStack, source, partialTick,
-                    0.54F, 0.56F, 0.615F - ISLAND_Y, 0.345F);
+                    2.0F * ISLAND_R, 0.86F - ISLAND_Y, 0.86F - ISLAND_Y, ISLAND_R);
             poseStack.popPose();
             source.endBatch(); // (the island before the glass over it)
         }
