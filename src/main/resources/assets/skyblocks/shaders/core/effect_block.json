@@ -264,6 +264,14 @@
                 0.0,
                 0.0
             ]
+        },
+        {
+            "name": "Glass",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
+            ]
         }
     ]
 }

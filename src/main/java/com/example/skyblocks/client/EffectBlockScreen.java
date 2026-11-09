@@ -19,7 +19,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 public class EffectBlockScreen extends Screen {
     private static final int PANEL_W = 276;
-    private static final int PANEL_H = 254;
+    private static final int PANEL_H = 278;
 
     private final BlockPos pos;
     private int effect, count, speed, size, brightness, blur;
@@ -34,6 +34,8 @@ public class EffectBlockScreen extends Screen {
     private final Slider[] rgb = new Slider[3];
     private boolean dirty;
     private int sinceSent;
+    /** Saving: the next preset button clicked keeps the current look. */
+    private boolean saving;
 
     public EffectBlockScreen(BlockPos pos, EffectBlockEntity.Settings s) {
         super(Component.translatable("screen.skyblocks.effect_block"));
@@ -142,6 +144,34 @@ public class EffectBlockScreen extends Screen {
             changed();
         }).bounds(l + 12, t + 226, 124, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose()).bounds(l + 188, t + 226, 76, 20).build());
+        // the presets: click one to use it; "Save", then one, to keep this look there
+        addRenderableWidget(Button.builder(saveLabel(), b -> {
+            saving = !saving;
+            b.setMessage(saveLabel());
+        }).bounds(l + 12, t + 250, 48, 20).build());
+        for (int i = 0; i < EffectPresets.SLOTS; i++) {
+            final int slot = i;
+            addRenderableWidget(new Button(l + 64 + i * 25, t + 250, 22, 20, Component.empty(), b -> preset(slot),
+                    s -> Component.literal("preset " + (slot + 1))) {
+                @Override
+                protected void renderWidget(GuiGraphics g, int mx, int my, float pt) {
+                    super.renderWidget(g, mx, my, pt);
+                    EffectBlockEntity.Settings p = EffectPresets.get(slot);
+                    if (p == null) {
+                        g.drawCenteredString(font, Integer.toString(slot + 1), getX() + width / 2, getY() + 6, 0x808080);
+                        return;
+                    }
+                    int n = Math.min(p.count(), 4); // (its first colours, as stripes)
+                    for (int k = 0; k < n; k++) {
+                        int x0 = getX() + 3 + k * (width - 6) / n, x1 = getX() + 3 + (k + 1) * (width - 6) / n;
+                        g.fill(x0, getY() + 3, x1, getY() + height - 3, 0xFF000000 | p.colours()[k]);
+                    }
+                    if (saving) {
+                        g.renderOutline(getX() + 1, getY() + 1, width - 2, height - 2, 0xFFFFC040);
+                    }
+                }
+            }).setTooltip(net.minecraft.client.gui.components.Tooltip.create(presetTip(slot)));
+        }
     }
 
     /** A slider for a number from {@code min} to {@code max}, in steps. */
@@ -185,6 +215,45 @@ public class EffectBlockScreen extends Screen {
     private Component effectLabel() {
         return Component.translatable("screen.skyblocks.effect_block.effect",
                 Component.translatable("effect_block.skyblocks." + EffectBlockEntity.EFFECTS[effect]));
+    }
+
+    private Component saveLabel() {
+        return Component.translatable(saving ? "screen.skyblocks.effect_block.saving" : "screen.skyblocks.effect_block.save");
+    }
+
+    private Component presetTip(int slot) {
+        EffectBlockEntity.Settings p = EffectPresets.get(slot);
+        return p == null ? Component.translatable("screen.skyblocks.effect_block.preset_empty")
+                : Component.translatable("effect_block.skyblocks." + EffectBlockEntity.EFFECTS[p.effect()]);
+    }
+
+    /** A preset button: keeps this look there (saving), or puts its look on the block. */
+    private void preset(int slot) {
+        if (saving) {
+            EffectPresets.set(slot, current());
+            saving = false;
+            rebuildWidgets();
+            return;
+        }
+        EffectBlockEntity.Settings p = EffectPresets.get(slot);
+        if (p == null) {
+            return;
+        }
+        effect = p.effect();
+        count = p.count();
+        System.arraycopy(p.colours(), 0, colours, 0, Math.min(colours.length, p.colours().length));
+        speed = p.speed();
+        size = p.size();
+        brightness = p.brightness();
+        blur = p.blur();
+        pixel = p.pixel();
+        sel = 0;
+        changed();
+        rebuildWidgets();
+    }
+
+    private EffectBlockEntity.Settings current() {
+        return new EffectBlockEntity.Settings(effect, count, colours, speed, size, brightness, pixel, blur);
     }
 
     private Component pixelLabel() {
@@ -244,8 +313,7 @@ public class EffectBlockScreen extends Screen {
     private void send() {
         dirty = false;
         sinceSent = 0;
-        PacketDistributor.sendToServer(EffectBlockPayload.of(pos,
-                new EffectBlockEntity.Settings(effect, count, colours, speed, size, brightness, pixel, blur)));
+        PacketDistributor.sendToServer(EffectBlockPayload.of(pos, current()));
     }
 
     @Override

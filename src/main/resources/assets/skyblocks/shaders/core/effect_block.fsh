@@ -18,6 +18,7 @@ uniform float Pixel;  // 1: pixelated, 32 to a block
 uniform float Blur;   // 0: crisp changes from colour to colour, 1: fully blended
 uniform float Boost;  // the music's bass, 0-1
 uniform vec3 Extent;  // the size of the block's group, in blocks (x, y, z)
+uniform float Glass;  // 1: effect glass - the dark parts clear, the bright ones glowing in it
 uniform vec3 Bg;      // the background, behind the effects that light only part of the side
 uniform vec4 BandsA;  // the music's 16 bands, low to high, 0-1
 uniform vec4 BandsB;
@@ -477,5 +478,12 @@ void main() {
     }
     // (a gentle curve: highlights roll off instead of clipping flat)
     c = c / (1.0 + max(max(c.r, c.g), c.b) * 0.15) * 1.15;
-    fragColor = vec4(clamp(c, 0.0, 1.0) * Bright * shade, 1.0);
+    vec3 outc = clamp(c, 0.0, 1.0) * Bright * shade;
+    float alpha = 1.0;
+    if (Glass > 0.5) {
+        float lum = max(max(c.r, c.g), c.b);
+        alpha = clamp(0.18 + lum * 0.8, 0.18, 0.92);
+        outc += vec3(0.04); // (a little glassy sheen)
+    }
+    fragColor = vec4(outc, alpha);
 }

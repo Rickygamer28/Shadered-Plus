@@ -442,5 +442,9 @@
   "effect_block.skyblocks.warp": "Starfield Warp",
   "effect_block.skyblocks.spectrum": "Spectrum",
   "itemGroup.skyblocks.shadered_plus": "Shadered+",
-  "screen.skyblocks.effect_block.background": "Background"
+  "screen.skyblocks.effect_block.background": "Background",
+  "screen.skyblocks.effect_block.save": "Save",
+  "screen.skyblocks.effect_block.saving": "Save to...",
+  "screen.skyblocks.effect_block.preset_empty": "Empty: click Save, then here, to keep this look",
+  "block.skyblocks.effect_glass": "Effect Glass"
 }

@@ -53,7 +53,7 @@ public class EffectBlock extends BaseEntityBlock {
 
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-        if (stack.getItem() instanceof EffectBlockItem) {
+        if (stack.getItem() instanceof EffectBlockItem) { // (effect blocks and effect glass)
             return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION; // (placing another against it: it joins)
         }
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;

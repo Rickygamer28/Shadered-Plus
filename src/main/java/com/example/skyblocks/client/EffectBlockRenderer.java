@@ -46,10 +46,18 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
         }
     }
 
+    private static void setUpGlass() {
+        setUp();
+        if (shader != null) {
+            shader.safeGetUniform("Glass").set(1.0F);
+        }
+    }
+
     private static void setUp() {
         if (shader == null) {
             return;
         }
+        shader.safeGetUniform("Glass").set(0.0F);
         EffectBlockEntity.Settings s = current;
         MusicReactor.tick();
         shader.safeGetUniform("Time").set(time);
@@ -81,6 +89,15 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
                         .setTexturingState(new TexturingStateShard("skyblocks_effect_block_settings", EffectBlockRenderer::setUp, () -> {}))
                         .setCullState(NO_CULL)
                         .createCompositeState(false));
+        /** Effect Glass: the same, see-through - blended over what's behind, not hiding it. */
+        static final RenderType GLASS = create("skyblocks_effect_glass", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 1024,
+                false, true, CompositeState.builder()
+                        .setShaderState(new ShaderStateShard(() -> shader))
+                        .setTexturingState(new TexturingStateShard("skyblocks_effect_glass_settings", EffectBlockRenderer::setUpGlass, () -> {}))
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .setWriteMaskState(COLOR_WRITE)
+                        .setCullState(NO_CULL)
+                        .createCompositeState(false));
 
         private Types() {
             super("", DefaultVertexFormat.POSITION, VertexFormat.Mode.QUADS, 0, false, false, () -> {}, () -> {});
@@ -103,9 +120,14 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
         }
         BlockPos pos = be.getBlockPos();
         BlockState state = be.getBlockState();
+        boolean glass = state.getBlock() instanceof com.example.skyblocks.EffectGlassBlock;
         int faces = 0;
         for (Direction d : Direction.values()) {
-            if (Block.shouldRenderFace(state, level, pos, d, pos.relative(d))) {
+            BlockPos n = pos.relative(d);
+            BlockState ns = level.getBlockState(n);
+            // (glass: no side against other effect blocks or glass, or a solid block; a block: as the game would)
+            if (glass ? !(ns.getBlock() instanceof com.example.skyblocks.EffectBlock) && !ns.isSolidRender(level, n)
+                    : Block.shouldRenderFace(state, level, pos, d, n)) {
                 faces |= 1 << d.ordinal();
             }
         }
@@ -119,8 +141,9 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
         current = be.settings();
         time = seconds(partialTick);
         MultiBufferSource.BufferSource source = DrawNow.now(buffers);
-        cube(source.getBuffer(Types.SIDES), poseStack.last().pose(), faces, (float) (pos.getX() - c[0]), (float) (pos.getY() - c[1]), (float) (pos.getZ() - c[2]));
-        source.endBatch(Types.SIDES);
+        RenderType type = glass ? Types.GLASS : Types.SIDES;
+        cube(source.getBuffer(type), poseStack.last().pose(), faces, (float) (pos.getX() - c[0]), (float) (pos.getY() - c[1]), (float) (pos.getZ() - c[2]));
+        source.endBatch(type);
     }
 
     /** As an item: every side, its default look. */

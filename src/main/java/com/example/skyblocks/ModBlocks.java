@@ -162,6 +162,12 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(1.0F, 6.0F).sound(SoundType.GLASS).lightLevel(state -> 12)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_MAGENTA));
 
+    /** Effect Glass: the effect block, see-through (EffectGlassBlock). */
+    public static final DeferredBlock<EffectGlassBlock> EFFECT_GLASS = BLOCKS.registerBlock("effect_glass", EffectGlassBlock::new,
+            BlockBehaviour.Properties.of().strength(0.6F).sound(SoundType.GLASS).noOcclusion().lightLevel(state -> 12)
+                    .isValidSpawn((s, l, p, e) -> false).isRedstoneConductor((s, l, p) -> false).isSuffocating((s, l, p) -> false)
+                    .isViewBlocking((s, l, p) -> false).mapColor(net.minecraft.world.level.material.MapColor.NONE));
+
     /** A kaleidoscope: coloured glass turning in windows on every side of a brass frame (KaleidoscopeBlock). */
     public static final DeferredBlock<KaleidoscopeBlock> KALEIDOSCOPE = BLOCKS.registerBlock("kaleidoscope", KaleidoscopeBlock::new,
             BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.COPPER).lightLevel(state -> 10)

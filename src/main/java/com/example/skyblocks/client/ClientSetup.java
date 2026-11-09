@@ -217,7 +217,7 @@ public final class ClientSetup {
                 }
                 return renderer;
             }
-        }, ModItems.EFFECT_BLOCK.get());
+        }, ModItems.EFFECT_BLOCK.get(), ModItems.EFFECT_GLASS.get());
         for (boolean bigHole : new boolean[] {false, true}) {
             event.registerItem(new IClientItemExtensions() {
                 private BlackHoleItemRenderer renderer;
