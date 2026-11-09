@@ -429,6 +429,11 @@ float depthOf(vec3 p) {
     return clamp(c.z / c.w * 0.5 + 0.5, 0.0, 1.0);
 }
 
+/** A depth never broken (else where the box is). */
+float safeDepth(float d) {
+    return isnan(d) || isinf(d) ? gl_FragCoord.z : clamp(d, 0.0, 1.0);
+}
+
 void main() {
     gl_FragDepth = gl_FragCoord.z;
     Dome = settings.x;
@@ -502,7 +507,7 @@ void main() {
     }
     if (DepthOnly > 0.5) { // (the depth pass: the solid things only)
         if (hit < 0 || hit == 15 || ItemMode > 0.5) discard;
-        gl_FragDepth = depthOf(ro + rd * hitT);
+        gl_FragDepth = safeDepth(depthOf(ro + rd * hitT));
         fragColor = vec4(0.0);
         return;
     }
@@ -661,15 +666,17 @@ void main() {
         vec3 pe = ro + rd * tIn;
         vec3 n = normalize(pe - gC);
         if (dome && pe.y > 0.31 && length(ro - gC) > domeR) { // (the glass, seen from outside)
-            float fres = 0.04 + 0.5 * pow(1.0 - abs(dot(n, rd)), 4.0);
+            float fres = 0.04 + 0.5 * pow(max(1.0 - abs(dot(n, rd)), 0.0), 4.0);
             vec3 rf = reflect(rd, n);
             float spec = pow(max(dot(rf, normalize(vec3(0.4, 1.0, 0.3))), 0.0), 80.0);
             col = col * (1.0 - fres) + vec3(0.55, 0.7, 0.85) * fres + vec3(spec) * 0.6;
             alpha = clamp(alpha + fres + spec * 0.5, 0.0, 1.0);
         }
+        // (never a broken value: some graphics cards turn one into a black screen through blending)
+        if (any(isnan(col)) || any(isinf(col)) || isnan(alpha) || isinf(alpha)) discard;
         if (alpha < 0.004) discard; // (no dome: nothing here)
         // (the depth of a planet hit, else of the dome's near side: the world in front of it hides it, not the box's)
-        if (ItemMode < 0.5) gl_FragDepth = depthOf(ro + rd * (hit >= 0 ? hitT : max(tIn, 0.1)));
+        if (ItemMode < 0.5) gl_FragDepth = safeDepth(depthOf(ro + rd * (hit >= 0 ? hitT : max(tIn, 0.1))));
         fragColor = vec4(clamp(col, 0.0, 1.0), clamp(alpha, 0.0, 1.0));
         return;
     }
@@ -677,7 +684,8 @@ void main() {
     // the orrery: solid things opaque, glows over them
     col = col + add;
     alpha = clamp(alpha + addA, 0.0, 1.0);
+    if (any(isnan(col)) || any(isinf(col)) || isnan(alpha) || isinf(alpha)) discard;
     if (alpha < 0.004) discard;
-    if (ItemMode < 0.5) gl_FragDepth = depthOf(ro + rd * (hit >= 0 ? hitT : max(tIn, 0.1)));
-    fragColor = vec4(clamp(col, 0.0, 1.0), alpha);
+    if (ItemMode < 0.5) gl_FragDepth = safeDepth(depthOf(ro + rd * (hit >= 0 ? hitT : max(tIn, 0.1))));
+    fragColor = vec4(clamp(col, 0.0, 1.0), clamp(alpha, 0.0, 1.0));
 }

@@ -69,7 +69,10 @@ public final class ViewState {
     /** The shader, with the turn now in the poses as its ViewRot (for a render type's shader state). */
     static ShaderInstance upload(ShaderInstance shader) {
         if (shader != null) {
-            shader.safeGetUniform("ViewRot").set(current());
+            Matrix4f m = current();
+            float det = m.determinant();
+            // (never a broken turn: the shaders invert it - NaN in a shader can turn into a black screen through blending)
+            shader.safeGetUniform("ViewRot").set(Float.isFinite(det) && Math.abs(det) > 1.0e-4F ? m : IDENTITY);
         }
         return shader;
     }
