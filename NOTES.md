@@ -151,3 +151,13 @@
 - Screens: 1.20.1 Screen.render doesn't draw the background (render calls renderBackground(g)); 3-argument
   mouseScrolled; TextureAtlasSprite.getU/getV take 0..16.
 - Hologram players: skin from SkinManager.getInsecureSkinInformation + registerTexture (DefaultPlayerSkin otherwise).
+
+## Shader packs over Shadered+'s own-shader blocks (9 Nov 2026)
+- 1.21.1 (verified in CI with Iris 1.8.12 + Complementary r5.9.3): client/iris/IrisDefer notes down our block entities
+  with shaders of their own (BlockEntityTimingMixin cancels them in the pack's pass) and draws them at
+  AFTER_BLOCK_ENTITIES into IrisIslandTarget's cat target, keeping depth (DeferDepthMixin), laid over the pack's image.
+  Black holes bend the pack's finished image of the last frame (IrisIslandTarget.lastFinalTexture). Tesla coils left
+  to the pack. With Iris and no pack (Iris's buffers hold every draw to the end): DrawNow gives our own immediate source.
+- 1.20.1: same code ported; CI can't check it - Oculus 1.8.0 with Complementary (r5.9.3 asks for unknown variables;
+  r5.2.1 too) draws no terrain under llvmpipe, with or without IrisDefer (SKYBLOCKS_NO_DEFER=1 turns it off). Needs a
+  real-GPU test by the user.

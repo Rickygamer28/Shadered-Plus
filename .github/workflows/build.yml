@@ -124,7 +124,8 @@ jobs:
           PACK=$(basename "$PACK_URL" | python3 -c "import sys,urllib.parse; print(urllib.parse.unquote(sys.stdin.read().strip()))")
           mkdir -p run/shaderpacks run/config && curl -sL "$PACK_URL" -o "run/shaderpacks/$PACK"
           echo "::notice::shader pack $PACK ($(stat -c %s "run/shaderpacks/$PACK" 2>/dev/null) bytes)"
-          for v in plain embeddium shaders shadersbase; do
+          # (shaders / shadersbase: Oculus with a pack - under CI's software OpenGL its terrain never draws, so not run by default)
+          for v in plain embeddium; do
             EXTRA=""; [ $v != plain ] && EXTRA="-PwithEmbeddium"
             NODEFER=""; MAXS=9999; [ $v = shadersbase ] && NODEFER=1 && MAXS=8
             rm -f run/config/oculus.properties run/config/iris.properties
