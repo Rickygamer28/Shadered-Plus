@@ -43,14 +43,15 @@ public final class IslandInGlobe {
                 return new Broken(data);
             }
         }
-        int across = Math.max(1, view.contentWidth());
+        // (its narrower way across fills the circle: cut round all the way, no straight side where it ends)
+        int across = Math.max(1, Math.min(view.contentWidth(), view.contentDepth()));
         int up = Math.max(1, view.highestLayer() - view.lowestLayer() + 1);
         float scale = Math.min(width / across, height / up);
         if (view.clip == null) { // (before its mesh is made: cut round - the blocks, the mobs and block entities in the circle)
             final IslandView v = view;
             v.cutX = v.contentCenterX();
             v.cutZ = v.contentCenterZ();
-            v.cutR = clipR / scale;
+            v.cutR = Math.min(clipR / scale, across / 2.0F); // (a tall island, shrunk to fit under the glass: still round)
             v.cutTop = v.lowestLayer() + clipTop / scale;
             final float cx = v.cutX, cz = v.cutZ, r = v.cutR, top = v.cutTop;
             v.clip = p -> (p.x - cx) * (p.x - cx) + (p.z - cz) * (p.z - cz) < r * r && p.y < top;
