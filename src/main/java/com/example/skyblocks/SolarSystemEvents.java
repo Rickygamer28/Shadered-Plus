@@ -23,6 +23,9 @@ import org.jetbrains.annotations.Nullable;
 public final class SolarSystemEvents {
     private SolarSystemEvents() {}
 
+    /** (render test: what the clicks found, logged) */
+    public static boolean trace;
+
     @SubscribeEvent
     public static void onUseOnBlock(PlayerInteractEvent.RightClickBlock event) {
         ItemStack stack = event.getItemStack();
@@ -33,6 +36,9 @@ public final class SolarSystemEvents {
         }
         double block = event.getHitVec().getLocation().distanceTo(event.getEntity().getEyePosition());
         BlockPos pos = aimed(event.getLevel(), event.getEntity(), block, !tool);
+        if (trace) {
+            SkyBlocksMod.LOGGER.info("Shadered+ render test: click on {} ({}) - the model in front of it: {}", event.getPos(), event.getLevel().isClientSide ? "client" : "server", pos);
+        }
         if (pos != null) {
             if (tool) {
                 SolarSystemBlock.useTool(stack, event.getLevel(), pos, event.getEntity());
@@ -51,6 +57,9 @@ public final class SolarSystemEvents {
             return;
         }
         BlockPos pos = aimed(event.getLevel(), event.getEntity(), Double.MAX_VALUE, true);
+        if (trace) {
+            SkyBlocksMod.LOGGER.info("Shadered+ render test: empty-hand click at nothing - the model pointed at: {}", pos);
+        }
         if (pos != null) {
             com.example.skyblocks.SkyBlocksMod.NETWORK.sendToServer(new SolarSystemClickPayload(pos));
         }
@@ -59,6 +68,9 @@ public final class SolarSystemEvents {
     /** (server) A player clicked a model at nothing behind it: checked, then as if they'd clicked its block. */
     public static void clicked(net.minecraft.server.level.ServerPlayer player, BlockPos pos) {
         Level level = player.level();
+        if (trace) {
+            SkyBlocksMod.LOGGER.info("Shadered+ render test: the server heard of a click on the model at {}: it finds {}", pos, aimed(level, player, Double.MAX_VALUE, true));
+        }
         if (level.isLoaded(pos) && player.getMainHandItem().isEmpty() && aimed(level, player, Double.MAX_VALUE, true) != null
                 && pos.equals(aimed(level, player, Double.MAX_VALUE, true))) {
             SolarSystemBlock.use(level, pos, player);
