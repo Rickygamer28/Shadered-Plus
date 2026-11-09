@@ -40,6 +40,7 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
     // the model being drawn now (for the uniforms)
     private static float years, spin, glow = 1.0F, itemMode;
     static final Matrix4f ITEM_INV = new Matrix4f();
+    private static long lastLogged = -1L;
 
     @Mod.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
@@ -119,6 +120,10 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
         years = (float) (be.years(time, partialTick) % 100000.0);
         spin = (float) (be.spin(time, partialTick) % 36000.0);
         itemMode = 0.0F;
+        if (RenderTest.ON && !holo && time % 20L == 0L && time != lastLogged) { // (render test: the speed it's drawn at)
+            lastLogged = time;
+            SkyBlocksMod.LOGGER.info("Shadered+ render test: orrery at {} drawn - speed {}, years {}", be.getBlockPos().toShortString(), be.speed(), years);
+        }
         // the hologram: dimmer in daylight
         float day = Math.max(0.0F, Math.min(1.0F, (level.getSkyDarken(partialTick) - 0.2F) / 0.8F));
         float sky = LightTexture.sky(light) / 15.0F;

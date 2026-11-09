@@ -31,7 +31,7 @@
     "SkyblockRenderPassMixin",
     "SkyPassMixin",
     "SkyRenderTypeDrawMixin",
-    "SkyboxSeamMixin"
+    "SkyboxSeamMixin", "ShaderBlendResetMixin"
   ],
   "injectors": {
     "defaultRequire": 1
