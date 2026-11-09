@@ -75,7 +75,7 @@ public class SkyBlocksMod {
         java.util.function.Consumer<net.minecraft.world.level.ItemLike> add = i -> out.accept(new net.minecraft.world.item.ItemStack(i));
         // lights and decoration
         for (net.minecraft.world.level.ItemLike i : new net.minecraft.world.level.ItemLike[] {ModItems.EFFECT_BLOCK.get(), ModItems.EFFECT_GLASS.get(), ModItems.NEON_SIGN.get(),
-                ModItems.LAVA_LAMP.get(), ModItems.BIG_LAVA_LAMP.get(), ModItems.PLASMA_BALL.get(), ModItems.TESLA_COIL.get(),
+                ModItems.LAVA_LAMP.get(), ModItems.BIG_LAVA_LAMP.get(), ModItems.LAVA_PILLAR.get(), ModItems.PLASMA_BALL.get(), ModItems.TESLA_COIL.get(),
                 ModItems.KALEIDOSCOPE.get(), ModItems.HOLOGRAM_PROJECTOR.get(), ModItems.GALAXY_PROJECTOR.get(), ModItems.WEATHER_GLOBE.get(),
                 // music and parties
                 ModItems.DANCE_FLOOR.get(), ModItems.DISCO_BALL.get(), ModItems.FOG_MACHINE.get(), ModItems.SPEAKER.get(),

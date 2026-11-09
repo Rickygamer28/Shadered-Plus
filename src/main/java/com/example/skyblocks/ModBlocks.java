@@ -173,6 +173,11 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.GLASS).noOcclusion().lightLevel(state -> 3)
                     .mapColor(net.minecraft.world.level.material.MapColor.WOOD));
 
+    /** A lava lamp pillar: stack them for one tall lamp (LavaPillarBlock). */
+    public static final DeferredBlock<LavaPillarBlock> LAVA_PILLAR = BLOCKS.registerBlock("lava_pillar", LavaPillarBlock::new,
+            BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.GLASS).noOcclusion().lightLevel(state -> 11)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_ORANGE));
+
     /** A kaleidoscope: coloured glass turning in windows on every side of a brass frame (KaleidoscopeBlock). */
     public static final DeferredBlock<KaleidoscopeBlock> KALEIDOSCOPE = BLOCKS.registerBlock("kaleidoscope", KaleidoscopeBlock::new,
             BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.COPPER).lightLevel(state -> 10)

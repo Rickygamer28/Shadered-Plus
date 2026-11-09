@@ -113,6 +113,7 @@ public final class ModItems {
     public static final DeferredItem<EffectBlockItem> EFFECT_GLASS = ITEMS.register("effect_glass",
             () -> new EffectBlockItem(ModBlocks.EFFECT_GLASS.get(), new Item.Properties()));
     public static final DeferredItem<BlockItem> WEATHER_GLOBE = ITEMS.registerSimpleBlockItem("weather_globe", ModBlocks.WEATHER_GLOBE);
+    public static final DeferredItem<BlockItem> LAVA_PILLAR = ITEMS.registerSimpleBlockItem("lava_pillar", ModBlocks.LAVA_PILLAR);
     public static final DeferredItem<BlockItem> KALEIDOSCOPE = ITEMS.registerSimpleBlockItem("kaleidoscope", ModBlocks.KALEIDOSCOPE);
     public static final DeferredItem<BlockItem> ORRERY = ITEMS.registerSimpleBlockItem("orrery", ModBlocks.ORRERY);
     public static final DeferredItem<BlockItem> PLANETARIUM = ITEMS.registerSimpleBlockItem("planetarium", ModBlocks.PLANETARIUM);

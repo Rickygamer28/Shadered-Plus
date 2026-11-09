@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "part=single": {
+      "model": "skyblocks:block/lava_pillar_single"
+    },
+    "part=bottom": {
+      "model": "skyblocks:block/lava_pillar_bottom"
+    },
+    "part=middle": {
+      "model": "skyblocks:block/lava_pillar_middle"
+    },
+    "part=top": {
+      "model": "skyblocks:block/lava_pillar_top"
+    }
+  }
+}

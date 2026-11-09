@@ -448,5 +448,7 @@
   "screen.skyblocks.effect_block.preset_empty": "Empty: click Save, then here, to keep this look",
   "block.skyblocks.effect_glass": "Effect Glass",
   "block.skyblocks.weather_globe": "Weather Globe",
-  "tooltip.skyblocks.weather_globe": "Shows the weather and the time of day outside. Right-click: shake it. With a Sky Island: that island inside. Sneak + right-click: the island back"
+  "tooltip.skyblocks.weather_globe": "Shows the weather and the time of day outside. Right-click: shake it. With a Sky Island: that island inside. Sneak + right-click: the island back",
+  "block.skyblocks.lava_pillar": "Lava Lamp Pillar",
+  "tooltip.skyblocks.lava_pillar": "Stack them for one tall lamp, the wax rising and sinking the whole height. A dye: the wax's colour; sneak + a dye: the liquid's"
 }
