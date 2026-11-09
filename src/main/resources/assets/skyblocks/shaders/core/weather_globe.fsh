@@ -177,7 +177,9 @@ void main() {
     float t0 = max(s.x, 0.0);
     if (Pass < 0.5) {
         if (gl_FrontFacing) discard; // (the far sides only: once a pixel)
-        vec3 c = skyColour(rd);
+        // (the sky painted on the inside of the ball: where the look meets its far side, not the way it looks - so the
+        // stars and the moon stay put on the globe as you walk round it)
+        vec3 c = skyColour(normalize(ro + rd * s.y - C));
         float tHit = s.y;
         if (HasIsland < 0.5) {
             float id; vec3 n;
