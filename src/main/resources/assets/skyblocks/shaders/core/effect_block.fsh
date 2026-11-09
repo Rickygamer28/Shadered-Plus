@@ -436,9 +436,14 @@ vec3 spectrum(vec2 b, float t) {
 // what's behind the effect here: the colour, or the block's texture - one to each block of the side
 vec3 background(vec2 b) {
     if (HasBgBlock < 0.5) return Bg;
-    vec2 f = vec2(fract(b.x), 1.0 - fract(b.y));
+    // (from the group's corner, not its middle: whole blocks, lined up with the real ones)
+    int sd = int(side + 0.5);
+    vec2 hf = 0.5 * (sd <= 1 ? Extent.xz : sd <= 3 ? Extent.xy : Extent.zy);
+    vec2 f = fract(b + hf);
+    f = vec2(f.x, 1.0 - f.y);
     f = (floor(f * 16.0) + 0.5) / 16.0; // (its own pixels, crisp)
-    return textureLod(Sampler0, mix(BgUV.xy, BgUV.zw, f), 0.0).rgb * BgTint;
+    vec4 tex = textureLod(Sampler0, mix(BgUV.xy, BgUV.zw, f), 0.0);
+    return mix(Bg, tex.rgb * BgTint, tex.a); // (see-through blocks, glass: the colour behind them)
 }
 
 vec3 effectAt(vec2 b, int e, float t) {
