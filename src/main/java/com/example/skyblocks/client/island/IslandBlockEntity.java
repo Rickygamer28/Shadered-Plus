@@ -11,7 +11,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 /** A copied block entity (chest, bed, sign, banner, head...) inside a Sky Island, drawn by its normal renderer. */
 final class IslandBlockEntity {
     private final BlockEntity blockEntity;
-    private final int x, y, z;
+    final int x, y, z; // (its place on the island)
     /** Shulker boxes: the real facing (the copy itself faces up). */
     @org.jetbrains.annotations.Nullable
     private final Direction turn;

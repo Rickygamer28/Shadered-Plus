@@ -521,7 +521,7 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
         IslandRendering.island = this;
         try {
             blockEntities.removeIf(be -> (only == null || only.test(be.blockEntity()))
-                    && shown(be.blockEntity().getBlockPos().getX() + 0.5, be.blockEntity().getBlockPos().getY() + 0.5, be.blockEntity().getBlockPos().getZ() + 0.5)
+                    && shown(be.x + 0.5, be.y + 0.5, be.z + 0.5) // (where it is on the island: its own position is far away)
                     && !be.render(this, dispatcher, poseStack, buffer, partialTick));
         } finally {
             IslandRendering.inIsland = wasInIsland;
