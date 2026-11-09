@@ -13,7 +13,7 @@ uniform float Count;  // colours used, 1-8
 uniform float Speed;  // 1 = normal
 uniform float Size;   // 1 = normal
 uniform float Bright; // 0.1-1
-uniform float Pixel;  // 1: pixelated, 16 to a block
+uniform float Pixel;  // 1: pixelated, 32 to a block
 uniform float Boost;  // the music's bass, 0-1
 uniform vec3 Col0;
 uniform vec3 Col1;
@@ -160,7 +160,7 @@ void main() {
     N = int(clamp(Count, 1.0, 8.0) + 0.5);
     vec2 b = uv;
     if (Pixel > 0.5) {
-        b = (floor(b * 16.0) + 0.5) / 16.0;
+        b = (floor(b * 32.0) + 0.5) / 32.0;
     }
     vec2 p = b / max(Size, 0.05);
     float t = Time * Speed;
