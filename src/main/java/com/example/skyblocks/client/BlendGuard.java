@@ -18,20 +18,24 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL14;
 
 /**
- * The HUD starts from a known blending state.
+ * The HUD starts from Minecraft's usual blending state.
  * <p>
- * 1.20.1: a core shader with its own blending (in its .json) is remembered as the last one used, and the next shader
- * without any turns blending off when it's used - Minecraft's memory of the state not knowing. The first thing the HUD
- * draws is the vignette: it darkens the screen's edges by blending, and drawn without blending it covers the whole
- * screen - a black screen with the hotbar and crosshair on top. So: before the HUD, that memory set back to "no
- * blending of its own", and OpenGL's blending made to agree with what Minecraft thinks it is.
+ * 1.20.1: each core shader has a blending of its own (in its .json), and Minecraft only sets it when it differs from
+ * the one it remembers - and it only remembers a new one when blending goes from off to on or back. After one of
+ * Shadered+'s shaders (which blend their own way) came straight after a shader without blending, it was the one
+ * remembered: from then on every ordinary see-through shader set its own blend function again when used, over what
+ * the code drawing with it had just asked for. The first thing the HUD draws is the vignette, which darkens the
+ * screen's edges with a blend function of its own - drawn with the ordinary one instead, it covered the whole screen:
+ * a black screen with the hotbar and crosshair on top.
+ * <p>
+ * So: Shadered+'s shaders put back what was remembered once they've drawn (mixin/ShaderBlendResetMixin), and before
+ * the HUD, the remembered blending is the HUD's own shader's.
  */
 @Mod.EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public final class BlendGuard {
-    static final BlendMode OPAQUE = new BlendMode();
     /** (render test: off, to see the black screen it stops) */
     static boolean off;
-    private static Field lastApplied, lastShader;
+    private static Field lastApplied, lastShader, blendField;
     private static boolean looked;
     private static final Set<String> told = new HashSet<>();
 
@@ -41,29 +45,34 @@ public final class BlendGuard {
     public static void onHudStart(RenderGuiEvent.Pre event) {
         try {
             BlendMode mode = lastApplied();
-            boolean left = mode != null && !mode.isOpaque();
+            BlendMode hud = blendOf(net.minecraft.client.renderer.GameRenderer.getPositionTexShader());
+            boolean left = hud != null && !hud.equals(mode); // (not what the HUD's own shader would leave)
             boolean glOn = GL11.glIsEnabled(GL11.GL_BLEND);
             if (left || RenderTest.ON) {
                 String shader = lastShaderName();
-                String key = left + " " + shader + " " + glOn;
+                String key = describe(mode) + " " + shader + " " + glOn + " " + off;
                 if (told.add(key) && told.size() < 40) {
-                    SkyBlocksMod.LOGGER.info("Shadered+: before the HUD - a shader's own blending left on: {}, last shader {}, blending in OpenGL {}{}",
-                            left, shader, glOn, off ? " (not set back: test)" : "");
+                    SkyBlocksMod.LOGGER.info("Shadered+: before the HUD - remembered blending {} (the HUD shader's: {}), last shader {}, blending in OpenGL {}{}",
+                            describe(mode), left ? describe(hud) : "the same", shader, glOn, off ? " (not set back: test)" : "");
                 }
             }
             if (off) {
                 return;
             }
             if (left) {
-                OPAQUE.apply(); // (remembered as "no blending of its own" again; turns blending off, through Minecraft)
+                setLastApplied(hud);
+                if (hud.isOpaque()) {
+                    RenderSystem.disableBlend();
+                    GL11.glDisable(GL11.GL_BLEND);
+                } else {
+                    // (OpenGL and Minecraft's memory of it agreeing: on, the usual way - as that shader's own)
+                    RenderSystem.enableBlend();
+                    GL11.glEnable(GL11.GL_BLEND);
+                    RenderSystem.defaultBlendFunc();
+                    GL14.glBlendEquation(GL14.GL_FUNC_ADD);
+                    GL14.glBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
+                }
             }
-            // OpenGL and Minecraft's memory of it agreeing: blending on, the usual way, as the HUD expects
-            RenderSystem.disableBlend();
-            GL11.glDisable(GL11.GL_BLEND);
-            RenderSystem.enableBlend();
-            RenderSystem.defaultBlendFunc();
-            GL14.glBlendEquation(GL14.GL_FUNC_ADD);
-            GL14.glBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
         } catch (RuntimeException e) {
             if (told.add("error")) {
                 SkyBlocksMod.LOGGER.warn("Shadered+: couldn't check the blending before the HUD", e);
@@ -71,11 +80,45 @@ public final class BlendGuard {
         }
     }
 
-    /** After one of Shadered+'s shaders with blending of its own is used (mixin/ShaderBlendResetMixin). */
-    public static void afterOwnShader() {
-        if (!off) {
-            OPAQUE.apply();
+    /** The blending remembered before one of Shadered+'s own-blending shaders was used (mixin/ShaderBlendResetMixin). */
+    @Nullable
+    public static Object before() {
+        return lastApplied();
+    }
+
+    /** ...and put back after it drew. */
+    public static void after(@Nullable Object before) {
+        if (!off && before instanceof BlendMode m) {
+            setLastApplied(m);
         }
+    }
+
+    private static void setLastApplied(BlendMode m) {
+        look();
+        try {
+            if (lastApplied != null) {
+                lastApplied.set(null, m);
+            }
+        } catch (IllegalAccessException ignored) {
+            // (left as it is)
+        }
+    }
+
+    @Nullable
+    private static BlendMode blendOf(@Nullable ShaderInstance shader) {
+        if (shader == null) {
+            return null;
+        }
+        look();
+        try {
+            return blendField == null ? null : (BlendMode) blendField.get(shader);
+        } catch (IllegalAccessException e) {
+            return null;
+        }
+    }
+
+    private static String describe(@Nullable BlendMode m) {
+        return m == null ? "none" : m.isOpaque() ? "off" : "on#" + Integer.toHexString(m.hashCode());
     }
 
     @Nullable
@@ -106,6 +149,17 @@ public final class BlendGuard {
         looked = true;
         lastApplied = staticOfType(BlendMode.class, BlendMode.class);
         lastShader = staticOfType(ShaderInstance.class, ShaderInstance.class);
+        for (Field f : ShaderInstance.class.getDeclaredFields()) {
+            if (!Modifier.isStatic(f.getModifiers()) && f.getType() == BlendMode.class) {
+                try {
+                    f.setAccessible(true);
+                    blendField = f;
+                } catch (RuntimeException ignored) {
+                    // (none)
+                }
+                break;
+            }
+        }
     }
 
     @Nullable
