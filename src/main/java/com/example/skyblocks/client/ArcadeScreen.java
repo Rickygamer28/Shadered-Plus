@@ -367,6 +367,15 @@ public class ArcadeScreen extends Screen {
         return false;
     }
 
+    /** How far down the piece would fall from here. */
+    private int ghostY() {
+        int y = py;
+        while (fits(piece, px, y + 1)) {
+            y++;
+        }
+        return y;
+    }
+
     private void tetrisHardDrop() {
         int rows = 0;
         while (fits(piece, px, py + 1)) {
@@ -426,6 +435,15 @@ public class ArcadeScreen extends Screen {
             }
         }
         if (piece != null && mode == Mode.PLAYING) {
+            // where it will land: its outline at the bottom of its fall
+            int gy = ghostY();
+            for (int[] c : piece) {
+                if (gy + c[1] >= 0) {
+                    int cx = bx + (px + c[0]) * TCELL, cy = by + (gy + c[1]) * TCELL, col = 0xFF000000 | pal[PIECE_COLOUR[pieceType]];
+                    g.fill(cx, cy, cx + TCELL - 1, cy + TCELL - 1, (col & 0x00FFFFFF) | 0x40000000);
+                    g.renderOutline(cx, cy, TCELL - 1, TCELL - 1, (col & 0x00FFFFFF) | 0xB0000000);
+                }
+            }
             for (int[] c : piece) {
                 if (py + c[1] >= 0) {
                     cell(g, bx + (px + c[0]) * TCELL, by + (py + c[1]) * TCELL, pal[PIECE_COLOUR[pieceType]]);
@@ -502,6 +520,12 @@ public class ArcadeScreen extends Screen {
                 }
             }
             if (piece != null && mode == Mode.PLAYING) {
+                int gy = ghostY();
+                for (int[] c : piece) {
+                    if (gy + c[1] >= 0 && gy + c[1] < TH) {
+                        f[idx.applyAsInt(ox + 1 + px + c[0], oy + gy + c[1])] = 13;
+                    }
+                }
                 for (int[] c : piece) {
                     if (py + c[1] >= 0 && py + c[1] < TH) {
                         f[idx.applyAsInt(ox + 1 + px + c[0], oy + py + c[1])] = (byte) PIECE_COLOUR[pieceType];
