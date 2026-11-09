@@ -76,7 +76,7 @@ public class SkyBlocksMod {
         // lights and decoration
         for (net.minecraft.world.level.ItemLike i : new net.minecraft.world.level.ItemLike[] {ModItems.EFFECT_BLOCK.get(), ModItems.EFFECT_GLASS.get(), ModItems.NEON_SIGN.get(),
                 ModItems.LAVA_LAMP.get(), ModItems.BIG_LAVA_LAMP.get(), ModItems.PLASMA_BALL.get(), ModItems.TESLA_COIL.get(),
-                ModItems.KALEIDOSCOPE.get(), ModItems.HOLOGRAM_PROJECTOR.get(), ModItems.GALAXY_PROJECTOR.get(),
+                ModItems.KALEIDOSCOPE.get(), ModItems.HOLOGRAM_PROJECTOR.get(), ModItems.GALAXY_PROJECTOR.get(), ModItems.WEATHER_GLOBE.get(),
                 // music and parties
                 ModItems.DANCE_FLOOR.get(), ModItems.DISCO_BALL.get(), ModItems.FOG_MACHINE.get(), ModItems.SPEAKER.get(),
                 ModItems.MUSIC_VISUALIZER.get(), ModItems.MUSIC_BOX.get(),

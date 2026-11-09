@@ -168,6 +168,11 @@ public final class ModBlocks {
                     .isValidSpawn((s, l, p, e) -> false).isRedstoneConductor((s, l, p) -> false).isSuffocating((s, l, p) -> false)
                     .isViewBlocking((s, l, p) -> false).mapColor(net.minecraft.world.level.material.MapColor.NONE));
 
+    /** A weather globe: a glass ball showing the weather and time of day outside (WeatherGlobeBlock). */
+    public static final DeferredBlock<WeatherGlobeBlock> WEATHER_GLOBE = BLOCKS.registerBlock("weather_globe", WeatherGlobeBlock::new,
+            BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.GLASS).noOcclusion().lightLevel(state -> 3)
+                    .mapColor(net.minecraft.world.level.material.MapColor.WOOD));
+
     /** A kaleidoscope: coloured glass turning in windows on every side of a brass frame (KaleidoscopeBlock). */
     public static final DeferredBlock<KaleidoscopeBlock> KALEIDOSCOPE = BLOCKS.registerBlock("kaleidoscope", KaleidoscopeBlock::new,
             BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.COPPER).lightLevel(state -> 10)

@@ -446,5 +446,7 @@
   "screen.skyblocks.effect_block.save": "Save",
   "screen.skyblocks.effect_block.saving": "Save to...",
   "screen.skyblocks.effect_block.preset_empty": "Empty: click Save, then here, to keep this look",
-  "block.skyblocks.effect_glass": "Effect Glass"
+  "block.skyblocks.effect_glass": "Effect Glass",
+  "block.skyblocks.weather_globe": "Weather Globe",
+  "tooltip.skyblocks.weather_globe": "Shows the weather and the time of day outside. Right-click: shake it. With a Sky Island: that island inside. Sneak + right-click: the island back"
 }

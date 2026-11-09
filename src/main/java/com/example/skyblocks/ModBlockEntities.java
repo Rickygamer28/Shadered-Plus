@@ -88,6 +88,8 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(SingularityBlockEntity::new, ModBlocks.SINGULARITY.get()).build(null));
     public static final Supplier<BlockEntityType<EffectBlockEntity>> EFFECT_BLOCK = TYPES.register("effect_block",
             () -> BlockEntityType.Builder.of(EffectBlockEntity::new, ModBlocks.EFFECT_BLOCK.get(), ModBlocks.EFFECT_GLASS.get()).build(null));
+    public static final Supplier<BlockEntityType<WeatherGlobeBlockEntity>> WEATHER_GLOBE = TYPES.register("weather_globe",
+            () -> BlockEntityType.Builder.of(WeatherGlobeBlockEntity::new, ModBlocks.WEATHER_GLOBE.get()).build(null));
     public static final Supplier<BlockEntityType<KaleidoscopeBlockEntity>> KALEIDOSCOPE = TYPES.register("kaleidoscope",
             () -> BlockEntityType.Builder.of(KaleidoscopeBlockEntity::new, ModBlocks.KALEIDOSCOPE.get()).build(null));
     public static final Supplier<BlockEntityType<SolarSystemBlockEntity>> SOLAR_SYSTEM = TYPES.register("solar_system",
