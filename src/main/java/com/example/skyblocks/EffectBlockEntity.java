@@ -35,7 +35,7 @@ public class EffectBlockEntity extends BlockEntity {
      * 10-100, blur 0-100: how soft the changes from one colour to the next are).
      */
     public record Settings(int effect, int count, int[] colours, int speed, int size, int brightness, boolean pixel, int blur) {
-        public static final Settings DEFAULT = new Settings(0, 3, DEFAULT_COLOURS.clone(), 100, 100, 100, false, 10);
+        public static final Settings DEFAULT = new Settings(0, 3, DEFAULT_COLOURS.clone(), 100, 100, 100, false, 0);
 
         public Settings {
             effect = Math.floorMod(effect, EFFECTS.length);

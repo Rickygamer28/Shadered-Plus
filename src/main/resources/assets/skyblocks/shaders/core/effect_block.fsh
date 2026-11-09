@@ -39,6 +39,7 @@ vec3 C[8];
 int N;
 float AA; // (how much one screen pixel covers, in pattern units: for soft edges)
 float SZ; // (the size: 1 = normal)
+int OCT;  // (more fine detail the bigger the size, so a big pattern stays sharp)
 
 vec3 colour(int i) {
     return C[int(mod(float(i), float(N)))];
@@ -84,7 +85,8 @@ const mat2 ROT = mat2(0.8, 0.6, -0.6, 0.8);
 
 float fbm(vec2 p) {
     float s = 0.0, a = 0.5;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 8; i++) {
+        if (i >= OCT + 2) break;
         s += a * noise(p);
         p = ROT * p * 2.03 + 17.1;
         a *= 0.5;
@@ -105,7 +107,8 @@ float relief(float h, float strength) {
 // three octaves only: broad, smooth shapes (liquid, not grain)
 float fbm3(vec2 p) {
     float s = 0.0, a = 0.5;
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 6; i++) {
+        if (i >= OCT) break;
         s += a * noise(p);
         p = ROT * p * 2.03 + 17.1;
         a *= 0.5;
@@ -130,7 +133,7 @@ float vortexField(vec2 p, float t) {
 
 vec3 swirl(vec2 p, float t) {
     float v = vortexField(p, t);
-    float e = 0.04;
+    float e = 0.04 / max(SZ, 1.0);
     float vx = vortexField(p + vec2(e, 0.0), t), vy = vortexField(p + vec2(0.0, e), t);
     // the colours from the middle out: the second; any from the third on, thin bands (the third the dark edge round
     // the middle); the first all round the outside
@@ -251,7 +254,7 @@ vec3 gradient(vec2 p, float t) {
 }
 
 vec3 aurora(vec2 p, float t) {
-    vec3 c = colour(N - 1) * 0.05;
+    vec3 c = vec3(0.0);
     // (faint stars behind)
     vec2 sc = floor(p * 8.0);
     float s = hash(sc + side);
@@ -380,7 +383,7 @@ vec3 lava(vec2 b, float t) {
 
 // stars streaking out from the middle, as if flying through them
 vec3 warp(vec2 p, float t) {
-    vec3 c = colour(N - 1) * 0.05 * (0.6 + 0.4 * fbm(p * 0.4 + t * 0.05));
+    vec3 c = vec3(0.0);
     float r = length(p);
     float a = atan(p.y, p.x);
     for (int layer = 0; layer < 3; layer++) {
@@ -419,22 +422,15 @@ vec3 spectrum(vec2 b, float t) {
     float rows = smoothstep(0.04, 0.1, fract(y * ext.y * 4.0 / SZ));
     vec3 c = pal(y * 0.9 + 0.001, 0.0);
     float cap = exp(-abs(y - level) * 10.0 * ext.y);
-    return colour(0) * 0.03 + c * gap * (lit * rows + cap * 0.8);
+    return c * gap * (lit * rows + cap * 0.8);
 }
 
-void main() {
-    C[0] = Col0; C[1] = Col1; C[2] = Col2; C[3] = Col3; C[4] = Col4; C[5] = Col5; C[6] = Col6; C[7] = Col7;
-    N = int(clamp(Count, 1.0, 8.0) + 0.5);
-    vec2 b = uv;
+// one point of the side: its effect, over the background where it lights only part of it
+vec3 effectAt(vec2 b, int e, float t) {
     if (Pixel > 0.5) {
         b = (floor(b * 32.0) + 0.5) / 32.0;
     }
-    float size = max(Size, 0.05);
-    SZ = size;
-    vec2 p = b / size;
-    AA = length(fwidth(p)) * 0.5;
-    float t = Time * Speed;
-    int e = int(Effect + 0.5);
+    vec2 p = b / SZ;
     vec3 c;
     if (e == 0) c = swirl(p, t);
     else if (e == 1) c = wave(p, t);
@@ -455,9 +451,27 @@ void main() {
     else if (e == 16) c = warp(p, t);
     else c = spectrum(b, t);
     c = max(c, 0.0);
-    // the effects that light only part of the side, over the background (its light where theirs isn't)
     if (e == 3 || e == 4 || e == 5 || e == 7 || e == 10 || e == 11 || (e >= 13 && e <= 17)) {
         c += Bg * (1.0 - clamp(max(max(c.r, c.g), c.b) * 1.5, 0.0, 1.0));
+    }
+    return c;
+}
+
+void main() {
+    C[0] = Col0; C[1] = Col1; C[2] = Col2; C[3] = Col3; C[4] = Col4; C[5] = Col5; C[6] = Col6; C[7] = Col7;
+    N = int(clamp(Count, 1.0, 8.0) + 0.5);
+    SZ = max(Size, 0.05);
+    OCT = 3 + int(clamp(log2(max(SZ, 1.0)) + 0.5, 0.0, 3.0));
+    vec2 b = uv;
+    AA = length(fwidth(b / SZ)) * 0.5;
+    float t = Time * Speed;
+    int e = int(Effect + 0.5);
+    vec3 c = effectAt(b, e, t);
+    if (Blur > 0.01) {
+        // blurred: the effect around this point too, softly weighted (up to a fifth of a block each way)
+        float r = Blur * 0.2;
+        c = c * 0.28 + (effectAt(b + vec2(r, r * 0.4), e, t) + effectAt(b + vec2(-r * 0.4, r), e, t)
+                + effectAt(b + vec2(-r, -r * 0.4), e, t) + effectAt(b + vec2(r * 0.4, -r), e, t)) * 0.18;
     }
     // (a gentle curve: highlights roll off instead of clipping flat)
     c = c / (1.0 + max(max(c.r, c.g), c.b) * 0.15) * 1.15;
