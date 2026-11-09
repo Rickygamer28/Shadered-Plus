@@ -21,7 +21,15 @@ import org.lwjgl.glfw.GLFW;
  */
 public class ArcadeScreen extends Screen {
     private static final int COLS = 24, ROWS = 18, CELL = 8, W = COLS * CELL, H = ROWS * CELL;
-    private static final String[] NAMES = {"SNAKE", "BREAKOUT", "TETRIS"};
+    private static final String[] NAMES = {"SNAKE", "BREAKOUT", "TETRIS", "PAC-MAN", "PONG", "FROGGER", "MINESWEEPER", "FIGHTER"};
+    /** The games after the first three, each its own (client/arcade). */
+    private final com.example.skyblocks.client.arcade.ArcadeGame[] extra = {new com.example.skyblocks.client.arcade.PacMan(),
+            new com.example.skyblocks.client.arcade.Pong(), new com.example.skyblocks.client.arcade.Frogger(),
+            new com.example.skyblocks.client.arcade.Minesweeper(), new com.example.skyblocks.client.arcade.Fighter()};
+
+    private com.example.skyblocks.client.arcade.ArcadeGame ext() {
+        return game >= 3 ? extra[game - 3] : null;
+    }
     private enum Mode { TITLE, PLAYING, OVER }
 
     private final BlockPos pos;
@@ -67,6 +75,10 @@ public class ArcadeScreen extends Screen {
         score = 0;
         ticks = 0;
         mode = Mode.PLAYING;
+        if (ext() != null) {
+            ext().start();
+            return;
+        }
         if (game == 2) {
             for (int[] row : board) {
                 java.util.Arrays.fill(row, 0);
@@ -273,7 +285,13 @@ public class ArcadeScreen extends Screen {
             return;
         }
         ticks++;
-        if (mode == Mode.PLAYING) {
+        if (mode == Mode.PLAYING && ext() != null) {
+            ext().tick();
+            score = ext().score();
+            if (ext().over()) {
+                over();
+            }
+        } else if (mode == Mode.PLAYING) {
             if (game == 0) {
                 tickSnake();
             } else if (game == 1) {
@@ -474,6 +492,14 @@ public class ArcadeScreen extends Screen {
         int fw = com.example.skyblocks.ArcadeFramePayload.WIDTH, fh = com.example.skyblocks.ArcadeFramePayload.HEIGHT;
         byte[] f = new byte[fw * fh];
         java.util.function.IntBinaryOperator idx = (x, y) -> y * fw + x;
+        if (ext() != null) { // (each cell: the colour at its middle, the field over rows 2 and on)
+            for (int cy = 2; cy < fh; cy++) {
+                for (int cx = 0; cx < fw; cx++) {
+                    f[idx.applyAsInt(cx, cy)] = (byte) (ext().sample((cx + 0.5F) * W / fw, (cy - 2 + 0.5F) * H / (fh - 2.0F)) & 15);
+                }
+            }
+            return f;
+        }
         if (game == 0) {
             for (int y = 2; y < 2 + ROWS + 2; y++) {
                 for (int x = 3; x < 3 + COLS + 2; x++) {
@@ -576,6 +602,10 @@ public class ArcadeScreen extends Screen {
             }
             return true;
         }
+        if (ext() != null) {
+            ext().keyPressed(key);
+            return true;
+        }
         boolean l = key == GLFW.GLFW_KEY_LEFT || key == GLFW.GLFW_KEY_A, r = key == GLFW.GLFW_KEY_RIGHT || key == GLFW.GLFW_KEY_D;
         boolean u = key == GLFW.GLFW_KEY_UP || key == GLFW.GLFW_KEY_W, d = key == GLFW.GLFW_KEY_DOWN || key == GLFW.GLFW_KEY_S;
         if (game == 2) {
@@ -606,6 +636,10 @@ public class ArcadeScreen extends Screen {
 
     @Override
     public boolean keyReleased(int key, int scan, int modifiers) {
+        if (ext() != null) {
+            ext().keyReleased(key);
+            return true;
+        }
         if (key == GLFW.GLFW_KEY_LEFT || key == GLFW.GLFW_KEY_A) {
             left = false;
         }
@@ -624,7 +658,9 @@ public class ArcadeScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
-        if (mode != Mode.PLAYING) {
+        if (mode == Mode.PLAYING && ext() != null) {
+            ext().mouseClicked(x - left0, y - top0, button);
+        } else if (mode != Mode.PLAYING) {
             start();
         } else if (game == 1 && ballHeld) {
             launch();
@@ -652,6 +688,10 @@ public class ArcadeScreen extends Screen {
 
         if (mode == Mode.TITLE) {
             drawTitle(g, x0, y0, partialTick);
+        } else if (ext() != null) {
+            g.enableScissor(x0, y0, x0 + W, y0 + H);
+            ext().draw(g, font, x0, y0, partialTick);
+            g.disableScissor();
         } else if (game == 0) {
             drawSnake(g, x0, y0);
         } else if (game == 2) {
@@ -661,6 +701,10 @@ public class ArcadeScreen extends Screen {
         }
         // the score along the top, the best under the screen
         g.drawString(font, "SCORE " + score, x0 + 3, y0 + 3, 0xFFFFFFFF, false);
+        if (ext() != null && mode != Mode.TITLE && !ext().status().isEmpty()) {
+            String st = ext().status();
+            g.drawString(font, st, x0 + W - 3 - font.width(st), y0 + 3, 0xFFFFFFFF, false);
+        }
         if (game == 1 && mode != Mode.TITLE) {
             String hearts = "❤".repeat(Math.max(lives, 0));
             g.drawString(font, hearts, x0 + W - 3 - font.width(hearts), y0 + 3, 0xFFFF4D5E, false);
@@ -673,7 +717,8 @@ public class ArcadeScreen extends Screen {
         }
         if (mode == Mode.OVER) {
             g.fill(x0, y0 + H / 2 - 22, x0 + W, y0 + H / 2 + 24, 0xC0000000);
-            drawCentred(g, "GAME OVER", x0 + W / 2, y0 + H / 2 - 14, 0xFFFF4D5E);
+            boolean win = ext() != null && ext().won();
+            drawCentred(g, win ? "YOU WIN!" : "GAME OVER", x0 + W / 2, y0 + H / 2 - 14, win ? 0xFF5BFF6A : 0xFFFF4D5E);
             drawCentred(g, "SCORE " + score, x0 + W / 2, y0 + H / 2, 0xFFFFFFFF);
             if ((ticks / 10) % 2 == 0) {
                 drawCentred(g, "SPACE: AGAIN   TAB: OTHER GAME", x0 + W / 2, y0 + H / 2 + 13, 0xFFAAAAAA);
@@ -688,7 +733,10 @@ public class ArcadeScreen extends Screen {
     private void drawTitle(GuiGraphics g, int x0, int y0, float partialTick) {
         float t = ticks + partialTick;
         drawCentred(g, NAMES[game], x0 + W / 2, y0 + 34, rainbow(t));
-        if (game == 2) {
+        if (ext() != null) {
+            drawCentred(g, ext().help()[0], x0 + W / 2, y0 + 60, 0xFFBBBBBB);
+            drawCentred(g, ext().help()[1], x0 + W / 2, y0 + 72, 0xFFBBBBBB);
+        } else if (game == 2) {
             drawCentred(g, "Left / right: move  Up: turn", x0 + W / 2, y0 + 60, 0xFFBBBBBB);
             drawCentred(g, "Down: faster  Space: drop", x0 + W / 2, y0 + 72, 0xFFBBBBBB);
         } else if (game == 0) {
