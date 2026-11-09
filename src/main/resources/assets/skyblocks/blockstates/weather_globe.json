@@ -1,7 +1,10 @@
 {
   "variants": {
-    "": {
+    "custom_base=false": {
       "model": "skyblocks:block/weather_globe"
+    },
+    "custom_base=true": {
+      "model": "skyblocks:block/weather_globe_ring"
     }
   }
 }

@@ -36,8 +36,40 @@ public class WeatherGlobeBlock extends BaseEntityBlock {
     public static final MapCodec<WeatherGlobeBlock> CODEC = simpleCodec(WeatherGlobeBlock::new);
     private static final VoxelShape SHAPE = Shapes.or(Block.box(2, 0, 2, 14, 4, 14), Block.box(2.5, 4, 2.5, 13.5, 15.5, 13.5));
 
+    /** Its base is another block's (WeatherGlobeBlockEntity.base, drawn by its renderer; the model: just the gold ring). */
+    public static final net.minecraft.world.level.block.state.properties.BooleanProperty CUSTOM_BASE =
+            net.minecraft.world.level.block.state.properties.BooleanProperty.create("custom_base");
+    /** (the base it comes with: picking this block puts it back) */
+    public static final Block DEFAULT_BASE = net.minecraft.world.level.block.Blocks.STRIPPED_DARK_OAK_LOG;
+
     public WeatherGlobeBlock(Properties properties) {
         super(properties);
+        registerDefaultState(stateDefinition.any().setValue(CUSTOM_BASE, false));
+    }
+
+    @Override
+    protected void createBlockStateDefinition(net.minecraft.world.level.block.state.StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(CUSTOM_BASE);
+    }
+
+    /** Whether this item's block can be a globe's base: a block drawn by its model. */
+    public static boolean baseBlock(ItemStack stack) {
+        return stack.getItem() instanceof net.minecraft.world.item.BlockItem b
+                && !(stack.getItem() instanceof com.example.skyblocks.island.SkyIslandItem)
+                && !(b.getBlock() instanceof WeatherGlobeBlock)
+                && b.getBlock().defaultBlockState().getRenderShape() == RenderShape.MODEL;
+    }
+
+    /** Sneak + right-click with a block: the base made of it (its own block: back as it came). */
+    public static void setBase(Level level, BlockPos pos, ItemStack stack) {
+        if (!(level.getBlockEntity(pos) instanceof WeatherGlobeBlockEntity be) || !(stack.getItem() instanceof net.minecraft.world.item.BlockItem b)) {
+            return;
+        }
+        BlockState base = b.getBlock().defaultBlockState();
+        boolean custom = !base.is(DEFAULT_BASE);
+        be.setBase(custom ? base : null);
+        level.setBlock(pos, level.getBlockState(pos).setValue(CUSTOM_BASE, custom), Block.UPDATE_ALL);
+        level.playSound(null, pos, base.getSoundType().getPlaceSound(), SoundSource.BLOCKS, 1.0F, 1.0F);
     }
 
     @Override

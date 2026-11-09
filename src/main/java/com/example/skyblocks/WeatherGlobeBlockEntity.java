@@ -39,6 +39,20 @@ public class WeatherGlobeBlockEntity extends BlockEntity {
         return shakenAt;
     }
 
+    /** The block its base is made of (null: its own, the model's). */
+    @Nullable
+    private BlockState base;
+
+    @Nullable
+    public BlockState base() {
+        return base;
+    }
+
+    public void setBase(@Nullable BlockState state) {
+        base = state;
+        changed();
+    }
+
     public void shake() {
         shakenAt = level != null ? level.getGameTime() : 0L;
         changed();
@@ -65,6 +79,10 @@ public class WeatherGlobeBlockEntity extends BlockEntity {
         if (!island.isEmpty()) {
             tag.put("island", island.save(registries));
         }
+        if (base != null) {
+            tag.put("base", net.minecraft.nbt.NbtUtils.writeBlockState(base));
+        }
+        tag.putBoolean("has_base", base != null);
         tag.putBoolean("has_island", !island.isEmpty()); // (always something: an emptied globe reaches clients)
         tag.putLong("shaken", shakenAt);
     }
@@ -76,6 +94,9 @@ public class WeatherGlobeBlockEntity extends BlockEntity {
         if (!ItemStack.matches(loaded, island)) {
             island = loaded;
         }
+        base = tag.contains("base")
+                ? net.minecraft.nbt.NbtUtils.readBlockState(registries.lookupOrThrow(net.minecraft.core.registries.Registries.BLOCK), tag.getCompound("base"))
+                : null;
         shakenAt = tag.contains("shaken") ? tag.getLong("shaken") : Long.MIN_VALUE / 2;
     }
 
