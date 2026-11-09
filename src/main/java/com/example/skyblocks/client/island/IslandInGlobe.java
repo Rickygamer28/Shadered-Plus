@@ -71,8 +71,28 @@ public final class IslandInGlobe {
         poseStack.scale(scale, scale, scale);
         poseStack.translate(-view.contentCenterX(), -view.lowestLayer(), -view.contentCenterZ());
         mesh.render(poseStack.last(), buffer);
+        if (!IslandRendering.inMirror) {
+            // as on a pedestal: infinity mirrors and cubes, aquariums and dance floors drawn with their own shaders after
+            // the block entities; portals given a Shadered sky, that sky
+            com.example.skyblocks.client.InfinityMirrorRenderer.queueIsland(view.infinity(), poseStack.last().pose());
+            com.example.skyblocks.client.AquariumRenderer.queueIsland(view.aquariums(), poseStack.last().pose());
+            com.example.skyblocks.client.DanceFloorRenderer.queueIsland(view.danceFloors(), poseStack.last().pose());
+            com.example.skyblocks.client.PortalSkyRenderer.drawInIsland(view, view.portalSkies, poseStack, buffer, true);
+        }
         if (near) {
-            view.renderBlockEntities(poseStack, buffer, partialTick);
+            // (with a shader pack, the cats go through our own target, as on a pedestal)
+            boolean irisCats = com.example.skyblocks.client.iris.IrisIslandTarget.active()
+                    || com.example.skyblocks.client.iris.IrisIslandTarget.shadowPass();
+            boolean wasCollecting = IslandRendering.collectCats;
+            IslandRendering.collectCats = irisCats || wasCollecting;
+            try {
+                view.renderBlockEntities(poseStack, buffer, partialTick);
+            } finally {
+                IslandRendering.collectCats = wasCollecting;
+            }
+            if (irisCats) {
+                com.example.skyblocks.client.iris.IrisIslandTarget.queueCats();
+            }
             view.renderFigures(poseStack, buffer, partialTick);
         }
         poseStack.popPose();
