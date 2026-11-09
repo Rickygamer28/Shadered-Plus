@@ -20,11 +20,12 @@ public final class IslandInGlobe {
 
     /**
      * Draws {@code data} with its ground's middle at the pose's origin, fitted into {@code width} across and
-     * {@code height} up; returns what to keep for next time.
+     * {@code height} up, and only what's inside the ball {@code clipR} across round {@code (0, clipY, 0)}; returns what
+     * to keep for next time.
      */
     @Nullable
     public static Object draw(@Nullable Object kept, IslandData data, Level level, BlockPos at, PoseStack poseStack, MultiBufferSource buffer,
-                              float partialTick, float width, float height) {
+                              float partialTick, float width, float height, float clipY, float clipR) {
         if (kept instanceof Broken b && b.source.equals(data)) {
             return kept;
         }
@@ -42,6 +43,17 @@ public final class IslandInGlobe {
                 return new Broken(data);
             }
         }
+        int across = Math.max(1, view.contentWidth());
+        int up = Math.max(1, view.highestLayer() - view.lowestLayer() + 1);
+        float scale = Math.min(width / across, height / up);
+        if (view.clip == null) { // (before its mesh is made: just the blocks and mobs inside the ball)
+            final IslandView v = view;
+            final float cx = v.contentCenterX(), cz = v.contentCenterZ(), low = v.lowestLayer();
+            v.clip = p -> {
+                double dx = (p.x - cx) * scale, dy = (p.y - low) * scale - clipY, dz = (p.z - cz) * scale;
+                return dx * dx + dy * dy + dz * dz < clipR * clipR;
+            };
+        }
         IslandMesh mesh;
         try {
             mesh = view.mesh();
@@ -49,9 +61,6 @@ public final class IslandInGlobe {
             view.close();
             return new Broken(data);
         }
-        int across = Math.max(1, view.contentWidth());
-        int up = Math.max(1, view.highestLayer() - view.lowestLayer() + 1);
-        float scale = Math.min(width / across, height / up);
         double distance = Math.sqrt(Minecraft.getInstance().gameRenderer.getMainCamera().getPosition().distanceToSqr(at.getCenter()));
         boolean near = distance < 16.0;
         if (near) {

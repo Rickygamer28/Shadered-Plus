@@ -440,6 +440,17 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
         return (bounds()[2] + bounds()[5] + 1) / 2.0F;
     }
 
+    /**
+     * Only what this accepts is shown (a point in the island's blocks: a block's middle, a mob's), or all if null - set
+     * before the mesh is first made (the weather globe: only what's inside its glass ball).
+     */
+    @Nullable
+    java.util.function.Predicate<net.minecraft.world.phys.Vec3> clip;
+
+    boolean shown(double x, double y, double z) {
+        return clip == null || clip.test(new net.minecraft.world.phys.Vec3(x, y, z));
+    }
+
     IslandMesh mesh() {
         if (mesh == null || meshGeneration != generation) {
             if (mesh != null) {
@@ -493,6 +504,7 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
         IslandRendering.island = this;
         try {
             blockEntities.removeIf(be -> (only == null || only.test(be.blockEntity()))
+                    && shown(be.blockEntity().getBlockPos().getX() + 0.5, be.blockEntity().getBlockPos().getY() + 0.5, be.blockEntity().getBlockPos().getZ() + 0.5)
                     && !be.render(this, dispatcher, poseStack, buffer, partialTick));
         } finally {
             IslandRendering.inIsland = wasInIsland;
@@ -517,6 +529,7 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
         dispatcher.setRenderShadow(false); // their shadows would be cast on the real world around the block
         try {
             figures.removeIf(figure -> distance <= reach * figureSize(figure.entity)
+                    && shown(figure.entity.getX(), figure.entity.getY() + figure.entity.getBbHeight() / 2.0, figure.entity.getZ())
                     && !figure.render(this, dispatcher, poseStack, buffer, partialTick));
         } finally {
             dispatcher.setRenderShadow(true);

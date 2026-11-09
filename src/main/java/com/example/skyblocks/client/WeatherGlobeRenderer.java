@@ -31,6 +31,8 @@ public class WeatherGlobeRenderer implements BlockEntityRenderer<WeatherGlobeBlo
     static ShaderInstance shader;
     private static final Matrix4f POSE = new Matrix4f(), POSE_INV = new Matrix4f();
     private static float time, sunY, rain, thunder, snowy, shake, flash, hasIsland, pass;
+    /** Where the island's ground sits in the ball (the shader's earth is under it). */
+    private static final float ISLAND_Y = 0.37F;
     private static final float X0 = 0.14F, X1 = 0.86F, Y0 = 0.255F, Y1 = 0.975F;
 
     @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
@@ -113,11 +115,39 @@ public class WeatherGlobeRenderer implements BlockEntityRenderer<WeatherGlobeBlo
         source.endBatch(Types.INSIDE);
         if (island != null) {
             poseStack.pushPose();
-            poseStack.translate(0.5F, 0.30F, 0.5F);
-            be.clientView = com.example.skyblocks.client.island.IslandInGlobe.draw(be.clientView, island, level, pos, poseStack, source, partialTick, 0.44F, 0.5F);
+            poseStack.translate(0.5F, ISLAND_Y, 0.5F);
+            // (as big as fits the ball's lower part; anything past the glass left out)
+            be.clientView = com.example.skyblocks.client.island.IslandInGlobe.draw(be.clientView, island, level, pos, poseStack, source, partialTick,
+                    0.54F, 0.56F, 0.615F - ISLAND_Y, 0.345F);
             poseStack.popPose();
             source.endBatch(); // (the island before the glass over it)
         }
+        box(source.getBuffer(Types.GLASS), poseStack.last().pose());
+        source.endBatch(Types.GLASS);
+    }
+
+    /** As an item: the ball on its base, the weather where you are, at once with this pose. */
+    static void drawItem(PoseStack poseStack, MultiBufferSource buffers) {
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        if (shader == null || mc.level == null) {
+            return;
+        }
+        ClientLevel level = mc.level;
+        float partialTick = mc.getTimer().getGameTimeDeltaPartialTick(false);
+        time = ((level.getGameTime() % 240000L) + partialTick) / 20.0F;
+        sunY = Mth.cos(level.getTimeOfDay(partialTick) * Mth.TWO_PI);
+        rain = level.getRainLevel(partialTick);
+        thunder = level.getThunderLevel(partialTick);
+        BlockPos at = mc.player != null ? mc.player.blockPosition() : BlockPos.ZERO;
+        snowy = level.getBiome(at).value().getPrecipitationAt(at) == Biome.Precipitation.SNOW ? 1.0F : 0.0F;
+        shake = 100.0F;
+        flash = level.getSkyFlashTime() > 0 ? 1.0F : 0.0F;
+        hasIsland = 0.0F;
+        POSE.set(poseStack.last().pose());
+        POSE_INV.set(POSE).invert();
+        MultiBufferSource.BufferSource source = DrawNow.now(buffers);
+        box(source.getBuffer(Types.INSIDE), poseStack.last().pose());
+        source.endBatch(Types.INSIDE);
         box(source.getBuffer(Types.GLASS), poseStack.last().pose());
         source.endBatch(Types.GLASS);
     }

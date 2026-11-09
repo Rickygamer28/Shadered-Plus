@@ -13,6 +13,8 @@ import org.jetbrains.annotations.Nullable;
 public class LavaPillarBlockEntity extends BlockEntity {
     public static final int DEFAULT_WAX = 0xFF5A1F, DEFAULT_LIQUID = 0x4A1060;
     private int wax = DEFAULT_WAX, liquid = DEFAULT_LIQUID;
+    /** On (its wax moving, glowing) or off; RGB: its wax cycling through the rainbow (as a lava lamp's). */
+    private boolean lit = true, rgb;
 
     public LavaPillarBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.LAVA_PILLAR.get(), pos, state);
@@ -27,7 +29,26 @@ public class LavaPillarBlockEntity extends BlockEntity {
     }
 
     public void setWax(int c) {
+        rgb = false;
         wax = c & 0xFFFFFF;
+        changed();
+    }
+
+    public boolean lit() {
+        return lit;
+    }
+
+    public boolean rgb() {
+        return rgb;
+    }
+
+    public void setLit(boolean on) {
+        lit = on;
+        changed();
+    }
+
+    public void setRgb(boolean on) {
+        rgb = on;
         changed();
     }
 
@@ -48,6 +69,8 @@ public class LavaPillarBlockEntity extends BlockEntity {
         super.saveAdditional(tag, registries);
         tag.putInt("wax", wax);
         tag.putInt("liquid", liquid);
+        tag.putBoolean("off", !lit);
+        tag.putBoolean("rgb", rgb);
     }
 
     @Override
@@ -55,6 +78,8 @@ public class LavaPillarBlockEntity extends BlockEntity {
         super.loadAdditional(tag, registries);
         wax = tag.contains("wax") ? tag.getInt("wax") : DEFAULT_WAX;
         liquid = tag.contains("liquid") ? tag.getInt("liquid") : DEFAULT_LIQUID;
+        lit = !tag.getBoolean("off");
+        rgb = tag.getBoolean("rgb");
     }
 
     @Override

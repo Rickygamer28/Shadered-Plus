@@ -33,6 +33,29 @@ public class ShaderedJeiPlugin implements IModPlugin {
     }
 
     @Override
+    public void registerGuiHandlers(mezz.jei.api.registration.IGuiHandlerRegistration registration) {
+        // (JEI's own panels keep clear of the chapter buttons)
+        registration.addGenericGuiContainerHandler(net.minecraft.client.gui.screens.inventory.AbstractContainerScreen.class,
+                new mezz.jei.api.gui.handlers.IGuiContainerHandler<net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>>() {
+                    @Override
+                    public java.util.List<net.minecraft.client.renderer.Rect2i> getGuiExtraAreas(net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen) {
+                        return JeiChapterButtons.areas(screen);
+                    }
+                });
+    }
+
+    private static boolean listening;
+
+    @Override
+    public void onRuntimeAvailable(mezz.jei.api.runtime.IJeiRuntime runtime) {
+        JeiChapterButtons.setRuntime(runtime);
+        if (!listening) {
+            listening = true;
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(JeiChapterButtons.class);
+        }
+    }
+
+    @Override
     public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
         registration.addRecipeCatalyst(new ItemStack(ModItems.GUIDE_BOOK.get()), STRUCTURES);
     }

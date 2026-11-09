@@ -60,6 +60,7 @@ public abstract class ComplexPassTimingMixin {
         WorldTiming.shaderedEnd();
         if (skyblocks$afterBlockEntities(stage)) {
             com.example.skyblocks.client.BlackHoleRenderer.drawPending("after Shadered's pass");
+            com.example.skyblocks.client.LatePass.drawPending();
         }
     }
 
@@ -69,6 +70,7 @@ public abstract class ComplexPassTimingMixin {
     private void skyblocks$beforePutBack(RenderStage stage, PoseStack poseStack, int renderTick, float partialTick, CallbackInfo ci) {
         if (skyblocks$afterBlockEntities(stage)) {
             com.example.skyblocks.client.BlackHoleRenderer.drawPending("in Shadered's pass");
+            com.example.skyblocks.client.LatePass.drawPending();
         }
     }
 

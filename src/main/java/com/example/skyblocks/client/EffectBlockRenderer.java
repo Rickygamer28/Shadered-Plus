@@ -158,12 +158,56 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
         extent[0] = (float) c[3];
         extent[1] = (float) c[4];
         extent[2] = (float) c[5];
+        float dx = (float) (pos.getX() - c[0]), dy = (float) (pos.getY() - c[1]), dz = (float) (pos.getZ() - c[2]);
+        if (glass && !com.example.skyblocks.client.iris.IrisCompat.shaderPackInUse() && !MirrorRenderer.isRenderingReflection()
+                && GLASS_JOBS.size() < 4096) {
+            // (see-through: drawn once everything behind it is - the mobs, block entities, water and glass - not now,
+            // when what's drawn after would show over it)
+            net.minecraft.world.phys.Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+            GLASS_JOBS.add(new GlassJob(new Matrix4f(poseStack.last().pose()), faces, dx, dy, dz, be.settings(),
+                    (float) c[3], (float) c[4], (float) c[5], pos.getCenter().distanceToSqr(cam)));
+            return;
+        }
         current = be.settings();
         time = seconds(partialTick);
         MultiBufferSource.BufferSource source = DrawNow.now(buffers);
         RenderType type = glass ? Types.GLASS : Types.SIDES;
-        cube(source.getBuffer(type), poseStack.last().pose(), faces, (float) (pos.getX() - c[0]), (float) (pos.getY() - c[1]), (float) (pos.getZ() - c[2]));
+        cube(source.getBuffer(type), poseStack.last().pose(), faces, dx, dy, dz);
         source.endBatch(type);
+    }
+
+    private record GlassJob(Matrix4f pose, int faces, float dx, float dy, float dz, EffectBlockEntity.Settings settings,
+                            float ex, float ey, float ez, double distance) {}
+
+    private static final java.util.List<GlassJob> GLASS_JOBS = new java.util.ArrayList<>();
+
+    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+    public static final class Later {
+        private Later() {}
+
+        @SubscribeEvent
+        public static void onStage(net.neoforged.neoforge.client.event.RenderLevelStageEvent event) {
+            if (event.getStage() == net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_SKY) {
+                GLASS_JOBS.clear(); // (a frame's left over, if it never got drawn)
+                return;
+            }
+            if (event.getStage() != net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS
+                    || GLASS_JOBS.isEmpty() || shader == null) {
+                return;
+            }
+            GLASS_JOBS.sort((a, b) -> Double.compare(b.distance, a.distance)); // (the far ones first)
+            time = seconds(event.getPartialTick().getGameTimeDeltaPartialTick(false));
+            MultiBufferSource.BufferSource source = DrawNow.now(Minecraft.getInstance().renderBuffers().bufferSource());
+            for (GlassJob job : GLASS_JOBS) {
+                current = job.settings;
+                extent[0] = job.ex;
+                extent[1] = job.ey;
+                extent[2] = job.ez;
+                cube(source.getBuffer(Types.GLASS), job.pose, job.faces, job.dx, job.dy, job.dz);
+                source.endBatch(Types.GLASS);
+            }
+            GLASS_JOBS.clear();
+        }
     }
 
     /** As an item: every side, its default look. */

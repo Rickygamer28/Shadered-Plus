@@ -10,6 +10,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeItem;
@@ -35,7 +36,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A lava lamp pillar: a glass column of coloured liquid with wax blobs rising and sinking through it. Stacked, they make
  * one tall lamp (a metal foot at the bottom, a cap at the top), the blobs travelling its whole height
- * (client/LavaPillarRenderer). A dye: the wax's colour; sneak + a dye: the liquid's - for the whole pillar.
+ * (client/LavaPillarRenderer). As a lava lamp: right-click on / off, sneak + right-click RGB, a dye the wax's colour; and
+ * sneak + a dye: the liquid's - for the whole pillar.
  */
 public class LavaPillarBlock extends BaseEntityBlock {
     public static final MapCodec<LavaPillarBlock> CODEC = simpleCodec(LavaPillarBlock::new);
@@ -135,6 +137,29 @@ public class LavaPillarBlock extends BaseEntityBlock {
         return ItemInteractionResult.sidedSuccess(level.isClientSide);
     }
 
+    /** Right-click: on / off; sneaking: RGB (the wax cycling through the rainbow) - for the whole pillar, as a lava lamp. */
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        if (!level.isClientSide && level.getBlockEntity(bottom(level, pos)) instanceof LavaPillarBlockEntity base) {
+            boolean rgb = player.isShiftKeyDown() ? !base.rgb() : base.rgb();
+            boolean lit = player.isShiftKeyDown() ? base.lit() : !base.lit();
+            BlockPos b = bottom(level, pos);
+            int h = height(level, b);
+            for (int i = 0; i < h; i++) {
+                if (level.getBlockEntity(b.above(i)) instanceof LavaPillarBlockEntity be) {
+                    be.setLit(lit);
+                    be.setRgb(rgb);
+                }
+            }
+            if (player.isShiftKeyDown()) {
+                player.displayClientMessage(Component.translatable(rgb ? "message.skyblocks.rgb_on" : "message.skyblocks.rgb_off"), true);
+            } else {
+                level.playSound(null, pos, SoundEvents.STONE_BUTTON_CLICK_ON, SoundSource.BLOCKS, 0.5F, lit ? 1.0F : 0.7F);
+            }
+        }
+        return InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
     /** A new block on a pillar takes its colours. */
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable net.minecraft.world.entity.LivingEntity placer, ItemStack stack) {
@@ -144,6 +169,8 @@ public class LavaPillarBlock extends BaseEntityBlock {
                 if (level.getBlockEntity(n) instanceof LavaPillarBlockEntity other) {
                     be.setWax(other.wax());
                     be.setLiquid(other.liquid());
+                    be.setRgb(other.rgb());
+                    be.setLit(other.lit());
                     return;
                 }
             }

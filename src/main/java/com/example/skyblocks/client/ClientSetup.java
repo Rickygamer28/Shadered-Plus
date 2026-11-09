@@ -213,6 +213,28 @@ public final class ClientSetup {
             }
         }, ModItems.KALEIDOSCOPE.get());
         event.registerItem(new IClientItemExtensions() {
+            private WeatherGlobeItemRenderer renderer;
+
+            @Override
+            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (renderer == null) {
+                    renderer = new WeatherGlobeItemRenderer();
+                }
+                return renderer;
+            }
+        }, ModItems.WEATHER_GLOBE.get());
+        event.registerItem(new IClientItemExtensions() {
+            private LavaPillarItemRenderer renderer;
+
+            @Override
+            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (renderer == null) {
+                    renderer = new LavaPillarItemRenderer();
+                }
+                return renderer;
+            }
+        }, ModItems.LAVA_PILLAR.get());
+        event.registerItem(new IClientItemExtensions() {
             private EffectBlockItemRenderer renderer;
 
             @Override

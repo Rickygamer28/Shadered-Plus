@@ -5,7 +5,7 @@
 // sides, see-through): the glass - its shine and reflections - and the rain or snow falling inside; shaken, a flurry.
 
 in vec3 lp;
-flat in vec3 eye;
+in vec3 eye;
 
 uniform mat4 ModelViewMat;
 uniform mat4 ProjMat;
@@ -189,6 +189,8 @@ void main() {
             } else if (rd.y < 0.0 && ro.y + rd.y * s.y < FLOOR) {
                 c = vec3(0.32, 0.22, 0.14) * mix(0.15, 0.7, day()); // (the earth under the ground)
             }
+        } else if (rd.y < 0.0 && ro.y + rd.y * s.y < 0.37) {
+            c = vec3(0.32, 0.22, 0.14) * mix(0.15, 0.7, day()); // (under the island: earth, not sky)
         }
         fragColor = vec4(c, 1.0);
         gl_FragDepth = depthOf(ro + rd * tHit);

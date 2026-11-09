@@ -42,7 +42,7 @@ final class IslandMesh implements AutoCloseable {
             for (int z = 0; z < island.size; z++) {
                 for (int x = 0; x < island.size; x++) {
                     BlockState state = island.stateAt(x, y, z);
-                    if (state.isAir()) {
+                    if (state.isAir() || !island.shown(x + 0.5, y + 0.5, z + 0.5)) {
                         continue;
                     }
                     for (QuadCollector collector : collectors.values()) {

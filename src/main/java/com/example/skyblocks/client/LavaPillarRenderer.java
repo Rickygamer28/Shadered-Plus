@@ -14,6 +14,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -81,17 +82,47 @@ public class LavaPillarRenderer implements BlockEntityRenderer<LavaPillarBlockEn
         BlockPos bottom = LavaPillarBlock.bottom(level, pos);
         int h = LavaPillarBlock.height(level, bottom);
         LavaPillarBlockEntity base = level.getBlockEntity(bottom) instanceof LavaPillarBlockEntity b ? b : be;
-        time = ((level.getGameTime() % 240000L) + partialTick) / 20.0F;
+        float seconds = ((level.getGameTime() % 240000L) + partialTick) / 20.0F;
         segY = pos.getY() - bottom.getY();
         height = h;
         seed = (float) ((bottom.asLong() * 0x9E3779B97F4A7C15L >>> 44) % 1000L) / 37.0F;
-        wax = base.wax();
+        // (RGB: the wax cycling through the rainbow, as a lava lamp's; off: the wax still, the lamp dark)
+        wax = base.rgb() ? Mth.hsvToRgb((float) ((seconds * 0.07 + seed * 0.1) % 1.0), 0.85F, 1.0F) : base.wax();
         liquid = base.liquid();
+        time = base.lit() ? seconds : seed * 7.0F;
+        if (!base.lit()) {
+            wax = dim(wax, 0.35F);
+            liquid = dim(liquid, 0.3F);
+        }
         POSE.set(poseStack.last().pose());
         POSE_INV.set(POSE).invert();
         float y0 = segY == 0 ? FOOT : 0.0F, y1 = segY == h - 1 ? 1.0F - FOOT : 1.0F;
         MultiBufferSource.BufferSource source = DrawNow.now(buffers);
         box(source.getBuffer(Types.GLASS), poseStack.last().pose(), y0 - 0.002F, y1 + 0.002F);
+        source.endBatch(Types.GLASS);
+    }
+
+    private static int dim(int c, float k) {
+        return ((int) (((c >> 16) & 255) * k) << 16) | ((int) (((c >> 8) & 255) * k) << 8) | (int) ((c & 255) * k);
+    }
+
+    /** As an item: a pillar one block tall, the wax rainbow-cycling, at once with this pose. */
+    static void drawItem(PoseStack poseStack, MultiBufferSource buffers) {
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        if (shader == null) {
+            return;
+        }
+        float seconds = mc.level == null ? 0.0F : ((mc.level.getGameTime() % 240000L) + mc.getTimer().getGameTimeDeltaPartialTick(false)) / 20.0F;
+        time = seconds;
+        segY = 0.0F;
+        height = 1.0F;
+        seed = 3.0F;
+        wax = com.example.skyblocks.LavaPillarBlockEntity.DEFAULT_WAX;
+        liquid = com.example.skyblocks.LavaPillarBlockEntity.DEFAULT_LIQUID;
+        POSE.set(poseStack.last().pose());
+        POSE_INV.set(POSE).invert();
+        MultiBufferSource.BufferSource source = DrawNow.now(buffers);
+        box(source.getBuffer(Types.GLASS), poseStack.last().pose(), FOOT - 0.002F, 1.0F - FOOT + 0.002F);
         source.endBatch(Types.GLASS);
     }
 

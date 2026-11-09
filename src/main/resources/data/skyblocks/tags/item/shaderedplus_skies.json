@@ -1,0 +1,164 @@
+{
+  "values": [
+    "skyblocks:jupiter_sky_block",
+    "skyblocks:cat_sky_block",
+    "skyblocks:twilight_sky_block",
+    "skyblocks:hell_sky_block",
+    "skyblocks:nebula_sky_block",
+    "skyblocks:golden_hour_sky_block",
+    "skyblocks:scadu_altus_sky_block",
+    "skyblocks:cerulean_coast_sky_block",
+    "skyblocks:gravesite_plain_sky_block",
+    "skyblocks:mountaintops_sky_block",
+    "skyblocks:altus_plateau_night_sky_block",
+    "skyblocks:altus_plateau_sunset_sky_block",
+    "skyblocks:altus_plateau_sky_block",
+    "skyblocks:divine_tower_sky_block",
+    "skyblocks:caelid_sky_block",
+    "skyblocks:siofra_river_sky_block",
+    "skyblocks:limgrave_sunset_sky_block",
+    "skyblocks:limgrave_rainy_sky_block",
+    "skyblocks:academy_of_raya_lucaria_sky_block",
+    "skyblocks:liurnia_sunset_sky_block",
+    "skyblocks:liurnia_rainy_sky_block",
+    "skyblocks:liurnia_sky_block",
+    "skyblocks:chaos_sky_block",
+    "skyblocks:synthwave_sky_block",
+    "skyblocks:synthwave_outrun_sky_block",
+    "skyblocks:synthwave_night_sky_block",
+    "skyblocks:synthwave_miami_sky_block",
+    "skyblocks:darksynth_sky_block",
+    "skyblocks:synthwave_terminal_sky_block",
+    "skyblocks:vaporwave_sky_block",
+    "skyblocks:aurora_sky_block",
+    "skyblocks:underwater_sky_block",
+    {
+      "id": "skyblocks:jupiter_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:cat_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:twilight_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:hell_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:nebula_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:golden_hour_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:scadu_altus_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:cerulean_coast_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:gravesite_plain_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:mountaintops_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:altus_plateau_night_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:altus_plateau_sunset_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:altus_plateau_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:divine_tower_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:caelid_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:siofra_river_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:limgrave_sunset_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:limgrave_rainy_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:academy_of_raya_lucaria_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:liurnia_sunset_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:liurnia_rainy_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:liurnia_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:chaos_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:synthwave_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:synthwave_outrun_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:synthwave_night_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:synthwave_miami_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:darksynth_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:synthwave_terminal_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:vaporwave_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:aurora_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:underwater_liquid_bucket",
+      "required": false
+    }
+  ]
+}

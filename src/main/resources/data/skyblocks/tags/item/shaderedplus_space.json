@@ -1,0 +1,17 @@
+{
+  "values": [
+    "skyblocks:orrery",
+    "skyblocks:planetarium",
+    "skyblocks:black_hole",
+    "skyblocks:big_black_hole",
+    "skyblocks:singularity",
+    "skyblocks:containment_frame",
+    "skyblocks:port_frame",
+    "skyblocks:display_frame",
+    "skyblocks:monitor_frame",
+    "skyblocks:redstone_frame",
+    "skyblocks:whirlpool",
+    "skyblocks:tank_frame",
+    "skyblocks:tank_glass"
+  ]
+}

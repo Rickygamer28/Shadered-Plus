@@ -6,7 +6,7 @@
 // bottom (the block's own y + SegY).
 
 in vec3 lp;
-flat in vec3 eye;
+in vec3 eye;
 
 uniform mat4 ModelViewMat;
 uniform mat4 ProjMat;

@@ -102,9 +102,8 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
             default -> 8 + Math.round(bass * 10.0F);
         };
         Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-        Matrix4f m = poseStack.last().pose();
-        MultiBufferSource.BufferSource source = DrawNow.now(buffers);
-        VertexConsumer vc = source.getBuffer(Types.BEAMS);
+        Matrix4f m = new Matrix4f(poseStack.last().pose());
+        java.util.List<float[]> vc = new java.util.ArrayList<>(n * 8);
         for (int i = 0; i < n; i++) {
             float k = n == 1 ? 0.5F : i / (float) (n - 1);
             float spread, around;
@@ -150,10 +149,20 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
                 spot(vc, m, pos, to.add(hit.getDirection().getStepX() * 0.01, hit.getDirection().getStepY() * 0.01, hit.getDirection().getStepZ() * 0.01), cam, c, Math.min(1.0F, 0.9F * pulse));
             }
         }
-        source.endBatch(Types.BEAMS);
+        java.util.function.Consumer<MultiBufferSource.BufferSource> draw = source -> {
+            VertexConsumer out = source.getBuffer(Types.BEAMS);
+            for (float[] p : vc) {
+                out.addVertex(m, p[0], p[1], p[2]).setUv(p[3], p[4]).setColor((int) p[5], (int) p[6], (int) p[7], (int) p[8]);
+            }
+            source.endBatch(Types.BEAMS);
+        };
+        // (after Shadered's sky blocks and models, which would be drawn over the beams)
+        if (!LatePass.later(draw)) {
+            draw.accept(DrawNow.now(buffers));
+        }
     }
 
-    private static void beam(VertexConsumer vc, Matrix4f m, BlockPos pos, Vec3 a, Vec3 b, Vec3 cam, float[] c, float strength) {
+    private static void beam(java.util.List<float[]> vc, Matrix4f m, BlockPos pos, Vec3 a, Vec3 b, Vec3 cam, float[] c, float strength) {
         Vec3 dir = b.subtract(a);
         Vec3 side = dir.cross(cam.subtract(a)).normalize().scale(0.06);
         Vec3 sideB = dir.cross(cam.subtract(b)).normalize().scale(0.06);
@@ -164,7 +173,7 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
         put(vc, m, pos, b.subtract(sideB), 1.0F, -1.0F, r, g, bl, al);
     }
 
-    private static void spot(VertexConsumer vc, Matrix4f m, BlockPos pos, Vec3 p, Vec3 cam, float[] c, float strength) {
+    private static void spot(java.util.List<float[]> vc, Matrix4f m, BlockPos pos, Vec3 p, Vec3 cam, float[] c, float strength) {
         Vec3 toCam = cam.subtract(p).normalize();
         Vec3 x = toCam.cross(Math.abs(toCam.y) > 0.9 ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0)).normalize().scale(0.18);
         Vec3 y = toCam.cross(x).normalize().scale(0.18);
@@ -175,8 +184,8 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
         put(vc, m, pos, p.subtract(x).add(y), 2.0F, 1.0F, r, g, bl, al);
     }
 
-    private static void put(VertexConsumer vc, Matrix4f m, BlockPos pos, Vec3 p, float u, float v, int r, int g, int b, int a) {
-        vc.addVertex(m, (float) (p.x - pos.getX()), (float) (p.y - pos.getY()), (float) (p.z - pos.getZ())).setUv(u, v).setColor(r, g, b, a);
+    private static void put(java.util.List<float[]> vc, Matrix4f m, BlockPos pos, Vec3 p, float u, float v, int r, int g, int b, int a) {
+        vc.add(new float[] {(float) (p.x - pos.getX()), (float) (p.y - pos.getY()), (float) (p.z - pos.getZ()), u, v, r, g, b, a});
     }
 
     @Override
