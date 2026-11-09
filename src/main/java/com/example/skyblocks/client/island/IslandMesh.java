@@ -60,6 +60,9 @@ final class IslandMesh implements AutoCloseable {
                             continue;
                         }
                         renderBlock(blocks, island, collectors, pose, random, state, at);
+                        if (island.cutR > 0.0F) {
+                            RoundCut.wall(blocks, island, collectors.get(RenderType.solid()), state, at);
+                        }
                     } catch (RuntimeException e) {
                         // a (modded) block whose renderer needs a real world: left out of the miniature,
                         // including anything it wrote before failing
@@ -74,12 +77,12 @@ final class IslandMesh implements AutoCloseable {
         IslandMesh mesh = new IslandMesh();
         skyCollectors.forEach((sky, collector) -> {
             if (collector.vertexCount() > 0) {
-                mesh.skies.put(sky, collector.toArray());
+                mesh.skies.put(sky, RoundCut.clip(island, collector.toArray()));
             }
         });
         collectors.forEach((type, collector) -> {
             if (collector.vertexCount() > 0) {
-                mesh.layers.put(type, collector.toArray());
+                mesh.layers.put(type, RoundCut.clip(island, collector.toArray()));
             }
         });
         return mesh;
@@ -269,6 +272,16 @@ final class IslandMesh implements AutoCloseable {
         private int size;
         private int current = -1;
         private int mark;
+
+        /** Adds one whole vertex as packed (RoundCut's walls). */
+        void put(int[] v) {
+            if (size + INTS > data.length) {
+                data = java.util.Arrays.copyOf(data, data.length * 2);
+            }
+            System.arraycopy(v, 0, data, size, INTS);
+            size += INTS;
+            current = -1;
+        }
 
         void mark() {
             mark = size;

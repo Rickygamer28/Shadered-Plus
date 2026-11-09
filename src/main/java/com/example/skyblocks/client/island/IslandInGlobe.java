@@ -46,13 +46,14 @@ public final class IslandInGlobe {
         int across = Math.max(1, view.contentWidth());
         int up = Math.max(1, view.highestLayer() - view.lowestLayer() + 1);
         float scale = Math.min(width / across, height / up);
-        if (view.clip == null) { // (before its mesh is made: just the blocks and mobs inside the round column)
+        if (view.clip == null) { // (before its mesh is made: cut round - the blocks, the mobs and block entities in the circle)
             final IslandView v = view;
-            final float cx = v.contentCenterX(), cz = v.contentCenterZ(), low = v.lowestLayer();
-            v.clip = p -> {
-                double dx = (p.x - cx) * scale, y = (p.y - low) * scale, dz = (p.z - cz) * scale;
-                return dx * dx + dz * dz < clipR * clipR && y < clipTop;
-            };
+            v.cutX = v.contentCenterX();
+            v.cutZ = v.contentCenterZ();
+            v.cutR = clipR / scale;
+            v.cutTop = v.lowestLayer() + clipTop / scale;
+            final float cx = v.cutX, cz = v.cutZ, r = v.cutR, top = v.cutTop;
+            v.clip = p -> (p.x - cx) * (p.x - cx) + (p.z - cz) * (p.z - cz) < r * r && p.y < top;
         }
         IslandMesh mesh;
         try {

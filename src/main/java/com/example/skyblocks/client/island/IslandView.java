@@ -373,7 +373,24 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
     }
 
     BlockState stateAt(int x, int y, int z) {
-        return inside(x, y, z) ? states[index(x, y, z)] : Blocks.AIR.defaultBlockState();
+        return inside(x, y, z) && !cutAway(x, y, z) ? states[index(x, y, z)] : Blocks.AIR.defaultBlockState();
+    }
+
+    /**
+     * A round cut (the weather globe): only the blocks with some part inside a circle round (cx, cz), radius r, below
+     * top - island blocks; r <= 0: none. Set before the mesh is first made.
+     */
+    float cutX, cutZ, cutR = -1.0F, cutTop = Float.MAX_VALUE;
+
+    boolean cutAway(int x, int y, int z) {
+        if (cutR <= 0.0F) {
+            return false;
+        }
+        if (y >= cutTop) {
+            return true;
+        }
+        float dx = Math.max(Math.max(x - cutX, cutX - (x + 1)), 0.0F), dz = Math.max(Math.max(z - cutZ, cutZ - (z + 1)), 0.0F);
+        return dx * dx + dz * dz >= cutR * cutR;
     }
 
     /** Height a mob standing near (x, fromY, z) stands at, or NaN if there is no floor within reach. */
