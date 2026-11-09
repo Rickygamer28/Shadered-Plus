@@ -49,7 +49,7 @@ vec3 colour(int i) {
 vec3 pal(float x, float edge) {
     float f = fract(x) * float(N);
     int i = int(floor(f));
-    float w = max(mix(0.012, 0.5, Blur), AA * float(N) * 1.2);
+    float w = min(max(mix(0.012, 0.5, Blur), fwidth(x) * float(N) * 0.75), 0.5); // (never sharper than a pixel)
     float k = smoothstep(0.5 - w, 0.5 + w, fract(f));
     return mix(colour(i), colour(i + 1), k);
 }
@@ -324,10 +324,12 @@ vec3 fire(vec2 b, vec2 p, float t) {
     float hot = clamp(heat, 0.0, 1.35);
     vec3 c = vec3(0.0);
     if (hot > 0.05) {
+        // (each colour a crisp band of flame, the edge between them a pixel wide, or as soft as the blur)
         float x = clamp((hot - 0.05) / 1.0, 0.0, 0.999) * float(N);
         int i = int(floor(x));
         vec3 a = i == 0 ? colour(0) * 0.25 : colour(i - 1);
-        c = mix(a, colour(min(i, N - 1)), smoothstep(0.0, 1.0, fract(x)));
+        float w = min(max(mix(0.04, 0.5, Blur), fwidth(x) * 0.75), 0.5);
+        c = mix(a, colour(min(i, N - 1)), smoothstep(0.5 - w, 0.5 + w, fract(x)));
         c += vec3(1.0, 0.9, 0.7) * smoothstep(1.0, 1.35, hot) * 0.6; // (white-hot at the heart)
         c *= smoothstep(0.05, 0.3, hot);
     }
