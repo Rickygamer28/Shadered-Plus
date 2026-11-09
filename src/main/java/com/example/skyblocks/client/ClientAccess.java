@@ -36,6 +36,10 @@ public final class ClientAccess {
         }
     }
 
+    public static void openGuide() {
+        Minecraft.getInstance().setScreen(new GuideScreen());
+    }
+
     public static void openArcade(net.minecraft.core.BlockPos pos) {
         Minecraft.getInstance().setScreen(new ArcadeScreen(pos));
     }

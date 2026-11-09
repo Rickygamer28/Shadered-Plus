@@ -116,6 +116,9 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> LAVA_PILLAR = ITEMS.registerSimpleBlockItem("lava_pillar", ModBlocks.LAVA_PILLAR);
     public static final DeferredItem<BlockItem> LIGHT_BRIDGE_EMITTER = ITEMS.registerSimpleBlockItem("light_bridge_emitter", ModBlocks.LIGHT_BRIDGE_EMITTER);
     public static final DeferredItem<BlockItem> LASER_PROJECTOR = ITEMS.registerSimpleBlockItem("laser_projector", ModBlocks.LASER_PROJECTOR);
+    /** The guide book (GuideBookItem). */
+    public static final DeferredItem<GuideBookItem> GUIDE_BOOK = ITEMS.register("guide_book",
+            () -> new GuideBookItem(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<BlockItem> ARCADE = ITEMS.registerSimpleBlockItem("arcade", ModBlocks.ARCADE);
     public static final DeferredItem<BlockItem> KALEIDOSCOPE = ITEMS.registerSimpleBlockItem("kaleidoscope", ModBlocks.KALEIDOSCOPE);
     public static final DeferredItem<BlockItem> ORRERY = ITEMS.registerSimpleBlockItem("orrery", ModBlocks.ORRERY);

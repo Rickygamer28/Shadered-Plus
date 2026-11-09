@@ -41,6 +41,20 @@ public class SkyBlocksMod {
         modEventBus.addListener(SkyBlocksMod::addToShaderedTab);
         modEventBus.addListener(SkyBlocksMod::registerCapabilities);
         modEventBus.addListener(SkyBlocksMod::registerPayloads);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(SkyBlocksMod::giveGuide);
+    }
+
+    /** The guide book, once, the first time a player joins a world with Shadered+. */
+    private static void giveGuide(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
+        net.minecraft.world.entity.player.Player player = event.getEntity();
+        // (kept where it outlives dying, so it's only ever once)
+        net.minecraft.nbt.CompoundTag all = player.getPersistentData();
+        net.minecraft.nbt.CompoundTag data = all.getCompound("PlayerPersisted");
+        if (!data.getBoolean("skyblocks_guide_given")) {
+            data.putBoolean("skyblocks_guide_given", true);
+            all.put("PlayerPersisted", data);
+            player.getInventory().add(new net.minecraft.world.item.ItemStack(ModItems.GUIDE_BOOK.get()));
+        }
     }
 
     /** Shadered+'s own creative tab, right after Shadered's: everything, grouped (see {@link #fillTab}). */
@@ -70,40 +84,19 @@ public class SkyBlocksMod {
         }
     }
 
-    /** Shadered+'s tab: like with like - lights, music, fire and water, aquariums, ponds, space, mirrors, islands, skies. */
+    /** Shadered+'s tab: like with like - the guide, then each of its chapters (lights, music, ... skies). */
     private static void fillTab(java.util.function.Consumer<net.minecraft.world.item.ItemStack> out) {
-        java.util.function.Consumer<net.minecraft.world.level.ItemLike> add = i -> out.accept(new net.minecraft.world.item.ItemStack(i));
-        // lights and decoration
-        for (net.minecraft.world.level.ItemLike i : new net.minecraft.world.level.ItemLike[] {ModItems.EFFECT_BLOCK.get(), ModItems.EFFECT_GLASS.get(), ModItems.NEON_SIGN.get(),
-                ModItems.LAVA_LAMP.get(), ModItems.BIG_LAVA_LAMP.get(), ModItems.LAVA_PILLAR.get(), ModItems.PLASMA_BALL.get(), ModItems.TESLA_COIL.get(),
-                ModItems.KALEIDOSCOPE.get(), ModItems.HOLOGRAM_PROJECTOR.get(), ModItems.GALAXY_PROJECTOR.get(), ModItems.WEATHER_GLOBE.get(),
-                // music and parties
-                ModItems.DANCE_FLOOR.get(), ModItems.DISCO_BALL.get(), ModItems.LASER_PROJECTOR.get(), ModItems.FOG_MACHINE.get(), ModItems.SPEAKER.get(),
-                ModItems.MUSIC_VISUALIZER.get(), ModItems.MUSIC_BOX.get(), ModItems.ARCADE.get(),
-                // fire and water
-                ModItems.BRICK_HEARTH.get(), ModItems.FIRE_TORNADO.get(), ModItems.MAGMA_BASIN.get(), ModItems.WATER_CAUSTICS.get(),
-                ModItems.RAIN_GLASS.get(),
-                // aquariums and tanks
-                ModItems.AQUARIUM.get(), ModItems.OCEAN_AQUARIUM.get(), ModItems.DEEP_SEA_AQUARIUM.get(), ModItems.REEF_AQUARIUM.get(),
-                ModItems.JUNGLE_AQUARIUM.get(), ModItems.VANILLA_AQUARIUM.get(), ModItems.VANILLA_OCEAN_AQUARIUM.get(),
-                ModItems.AQUARIUM_STAND.get(), ModItems.AQUARIUM_LID.get(), ModItems.FISHBOWL.get(), ModItems.TALL_TANK.get(),
-                ModItems.SLIM_TANK.get(), ModItems.JELLYFISH_TANK.get(),
-                // ponds
-                ModItems.KOI_POND.get(), ModItems.VANILLA_KOI_POND.get(), ModItems.POND_STEPPING_STONE.get(), ModItems.POND_BRIDGE.get(),
-                ModItems.BAMBOO_SPOUT.get(),
-                // space
-                ModItems.ORRERY.get(), ModItems.PLANETARIUM.get(), ModItems.BLACK_HOLE.get(), ModItems.BIG_BLACK_HOLE.get(),
-                ModItems.SINGULARITY.get(), ModItems.CONTAINMENT_FRAME.get(), ModItems.PORT_FRAME.get(), ModItems.DISPLAY_FRAME.get(),
-                ModItems.MONITOR_FRAME.get(), ModItems.REDSTONE_FRAME.get(), ModItems.WHIRLPOOL.get(), ModItems.TANK_FRAME.get(),
-                ModItems.TANK_GLASS.get(),
-                // mirrors and portals
-                ModItems.MIRROR.get(), ModItems.ROUND_MIRROR.get(), ModItems.CRACKED_MIRROR.get(), ModItems.VANITY_MIRROR.get(),
-                ModItems.INFINITY_MIRROR.get(), ModItems.INFINITY_CUBE.get(), ModItems.PORTAL_MIRROR.get(), ModItems.LIGHT_BRIDGE_EMITTER.get(),
-                // sky islands, the cat
-                ModItems.ISLAND_SCANNER.get(), ModItems.ISLAND_PAINTING.get(), ModItems.OIIA_CAT.get()}) {
-            add.accept(i);
+        out.accept(new net.minecraft.world.item.ItemStack(ModItems.GUIDE_BOOK.get()));
+        for (GuideChapters.Chapter chapter : GuideChapters.all()) {
+            chapter.items().forEach(out);
         }
-        skies(out);
+    }
+
+    /** (the skies and their liquids, for the guide's last chapter) */
+    static java.util.List<net.minecraft.world.item.ItemStack> skyStacks() {
+        java.util.List<net.minecraft.world.item.ItemStack> list = new java.util.ArrayList<>();
+        skies(list::add);
+        return list;
     }
 
     /** Hoppers and pipes (any mod's) put things into the singularity and take them out. */
