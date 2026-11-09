@@ -37,6 +37,7 @@ const float TAU = 6.28318530718;
 vec3 C[8];
 int N;
 float AA; // (how much one screen pixel covers, in pattern units: for soft edges)
+float SZ; // (the size: 1 = normal)
 
 vec3 colour(int i) {
     return C[int(mod(float(i), float(N)))];
@@ -166,7 +167,7 @@ vec3 cycle(vec2 p, float t) {
 }
 
 vec3 breathe(vec2 p, float t) {
-    float k = t * 0.22;
+    float k = t * 0.22 - length(p) * 0.08; // (the breath spreads out from the middle: slower across a bigger size)
     float b = 0.5 - 0.5 * cos(fract(k) * TAU); // in and out
     // (the colour changes while it's dark, eased from one to the next)
     vec3 c = mix(colour(int(floor(k))), colour(int(floor(k)) + 1), smoothstep(0.85, 1.0, fract(k)));
@@ -175,7 +176,8 @@ vec3 breathe(vec2 p, float t) {
 }
 
 vec3 strobe(vec2 p, float t) {
-    float k = t * 2.5;
+    vec2 tile = floor(p * 0.5);
+    float k = t * 2.5 + (SZ < 7.5 ? hash(tile + side * 3.0) * 7.0 : 0.0);
     float f = fract(k);
     float flash = exp(-f * 9.0); // (a flash, fading fast)
     return colour(int(floor(k))) * (0.04 + 1.1 * flash);
@@ -281,7 +283,7 @@ vec3 ink(vec2 p, float t) {
 vec3 music(vec2 b, float t) {
     vec2 ext = side < 1.5 ? Extent.xz : side < 3.5 ? Extent.xy : Extent.zy;
     float y = clamp(b.y / max(ext.y, 1.0) + 0.5, 0.0, 1.0); // (0 at the group's foot, 1 at its top)
-    float cell = floor(b.x * 2.0);
+    float cell = floor(b.x * 2.0 / SZ);
     float h = hash(vec2(cell, 7.0));
     float h2 = hash(vec2(cell, 3.0));
     float level = clamp(Boost * (0.45 + 0.4 * sin(t * (4.0 + 3.0 * h2) + h * TAU) + 0.25 * h2)
@@ -290,9 +292,9 @@ vec3 music(vec2 b, float t) {
     float lit = 1.0 - smoothstep(level - edge, level + edge, y);
     vec3 c = pal(y * 0.9 + cell * 0.04 + t * 0.02, 0.0);
     float topGlow = exp(-abs(y - level) * 8.0 * max(ext.y, 1.0));
-    float gx = fract(b.x * 2.0);
+    float gx = fract(b.x * 2.0 / SZ);
     float gap = smoothstep(0.04, 0.1, gx) * smoothstep(0.04, 0.1, 1.0 - gx);
-    float rows = smoothstep(0.03, 0.08, fract(y * ext.y * 4.0)); // (lit in segments, like a meter)
+    float rows = smoothstep(0.03, 0.08, fract(y * ext.y * 4.0 / SZ)); // (lit in segments, like a meter)
     vec3 bg = palSmooth(t * 0.05) * (0.04 + 0.12 * Boost);
     return bg + c * gap * (lit * rows * (0.7 + 0.5 * Boost) + topGlow * 0.9);
 }
@@ -311,9 +313,9 @@ vec3 fire(vec2 b, vec2 p, float t) {
     vec2 ext;
     vec2 g = groupPlace(b, ext);
     float y = g.y * ext.y; // (blocks up from the foot)
-    vec2 q = vec2(p.x * 1.3, (y - t * 1.4) * 0.9);
+    vec2 q = vec2(p.x * 1.3, (y / SZ - t * 1.4) * 0.9);
     float n = fbm(q + vec2(0.0, fbm(q * 0.7 + t * 0.2) * 0.8));
-    float heat = 1.25 - y / max(ext.y * 0.85, 1.0) + n * 0.75;
+    float heat = 1.25 - y / max(ext.y * 0.85 * clamp(SZ, 0.4, 1.0), 1.0) + n * 0.75;
     heat -= 0.25 * fbm(vec2(p.x * 0.6, t * 0.3)); // (some tongues taller than others)
     float hot = clamp(heat, 0.0, 1.35);
     vec3 c = vec3(0.0);
@@ -330,7 +332,7 @@ vec3 fire(vec2 b, vec2 p, float t) {
 
 // digital rain: columns of changing characters falling, a bright head and a fading tail
 vec3 rain(vec2 b, float t) {
-    float cols = 6.0;
+    float cols = 6.0 / SZ;
     vec2 cell = vec2(floor(b.x * cols), floor(b.y * cols));
     vec2 f = fract(b * cols);
     float col = cell.x + side * 31.0;
@@ -358,7 +360,7 @@ vec3 lava(vec2 b, float t) {
         float fk = float(k);
         float x = (hash(vec2(fk, 1.0)) - 0.5) * ext.x * 0.8 + sin(t * 0.21 + fk * 2.0) * 0.4;
         float y = sin(t * (0.12 + 0.05 * hash(vec2(fk, 2.0))) + fk * 1.7) * ext.y * 0.42;
-        float r = (0.3 + 0.3 * hash(vec2(fk, 3.0))) * min(max(ext.x, ext.y), 4.0) * 0.32;
+        float r = (0.3 + 0.3 * hash(vec2(fk, 3.0))) * min(max(ext.x, ext.y), 4.0) * 0.32 * SZ;
         vec2 d = q - vec2(x, y);
         field += r * r / (dot(d, d) + 0.02);
     }
@@ -377,7 +379,7 @@ vec3 warp(vec2 p, float t) {
     float a = atan(p.y, p.x);
     for (int layer = 0; layer < 3; layer++) {
         float fl = float(layer);
-        float slices = 70.0 + fl * 40.0;
+        float slices = (70.0 + fl * 40.0) / clamp(sqrt(SZ), 0.5, 2.0);
         float sa = floor(a / TAU * slices);
         float h = hash(vec2(sa, fl));
         float speed = 0.6 + h * 0.8;
@@ -397,7 +399,7 @@ vec3 warp(vec2 p, float t) {
 vec3 spectrum(vec2 b, float t) {
     vec2 ext;
     vec2 g = groupPlace(b, ext);
-    float bars = clamp(floor(ext.x * 2.0), 4.0, 16.0);
+    float bars = clamp(floor(ext.x * 2.0 / SZ), 2.0, 32.0);
     float i = floor(g.x * bars);
     float bi = floor(i / bars * 16.0);
     vec4 sel = bi < 4.0 ? BandsA : bi < 8.0 ? BandsB : bi < 12.0 ? BandsC : BandsD;
@@ -408,7 +410,7 @@ vec3 spectrum(vec2 b, float t) {
     float lit = 1.0 - smoothstep(level - edge, level + edge, y);
     float gx = fract(g.x * bars);
     float gap = smoothstep(0.06, 0.14, gx) * smoothstep(0.06, 0.14, 1.0 - gx);
-    float rows = smoothstep(0.04, 0.1, fract(y * ext.y * 4.0));
+    float rows = smoothstep(0.04, 0.1, fract(y * ext.y * 4.0 / SZ));
     vec3 c = pal(y * 0.9 + 0.001, 0.0);
     float cap = exp(-abs(y - level) * 10.0 * ext.y);
     return colour(0) * 0.03 + c * gap * (lit * rows + cap * 0.8);
@@ -422,6 +424,7 @@ void main() {
         b = (floor(b * 32.0) + 0.5) / 32.0;
     }
     float size = max(Size, 0.05);
+    SZ = size;
     vec2 p = b / size;
     AA = length(fwidth(p)) * 0.5;
     float t = Time * Speed;
