@@ -146,14 +146,7 @@ public class SolarSystemBlockEntity extends BlockEntity {
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
-        if (tag.contains("speed")) {
-            int was = speed;
-            speed = Math.floorMod(tag.getInt("speed"), SPEEDS);
-            if (was != speed && level != null && level.isClientSide) { // (test build: told in the log)
-                SkyBlocksMod.LOGGER.info("Shadered+ orrery check: the {} at {} (#{}) got speed {} from the server", getBlockState().getBlock() instanceof SolarSystemBlock b && b.hologram() ? "planetarium" : "orrery",
-                        worldPosition.toShortString(), Integer.toHexString(System.identityHashCode(this)), speed);
-            }
-        }
+        if (tag.contains("speed")) speed = Math.floorMod(tag.getInt("speed"), SPEEDS);
         realSizes = tag.getBoolean("realSizes");
         dome = !tag.contains("dome") || tag.getBoolean("dome");
         size = Math.floorMod(tag.getInt("size"), 3);
