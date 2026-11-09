@@ -122,7 +122,7 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
     }
 
     /** (the textures changed - a resource pack: the places on the atlas worked out again) */
-    static void forgetSprites() {
+    public static void forgetSprites() {
         SPRITES.clear();
     }
 
