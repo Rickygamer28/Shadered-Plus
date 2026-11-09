@@ -152,7 +152,7 @@ public class KaleidoscopeRenderer implements BlockEntityRenderer<KaleidoscopeBlo
             return;
         }
         BlockPos pos = be.getBlockPos();
-        MultiBufferSource.BufferSource source = buffers instanceof MultiBufferSource.BufferSource s ? s : Minecraft.getInstance().renderBuffers().bufferSource();
+        MultiBufferSource.BufferSource source = DrawNow.now(buffers);
         itemMode = 0.0F;
         for (Direction face : Direction.values()) {
             if (!shows(level, pos, face)) {
@@ -185,7 +185,7 @@ public class KaleidoscopeRenderer implements BlockEntityRenderer<KaleidoscopeBlo
         Minecraft mc = Minecraft.getInstance();
         turn = mc.level == null ? 0.0F : (mc.level.getGameTime() % 72000L) / 20.0F;
         itemMode = 1.0F;
-        MultiBufferSource.BufferSource source = buffers instanceof MultiBufferSource.BufferSource s ? s : mc.renderBuffers().bufferSource();
+        MultiBufferSource.BufferSource source = DrawNow.now(buffers);
         VertexConsumer vc = source.getBuffer(Types.WINDOWS);
         for (int face = 0; face < 6; face++) {
             window(vc, m, face, 0, new int[] {128, 128, 1, 1}, 3, 0, 7);
