@@ -260,6 +260,7 @@ public final class RenderTest {
                             }
                             // ("with <item> ": that in the hand - then a click places it, as a player would)
                             String inHand = null;
+                            mc.options.hideGui = !where.startsWith("with "); // (holding something: the hand and the hotbar shown)
                             if (where.startsWith("with ")) {
                                 String[] w = where.split(" ", 3);
                                 inHand = w[1];
