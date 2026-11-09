@@ -67,14 +67,6 @@ public class EffectBlock extends BaseEntityBlock {
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    @Override
-    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moving) {
-        super.onPlace(state, level, pos, old, moving);
-        if (!level.isClientSide && !old.is(this) && level.getBlockEntity(pos) instanceof EffectBlockEntity be && be.group() == 0L) {
-            be.startGroup(level.random.nextLong() | 1L); // (EffectBlockItem joins it to the clicked one's group after this)
-        }
-    }
-
     /** The blocks of this one's group touching it, through each other (it included). */
     public static List<BlockPos> group(BlockGetter level, BlockPos start) {
         List<BlockPos> out = new ArrayList<>();
@@ -82,6 +74,10 @@ public class EffectBlock extends BaseEntityBlock {
             return out;
         }
         long id = first.group();
+        if (id == 0L) { // (on its own)
+            out.add(start.immutable());
+            return out;
+        }
         Set<BlockPos> seen = new HashSet<>();
         ArrayDeque<BlockPos> todo = new ArrayDeque<>();
         seen.add(start.immutable());

@@ -54,13 +54,13 @@ float noise(vec2 p) {
     return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
 }
 
-// ---- the effects: p in pattern units (blocks / 3 / Size), t in seconds (times Speed) ----
+// ---- the effects: p in pattern units (blocks / Size), t in seconds (times Speed) ----
 
 // paint stirred round and round: a slow whirl in the middle, the colours folded into each other in bands
 vec3 swirl(vec2 p, float t) {
     float r = length(p);
     float a = atan(p.y, p.x) + t * 0.18 - r * 0.55 + 0.35 * sin(t * 0.13);
-    vec2 w = vec2(cos(a), sin(a)) * r * 2.4;
+    vec2 w = vec2(cos(a), sin(a)) * r * 4.5;
     vec2 z = w;
     for (int k = 0; k < 5; k++) {
         float fk = float(k);
@@ -162,7 +162,7 @@ void main() {
     if (Pixel > 0.5) {
         b = (floor(b * 16.0) + 0.5) / 16.0;
     }
-    vec2 p = b / (3.0 * max(Size, 0.05));
+    vec2 p = b / max(Size, 0.05);
     float t = Time * Speed;
     int e = int(Effect + 0.5);
     vec3 c;

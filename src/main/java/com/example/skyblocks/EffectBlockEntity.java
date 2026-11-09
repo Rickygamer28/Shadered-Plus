@@ -31,7 +31,7 @@ public class EffectBlockEntity extends BlockEntity {
      * What an effect block shows. Speed, size and brightness in percent (speed 10-400, size 25-800, brightness 10-100).
      */
     public record Settings(int effect, int count, int[] colours, int speed, int size, int brightness, boolean pixel) {
-        public static final Settings DEFAULT = new Settings(0, 3, DEFAULT_COLOURS.clone(), 100, 100, 100, true);
+        public static final Settings DEFAULT = new Settings(0, 3, DEFAULT_COLOURS.clone(), 100, 100, 100, false);
 
         public Settings {
             effect = Math.floorMod(effect, EFFECTS.length);
@@ -98,8 +98,11 @@ public class EffectBlockEntity extends BlockEntity {
         changed();
     }
 
-    /** Joins another's group: its settings, its anchor. */
+    /** Joins another's group: its settings, its anchor (the other starting a group, if it's on its own). */
     public void join(EffectBlockEntity other) {
+        if (other.group == 0L) {
+            other.startGroup(level != null ? level.random.nextLong() | 1L : System.nanoTime() | 1L);
+        }
         settings = other.settings;
         group = other.group;
         anchor = other.anchor();
