@@ -434,15 +434,19 @@ vec3 spectrum(vec2 b, float t) {
 
 // one point of the side: its effect, over the background where it lights only part of it
 // what's behind the effect here: the colour, or the block's texture - one to each block of the side
-vec3 background(vec2 b) {
-    if (HasBgBlock < 0.5) return Bg;
-    // (from the group's corner, not its middle: whole blocks, lined up with the real ones)
+// where on the background block's texture this point is (the group's corner on, whole blocks lined up with the real ones)
+vec4 bgTexel(vec2 b) {
     int sd = int(side + 0.5);
     vec2 hf = 0.5 * (sd <= 1 ? Extent.xz : sd <= 3 ? Extent.xy : Extent.zy);
     vec2 f = fract(b + hf);
     f = vec2(f.x, 1.0 - f.y);
     f = (floor(f * 16.0) + 0.5) / 16.0; // (its own pixels, crisp)
-    vec4 tex = textureLod(Sampler0, mix(BgUV.xy, BgUV.zw, f), 0.0);
+    return textureLod(Sampler0, mix(BgUV.xy, BgUV.zw, f), 0.0);
+}
+
+vec3 background(vec2 b) {
+    if (HasBgBlock < 0.5) return Bg;
+    vec4 tex = bgTexel(b);
     return mix(Bg, tex.rgb * BgTint, tex.a); // (see-through blocks, glass: the colour behind them)
 }
 
@@ -506,6 +510,9 @@ void main() {
     if (Glass > 0.5) {
         float lum = max(max(c.r, c.g), c.b);
         alpha = clamp(0.18 + lum * 0.8, 0.18, 0.92);
+        if (HasBgBlock > 0.5) {
+            alpha = max(alpha, bgTexel(b).a); // (a block behind it: solid, only the effect glassy over it)
+        }
         outc += vec3(0.04); // (a little glassy sheen)
     }
     fragColor = vec4(outc, alpha);
