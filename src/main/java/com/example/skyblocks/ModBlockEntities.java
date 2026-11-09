@@ -86,6 +86,8 @@ public final class ModBlockEntities {
                     ModBlocks.MONITOR_FRAME.get(), ModBlocks.REDSTONE_FRAME.get()).build(null));
     public static final Supplier<BlockEntityType<SingularityBlockEntity>> SINGULARITY = TYPES.register("singularity",
             () -> BlockEntityType.Builder.of(SingularityBlockEntity::new, ModBlocks.SINGULARITY.get()).build(null));
+    public static final Supplier<BlockEntityType<EffectBlockEntity>> EFFECT_BLOCK = TYPES.register("effect_block",
+            () -> BlockEntityType.Builder.of(EffectBlockEntity::new, ModBlocks.EFFECT_BLOCK.get()).build(null));
     public static final Supplier<BlockEntityType<KaleidoscopeBlockEntity>> KALEIDOSCOPE = TYPES.register("kaleidoscope",
             () -> BlockEntityType.Builder.of(KaleidoscopeBlockEntity::new, ModBlocks.KALEIDOSCOPE.get()).build(null));
     public static final Supplier<BlockEntityType<SolarSystemBlockEntity>> SOLAR_SYSTEM = TYPES.register("solar_system",

@@ -157,6 +157,11 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 9)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLUE));
 
+    /** An effect block: a full block showing an animated shader effect of your choosing (EffectBlock, client/EffectBlockRenderer). */
+    public static final DeferredBlock<EffectBlock> EFFECT_BLOCK = BLOCKS.registerBlock("effect_block", EffectBlock::new,
+            BlockBehaviour.Properties.of().strength(1.0F, 6.0F).sound(SoundType.GLASS).lightLevel(state -> 12)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_MAGENTA));
+
     /** A kaleidoscope: coloured glass turning in windows on every side of a brass frame (KaleidoscopeBlock). */
     public static final DeferredBlock<KaleidoscopeBlock> KALEIDOSCOPE = BLOCKS.registerBlock("kaleidoscope", KaleidoscopeBlock::new,
             BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.COPPER).lightLevel(state -> 10)

@@ -67,6 +67,7 @@ public class SkyBlocksMod {
         event.accept(ModItems.GALAXY_PROJECTOR.get());
         event.accept(ModItems.ORRERY.get());
         event.accept(ModItems.KALEIDOSCOPE.get());
+        event.accept(ModItems.EFFECT_BLOCK.get());
         event.accept(ModItems.PORTAL_MIRROR.get());
         event.accept(ModItems.PLANETARIUM.get());
         event.accept(ModItems.MAGMA_BASIN.get());
@@ -134,6 +135,7 @@ public class SkyBlocksMod {
         event.registrar("1").playToServer(ScanIslandPayload.TYPE, ScanIslandPayload.STREAM_CODEC, ScanIslandPayload::handle)
                 .playToServer(FogAreaPayload.TYPE, FogAreaPayload.STREAM_CODEC, FogAreaPayload::handle)
                 .playToServer(NeonSignPayload.TYPE, NeonSignPayload.STREAM_CODEC, NeonSignPayload::handle)
+                .playToServer(EffectBlockPayload.TYPE, EffectBlockPayload.STREAM_CODEC, EffectBlockPayload::handle)
                 .playToServer(PondMaterialsPayload.TYPE, PondMaterialsPayload.STREAM_CODEC, PondMaterialsPayload::handle)
                 .playToServer(SolarSystemClickPayload.TYPE, SolarSystemClickPayload.STREAM_CODEC, SolarSystemClickPayload::handle)
                 .playToServer(PortalCrossPayload.TYPE, PortalCrossPayload.STREAM_CODEC, PortalCrossPayload::handle)

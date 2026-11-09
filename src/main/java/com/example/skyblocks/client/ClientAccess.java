@@ -36,6 +36,13 @@ public final class ClientAccess {
         }
     }
 
+    public static void openEffectBlock(net.minecraft.core.BlockPos pos) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null && mc.level.getBlockEntity(pos) instanceof com.example.skyblocks.EffectBlockEntity be) {
+            mc.setScreen(new EffectBlockScreen(pos, be.settings()));
+        }
+    }
+
     public static void openNeonSign(net.minecraft.core.BlockPos pos) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.level.getBlockEntity(pos) instanceof com.example.skyblocks.NeonSignBlockEntity sign) {
