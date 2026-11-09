@@ -441,5 +441,6 @@
   "effect_block.skyblocks.lava": "Lava Lamp",
   "effect_block.skyblocks.warp": "Starfield Warp",
   "effect_block.skyblocks.spectrum": "Spectrum",
-  "itemGroup.skyblocks.shadered_plus": "Shadered+"
+  "itemGroup.skyblocks.shadered_plus": "Shadered+",
+  "screen.skyblocks.effect_block.background": "Background"
 }

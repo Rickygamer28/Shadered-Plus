@@ -21,7 +21,9 @@ public class EffectBlockEntity extends BlockEntity {
             "lava", "warp", "spectrum"};
     public static final int MAX_COLOURS = 8;
     /** (a Balatro-like start: red, blue and a dark teal - then gold, green, purple, white, orange) */
-    public static final int[] DEFAULT_COLOURS = {0xDE443B, 0x006BB4, 0x162325, 0xF2B53A, 0x3FBF6F, 0x8E5BD9, 0xF4F4F4, 0xFF7A1A};
+    public static final int[] DEFAULT_COLOURS = {0xDE443B, 0x006BB4, 0x162325, 0xF2B53A, 0x3FBF6F, 0x8E5BD9, 0xF4F4F4, 0xFF7A1A, 0x000000};
+    /** Where in the colours the background is (behind the effects that light only part of the side), after the eight. */
+    public static final int BACKGROUND = MAX_COLOURS;
 
     private Settings settings = Settings.DEFAULT;
     private long group;
@@ -38,8 +40,8 @@ public class EffectBlockEntity extends BlockEntity {
         public Settings {
             effect = Math.floorMod(effect, EFFECTS.length);
             count = Math.max(1, Math.min(MAX_COLOURS, count));
-            int[] c = new int[MAX_COLOURS];
-            for (int i = 0; i < MAX_COLOURS; i++) {
+            int[] c = new int[MAX_COLOURS + 1];
+            for (int i = 0; i <= MAX_COLOURS; i++) {
                 c[i] = (colours != null && i < colours.length ? colours[i] : DEFAULT_COLOURS[i]) & 0xFFFFFF;
             }
             colours = c;
@@ -47,6 +49,11 @@ public class EffectBlockEntity extends BlockEntity {
             size = Math.max(25, Math.min(800, size));
             brightness = Math.max(10, Math.min(100, brightness));
             blur = Math.max(0, Math.min(100, blur));
+        }
+
+        /** The colour behind the effects that light only part of the side (black to start with). */
+        public int background() {
+            return colours[BACKGROUND];
         }
 
         public CompoundTag save() {

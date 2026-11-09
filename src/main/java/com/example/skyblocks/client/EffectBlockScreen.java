@@ -64,7 +64,7 @@ public class EffectBlockScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal(">"), b -> setEffect(effect + 1)).bounds(l + 244, t + 24, 20, 20).build());
         addRenderableWidget(Button.builder(Component.literal("-"), b -> {
             count = Math.max(1, count - 1);
-            if (sel >= count) {
+            if (sel != EffectBlockEntity.BACKGROUND && sel >= count) {
                 select(count - 1);
             }
             showSwatches();
@@ -91,6 +91,19 @@ public class EffectBlockScreen extends Screen {
             });
         }
         showSwatches();
+        // the background (behind the effects that light only part of the side): set like the colours
+        addRenderableWidget(new Button(l + 70, t + 49, 118, 20, Component.translatable("screen.skyblocks.effect_block.background"),
+                b -> select(EffectBlockEntity.BACKGROUND), s -> Component.literal("background")) {
+            @Override
+            protected void renderWidget(GuiGraphics g, int mx, int my, float pt) {
+                super.renderWidget(g, mx, my, pt);
+                g.fill(getX() + 4, getY() + 4, getX() + 16, getY() + height - 4, 0xFFFFFFFF);
+                g.fill(getX() + 5, getY() + 5, getX() + 15, getY() + height - 5, 0xFF000000 | colours[EffectBlockEntity.BACKGROUND]);
+                if (sel == EffectBlockEntity.BACKGROUND) {
+                    g.renderOutline(getX() + 1, getY() + 1, width - 2, height - 2, 0xFFFFFFFF);
+                }
+            }
+        });
         String[] names = {"red", "green", "blue"};
         for (int k = 0; k < 3; k++) {
             final int shift = 16 - 8 * k;
@@ -246,11 +259,13 @@ public class EffectBlockScreen extends Screen {
         int l = left(), t = top();
         g.drawCenteredString(font, title, l + PANEL_W / 2, t + 9, 0xFFFFFF);
         g.drawString(font, Component.translatable("screen.skyblocks.effect_block.colours"), l + 12, t + 55, 0xA0A0A0);
+        Component editing = sel == EffectBlockEntity.BACKGROUND ? Component.translatable("screen.skyblocks.effect_block.background")
+                : Component.translatable("screen.skyblocks.effect_block.editing", sel + 1);
         g.drawCenteredString(font, Component.literal(Integer.toString(count)), l + 230, t + 55, 0xFFFFFF);
         // the colour being set, big
         g.fill(l + 198, t + 100, l + 264, t + 142, 0xFFFFFFFF);
         g.fill(l + 199, t + 101, l + 263, t + 141, 0xFF000000 | colours[sel]);
-        g.drawCenteredString(font, Component.translatable("screen.skyblocks.effect_block.editing", sel + 1), l + 231, t + 116,
+        g.drawCenteredString(font, editing, l + 231, t + 116,
                 (((colours[sel] >> 16) & 255) * 3 + ((colours[sel] >> 8) & 255) * 6 + (colours[sel] & 255)) > 1300 ? 0x202020 : 0xFFFFFF);
     }
 

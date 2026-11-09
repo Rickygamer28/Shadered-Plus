@@ -18,6 +18,7 @@ uniform float Pixel;  // 1: pixelated, 32 to a block
 uniform float Blur;   // 0: crisp changes from colour to colour, 1: fully blended
 uniform float Boost;  // the music's bass, 0-1
 uniform vec3 Extent;  // the size of the block's group, in blocks (x, y, z)
+uniform vec3 Bg;      // the background, behind the effects that light only part of the side
 uniform vec4 BandsA;  // the music's 16 bands, low to high, 0-1
 uniform vec4 BandsB;
 uniform vec4 BandsC;
@@ -345,9 +346,10 @@ vec3 rain(vec2 b, float t) {
     vec2 px = floor(f * vec2(5.0, 7.0));
     float glyph = step(0.45, hash(px + cell * 7.3 + floor(t * (2.0 + 6.0 * hash(cell)))));
     glyph *= step(0.5, f.x * 5.0 - floor(f.x * 5.0) + 0.3) * step(0.1, f.y) * step(f.x, 0.95);
-    vec3 c = colour(0) * glyph * trail * 0.9;
-    c += mix(colour(0), vec3(1.0), 0.75) * glyph * step(d, 0.99) * 1.2; // (the head, almost white)
-    return c + colour(0) * 0.03;
+    vec3 ink = colour(int(hash(vec2(col, 5.0)) * float(N))); // (each column in one of the colours)
+    vec3 c = ink * glyph * trail * 0.9;
+    c += mix(ink, vec3(1.0), 0.75) * glyph * step(d, 0.99) * 1.2; // (the head, almost white)
+    return c;
 }
 
 // a lava lamp: big soft blobs rising and sinking, joining and coming apart
@@ -356,20 +358,24 @@ vec3 lava(vec2 b, float t) {
     vec2 g = groupPlace(b, ext);
     vec2 q = (g - 0.5) * ext; // (blocks from the middle)
     float field = 0.0;
+    vec3 tint = vec3(0.0); // (each blob in one of the colours, blended where they join)
     for (int k = 0; k < 7; k++) {
         float fk = float(k);
         float x = (hash(vec2(fk, 1.0)) - 0.5) * ext.x * 0.8 + sin(t * 0.21 + fk * 2.0) * 0.4;
         float y = sin(t * (0.12 + 0.05 * hash(vec2(fk, 2.0))) + fk * 1.7) * ext.y * 0.42;
         float r = (0.3 + 0.3 * hash(vec2(fk, 3.0))) * min(max(ext.x, ext.y), 4.0) * 0.32 * SZ;
         vec2 d = q - vec2(x, y);
-        field += r * r / (dot(d, d) + 0.02);
+        float f = r * r / (dot(d, d) + 0.02);
+        field += f;
+        tint += colour(k) * f;
     }
+    vec3 wax = tint / max(field, 1e-4);
     float edge = max(fwidth(field) * 1.5, 0.02);
     float blob = smoothstep(1.0 - edge, 1.0 + edge, field);
-    vec3 wax = mix(colour(0), colour(1), clamp((field - 1.0) * 0.35, 0.0, 1.0));
-    vec3 liquid = colour(N > 2 ? 2 : 0) * 0.25 + colour(0) * 0.1 * clamp(field, 0.0, 1.0); // (lit by the wax)
+    vec3 glow = wax * 0.12 * clamp(field, 0.0, 1.0); // (the liquid lit by the wax near it)
     float rim = smoothstep(1.0, 1.6, field) * (1.0 - smoothstep(1.6, 3.0, field));
-    return mix(liquid, wax * (0.85 + 0.25 * rim), blob);
+    float core = smoothstep(1.5, 4.0, field); // (brighter inside)
+    return mix(glow, wax * (0.8 + 0.2 * rim + 0.2 * core), blob);
 }
 
 // stars streaking out from the middle, as if flying through them
@@ -448,8 +454,12 @@ void main() {
     else if (e == 15) c = lava(b, t);
     else if (e == 16) c = warp(p, t);
     else c = spectrum(b, t);
-    // (a gentle curve: highlights roll off instead of clipping flat)
     c = max(c, 0.0);
+    // the effects that light only part of the side, over the background (its light where theirs isn't)
+    if (e == 3 || e == 4 || e == 5 || e == 7 || e == 10 || e == 11 || (e >= 13 && e <= 17)) {
+        c += Bg * (1.0 - clamp(max(max(c.r, c.g), c.b) * 1.5, 0.0, 1.0));
+    }
+    // (a gentle curve: highlights roll off instead of clipping flat)
     c = c / (1.0 + max(max(c.r, c.g), c.b) * 0.15) * 1.15;
     fragColor = vec4(clamp(c, 0.0, 1.0) * Bright * shade, 1.0);
 }

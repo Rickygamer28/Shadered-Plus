@@ -23,7 +23,7 @@ public record EffectBlockPayload(BlockPos pos, int look, java.util.List<Integer>
     }
 
     public EffectBlockEntity.Settings settings() {
-        int[] c = new int[EffectBlockEntity.MAX_COLOURS];
+        int[] c = new int[EffectBlockEntity.MAX_COLOURS + 1];
         for (int i = 0; i < c.length && i < colours.size(); i++) {
             c[i] = colours.get(i);
         }
@@ -36,7 +36,7 @@ public record EffectBlockPayload(BlockPos pos, int look, java.util.List<Integer>
     public static final StreamCodec<ByteBuf, EffectBlockPayload> STREAM_CODEC = StreamCodec.composite(
             BlockPos.STREAM_CODEC, EffectBlockPayload::pos,
             ByteBufCodecs.VAR_INT, EffectBlockPayload::look,
-            ByteBufCodecs.INT.apply(ByteBufCodecs.list(EffectBlockEntity.MAX_COLOURS)), EffectBlockPayload::colours,
+            ByteBufCodecs.INT.apply(ByteBufCodecs.list(EffectBlockEntity.MAX_COLOURS + 1)), EffectBlockPayload::colours,
             ByteBufCodecs.VAR_INT, EffectBlockPayload::amounts,
             EffectBlockPayload::new);
 
