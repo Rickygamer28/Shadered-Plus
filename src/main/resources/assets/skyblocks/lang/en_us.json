@@ -556,5 +556,6 @@
   "guide.skyblocks.light_bridge_emitter": "Two of these facing each other, up to 32 blocks apart, make a bridge of solid light you can walk on. Dye it any colour, or rainbow.",
   "guide.skyblocks.island_scanner": "Scans the area around it into a Sky Island item: a little copy of it, mobs included, to keep and show in paintings, on pedestals or in a weather globe.",
   "guide.skyblocks.island_painting": "A framed shadow box for the wall with a Sky Island inside. Right-click it with an ender pearl to go to where the island was scanned.",
-  "guide.skyblocks.oiia_cat": "The spinning cat. Give it redstone to make it spin; 27 of them in a cube make a big one (see Structures)."
+  "guide.skyblocks.oiia_cat": "The spinning cat. Give it redstone to make it spin; 27 of them in a cube make a big one (see Structures).",
+  "guide.skyblocks.chapter.everything": "Everything"
 }
