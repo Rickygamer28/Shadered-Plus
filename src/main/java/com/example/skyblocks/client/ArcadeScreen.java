@@ -109,6 +109,12 @@ public class ArcadeScreen extends Screen {
         }
     }
 
+    private boolean canClaim() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.player != null && mc.level != null && mc.level.getBlockEntity(pos) instanceof ArcadeBlockEntity be
+                && be.claimable(game, mc.player.getGameProfile().getName());
+    }
+
     private void over() {
         mode = Mode.OVER;
         if (score > 0) {
@@ -599,6 +605,8 @@ public class ArcadeScreen extends Screen {
                 game = (game + NAMES.length - 1) % NAMES.length;
             } else if (key == GLFW.GLFW_KEY_SPACE || key == GLFW.GLFW_KEY_ENTER) {
                 start();
+            } else if (key == GLFW.GLFW_KEY_T && canClaim()) { // (the best score's holder: its trophy)
+                PacketDistributor.sendToServer(new com.example.skyblocks.TrophyClaimPayload(pos, game));
             }
             return true;
         }
@@ -714,6 +722,9 @@ public class ArcadeScreen extends Screen {
             int best = be.best(game);
             String line = best > 0 ? "HI-SCORE " + best + " - " + be.bestBy(game) : "NO HI-SCORE YET";
             drawCentred(g, line, x0 + W / 2, y0 + H + 9, 0xFFE9F27A);
+            if (mode != Mode.PLAYING && canClaim() && (ticks / 10) % 2 == 0) {
+                drawCentred(g, "T: CLAIM YOUR TROPHY!", x0 + W / 2, y0 + H - 12, 0xFFFFC23A);
+            }
         }
         if (mode == Mode.OVER) {
             g.fill(x0, y0 + H / 2 - 22, x0 + W, y0 + H / 2 + 24, 0xC0000000);

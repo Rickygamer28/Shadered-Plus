@@ -94,6 +94,18 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(LavaPillarBlockEntity::new, ModBlocks.LAVA_PILLAR.get()).build(null));
     public static final Supplier<BlockEntityType<LightBridgeEmitterBlockEntity>> LIGHT_BRIDGE_EMITTER = TYPES.register("light_bridge_emitter",
             () -> BlockEntityType.Builder.of(LightBridgeEmitterBlockEntity::new, ModBlocks.LIGHT_BRIDGE_EMITTER.get()).build(null));
+    public static final Supplier<BlockEntityType<ClawMachineBlockEntity>> CLAW_MACHINE = TYPES.register("claw_machine",
+            () -> BlockEntityType.Builder.of(ClawMachineBlockEntity::new, ModBlocks.CLAW_MACHINE.get()).build(null));
+    public static final Supplier<BlockEntityType<TrophyBlockEntity>> TROPHY = TYPES.register("trophy",
+            () -> BlockEntityType.Builder.of(TrophyBlockEntity::new, ModBlocks.TROPHY.get()).build(null));
+    public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> WATERFALL = TYPES.register("waterfall",
+            () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.WATERFALL.get(), p, st), ModBlocks.WATERFALL.get()).build(null));
+    public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> STAGE = TYPES.register("stage",
+            () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.STAGE.get(), p, st), ModBlocks.STAGE.get()).build(null));
+    public static final Supplier<BlockEntityType<SpotlightBlockEntity>> SPOTLIGHT = TYPES.register("spotlight",
+            () -> BlockEntityType.Builder.of(SpotlightBlockEntity::new, ModBlocks.SPOTLIGHT.get()).build(null));
+    public static final Supplier<BlockEntityType<TerrariumBlockEntity>> TERRARIUM = TYPES.register("terrarium",
+            () -> BlockEntityType.Builder.of(TerrariumBlockEntity::new, ModBlocks.TERRARIUM.get()).build(null));
     public static final Supplier<BlockEntityType<ArcadeBlockEntity>> ARCADE = TYPES.register("arcade",
             () -> BlockEntityType.Builder.of(ArcadeBlockEntity::new, ModBlocks.ARCADE.get()).build(null));
     public static final Supplier<BlockEntityType<LaserProjectorBlockEntity>> LASER_PROJECTOR = TYPES.register("laser_projector",

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "scene=0": {
+      "model": "skyblocks:block/terrarium_desert"
+    },
+    "scene=1": {
+      "model": "skyblocks:block/terrarium_jungle"
+    }
+  }
+}

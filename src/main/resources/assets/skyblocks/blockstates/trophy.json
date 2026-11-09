@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "skyblocks:block/trophy"
+    },
+    "facing=east": {
+      "model": "skyblocks:block/trophy",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "skyblocks:block/trophy",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "skyblocks:block/trophy",
+      "y": 270
+    }
+  }
+}

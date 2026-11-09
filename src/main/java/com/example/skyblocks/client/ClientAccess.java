@@ -52,6 +52,23 @@ public final class ClientAccess {
         }
     }
 
+    public static void openClawMachine(net.minecraft.core.BlockPos pos) {
+        Minecraft.getInstance().setScreen(new ClawScreen(pos));
+    }
+
+    /** Someone's claw on a claw machine. */
+    public static void clawState(com.example.skyblocks.ClawPayloads.State p) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null && mc.level.getBlockEntity(p.pos()) instanceof com.example.skyblocks.ClawMachineBlockEntity be) {
+            be.liveX = p.x() / 1000.0F;
+            be.liveZ = p.z() / 1000.0F;
+            be.liveOpen = p.depth() < 2000;
+            be.liveDepth = (p.depth() % 2000) / 1000.0F;
+            be.liveHolding = p.holding();
+            be.liveAt = mc.level.getGameTime();
+        }
+    }
+
     public static void openArcade(net.minecraft.core.BlockPos pos) {
         Minecraft.getInstance().setScreen(new ArcadeScreen(pos));
     }

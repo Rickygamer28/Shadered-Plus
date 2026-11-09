@@ -69,6 +69,12 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.LIGHT_BRIDGE_EMITTER.get(), LightBridgeRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.LASER_PROJECTOR.get(), LaserProjectorRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.ARCADE.get(), ArcadeRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.CLAW_MACHINE.get(), ClawMachineRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.TROPHY.get(), TrophyRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.WATERFALL.get(), WaterfallRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.STAGE.get(), StageRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.SPOTLIGHT.get(), SpotlightRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.TERRARIUM.get(), TerrariumRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.FIRE.get(), WallFireRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.BRICK_HEARTH.get(), ClientSetup::hearthRenderer);
         event.registerBlockEntityRenderer(ModBlockEntities.VISUALIZER.get(), VisualizerRenderer::new);
@@ -415,6 +421,29 @@ public final class ClientSetup {
             net.minecraft.world.level.block.state.BlockState block = tint < PondModel.FLOOR_TINT ? pond.rim() : pond.floor();
             return block == null ? -1 : event.getBlockColors().getColor(block, level, pos, tint % 100);
         }, com.example.skyblocks.ModBlocks.VANILLA_KOI_POND.get());
+    }
+
+    /** Neon tubes: their colour, brightened to neon. */
+    @SubscribeEvent
+    public static void neonColours(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Block event) {
+        event.register((state, level, pos, tint) -> neon(state.getValue(com.example.skyblocks.NeonTubeBlock.COLOR)),
+                com.example.skyblocks.ModBlocks.NEON_TUBE.get());
+    }
+
+    @SubscribeEvent
+    public static void neonItemColour(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Item event) {
+        event.register((stack, tint) -> 0xFF000000 | neon(net.minecraft.world.item.DyeColor.PINK), com.example.skyblocks.ModItems.NEON_TUBE.get());
+    }
+
+    private static int neon(net.minecraft.world.item.DyeColor dye) {
+        int c = dye.getTextureDiffuseColor();
+        int r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+        int max = Math.max(1, Math.max(r, Math.max(g, b)));
+        // (as bright as it goes, keeping its hue; a little white in it)
+        r = Math.min(255, r * 255 / max + 30);
+        g = Math.min(255, g * 255 / max + 30);
+        b = Math.min(255, b * 255 / max + 30);
+        return (r << 16) | (g << 8) | b;
     }
 
     /** Portal mirrors: their colour. */

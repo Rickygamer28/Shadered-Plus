@@ -18,5 +18,21 @@ public final class ModComponents {
                     .networkSynchronized(IslandData.STREAM_CODEC)
                     .build());
 
+    /** A trophy's engraving: who, at which arcade game, what score. */
+    public record Trophy(String name, String game, int score) {
+        public static final com.mojang.serialization.Codec<Trophy> CODEC = com.mojang.serialization.codecs.RecordCodecBuilder.create(i -> i.group(
+                com.mojang.serialization.Codec.STRING.fieldOf("name").forGetter(Trophy::name),
+                com.mojang.serialization.Codec.STRING.fieldOf("game").forGetter(Trophy::game),
+                com.mojang.serialization.Codec.INT.fieldOf("score").forGetter(Trophy::score)).apply(i, Trophy::new));
+        public static final net.minecraft.network.codec.StreamCodec<io.netty.buffer.ByteBuf, Trophy> STREAM_CODEC =
+                net.minecraft.network.codec.StreamCodec.composite(
+                        net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8, Trophy::name,
+                        net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8, Trophy::game,
+                        net.minecraft.network.codec.ByteBufCodecs.VAR_INT, Trophy::score, Trophy::new);
+    }
+
+    public static final Supplier<DataComponentType<Trophy>> TROPHY = COMPONENTS.register("trophy",
+            () -> DataComponentType.<Trophy>builder().persistent(Trophy.CODEC).networkSynchronized(Trophy.STREAM_CODEC).build());
+
     private ModComponents() {}
 }

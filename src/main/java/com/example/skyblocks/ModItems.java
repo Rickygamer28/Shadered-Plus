@@ -120,6 +120,21 @@ public final class ModItems {
     public static final DeferredItem<GuideBookItem> GUIDE_BOOK = ITEMS.register("guide_book",
             () -> new GuideBookItem(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<BlockItem> ARCADE = ITEMS.registerSimpleBlockItem("arcade", ModBlocks.ARCADE);
+    public static final DeferredItem<BlockItem> CLAW_MACHINE = ITEMS.registerSimpleBlockItem("claw_machine", ModBlocks.CLAW_MACHINE);
+    public static final DeferredItem<BlockItem> TROPHY = ITEMS.registerSimpleBlockItem("trophy", ModBlocks.TROPHY);
+    public static final DeferredItem<BlockItem> NEON_TUBE = ITEMS.registerSimpleBlockItem("neon_tube", ModBlocks.NEON_TUBE);
+    public static final DeferredItem<BlockItem> WATERFALL = ITEMS.registerSimpleBlockItem("waterfall", ModBlocks.WATERFALL);
+    public static final DeferredItem<BlockItem> STAGE = ITEMS.registerSimpleBlockItem("stage", ModBlocks.STAGE);
+    public static final DeferredItem<BlockItem> SPOTLIGHT = ITEMS.registerSimpleBlockItem("spotlight", ModBlocks.SPOTLIGHT);
+    public static final DeferredItem<BlockItem> TERRARIUM = ITEMS.registerSimpleBlockItem("terrarium", ModBlocks.TERRARIUM);
+    public static final java.util.List<DeferredItem<BlockItem>> PLUSHIES = new ArrayList<>();
+
+    static {
+        for (net.neoforged.neoforge.registries.DeferredBlock<PlushieBlock> b : ModBlocks.PLUSHIES) {
+            PLUSHIES.add(ITEMS.registerSimpleBlockItem(b));
+        }
+    }
+
     public static final DeferredItem<BlockItem> KALEIDOSCOPE = ITEMS.registerSimpleBlockItem("kaleidoscope", ModBlocks.KALEIDOSCOPE);
     public static final DeferredItem<BlockItem> ORRERY = ITEMS.registerSimpleBlockItem("orrery", ModBlocks.ORRERY);
     public static final DeferredItem<BlockItem> PLANETARIUM = ITEMS.registerSimpleBlockItem("planetarium", ModBlocks.PLANETARIUM);

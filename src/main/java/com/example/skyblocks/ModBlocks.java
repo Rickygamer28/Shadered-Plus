@@ -199,6 +199,43 @@ public final class ModBlocks {
                     .pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE));
 
+    /** A claw machine, two blocks tall: win plushies (ClawMachineBlock). */
+    public static final DeferredBlock<ClawMachineBlock> CLAW_MACHINE = BLOCKS.registerBlock("claw_machine", ClawMachineBlock::new,
+            BlockBehaviour.Properties.of().strength(2.0F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 9)
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY).mapColor(net.minecraft.world.level.material.MapColor.COLOR_PINK));
+    /** A high-score trophy (TrophyBlock). */
+    public static final DeferredBlock<TrophyBlock> TROPHY = BLOCKS.registerBlock("trophy", TrophyBlock::new,
+            BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.METAL).noOcclusion().mapColor(net.minecraft.world.level.material.MapColor.GOLD));
+    /** Neon tubes (NeonTubeBlock). */
+    public static final DeferredBlock<NeonTubeBlock> NEON_TUBE = BLOCKS.registerBlock("neon_tube", NeonTubeBlock::new,
+            BlockBehaviour.Properties.of().strength(0.3F).sound(SoundType.GLASS).noOcclusion().noCollission().lightLevel(state -> 9)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PINK));
+    /** A waterfall down a wall (WaterfallBlock). */
+    public static final DeferredBlock<WaterfallBlock> WATERFALL = BLOCKS.registerBlock("waterfall", WaterfallBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.STONE).noOcclusion().mapColor(net.minecraft.world.level.material.MapColor.STONE));
+    /** A stage (StageBlock) and a spotlight (SpotlightBlock). */
+    public static final DeferredBlock<StageBlock> STAGE = BLOCKS.registerBlock("stage", StageBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.WOOD).mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+    public static final DeferredBlock<SpotlightBlock> SPOTLIGHT = BLOCKS.registerBlock("spotlight", SpotlightBlock::new,
+            BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 7)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+    /** A pet terrarium (TerrariumBlock). */
+    public static final DeferredBlock<TerrariumBlock> TERRARIUM = BLOCKS.registerBlock("terrarium", TerrariumBlock::new,
+            BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS).noOcclusion().lightLevel(state -> 6)
+                    .mapColor(net.minecraft.world.level.material.MapColor.SAND));
+
+    /** The plushies (PlushieBlock): won from a claw machine. */
+    public static final String[] PLUSHIE_NAMES = {"cat", "ember", "frost", "moss", "bloom", "frog"};
+    public static final java.util.List<DeferredBlock<PlushieBlock>> PLUSHIES = new java.util.ArrayList<>();
+
+    static {
+        for (String name : PLUSHIE_NAMES) {
+            PLUSHIES.add(BLOCKS.registerBlock("plushie_" + name, PlushieBlock::new,
+                    BlockBehaviour.Properties.of().strength(0.4F).sound(SoundType.WOOL).noOcclusion()
+                            .mapColor(net.minecraft.world.level.material.MapColor.WOOL)));
+        }
+    }
+
     /** A kaleidoscope: coloured glass turning in windows on every side of a brass frame (KaleidoscopeBlock). */
     public static final DeferredBlock<KaleidoscopeBlock> KALEIDOSCOPE = BLOCKS.registerBlock("kaleidoscope", KaleidoscopeBlock::new,
             BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.COPPER).lightLevel(state -> 10)
