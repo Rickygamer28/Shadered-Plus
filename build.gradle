@@ -33,6 +33,12 @@ repositories {
         url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
         content { includeGroup 'software.bernie.geckolib' }
     }
+    // JEI (only its API, for our structure pages; JEI itself is optional)
+    maven {
+        name = 'Jared'
+        url = 'https://maven.blamejared.com/'
+        content { includeGroup 'mezz.jei' }
+    }
 }
 
 dependencies {
@@ -40,6 +46,8 @@ dependencies {
     // dependencies, e.g. GeckoLib and Sodium) installed in the game. Not bundled into our jar.
     compileOnly "maven.modrinth:shadered:${shadered_version}"
     compileOnly "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
+    compileOnly "mezz.jei:jei-${minecraft_version}-common-api:${jei_version}"
+    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
     // only for running the game from Gradle (and the CI load test), not part of our jar
     runtimeOnly "maven.modrinth:shadered:${shadered_version}"
     runtimeOnly "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
