@@ -135,6 +135,26 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
             return;
         }
         double[] c = centre(level, be);
+        if (glass) {
+            // (see-through: only the sides facing the camera - the group's near shell, one layer over what's behind;
+            // its far sides seen through it would stack up out of order. From inside the group: its inner sides.)
+            net.minecraft.world.phys.Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+            boolean inside = Math.abs(cam.x - c[0]) < c[3] / 2.0 && Math.abs(cam.y - c[1]) < c[4] / 2.0 && Math.abs(cam.z - c[2]) < c[5] / 2.0;
+            for (Direction d : Direction.values()) {
+                double plane = switch (d.getAxis()) {
+                    case X -> pos.getX() + (d == Direction.EAST ? 1 : 0) - cam.x;
+                    case Y -> pos.getY() + (d == Direction.UP ? 1 : 0) - cam.y;
+                    default -> pos.getZ() + (d == Direction.SOUTH ? 1 : 0) - cam.z;
+                };
+                boolean outer = d.getAxisDirection() == Direction.AxisDirection.POSITIVE ? plane < 0 : plane > 0;
+                if (outer == inside) {
+                    faces &= ~(1 << d.ordinal());
+                }
+            }
+            if (faces == 0) {
+                return;
+            }
+        }
         extent[0] = (float) c[3];
         extent[1] = (float) c[4];
         extent[2] = (float) c[5];
