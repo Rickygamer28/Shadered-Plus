@@ -8,6 +8,8 @@ in vec2 uv;
 uniform float Time;
 uniform float Seed;
 uniform float Power;
+uniform float Live;   // 1: someone's playing - their game's picture (Sampler0, 32 x 24 cells) instead of the demo
+uniform sampler2D Sampler0;
 
 out vec4 fragColor;
 
@@ -75,6 +77,31 @@ vec3 breakout(vec2 p, float t, float rnd) {
     return col;
 }
 
+vec3 tetris(vec2 p, float t, float rnd) {
+    vec3 col = vec3(0.02, 0.02, 0.06);
+    float ch = 0.045, cw = ch * 0.75; // (square cells on the 4:3 glass)
+    vec2 o = vec2(0.5 - cw * 5.0, 0.05);
+    vec2 q = (p - o) / vec2(cw, ch);
+    if (q.x < -0.3 || q.x > 10.3 || q.y < -0.3 || q.y > 20.0) return col;
+    if (q.x < 0.0 || q.x > 10.0 || q.y < 0.0) return vec3(0.23, 0.29, 0.42); // (the well's walls)
+    vec2 id = floor(q), f = fract(q);
+    float lit = boxGlow(f, vec2(0.08), vec2(0.92), 40.0) * 0.9 + 0.1;
+    vec3 pieces[7] = vec3[7](vec3(0.0, 0.9, 1.0), vec3(1.0, 0.9, 0.29), vec3(0.7, 0.36, 1.0), vec3(0.36, 1.0, 0.42),
+                             vec3(1.0, 0.3, 0.37), vec3(0.3, 0.65, 1.0), vec3(1.0, 0.6, 0.18));
+    // the stack, growing as the round goes on (with holes), and a piece falling onto it
+    float stack = floor(t / CYCLE * 15.0);
+    if (id.y < stack && hash(id + rnd * 1.7) > 0.18) {
+        return pieces[int(hash(vec2(id.y, rnd)) * 6.99)] * lit;
+    }
+    float drop = fract(t / 2.2);
+    float col0 = floor(hash(vec2(floor(t / 2.2), rnd)) * 8.0);
+    float py = floor(19.0 - drop * (19.0 - stack));
+    if (id.x >= col0 && id.x <= col0 + 1.0 && id.y >= py && id.y <= py + 1.0) {
+        return pieces[int(mod(floor(t / 2.2), 7.0))] * lit;
+    }
+    return col + vec3(0.03, 0.04, 0.08) * step(0.94, max(f.x, f.y));
+}
+
 void main() {
     // the tube's curve: the picture bowed out, nothing past its edges
     vec2 c = uv * 2.0 - 1.0;
@@ -86,9 +113,20 @@ void main() {
     }
     float rnd = floor(Time / CYCLE);
     float t = mod(Time, CYCLE);
-    vec3 col = mod(rnd, 2.0) < 0.5 ? snake(p, Time) : breakout(p, t, rnd);
-    // a blink of white between demos
-    col += vec3(0.6) * max(0.0, 1.0 - t * 4.0) * step(1.0, Time);
+    vec3 col;
+    if (Live > 0.5) {
+        // someone's game: its cells, each a little lit square
+        vec2 cells = vec2(32.0, 24.0);
+        vec2 id = floor(p * cells);
+        vec2 f = fract(p * cells);
+        col = texture(Sampler0, (id + 0.5) / cells * vec2(1.0, -1.0) + vec2(0.0, 1.0)).rgb;
+        col *= boxGlow(f, vec2(0.07), vec2(0.93), 30.0) * 0.85 + 0.15;
+    } else {
+        float g = mod(rnd, 3.0);
+        col = g < 0.5 ? snake(p, Time) : g < 1.5 ? breakout(p, t, rnd) : tetris(p, t, rnd);
+        // a blink of white between demos
+        col += vec3(0.6) * max(0.0, 1.0 - t * 4.0) * step(1.0, Time);
+    }
     // the tube: scanlines, the phosphor's three colours, rolling brightness, dark corners
     float scan = 0.72 + 0.28 * sin(p.y * 360.0);
     float column = mod(floor(gl_FragCoord.x), 3.0);

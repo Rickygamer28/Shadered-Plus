@@ -31,7 +31,9 @@ import org.joml.Matrix4f;
  */
 public class ArcadeRenderer implements BlockEntityRenderer<ArcadeBlockEntity> {
     static ShaderInstance shader;
-    private static float time, seed;
+    private static float time, seed, live;
+    /** The picture of someone's game, filled for each cabinet just before it's drawn (they're drawn at once). */
+    private static net.minecraft.client.renderer.texture.DynamicTexture picture;
     /** The glass, in the upper half's pixels, its front facing north. */
     private static final float X0 = 2.5F / 16, X1 = 13.5F / 16, Y0 = 1.0F + 2.0F / 16, Y1 = 1.0F + 11.0F / 16, Z = 3.5F / 16;
     /** (as the shader's: how long each demo runs) */
@@ -56,6 +58,10 @@ public class ArcadeRenderer implements BlockEntityRenderer<ArcadeBlockEntity> {
                                 shader.safeGetUniform("Time").set(time);
                                 shader.safeGetUniform("Seed").set(seed);
                                 shader.safeGetUniform("Power").set(1.0F);
+                                shader.safeGetUniform("Live").set(live);
+                            }
+                            if (picture != null) {
+                                com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(0, picture.getId());
                             }
                         }, () -> {}))
                         .setCullState(NO_CULL)
@@ -88,6 +94,11 @@ public class ArcadeRenderer implements BlockEntityRenderer<ArcadeBlockEntity> {
         poseStack.mulPose(Axis.YP.rotationDegrees(-(facing.toYRot() + 180.0F))); // (as the model is turned)
         poseStack.translate(-0.5F, 0.0F, -0.5F);
 
+        boolean playing = be.liveCells != null && level.getGameTime() - be.liveAt < 40L;
+        live = playing ? 1.0F : 0.0F;
+        if (playing) {
+            showPicture(be.liveCells);
+        }
         MultiBufferSource.BufferSource source = DrawNow.now(buffers);
         Matrix4f m = poseStack.last().pose();
         VertexConsumer vc = source.getBuffer(Types.SCREEN);
@@ -100,16 +111,40 @@ public class ArcadeRenderer implements BlockEntityRenderer<ArcadeBlockEntity> {
 
         // the best score at the game being shown; "insert coin" blinking at the foot
         double distance = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition().distanceToSqr(be.getBlockPos().getCenter());
-        if (distance < 24.0 * 24.0) {
-            int game = Math.floorMod((int) Math.floor(time / CYCLE), 2);
+        if (distance < 24.0 * 24.0 && playing) { // (who's playing, and their score)
+            String name = be.liveName.length() > 12 ? be.liveName.substring(0, 12) : be.liveName;
+            text(poseStack, buffers, name + "  " + be.liveScore, Y1 - 0.045F, 0xFFE9F27A, 0.004F);
+        } else if (distance < 24.0 * 24.0) {
+            int game = Math.floorMod((int) Math.floor(time / CYCLE), 3);
             int best = be.best(game);
-            String top = best > 0 ? "HI " + best + "  " + be.bestBy(game) : (game == 0 ? "SNAKE" : "BREAKOUT");
+            String top = best > 0 ? "HI " + best + "  " + be.bestBy(game) : (game == 0 ? "SNAKE" : game == 1 ? "BREAKOUT" : "TETRIS");
             text(poseStack, buffers, top, Y1 - 0.06F, 0xFFE9F27A, 0.0055F);
             if (((int) (time * 1.5F) & 1) == 0) {
                 text(poseStack, buffers, "INSERT COIN", Y0 + 0.035F, 0xFFFFFFFF, 0.0045F);
             }
         }
         poseStack.popPose();
+    }
+
+    /** Puts a game's cells (colours of the palette) into the picture the shader shows. */
+    private static void showPicture(byte[] cells) {
+        int w = com.example.skyblocks.ArcadeFramePayload.WIDTH, h = com.example.skyblocks.ArcadeFramePayload.HEIGHT;
+        if (picture == null) {
+            picture = new net.minecraft.client.renderer.texture.DynamicTexture(w, h, false);
+        }
+        com.mojang.blaze3d.platform.NativeImage image = picture.getPixels();
+        if (image == null) {
+            return;
+        }
+        int[] palette = com.example.skyblocks.ArcadeBlockEntity.PALETTE;
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                int rgb = palette[cells[y * w + x] & 15];
+                // (the picture's pixels are ABGR)
+                image.setPixelRGBA(x, y, 0xFF000000 | ((rgb & 255) << 16) | (rgb & 0xFF00) | ((rgb >> 16) & 255));
+            }
+        }
+        picture.upload();
     }
 
     /** A line written across the glass's middle, its top at {@code y}. */

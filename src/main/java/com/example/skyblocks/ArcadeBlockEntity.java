@@ -11,9 +11,17 @@ import org.jetbrains.annotations.Nullable;
 
 /** An arcade cabinet: the best score in each of its games, and who got it. */
 public class ArcadeBlockEntity extends BlockEntity {
-    public static final String[] GAMES = {"snake", "breakout"};
+    public static final String[] GAMES = {"snake", "breakout", "tetris"};
+    /** The colours of a game's little picture on the screen (ArcadeFramePayload's cells). */
+    public static final int[] PALETTE = {0x070B16, 0x3CC85A, 0xBEFF8C, 0xFF3A4A, 0xFFFFFF, 0x9AD8FF, 0xFF4D5E, 0xFF9A2E,
+            0xFFE74A, 0x5BFF6A, 0x4DA6FF, 0xB45BFF, 0x00E5FF, 0x3A4A6A, 0x1A2238, 0xFF7AD9};
     private final int[] best = new int[GAMES.length];
-    private final String[] bestBy = {"", ""};
+    private final String[] bestBy = {"", "", ""};
+    /** Client only: what someone is playing on it now (the picture, the game, their score and name; when it came). */
+    public byte[] liveCells;
+    public int liveGame, liveScore;
+    public String liveName = "";
+    public long liveAt = Long.MIN_VALUE / 2;
 
     public ArcadeBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ARCADE.get(), pos, state);

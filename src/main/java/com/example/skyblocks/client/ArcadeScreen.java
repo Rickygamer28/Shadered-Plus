@@ -21,7 +21,7 @@ import org.lwjgl.glfw.GLFW;
  */
 public class ArcadeScreen extends Screen {
     private static final int COLS = 24, ROWS = 18, CELL = 8, W = COLS * CELL, H = ROWS * CELL;
-    private static final String[] NAMES = {"SNAKE", "BREAKOUT"};
+    private static final String[] NAMES = {"SNAKE", "BREAKOUT", "TETRIS"};
     private enum Mode { TITLE, PLAYING, OVER }
 
     private final BlockPos pos;
@@ -67,6 +67,17 @@ public class ArcadeScreen extends Screen {
         score = 0;
         ticks = 0;
         mode = Mode.PLAYING;
+        if (game == 2) {
+            for (int[] row : board) {
+                java.util.Arrays.fill(row, 0);
+            }
+            lines = 0;
+            dropEvery = 20;
+            sinceDrop = 0;
+            nextPiece = random.nextInt(7);
+            spawn();
+            return;
+        }
         if (game == 0) {
             body.clear();
             turns.clear();
@@ -265,10 +276,261 @@ public class ArcadeScreen extends Screen {
         if (mode == Mode.PLAYING) {
             if (game == 0) {
                 tickSnake();
-            } else {
+            } else if (game == 1) {
                 tickBreakout();
+            } else {
+                tickTetris();
             }
         }
+        // what's on the screen, to the cabinet (everyone near it sees it on its screen)
+        if (mode != Mode.TITLE && ticks % 5 == 0) {
+            PacketDistributor.sendToServer(new com.example.skyblocks.ArcadeFramePayload(pos, game, score, "", frame()));
+            showing = true;
+        } else if (mode == Mode.TITLE && showing) {
+            stopShowing();
+        }
+    }
+
+    // ================= tetris =================
+
+    private static final int TW = 10, TH = 20, TCELL = 7;
+    /** The seven pieces: their cells (x, y) in a box of the given size, and their colour (the palette's). */
+    private static final int[][][] PIECES = {
+            {{0, 1}, {1, 1}, {2, 1}, {3, 1}}, {{0, 0}, {1, 0}, {0, 1}, {1, 1}}, {{1, 0}, {0, 1}, {1, 1}, {2, 1}},
+            {{1, 0}, {2, 0}, {0, 1}, {1, 1}}, {{0, 0}, {1, 0}, {1, 1}, {2, 1}}, {{0, 0}, {0, 1}, {1, 1}, {2, 1}},
+            {{2, 0}, {0, 1}, {1, 1}, {2, 1}}};
+    private static final int[] PIECE_BOX = {4, 2, 3, 3, 3, 3, 3};
+    private static final int[] PIECE_COLOUR = {12, 8, 11, 9, 6, 10, 7};
+    private final int[][] board = new int[TH][TW];
+    private int[][] piece;
+    private int pieceType, nextPiece, px, py, lines, dropEvery, sinceDrop;
+
+    private void spawn() {
+        pieceType = nextPiece;
+        nextPiece = random.nextInt(7);
+        piece = new int[4][];
+        for (int i = 0; i < 4; i++) {
+            piece[i] = PIECES[pieceType][i].clone();
+        }
+        px = (TW - PIECE_BOX[pieceType]) / 2;
+        py = 0;
+        if (!fits(piece, px, py)) {
+            over();
+        }
+    }
+
+    private boolean fits(int[][] cells, int x, int y) {
+        for (int[] c : cells) {
+            int cx = x + c[0], cy = y + c[1];
+            if (cx < 0 || cx >= TW || cy >= TH || (cy >= 0 && board[cy][cx] != 0)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void tetrisMove(int dx) {
+        if (fits(piece, px + dx, py)) {
+            px += dx;
+        }
+    }
+
+    private void tetrisRotate() {
+        int n = PIECE_BOX[pieceType];
+        if (n == 2) {
+            return; // (the square)
+        }
+        int[][] turned = new int[4][];
+        for (int i = 0; i < 4; i++) {
+            turned[i] = new int[] {n - 1 - piece[i][1], piece[i][0]};
+        }
+        for (int kick : new int[] {0, -1, 1, -2, 2}) { // (pushed off a wall or the stack if it must)
+            if (fits(turned, px + kick, py)) {
+                piece = turned;
+                px += kick;
+                return;
+            }
+        }
+    }
+
+    /** One row down; landed: kept on the board. Returns whether it moved. */
+    private boolean tetrisDown(boolean byPlayer) {
+        if (fits(piece, px, py + 1)) {
+            py++;
+            if (byPlayer) {
+                score += 1;
+            }
+            sinceDrop = 0;
+            return true;
+        }
+        land();
+        return false;
+    }
+
+    private void tetrisHardDrop() {
+        int rows = 0;
+        while (fits(piece, px, py + 1)) {
+            py++;
+            rows++;
+        }
+        score += rows * 2;
+        land();
+    }
+
+    private void land() {
+        for (int[] c : piece) {
+            if (py + c[1] >= 0) {
+                board[py + c[1]][px + c[0]] = PIECE_COLOUR[pieceType];
+            }
+        }
+        int cleared = 0;
+        for (int y = TH - 1; y >= 0; y--) {
+            boolean full = true;
+            for (int x = 0; x < TW; x++) {
+                full &= board[y][x] != 0;
+            }
+            if (full) {
+                for (int yy = y; yy > 0; yy--) {
+                    board[yy] = board[yy - 1].clone();
+                }
+                board[0] = new int[TW];
+                cleared++;
+                y++; // (the row that fell into this one, looked at again)
+            }
+        }
+        int level = lines / 10;
+        score += new int[] {0, 100, 300, 500, 800}[cleared] * (level + 1);
+        lines += cleared;
+        dropEvery = Math.max(2, 20 - (lines / 10) * 2); // (faster every ten lines)
+        sinceDrop = 0;
+        spawn();
+    }
+
+    private void tickTetris() {
+        if (++sinceDrop >= dropEvery) {
+            sinceDrop = 0;
+            tetrisDown(false);
+        }
+    }
+
+    private void drawTetris(GuiGraphics g, int x0, int y0) {
+        int bx = x0 + (W - TW * TCELL) / 2, by = y0 + 2;
+        g.fill(bx - 2, by - 1, bx + TW * TCELL + 2, by + TH * TCELL + 2, 0xFF3A4A6A);
+        g.fill(bx, by, bx + TW * TCELL, by + TH * TCELL, 0xFF070B16);
+        int[] pal = com.example.skyblocks.ArcadeBlockEntity.PALETTE;
+        for (int y = 0; y < TH; y++) {
+            for (int x = 0; x < TW; x++) {
+                if (board[y][x] != 0) {
+                    cell(g, bx + x * TCELL, by + y * TCELL, pal[board[y][x]]);
+                }
+            }
+        }
+        if (piece != null && mode == Mode.PLAYING) {
+            for (int[] c : piece) {
+                if (py + c[1] >= 0) {
+                    cell(g, bx + (px + c[0]) * TCELL, by + (py + c[1]) * TCELL, pal[PIECE_COLOUR[pieceType]]);
+                }
+            }
+        }
+        // the next piece, and the lines
+        int nx = bx + TW * TCELL + 10, ny = by + 14;
+        g.drawString(font, "NEXT", nx, by + 2, 0xFFAAAAAA, false);
+        for (int[] c : PIECES[nextPiece]) {
+            cell(g, nx + c[0] * TCELL, ny + c[1] * TCELL, pal[PIECE_COLOUR[nextPiece]]);
+        }
+        g.drawString(font, "LINES", nx, by + 40, 0xFFAAAAAA, false);
+        g.drawString(font, Integer.toString(lines), nx, by + 50, 0xFFFFFFFF, false);
+    }
+
+    private static void cell(GuiGraphics g, int x, int y, int rgb) {
+        g.fill(x, y, x + TCELL - 1, y + TCELL - 1, 0xFF000000 | rgb);
+        g.fill(x, y, x + TCELL - 1, y + 1, 0x55FFFFFF);
+    }
+
+    // ================= the cabinet's screen =================
+
+    private boolean showing;
+
+    /** The game now as the cabinet's screen shows it: 32 x 24 cells, each a colour of the palette (rows 0-1 left for the name). */
+    private byte[] frame() {
+        int fw = com.example.skyblocks.ArcadeFramePayload.WIDTH, fh = com.example.skyblocks.ArcadeFramePayload.HEIGHT;
+        byte[] f = new byte[fw * fh];
+        java.util.function.IntBinaryOperator idx = (x, y) -> y * fw + x;
+        if (game == 0) {
+            for (int y = 2; y < 2 + ROWS + 2; y++) {
+                for (int x = 3; x < 3 + COLS + 2; x++) {
+                    boolean edge = x == 3 || y == 2 || x == 3 + COLS + 1 || y == 2 + ROWS + 1;
+                    f[idx.applyAsInt(x, y)] = (byte) (edge ? 13 : 14);
+                }
+            }
+            f[idx.applyAsInt(4 + foodX, 3 + foodY)] = 3;
+            int i = 0;
+            for (int[] b : body) {
+                f[idx.applyAsInt(4 + b[0], 3 + b[1])] = (byte) (i++ == 0 ? 2 : 1);
+            }
+        } else if (game == 1) {
+            for (int y = 2; y < fh; y++) {
+                for (int x = 0; x < fw; x++) {
+                    float cx = (x + 0.5F) * W / fw, cy = (y - 2 + 0.5F) * H / (fh - 2);
+                    int col = (int) (cx / BRICK_W), row = (int) Math.floor((cy - BRICK_TOP) / BRICK_H);
+                    byte v = 14;
+                    if (row >= 0 && row < BRICK_ROWS && col < BRICK_COLS && bricks[row * BRICK_COLS + col]) {
+                        v = (byte) (6 + row % 6);
+                    }
+                    if (Math.abs(cy - PADDLE_Y) < H / (fh - 2.0F) * 0.6F && cx >= paddle && cx <= paddle + PADDLE_W) {
+                        v = 5;
+                    }
+                    f[idx.applyAsInt(x, y)] = v;
+                }
+            }
+            if (ballY < H) {
+                int bx = Mth.clamp((int) (ballX * fw / W), 0, fw - 1), by = Mth.clamp(2 + (int) (ballY * (fh - 2) / H), 2, fh - 1);
+                f[idx.applyAsInt(bx, by)] = 4;
+            }
+        } else {
+            int ox = 10, oy = 2;
+            for (int y = 0; y < TH + 1; y++) {
+                f[idx.applyAsInt(ox, oy + y)] = 13;
+                f[idx.applyAsInt(ox + TW + 1, oy + y)] = 13;
+            }
+            for (int x = 0; x < TW + 2; x++) {
+                f[idx.applyAsInt(ox + x, oy + TH)] = 13;
+            }
+            for (int y = 0; y < TH; y++) {
+                for (int x = 0; x < TW; x++) {
+                    f[idx.applyAsInt(ox + 1 + x, oy + y)] = (byte) (board[y][x] != 0 ? board[y][x] : 14);
+                }
+            }
+            if (piece != null && mode == Mode.PLAYING) {
+                for (int[] c : piece) {
+                    if (py + c[1] >= 0 && py + c[1] < TH) {
+                        f[idx.applyAsInt(ox + 1 + px + c[0], oy + py + c[1])] = (byte) PIECE_COLOUR[pieceType];
+                    }
+                }
+            }
+            for (int[] c : PIECES[nextPiece]) {
+                f[idx.applyAsInt(25 + c[0], 4 + c[1])] = (byte) PIECE_COLOUR[nextPiece];
+            }
+        }
+        if (mode == Mode.OVER && (ticks / 10) % 2 == 0) { // (game over: a blinking red line across)
+            for (int x = 0; x < fw; x++) {
+                f[idx.applyAsInt(x, fh / 2)] = 6;
+            }
+        }
+        return f;
+    }
+
+    private void stopShowing() {
+        showing = false;
+        PacketDistributor.sendToServer(new com.example.skyblocks.ArcadeFramePayload(pos, game, score, "", new byte[0]));
+    }
+
+    @Override
+    public void removed() {
+        if (showing) {
+            stopShowing();
+        }
+        super.removed();
     }
 
     // ================= keys =================
@@ -280,9 +542,11 @@ public class ArcadeScreen extends Screen {
             return true;
         }
         if (mode != Mode.PLAYING) {
-            if (key == GLFW.GLFW_KEY_TAB || (mode == Mode.TITLE && (key == GLFW.GLFW_KEY_LEFT || key == GLFW.GLFW_KEY_RIGHT))) {
-                game = 1 - game;
+            if (key == GLFW.GLFW_KEY_TAB || (mode == Mode.TITLE && key == GLFW.GLFW_KEY_RIGHT)) {
+                game = (game + 1) % NAMES.length;
                 mode = Mode.TITLE;
+            } else if (mode == Mode.TITLE && key == GLFW.GLFW_KEY_LEFT) {
+                game = (game + NAMES.length - 1) % NAMES.length;
             } else if (key == GLFW.GLFW_KEY_SPACE || key == GLFW.GLFW_KEY_ENTER) {
                 start();
             }
@@ -290,6 +554,14 @@ public class ArcadeScreen extends Screen {
         }
         boolean l = key == GLFW.GLFW_KEY_LEFT || key == GLFW.GLFW_KEY_A, r = key == GLFW.GLFW_KEY_RIGHT || key == GLFW.GLFW_KEY_D;
         boolean u = key == GLFW.GLFW_KEY_UP || key == GLFW.GLFW_KEY_W, d = key == GLFW.GLFW_KEY_DOWN || key == GLFW.GLFW_KEY_S;
+        if (game == 2) {
+            if (l) tetrisMove(-1);
+            if (r) tetrisMove(1);
+            if (u || key == GLFW.GLFW_KEY_X) tetrisRotate();
+            if (d) tetrisDown(true);
+            if (key == GLFW.GLFW_KEY_SPACE) tetrisHardDrop();
+            return true;
+        }
         if (game == 0) {
             if (l) turn(-1, 0);
             if (r) turn(1, 0);
@@ -358,6 +630,8 @@ public class ArcadeScreen extends Screen {
             drawTitle(g, x0, y0, partialTick);
         } else if (game == 0) {
             drawSnake(g, x0, y0);
+        } else if (game == 2) {
+            drawTetris(g, x0, y0);
         } else {
             drawBreakout(g, x0, y0, partialTick);
         }
@@ -390,7 +664,10 @@ public class ArcadeScreen extends Screen {
     private void drawTitle(GuiGraphics g, int x0, int y0, float partialTick) {
         float t = ticks + partialTick;
         drawCentred(g, NAMES[game], x0 + W / 2, y0 + 34, rainbow(t));
-        if (game == 0) {
+        if (game == 2) {
+            drawCentred(g, "Left / right: move  Up: turn", x0 + W / 2, y0 + 60, 0xFFBBBBBB);
+            drawCentred(g, "Down: faster  Space: drop", x0 + W / 2, y0 + 72, 0xFFBBBBBB);
+        } else if (game == 0) {
             drawCentred(g, "Arrows / WASD to steer", x0 + W / 2, y0 + 60, 0xFFBBBBBB);
             drawCentred(g, "Eat, grow, don't bite yourself", x0 + W / 2, y0 + 72, 0xFFBBBBBB);
         } else {
@@ -400,7 +677,7 @@ public class ArcadeScreen extends Screen {
         if (((int) t / 10) % 2 == 0) {
             drawCentred(g, "PRESS SPACE", x0 + W / 2, y0 + 100, 0xFFFFFFFF);
         }
-        drawCentred(g, "< TAB: " + NAMES[1 - game] + " >", x0 + W / 2, y0 + 124, 0xFF7788AA);
+        drawCentred(g, "< TAB: " + NAMES[(game + 1) % NAMES.length] + " >", x0 + W / 2, y0 + 124, 0xFF7788AA);
     }
 
     private void drawSnake(GuiGraphics g, int x0, int y0) {

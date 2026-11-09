@@ -40,6 +40,18 @@ public final class ClientAccess {
         Minecraft.getInstance().setScreen(new GuideScreen());
     }
 
+    /** Someone's game on an arcade cabinet's screen (or their stopping). */
+    public static void arcadeFrame(com.example.skyblocks.ArcadeFramePayload p) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null && mc.level.getBlockEntity(p.pos()) instanceof com.example.skyblocks.ArcadeBlockEntity be) {
+            be.liveCells = p.cells().length == 0 ? null : p.cells();
+            be.liveGame = p.game();
+            be.liveScore = p.score();
+            be.liveName = p.name();
+            be.liveAt = mc.level.getGameTime();
+        }
+    }
+
     public static void openArcade(net.minecraft.core.BlockPos pos) {
         Minecraft.getInstance().setScreen(new ArcadeScreen(pos));
     }

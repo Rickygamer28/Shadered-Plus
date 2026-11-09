@@ -1,7 +1,11 @@
 {
     "vertex": "skyblocks:arcade_screen",
     "fragment": "skyblocks:arcade_screen",
-    "samplers": [],
+    "samplers": [
+        {
+            "name": "Sampler0"
+        }
+    ],
     "uniforms": [
         {
             "name": "ModelViewMat",
@@ -71,6 +75,14 @@
             "count": 1,
             "values": [
                 1.0
+            ]
+        },
+        {
+            "name": "Live",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
             ]
         }
     ]
