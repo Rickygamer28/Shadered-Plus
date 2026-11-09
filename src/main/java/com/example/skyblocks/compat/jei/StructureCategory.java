@@ -63,7 +63,8 @@ public class StructureCategory implements IRecipeCategory<Structures.Structure> 
     @Override
     public void draw(Structures.Structure s, IRecipeSlotsView slots, GuiGraphics g, double mouseX, double mouseY) {
         Font font = Minecraft.getInstance().font;
-        g.drawString(font, Component.translatable("guide.skyblocks.structure." + s.id() + ".name"), 0, 0, 0xFF404040, false);
+        g.drawString(font, Component.translatable("guide.skyblocks.structure." + s.id() + ".name").append(" (" + s.size() + "x" + s.size() + "x" + s.size() + ")"),
+                0, 0, 0xFF404040, false);
         g.fill(0, 11, VIEW, HEIGHT, 0x30000000);
         float yaw = (System.currentTimeMillis() % 20000L) / 20000.0F * 360.0F;
         StructurePreview.draw(g, s, VIEW / 2.0F, 11 + (HEIGHT - 11) / 2.0F, VIEW - 8, yaw, 28.0F);

@@ -29,7 +29,7 @@ public class ShaderedJeiPlugin implements IModPlugin {
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
-        registration.addRecipes(STRUCTURES, Structures.all());
+        registration.addRecipes(STRUCTURES, Structures.everySize());
     }
 
     @Override
