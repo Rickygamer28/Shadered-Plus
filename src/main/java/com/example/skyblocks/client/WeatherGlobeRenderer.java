@@ -111,7 +111,7 @@ public class WeatherGlobeRenderer implements BlockEntityRenderer<WeatherGlobeBlo
         POSE_INV.set(POSE).invert();
 
         if (be.base() != null) {
-            drawBase(be.base(), level, pos, poseStack, buffers, light, overlay);
+            BlockSkin.box(be.base(), level, pos, poseStack, buffers, light, overlay, 2, 0, 2, 14, 3, 14);
         }
         MultiBufferSource.BufferSource source = DrawNow.now(buffers);
         box(source.getBuffer(Types.INSIDE), poseStack.last().pose());
@@ -127,54 +127,6 @@ public class WeatherGlobeRenderer implements BlockEntityRenderer<WeatherGlobeBlo
         }
         box(source.getBuffer(Types.GLASS), poseStack.last().pose());
         source.endBatch(Types.GLASS);
-    }
-
-    /**
-     * A base made of another block: the base's box (2-14 across, 3 pixels tall) with that block's textures - each side
-     * the block's own for that side, its lowest 3 pixels; tinted as the block would be (grass, leaves).
-     */
-    private static void drawBase(net.minecraft.world.level.block.state.BlockState base, ClientLevel level, BlockPos pos, PoseStack poseStack,
-                                 MultiBufferSource buffers, int light, int overlay) {
-        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-        net.minecraft.client.resources.model.BakedModel model = mc.getBlockRenderer().getBlockModel(base);
-        net.minecraft.util.RandomSource random = net.minecraft.util.RandomSource.create(42L);
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityCutout(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS));
-        PoseStack.Pose last = poseStack.last();
-        float x0 = 2.0F / 16, x1 = 14.0F / 16, y0 = 0.0F, y1 = 3.0F / 16;
-        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
-            java.util.List<net.minecraft.client.renderer.block.model.BakedQuad> quads;
-            try {
-                quads = model.getQuads(base, d, random, net.neoforged.neoforge.client.model.data.ModelData.EMPTY, null);
-            } catch (RuntimeException e) {
-                quads = java.util.List.of();
-            }
-            net.minecraft.client.renderer.texture.TextureAtlasSprite sprite = quads.isEmpty() ? model.getParticleIcon() : quads.get(0).getSprite();
-            int tint = -1;
-            if (!quads.isEmpty() && quads.get(0).isTinted()) {
-                tint = 0xFF000000 | mc.getBlockColors().getColor(base, level, pos, quads.get(0).getTintIndex());
-            }
-            float[][] v; // (four corners, each x y z u v - u, v as parts of the texture)
-            switch (d) {
-                case UP -> v = new float[][] {{x0, y1, x0, 2, 2}, {x0, y1, x1, 2, 14}, {x1, y1, x1, 14, 14}, {x1, y1, x0, 14, 2}};
-                case DOWN -> v = new float[][] {{x0, y0, x0, 2, 2}, {x1, y0, x0, 14, 2}, {x1, y0, x1, 14, 14}, {x0, y0, x1, 2, 14}};
-                case NORTH -> v = new float[][] {{x0, y0, x0, 14, 16}, {x0, y1, x0, 14, 13}, {x1, y1, x0, 2, 13}, {x1, y0, x0, 2, 16}};
-                case SOUTH -> v = new float[][] {{x0, y0, x1, 2, 16}, {x1, y0, x1, 14, 16}, {x1, y1, x1, 14, 13}, {x0, y1, x1, 2, 13}};
-                case WEST -> v = new float[][] {{x0, y0, x0, 2, 16}, {x0, y0, x1, 14, 16}, {x0, y1, x1, 14, 13}, {x0, y1, x0, 2, 13}};
-                default -> v = new float[][] {{x1, y0, x0, 14, 16}, {x1, y1, x0, 14, 13}, {x1, y1, x1, 2, 13}, {x1, y0, x1, 2, 16}};
-            }
-            float shade = switch (d) {
-                case UP -> 1.0F;
-                case DOWN -> 0.5F;
-                case NORTH, SOUTH -> 0.8F;
-                default -> 0.6F;
-            };
-            int r = (int) (((tint >> 16) & 255) * shade), g = (int) (((tint >> 8) & 255) * shade), b = (int) ((tint & 255) * shade);
-            int colour = 0xFF000000 | (r << 16) | (g << 8) | b;
-            for (float[] c : v) {
-                vc.addVertex(last, c[0], c[1], c[2]).setColor(colour).setUv(sprite.getU(c[3] / 16.0F), sprite.getV(c[4] / 16.0F))
-                        .setOverlay(overlay).setLight(light).setNormal(last, d.getStepX(), d.getStepY(), d.getStepZ());
-            }
-        }
     }
 
     /** As an item: the ball on its base, the weather where you are, at once with this pose. */

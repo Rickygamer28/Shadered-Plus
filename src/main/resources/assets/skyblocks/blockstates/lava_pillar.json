@@ -1,16 +1,28 @@
 {
   "variants": {
-    "part=single": {
+    "custom_base=false,part=single": {
       "model": "skyblocks:block/lava_pillar_single"
     },
-    "part=bottom": {
-      "model": "skyblocks:block/lava_pillar_bottom"
-    },
-    "part=middle": {
+    "custom_base=true,part=single": {
       "model": "skyblocks:block/lava_pillar_middle"
     },
-    "part=top": {
+    "custom_base=false,part=bottom": {
+      "model": "skyblocks:block/lava_pillar_bottom"
+    },
+    "custom_base=true,part=bottom": {
+      "model": "skyblocks:block/lava_pillar_middle"
+    },
+    "custom_base=false,part=middle": {
+      "model": "skyblocks:block/lava_pillar_middle"
+    },
+    "custom_base=true,part=middle": {
+      "model": "skyblocks:block/lava_pillar_middle"
+    },
+    "custom_base=false,part=top": {
       "model": "skyblocks:block/lava_pillar_top"
+    },
+    "custom_base=true,part=top": {
+      "model": "skyblocks:block/lava_pillar_middle"
     }
   }
 }

@@ -52,15 +52,16 @@ public class WeatherGlobeBlock extends BaseEntityBlock {
         builder.add(CUSTOM_BASE);
     }
 
-    /** Whether this item's block can be a globe's base: a block drawn by its model. */
+    /** Whether this item's block can be a globe's base: any wood (logs, stripped or not, wood blocks, planks). */
     public static boolean baseBlock(ItemStack stack) {
-        return stack.getItem() instanceof net.minecraft.world.item.BlockItem b
-                && !(stack.getItem() instanceof com.example.skyblocks.island.SkyIslandItem)
-                && !(b.getBlock() instanceof WeatherGlobeBlock)
-                && b.getBlock().defaultBlockState().getRenderShape() == RenderShape.MODEL;
+        if (!(stack.getItem() instanceof net.minecraft.world.item.BlockItem b)) {
+            return false;
+        }
+        BlockState s = b.getBlock().defaultBlockState();
+        return (s.is(net.minecraft.tags.BlockTags.LOGS) || s.is(net.minecraft.tags.BlockTags.PLANKS)) && s.getRenderShape() == RenderShape.MODEL;
     }
 
-    /** Sneak + right-click with a block: the base made of it (its own block: back as it came). */
+    /** Sneak + right-click with wood: the base made of it (its own wood: back as it came). */
     public static void setBase(Level level, BlockPos pos, ItemStack stack) {
         if (!(level.getBlockEntity(pos) instanceof WeatherGlobeBlockEntity be) || !(stack.getItem() instanceof net.minecraft.world.item.BlockItem b)) {
             return;

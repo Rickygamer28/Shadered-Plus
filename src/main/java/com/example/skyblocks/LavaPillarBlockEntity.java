@@ -15,6 +15,19 @@ public class LavaPillarBlockEntity extends BlockEntity {
     private int wax = DEFAULT_WAX, liquid = DEFAULT_LIQUID;
     /** On (its wax moving, glowing) or off; RGB: its wax cycling through the rainbow (as a lava lamp's). */
     private boolean lit = true, rgb;
+    /** The block its foot and cap are made of (null: iron, the model's). */
+    @org.jetbrains.annotations.Nullable
+    private BlockState base;
+
+    @org.jetbrains.annotations.Nullable
+    public BlockState base() {
+        return base;
+    }
+
+    public void setBase(@org.jetbrains.annotations.Nullable BlockState state) {
+        base = state;
+        changed();
+    }
 
     public LavaPillarBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.LAVA_PILLAR.get(), pos, state);
@@ -71,6 +84,9 @@ public class LavaPillarBlockEntity extends BlockEntity {
         tag.putInt("liquid", liquid);
         tag.putBoolean("off", !lit);
         tag.putBoolean("rgb", rgb);
+        if (base != null) {
+            tag.put("base", net.minecraft.nbt.NbtUtils.writeBlockState(base));
+        }
     }
 
     @Override
@@ -80,6 +96,9 @@ public class LavaPillarBlockEntity extends BlockEntity {
         liquid = tag.contains("liquid") ? tag.getInt("liquid") : DEFAULT_LIQUID;
         lit = !tag.getBoolean("off");
         rgb = tag.getBoolean("rgb");
+        base = tag.contains("base")
+                ? net.minecraft.nbt.NbtUtils.readBlockState(registries.lookupOrThrow(net.minecraft.core.registries.Registries.BLOCK), tag.getCompound("base"))
+                : null;
     }
 
     @Override

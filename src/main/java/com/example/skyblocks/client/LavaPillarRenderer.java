@@ -97,6 +97,14 @@ public class LavaPillarRenderer implements BlockEntityRenderer<LavaPillarBlockEn
         POSE.set(poseStack.last().pose());
         POSE_INV.set(POSE).invert();
         float y0 = segY == 0 ? FOOT : 0.0F, y1 = segY == h - 1 ? 1.0F - FOOT : 1.0F;
+        if (be.base() != null && level instanceof net.minecraft.client.multiplayer.ClientLevel cl) { // (its foot and cap of another block)
+            if (segY == 0) {
+                BlockSkin.box(be.base(), cl, pos, poseStack, buffers, light, overlay, 2, 0, 2, 14, 3, 14);
+            }
+            if (segY == h - 1) {
+                BlockSkin.box(be.base(), cl, pos, poseStack, buffers, light, overlay, 3, 13, 3, 13, 16, 13);
+            }
+        }
         MultiBufferSource.BufferSource source = DrawNow.now(buffers);
         box(source.getBuffer(Types.GLASS), poseStack.last().pose(), y0 - 0.002F, y1 + 0.002F);
         source.endBatch(Types.GLASS);

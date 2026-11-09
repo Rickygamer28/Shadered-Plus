@@ -55,9 +55,41 @@ public class LavaPillarBlock extends BaseEntityBlock {
         }
     }
 
+    /** Its foot and cap are another block's (LavaPillarBlockEntity.base, drawn by its renderer; the model: none). */
+    public static final net.minecraft.world.level.block.state.properties.BooleanProperty CUSTOM_BASE =
+            net.minecraft.world.level.block.state.properties.BooleanProperty.create("custom_base");
+    /** (what its foot and cap are made of to start with: picking this block puts them back) */
+    public static final Block DEFAULT_BASE = net.minecraft.world.level.block.Blocks.IRON_BLOCK;
+
     public LavaPillarBlock(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(PART, Part.SINGLE));
+        registerDefaultState(stateDefinition.any().setValue(PART, Part.SINGLE).setValue(CUSTOM_BASE, false));
+    }
+
+    /** Whether this item's block can be a pillar's foot and cap: a block drawn by its model. */
+    public static boolean baseBlock(ItemStack stack) {
+        return stack.getItem() instanceof net.minecraft.world.item.BlockItem b
+                && !(b.getBlock() instanceof LavaPillarBlock)
+                && b.getBlock().defaultBlockState().getRenderShape() == RenderShape.MODEL;
+    }
+
+    /** Sneak + right-click with a block: the whole pillar's foot and cap made of it (iron: back as they came). */
+    public static void setBase(Level level, BlockPos pos, ItemStack stack) {
+        if (!(stack.getItem() instanceof net.minecraft.world.item.BlockItem item)) {
+            return;
+        }
+        BlockState skin = item.getBlock().defaultBlockState();
+        boolean custom = !skin.is(DEFAULT_BASE);
+        BlockPos b = bottom(level, pos);
+        int h = height(level, b);
+        for (int i = 0; i < h; i++) {
+            BlockPos p = b.above(i);
+            if (level.getBlockEntity(p) instanceof LavaPillarBlockEntity be) {
+                be.setBase(custom ? skin : null);
+                level.setBlock(p, level.getBlockState(p).setValue(CUSTOM_BASE, custom), Block.UPDATE_ALL);
+            }
+        }
+        level.playSound(null, pos, skin.getSoundType().getPlaceSound(), SoundSource.BLOCKS, 1.0F, 1.0F);
     }
 
     @Override
@@ -67,7 +99,7 @@ public class LavaPillarBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(PART);
+        builder.add(PART, CUSTOM_BASE);
     }
 
     @Override
@@ -88,7 +120,17 @@ public class LavaPillarBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return defaultBlockState().setValue(PART, part(context.getLevel(), context.getClickedPos()));
+        // (on a pillar with its own foot and cap: the same)
+        BlockPos at = context.getClickedPos();
+        boolean custom = false;
+        for (BlockPos n : new BlockPos[] {at.below(), at.above()}) {
+            BlockState ns = context.getLevel().getBlockState(n);
+            if (ns.is(this)) {
+                custom = ns.getValue(CUSTOM_BASE);
+                break;
+            }
+        }
+        return defaultBlockState().setValue(PART, part(context.getLevel(), at)).setValue(CUSTOM_BASE, custom);
     }
 
     @Override
@@ -171,6 +213,7 @@ public class LavaPillarBlock extends BaseEntityBlock {
                     be.setLiquid(other.liquid());
                     be.setRgb(other.rgb());
                     be.setLit(other.lit());
+                    be.setBase(other.base());
                     return;
                 }
             }
