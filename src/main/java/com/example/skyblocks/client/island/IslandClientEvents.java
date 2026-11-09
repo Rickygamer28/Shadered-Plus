@@ -16,7 +16,10 @@ public final class IslandClientEvents {
     public static final class ModBus {
         @SubscribeEvent
         public static void registerReloadListener(RegisterClientReloadListenersEvent event) {
-            event.registerReloadListener((ResourceManagerReloadListener) manager -> IslandView.generation++);
+            event.registerReloadListener((ResourceManagerReloadListener) manager -> {
+                IslandView.generation++;
+                com.example.skyblocks.client.EffectBlockRenderer.forgetSprites();
+            });
         }
 
         private ModBus() {}

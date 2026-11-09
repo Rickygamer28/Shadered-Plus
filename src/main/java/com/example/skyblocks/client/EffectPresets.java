@@ -86,6 +86,9 @@ public final class EffectPresets {
         o.addProperty("brightness", s.brightness());
         o.addProperty("pixel", s.pixel());
         o.addProperty("blur", s.blur());
+        if (!s.block().isEmpty()) {
+            o.addProperty("block", s.block());
+        }
         return o;
     }
 
@@ -98,7 +101,8 @@ public final class EffectPresets {
             c[i] = Integer.parseInt(e.getAsString().replace("#", ""), 16);
         }
         return new EffectBlockEntity.Settings(Math.max(effect, 0), o.get("count").getAsInt(), c, o.get("speed").getAsInt(),
-                o.get("size").getAsInt(), o.get("brightness").getAsInt(), o.get("pixel").getAsBoolean(), o.get("blur").getAsInt());
+                o.get("size").getAsInt(), o.get("brightness").getAsInt(), o.get("pixel").getAsBoolean(), o.get("blur").getAsInt(),
+                o.has("block") ? o.get("block").getAsString() : "");
     }
 
     private static EffectBlockEntity.Settings preset(String effect, int speed, int size, int... colours) {

@@ -557,5 +557,11 @@
   "guide.skyblocks.island_scanner": "Scans the area around it into a Sky Island item: a little copy of it, mobs included, to keep and show in paintings, on pedestals or in a weather globe.",
   "guide.skyblocks.island_painting": "A framed shadow box for the wall with a Sky Island inside. Right-click it with an ender pearl to go to where the island was scanned.",
   "guide.skyblocks.oiia_cat": "The spinning cat. Give it redstone to make it spin; 27 of them in a cube make a big one (see Structures).",
-  "guide.skyblocks.chapter.everything": "Everything"
+  "guide.skyblocks.chapter.everything": "Everything",
+  "screen.skyblocks.effect_block.page_effect": "Effect",
+  "screen.skyblocks.effect_block.page_block": "Background Block",
+  "screen.skyblocks.effect_block.search": "Search blocks...",
+  "screen.skyblocks.effect_block.use_colour": "Use the colour",
+  "screen.skyblocks.effect_block.bg_colour": "Background: the colour (pick a block for it instead)",
+  "screen.skyblocks.effect_block.bg_block": "Background: %s"
 }

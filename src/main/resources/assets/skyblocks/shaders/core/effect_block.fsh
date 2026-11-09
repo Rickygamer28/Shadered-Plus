@@ -20,6 +20,10 @@ uniform float Boost;  // the music's bass, 0-1
 uniform vec3 Extent;  // the size of the block's group, in blocks (x, y, z)
 uniform float Glass;  // 1: effect glass - the dark parts clear, the bright ones glowing in it
 uniform vec3 Bg;      // the background, behind the effects that light only part of the side
+uniform float HasBgBlock; // 1: the background is a block's texture (Sampler0, at BgUV on the block atlas, tinted BgTint)
+uniform vec4 BgUV;
+uniform vec3 BgTint;
+uniform sampler2D Sampler0;
 uniform vec4 BandsA;  // the music's 16 bands, low to high, 0-1
 uniform vec4 BandsB;
 uniform vec4 BandsC;
@@ -429,6 +433,14 @@ vec3 spectrum(vec2 b, float t) {
 }
 
 // one point of the side: its effect, over the background where it lights only part of it
+// what's behind the effect here: the colour, or the block's texture - one to each block of the side
+vec3 background(vec2 b) {
+    if (HasBgBlock < 0.5) return Bg;
+    vec2 f = vec2(fract(b.x), 1.0 - fract(b.y));
+    f = (floor(f * 16.0) + 0.5) / 16.0; // (its own pixels, crisp)
+    return textureLod(Sampler0, mix(BgUV.xy, BgUV.zw, f), 0.0).rgb * BgTint;
+}
+
 vec3 effectAt(vec2 b, int e, float t) {
     if (Pixel > 0.5) {
         b = (floor(b * 32.0) + 0.5) / 32.0;
@@ -455,7 +467,7 @@ vec3 effectAt(vec2 b, int e, float t) {
     else c = spectrum(b, t);
     c = max(c, 0.0);
     if (e == 3 || e == 4 || e == 5 || e == 7 || e == 10 || e == 11 || (e >= 13 && e <= 17)) {
-        c += Bg * (1.0 - clamp(max(max(c.r, c.g), c.b) * 1.5, 0.0, 1.0));
+        c += background(b) * (1.0 - clamp(max(max(c.r, c.g), c.b) * 1.5, 0.0, 1.0));
     }
     return c;
 }

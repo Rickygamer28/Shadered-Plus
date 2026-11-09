@@ -1,7 +1,11 @@
 {
     "vertex": "skyblocks:effect_block",
     "fragment": "skyblocks:effect_block",
-    "samplers": [],
+    "samplers": [
+        {
+            "name": "Sampler0"
+        }
+    ],
     "uniforms": [
         {
             "name": "ModelViewMat",
@@ -271,6 +275,35 @@
             "count": 1,
             "values": [
                 0.0
+            ]
+        },
+        {
+            "name": "HasBgBlock",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
+            ]
+        },
+        {
+            "name": "BgUV",
+            "type": "float",
+            "count": 4,
+            "values": [
+                0.0,
+                0.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "name": "BgTint",
+            "type": "float",
+            "count": 3,
+            "values": [
+                1.0,
+                1.0,
+                1.0
             ]
         }
     ]

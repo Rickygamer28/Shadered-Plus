@@ -11,7 +11,7 @@ import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /** Effect block menu -> server: the settings, for the clicked block's whole group. */
-public record EffectBlockPayload(BlockPos pos, int look, java.util.List<Integer> colours, int amounts) implements CustomPacketPayload {
+public record EffectBlockPayload(BlockPos pos, int look, java.util.List<Integer> colours, int amounts, String block) implements CustomPacketPayload {
     // (look: the effect, the colour count << 8, pixelated << 12, blur << 13; amounts: speed, size << 10, brightness << 20)
     public static EffectBlockPayload of(BlockPos pos, EffectBlockEntity.Settings s) {
         java.util.List<Integer> c = new java.util.ArrayList<>();
@@ -19,7 +19,7 @@ public record EffectBlockPayload(BlockPos pos, int look, java.util.List<Integer>
             c.add(v);
         }
         return new EffectBlockPayload(pos, s.effect() | (s.count() << 8) | (s.pixel() ? 1 << 12 : 0) | (s.blur() << 13), c,
-                s.speed() | (s.size() << 10) | (s.brightness() << 20));
+                s.speed() | (s.size() << 10) | (s.brightness() << 20), s.block());
     }
 
     public EffectBlockEntity.Settings settings() {
@@ -28,7 +28,8 @@ public record EffectBlockPayload(BlockPos pos, int look, java.util.List<Integer>
             c[i] = colours.get(i);
         }
         return new EffectBlockEntity.Settings(look & 0xFF, (look >> 8) & 0xF, c, amounts & 0x3FF, (amounts >> 10) & 0x3FF,
-                (amounts >> 20) & 0x3FF, (look & (1 << 12)) != 0, (look >> 13) & 0x7F);
+                (amounts >> 20) & 0x3FF, (look & (1 << 12)) != 0, (look >> 13) & 0x7F,
+                block.length() > 200 ? "" : block);
     }
 
     public static final Type<EffectBlockPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "effect_block"));
@@ -38,6 +39,7 @@ public record EffectBlockPayload(BlockPos pos, int look, java.util.List<Integer>
             ByteBufCodecs.VAR_INT, EffectBlockPayload::look,
             ByteBufCodecs.INT.apply(ByteBufCodecs.list(EffectBlockEntity.MAX_COLOURS + 1)), EffectBlockPayload::colours,
             ByteBufCodecs.VAR_INT, EffectBlockPayload::amounts,
+            ByteBufCodecs.stringUtf8(256), EffectBlockPayload::block,
             EffectBlockPayload::new);
 
     @Override

@@ -74,6 +74,13 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
             shader.safeGetUniform(bands[k]).set(MusicReactor.band(4 * k), MusicReactor.band(4 * k + 1), MusicReactor.band(4 * k + 2), MusicReactor.band(4 * k + 3));
         }
         shader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.5F, 1.0F));
+        // a block as the background: its texture's place on the block atlas (Sampler0), and its tint
+        float[] sprite = blockBackground(s.block());
+        shader.safeGetUniform("HasBgBlock").set(sprite == null ? 0.0F : 1.0F);
+        if (sprite != null) {
+            shader.safeGetUniform("BgUV").set(sprite[0], sprite[1], sprite[2], sprite[3]);
+            shader.safeGetUniform("BgTint").set(sprite[4], sprite[5], sprite[6]);
+        }
         int bg = s.background();
         shader.safeGetUniform("Bg").set(((bg >> 16) & 255) / 255.0F, ((bg >> 8) & 255) / 255.0F, (bg & 255) / 255.0F);
         for (int i = 0; i < EffectBlockEntity.MAX_COLOURS; i++) {
@@ -82,10 +89,48 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
         }
     }
 
+    private static final java.util.Map<String, float[]> SPRITES = new java.util.HashMap<>();
+
+    /** A block's side texture on the block atlas (u0, v0, u1, v1) and its tint (r, g, b); null: none, or not a block. */
+    static float[] blockBackground(String id) {
+        if (id == null || id.isEmpty()) {
+            return null;
+        }
+        return SPRITES.computeIfAbsent(id, k -> {
+            net.minecraft.resources.ResourceLocation rl = net.minecraft.resources.ResourceLocation.tryParse(k);
+            if (rl == null || !net.minecraft.core.registries.BuiltInRegistries.BLOCK.containsKey(rl)) {
+                return null;
+            }
+            BlockState state = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(rl).defaultBlockState();
+            Minecraft mc = Minecraft.getInstance();
+            net.minecraft.client.resources.model.BakedModel model = mc.getBlockRenderer().getBlockModel(state);
+            java.util.List<net.minecraft.client.renderer.block.model.BakedQuad> quads;
+            try {
+                quads = model.getQuads(state, Direction.NORTH, net.minecraft.util.RandomSource.create(42L),
+                        net.neoforged.neoforge.client.model.data.ModelData.EMPTY, null);
+            } catch (RuntimeException e) {
+                quads = java.util.List.of();
+            }
+            net.minecraft.client.renderer.texture.TextureAtlasSprite sp = quads.isEmpty() ? model.getParticleIcon() : quads.get(0).getSprite();
+            int tint = -1;
+            if (!quads.isEmpty() && quads.get(0).isTinted()) {
+                tint = mc.getBlockColors().getColor(state, null, null, quads.get(0).getTintIndex());
+            }
+            return new float[] {sp.getU0(), sp.getV0(), sp.getU1(), sp.getV1(),
+                    ((tint >> 16) & 255) / 255.0F, ((tint >> 8) & 255) / 255.0F, (tint & 255) / 255.0F};
+        });
+    }
+
+    /** (the textures changed - a resource pack: the places on the atlas worked out again) */
+    static void forgetSprites() {
+        SPRITES.clear();
+    }
+
     abstract static class Types extends RenderType {
         static final RenderType SIDES = create("skyblocks_effect_block", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 1024,
                 false, false, CompositeState.builder()
                         .setShaderState(new ShaderStateShard(() -> shader))
+                        .setTextureState(new TextureStateShard(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS, false, false))
                         .setTexturingState(new TexturingStateShard("skyblocks_effect_block_settings", EffectBlockRenderer::setUp, () -> {}))
                         .setCullState(NO_CULL)
                         .createCompositeState(false));
@@ -93,6 +138,7 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
         static final RenderType GLASS = create("skyblocks_effect_glass", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 1024,
                 false, true, CompositeState.builder()
                         .setShaderState(new ShaderStateShard(() -> shader))
+                        .setTextureState(new TextureStateShard(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS, false, false))
                         .setTexturingState(new TexturingStateShard("skyblocks_effect_glass_settings", EffectBlockRenderer::setUpGlass, () -> {}))
                         .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                         .setWriteMaskState(COLOR_WRITE)

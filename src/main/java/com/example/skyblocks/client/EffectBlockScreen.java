@@ -25,6 +25,15 @@ public class EffectBlockScreen extends Screen {
     private int effect, count, speed, size, brightness, blur;
     private boolean pixel;
     private final int[] colours;
+    /** The background block's id ("": the background colour). */
+    private String block;
+    /** The menu's page: 0 the effect, 1 the background block. */
+    private static int page;
+    private EditBox search;
+    private java.util.List<net.minecraft.world.item.ItemStack> found = java.util.List.of();
+    private double gridScroll;
+    private static final int GRID_COLS = 12, GRID_ROWS = 9, CELL = 21;
+    private static java.util.List<net.minecraft.world.item.ItemStack> allBlocks;
     /** The colour being set. */
     private int sel;
     private EditBox hex;
@@ -48,6 +57,38 @@ public class EffectBlockScreen extends Screen {
         brightness = s.brightness();
         blur = s.blur();
         pixel = s.pixel();
+        block = s.block();
+    }
+
+    /** Every block that's drawn by its model (any mod's), as items to pick from. */
+    private static java.util.List<net.minecraft.world.item.ItemStack> allBlocks() {
+        if (allBlocks == null) {
+            allBlocks = new java.util.ArrayList<>();
+            for (net.minecraft.world.item.Item item : net.minecraft.core.registries.BuiltInRegistries.ITEM) {
+                if (item instanceof net.minecraft.world.item.BlockItem b && !(b.getBlock() instanceof com.example.skyblocks.EffectBlock)
+                        && b.getBlock().defaultBlockState().getRenderShape() == net.minecraft.world.level.block.RenderShape.MODEL) {
+                    allBlocks.add(new net.minecraft.world.item.ItemStack(item));
+                }
+            }
+        }
+        return allBlocks;
+    }
+
+    private void find(String text) {
+        String q = text.trim().toLowerCase(java.util.Locale.ROOT);
+        java.util.List<net.minecraft.world.item.ItemStack> out = new java.util.ArrayList<>();
+        for (net.minecraft.world.item.ItemStack stack : allBlocks()) {
+            if (q.isEmpty() || stack.getHoverName().getString().toLowerCase(java.util.Locale.ROOT).contains(q)
+                    || net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString().contains(q)) {
+                out.add(stack);
+            }
+        }
+        found = out;
+        gridScroll = 0;
+    }
+
+    private static String idOf(net.minecraft.world.item.ItemStack stack) {
+        return net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(((net.minecraft.world.item.BlockItem) stack.getItem()).getBlock()).toString();
     }
 
     private int left() {
@@ -61,6 +102,19 @@ public class EffectBlockScreen extends Screen {
     @Override
     protected void init() {
         int l = left(), t = top();
+        // the two pages: the effect, and a block for its background
+        addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.effect_block.page_effect"), b -> {
+            page = 0;
+            rebuildWidgets();
+        }).bounds(l + 12, t + 3, 124, 18).build()).active = page != 0;
+        addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.effect_block.page_block"), b -> {
+            page = 1;
+            rebuildWidgets();
+        }).bounds(l + 140, t + 3, 124, 18).build()).active = page != 1;
+        if (page == 1) {
+            initBlockPage(l, t);
+            return;
+        }
         addRenderableWidget(Button.builder(Component.literal("<"), b -> setEffect(effect - 1)).bounds(l + 12, t + 24, 20, 20).build());
         effectButton = addRenderableWidget(Button.builder(effectLabel(), b -> setEffect(effect + 1)).bounds(l + 36, t + 24, 204, 20).build());
         addRenderableWidget(Button.builder(Component.literal(">"), b -> setEffect(effect + 1)).bounds(l + 244, t + 24, 20, 20).build());
@@ -174,6 +228,97 @@ public class EffectBlockScreen extends Screen {
         }
     }
 
+    private void initBlockPage(int l, int t) {
+        search = new EditBox(font, l + 12, t + 25, 252, 16, Component.translatable("screen.skyblocks.effect_block.search"));
+        search.setHint(Component.translatable("screen.skyblocks.effect_block.search"));
+        search.setResponder(this::find);
+        addRenderableWidget(search);
+        find(search.getValue());
+        addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.effect_block.use_colour"), b -> {
+            block = "";
+            changed();
+        }).bounds(l + 12, t + 250, 124, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose()).bounds(l + 188, t + 250, 76, 20).build());
+    }
+
+    private int gridRows() {
+        return (found.size() + GRID_COLS - 1) / GRID_COLS;
+    }
+
+    /** The block in the grid at this point (null: none). */
+    private net.minecraft.world.item.ItemStack cellAt(double mx, double my) {
+        int l = left() + 12, t = top() + 46;
+        if (mx < l || my < t || mx >= l + GRID_COLS * CELL || my >= t + GRID_ROWS * CELL) {
+            return null;
+        }
+        int i = ((int) (my - t) / CELL + (int) gridScroll) * GRID_COLS + (int) (mx - l) / CELL;
+        return i >= 0 && i < found.size() ? found.get(i) : null;
+    }
+
+    @Override
+    public boolean mouseClicked(double mx, double my, int button) {
+        if (page == 1) {
+            net.minecraft.world.item.ItemStack stack = cellAt(mx, my);
+            if (stack != null) {
+                block = idOf(stack);
+                changed();
+                net.minecraft.client.Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
+                        net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                return true;
+            }
+        }
+        return super.mouseClicked(mx, my, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mx, double my, double dx, double dy) {
+        if (page == 1) {
+            gridScroll = Math.max(0, Math.min(Math.max(0, gridRows() - GRID_ROWS), gridScroll - dy));
+            return true;
+        }
+        return super.mouseScrolled(mx, my, dx, dy);
+    }
+
+    private void renderBlockPage(GuiGraphics g, int mx, int my) {
+        int l = left() + 12, t = top() + 46;
+        g.fill(l - 1, t - 1, l + GRID_COLS * CELL + 1, t + GRID_ROWS * CELL + 1, 0xFF000000);
+        net.minecraft.world.item.ItemStack hovered = null;
+        for (int r = 0; r < GRID_ROWS; r++) {
+            for (int c = 0; c < GRID_COLS; c++) {
+                int i = (r + (int) gridScroll) * GRID_COLS + c;
+                if (i >= found.size()) {
+                    break;
+                }
+                net.minecraft.world.item.ItemStack stack = found.get(i);
+                int x = l + c * CELL, y = t + r * CELL;
+                boolean chosen = idOf(stack).equals(block);
+                boolean over = mx >= x && mx < x + CELL && my >= y && my < y + CELL;
+                g.fill(x, y, x + CELL - 1, y + CELL - 1, chosen ? 0xFF8B5CF6 : over ? 0xFF4A4A5A : 0xFF24242C);
+                g.renderItem(stack, x + 2, y + 2);
+                if (over) {
+                    hovered = stack;
+                }
+            }
+        }
+        if (gridRows() > GRID_ROWS) { // (a bar: there's more)
+            int h = GRID_ROWS * CELL, bar = Math.max(10, h * GRID_ROWS / gridRows());
+            int by = t + (int) ((h - bar) * gridScroll / (gridRows() - GRID_ROWS));
+            g.fill(l + GRID_COLS * CELL + 2, by, l + GRID_COLS * CELL + 4, by + bar, 0xFF8080A0);
+        }
+        Component now = block.isEmpty() ? Component.translatable("screen.skyblocks.effect_block.bg_colour")
+                : Component.translatable("screen.skyblocks.effect_block.bg_block", blockName(block));
+        g.drawString(font, now, l, top() + 238, 0xC0C0C0);
+        if (hovered != null) {
+            g.renderTooltip(font, hovered.getHoverName(), mx, my);
+        }
+    }
+
+    private static Component blockName(String id) {
+        net.minecraft.resources.ResourceLocation rl = net.minecraft.resources.ResourceLocation.tryParse(id);
+        return rl != null && net.minecraft.core.registries.BuiltInRegistries.BLOCK.containsKey(rl)
+                ? net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(rl).getName() : Component.literal(id);
+    }
+
     /** A slider for a number from {@code min} to {@code max}, in steps. */
     private class Slider extends AbstractSliderButton {
         private final String name;
@@ -247,13 +392,14 @@ public class EffectBlockScreen extends Screen {
         brightness = p.brightness();
         blur = p.blur();
         pixel = p.pixel();
+        block = p.block();
         sel = 0;
         changed();
         rebuildWidgets();
     }
 
     private EffectBlockEntity.Settings current() {
-        return new EffectBlockEntity.Settings(effect, count, colours, speed, size, brightness, pixel, blur);
+        return new EffectBlockEntity.Settings(effect, count, colours, speed, size, brightness, pixel, blur, block);
     }
 
     private Component pixelLabel() {
@@ -325,7 +471,10 @@ public class EffectBlockScreen extends Screen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
         int l = left(), t = top();
-        g.drawCenteredString(font, title, l + PANEL_W / 2, t + 9, 0xFFFFFF);
+        if (page == 1) {
+            renderBlockPage(g, mouseX, mouseY);
+            return;
+        }
         g.drawString(font, Component.translatable("screen.skyblocks.effect_block.colours"), l + 12, t + 55, 0xA0A0A0);
         Component editing = sel == EffectBlockEntity.BACKGROUND ? Component.translatable("screen.skyblocks.effect_block.background")
                 : Component.translatable("screen.skyblocks.effect_block.editing", sel + 1);

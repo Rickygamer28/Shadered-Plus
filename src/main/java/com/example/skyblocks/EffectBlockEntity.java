@@ -34,10 +34,16 @@ public class EffectBlockEntity extends BlockEntity {
      * What an effect block shows. Speed, size, brightness and blur in percent (speed 0-400, size 25-800, brightness
      * 10-100, blur 0-100: how soft the changes from one colour to the next are).
      */
-    public record Settings(int effect, int count, int[] colours, int speed, int size, int brightness, boolean pixel, int blur) {
+    public record Settings(int effect, int count, int[] colours, int speed, int size, int brightness, boolean pixel, int blur, String block) {
         public static final Settings DEFAULT = new Settings(0, 3, DEFAULT_COLOURS.clone(), 100, 100, 100, false, 0);
 
+        /** (with the background a colour, not a block) */
+        public Settings(int effect, int count, int[] colours, int speed, int size, int brightness, boolean pixel, int blur) {
+            this(effect, count, colours, speed, size, brightness, pixel, blur, "");
+        }
+
         public Settings {
+            block = block == null ? "" : block; // (a block's id: the background made of that block; "": its colour)
             effect = Math.floorMod(effect, EFFECTS.length);
             count = Math.max(1, Math.min(MAX_COLOURS, count));
             int[] c = new int[MAX_COLOURS + 1];
@@ -66,6 +72,7 @@ public class EffectBlockEntity extends BlockEntity {
             tag.putInt("brightness", brightness);
             tag.putBoolean("pixel", pixel);
             tag.putInt("blur", blur);
+            tag.putString("block", block);
             return tag;
         }
 
@@ -76,13 +83,13 @@ public class EffectBlockEntity extends BlockEntity {
             return new Settings(tag.getInt("effect"), tag.getInt("count"), tag.getIntArray("colours"),
                     tag.contains("speed") ? tag.getInt("speed") : 100, tag.contains("size") ? tag.getInt("size") : 100,
                     tag.contains("brightness") ? tag.getInt("brightness") : 100, tag.getBoolean("pixel"),
-                    tag.contains("blur") ? tag.getInt("blur") : DEFAULT.blur());
+                    tag.contains("blur") ? tag.getInt("blur") : DEFAULT.blur(), tag.getString("block"));
         }
 
         /** (for drawing: one number that changes when anything does) */
         public int key() {
             int h = java.util.Arrays.hashCode(colours);
-            return ((((h * 31 + effect) * 31 + count) * 31 + speed) * 31 + size) * 31 + brightness * 2 + (pixel ? 1 : 0) + blur * 7919;
+            return ((((h * 31 + effect) * 31 + count) * 31 + speed) * 31 + size) * 31 + brightness * 2 + (pixel ? 1 : 0) + blur * 7919 + block.hashCode() * 104729;
         }
     }
 
