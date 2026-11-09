@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "front": "skyblocks:block/light_bridge_emitter_front",
+    "side": "skyblocks:block/light_bridge_emitter_side",
+    "top": "skyblocks:block/light_bridge_emitter_side"
+  }
+}

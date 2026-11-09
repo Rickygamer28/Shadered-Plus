@@ -178,6 +178,16 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.GLASS).noOcclusion().lightLevel(state -> 11)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_ORANGE));
 
+    /** A light bridge emitter: two facing each other make a walkable bridge of light (LightBridgeEmitterBlock). */
+    public static final DeferredBlock<LightBridgeEmitterBlock> LIGHT_BRIDGE_EMITTER = BLOCKS.registerBlock("light_bridge_emitter", LightBridgeEmitterBlock::new,
+            BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.METAL).lightLevel(state -> 7)
+                    .mapColor(net.minecraft.world.level.material.MapColor.METAL));
+    /** The bridge's blocks, put down and taken away by the emitters (LightBridgeBlock). */
+    public static final DeferredBlock<LightBridgeBlock> LIGHT_BRIDGE = BLOCKS.registerBlock("light_bridge", LightBridgeBlock::new,
+            BlockBehaviour.Properties.of().strength(-1.0F, 3600000.0F).noLootTable().noOcclusion().lightLevel(state -> 8)
+                    .isValidSpawn((s, l, p, e) -> false).pushReaction(net.minecraft.world.level.material.PushReaction.BLOCK)
+                    .mapColor(net.minecraft.world.level.material.MapColor.NONE));
+
     /** A kaleidoscope: coloured glass turning in windows on every side of a brass frame (KaleidoscopeBlock). */
     public static final DeferredBlock<KaleidoscopeBlock> KALEIDOSCOPE = BLOCKS.registerBlock("kaleidoscope", KaleidoscopeBlock::new,
             BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.COPPER).lightLevel(state -> 10)

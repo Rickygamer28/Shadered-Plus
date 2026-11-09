@@ -92,6 +92,8 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(WeatherGlobeBlockEntity::new, ModBlocks.WEATHER_GLOBE.get()).build(null));
     public static final Supplier<BlockEntityType<LavaPillarBlockEntity>> LAVA_PILLAR = TYPES.register("lava_pillar",
             () -> BlockEntityType.Builder.of(LavaPillarBlockEntity::new, ModBlocks.LAVA_PILLAR.get()).build(null));
+    public static final Supplier<BlockEntityType<LightBridgeEmitterBlockEntity>> LIGHT_BRIDGE_EMITTER = TYPES.register("light_bridge_emitter",
+            () -> BlockEntityType.Builder.of(LightBridgeEmitterBlockEntity::new, ModBlocks.LIGHT_BRIDGE_EMITTER.get()).build(null));
     public static final Supplier<BlockEntityType<KaleidoscopeBlockEntity>> KALEIDOSCOPE = TYPES.register("kaleidoscope",
             () -> BlockEntityType.Builder.of(KaleidoscopeBlockEntity::new, ModBlocks.KALEIDOSCOPE.get()).build(null));
     public static final Supplier<BlockEntityType<SolarSystemBlockEntity>> SOLAR_SYSTEM = TYPES.register("solar_system",

@@ -98,7 +98,7 @@ public class SkyBlocksMod {
                 ModItems.TANK_GLASS.get(),
                 // mirrors and portals
                 ModItems.MIRROR.get(), ModItems.ROUND_MIRROR.get(), ModItems.CRACKED_MIRROR.get(), ModItems.VANITY_MIRROR.get(),
-                ModItems.INFINITY_MIRROR.get(), ModItems.INFINITY_CUBE.get(), ModItems.PORTAL_MIRROR.get(),
+                ModItems.INFINITY_MIRROR.get(), ModItems.INFINITY_CUBE.get(), ModItems.PORTAL_MIRROR.get(), ModItems.LIGHT_BRIDGE_EMITTER.get(),
                 // sky islands, the cat
                 ModItems.ISLAND_SCANNER.get(), ModItems.ISLAND_PAINTING.get(), ModItems.OIIA_CAT.get()}) {
             add.accept(i);
