@@ -17,7 +17,11 @@ public final class DrawNow {
 
     /** Whether this is Iris's buffer source (everything drawn later, together). */
     public static boolean isIris(MultiBufferSource buffers) {
-        return buffers != null && buffers.getClass().getName().startsWith("net.irisshaders.");
+        if (buffers == null) {
+            return false;
+        }
+        String n = buffers.getClass().getName();
+        return n.startsWith("net.irisshaders.") || n.startsWith("net.coderbot.");
     }
 
     /** {@code buffers}, or (Iris's) ours that draws on endBatch. */
@@ -32,18 +36,32 @@ public final class DrawNow {
         }
     }
 
-    /** A source that draws on endBatch: {@code buffers} itself if it does, ours instead of Iris's, else null. */
+    /**
+     * A source that draws on endBatch: ours instead of Iris's (which may be a game buffer source itself, that only
+     * pretends to draw on endBatch - so it's looked for first), {@code buffers} itself if it draws, else null.
+     */
     @Nullable
     public static MultiBufferSource.BufferSource of(MultiBufferSource buffers) {
-        if (buffers instanceof MultiBufferSource.BufferSource source) {
-            return source;
-        }
         if (isIris(buffers)) {
-            if (own == null) {
-                own = MultiBufferSource.immediate(new ByteBufferBuilder(1 << 18));
-            }
-            return own;
+            return own();
         }
-        return null;
+        return buffers instanceof MultiBufferSource.BufferSource source ? source : null;
+    }
+
+    /** A source that draws on endBatch, whatever {@code buffers} is: it, if it does; else ours. */
+    public static MultiBufferSource.BufferSource now(MultiBufferSource buffers) {
+        MultiBufferSource.BufferSource s = of(buffers);
+        if (s == null) {
+            // (the game's own - unless Iris has put its own in its place for the level's drawing)
+            s = of(net.minecraft.client.Minecraft.getInstance().renderBuffers().bufferSource());
+        }
+        return s != null ? s : own();
+    }
+
+    private static MultiBufferSource.BufferSource own() {
+        if (own == null) {
+            own = MultiBufferSource.immediate(new ByteBufferBuilder(1 << 18));
+        }
+        return own;
     }
 }

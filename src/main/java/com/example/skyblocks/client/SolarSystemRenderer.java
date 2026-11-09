@@ -40,6 +40,7 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
     // the model being drawn now (for the uniforms)
     private static float years, spin, glow = 1.0F, itemMode;
     static final Matrix4f ITEM_INV = new Matrix4f();
+    private static boolean toldBuffers;
 
     @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
@@ -124,7 +125,13 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
         float sky = LightTexture.sky(light) / 15.0F;
         glow = holo ? 1.0F - 0.3F * day * sky : 1.0F;
         // drawn now, with its own time and brightness (the main buffers if these can't be drawn at once)
-        MultiBufferSource.BufferSource source = buffers instanceof MultiBufferSource.BufferSource s ? s : Minecraft.getInstance().renderBuffers().bufferSource();
+        // (always one that draws on endBatch: Iris's, even with no pack on, keeps everything for later - and every
+        // orrery and planetarium then came out with the last one drawn's time, the planets jumping as the camera moved)
+        MultiBufferSource.BufferSource source = DrawNow.now(buffers);
+        if (RenderTest.ON && !toldBuffers) {
+            toldBuffers = true;
+            SkyBlocksMod.LOGGER.info("Shadered+ render test: a solar system given {} - drawn into {}", buffers.getClass().getName(), source.getClass().getName());
+        }
         box(source.getBuffer(Types.MODEL), poseStack.last().pose(), holo, holo ? be.size() : 0, be.dome(), be.realSizes());
         source.endBatch(Types.MODEL);
         box(source.getBuffer(Types.DEPTH), poseStack.last().pose(), holo, holo ? be.size() : 0, be.dome(), be.realSizes());
@@ -153,7 +160,7 @@ public class SolarSystemRenderer implements BlockEntityRenderer<SolarSystemBlock
         spin = t;
         glow = 1.0F;
         itemMode = 1.0F;
-        MultiBufferSource.BufferSource source = buffers instanceof MultiBufferSource.BufferSource s ? s : mc.renderBuffers().bufferSource();
+        MultiBufferSource.BufferSource source = DrawNow.now(buffers);
         box(source.getBuffer(Types.MODEL), m, holo, 0, true, false);
         source.endBatch(Types.MODEL);
         itemMode = 0.0F;
