@@ -95,40 +95,55 @@ float relief(float h, float strength) {
 
 // ---- the Balatro-like vortex: glossy paint pulled round into the middle ----
 
+// three octaves only: broad, smooth shapes (liquid, not grain)
+float fbm3(vec2 p) {
+    float s = 0.0, a = 0.5;
+    for (int i = 0; i < 3; i++) {
+        s += a * noise(p);
+        p = ROT * p * 2.03 + 17.1;
+        a *= 0.5;
+    }
+    return s;
+}
+
 // how far out a point is in the paint, after the twist and the stirring (0 the middle, about 1 the outside)
 float vortexField(vec2 p, float t) {
     float r = length(p);
-    float a = atan(p.y, p.x) + 2.4 / (0.55 + r * 0.45) + t * 0.32; // (twisted harder towards the middle, turning)
+    float a = atan(p.y, p.x) + 2.2 / (0.5 + r * 0.5) + t * 0.3; // (twisted harder towards the middle, turning)
     vec2 w = vec2(cos(a), sin(a)) * r;
-    vec2 d = w * 1.1;
-    for (int k = 0; k < 4; k++) {
+    vec2 d = w * 0.7;
+    for (int k = 0; k < 3; k++) {
         float fk = float(k);
-        d += 0.32 * vec2(sin(d.y * 1.9 + t * 0.55 + fk * 1.7), cos(d.x * 1.9 - t * 0.47 + fk * 2.3));
+        d += 0.38 * vec2(sin(d.y * 1.3 + t * 0.45 + fk * 1.7), cos(d.x * 1.3 - t * 0.38 + fk * 2.3));
     }
-    float n = fbm(d * 0.9 + vec2(t * 0.07, -t * 0.05));
-    return r * 0.3 + n * 0.32 + 0.06 * sin(length(d) * 3.0 - t * 0.8);
+    float n = fbm3(d * 0.75 + vec2(t * 0.06, -t * 0.05));
+    float streaks = 0.035 * sin(d.x * 3.1 + d.y * 2.3 + n * 4.0) + 0.02 * sin(d.y * 5.7 - d.x * 1.9); // (the long glossy ridges)
+    return r * 0.26 + n * 0.45 + streaks;
 }
 
 vec3 swirl(vec2 p, float t) {
     float v = vortexField(p, t);
-    // the colours from the middle out: the second, then the third (the dark between), ..., the first on the outside
-    float span = float(N - 1);
-    float x = clamp(v, 0.0, 1.0) * span;
-    int i = int(floor(x));
-    float w = max(mix(0.06, 0.5, Blur), AA * span * 1.2);
-    float k = smoothstep(0.5 - w, 0.5 + w, fract(x));
-    vec3 c = N == 1 ? colour(0) : mix(colour(i + 1), colour(i + 2), i + 1 >= N ? 0.0 : k);
-    if (i >= N - 1) c = colour(0);
-    // glossy: lit by the slope of the paint, with bright streaks where it catches the light
-    float e = 0.03;
+    float e = 0.04;
     float vx = vortexField(p + vec2(e, 0.0), t), vy = vortexField(p + vec2(0.0, e), t);
-    vec3 n = normalize(vec3((v - vx) / e, (v - vy) / e, 1.4));
-    vec3 L = normalize(vec3(-0.5, 0.6, 0.65));
-    float diff = 0.62 + 0.45 * max(dot(n, L), 0.0);
-    float spec = pow(max(dot(reflect(-L, n), vec3(0.0, 0.0, 1.0)), 0.0), 18.0);
-    float crease = smoothstep(0.0, 0.35, length(vec2(v - vx, v - vy)) / e); // (darker in the steep folds)
-    c = c * diff * mix(1.0, 0.75, crease);
-    return c + mix(c, vec3(1.0), 0.55) * spec * 0.9;
+    // the colours from the middle out: the second; any from the third on, thin bands (the third the dark edge round
+    // the middle); the first all round the outside
+    float edge = max(mix(0.015, 0.25, Blur), AA * 2.0);
+    vec3 c = colour(1);
+    float x = 0.42;
+    for (int k = 2; k < 8; k++) {
+        if (k >= N) break;
+        c = mix(c, colour(k), smoothstep(x - edge, x + edge, v));
+        x += k == 2 ? 0.14 : 0.07;
+    }
+    c = mix(c, colour(0), smoothstep(x - edge, x + edge, v));
+    if (N == 1) c = colour(0);
+    // glossy: lit by the slope of the paint, with bright streaks where it catches the light
+    vec3 n = normalize(vec3((v - vx) / e, (v - vy) / e, 0.6));
+    vec3 L = normalize(vec3(-0.45, 0.55, 0.7));
+    float diff = 0.55 + 0.55 * max(dot(n, L), 0.0);
+    float spec = pow(max(dot(reflect(-L, n), vec3(0.0, 0.0, 1.0)), 0.0), 14.0);
+    c *= diff;
+    return c + mix(c, vec3(1.0), 0.5) * spec * 0.85;
 }
 
 vec3 wave(vec2 p, float t) {
@@ -217,9 +232,9 @@ vec3 ripples(vec2 p, float t) {
         float r = length(p - c);
         h += sin(r * 4.0 - t * 1.6 + fk) / (1.0 + r * 0.25);
     }
-    float x = length(p) * 0.12 - t * 0.04 + h * 0.03;
+    float x = length(p) * 0.3 - t * 0.12 + h * 0.04;
     vec3 c = pal(x, 0.0);
-    return c * relief(h * 0.05, 1.0) * (0.85 + 0.15 * h);
+    return c * relief(h * 0.3, 1.0) * (0.85 + 0.12 * h);
 }
 
 vec3 gradient(vec2 p, float t) {
@@ -247,13 +262,13 @@ vec3 aurora(vec2 p, float t) {
 
 // liquid ink: colours flowing round each other, folding and spreading
 vec3 ink(vec2 p, float t) {
-    vec2 q = p * 0.55;
-    vec2 a = vec2(fbm(q + vec2(0.0, t * 0.08)), fbm(q + vec2(5.2, 1.3) - t * 0.07));
-    vec2 b = vec2(fbm(q + 3.0 * a + vec2(1.7, 9.2) + t * 0.05), fbm(q + 3.0 * a + vec2(8.3, 2.8) - t * 0.06));
-    float v = fbm(q + 3.2 * b);
-    vec3 c = pal(v * 0.9 + 0.5 + length(b) * 0.25, 0.18);
-    float dark = smoothstep(-0.55, 0.1, v); // (deep shadows in the folds)
-    return c * mix(0.25, 1.0, dark) * relief(v, 0.6);
+    vec2 q = p * 0.3;
+    vec2 a = vec2(fbm3(q + vec2(0.0, t * 0.06)), fbm3(q + vec2(5.2, 1.3) - t * 0.05));
+    vec2 b = vec2(fbm3(q + 2.2 * a + vec2(1.7, 9.2) + t * 0.04), fbm3(q + 2.2 * a + vec2(8.3, 2.8) - t * 0.045));
+    float v = fbm3(q + 2.4 * b);
+    vec3 c = pal(v * 1.4 + length(b) * 0.6 + 0.3, 0.0);
+    float dark = smoothstep(-0.6, -0.1, v); // (shadows in the deepest folds)
+    return c * mix(0.45, 1.0, dark) * relief(v, 0.5);
 }
 
 // the music: bars rising with the bass, half a block wide, glowing at their tops; the rest breathing with it
