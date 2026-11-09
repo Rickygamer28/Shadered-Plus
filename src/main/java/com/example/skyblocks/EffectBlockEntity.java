@@ -17,7 +17,7 @@ import org.jetbrains.annotations.Nullable;
 public class EffectBlockEntity extends BlockEntity {
     /** The effects, in the menu's order (the shader's numbers). */
     public static final String[] EFFECTS = {"swirl", "wave", "cycle", "breathe", "strobe", "sparkle", "plasma", "scanner",
-            "ripples", "gradient", "aurora", "music"};
+            "ripples", "gradient", "aurora", "music", "ink"};
     public static final int MAX_COLOURS = 8;
     /** (a Balatro-like start: red, blue and a dark teal - then gold, green, purple, white, orange) */
     public static final int[] DEFAULT_COLOURS = {0xDE443B, 0x006BB4, 0x162325, 0xF2B53A, 0x3FBF6F, 0x8E5BD9, 0xF4F4F4, 0xFF7A1A};
@@ -28,10 +28,11 @@ public class EffectBlockEntity extends BlockEntity {
     private BlockPos anchor;
 
     /**
-     * What an effect block shows. Speed, size and brightness in percent (speed 10-400, size 25-800, brightness 10-100).
+     * What an effect block shows. Speed, size, brightness and blur in percent (speed 0-400, size 25-800, brightness
+     * 10-100, blur 0-100: how soft the changes from one colour to the next are).
      */
-    public record Settings(int effect, int count, int[] colours, int speed, int size, int brightness, boolean pixel) {
-        public static final Settings DEFAULT = new Settings(0, 3, DEFAULT_COLOURS.clone(), 100, 100, 100, false);
+    public record Settings(int effect, int count, int[] colours, int speed, int size, int brightness, boolean pixel, int blur) {
+        public static final Settings DEFAULT = new Settings(0, 3, DEFAULT_COLOURS.clone(), 100, 100, 100, false, 10);
 
         public Settings {
             effect = Math.floorMod(effect, EFFECTS.length);
@@ -44,6 +45,7 @@ public class EffectBlockEntity extends BlockEntity {
             speed = Math.max(0, Math.min(400, speed));
             size = Math.max(25, Math.min(800, size));
             brightness = Math.max(10, Math.min(100, brightness));
+            blur = Math.max(0, Math.min(100, blur));
         }
 
         public CompoundTag save() {
@@ -55,6 +57,7 @@ public class EffectBlockEntity extends BlockEntity {
             tag.putInt("size", size);
             tag.putInt("brightness", brightness);
             tag.putBoolean("pixel", pixel);
+            tag.putInt("blur", blur);
             return tag;
         }
 
@@ -64,13 +67,14 @@ public class EffectBlockEntity extends BlockEntity {
             }
             return new Settings(tag.getInt("effect"), tag.getInt("count"), tag.getIntArray("colours"),
                     tag.contains("speed") ? tag.getInt("speed") : 100, tag.contains("size") ? tag.getInt("size") : 100,
-                    tag.contains("brightness") ? tag.getInt("brightness") : 100, tag.getBoolean("pixel"));
+                    tag.contains("brightness") ? tag.getInt("brightness") : 100, tag.getBoolean("pixel"),
+                    tag.contains("blur") ? tag.getInt("blur") : DEFAULT.blur());
         }
 
         /** (for drawing: one number that changes when anything does) */
         public int key() {
             int h = java.util.Arrays.hashCode(colours);
-            return ((((h * 31 + effect) * 31 + count) * 31 + speed) * 31 + size) * 31 + brightness * 2 + (pixel ? 1 : 0);
+            return ((((h * 31 + effect) * 31 + count) * 31 + speed) * 31 + size) * 31 + brightness * 2 + (pixel ? 1 : 0) + blur * 7919;
         }
     }
 

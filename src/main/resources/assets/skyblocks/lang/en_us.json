@@ -430,5 +430,10 @@
   "effect_block.skyblocks.ripples": "Ripples",
   "effect_block.skyblocks.gradient": "Gradient",
   "effect_block.skyblocks.aurora": "Aurora",
-  "effect_block.skyblocks.music": "Music Bars"
+  "effect_block.skyblocks.music": "Music Bars",
+  "effect_block.skyblocks.ink": "Liquid Ink",
+  "screen.skyblocks.effect_block.blur": "Blur: %s%%",
+  "screen.skyblocks.effect_block.red": "Red: %s",
+  "screen.skyblocks.effect_block.green": "Green: %s",
+  "screen.skyblocks.effect_block.blue": "Blue: %s"
 }

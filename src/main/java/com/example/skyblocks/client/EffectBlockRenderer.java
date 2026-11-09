@@ -57,6 +57,7 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
         shader.safeGetUniform("Size").set(s.size() / 100.0F);
         shader.safeGetUniform("Bright").set(s.brightness() / 100.0F);
         shader.safeGetUniform("Pixel").set(s.pixel() ? 1.0F : 0.0F);
+        shader.safeGetUniform("Blur").set(s.blur() / 100.0F);
         shader.safeGetUniform("Boost").set(Math.min(MusicReactor.bass() * 1.5F, 1.0F));
         for (int i = 0; i < EffectBlockEntity.MAX_COLOURS; i++) {
             int c = s.colours()[i];

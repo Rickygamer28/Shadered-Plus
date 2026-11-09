@@ -12,13 +12,13 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /** Effect block menu -> server: the settings, for the clicked block's whole group. */
 public record EffectBlockPayload(BlockPos pos, int look, java.util.List<Integer> colours, int amounts) implements CustomPacketPayload {
-    // (look: the effect, the colour count << 8, pixelated << 12; amounts: speed, size << 10, brightness << 20)
+    // (look: the effect, the colour count << 8, pixelated << 12, blur << 13; amounts: speed, size << 10, brightness << 20)
     public static EffectBlockPayload of(BlockPos pos, EffectBlockEntity.Settings s) {
         java.util.List<Integer> c = new java.util.ArrayList<>();
         for (int v : s.colours()) {
             c.add(v);
         }
-        return new EffectBlockPayload(pos, s.effect() | (s.count() << 8) | (s.pixel() ? 1 << 12 : 0), c,
+        return new EffectBlockPayload(pos, s.effect() | (s.count() << 8) | (s.pixel() ? 1 << 12 : 0) | (s.blur() << 13), c,
                 s.speed() | (s.size() << 10) | (s.brightness() << 20));
     }
 
@@ -28,7 +28,7 @@ public record EffectBlockPayload(BlockPos pos, int look, java.util.List<Integer>
             c[i] = colours.get(i);
         }
         return new EffectBlockEntity.Settings(look & 0xFF, (look >> 8) & 0xF, c, amounts & 0x3FF, (amounts >> 10) & 0x3FF,
-                (amounts >> 20) & 0x3FF, (look & (1 << 12)) != 0);
+                (amounts >> 20) & 0x3FF, (look & (1 << 12)) != 0, (look >> 13) & 0x7F);
     }
 
     public static final Type<EffectBlockPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "effect_block"));

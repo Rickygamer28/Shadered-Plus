@@ -114,6 +114,14 @@
             ]
         },
         {
+            "name": "Blur",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.1
+            ]
+        },
+        {
             "name": "Col0",
             "type": "float",
             "count": 3,
