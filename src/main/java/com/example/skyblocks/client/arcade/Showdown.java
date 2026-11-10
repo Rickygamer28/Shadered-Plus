@@ -1003,7 +1003,7 @@ public class Showdown extends ArcadeGame {
                 p[10] = 25;
             }
             case AIR -> {
-                p[12] = -40 - b.airHits * 30 - b.t * 6;
+                p[12] = 40 + b.airHits * 30 + b.t * 6;
                 p[7] = 130;
                 p[8] = 20;
                 p[9] = 150;
@@ -1014,7 +1014,7 @@ public class Showdown extends ArcadeGame {
                 p[6] = -50;
             }
             case DOWN, KO -> {
-                p[12] = -88;
+                p[12] = 88;
                 p[0] = 0;
                 p[3] = 5;
                 p[4] = -5;
@@ -1028,7 +1028,7 @@ public class Showdown extends ArcadeGame {
             }
             case THROWN -> {
                 if (b.t > 8) {
-                    p[12] = -88;
+                    p[12] = 88;
                 } else {
                     p[0] = -15;
                     p[11] = -20;
@@ -1200,7 +1200,7 @@ public class Showdown extends ArcadeGame {
         int gi = b.style.gi(), sk = b.style.skin(), band = b.style.band(), hr = b.style.hair();
         float lean = p[0];
         float[] pelvis = {p[2], 18 - p[1]};
-        float[] up = dir(180 + lean);
+        float[] up = dir(180 - lean); // (leaning forward: its chest ahead of its hips)
         float[] neck = {pelvis[0] + up[0] * 13, pelvis[1] + up[1] * 13};
         // legs (near: the camera's side, the lead leg)
         for (int s = 0; s < 2; s++) {
@@ -1220,13 +1220,13 @@ public class Showdown extends ArcadeGame {
         out.add(new Bone(new float[] {pelvis[0] + up[0] * 2.4F, pelvis[1] + up[1] * 2.4F, 0}, new float[] {pelvis[0] + up[0] * 4, pelvis[1] + up[1] * 4, 0},
                 7.0F, 10.2F, accent, band));
         out.add(new Bone(new float[] {pelvis[0] + up[0] * 3.6F, pelvis[1] + up[1] * 3.6F, 0}, neck, 6.6F, 10.0F, top, gi));
-        float[] hd = dir(180 + lean + p[11]);
+        float[] hd = dir(180 - lean - p[11]);
         float[] headBase = {neck[0] + hd[0] * 1.2F, neck[1] + hd[1] * 1.2F, 0};
         float[] headTop = {neck[0] + hd[0] * 8.6F, neck[1] + hd[1] * 8.6F, 0};
         out.add(new Bone(neck, headBase, 2.8F, 2.8F, skin, sk));
         out.add(new Bone(headBase, headTop, 7.0F, 7.0F, skin, sk));
         // the face: eyes towards its front
-        float[] fwd = dir(90 + lean + p[11]);
+        float[] fwd = dir(90 - lean - p[11]);
         for (float side : new float[] {-1.6F, 1.6F}) {
             float[] e = {headBase[0] + hd[0] * 4.4F + fwd[0] * 3.55F, headBase[1] + hd[1] * 4.4F + fwd[1] * 3.55F, side};
             out.add(new Bone(e, new float[] {e[0] + hd[0] * 1.2F, e[1] + hd[1] * 1.2F, side}, 0.3F, 0.9F, kind == 2 ? accent : 0x141018, 0));
@@ -1239,7 +1239,7 @@ public class Showdown extends ArcadeGame {
                 float[] bandAt = {headBase[0] + hd[0] * 5.4F, headBase[1] + hd[1] * 5.4F, 0};
                 out.add(new Bone(bandAt, new float[] {bandAt[0] + hd[0] * 1.1F, bandAt[1] + hd[1] * 1.1F, 0}, 7.5F, 7.5F, accent, band));
                 float flap = Mth.sin(ticks * 0.4F) * 15;
-                float[] tail = at(new float[] {bandAt[0] - fwd[0] * 3.6F, bandAt[1] - fwd[1] * 3.6F}, dir(-80 + lean + flap), 6, 0);
+                float[] tail = at(new float[] {bandAt[0] - fwd[0] * 3.6F, bandAt[1] - fwd[1] * 3.6F}, dir(-80 + flap), 6, 0);
                 out.add(new Bone(new float[] {bandAt[0] - fwd[0] * 3.6F, bandAt[1] - fwd[1] * 3.6F, 0}, tail, 1.0F, 1.6F, accent, band));
             }
             case 1 -> { // cat ears and a tail
@@ -1270,7 +1270,7 @@ public class Showdown extends ArcadeGame {
                     float flick = Mth.sin(ticks * 0.6F + i * 1.7F) * 1.2F;
                     float side = -2.4F + i * 1.6F;
                     float[] f0 = {headTop[0] - fwd[0] * (i % 2) * 1.5F, headTop[1] - fwd[1] * (i % 2) * 1.5F, side};
-                    float[] f1 = at(f0, dir(150 + lean - 25 + i * 3), 3.5F + flick + (i % 2), side);
+                    float[] f1 = at(f0, dir(195 + i * 4 - lean), 3.5F + flick + (i % 2), side);
                     out.add(new Bone(f0, f1, 1.8F, 1.4F, i % 2 == 0 ? hair : accent, hr));
                 }
             }
@@ -1278,7 +1278,7 @@ public class Showdown extends ArcadeGame {
         // arms (near first: the lead hand)
         for (int s = 0; s < 2; s++) {
             float side = s == 0 ? -5.6F : 5.6F;
-            float sh = (s == 0 ? p[7] : p[9]) + lean, el = s == 0 ? p[8] : p[10];
+            float sh = s == 0 ? p[7] : p[9], el = s == 0 ? p[8] : p[10];
             float[] sp = {neck[0] - up[0] * 1.6F, neck[1] - up[1] * 1.6F, side};
             float[] e = at(sp, dir(sh), 7.0F, side);
             float[] h = at(e, dir(sh + el), 6.5F, side);
