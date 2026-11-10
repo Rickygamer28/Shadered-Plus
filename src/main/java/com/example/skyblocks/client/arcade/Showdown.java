@@ -369,6 +369,8 @@ public class Showdown extends ArcadeGame {
          *  when a chain throw was asked for (the thrower) or escaped (the one thrown). */
         boolean bt;
         int stance, chainAt = -100, escapeAt = -100;
+        /** What height it was last hit at (0 high, 1 mid, 2 low). */
+        int hitLevel = 1;
         /** The arena wall it's up against (0-3), or -1. */
         int wallSide = -1;
         /** While-standing up until; parried at; the combo's damage, how long its counter stays up after; how many moves
@@ -1343,6 +1345,7 @@ public class Showdown extends ArcadeGame {
             o.stun = Math.max(o.stun, 24);
         } else {
             o.state = State.HIT;
+            o.hitLevel = m.level() == Level.HIGH ? 0 : m.level() == Level.LOW ? 2 : 1;
             o.stun = Math.max(6, left + m.onHit() + (counter ? 4 : 0) + (back ? 8 : sideHit ? 6 : 0)); // (as far ahead as its frame data says)
             if (sideHit) { // (hit from the side: spun round, back to you)
                 o.bt = true;
@@ -1396,6 +1399,8 @@ public class Showdown extends ArcadeGame {
     /** Which limb a move strikes with: side (0 near, 1 far), and leg (1) or arm (0). */
     private static int[] limbOf(Move m) {
         if (m == null) return new int[] {0, 0};
+        Anim an = ANIMS.get(m);
+        if (an != null) return new int[] {an.side(), an.leg() ? 1 : 0};
         return switch (m.pose()) {
             case JAB, LOWPUNCH, THROW -> new int[] {0, 0};
             case CROSS, UPPER, RAGE, TACKLE, SPIN, PALM -> new int[] {1, 0};
@@ -2363,10 +2368,11 @@ public class Showdown extends ArcadeGame {
             System.arraycopy(p[1], 0, p[0], 0, P);
             float[] want = target(b);
             boolean snap = b.state == State.ATTACK && b.move != null && b.t >= b.move.startup() - 4 && b.t <= b.move.startup() + b.move.active();
-            float k = snap ? 0.54F : 0.28F; // (a frame's share of easing there: snapping out as a move hits)
+            // (a frame's share of easing there: an attack follows its own curve closely, snapping out as it hits)
+            float k = snap ? 0.62F : b.state == State.ATTACK ? 0.5F : 0.28F;
             for (int i = 0; i < P; i++) {
                 float d = want[i] - p[1][i];
-                if (i == 12) d = Mth.wrapDegrees(d);
+                if (i == 12 || i == 13) d = Mth.wrapDegrees(d);
                 p[1][i] += d * k;
             }
             float[] hp = shownHp.computeIfAbsent(b, x -> new float[] {MAX_HP});
@@ -2484,24 +2490,45 @@ public class Showdown extends ArcadeGame {
                     p[10] = 15;
                     break;
                 }
-                p[0] = -20;
-                p[11] = -25;
-                p[7] = 15;
-                p[8] = 30;
-                p[9] = 5;
-                p[10] = 25;
+                float k = Mth.clamp(1 - b.t / 14.0F, 0.3F, 1); // (the jolt of it, easing off)
+                if (b.hitLevel == 0) { // (a high: head snapped back)
+                    p[0] = -22 * k;
+                    p[11] = -32 * k;
+                    p[7] = 15;
+                    p[8] = 30;
+                    p[9] = 5;
+                    p[10] = 25;
+                } else if (b.hitLevel == 1) { // (a mid: doubled over it)
+                    p[0] = 32 * k;
+                    p[1] = 3;
+                    p[11] = 20 * k;
+                    p[7] = 20;
+                    p[8] = 115;
+                    p[9] = 15;
+                    p[10] = 120;
+                    p[3] = 30;
+                    p[4] = -40;
+                } else { // (a low: a leg buckling)
+                    p[1] = 5 * k;
+                    p[0] = 12;
+                    p[3] = 10;
+                    p[4] = -70 * k;
+                    p[7] = 45;
+                    p[9] = 40;
+                }
             }
             case AIR -> {
                 // (screwed: spinning over and over, turned side-on)
                 p[12] = b.screwed ? 60 + b.t * 10 : 40 + b.airHits * 30 + b.t * 2;
                 if (b.screwed) p[13] = 55;
-                p[7] = 130;
-                p[8] = 20;
-                p[9] = 150;
+                float fl = Mth.sin(b.t * 0.35F); // (limbs flailing as they tumble)
+                p[7] = 130 + 20 * fl;
+                p[8] = 20 + 15 * fl;
+                p[9] = 150 - 20 * fl;
                 p[10] = 10;
-                p[3] = 30;
-                p[4] = -20;
-                p[5] = 10;
+                p[3] = 30 + 15 * fl;
+                p[4] = -20 - 20 * fl;
+                p[5] = 10 - 15 * fl;
                 p[6] = -50;
             }
             case DOWN, KO -> {
@@ -2517,14 +2544,23 @@ public class Showdown extends ArcadeGame {
                 p[10] = 20;
                 p[11] = 0;
             }
-            case THROWN -> {
-                if (b.t > 24) {
-                    p[12] = 88;
-                } else {
+            case THROWN -> { // (grabbed, lifted and flipped over, slammed down)
+                if (b.t <= 10) {
                     p[0] = -15;
                     p[11] = -20;
                     p[7] = 60;
                     p[9] = 60;
+                } else if (b.t <= 30) {
+                    float k = (b.t - 10) / 20.0F;
+                    p[1] = -8 * Mth.sin(k * Mth.PI);
+                    p[12] = -200 * k;
+                    p[7] = p[9] = 150;
+                    p[3] = 60;
+                    p[5] = 40;
+                } else {
+                    p[12] = -272;
+                    p[7] = 140;
+                    p[9] = 160;
                 }
             }
             case SPLAT -> {
@@ -2623,7 +2659,10 @@ public class Showdown extends ArcadeGame {
                 }
             }
         }
-        if (b.state == State.ATTACK && m != null) {
+        Anim an = m == null ? null : ANIMS.get(m);
+        if (b.state == State.ATTACK && an != null) {
+            applyAnim(p, an, m, b.t);
+        } else if (b.state == State.ATTACK && m != null) {
             switch (m.pose()) {
                 case JAB -> {
                     p[0] = 10;
@@ -2777,6 +2816,168 @@ public class Showdown extends ArcadeGame {
         }
     }
 
+
+    // ---- animations: each move its own ----
+
+    /**
+     * A move's animation: the limb it strikes with (side 0 near, 1 far; leg or arm), whether it starts from a crouch,
+     * and its keys - w the wind-up (just over halfway to the hit), W a second wind-up (just before it), h the strike
+     * (held while it's out), f the follow-through, r the recovery - each a few pose angles (the rest stay as they are).
+     */
+    private record Anim(int side, boolean leg, boolean crouched, char[] at, float[][] keys) {}
+
+    private static final java.util.Map<Move, Anim> ANIMS = new java.util.IdentityHashMap<>();
+
+    /** "side A|L [C] | w: i=v i=v | h: ... | f: ... | r: ..." */
+    private static void anim(Move m, String spec) {
+        String[] parts = spec.split("\\|");
+        String[] head = parts[0].trim().split("\\s+");
+        List<Character> at = new ArrayList<>();
+        List<float[]> keys = new ArrayList<>();
+        for (int i = 1; i < parts.length; i++) {
+            String part = parts[i].trim();
+            float[] k = new float[P];
+            java.util.Arrays.fill(k, Float.NaN);
+            for (String kv : part.substring(2).trim().split("\\s+")) {
+                String[] x = kv.split("=");
+                k[Integer.parseInt(x[0])] = Float.parseFloat(x[1]);
+            }
+            at.add(part.charAt(0));
+            keys.add(k);
+        }
+        char[] ats = new char[at.size()];
+        for (int i = 0; i < ats.length; i++) ats[i] = at.get(i);
+        ANIMS.put(m, new Anim(Integer.parseInt(head[0]), head[1].equals("L"), head.length > 2 && head[2].equals("C"), ats, keys.toArray(new float[0][])));
+    }
+
+    static {
+        anim(JAB, "0 A   | w: 7=50 8=85 0=8 | h: 7=88 8=3 0=12 13=-6 2=1 | r: 7=55 8=70");
+        anim(JAB_2, "0 A   | w: 7=55 8=75 2=2 | h: 7=90 8=2 0=14 2=3 13=-8 | r: 7=55 8=70 2=1");
+        anim(ELBOW_FINISH, "1 A   | w: 9=30 10=130 1=4 0=10 | h: 9=150 10=95 0=-6 1=0 13=-25 11=-8 | r: 9=90 10=110");
+        anim(CROSS, "1 A   | w: 9=40 10=95 13=8 | h: 9=88 10=2 0=16 2=2 13=-22 | r: 9=50 10=100");
+        anim(CROSS_KICK, "1 L | w: 5=60 6=-110 13=20 0=-4 | h: 5=125 6=-6 0=-26 13=-25 9=-10 10=40 | f: 5=100 6=-30 13=-55 | r: 5=20 6=-40");
+        anim(CROSS_LOW, "0 L   | w: 3=50 4=-80 1=3 | h: 3=55 4=-8 1=5 0=18 13=-10 | r: 3=30 4=-40");
+        anim(MID_KICK, "1 L | w: 5=55 6=-100 13=15 | h: 5=92 6=-4 0=-14 13=-20 | r: 5=30 6=-60");
+        anim(HIGH_KICK, "0 L   | w: 3=70 4=-110 0=-4 | h: 3=128 4=-6 0=-24 13=-15 7=10 | r: 3=50 4=-60");
+        anim(WHIRL_KICK, "1 L | w: 13=160 5=40 6=-60 | h: 13=350 5=115 6=-5 0=-20 | f: 13=390 5=60 | r: 13=400 5=10");
+        anim(HOMING_KICK, "1 L | w: 13=40 5=50 6=-90 0=4 | h: 13=-20 5=95 6=-10 0=-18 2=2 | f: 13=-60 5=70 | r: 13=-20 5=20");
+        anim(LUNGE_PUNCH, "1 A   | w: 9=30 10=110 1=4 | h: 9=92 10=0 0=30 2=5 1=3 3=50 4=-50 5=-30 13=-25 | r: 9=60 10=90 0=15");
+        anim(SPIRAL_KICK, "1 L | w: 13=150 1=4 5=30 | h: 13=345 1=-3 5=100 6=-8 3=40 4=-90 0=-10 | f: 13=380 | r: 13=390 1=1");
+        anim(SPIN_FIST, "1 A | w: 13=160 9=20 10=120 | h: 13=340 9=95 10=8 | f: 13=375 9=70 | r: 13=380 9=30 10=110");
+        anim(IRON_PALM, "1 A   | w: 7=20 8=120 9=20 10=120 1=5 0=-8 | h: 7=85 8=0 9=82 10=0 0=22 2=4 1=4 3=45 4=-40 | r: 7=50 9=50 0=10");
+        anim(CROUCH_JAB, "0 A C | w: 7=45 8=90 | h: 7=78 8=4 0=20 | r: 7=50 8=80");
+        anim(CROUCH_STRAIGHT, "1 A C | w: 9=40 10=100 | h: 9=80 10=2 0=24 13=-20 2=2 | r: 9=45 10=90");
+        anim(LOW_KICK, "0 L C | w: 3=50 4=-100 | h: 3=40 4=-4 1=8 0=12 | r: 3=55 4=-90");
+        anim(TOE_KICK, "1 L C | w: 5=40 6=-100 | h: 5=35 6=-2 0=10 | r: 5=30 6=-110");
+        anim(SWEEP, "1 L C | w: 13=-150 1=12 0=25 | h: 13=-345 1=12 5=88 6=0 0=28 3=60 4=-130 | f: 13=-380 | r: 13=-390 5=40");
+        anim(MID_CHECK, "0 A   | w: 7=40 8=95 1=3 | h: 7=82 8=6 0=22 1=4 2=3 13=-8 | r: 7=50 8=80");
+        anim(LAUNCHER, "1 A   | w: 1=8 0=18 9=10 10=70 3=60 4=-90 | h: 1=-1 0=-12 9=168 10=18 13=-18 2=2 11=-10 | f: 9=150 | r: 9=80 10=100 0=0");
+        anim(FRONT_KICK, "0 L   | w: 3=85 4=-110 0=2 | h: 3=88 4=-4 0=-14 2=-1 | r: 3=40 4=-70");
+        anim(STEP_KICK, "1 L   | w: 5=70 6=-110 2=3 | h: 5=86 6=-2 0=-10 2=4 3=10 | r: 5=30 6=-60");
+        anim(RISING_JAB, "0 A C | w: 1=5 7=50 8=80 | h: 1=1 7=86 8=4 0=10 | r: 7=55");
+        anim(RISING_UPPER, "1 A C | w: 1=9 9=10 10=60 0=20 | h: 1=-1 9=165 10=20 0=-10 13=-15 | r: 9=90");
+        anim(RISING_KNEE, "0 L C | w: 1=5 3=60 4=-110 | h: 1=0 3=105 4=-125 0=-8 7=60 8=60 9=60 10=60 | r: 3=40");
+        anim(RISING_KICK, "1 L C | w: 1=5 5=50 6=-100 | h: 1=1 5=95 6=-4 0=-16 13=-18 | r: 5=30");
+        anim(HOPKICK, "0 L   | w: 1=5 3=40 4=-60 | h: 1=-4 3=120 4=-5 5=70 6=-120 0=-15 7=70 9=60 | r: 3=50 5=20 1=1");
+        anim(GETUP_KICK, "0 L   | w: 12=80 3=40 4=-60 | h: 12=40 3=95 4=-4 0=-10 | r: 12=0 3=30");
+        anim(GETUP_LOW, "1 L   | w: 12=80 5=20 | h: 12=60 5=70 6=-2 1=6 | r: 12=0");
+        anim(THROW_L, "0 A   | w: 7=70 8=40 9=70 10=40 0=10 | h: 7=88 8=15 9=88 10=15 0=14 2=2 | f: 7=100 9=100 13=60 0=-10 | r: 13=90 7=60 9=60");
+        anim(THROW_R, "1 A   | w: 7=70 8=40 9=70 10=40 0=10 | h: 7=88 8=15 9=88 10=15 0=14 2=2 | f: 7=130 9=130 13=-60 0=-14 | r: 13=-90 7=60 9=60");
+        anim(AIR_KICK, "0 L   | w: 3=60 4=-100 5=-10 6=-100 | h: 3=100 4=-4 5=-20 6=-110 0=-14 7=40 | r: 3=70 4=-30");
+        anim(TACKLE, "1 A   | w: 0=30 1=4 | h: 0=45 2=5 7=60 8=90 9=40 10=80 13=-30 | r: 0=20");
+        anim(RAGE_ART, "1 A   | w: 1=7 0=-10 9=-30 10=100 7=60 8=120 13=30 | W: 1=8 0=35 2=4 9=40 | h: 0=10 1=-2 9=170 10=10 13=-30 2=3 11=-15 | f: 9=160 | r: 9=90 0=0");
+        anim(RUN_CHOP, "1 A   | w: 9=175 10=40 0=-8 | h: 9=70 10=10 0=30 2=4 | r: 9=40");
+        anim(RUN_SLIDE, "1 L   | w: 1=6 | h: 12=-60 1=14 5=80 6=0 3=60 4=-100 7=120 9=120 | r: 12=-30 1=8");
+        anim(RUN_KICK, "0 L   | w: 3=70 4=-120 1=-2 | h: 3=105 4=0 5=-20 6=-120 0=-20 1=-6 7=80 9=-20 | r: 3=40 1=0");
+        anim(BT_BACKFIST, "0 A | w: 13=180 7=30 8=120 | h: 13=10 7=95 8=5 | r: 13=0 7=40 8=100");
+        anim(BT_ELBOW, "1 A   | w: 13=180 9=60 10=140 | h: 13=20 9=90 10=130 0=10 | r: 13=0");
+        anim(BT_LOW, "0 L C | w: 13=180 | h: 13=10 3=40 4=-2 1=9 | r: 13=0");
+        anim(MULE_KICK, "1 L   | w: 0=20 5=10 6=-100 | h: 0=45 5=-85 6=-5 7=20 9=20 11=-20 | r: 0=15 5=-20");
+        anim(SPRING_KICK, "0 L   | w: 12=85 3=110 4=-120 5=110 6=-120 | h: 12=30 3=100 4=-2 5=95 6=-2 1=-3 | r: 12=0 3=30 5=-10");
+        anim(STOMP, "0 L   | w: 3=100 4=-110 0=-6 | h: 3=30 4=-5 0=20 1=3 | r: 3=20");
+        anim(DEMON_HEEL, "1 L   | w: 5=100 6=-30 0=-15 | W: 5=165 6=-2 0=-30 | h: 5=100 6=-2 0=-10 | f: 5=60 0=10 | r: 5=20");
+        anim(TWIN_PALM, "1 A   | w: 7=30 8=120 9=30 10=120 1=4 | h: 7=60 8=5 9=60 10=5 0=26 2=5 3=45 4=-40 | r: 7=40 9=40");
+        anim(SNAP_ELBOW, "0 A C | w: 7=60 8=130 | h: 7=90 8=135 0=24 13=-20 2=3 | r: 7=50 8=100");
+        anim(DRAGON_UPPER, "1 A C | w: 1=11 0=25 9=0 10=50 3=75 4=-120 | h: 1=-5 0=-14 9=172 10=15 13=-20 2=3 3=40 4=-30 11=-10 | f: 9=160 1=-3 | r: 9=90 1=2");
+        anim(PERFECT_DRAGON, "1 A C | w: 1=11 0=28 9=0 10=50 3=75 4=-120 | h: 1=-6 0=-16 9=175 10=10 13=-25 2=3 3=40 4=-30 11=-15 | f: 9=165 1=-4 | r: 9=90 1=2");
+        anim(HELL_SWEEP, "1 L C | w: 13=-160 1=12 0=30 | h: 13=-350 1=13 5=90 6=0 0=30 3=70 4=-140 7=20 | f: 13=-390 | r: 13=-400 5=60");
+        anim(DEVIL_RUSH, "1 A   | w: 1=6 9=-20 10=90 7=60 0=-10 | h: 9=95 10=0 0=28 2=6 13=-35 3=60 4=-60 | r: 9=60 0=12");
+        anim(CLAW_SWIPE, "0 A | w: 13=40 7=70 8=60 | h: 13=-15 7=95 8=10 0=10 | f: 13=-60 | r: 13=-20 7=50");
+        anim(CAT_SLIDE, "1 L C | w: 1=8 0=10 | h: 12=-45 1=14 5=85 6=0 3=50 4=-110 7=110 9=110 | r: 12=-20 1=10");
+        anim(BACKFLIP, "0 L   | w: 1=6 0=10 | h: 12=-200 3=120 4=-5 5=100 6=-10 1=-6 7=160 9=160 | f: 12=-300 | r: 12=-360 1=2");
+        anim(NINE_LIVES, "1 L   | w: 1=5 13=30 | h: 12=-120 5=130 6=-5 1=-6 13=-20 | f: 12=-250 | r: 12=-360");
+        anim(PAW_JAB, "0 A C | w: 7=60 8=70 | h: 7=85 8=10 0=40 | r: 7=65 8=60");
+        anim(POUNCE, "0 A C | w: 1=12 0=45 7=30 9=30 | h: 1=-6 0=-10 7=160 8=20 9=155 10=25 3=80 4=-40 5=-20 | r: 7=90 9=90 1=4");
+        anim(TAIL_SWEEP, "1 L C | w: 13=-160 1=12 0=38 | h: 13=-350 1=13 5=85 6=0 | f: 13=-390 | r: 13=-400");
+        anim(CAT_FLIP, "0 L C | w: 1=10 0=30 | h: 12=-180 3=115 4=-5 5=60 6=-100 1=-6 | f: 12=-280 | r: 12=-360 1=6");
+        anim(IRON_GRAB, "0 A   | w: 7=80 8=30 9=80 10=30 0=12 1=3 | h: 7=95 8=10 9=95 10=10 2=3 | f: 7=170 9=170 8=20 10=20 0=-15 1=-2 | r: 7=120 9=120");
+        anim(PISTON, "1 A   | w: 7=40 8=130 9=40 10=130 1=5 0=-6 | h: 7=88 8=0 9=86 10=0 0=24 2=5 1=5 3=50 4=-60 | r: 7=60 9=60");
+        anim(GROUND_SLAM, "0 A   | w: 7=175 8=20 9=175 10=20 0=-15 1=-2 | h: 7=60 8=10 9=60 10=10 0=60 1=10 3=70 4=-110 5=30 6=-120 | r: 0=30 1=6");
+        anim(OVERDRIVE, "1 A   | w: 1=8 0=20 7=20 9=20 | h: 1=-3 0=-12 7=165 9=168 8=20 10=20 | r: 7=90 9=90");
+        anim(PISTON_JAB, "0 A   | w: 7=40 8=110 1=5 | h: 7=88 8=0 0=14 2=3 1=5 | r: 7=60 8=90 1=5");
+        anim(CANNON, "1 A   | w: 7=-20 8=100 9=-30 10=100 0=-14 1=6 13=25 | W: 7=-30 9=-40 0=-18 | h: 7=88 8=0 9=88 10=0 0=30 2=6 1=6 13=-10 3=60 4=-70 | r: 7=60 9=60 0=12 1=5");
+        anim(TREAD_SWEEP, "1 L C | w: 1=10 13=40 | h: 13=-15 5=85 6=0 1=11 0=25 | r: 13=-30 5=40");
+        anim(STOMP_KICK, "0 L   | w: 3=95 4=-120 1=4 | h: 3=80 4=-2 0=-12 2=2 1=4 | r: 3=40 4=-60 1=4");
+        anim(SCRAP_GRAB, "0 A C | w: 7=40 9=40 0=30 | h: 7=55 8=20 9=55 10=20 0=40 2=3 | f: 7=150 9=150 0=-10 1=3 | r: 7=100 9=100");
+        anim(SWAY_JAB, "0 A   | w: 0=-25 7=50 8=80 | h: 0=10 7=88 8=3 2=2 | r: 0=-10 7=55");
+        anim(SWAY_BURNER, "1 A   | w: 0=-30 9=10 10=110 13=20 | h: 0=30 9=92 10=0 2=6 13=-35 3=55 4=-60 | f: 0=34 | r: 0=12 9=60");
+        anim(SWAY_SWEEP, "1 L | w: 0=-30 1=4 13=30 | h: 0=10 1=12 5=85 6=0 13=-15 3=60 4=-120 | r: 13=-20 1=6");
+        anim(SWAY_KICK, "1 L | w: 0=-30 5=50 6=-90 | h: 0=-18 5=95 6=-4 13=-20 | r: 0=-10 5=30");
+        anim(BURNING_FIST, "1 A   | w: 1=6 9=-10 10=100 13=25 | h: 0=28 1=4 2=6 9=92 10=0 13=-40 3=60 4=-60 5=-35 | f: 0=32 | r: 0=15 9=60");
+        anim(FLAME_HEEL, "1 L | w: 13=160 5=40 | h: 13=345 5=130 6=-4 0=-22 | f: 13=380 | r: 13=390 5=20");
+        anim(HEAT_RUSH, "1 A   | w: 0=10 9=40 10=120 7=60 8=120 | h: 0=38 2=5 9=80 10=60 7=80 8=60 13=-25 | r: 0=15");
+        anim(INFERNO, "1 A   | w: 1=8 9=-30 10=100 13=35 0=-6 | W: 0=-10 | h: 0=34 1=5 2=7 9=94 10=0 13=-45 3=65 4=-70 5=-40 | f: 0=36 | r: 0=15 9=60");
+        anim(VOID_BEAM, "1 A   | w: 7=20 8=130 9=20 10=130 1=4 11=10 | W: 7=10 9=10 0=-10 | h: 7=92 8=0 9=92 10=0 0=10 2=2 | f: 7=92 9=92 | r: 7=50 9=50");
+        anim(DARK_UPPER, "1 A   | w: 1=7 0=15 9=10 10=80 | h: 1=-2 0=-14 9=170 10=15 13=-25 11=-12 | r: 9=90");
+    }
+
+    /** Where in the move each kind of key falls (frames). */
+    private static float keyTime(char at, Move m) {
+        return switch (at) {
+            case 'w' -> m.startup() * 0.55F;
+            case 'W' -> m.startup() * 0.85F;
+            case 'h' -> m.startup();
+            case 'f' -> m.startup() + m.active() + Math.min(5, m.recovery() / 3.0F);
+            default -> m.startup() + m.active() + m.recovery() * 0.55F;
+        };
+    }
+
+    /** The move's pose at frame t: eased from key to key (the strike held while it's out), back to its stance at the end. */
+    private static void applyAnim(float[] p, Anim an, Move m, float t) {
+        if (an.crouched()) crouch(p);
+        float[] base = p.clone();
+        // the timeline: the stance at 0, each key, the strike held to the end of its active frames, the stance at the end
+        List<Float> times = new ArrayList<>();
+        List<float[]> vals = new ArrayList<>();
+        times.add(0F);
+        vals.add(base);
+        for (int i = 0; i < an.at().length; i++) {
+            float kt = keyTime(an.at()[i], m);
+            float[] full = vals.get(vals.size() - 1).clone();
+            for (int j = 0; j < P; j++) if (!Float.isNaN(an.keys()[i][j])) full[j] = an.keys()[i][j];
+            if (kt <= times.get(times.size() - 1)) kt = times.get(times.size() - 1) + 0.5F;
+            times.add(kt);
+            vals.add(full);
+            if (an.at()[i] == 'h') { // (held while it's out)
+                times.add(Math.max(kt + 0.5F, m.startup() + m.active()));
+                vals.add(full);
+            }
+        }
+        float end = m.total();
+        float[] last = base.clone();
+        float[] lastKey = vals.get(vals.size() - 1);
+        last[13] = Math.round(lastKey[13] / 360) * 360; // (a spin ends a whole turn round, not unwinding)
+        last[12] = Math.round(lastKey[12] / 360) * 360;
+        times.add(Math.max(end, times.get(times.size() - 1) + 1));
+        vals.add(last);
+        int k = 0;
+        while (k < times.size() - 2 && t > times.get(k + 1)) k++;
+        float t0 = times.get(k), t1 = times.get(k + 1);
+        float u = ease(Mth.clamp((t - t0) / Math.max(0.01F, t1 - t0), 0, 1));
+        float[] a = vals.get(k), b = vals.get(k + 1);
+        for (int j = 0; j < P; j++) p[j] = a[j] + (b[j] - a[j]) * u;
+    }
+
     private static void crouch(float[] p) {
         p[1] = 9;
         p[0] = 15;
@@ -2905,14 +3106,9 @@ public class Showdown extends ArcadeGame {
     private float[] tip(Body b) {
         if (b.move == null) return null;
         float[] p = poseOf(b)[1];
-        int s;
-        boolean leg;
-        switch (b.move.pose()) {
-            case JAB, LOWPUNCH, THROW -> { s = 0; leg = false; }
-            case CROSS, UPPER, RAGE, TACKLE, SPIN, PALM -> { s = 1; leg = false; }
-            case LOWKICK, AIRKICK -> { s = 0; leg = true; }
-            default -> { s = 1; leg = true; }
-        }
+        int[] sl = limbOf(b.move);
+        int s = sl[0];
+        boolean leg = sl[1] == 1;
         List<Bone> bones = skeleton(b, p, LOOKS[styleIndex(b.style)], b.style.kind());
         // (bones: legs are 0-5, arms the last six)
         Bone end = leg ? bones.get(s * 3 + 2) : bones.get(bones.size() - 6 + s * 3 + 2);
@@ -3089,7 +3285,7 @@ public class Showdown extends ArcadeGame {
     private void fighter(Body b, float partial) {
         float[][] pp = poseOf(b);
         float[] p = new float[P];
-        for (int i = 0; i < P; i++) p[i] = i == 12 ? pp[0][i] + Mth.wrapDegrees(pp[1][i] - pp[0][i]) * partial : Mth.lerp(partial, pp[0][i], pp[1][i]);
+        for (int i = 0; i < P; i++) p[i] = i >= 12 ? pp[0][i] + Mth.wrapDegrees(pp[1][i] - pp[0][i]) * partial : Mth.lerp(partial, pp[0][i], pp[1][i]);
         int[] look = LOOKS[styleIndex(b.style)];
         List<Bone> bones = skeleton(b, p, look, b.style.kind());
         curBody = b;
