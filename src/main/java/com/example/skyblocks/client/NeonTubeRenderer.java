@@ -37,6 +37,19 @@ public class NeonTubeRenderer implements BlockEntityRenderer<NeonTubeBlockEntity
         int rgb = neon(state.getValue(NeonTubeBlock.COLOR).getTextureDiffuseColor());
         Matrix4f m = poseStack.last().pose();
         VertexConsumer glow = buffers.getBuffer(RenderType.debugQuads());
+        // how many tubes each side's joins on its own surface (and over its edges): corners only join two that would
+        // otherwise end there - an L where a tube turns from the floor up a wall, not rungs between two running alongside
+        int[] runs = new int[6];
+        for (Direction face : Direction.values()) {
+            if (!NeonTubeBlock.has(state, face)) continue;
+            for (Direction d : Direction.values()) {
+                if (d.getAxis() == face.getAxis()) continue;
+                if (NeonTubeBlock.has(level.getBlockState(pos.relative(d)), face)
+                        || NeonTubeBlock.has(level.getBlockState(pos.relative(d).relative(face)), d.getOpposite())) {
+                    runs[face.ordinal()]++;
+                }
+            }
+        }
         for (Direction face : Direction.values()) {
             if (!NeonTubeBlock.has(state, face)) continue;
             // the tube's line on this side: the middle of the side, OFF out from the surface
@@ -47,10 +60,10 @@ public class NeonTubeRenderer implements BlockEntityRenderer<NeonTubeBlockEntity
                 float reach;
                 if (NeonTubeBlock.has(level.getBlockState(pos.relative(d)), face)) {
                     reach = 0.5F; // (on to the next tube on the same surface)
-                } else if (NeonTubeBlock.has(state, d)) {
-                    reach = 0.5F - OFF; // (into the corner, to the tube on that side)
                 } else if (NeonTubeBlock.has(level.getBlockState(pos.relative(d).relative(face)), d.getOpposite())) {
                     reach = 0.5F + OFF; // (over the edge, round to the next surface)
+                } else if (NeonTubeBlock.has(state, d) && runs[face.ordinal()] <= 1 && runs[d.ordinal()] <= 1) {
+                    reach = 0.5F - OFF; // (into the corner, to the tube on that side)
                 } else {
                     continue;
                 }
