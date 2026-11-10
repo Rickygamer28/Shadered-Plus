@@ -179,7 +179,9 @@ public class LightBridgeEmitterBlockEntity extends BlockEntity {
         if (!p.walkable) return false;
         Map<BlockPos, BlockState> want = new HashMap<>();
         BlockState base = ModBlocks.LIGHT_BRIDGE.get().defaultBlockState();
-        for (LightBridgePath.Sample a : p.samples) {
+        for (int si = 0; si < p.samples.size(); si++) {
+            LightBridgePath.Sample a = p.samples.get(si);
+            boolean steep = p.slopeAt(si) > LightBridgePath.RAMP_SLOPE;
             float half = p.width / 2.0F - 0.05F;
             for (float across = -half; across <= half + 0.01F; across += Math.min(0.45F, half)) {
                 double x = a.x() - a.dz() * across, z = a.z() + a.dx() * across;
@@ -199,9 +201,11 @@ public class LightBridgeEmitterBlockEntity extends BlockEntity {
                         want.putIfAbsent(cell.above(h), base.setValue(LightBridgeBlock.KIND, LightBridgeBlock.Kind.TUNNEL));
                     }
                 } else {
-                    BlockState s = base.setValue(LightBridgeBlock.OFFSET, off);
                     BlockState had = want.get(cell);
-                    if (had == null || had.getValue(LightBridgeBlock.OFFSET) < off) want.put(cell, s);
+                    boolean ramp = steep || had != null && had.getValue(LightBridgeBlock.KIND) == LightBridgeBlock.Kind.RAMP;
+                    int o = had == null ? off : Math.max(off, had.getValue(LightBridgeBlock.OFFSET));
+                    want.put(cell, base.setValue(LightBridgeBlock.OFFSET, o).setValue(LightBridgeBlock.KIND,
+                            ramp ? LightBridgeBlock.Kind.RAMP : LightBridgeBlock.Kind.FLOOR));
                 }
             }
         }
@@ -232,41 +236,66 @@ public class LightBridgeEmitterBlockEntity extends BlockEntity {
     }
 
     /**
-     * A moving walkway carries whatever stands on it along; a tunnel carries whatever is in it through, floating. On the
-     * server for everything but players; on each player's own client for them (their movement is theirs).
+     * Holds whatever walks on it to its surface - smoothly up and down its slopes, however steep - and a moving walkway
+     * carries it along; a tunnel carries whatever is in it through, floating. On the server for everything but players;
+     * on each player's own client for them (their movement is theirs).
      */
     private void carry(Level level, @Nullable Player only) {
         LightBridgePath p = path();
-        if (p == null || p.mode != LightBridgePath.SPEED && p.mode != LightBridgePath.TUNNEL || p.samples.isEmpty()) return;
+        if (p == null || p.mode == LightBridgePath.WALL || p.samples.isEmpty()) return;
         double[] b = p.bounds();
+        AABB box = new AABB(b[0], b[1], b[2], b[3], b[4], b[5]);
         List<? extends Entity> who = only != null ? List.of(only)
-                : level.getEntities((Entity) null, new AABB(b[0], b[1], b[2], b[3], b[4], b[5]), e -> !(e instanceof Player) && !e.isSpectator());
+                : level.getEntities((Entity) null, box, e -> !(e instanceof Player) && !e.isSpectator() && !e.isPassenger() && !e.noPhysics);
         float[] dist = new float[1];
+        LightBridgePath.Sample[] at = new LightBridgePath.Sample[1];
         float sign = reverse ? -1 : 1;
         for (Entity e : who) {
-            if (only != null && !new AABB(b[0], b[1], b[2], b[3], b[4], b[5]).contains(e.position())) continue;
-            LightBridgePath.Sample a = p.nearest(e.getX(), e.getY(), e.getZ(), dist);
-            if (a == null) continue;
-            float along = reverse ? p.length - a.s() : a.s();
-            if (along > p.length - 0.6F) continue; // (at the end: let go)
+            if (only != null && (!box.contains(e.position()) || e.isSpectator() || e.isPassenger() || only.getAbilities().flying)) continue;
             Vec3 v = e.getDeltaMovement();
-            double hx = a.dx() * sign, hz = a.dz() * sign;
-            if (p.mode == LightBridgePath.SPEED) {
-                double top = a.y() + 2.0 / 16;
-                if (dist[0] > p.width / 2.0F + 0.05F || e.getY() < top - 0.3 || e.getY() > top + 0.35) continue;
-                double speed = 0.42, now = v.x * hx + v.z * hz;
-                double push = Math.max(0, speed - now) * 0.35;
-                e.setDeltaMovement(v.x + hx * push, v.y, v.z + hz * push);
-            } else {
+            if (p.mode == LightBridgePath.TUNNEL) {
+                LightBridgePath.Sample a = p.nearest(e.getX(), e.getY(), e.getZ(), dist);
+                if (a == null) continue;
+                float along = reverse ? p.length - a.s() : a.s();
+                if (along > p.length - 0.6F) continue; // (at the end: let go)
+                double hx = a.dx() * sign, hz = a.dz() * sign;
                 double cy = a.y() + p.tunnelRadius() - 0.2, ey = e.getY() + e.getBbHeight() / 2;
                 double off = Math.hypot(dist[0], ey - cy);
                 if (off > p.tunnelRadius() + 0.05) continue;
                 double toX = a.x() - e.getX(), toY = cy - ey, toZ = a.z() - e.getZ();
                 double speed = 0.24;
-                e.setDeltaMovement(hx * speed + toX * 0.12, toY * 0.15 + 0.0, hz * speed + toZ * 0.12);
+                e.setDeltaMovement(hx * speed + toX * 0.12, toY * 0.15, hz * speed + toZ * 0.12);
                 e.resetFallDistance();
+                e.hurtMarked = only == null;
+                continue;
             }
-            e.hurtMarked = only == null;
+            double top = p.surface(e.getX(), e.getY(), e.getZ(), dist, at);
+            if (Double.isNaN(top) || dist[0] > p.width / 2.0F + 0.1F) continue;
+            double dy = e.getY() - top;
+            boolean moved = false;
+            // held to its surface: lifted up onto a slope, kept on it going down (not while jumping up off it)
+            if (dy > -1.1 && dy < 0.35 && v.y <= 0.08 && !(e.onGround() && Math.abs(dy) < 0.08)) {
+                e.setPos(e.getX(), top, e.getZ());
+                v = new Vec3(v.x, 0, v.z);
+                e.setOnGround(true);
+                e.resetFallDistance();
+                moved = true;
+            }
+            if (p.mode == LightBridgePath.SPEED && Math.abs(e.getY() - top) < 0.3) {
+                LightBridgePath.Sample a = at[0];
+                float along = reverse ? p.length - a.s() : a.s();
+                if (along < p.length - 0.6F) {
+                    double hx = a.dx() * sign, hz = a.dz() * sign;
+                    double speed = 0.42, now = v.x * hx + v.z * hz;
+                    double push = Math.max(0, speed - now) * 0.35;
+                    v = new Vec3(v.x + hx * push, v.y, v.z + hz * push);
+                    moved = true;
+                }
+            }
+            if (moved) {
+                e.setDeltaMovement(v);
+                e.hurtMarked = only == null;
+            }
         }
     }
 

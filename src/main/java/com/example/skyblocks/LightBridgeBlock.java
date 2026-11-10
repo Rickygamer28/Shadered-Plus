@@ -16,14 +16,14 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
  * A piece of hard light, only ever put there by a light bridge emitter and taken away when its bridge goes: a thin plate
- * to walk on (OFFSET pixels up its block, for ramps and arches), a piece of a wall of light, or the inside of a light
+ * to walk on (OFFSET pixels up its block, for ramps and arches; on a steep slope, one you're held onto rather than step up), a piece of a wall of light, or the inside of a light
  * tunnel (nothing to bump into). Drawn by the emitter (client/LightBridgeRenderer), not by itself.
  */
 public class LightBridgeBlock extends Block {
     public static final MapCodec<LightBridgeBlock> CODEC = simpleCodec(LightBridgeBlock::new);
 
     public enum Kind implements StringRepresentable {
-        FLOOR, WALL_X, WALL_Z, WALL, TUNNEL;
+        FLOOR, RAMP, WALL_X, WALL_Z, WALL, TUNNEL;
 
         @Override
         public String getSerializedName() {
@@ -65,12 +65,18 @@ public class LightBridgeBlock extends Block {
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return switch (state.getValue(KIND)) {
-            case FLOOR -> PLATES[state.getValue(OFFSET)];
+            case FLOOR, RAMP -> PLATES[state.getValue(OFFSET)];
             case WALL_X -> WALL_X;
             case WALL_Z -> WALL_Z;
             case WALL -> Shapes.block();
             case TUNNEL -> Shapes.empty();
         };
+    }
+
+    /** A steep piece holds you onto its slope itself (LightBridgeEmitterBlockEntity) rather than being steps to climb. */
+    @Override
+    protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return state.getValue(KIND) == Kind.RAMP ? Shapes.empty() : getShape(state, level, pos, context);
     }
 
     @Override

@@ -19,9 +19,11 @@ public final class LightBridgePath {
     /** What the bridge is: a walkway, an arch, a moving walkway, a wall of light, a tunnel that carries you through. */
     public static final int BRIDGE = 0, ARCH = 1, SPEED = 2, WALL = 3, TUNNEL = 4, MODES = 5;
     public static final String[] MODE_NAMES = {"bridge", "arch", "speed", "wall", "tunnel"};
-    public static final int MAX_CELLS = 64, MAX_BENDS = 8, MAX_RISE = 8;
-    /** How steep it may get (blocks up per block along): still walkable. */
-    public static final float MAX_SLOPE = 0.55F;
+    public static final int MAX_CELLS = 64, MAX_BENDS = 8, MAX_RISE = 16;
+    /** How steep it may get (blocks up per block along) at its steepest: you're held to its surface as you walk it. */
+    public static final float MAX_SLOPE = 1.25F;
+    /** Steeper than this, a piece of it isn't a step to climb but a slope you're held onto. */
+    public static final float RAMP_SLOPE = 0.3F;
     public static final float STEP = 0.2F;
 
     /** A corner of the path (block x, y, z: an emitter or a bender) and how round the curve there is (blocks). */
@@ -161,7 +163,7 @@ public final class LightBridgePath {
             samples.set(i, new Sample(a.x(), a.z(), a.dx(), a.dz(), a.s(), ramp(a.y(), sig)));
         }
         List<Sample> flat = new ArrayList<>(samples);
-        float want = mode == ARCH ? Math.min(0.2F * length, 8.0F) : 0.0F;
+        float want = mode == ARCH ? Math.min(0.28F * length, 10.0F) : 0.0F;
         for (int tries = 0; tries < 8; tries++) {
             samples.clear();
             for (Sample a : flat) {
@@ -237,6 +239,44 @@ public final class LightBridgePath {
         }
         dist[0] = (float) Math.sqrt(bd);
         return best;
+    }
+
+    /** How steep it is at sample {@code i}. */
+    public float slopeAt(int i) {
+        Sample a = samples.get(Math.max(0, i - 1)), b = samples.get(Math.min(samples.size() - 1, i + 1));
+        float ds = b.s() - a.s();
+        return ds < 1e-4F ? 0 : (float) Math.abs(b.y() - a.y()) / ds;
+    }
+
+    /**
+     * Its surface under (x, z): how high its top is there (between the samples either side, smoothly), how far (x, z) is
+     * from its middle line, which sample - or NaN if it isn't near (x, y, z).
+     */
+    public double surface(double x, double y, double z, float[] dist, Sample[] at) {
+        int best = -1;
+        double bd = Double.MAX_VALUE;
+        for (int i = 0; i < samples.size(); i++) {
+            Sample a = samples.get(i);
+            double h = y - a.y();
+            if (h < -2.0 || h > 2.0) continue;
+            double d = (a.x() - x) * (a.x() - x) + (a.z() - z) * (a.z() - z);
+            if (d < bd) {
+                bd = d;
+                best = i;
+            }
+        }
+        if (best < 0) return Double.NaN;
+        Sample a = samples.get(best);
+        // (how far along from it, towards the next or the last)
+        double along = (x - a.x()) * a.dx() + (z - a.z()) * a.dz();
+        int j = along >= 0 ? Math.min(best + 1, samples.size() - 1) : Math.max(best - 1, 0);
+        Sample b = samples.get(j);
+        double span = Math.abs(b.s() - a.s());
+        double t = span < 1e-4 ? 0 : Mth.clamp(Math.abs(along) / span, 0, 1);
+        double side = (x - a.x()) * -a.dz() + (z - a.z()) * a.dx();
+        dist[0] = (float) Math.abs(side);
+        at[0] = a;
+        return Mth.lerp(t, a.y(), b.y()) + 2.0 / 16;
     }
 
     /** The lowest and highest corner of all of it (for drawing). */
