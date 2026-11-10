@@ -20,7 +20,8 @@ import net.minecraft.world.level.block.state.BlockState;
  * billows off its edges for a moment.
  */
 public class StageRenderer implements BlockEntityRenderer<SimpleRenderedBlockEntity> {
-    private static final BlockState ON = Blocks.GLOWSTONE.defaultBlockState(), OFF = Blocks.GRAY_CONCRETE.defaultBlockState();
+    private static final BlockState WARM = Blocks.YELLOW_CONCRETE.defaultBlockState(), WHITE = Blocks.WHITE_CONCRETE.defaultBlockState(),
+            OFF = Blocks.GRAY_CONCRETE.defaultBlockState();
     private static float lastMusic;
     private static long smokeUntil, checkedAt = -1;
 
@@ -55,17 +56,21 @@ public class StageRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
                 continue; // (an inside edge: no bulbs)
             }
             for (int i = 0; i < 4; i++) {
-                float along = 2.0F + i * 4.0F;
+                // (on the side's face, standing out from it a little, halfway up)
+                float along = 2.0F + i * 4.0F, out = 0.7F;
                 float x, z;
                 switch (d) {
-                    case NORTH -> { x = along; z = 0.4F; }
-                    case SOUTH -> { x = 16 - along; z = 15.6F; }
-                    case WEST -> { x = 0.4F; z = 16 - along; }
-                    default -> { x = 15.6F; z = along; }
+                    case NORTH -> { x = along; z = -out / 2; }
+                    case SOUTH -> { x = 16 - along; z = 16 + out / 2; }
+                    case WEST -> { x = -out / 2; z = 16 - along; }
+                    default -> { x = 16 + out / 2; z = along; }
                 }
                 boolean on = ((int) (t * speed) + index + i) % 3 != 0 || beat > 0.6F;
-                BlockSkin.box(on ? ON : OFF, level, pos, poseStack, buffers, on ? LightTexture.FULL_BRIGHT : light, overlay,
-                        x - 0.6F, 6.2F, z - 0.6F, x + 0.6F, 7.4F, z + 0.6F);
+                BlockState bulb = on ? ((index + i) % 2 == 0 ? WARM : WHITE) : OFF;
+                float r = 0.7F;
+                BlockSkin.box(bulb, level, pos, poseStack, buffers, on ? LightTexture.FULL_BRIGHT : light, overlay,
+                        x - (d.getAxis() == Direction.Axis.X ? out / 2 : r), 3.3F, z - (d.getAxis() == Direction.Axis.Z ? out / 2 : r),
+                        x + (d.getAxis() == Direction.Axis.X ? out / 2 : r), 4.7F, z + (d.getAxis() == Direction.Axis.Z ? out / 2 : r));
             }
         }
         // the smoke when a song starts: off the stage's outer edges

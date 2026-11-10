@@ -590,7 +590,7 @@
   "block.skyblocks.stage": "Stage",
   "tooltip.skyblocks.stage": "Half a block high; side by side they make one stage, bulbs chasing round its edge to the music, and smoke when a song starts",
   "block.skyblocks.spotlight": "Spotlight",
-  "tooltip.skyblocks.spotlight": "Follows the nearest player with a soft cone of light (sweeps round when nobody's near). Right-click: on / off. A dye: its colour; glowstone dust: white",
+  "tooltip.skyblocks.spotlight": "On a floor, a ceiling or a wall: follows the nearest player with a soft cone of light (sweeps round when nobody's near). Right-click: on / off. A dye: its colour; glowstone dust: white",
   "block.skyblocks.terrarium": "Pet Terrarium",
   "tooltip.skyblocks.terrarium": "Two geckos in a little desert or jungle - wandering, looking round, flicking their tongues. Right-click: the other scene",
   "guide.skyblocks.chapter.toys": "Toys and Trophies",

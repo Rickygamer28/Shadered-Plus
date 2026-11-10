@@ -76,7 +76,11 @@ public class SpotlightRenderer implements BlockEntityRenderer<SpotlightBlockEnti
             return;
         }
         BlockPos pos = be.getBlockPos();
-        Vec3 lamp = new Vec3(pos.getX() + 0.5, pos.getY() + 11.0 / 16, pos.getZ() + 0.5);
+        net.minecraft.core.Direction mount = be.getBlockState().hasProperty(com.example.skyblocks.SpotlightBlock.FACING)
+                ? be.getBlockState().getValue(com.example.skyblocks.SpotlightBlock.FACING) : net.minecraft.core.Direction.UP;
+        // (the lamp's pivot: 3 pixels out from the middle, the way its stand points)
+        float ox = 0.5F + mount.getStepX() * 3.0F / 16, oy = 0.5F + mount.getStepY() * 3.0F / 16, oz = 0.5F + mount.getStepZ() * 3.0F / 16;
+        Vec3 lamp = new Vec3(pos.getX() + ox, pos.getY() + oy, pos.getZ() + oz);
         // what it follows: the nearest player in reach - else a slow sweep
         Player target = null;
         double best = REACH * REACH;
@@ -95,7 +99,7 @@ public class SpotlightRenderer implements BlockEntityRenderer<SpotlightBlockEnti
             wantPitch = (float) Mth.atan2(at.y, Math.sqrt(at.x * at.x + at.z * at.z));
         } else {
             wantYaw = t * 0.4F;
-            wantPitch = -0.55F;
+            wantPitch = mount == net.minecraft.core.Direction.UP ? 0.5F : mount == net.minecraft.core.Direction.DOWN ? -0.9F : -0.35F;
         }
         // (turning smoothly, at most so fast)
         long now = System.nanoTime();
@@ -107,7 +111,7 @@ public class SpotlightRenderer implements BlockEntityRenderer<SpotlightBlockEnti
 
         // the lamp's housing, turned that way (on the stand of its model)
         poseStack.pushPose();
-        poseStack.translate(0.5F, 11.0F / 16, 0.5F);
+        poseStack.translate(ox, oy, oz);
         poseStack.mulPose(Axis.YP.rotation(be.yaw));
         poseStack.mulPose(Axis.XP.rotation(-be.pitch));
         poseStack.translate(-0.5F, -11.0F / 16, -0.5F);

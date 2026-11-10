@@ -1,7 +1,30 @@
 {
   "variants": {
-    "": {
+    "facing=up": {
       "model": "skyblocks:block/spotlight"
+    },
+    "facing=down": {
+      "model": "skyblocks:block/spotlight",
+      "x": 180
+    },
+    "facing=north": {
+      "model": "skyblocks:block/spotlight",
+      "x": 90
+    },
+    "facing=south": {
+      "model": "skyblocks:block/spotlight",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west": {
+      "model": "skyblocks:block/spotlight",
+      "x": 90,
+      "y": 270
+    },
+    "facing=east": {
+      "model": "skyblocks:block/spotlight",
+      "x": 90,
+      "y": 90
     }
   }
 }

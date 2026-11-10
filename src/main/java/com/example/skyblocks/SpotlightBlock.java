@@ -29,16 +29,33 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A stage spotlight: a lamp on a stand that turns to follow the nearest player (sweeping round when there's nobody),
+ * A stage spotlight - on a floor, a ceiling or a wall: a lamp on a stand that turns to follow the nearest player (sweeping round when there's nobody),
  * a soft cone of light and a pool of it where it lands (client/SpotlightRenderer). Right-click: on / off; a dye: its
  * colour; glowstone dust: back to white.
  */
 public class SpotlightBlock extends BaseEntityBlock {
     public static final MapCodec<SpotlightBlock> CODEC = simpleCodec(SpotlightBlock::new);
-    private static final VoxelShape SHAPE = Block.box(3, 0, 3, 13, 14, 13);
+    /** The way its stand points out from what it's fixed to: up off a floor, down from a ceiling, out from a wall. */
+    public static final net.minecraft.world.level.block.state.properties.DirectionProperty FACING =
+            net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING;
+    private static final java.util.Map<net.minecraft.core.Direction, VoxelShape> SHAPES = java.util.Map.of(
+            net.minecraft.core.Direction.UP, Block.box(3, 0, 3, 13, 14, 13), net.minecraft.core.Direction.DOWN, Block.box(3, 2, 3, 13, 16, 13),
+            net.minecraft.core.Direction.NORTH, Block.box(3, 3, 2, 13, 13, 16), net.minecraft.core.Direction.SOUTH, Block.box(3, 3, 0, 13, 13, 14),
+            net.minecraft.core.Direction.WEST, Block.box(2, 3, 3, 16, 13, 13), net.minecraft.core.Direction.EAST, Block.box(0, 3, 3, 14, 13, 13));
 
     public SpotlightBlock(Properties properties) {
         super(properties);
+        registerDefaultState(stateDefinition.any().setValue(FACING, net.minecraft.core.Direction.UP));
+    }
+
+    @Override
+    protected void createBlockStateDefinition(net.minecraft.world.level.block.state.StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING);
+    }
+
+    @Override
+    public BlockState getStateForPlacement(net.minecraft.world.item.context.BlockPlaceContext context) {
+        return defaultBlockState().setValue(FACING, context.getClickedFace());
     }
 
     @Override
@@ -53,7 +70,7 @@ public class SpotlightBlock extends BaseEntityBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPE;
+        return SHAPES.get(state.getValue(FACING));
     }
 
     @Override
