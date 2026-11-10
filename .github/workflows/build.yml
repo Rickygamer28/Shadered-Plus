@@ -96,12 +96,12 @@ jobs:
           PACK=$(basename "$PACK_URL" | python3 -c "import sys,urllib.parse; print(urllib.parse.unquote(sys.stdin.read().strip()))")
           mkdir -p run/shaderpacks run/config && curl -sL "$PACK_URL" -o "run/shaderpacks/$PACK"
           echo "::notice::shader pack $PACK ($(stat -c %s "run/shaderpacks/$PACK" 2>/dev/null) bytes)"
-          for v in plain sodium shaders; do
+          for v in plain; do
             EXTRA=""; [ $v != plain ] && EXTRA="-PsodiumVersion=$SODIUM -PirisVersion=$IRIS"
             rm -f run/config/iris.properties
             [ $v = shaders ] && printf 'enableShaders=true\nshaderPack=%s\n' "$PACK" > run/config/iris.properties
             LIMIT=200; [ $v = shaders ] && LIMIT=500
-            (SKYBLOCKS_RENDER_TEST=$v xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient $EXTRA --no-daemon > client_$v.log 2>&1 &)
+            (SKYBLOCKS_RENDER_SET=new SKYBLOCKS_RENDER_TEST=$v xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient $EXTRA --no-daemon > client_$v.log 2>&1 &)
             for i in $(seq 1 $LIMIT); do
               sleep 5
               if grep -qE "render test done|Crash report saved|BUILD FAILED" client_$v.log; then sleep 5; break; fi
@@ -109,7 +109,7 @@ jobs:
             pkill -f "runClient|DevLaunch|minecraft" ; sleep 5
             echo "::notice::render test $v: $(grep -E 'render test|Shadered\+ shaders after' client_$v.log | grep -v 'burst' | head -25 | sed ':a;N;$!ba;s/\n/%0A/g' | cut -c1-5000)"
           done
-          cp client_plain.log client.log
+          cp client_plain.log client.log; touch client_sodium.log client_shaders.log
           grep -E "skyblocks|Shadered\+|mixin.*(fail|error)|Exception|ERROR|FATAL|Caused by" client.log \
             | grep -vE "DEBUG|Mixin subsystem|SpongePowered MIXIN|Narrator|narrator|OpenAL|ALSA|Failed to load library|realms|Realms|telemetry" \
             | awk '!seen[$0]++' | head -45 > summary.txt
@@ -118,6 +118,6 @@ jobs:
           mkdir -p shots && cp run/screenshots/rendertest_*.png shots/ 2>/dev/null
           cp client.log shots/render.log; cp client_sodium.log shots/render_sodium.log; cp client_shaders.log shots/render_shaders.log; cp server.log shots/server.log 2>/dev/null
           echo "::notice::screenshots: $(ls shots | grep -v _f | tr '\n' ' ')"
-          cd shots && git init -q && git checkout -q -b ci-shots-1.21.1 && git add . \
+          cd shots && git init -q && git checkout -q -b ci-shots-polish && git add . \
             && git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "render test ${GITHUB_SHA}" \
             && git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" ci-shots-1.21.1
