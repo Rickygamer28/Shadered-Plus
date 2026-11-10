@@ -130,6 +130,9 @@ public final class RenderTest {
             "fill 200 -60 11 204 -56 11 minecraft:stone_bricks",
             "fill 200 -60 10 204 -60 10 skyblocks:neon_tube[down=true,south=true,color=pink]",
             "fill 202 -59 10 202 -57 10 skyblocks:neon_tube[down=false,south=true,color=pink]",
+            "fill 205 -60 11 208 -56 11 minecraft:stone_bricks", "fill 206 -60 7 206 -60 9 skyblocks:neon_tube[down=true,color=yellow]",
+            "setblock 206 -60 10 skyblocks:neon_tube[down=true,south=true,color=yellow]",
+            "fill 206 -59 10 206 -57 10 skyblocks:neon_tube[down=false,south=true,color=yellow]",
             "fill 199 -55 6 205 -55 9 minecraft:stone_bricks",
             "fill 200 -56 8 204 -56 8 skyblocks:neon_tube[down=false,up=true,color=lime]",
             // light bridges: round a bender; a ramp; an arch; a tunnel; a wall; a wide moving walkway with rails and stars
