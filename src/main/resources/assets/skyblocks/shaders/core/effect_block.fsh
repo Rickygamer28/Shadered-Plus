@@ -450,7 +450,13 @@ vec3 background(vec2 b) {
     return mix(Bg, tex.rgb * BgTint, tex.a); // (see-through blocks, glass: the colour behind them)
 }
 
-vec3 effectAt(vec2 b, int e, float t) {
+bool overBg(int e) {
+    return e == 3 || e == 4 || e == 5 || e == 7 || e == 10 || e == 11 || (e >= 13 && e <= 17);
+}
+
+// The effect alone at b (pixelated if set), and how much of the background it covers (the effects drawn over it) - the
+// background goes in afterwards, never pixelated or blurred with it.
+vec4 effectAt(vec2 b, int e, float t) {
     if (Pixel > 0.5) {
         b = (floor(b * 32.0) + 0.5) / 32.0;
     }
@@ -475,10 +481,8 @@ vec3 effectAt(vec2 b, int e, float t) {
     else if (e == 16) c = warp(p, t);
     else c = spectrum(b, t);
     c = max(c, 0.0);
-    if (e == 3 || e == 4 || e == 5 || e == 7 || e == 10 || e == 11 || (e >= 13 && e <= 17)) {
-        c += background(b) * (1.0 - clamp(max(max(c.r, c.g), c.b) * 1.5, 0.0, 1.0));
-    }
-    return c;
+    float cover = overBg(e) ? clamp(max(max(c.r, c.g), c.b) * 1.5, 0.0, 1.0) : 1.0;
+    return vec4(c, cover);
 }
 
 void main() {
@@ -490,14 +494,18 @@ void main() {
     AA = length(fwidth(b / SZ)) * 0.5;
     float t = Time * Speed;
     int e = int(Effect + 0.5);
-    vec3 c = effectAt(b, e, t);
+    vec4 ec = effectAt(b, e, t);
     if (Blur > 0.01) {
         // blurred: the effect around this point too, softly weighted (up to a fifth of a block each way)
         float r = Blur * 0.2;
-        c = c * 0.28 + (effectAt(b + vec2(r, r * 0.4), e, t) + effectAt(b + vec2(-r * 0.4, r), e, t)
+        ec = ec * 0.28 + (effectAt(b + vec2(r, r * 0.4), e, t) + effectAt(b + vec2(-r * 0.4, r), e, t)
                 + effectAt(b + vec2(-r, -r * 0.4), e, t) + effectAt(b + vec2(r * 0.4, -r), e, t)) * 0.18;
     }
-    if (HasBgBlock > 0.5 && !(e == 3 || e == 4 || e == 5 || e == 7 || e == 10 || e == 11 || (e >= 13 && e <= 17))) {
+    vec3 c = ec.rgb;
+    if (overBg(e)) {
+        c += background(b) * (1.0 - ec.a); // (the background crisp, behind the effect)
+    }
+    if (HasBgBlock > 0.5 && !overBg(e)) {
         // the effects that fill the whole side: laid over the block like coloured glass - its dark parts clear, the
         // block always showing a little through the bright ones
         float lum = max(max(c.r, c.g), c.b);
