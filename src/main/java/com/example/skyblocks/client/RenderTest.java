@@ -112,6 +112,7 @@ public final class RenderTest {
     /** The newer things (SKYBLOCKS_RENDER_SET=new: only these), well away from the rest. */
     static final boolean NEW = "new".equals(System.getenv("SKYBLOCKS_RENDER_SET"));
     private static final String[] NEW_SCENE = {
+            "forceload add 190 -10 300 60", // (far from where the world starts: loaded, so things can be put there)
             // a claw machine and an arcade cabinet
             "setblock 200 -60 0 skyblocks:claw_machine[facing=north,half=lower]", "setblock 200 -59 0 skyblocks:claw_machine[facing=north,half=upper]",
             "setblock 270 -60 0 skyblocks:arcade[facing=north,half=lower]", "setblock 270 -59 0 skyblocks:arcade[facing=north,half=upper]",
