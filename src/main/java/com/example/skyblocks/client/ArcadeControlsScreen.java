@@ -1,5 +1,7 @@
 package com.example.skyblocks.client;
 
+import net.minecraft.util.Mth;
+
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
@@ -13,7 +15,9 @@ import org.lwjgl.glfw.GLFW;
  * then press the key (or the controller button) you want for it; Backspace clears it, Esc keeps it as it was.
  */
 public class ArcadeControlsScreen extends Screen {
-    private static final int ROW = 20, NAME_W = 84, CELL_W = 64;
+    private static final int NAME_W = 84, CELL_W = 64;
+    /** A row's height: 20, or less when the screen's too short for all of a game's rows. */
+    private int ROW = 20;
     private final Screen parent;
     private int game;
     /** What's waiting for a key or button: the action, and the column (0, 1 keys; 2, 3 controller); -1 nothing. */
@@ -34,6 +38,7 @@ public class ArcadeControlsScreen extends Screen {
         ArcadeControls.Action[] acts = ArcadeControls.GAMES[game];
         int w = NAME_W + CELL_W * 4;
         int left = width / 2 - w / 2;
+        ROW = Mth.clamp((height - 34 - 50) / Math.max(1, acts.length), 14, 20);
         top = Math.max(34, height / 2 - (acts.length * ROW) / 2 - 20);
         for (int a = 0; a < acts.length; a++) {
             for (int c = 0; c < 4; c++) {
@@ -109,7 +114,7 @@ public class ArcadeControlsScreen extends Screen {
             g.drawCenteredString(font, heads[c], left + NAME_W + c * CELL_W + CELL_W / 2 - 1, top - 12, 0xFFA0A0A0);
         }
         for (int a = 0; a < acts.length; a++) {
-            g.drawString(font, acts[a].name(), left, top + a * ROW + 5, 0xFFFFFFFF);
+            g.drawString(font, acts[a].name(), left, top + a * ROW + (ROW - 8) / 2, 0xFFFFFFFF);
         }
         String hint = listenAction >= 0 ? (listenCol < 2 ? "Press a key - Backspace: none, Esc: keep it" : "Press a controller button - Backspace: none, Esc: keep it")
                 : pad.connected ? "Controller connected - LB / RB: other games, B: back" : "Click one to change it";

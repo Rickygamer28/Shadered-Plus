@@ -162,9 +162,9 @@ public final class RenderTest {
             "night 229 -56 13 130 35", "236 -58 2 0 10", "238 -58 12 0 10", "238 -58 22 0 8", "night 238 -58 22 0 8", "238 -58 32 0 8",
             "238 -57 43 0 20", "251 -59 -3 0 30", "254.5 -59 -2.2 0 32", "262 -59 -3 0 30", "open 260 -60 0 260.5 -60 -1.5 0 30",
             "open 220 -60 10 219.5 -60 8 0 30", "playpick 7 open 270 -60 0 270.5 -60 -1.6 0 10", "play 7 open 270 -60 0 270.5 -60 -1.6 0 10",
-            "play 3 open 270 -60 0 270.5 -60 -1.6 0 10", "controls open 270 -60 0 270.5 -60 -1.6 0 10"};
+            "play 3 open 270 -60 0 270.5 -60 -1.6 0 10", "playmoves 7 open 270 -60 0 270.5 -60 -1.6 0 10", "controls open 270 -60 0 270.5 -60 -1.6 0 10"};
     private static int playGame = -1;
-    private static boolean pickOnly, controls;
+    private static boolean pickOnly, controls, moveList;
 
     private static String[] spots() {
         return NEW ? NEW_SPOTS : SPOTS;
@@ -273,9 +273,10 @@ public final class RenderTest {
                         if (ticks == 1) {
                             String where = spots()[spot];
                             playGame = -1;
-                            pickOnly = controls = false;
-                            if (where.startsWith("play ") || where.startsWith("playpick ")) { // (an arcade game, playing)
+                            pickOnly = controls = moveList = false;
+                            if (where.startsWith("play ") || where.startsWith("playpick ") || where.startsWith("playmoves ")) { // (an arcade game, playing)
                                 pickOnly = where.startsWith("playpick ");
+                                moveList = where.startsWith("playmoves ");
                                 String[] w = where.split(" ", 3);
                                 playGame = Integer.parseInt(w[1]);
                                 where = w[2];
@@ -364,7 +365,7 @@ public final class RenderTest {
                             }
                         }
                         if (ticks == 94 && playGame == 7 && !pickOnly && mc.screen instanceof ArcadeScreen arcade) {
-                            arcade.testKey(org.lwjgl.glfw.GLFW.GLFW_KEY_J); // (a kick, mid-fight)
+                            arcade.testKey(moveList ? org.lwjgl.glfw.GLFW.GLFW_KEY_H : org.lwjgl.glfw.GLFW.GLFW_KEY_J); // (a kick, mid-fight; or the move list)
                         }
                         if (ticks == 80 && clickAt != null) {
                             var sbe = mc.getSingleplayerServer().overworld().getBlockEntity(clickAt);
