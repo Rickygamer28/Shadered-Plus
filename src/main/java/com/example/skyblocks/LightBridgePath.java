@@ -199,7 +199,7 @@ public final class LightBridgePath {
         for (int i = 0; i < n - 1; i++) {
             if (sigma <= sig[i + 1] || i == n - 2) {
                 double t = Mth.clamp((sigma - sig[i]) / Math.max(sig[i + 1] - sig[i], 1e-4), 0, 1);
-                double e = 0.5 * t + 0.5 * t * t * (3 - 2 * t);
+                double e = 0.25 * t + 0.75 * t * t * (3 - 2 * t); // (levelling out at each end, onto the emitter or bender)
                 return Mth.lerp(e, nodes.get(i).y(), nodes.get(i + 1).y());
             }
         }

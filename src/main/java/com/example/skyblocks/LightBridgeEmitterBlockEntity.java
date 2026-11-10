@@ -290,6 +290,13 @@ public class LightBridgeEmitterBlockEntity extends BlockEntity {
             boolean below = dy < -0.02 && dy > -1.1;
             boolean above = dy > 0.0 && dy < 0.35 && !e.onGround();
             if ((below || above) && v.y <= 0.08) {
+                // never into a block: where its end meets an emitter on a block, up onto that instead
+                double to = top;
+                for (int k = 0; k <= 10 && !level.noCollision(e, e.getBoundingBox().move(0, to - e.getY(), 0)); k++) {
+                    to = top + (k + 1) / 16.0;
+                }
+                if (!level.noCollision(e, e.getBoundingBox().move(0, to - e.getY(), 0))) continue;
+                top = to;
                 e.setPos(e.getX(), top, e.getZ());
                 v = new Vec3(v.x, 0, v.z);
                 e.setOnGround(true);
