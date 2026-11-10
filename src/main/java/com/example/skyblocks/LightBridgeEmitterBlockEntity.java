@@ -247,7 +247,7 @@ public class LightBridgeEmitterBlockEntity extends BlockEntity {
         AABB box = new AABB(b[0], b[1], b[2], b[3], b[4], b[5]);
         List<? extends Entity> who = only != null ? List.of(only)
                 : level.getEntities((Entity) null, box, e -> !(e instanceof Player) && !e.isSpectator() && !e.isPassenger() && !e.noPhysics);
-        float[] dist = new float[1];
+        float[] dist = new float[2];
         LightBridgePath.Sample[] at = new LightBridgePath.Sample[1];
         float sign = reverse ? -1 : 1;
         for (Entity e : who) {
@@ -285,8 +285,11 @@ public class LightBridgeEmitterBlockEntity extends BlockEntity {
             if (Double.isNaN(top) || dist[0] > p.width / 2.0F + 0.1F) continue;
             double dy = e.getY() - top;
             boolean moved = false;
-            // held to its surface: lifted up onto a slope, kept on it going down (not while jumping up off it)
-            if (dy > -1.1 && dy < 0.35 && v.y <= 0.08 && !(e.onGround() && Math.abs(dy) < 0.08)) {
+            // held to its surface: lifted up onto it from below, kept on it going down a slope (not while jumping up off
+            // it, nor when standing on something a little above it - a flat stretch's plate, an emitter's deck)
+            boolean below = dy < -0.02 && dy > -1.1;
+            boolean above = dy > 0.0 && dy < 0.35 && !e.onGround();
+            if ((below || above) && v.y <= 0.08) {
                 e.setPos(e.getX(), top, e.getZ());
                 v = new Vec3(v.x, 0, v.z);
                 e.setOnGround(true);
@@ -300,7 +303,10 @@ public class LightBridgeEmitterBlockEntity extends BlockEntity {
                     double hx = a.dx() * sign, hz = a.dz() * sign;
                     double speed = 0.42, now = v.x * hx + v.z * hz;
                     double push = Math.max(0, speed - now) * 0.35;
-                    v = new Vec3(v.x + hx * push, v.y, v.z + hz * push);
+                    // and towards its middle, so a curve doesn't fling you off its edge
+                    double lx = -a.dz(), lz = a.dx(), sideways = v.x * lx + v.z * lz;
+                    double centre = -dist[1] * 0.18 - sideways * 0.25;
+                    v = new Vec3(v.x + hx * push + lx * centre, v.y, v.z + hz * push + lz * centre);
                     moved = true;
                 }
             }

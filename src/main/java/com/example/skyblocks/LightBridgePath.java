@@ -23,7 +23,7 @@ public final class LightBridgePath {
     /** How steep it may get (blocks up per block along) at its steepest: you're held to its surface as you walk it. */
     public static final float MAX_SLOPE = 1.25F;
     /** Steeper than this, a piece of it isn't a step to climb but a slope you're held onto. */
-    public static final float RAMP_SLOPE = 0.3F;
+    public static final float RAMP_SLOPE = 0.04F;
     public static final float STEP = 0.2F;
 
     /** A corner of the path (block x, y, z: an emitter or a bender) and how round the curve there is (blocks). */
@@ -289,6 +289,7 @@ public final class LightBridgePath {
         double t = span < 1e-4 ? 0 : Mth.clamp(Math.abs(along) / span, 0, 1);
         double side = (x - a.x()) * -a.dz() + (z - a.z()) * a.dx();
         dist[0] = (float) Math.abs(side);
+        if (dist.length > 1) dist[1] = (float) side;
         at[0] = a;
         return Mth.lerp(t, a.y(), b.y()) + 2.0 / 16;
     }
