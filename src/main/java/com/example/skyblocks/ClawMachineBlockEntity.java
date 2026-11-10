@@ -27,8 +27,8 @@ public class ClawMachineBlockEntity extends BlockEntity {
     public static final float X0 = 2.5F, X1 = 13.5F, Z0 = 2.5F, Z1 = 13.5F, FLOOR = 12.0F, TOP = 27.6F;
     public static final float CHUTE_X0 = 10.0F, CHUTE_Z1 = 6.0F; // (the chute: the front corner on the viewer's left)
     /** How big a plushie is drawn in the case; how far above the floor one lying on others is; how tall one is. */
-    public static final float PRIZE_SCALE = 0.36F, STACKED = 2.0F, PRIZE_H = 3.4F;
-    private static final int STOCK = 14, LOW = 6;
+    public static final float PRIZE_SCALE = 0.32F, STACKED = 2.4F, PRIZE_H = 3.0F;
+    private static final int LOW = 12;
 
     /** A plushie in the case: its id, which plushie, where (pixels), lying on top of others or not, turned how. */
     public record Prize(int id, int kind, float x, float z, boolean top, float turn) {}
@@ -58,23 +58,28 @@ public class ClawMachineBlockEntity extends BlockEntity {
         return null;
     }
 
-    /** Fills the case up again (new plushies scattered on the floor, some on top of others). */
+    /** Fills the case up again: a heap of plushies over the whole floor (bar the chute), a second layer on top of it. */
     public void restock(RandomSource r) {
         int kinds = ModBlocks.PLUSHIE_NAMES.length;
-        int tries = 0;
-        while (prizes.size() < STOCK && tries++ < 400) {
-            float x = X0 + 2.0F + r.nextFloat() * (X1 - X0 - 4.0F), z = Z0 + 2.0F + r.nextFloat() * (Z1 - Z0 - 4.0F);
-            if (x > CHUTE_X0 - 2.0F && z < CHUTE_Z1 + 2.0F) continue; // (not on the chute)
-            boolean top = false, clash = false;
-            for (Prize p : prizes) {
-                float d = (p.x() - x) * (p.x() - x) + (p.z() - z) * (p.z() - z);
-                if (d < 10.0F) {
-                    if (p.top()) clash = true;
-                    else top = true;
+        for (int layer = 0; layer < 2; layer++) {
+            float off = layer == 0 ? 0.0F : 1.2F;
+            for (float gx = X0 + 1.9F + off; gx <= X1 - 1.9F; gx += 2.4F) {
+                for (float gz = Z0 + 1.9F + off; gz <= Z1 - 1.9F; gz += 2.4F) {
+                    if (gx > CHUTE_X0 - 1.6F && gz < CHUTE_Z1 + 1.6F) continue; // (not on the chute)
+                    if (layer == 1 && r.nextInt(5) == 0) continue;
+                    float x = gx + (r.nextFloat() - 0.5F) * 0.8F, z = gz + (r.nextFloat() - 0.5F) * 0.8F;
+                    boolean taken = false;
+                    for (Prize p : prizes) {
+                        if (p.top() == (layer == 1) && (p.x() - x) * (p.x() - x) + (p.z() - z) * (p.z() - z) < 2.0F * 2.0F) {
+                            taken = true;
+                            break;
+                        }
+                    }
+                    if (!taken) {
+                        prizes.add(new Prize(nextId++, r.nextInt(kinds), x, z, layer == 1, r.nextFloat() * 360.0F));
+                    }
                 }
             }
-            if (clash) continue;
-            prizes.add(new Prize(nextId++, r.nextInt(kinds), x, z, top, r.nextFloat() * 360.0F));
         }
         changed();
     }
@@ -123,7 +128,7 @@ public class ClawMachineBlockEntity extends BlockEntity {
     @Override
     public void onLoad() {
         super.onLoad();
-        if (level != null && !level.isClientSide && prizes.isEmpty()) {
+        if (level != null && !level.isClientSide && prizes.size() < LOW) {
             restock(level.random);
         }
     }

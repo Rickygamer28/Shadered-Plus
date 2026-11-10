@@ -225,7 +225,7 @@ public final class ModBlocks {
                     .mapColor(net.minecraft.world.level.material.MapColor.SAND));
 
     /** The plushies (PlushieBlock): won from a claw machine. */
-    public static final String[] PLUSHIE_NAMES = {"cat", "ember", "frost", "moss", "bloom", "frog", "clownfish", "blue_tang", "goldfish", "angelfish", "shark", "octopus", "crab", "ocean_sunfish"};
+    public static final String[] PLUSHIE_NAMES = {"cat", "ember", "frost", "moss", "bloom", "frog", "axolotl", "clownfish", "blue_tang", "goldfish", "angelfish", "shark", "octopus", "crab", "ocean_sunfish"};
     public static final java.util.List<DeferredBlock<PlushieBlock>> PLUSHIES = new java.util.ArrayList<>();
 
     static {

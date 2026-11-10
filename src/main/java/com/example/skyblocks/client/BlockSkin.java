@@ -43,14 +43,17 @@ public final class BlockSkin {
             if (!quads.isEmpty() && quads.get(0).isTinted()) {
                 tint = 0xFF000000 | mc.getBlockColors().getColor(skin, level, pos, quads.get(0).getTintIndex());
             }
-            // (four corners: x y z, then u v in pixels - as a model element's faces take their texture)
+            // (four corners: x y z, then u v in pixels - as a model element's faces take their texture; a box reaching
+            // outside its block takes the texture from the sprite's corner rather than off the edge of it)
+            float[] ux = uv(x0, x1), uy = uv(y0, y1), uz = uv(z0, z1);
+            float ux0 = ux[0], ux1 = ux[1], uy0 = uy[0], uy1 = uy[1], uz0 = uz[0], uz1 = uz[1];
             float[][] v = switch (dir) {
-                case UP -> new float[][] {{a, e, c, x0, z0}, {a, e, f, x0, z1}, {d, e, f, x1, z1}, {d, e, c, x1, z0}};
-                case DOWN -> new float[][] {{a, b, c, x0, 16 - z0}, {d, b, c, x1, 16 - z0}, {d, b, f, x1, 16 - z1}, {a, b, f, x0, 16 - z1}};
-                case NORTH -> new float[][] {{a, b, c, 16 - x0, 16 - y0}, {a, e, c, 16 - x0, 16 - y1}, {d, e, c, 16 - x1, 16 - y1}, {d, b, c, 16 - x1, 16 - y0}};
-                case SOUTH -> new float[][] {{a, b, f, x0, 16 - y0}, {d, b, f, x1, 16 - y0}, {d, e, f, x1, 16 - y1}, {a, e, f, x0, 16 - y1}};
-                case WEST -> new float[][] {{a, b, c, z0, 16 - y0}, {a, b, f, z1, 16 - y0}, {a, e, f, z1, 16 - y1}, {a, e, c, z0, 16 - y1}};
-                default -> new float[][] {{d, b, c, 16 - z0, 16 - y0}, {d, e, c, 16 - z0, 16 - y1}, {d, e, f, 16 - z1, 16 - y1}, {d, b, f, 16 - z1, 16 - y0}};
+                case UP -> new float[][] {{a, e, c, ux0, uz0}, {a, e, f, ux0, uz1}, {d, e, f, ux1, uz1}, {d, e, c, ux1, uz0}};
+                case DOWN -> new float[][] {{a, b, c, ux0, 16 - uz0}, {d, b, c, ux1, 16 - uz0}, {d, b, f, ux1, 16 - uz1}, {a, b, f, ux0, 16 - uz1}};
+                case NORTH -> new float[][] {{a, b, c, 16 - ux0, 16 - uy0}, {a, e, c, 16 - ux0, 16 - uy1}, {d, e, c, 16 - ux1, 16 - uy1}, {d, b, c, 16 - ux1, 16 - uy0}};
+                case SOUTH -> new float[][] {{a, b, f, ux0, 16 - uy0}, {d, b, f, ux1, 16 - uy0}, {d, e, f, ux1, 16 - uy1}, {a, e, f, ux0, 16 - uy1}};
+                case WEST -> new float[][] {{a, b, c, uz0, 16 - uy0}, {a, b, f, uz1, 16 - uy0}, {a, e, f, uz1, 16 - uy1}, {a, e, c, uz0, 16 - uy1}};
+                default -> new float[][] {{d, b, c, 16 - uz0, 16 - uy0}, {d, e, c, 16 - uz0, 16 - uy1}, {d, e, f, 16 - uz1, 16 - uy1}, {d, b, f, 16 - uz1, 16 - uy0}};
             };
             float shade = switch (dir) {
                 case UP -> 1.0F;
@@ -65,5 +68,21 @@ public final class BlockSkin {
                         .setOverlay(overlay).setLight(light).setNormal(last, dir.getStepX(), dir.getStepY(), dir.getStepZ());
             }
         }
+    }
+
+    /** Where on its sprite (pixels, 0-16) a box's side from lo to hi takes its texture. */
+    private static float[] uv(float lo, float hi) {
+        if (lo >= 0.0F && hi <= 16.0F) {
+            return new float[] {lo, hi};
+        }
+        float size = hi - lo;
+        if (size >= 16.0F) {
+            return new float[] {0.0F, 16.0F};
+        }
+        float start = lo - (float) Math.floor(lo / 16.0F) * 16.0F; // (the same place in the next block over)
+        if (start + size > 16.0F) {
+            start = 16.0F - size;
+        }
+        return new float[] {start, start + size};
     }
 }

@@ -1,0 +1,67 @@
+{
+ "parent": "block/block",
+ "render_type": "minecraft:translucent",
+ "textures": {
+  "frame": "minecraft:block/dark_oak_planks",
+  "glass": "minecraft:block/white_stained_glass",
+  "mesh": "minecraft:block/iron_bars",
+  "particle": "minecraft:block/dark_oak_planks",
+  "ground": "minecraft:block/moss_block"
+ },
+ "elements": [
+  {
+   "from": [
+    1,
+    0,
+    0
+   ],
+   "to": [
+    16,
+    1,
+    1
+   ],
+   "faces": {
+    "down": {
+     "texture": "#frame"
+    }
+   }
+  },
+  {
+   "from": [
+    1,
+    1,
+    0
+   ],
+   "to": [
+    16,
+    3,
+    1
+   ],
+   "faces": {
+    "up": {
+     "texture": "#ground"
+    }
+   }
+  },
+  {
+   "from": [
+    1,
+    13.5,
+    0
+   ],
+   "to": [
+    16,
+    14,
+    1
+   ],
+   "faces": {
+    "up": {
+     "texture": "#mesh"
+    },
+    "down": {
+     "texture": "#mesh"
+    }
+   }
+  }
+ ]
+}

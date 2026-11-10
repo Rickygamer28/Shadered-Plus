@@ -15,7 +15,8 @@
   "red": "minecraft:block/red_concrete",
   "yellow": "minecraft:block/yellow_concrete",
   "sign": "skyblocks:block/claw_sign",
-  "particle": "skyblocks:block/claw_body"
+  "particle": "skyblocks:block/claw_body",
+  "chute": "skyblocks:block/claw_chute"
  },
  "elements": [
   {
@@ -456,10 +457,10 @@
    ],
    "faces": {
     "east": {
-     "texture": "#glass"
+     "texture": "#chute"
     },
     "west": {
-     "texture": "#glass"
+     "texture": "#chute"
     }
    }
   },
@@ -476,10 +477,10 @@
    ],
    "faces": {
     "north": {
-     "texture": "#glass"
+     "texture": "#chute"
     },
     "south": {
-     "texture": "#glass"
+     "texture": "#chute"
     }
    }
   },
