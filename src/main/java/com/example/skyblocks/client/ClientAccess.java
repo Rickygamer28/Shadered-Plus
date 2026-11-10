@@ -56,6 +56,19 @@ public final class ClientAccess {
         Minecraft.getInstance().setScreen(new ClawScreen(pos));
     }
 
+    public static void openLightBridge(net.minecraft.core.BlockPos pos) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null && mc.level.getBlockEntity(pos) instanceof com.example.skyblocks.LightBridgeEmitterBlockEntity be) {
+            mc.setScreen(new LightBridgeScreen(pos, be));
+        }
+    }
+
+    /** This client's own player. */
+    @org.jetbrains.annotations.Nullable
+    public static net.minecraft.world.entity.player.Player player() {
+        return Minecraft.getInstance().player;
+    }
+
     /** Someone's claw on a claw machine. */
     public static void clawState(com.example.skyblocks.ClawPayloads.State p) {
         Minecraft mc = Minecraft.getInstance();

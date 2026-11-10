@@ -182,6 +182,10 @@ public final class ModBlocks {
     public static final DeferredBlock<LightBridgeEmitterBlock> LIGHT_BRIDGE_EMITTER = BLOCKS.registerBlock("light_bridge_emitter", LightBridgeEmitterBlock::new,
             BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.METAL).lightLevel(state -> 7).noOcclusion()
                     .mapColor(net.minecraft.world.level.material.MapColor.METAL));
+    /** Turns a light bridge round a corner (LightBridgeBenderBlock). */
+    public static final DeferredBlock<LightBridgeBenderBlock> LIGHT_BRIDGE_BENDER = BLOCKS.registerBlock("light_bridge_bender", LightBridgeBenderBlock::new,
+            BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.METAL).lightLevel(state -> 6).noOcclusion()
+                    .mapColor(net.minecraft.world.level.material.MapColor.METAL));
     /** The bridge's blocks, put down and taken away by the emitters (LightBridgeBlock). */
     public static final DeferredBlock<LightBridgeBlock> LIGHT_BRIDGE = BLOCKS.registerBlock("light_bridge", LightBridgeBlock::new,
             BlockBehaviour.Properties.of().strength(-1.0F, 3600000.0F).noLootTable().noOcclusion().lightLevel(state -> 8)

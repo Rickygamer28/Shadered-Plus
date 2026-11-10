@@ -115,6 +115,7 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> WEATHER_GLOBE = ITEMS.registerSimpleBlockItem("weather_globe", ModBlocks.WEATHER_GLOBE);
     public static final DeferredItem<BlockItem> LAVA_PILLAR = ITEMS.registerSimpleBlockItem("lava_pillar", ModBlocks.LAVA_PILLAR);
     public static final DeferredItem<BlockItem> LIGHT_BRIDGE_EMITTER = ITEMS.registerSimpleBlockItem("light_bridge_emitter", ModBlocks.LIGHT_BRIDGE_EMITTER);
+    public static final DeferredItem<BlockItem> LIGHT_BRIDGE_BENDER = ITEMS.registerSimpleBlockItem("light_bridge_bender", ModBlocks.LIGHT_BRIDGE_BENDER);
     public static final DeferredItem<BlockItem> LASER_PROJECTOR = ITEMS.registerSimpleBlockItem("laser_projector", ModBlocks.LASER_PROJECTOR);
     /** The guide book (GuideBookItem). */
     public static final DeferredItem<GuideBookItem> GUIDE_BOOK = ITEMS.register("guide_book",

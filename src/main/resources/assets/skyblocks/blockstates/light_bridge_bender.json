@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "skyblocks:block/light_bridge_bender"
+    },
+    "facing=east": {
+      "model": "skyblocks:block/light_bridge_bender",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "skyblocks:block/light_bridge_bender",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "skyblocks:block/light_bridge_bender",
+      "y": 270
+    }
+  }
+}

@@ -120,6 +120,7 @@ public class SkyBlocksMod {
                 .playToServer(NeonSignPayload.TYPE, NeonSignPayload.STREAM_CODEC, NeonSignPayload::handle)
                 .playToServer(EffectBlockPayload.TYPE, EffectBlockPayload.STREAM_CODEC, EffectBlockPayload::handle)
                 .playToServer(ArcadeScorePayload.TYPE, ArcadeScorePayload.STREAM_CODEC, ArcadeScorePayload::handle)
+                .playToServer(LightBridgeSettingsPayload.TYPE, LightBridgeSettingsPayload.STREAM_CODEC, LightBridgeSettingsPayload::handle)
                 .playToServer(ClawPayloads.Play.TYPE, ClawPayloads.Play.STREAM_CODEC, ClawPayloads.Play::handle)
                 .playBidirectional(ClawPayloads.State.TYPE, ClawPayloads.State.STREAM_CODEC, ClawPayloads.State::handle)
                 .playToServer(TrophyClaimPayload.TYPE, TrophyClaimPayload.STREAM_CODEC, TrophyClaimPayload::handle)
