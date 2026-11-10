@@ -619,6 +619,21 @@ public class ArcadeScreen extends Screen {
         return true;
     }
 
+    /** (the render test: a game started, its own keys pressed) */
+    public void testPlay(int g, int... keys) {
+        game = g;
+        start();
+        for (int k : keys) gameKey(k);
+    }
+
+    public void testKey(int key) {
+        gameKey(key);
+    }
+
+    public void testControls() {
+        openControls();
+    }
+
     private void openControls() {
         Minecraft.getInstance().setScreen(new ArcadeControlsScreen(this, game));
     }

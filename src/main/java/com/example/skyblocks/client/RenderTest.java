@@ -109,6 +109,63 @@ public final class RenderTest {
             // a wall of the underwater sky, seen from the same spot turned two ways (the sky must stay put)
             "fill -20 -60 20 -17 -56 20 skyblocks:underwater_liquid", "fill -16 -60 20 -14 -56 20 skyblocks:aurora_liquid",
     };
+    /** The newer things (SKYBLOCKS_RENDER_SET=new: only these), well away from the rest. */
+    static final boolean NEW = "new".equals(System.getenv("SKYBLOCKS_RENDER_SET"));
+    private static final String[] NEW_SCENE = {
+            // a claw machine and an arcade cabinet
+            "setblock 200 -60 0 skyblocks:claw_machine[facing=north,half=lower]", "setblock 200 -59 0 skyblocks:claw_machine[facing=north,half=upper]",
+            "setblock 270 -60 0 skyblocks:arcade[facing=north,half=lower]", "setblock 270 -59 0 skyblocks:arcade[facing=north,half=upper]",
+            // every plushie
+            "setblock 280 -60 0 skyblocks:plushie_cat[facing=north]", "setblock 281 -60 0 skyblocks:plushie_ember[facing=north]",
+            "setblock 282 -60 0 skyblocks:plushie_frost[facing=north]", "setblock 283 -60 0 skyblocks:plushie_moss[facing=north]",
+            "setblock 284 -60 0 skyblocks:plushie_bloom[facing=north]", "setblock 285 -60 0 skyblocks:plushie_frog[facing=north]",
+            "setblock 286 -60 0 skyblocks:plushie_axolotl[facing=north]", "setblock 287 -60 0 skyblocks:plushie_clownfish[facing=north]",
+            "setblock 288 -60 0 skyblocks:plushie_blue_tang[facing=north]", "setblock 289 -60 0 skyblocks:plushie_goldfish[facing=north]",
+            "setblock 290 -60 0 skyblocks:plushie_angelfish[facing=north]", "setblock 291 -60 0 skyblocks:plushie_shark[facing=north]",
+            "setblock 292 -60 0 skyblocks:plushie_octopus[facing=north]", "setblock 293 -60 0 skyblocks:plushie_crab[facing=north]",
+            "setblock 294 -60 0 skyblocks:plushie_ocean_sunfish[facing=north]",
+            // neon tubes: along the floor, up a wall (round the corner), along a ceiling
+            "fill 200 -60 6 204 -60 6 skyblocks:neon_tube[down=true,color=cyan]",
+            "fill 200 -60 11 204 -56 11 minecraft:stone_bricks",
+            "fill 200 -60 10 204 -60 10 skyblocks:neon_tube[down=true,south=true,color=pink]",
+            "fill 202 -59 10 202 -57 10 skyblocks:neon_tube[down=false,south=true,color=pink]",
+            "fill 199 -55 6 205 -55 9 minecraft:stone_bricks",
+            "fill 200 -56 8 204 -56 8 skyblocks:neon_tube[down=false,up=true,color=lime]",
+            // light bridges: round a bender; a ramp; an arch; a tunnel; a wall; a wide moving walkway with rails and stars
+            "setblock 220 -60 10 skyblocks:light_bridge_emitter[facing=east]", "setblock 226 -60 10 skyblocks:light_bridge_bender[facing=west,radius=2]",
+            "setblock 226 -60 4 skyblocks:light_bridge_emitter[facing=south]",
+            "setblock 232 -60 10 skyblocks:light_bridge_emitter[facing=east]", "fill 240 -61 10 240 -57 10 minecraft:stone_bricks",
+            "setblock 240 -56 10 skyblocks:light_bridge_emitter[facing=west]",
+            "setblock 232 -60 20 skyblocks:light_bridge_emitter[facing=east]{mode:1}", "setblock 244 -60 20 skyblocks:light_bridge_emitter[facing=west]{mode:1}",
+            "setblock 232 -60 30 skyblocks:light_bridge_emitter[facing=east,color=3]{mode:4,colour:3847130}",
+            "setblock 244 -60 30 skyblocks:light_bridge_emitter[facing=west,color=3]{mode:4,colour:3847130}",
+            "setblock 232 -60 40 skyblocks:light_bridge_emitter[facing=east,color=14]{mode:3,colour:11546150,pattern:1}",
+            "setblock 244 -60 40 skyblocks:light_bridge_emitter[facing=west,color=14]{mode:3,colour:11546150,pattern:1}",
+            "setblock 232 -60 50 skyblocks:light_bridge_emitter[facing=east]{mode:2,width:2,rails:1b,pattern:4}",
+            "setblock 244 -60 50 skyblocks:light_bridge_emitter[facing=west]{mode:2,width:2,rails:1b,pattern:4}",
+            // terrariums: four joined into one big desert tank, and a jungle one on its own
+            "setblock 250 -60 0 skyblocks:terrarium[scene=0,north=false,west=false,east=true,south=true]",
+            "setblock 251 -60 0 skyblocks:terrarium[scene=0,north=false,west=true,east=false,south=true]",
+            "setblock 250 -60 1 skyblocks:terrarium[scene=0,north=true,west=false,east=true,south=false]",
+            "setblock 251 -60 1 skyblocks:terrarium[scene=0,north=true,west=true,east=false,south=false]",
+            "setblock 254 -60 0 skyblocks:terrarium[scene=1]",
+            // teleport pads with names
+            "setblock 260 -60 0 skyblocks:teleport_pad[color=5]{name:\"Home\"}", "setblock 262 -60 0 skyblocks:teleport_pad[color=5]{name:\"Mine\"}",
+            "setblock 264 -60 0 skyblocks:teleport_pad[color=14]{name:\"Farm\"}",
+    };
+    private static final String[] NEW_SPOTS = {"200.5 -59.2 -3 0 18", "open 200 -60 0 200.5 -60 -1.6 0 15", "283.5 -59.6 -2.4 0 32",
+            "290.5 -59.6 -2.4 0 32", "286.5 -60 -1.2 0 30", "202.5 -58.5 2.6 0 22", "night 202.5 -58.5 2.6 0 22", "229 -56 13 130 35",
+            "night 229 -56 13 130 35", "236 -58 2 0 10", "238 -58 12 0 10", "238 -58 22 0 8", "night 238 -58 22 0 8", "238 -58 32 0 8",
+            "238 -57 43 0 20", "251 -59 -3 0 30", "254.5 -59 -2.2 0 32", "262 -59 -3 0 30", "open 260 -60 0 260.5 -60 -1.5 0 30",
+            "open 220 -60 10 219.5 -60 8 0 30", "playpick 7 open 270 -60 0 270.5 -60 -1.6 0 10", "play 7 open 270 -60 0 270.5 -60 -1.6 0 10",
+            "play 3 open 270 -60 0 270.5 -60 -1.6 0 10", "controls open 270 -60 0 270.5 -60 -1.6 0 10"};
+    private static int playGame = -1;
+    private static boolean pickOnly, controls;
+
+    private static String[] spots() {
+        return NEW ? NEW_SPOTS : SPOTS;
+    }
+
     /** Where the player stands for each picture: x y z yaw pitch ("night " first: at night). */
     private static net.minecraft.core.BlockPos clickAt;
     private static long timedFrames, timedFrom;
@@ -189,7 +246,7 @@ public final class RenderTest {
                             run(server, "gamerule doWeatherCycle false");
                             run(server, "gamerule doMobSpawning false");
                             run(server, "time set 6000");
-                            for (String c : SCENE) {
+                            for (String c : NEW ? NEW_SCENE : SCENE) {
                                 run(server, c);
                             }
                             stage = 2;
@@ -202,15 +259,27 @@ public final class RenderTest {
                     }
                 }
                 default -> {
-                    if (stage >= 2 && stage < 2 + SPOTS.length) {
+                    if (stage >= 2 && stage < 2 + spots().length) {
                         int spot = stage - 2;
-                        if (ticks == 1 && "shaders".equals(TAG) && (SPOTS[spot].contains("burst ") || SPOTS[spot].startsWith("nobridge "))) {
+                        if (ticks == 1 && "shaders".equals(TAG) && (spots()[spot].contains("burst ") || spots()[spot].startsWith("nobridge "))) {
                             stage++; // (with a shader pack the frames come slowly: no frame-by-frame spots)
                             ticks = 0;
                             return;
                         }
                         if (ticks == 1) {
-                            String where = SPOTS[spot];
+                            String where = spots()[spot];
+                            playGame = -1;
+                            pickOnly = controls = false;
+                            if (where.startsWith("play ") || where.startsWith("playpick ")) { // (an arcade game, playing)
+                                pickOnly = where.startsWith("playpick ");
+                                String[] w = where.split(" ", 3);
+                                playGame = Integer.parseInt(w[1]);
+                                where = w[2];
+                            }
+                            if (where.startsWith("controls ")) {
+                                controls = true;
+                                where = where.substring("controls ".length());
+                            }
                             com.example.skyblocks.client.SkyUsage.itemParts = !where.startsWith("itemswhole ");
                             boolean farPortal = where.startsWith("farportal ");
                             if (farPortal != MirrorRenderer.forceFarPortals) {
@@ -283,6 +352,16 @@ public final class RenderTest {
                             var r = mc.gameMode.useItemOn(mc.player, net.minecraft.world.InteractionHand.MAIN_HAND, hit);
                             SkyBlocksMod.LOGGER.info("Shadered+ render test: clicked {} with {}: {}", clickAt, mc.player.getMainHandItem(), r);
                         }
+                        if (ticks == 45 && mc.screen instanceof ArcadeScreen arcade) {
+                            if (controls) {
+                                arcade.testControls();
+                            } else if (playGame >= 0) {
+                                arcade.testPlay(playGame, playGame == 7 && !pickOnly ? new int[] {org.lwjgl.glfw.GLFW.GLFW_KEY_U} : new int[0]);
+                            }
+                        }
+                        if (ticks == 94 && playGame == 7 && !pickOnly && mc.screen instanceof ArcadeScreen arcade) {
+                            arcade.testKey(org.lwjgl.glfw.GLFW.GLFW_KEY_J); // (a kick, mid-fight)
+                        }
                         if (ticks == 80 && clickAt != null) {
                             var sbe = mc.getSingleplayerServer().overworld().getBlockEntity(clickAt);
                             var cbe = mc.level.getBlockEntity(clickAt);
@@ -312,7 +391,7 @@ public final class RenderTest {
                             double ms = n > 0 ? (System.nanoTime() - timedFrom) / 1.0e6 / n : -1.0;
                             java.util.List<String> lines = new java.util.ArrayList<>();
                             WorldTiming.report(lines);
-                            SkyBlocksMod.LOGGER.info("Shadered+ render test: timing spot {} ({}): {} frames, {} ms a frame\n  {}", spot, SPOTS[spot],
+                            SkyBlocksMod.LOGGER.info("Shadered+ render test: timing spot {} ({}): {} frames, {} ms a frame\n  {}", spot, spots()[spot],
                                     n, String.format(java.util.Locale.ROOT, "%.1f", ms), String.join("\n  ", lines));
                         }
                         if (ticks == 100) { // (the chunks built, the shaders warmed up)
@@ -322,7 +401,7 @@ public final class RenderTest {
                             stage++;
                             ticks = 0;
                         }
-                    } else if (stage == 2 + SPOTS.length || stage == 99) {
+                    } else if (stage == 2 + spots().length || stage == 99) {
                         if (ticks == 60) {
                             SkyBlocksMod.LOGGER.info("Shadered+ render test done");
                             mc.stop();
