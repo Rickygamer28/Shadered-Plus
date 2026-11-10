@@ -254,10 +254,6 @@ public final class LightBridgePath {
         float ds = b.s() - a.s();
         return ds < 1e-4F ? 0 : (float) (b.y() - a.y()) / ds;
     }
-        }
-        dist[0] = (float) Math.sqrt(bd);
-        return best;
-    }
 
     /** How steep it is at sample {@code i}. */
     public float slopeAt(int i) {
