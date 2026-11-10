@@ -156,6 +156,8 @@ TRACKS = {
     "music_cavern": dict(seed=41, root=50, mode="minor", bpm=96, progression=[0, 3, 5, 4], style=2),
     "music_forge": dict(seed=59, root=48, mode="harmonic", bpm=144, progression=[0, 0, 5, 4, 0, 0, 3, 4]),
     "music_void": dict(seed=73, root=46, mode="phrygian", bpm=128, progression=[0, 1, 0, 1, 5, 4, 1, 0], style=1),
+    "music_harbor": dict(seed=89, root=53, mode="dorian", bpm=112, progression=[0, 3, 6, 4, 0, 3, 5, 4]),
+    "music_sakura": dict(seed=97, root=60, mode="major", bpm=126, progression=[0, 5, 3, 4, 0, 5, 1, 4]),
 }
 
 

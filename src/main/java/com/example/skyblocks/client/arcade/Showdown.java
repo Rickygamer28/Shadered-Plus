@@ -38,8 +38,87 @@ public class Showdown extends ArcadeGame {
     /** It runs at 60 frames a second, like the real thing: every move's frame data is in those frames. */
     private static final int FPS = 60;
     private static final int GROUND = 128, ROUND_FRAMES = 60 * FPS;
-    /** Where the walls are on this stage (far off on one without walls; moved back by a wall break). */
-    private float wallL = 10, wallR = W - 10;
+    /**
+     * The arena, in its own (stage) space: a square, its walls on all four sides (far off on a stage without walls;
+     * one moved back by a wall break): min along, max along, min across, max across. The middle is (W / 2, 0).
+     */
+    private final float[] arena = {10, W - 10, -86, 86};
+
+    /**
+     * The fighters' line in the arena: the line's coordinates (along it, and off it - depth) turned by the line's
+     * angle (spin * SPIN_RAD) and moved by (tX, tZ) give the arena's. The line turns to stay through both fighters - and
+     * the camera, side-on to it, swings round with it - but the fighters stay where they are on the floor.
+     */
+    private float tX, tZ, oTX, oTZ;
+    private static final float SPIN_RAD = 0.011F;
+
+    private float[] toStage(float x, float z, float spinNow, float tx, float tz) {
+        float a = spinNow * SPIN_RAD, c = Mth.cos(a), sn = Mth.sin(a);
+        return new float[] {x * c - z * sn + tx, x * sn + z * c + tz};
+    }
+
+    private float[] toLine(float sx, float sz, float spinNow, float tx, float tz) {
+        float a = spinNow * SPIN_RAD, c = Mth.cos(a), sn = Mth.sin(a);
+        float dx = sx - tx, dz = sz - tz;
+        return new float[] {dx * c + dz * sn, -dx * sn + dz * c};
+    }
+
+    /** Fighters in the arena: kept inside its walls (a fighter reeling into one: a wall splat); which wall it's at. */
+    private void keepInArena(Body b, boolean splats) {
+        float[] p = toStage(b.x, b.depth, spin, tX, tZ);
+        int side = p[0] < arena[0] ? 0 : p[0] > arena[1] ? 1 : p[1] < arena[2] ? 2 : p[1] > arena[3] ? 3 : -1;
+        b.wallSide = side;
+        if (side < 0) return;
+        p[0] = Mth.clamp(p[0], arena[0], arena[1]);
+        p[1] = Mth.clamp(p[1], arena[2], arena[3]);
+        float[] l = toLine(p[0], p[1], spin, tX, tZ);
+        b.x = l[0];
+        b.depth = l[1];
+        if (splats && (b.state == State.AIR || b.state == State.HIT) && Math.abs(b.vx) > 0.33F && b.wallHits == 0) {
+            b.state = State.SPLAT; // (slammed into the wall while reeling: a wall splat)
+            b.stun = 42;
+            b.vx = 0;
+            b.vy = 0;
+            b.wallHits = 1;
+            shake = 6;
+            call("WALL SPLAT!", b.x, GROUND - b.y - 40);
+            sfx(Sfx.WALL_SPLAT);
+        }
+    }
+
+    /**
+     * The line turning to go through both of them again (quickly when nobody's stepping; slowly mid-sidestep, so the
+     * step still takes you off it; in between while sidewalking - circling them): it turns round the middle of them,
+     * so neither moves on the floor - only the camera swings.
+     */
+    private void realign() {
+        float[] a = toStage(me.x, me.depth, spin, tX, tZ), b = toStage(foe.x, foe.depth, spin, tX, tZ);
+        float dx = b[0] - a[0], dz = b[1] - a[1];
+        if (foe.x < me.x) {
+            dx = -dx;
+            dz = -dz;
+        }
+        if (dx * dx + dz * dz < 4) return;
+        boolean stepping = me.state == State.SIDESTEP || foe.state == State.SIDESTEP;
+        boolean walking = me.state == State.SIDEWALK || foe.state == State.SIDEWALK;
+        float rate = stepping ? 0.008F : walking ? 0.04F : 0.07F;
+        float want = (float) Math.atan2(dz, dx) / SPIN_RAD;
+        float newSpin = spin + Mth.wrapDegrees((want - spin) * SPIN_RAD * Mth.RAD_TO_DEG) / (SPIN_RAD * Mth.RAD_TO_DEG) * rate;
+        // the middle of them stays put (on the floor and on the line - drifting back onto the line's middle)
+        float mx = (me.x + foe.x) / 2, mz = (me.depth + foe.depth) / 2;
+        float[] mid = toStage(mx, mz, spin, tX, tZ);
+        float a2 = newSpin * SPIN_RAD, c = Mth.cos(a2), sn = Mth.sin(a2);
+        float mz2 = mz * (1 - rate);
+        tX = mid[0] - (mx * c - mz2 * sn);
+        tZ = mid[1] - (mx * sn + mz2 * c);
+        for (Body f : new Body[] {me, foe}) {
+            float[] st = f == me ? a : b;
+            float[] l = toLine(st[0], st[1], newSpin, tX, tZ);
+            f.x = l[0];
+            f.depth = l[1];
+        }
+        spin = newSpin;
+    }
 
     /**
      * A stage: its sky (top, middle, low), the haze far off, the floor's tiles, its ring and middle, the hills behind,
@@ -48,21 +127,27 @@ public class Showdown extends ArcadeGame {
      */
     private record Stage(String name, int skyTop, int skyMid, int skyLow, int haze, int tileA, int tileB, int ringA, int ringB,
                          int middle, int farHills, int nearHills, int feature, int wall, boolean walls, boolean wallBreak,
-                         boolean floorBreak, int lowA, int lowB) {}
+                         boolean floorBreak, int lowA, int lowB, int outside) {}
 
     private static final Stage[] STAGES = {
             new Stage("SUNSET TEMPLE", 0x1A1640, 0x8A3A6A, 0xFF9A5A, 0xC87A6A, 0x8A7A72, 0x6E5F5A, 0xB89A6A, 0xA0845A, 0xC83C3C,
-                    0xFF4A2A5A, 0xFF2A1838, 0, 0x3AE8FF, true, true, false, 0, 0),
+                    0xFF4A2A5A, 0xFF2A1838, 0, 0x3AE8FF, true, true, false, 0, 0, 0x3A5A2A),
             new Stage("NEON ROOFTOP", 0x05051A, 0x2A0A4A, 0x6A1A8A, 0x3A2A6A, 0x3A3A4A, 0x2A2A38, 0x40E0FF, 0x30B0D0, 0xFF3AA0,
-                    0xFF1A1030, 0xFF0E0820, 1, 0xFF4AD0, true, false, true, 0x5A4A3A, 0x4A3A2E),
+                    0xFF1A1030, 0xFF0E0820, 1, 0xFF4AD0, true, false, true, 0x5A4A3A, 0x4A3A2E, 0x0A0A16),
             new Stage("FROZEN CAVERN", 0x0A1A2A, 0x2A5A7A, 0x8AD0E8, 0x9AC8D8, 0xB8DCE8, 0x9CC4D4, 0xE0F4FF, 0xC8E8F4, 0x3A8AC8,
-                    0xFF5A8AA0, 0xFF3A6A80, 2, 0xFFFFFF, false, false, false, 0, 0),
+                    0xFF5A8AA0, 0xFF3A6A80, 2, 0xFFFFFF, false, false, false, 0, 0, 0xC8E4F0),
             new Stage("VOLCANO FORGE", 0x1A0505, 0x6A1A0A, 0xFF6A1A, 0xA0401A, 0x4A3A34, 0x3A2C28, 0xFF8A2A, 0xD06A1A, 0xFFD040,
-                    0xFF3A1208, 0xFF200A04, 3, 0xFF8A3A, true, true, true, 0x6A2A10, 0x5A200C),
+                    0xFF3A1208, 0xFF200A04, 3, 0xFF8A3A, true, true, true, 0x6A2A10, 0x5A200C, 0xFF4A10),
             new Stage("THE VOID", 0x000000, 0x1A0A2A, 0x4A1A6A, 0x2A1A3A, 0x1A1A24, 0x101018, 0x8A3AFF, 0x6A2ACC, 0xFF3AFF,
-                    0xFF120A1E, 0xFF0A0612, 4, 0xB04AFF, true, false, false, 0, 0)};
+                    0xFF120A1E, 0xFF0A0612, 4, 0xB04AFF, true, false, false, 0, 0, 0x05020A),
+            new Stage("HARBOR NIGHT", 0x020614, 0x0A1A3A, 0x1A3A6A, 0x1A2A4A, 0x6A4A30, 0x5A3C26, 0x8A6A40, 0x7A5A34, 0xC8A040,
+                    0xFF0A1428, 0xFF060C1A, 5, 0xFFC860, true, true, true, 0x3A2A20, 0x2E2018, 0x1A3A6A),
+            new Stage("SAKURA COURT", 0x5AA8E8, 0xB8D8F0, 0xFFD8E8, 0xF0D0E0, 0xD8C8B8, 0xC8B4A4, 0xE89AB8, 0xD88AA8, 0xC83C5A,
+                    0xFF7A98B8, 0xFF5A7A6A, 6, 0xFF9AC8, true, true, false, 0, 0, 0x5A8A4A)};
     /** The stage now; the one picked (4: random); the floor broken through; how far each wall's been broken back. */
     private int stage, stageChoice, pickPhase;
+    /** The stages you can pick (the fifth, THE VOID, is the boss's); after them, random. */
+    private static final int[] PICKABLE = {0, 1, 2, 3, 5, 6};
     private boolean floorBroken;
     /** 0 arcade (the ladder, then the boss), 1 survival (one round each, health carried over). */
     private int mode, survived, carryHp = MAX_HP;
@@ -73,10 +158,14 @@ public class Showdown extends ArcadeGame {
 
     /** The stage for the next fight: the one picked, or one at random (the boss: always its own). */
     private void pickStage() {
-        stage = foe != null && foe.who == BOSS ? 4 : stageChoice == 4 ? random.nextInt(4) : stageChoice;
+        stage = foe != null && foe.who == BOSS ? 4 : stageChoice == PICKABLE.length ? PICKABLE[random.nextInt(PICKABLE.length)]
+                : PICKABLE[stageChoice];
         floorBroken = false;
-        wallL = st().walls() ? 10 : -100000;
-        wallR = st().walls() ? W - 10 : 100000;
+        float r = st().walls() ? 86 : 100000;
+        arena[0] = W / 2.0F - r;
+        arena[1] = W / 2.0F + r;
+        arena[2] = -r;
+        arena[3] = r;
     }
     private static final int MAX_HP = 170;
     /** Gravity a frame: standing jumps, and someone juggled (floatier). */
@@ -93,7 +182,7 @@ public class Showdown extends ArcadeGame {
     @Override
     public String music() {
         if (picking || me == null) return "music_select";
-        return new String[] {"music_temple", "music_rooftop", "music_cavern", "music_forge", "music_void"}[stage];
+        return new String[] {"music_temple", "music_rooftop", "music_cavern", "music_forge", "music_void", "music_harbor", "music_sakura"}[stage];
     }
 
     private enum Level { HIGH, MID, LOW, THROW }
@@ -280,6 +369,8 @@ public class Showdown extends ArcadeGame {
          *  when a chain throw was asked for (the thrower) or escaped (the one thrown). */
         boolean bt;
         int stance, chainAt = -100, escapeAt = -100;
+        /** The arena wall it's up against (0-3), or -1. */
+        int wallSide = -1;
         /** While-standing up until; parried at; the combo's damage, how long its counter stays up after; how many moves
          *  it's started (so the cabinet's fighter reacts once to each). */
         int wsUntil = -100, parryAt = -100, comboDmg, comboShow, serial;
@@ -423,9 +514,10 @@ public class Showdown extends ArcadeGame {
 
     private void newRound() {
         round++;
-        float mid = Mth.clamp(W / 2.0F, wallL + 40, wallR - 40);
-        me.x = mid - 36;
-        foe.x = mid + 36;
+        spin = oSpin = 0; // (the line back straight across the middle of the arena)
+        tX = tZ = oTX = oTZ = 0;
+        me.x = W / 2.0F - 36;
+        foe.x = W / 2.0F + 36;
         for (Body b : new Body[] {me, foe}) {
             b.y = b.vx = b.vy = b.depth = 0;
             b.hp = MAX_HP;
@@ -527,7 +619,7 @@ public class Showdown extends ArcadeGame {
         if (roundOver > 0) {
             for (Body b : new Body[] {me, foe}) {
                 physics(b);
-                b.x = Mth.clamp(b.x, wallL, wallR);
+                keepInArena(b, false);
             }
             if (--roundOver == 0) endRound();
             return;
@@ -571,31 +663,8 @@ public class Showdown extends ArcadeGame {
             me.x -= push;
             foe.x += push;
         }
-        for (Body b : new Body[] {me, foe}) {
-            if (b.x < wallL || b.x > wallR) {
-                // slammed into the wall while reeling: a wall splat
-                if ((b.state == State.AIR || b.state == State.HIT) && Math.abs(b.vx) > 0.33F && b.wallHits == 0) {
-                    b.state = State.SPLAT;
-                    b.stun = 42;
-                    b.vx = 0;
-                    b.vy = 0;
-                    b.wallHits = 1;
-                    shake = 6;
-                    call("WALL SPLAT!", b.x, GROUND - b.y - 40);
-                    sfx(Sfx.WALL_SPLAT);
-                }
-                b.x = Mth.clamp(b.x, wallL, wallR);
-            }
-        }
-        // the line between them turns back straight when nobody's stepping: the camera swings round with it
-        boolean stepping = me.state == State.SIDESTEP || me.state == State.SIDEWALK || foe.state == State.SIDESTEP || foe.state == State.SIDEWALK;
-        if (!stepping) {
-            for (Body b : new Body[] {me, foe}) {
-                float d = Mth.clamp(-b.depth * 0.05F, -0.35F, 0.35F); // (easing back onto the line, not snapping)
-                b.depth += d;
-                spin += d * (b == me ? 3.0F : -3.0F) * b.facing;
-            }
-        }
+        for (Body b : new Body[] {me, foe}) keepInArena(b, true);
+        realign(); // (the line through them again: the camera swinging round as they circle)
         face(me);
         face(foe);
         for (Body b : new Body[] {me, foe}) {
@@ -725,7 +794,6 @@ public class Showdown extends ArcadeGame {
                 int frames = in ? 20 : 26;
                 float far = in ? 15 : 18;
                 b.depth += b.sideDir * far * (ease(Math.min(1, b.t / (float) frames)) - ease((b.t - 1) / (float) frames));
-                b.depth = Mth.clamp(b.depth, -34, 34);
                 if (b.t >= frames) {
                     boolean holding = b.in != null ? (b.sideDir > 0 ? b.in.kU : b.in.kD) : b.buffered;
                     b.state = holding ? State.SIDEWALK : State.STAND;
@@ -734,9 +802,6 @@ public class Showdown extends ArcadeGame {
             }
             case SIDEWALK -> { // (circling: picking up speed out of the step)
                 b.depth += b.sideDir * Math.min(0.42F, 0.2F + b.t * 0.02F);
-                // circling round them: the camera follows
-                spin += b.sideDir * 0.53F * b.facing * (b == me ? 1 : -1);
-                b.depth = Mth.clamp(b.depth, -34, 34);
                 if (b.in == null && !b.buffered) b.state = State.STAND;
             }
             case BLOCK, HIT -> {
@@ -1192,14 +1257,16 @@ public class Showdown extends ArcadeGame {
         if (juggled || m.launch() > 0 || m.is(KND) || m.is(CARRY)) o.bt = false;
         o.crumple = false;
         boolean heavy = m.is(KND) || m.is(CARRY) || m.launch() > 0;
-        if (o.state == State.SPLAT && heavy && st().wallBreak() && Math.abs((o.x < W / 2.0F ? wallL : wallR) - o.x) < 4) {
-            // a wall that breaks: they go through it, into the next area (the wall now further back)
-            boolean leftSide = o.x < W / 2.0F;
-            if (leftSide) wallL -= 110;
-            else wallR += 110;
+        if (o.state == State.SPLAT && heavy && st().wallBreak() && o.wallSide >= 0) {
+            // a wall that breaks: they go through it, into the next area (that wall now further back)
+            int ws = o.wallSide;
+            arena[ws] += ws % 2 == 0 ? -110 : 110;
+            float[] out = {ws == 0 ? -1 : ws == 1 ? 1 : 0, ws == 2 ? -1 : ws == 3 ? 1 : 0};
+            float a = spin * SPIN_RAD;
+            float along = out[0] * Mth.cos(a) + out[1] * Mth.sin(a); // (that way, along their line)
             o.state = State.AIR;
             o.vy = 1.0F;
-            o.vx = (leftSide ? -1 : 1) * 1.6F;
+            o.vx = (along >= 0 ? 1 : -1) * 1.6F;
             o.y = Math.max(o.y, 6);
             o.wallHits = 0;
             shake = 12;
@@ -1615,7 +1682,8 @@ public class Showdown extends ArcadeGame {
                 return;
             }
             if (r > 0.9F && o.free() && !o.airborne()) {
-                b.x = Mth.clamp(o.x - o.facing * 18, wallL, wallR);
+                b.x = o.x - o.facing * 18;
+                keepInArena(b, false);
                 b.facing = toward(b);
                 o.bt = true; // (it's behind you: you're facing away from it)
                 flash = 3;
@@ -1908,8 +1976,8 @@ public class Showdown extends ArcadeGame {
                     pickPhase = 1;
                 }
             } else { // (the stage - or random)
-                if (left(key)) stageChoice = (stageChoice + 4) % 5;
-                if (right(key)) stageChoice = (stageChoice + 1) % 5;
+                if (left(key)) stageChoice = (stageChoice + PICKABLE.length) % (PICKABLE.length + 1);
+                if (right(key)) stageChoice = (stageChoice + 1) % (PICKABLE.length + 1);
                 if (left(key) || right(key)) sfx(Sfx.BLIP);
                 if (key == GLFW.GLFW_KEY_K || key == GLFW.GLFW_KEY_I) {
                     pickPhase = 0;
@@ -2276,6 +2344,8 @@ public class Showdown extends ArcadeGame {
         oCamU = camU;
         oCamD = camD;
         oSpin = spin;
+        oTX = tX;
+        oTZ = tZ;
         float sep = Math.abs(me.x - foe.x);
         camU += ((me.x + foe.x) / 2 - camU) * 0.091F; // (as quick a frame as a quarter a 20th)
         camV += ((me.depth + foe.depth) / 2 - camV) * 0.091F;
@@ -2284,7 +2354,6 @@ public class Showdown extends ArcadeGame {
         for (Body b : new Body[] {me, foe}) {
             if (b.state == State.ATTACK && b.move == RAGE_ART && b.t < b.move.startup() + b.move.active() + 10) art = true;
         }
-        if (art) spin += 1.4F;
         camD += ((art ? 105 : Mth.clamp(sep * 0.8F + 95, 130, 240)) - camD) * (art ? 0.1F : 0.053F);
         for (Body b : new Body[] {me, foe}) {
             b.ox = b.x;
@@ -2330,6 +2399,8 @@ public class Showdown extends ArcadeGame {
         oCamU = camU;
         oCamD = camD;
         oSpin = spin;
+        oTX = tX;
+        oTZ = tZ;
         for (Body b : new Body[] {me, foe}) {
             b.ox = b.x;
             b.oy = b.y;
@@ -2898,12 +2969,16 @@ public class Showdown extends ArcadeGame {
         return (ticks + pt) / 3.0F;
     }
     private float cu, cd, csp, horizon, camH;
+    /** The line's place in the arena as drawn (between frames). */
+    private float rTX, rTZ;
     private static final float FL = 170;
 
     private void camera(float partial) {
         cu = Mth.lerp(partial, oCamU, camU);
         cd = Mth.lerp(partial, oCamD, camD);
         csp = Mth.lerp(partial, oSpin, spin);
+        rTX = Mth.lerp(partial, oTX, tX);
+        rTZ = Mth.lerp(partial, oTZ, tZ);
         camH = 26 + cd * 0.1F;
         horizon = 122 - camH * FL / cd;
     }
@@ -3067,7 +3142,12 @@ public class Showdown extends ArcadeGame {
         }
         // the sun (the temple's low and gold, the forge's huge and red), with its glow
         float sunX = W * 0.68F - Mth.wrapDegrees(turn * Mth.RAD_TO_DEG) * 3.0F;
-        if (st().feature() == 0 || st().feature() == 3) {
+        if (st().feature() == 5) { // (the harbour: a big moon over the sea)
+            for (int r = 18; r > 0; r -= 3) box(g, x0, y0, sunX - r, horizon - 40 - r * 0.5F, r * 2, r, ((int) (30 - r) << 24) | 0xC8D8FF);
+            box(g, x0, y0, sunX - 7, horizon - 48, 14, 14, 0xFFF0F4FF);
+            box(g, x0, y0, sunX - 3, horizon - 45, 3, 3, 0xFFD0D8EE);
+        }
+        if (st().feature() == 0 || st().feature() == 3 || st().feature() == 6) {
             boolean red = st().feature() == 3;
             int glow = red ? 0xFF5A2A : 0xFFD08A;
             for (int r = red ? 26 : 16; r > 0; r -= 3) {
@@ -3156,6 +3236,51 @@ public class Showdown extends ArcadeGame {
                     box(g, x0, y0, ex, ey, 1, 1, ((int) (255 * (1 - life / 60)) << 24) | (i % 3 == 0 ? 0xFFD040 : 0xFF6A2A));
                 }
             }
+            case 5 -> { // (the sea to the horizon, boats' lights, a lighthouse sweeping its beam)
+                box(g, x0, y0, 0, horizon - 6, W, 6, 0xFF0A1A34);
+                for (int i = 0; i < 24; i++) {
+                    float wx = Math.floorMod((int) (i * 17 - slide * 0.6F + vt() * 0.3F), W);
+                    box(g, x0, y0, wx, horizon - 5 + (i % 3) * 2, 4, 1, 0x60A8C8FF);
+                }
+                for (int i = 0; i < 4; i++) {
+                    float bx = Math.floorMod((int) (i * 53 + 20 - slide * 0.8F), W + 20) - 10;
+                    box(g, x0, y0, bx, horizon - 8, 6, 2, 0xFF101420);
+                    box(g, x0, y0, bx + 2, horizon - 10, 1, 1, ((int) vt() / 12 + i) % 2 == 0 ? 0xFFFFD060 : 0xFFFF6040);
+                }
+                float lx = Math.floorMod((int) (150 - slide), W + 80) - 40;
+                box(g, x0, y0, lx - 3, horizon - 34, 6, 28, 0xFFE8E0D8);
+                for (int k = 0; k < 4; k++) box(g, x0, y0, lx - 3, horizon - 30 + k * 7, 6, 3, 0xFFC03030);
+                box(g, x0, y0, lx - 4, horizon - 38, 8, 4, 0xFF202028);
+                box(g, x0, y0, lx - 2, horizon - 37, 4, 2, 0xFFFFF0A0);
+                float beam = Mth.sin(vt() * 0.08F);
+                for (int k = 1; k < 12; k++) { // (the beam sweeping round)
+                    float bw = k * 4 * Math.abs(beam);
+                    box(g, x0, y0, beam > 0 ? lx + 4 + (k - 1) * bw * 0.9F : lx - 4 - k * bw * 0.9F, horizon - 37 - k * 0.3F, bw, 1 + k * 0.3F,
+                            ((int) (60 - k * 4) << 24) | 0xFFF0A0);
+                }
+            }
+            case 6 -> { // (cherry trees in bloom on the hills, a pagoda, petals drifting down)
+                for (int i = 0; i < 9; i++) {
+                    float tx = Math.floorMod((int) (i * 29 + 9 - slide), W + 40) - 20;
+                    float ty = horizon - 12 - (i * 7 % 6);
+                    box(g, x0, y0, tx - 1, ty, 2, 8, 0xFF5A3A2A);
+                    for (int k = 0; k < 5; k++) {
+                        float ox = Mth.sin(i * 3.1F + k * 1.7F) * 5, oy = Mth.cos(i * 2.3F + k * 1.3F) * 3;
+                        box(g, x0, y0, tx + ox - 3, ty - 4 + oy, 6, 5, k % 2 == 0 ? 0xFFFFB8D0 : 0xFFF098B8);
+                    }
+                }
+                float px = Math.floorMod((int) (70 - slide), W + 100) - 50;
+                for (int k = 0; k < 4; k++) {
+                    float w = 22 - k * 5, y = horizon - 14 - k * 8;
+                    box(g, x0, y0, px - w / 2, y, w, 2, 0xFF6A1A28);
+                    box(g, x0, y0, px - w / 2 + 3, y + 2, w - 6, 6, 0xFFE8D8C0);
+                }
+                for (int i = 0; i < 36; i++) { // (petals drifting across and down)
+                    float sx = Math.floorMod((int) (i * 37 - slide * 0.4F + vt() * (0.6F + i % 3 * 0.3F)), W);
+                    float sy = Math.floorMod((int) (i * 23 + vt() * (0.4F + i % 4 * 0.15F)), H);
+                    box(g, x0, y0, sx, sy, 1.5F, 1, 0xD0FFC0D8);
+                }
+            }
             default -> { // (the void: shards hanging in the dark, slowly turning)
                 for (int i = 0; i < 12; i++) {
                     float tx = Math.floorMod((int) (i * 29 + 5 - slide * (0.5F + i % 3 * 0.25F)), W + 40) - 20;
@@ -3168,65 +3293,94 @@ public class Showdown extends ArcadeGame {
         }
     }
 
-    /** The stone stage, in its own space (turned under them by the camera's swing): tiles, a circle, the fog far off. */
+    /**
+     * The floor, in the arena's own space (seen along their line as it turns): its tiles, the ring in the middle, the
+     * floor below once it's broken through - and outside the walls, what's out there (grass, a drop, lava, the sea ...).
+     */
     private void floor() {
-        float turn = csp * 0.011F;
-        float c = Mth.cos(turn), s = Mth.sin(turn);
-        float pivot = W / 2.0F;
         int tile = 24;
-        int gx0 = (int) Math.floor((cu - 260) / tile), gx1 = (int) Math.ceil((cu + 260) / tile);
+        Stage sg = st();
+        float[] at = toStage(cu, camV, csp, rTX, rTZ); // (where the camera's looking, on the floor)
+        int gx0 = (int) Math.floor((at[0] - 280) / tile), gx1 = (int) Math.ceil((at[0] + 280) / tile);
+        int gz0 = (int) Math.floor((at[1] - 280) / tile), gz1 = (int) Math.ceil((at[1] + 280) / tile);
+        float midX = W / 2.0F;
         for (int gx = gx0; gx <= gx1; gx++) {
-            for (int gz = -8; gz <= 16; gz++) {
+            for (int gz = gz0; gz <= gz1; gz++) {
                 float[][] cam = new float[4][];
                 boolean ok = true;
                 float[][] corners = {{gx * tile, gz * tile}, {gx * tile, (gz + 1) * tile}, {(gx + 1) * tile, (gz + 1) * tile}, {(gx + 1) * tile, gz * tile}};
                 for (int i = 0; i < 4; i++) {
-                    float wx = corners[i][0] - pivot, wz = corners[i][1];
-                    float u = pivot + wx * c + wz * s, v = -wx * s + wz * c; // (stage -> the fighters' line)
-                    cam[i] = view(u, 0, v);
+                    float[] l = toLine(corners[i][0], corners[i][1], csp, rTX, rTZ);
+                    cam[i] = view(l[0], 0, l[1]);
                     if (cam[i][2] < 6) ok = false;
                 }
                 if (!ok) continue;
                 float dist = (cam[0][2] + cam[2][2]) / 2;
+                float cx = (gx + 0.5F) * tile, cz = (gz + 0.5F) * tile;
+                boolean inside = cx > arena[0] && cx < arena[1] && cz > arena[2] && cz < arena[3];
                 boolean light = Math.floorMod(gx + gz, 2) == 0;
-                Stage sg = st();
-                boolean below = floorBroken && sg.floorBreak(); // (through the floor: the one below)
-                int base = below ? (light ? sg.lowA() : sg.lowB()) : light ? sg.tileA() : sg.tileB();
-                // the circle in the middle of the stage
-                float mx = (gx + 0.5F) * tile - pivot, mz = (gz + 0.5F) * tile;
-                float rr = Mth.sqrt(mx * mx + mz * mz);
-                if (!below && Math.abs(rr - 60) < 12) base = light ? sg.ringA() : sg.ringB();
-                if (!below && rr < 14) base = sg.middle();
-                if (sg.feature() == 3 && !below && Math.floorMod(gx * 7 + gz * 3, 11) == 0) { // (the forge: lava in the cracks)
-                    base = mixRgb(base, 0xFF6A1A, 0.5F + 0.3F * Mth.sin(vt() * 0.2F + gx));
+                int base;
+                if (!inside && sg.walls()) { // (beyond the walls)
+                    base = sg.outside();
+                    if (sg.feature() == 5) base = mixRgb(base, 0x3A6AA0, 0.3F + 0.3F * Mth.sin(vt() * 0.15F + gx * 0.9F + gz * 0.5F)); // (the sea)
+                    if (sg.feature() == 3) base = mixRgb(base, 0xFFB040, 0.3F + 0.3F * Mth.sin(vt() * 0.2F + gx + gz * 1.3F)); // (lava)
+                    if (sg.feature() == 0 || sg.feature() == 6) base = mixRgb(base, 0x000000, light ? 0 : 0.12F);
+                } else {
+                    boolean below = floorBroken && sg.floorBreak(); // (through the floor: the one below)
+                    base = below ? (light ? sg.lowA() : sg.lowB()) : light ? sg.tileA() : sg.tileB();
+                    float mx = cx - midX, rr = Mth.sqrt(mx * mx + cz * cz); // (the ring in the middle of the arena)
+                    if (!below && Math.abs(rr - 60) < 12) base = light ? sg.ringA() : sg.ringB();
+                    if (!below && rr < 14) base = sg.middle();
+                    if (sg.feature() == 3 && !below && Math.floorMod(gx * 7 + gz * 3, 11) == 0) { // (the forge: lava in the cracks)
+                        base = mixRgb(base, 0xFF6A1A, 0.5F + 0.3F * Mth.sin(vt() * 0.2F + gx));
+                    }
+                    if (sg.walls() && (Math.abs(cx - arena[0]) < tile || Math.abs(cx - arena[1]) < tile
+                            || Math.abs(cz - arena[2]) < tile || Math.abs(cz - arena[3]) < tile)) {
+                        base = mixRgb(base, 0x000000, 0.18F); // (the edge by the walls, darker)
+                    }
                 }
                 int col = mixRgb(base, sg.haze(), (dist - 150) / 650);
-                int[] cs = {col, col, col, col};
-                quad(cam, cs, 1.0F, 11);
+                quad(cam, new int[] {col, col, col, col}, 1.0F, 11);
             }
         }
     }
 
-    /** The walls at either end of their line: shimmering screens of light. */
+    /** The arena's walls, all four sides: screens of light (see-through where they're between the camera and them). */
     private void walls() {
         if (!st().walls()) return;
-        for (float wall : new float[] {wallL - 6, wallR + 6}) {
-            for (int k = -4; k < 4; k++) {
-                float v0 = k * 16, v1 = v0 + 16;
-                float[][] cam = {view(wall, 0, v0), view(wall, 40, v0), view(wall, 40, v1), view(wall, 0, v1)};
-                int glow = st().wall();
-                quad(cam, new int[] {glow, mixRgb(glow, 0xFFFFFF, 0.5F), mixRgb(glow, 0xFFFFFF, 0.5F), glow}, 0.18F, 0);
+        float[] at = toStage(cu, camV, csp, rTX, rTZ);
+        int glow = st().wall();
+        for (int side = 0; side < 4; side++) {
+            boolean alongX = side >= 2;
+            float fixed = arena[side];
+            float from = alongX ? arena[0] : arena[2], to = alongX ? arena[1] : arena[3];
+            float push = side % 2 == 0 ? -2 : 2; // (just outside the floor they stand on)
+            for (float k = from; k < to; k += 16) {
+                float k1 = Math.min(to, k + 16);
+                float mid = (k + k1) / 2;
+                if (Math.abs((alongX ? mid : fixed) - at[0]) > 300 || Math.abs((alongX ? fixed : mid) - at[1]) > 300) continue;
+                float[] a = alongX ? new float[] {k, fixed + push} : new float[] {fixed + push, k};
+                float[] b = alongX ? new float[] {k1, fixed + push} : new float[] {fixed + push, k1};
+                float[] la = toLine(a[0], a[1], csp, rTX, rTZ), lb = toLine(b[0], b[1], csp, rTX, rTZ);
+                boolean nearSide = (la[1] + lb[1]) / 2 < camV - 20; // (between the camera and the fight)
+                float[][] cam = {view(la[0], 0, la[1]), view(la[0], 40, la[1]), view(lb[0], 40, lb[1]), view(lb[0], 0, lb[1])};
+                quad(cam, new int[] {glow, mixRgb(glow, 0xFFFFFF, 0.5F), mixRgb(glow, 0xFFFFFF, 0.5F), glow}, nearSide ? 0.06F : 0.2F, 0);
+                float[][] rim = {view(la[0], 0, la[1]), view(la[0], 2, la[1]), view(lb[0], 2, lb[1]), view(lb[0], 0, lb[1])};
+                quad(rim, new int[] {glow, glow, glow, glow}, nearSide ? 0.3F : 0.7F, 0); // (a bright line where wall meets floor)
             }
         }
     }
 
     /** Draws a fighter where it is between its last tick and this one (smooth at any frame rate), then puts it back. */
-    private static void between(Body b, float partial, Runnable draw) {
+    private void between(Body b, float partial, Runnable draw) {
         float x = b.x, y = b.y, d = b.depth;
         if (Math.abs(b.x - b.ox) < 40) { // (not across a teleport-like jump: a throw over the shoulder)
-            b.x = Mth.lerp(partial, b.ox, x);
+            // where it was and is on the floor, in between - then along the line as it's drawn now
+            float[] s0 = toStage(b.ox, b.oDepth, oSpin, oTX, oTZ), s1 = toStage(x, d, spin, tX, tZ);
+            float[] l = toLine(Mth.lerp(partial, s0[0], s1[0]), Mth.lerp(partial, s0[1], s1[1]), csp, rTX, rTZ);
+            b.x = l[0];
             b.y = Mth.lerp(partial, b.oy, y);
-            b.depth = Mth.lerp(partial, b.oDepth, d);
+            b.depth = l[1];
         }
         try {
             draw.run();
@@ -3780,12 +3934,16 @@ public class Showdown extends ArcadeGame {
 
     /** Picking the stage: the stage itself, live behind its name. */
     private void drawStagePick(GuiGraphics g, Font font, int x0, int y0, float partial) {
-        boolean random = stageChoice == 4;
-        stage = random ? (int) (vt() / 8) % 4 : stageChoice; // (random: flicking through them)
+        boolean random = stageChoice == PICKABLE.length;
+        stage = random ? PICKABLE[(int) (vt() / 8) % PICKABLE.length] : PICKABLE[stageChoice]; // (random: flicking through them)
         floorBroken = false;
         cu = W / 2.0F;
         cd = 170;
         csp = vt() * 2;
+        camV = 0;
+        float sa = csp * SPIN_RAD; // (turning round the arena's middle)
+        rTX = W / 2.0F - W / 2.0F * Mth.cos(sa);
+        rTZ = -W / 2.0F * Mth.sin(sa);
         camH = 26 + cd * 0.1F;
         horizon = 122 - camH * FL / cd;
         sky(g, x0, y0);

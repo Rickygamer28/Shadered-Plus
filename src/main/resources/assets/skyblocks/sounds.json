@@ -271,10 +271,26 @@
       }
     ]
   },
+  "arcade.music_harbor": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/music_harbor",
+        "stream": true
+      }
+    ]
+  },
   "arcade.music_rooftop": {
     "sounds": [
       {
         "name": "skyblocks:arcade/music_rooftop",
+        "stream": true
+      }
+    ]
+  },
+  "arcade.music_sakura": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/music_sakura",
         "stream": true
       }
     ]
