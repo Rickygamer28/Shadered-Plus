@@ -150,6 +150,9 @@ public class Showdown extends ArcadeGame {
 
     private void newMatch() {
         round = 0;
+        poses.clear(); // (the last match's fighters: forgotten)
+        shownHp.clear();
+        trails.clear();
         me = new Body(FIGHTERS[pick], 60);
         foe = new Body(foeStyle(), W - 60);
         newRound();

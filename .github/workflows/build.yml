@@ -120,4 +120,4 @@ jobs:
           echo "::notice::screenshots: $(ls shots | grep -v _f | tr '\n' ' ')"
           cd shots && git init -q && git checkout -q -b ci-shots-polish && git add . \
             && git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "render test ${GITHUB_SHA}" \
-            && git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" ci-shots-1.21.1
+            && git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" ci-shots-polish
