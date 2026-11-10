@@ -292,7 +292,7 @@ public class ArcadeScreen extends Screen {
         }
         ticks++;
         if (mode == Mode.PLAYING && ext() != null) {
-            ext().tick();
+            if (ext().rate() == 20) ext().tick(); // (a faster game: ticked from render, on its own clock - see runFast)
             score = ext().score();
             if (ext().over()) {
                 over();
@@ -724,6 +724,35 @@ public class ArcadeScreen extends Screen {
 
     private final ArcadeControls.Pad pad = new ArcadeControls.Pad();
 
+    // a game faster than the world's 20 ticks (the fighting game, at 60): ticked here, as often as its clock says
+    private long fastLast = -1;
+    private double fastDue;
+
+    /** Ticks a faster game for the time since the last frame (a few at most: a slow frame slows it, not skips it);
+     *  how far it is into its next tick. */
+    private float runFast() {
+        var g = ext();
+        if (mode != Mode.PLAYING || g == null || g.rate() == 20) {
+            fastLast = -1;
+            fastDue = 0;
+            return 0;
+        }
+        long now = System.nanoTime();
+        if (fastLast >= 0) fastDue += (now - fastLast) / 1.0E9 * g.rate();
+        fastLast = now;
+        fastDue = Math.min(fastDue, 4);
+        while (fastDue >= 1 && mode == Mode.PLAYING) {
+            fastDue -= 1;
+            g.tick();
+            score = g.score();
+            if (g.over()) {
+                over();
+                break;
+            }
+        }
+        return (float) Math.min(1, fastDue);
+    }
+
     /** A controller: in a game, what its buttons are set to there; at the title, start, change game, the controls. */
     private void pollPad() {
         java.util.List<Integer> pressed = new java.util.ArrayList<>(), released = new java.util.ArrayList<>();
@@ -774,6 +803,7 @@ public class ArcadeScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mx, int my, float partialTick) {
         pollPad();
+        float fastPartial = runFast();
         super.render(g, mx, my, partialTick);
         int x0 = left0, y0 = top0;
         // the cabinet's frame round the screen
@@ -787,7 +817,7 @@ public class ArcadeScreen extends Screen {
             drawTitle(g, x0, y0, partialTick);
         } else if (ext() != null) {
             g.enableScissor(x0, y0, x0 + W, y0 + H);
-            ext().draw(g, font, x0, y0, partialTick);
+            ext().draw(g, font, x0, y0, ext().rate() == 20 ? partialTick : fastPartial);
             g.disableScissor();
         } else if (game == 0) {
             drawSnake(g, x0, y0);

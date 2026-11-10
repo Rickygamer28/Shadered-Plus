@@ -11,84 +11,142 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * Shadered Showdown: a 3D fighting game against the cabinet that moves and combos like Tekken 7 - its own fighters and
- * moves, the same systems. Four limbs, 1 2 3 4 (U I J K), and moves in numpad notation from the way you're holding.
+ * moves, the same systems. It runs at 60 frames a second on its own clock (not the world's 20 ticks), and every move
+ * has real frame data: its startup (i10 jab, i15 launchers), and how far ahead or behind it leaves you on block and on
+ * hit - so a -13 launcher blocked gets launched back, a +1 jab keeps your turn. Four limbs, 1 2 3 4 (U I J K), and
+ * moves in numpad notation from the way you're holding.
  *
  * <p>Movement: walk, dash (f,f) into a run, backdash (b,b - chain them), sidestep (tap up or down) and sidewalk (hold
- * it), the crouch dash (f,n,d,df - under highs, into the dragon upper), jumps (held off a moment, so uf+4 can be a
- * hopkick). Highs, mids and lows: stand to block highs and mids, crouch for lows (highs go over you). While-standing
- * moves as you let go of a crouch. Strings (1,1,2  1,2,4  1,2,3  3,4), launchers (df+2, ws2, cd+2, uf+4), juggles that
- * hurt less as they go, one screw a combo (b+2, f+3) to carry them on, enders (f+2) into the wall for a wall splat.
- * Counter hits (and staggers), power crush (b+1+2: soaks up highs and mids), low parry (df just before a low), throws
- * (1+3, 2+4, broken with 1 or 2), tech rolls and get-up kicks, rage and the rage art. H shows the move list.
+ * it), jumps (held off a moment, so uf+4 can be a hopkick). Highs, mids and lows: stand to block highs and mids,
+ * crouch for lows (highs go over you). While-standing moves as you let go of a crouch. Strings (1,1,2  1,2,4  1,2,3
+ * 3,4), launchers (df+2, ws2, uf+4), juggles that hurt less as they go, one screw a combo (b+2, f+3) to carry them on,
+ * enders (f+2) into the wall for a wall splat and wall combos. Counter hits and crumples, power crushes, low parry
+ * (df just as a low comes), throws (1+3, 2+4, broken with 1 or 2), tech rolls, get-up kicks and rolls, ki charge
+ * (1+2+3+4), rage with a rage art (df+1+2) or a rage drive. Each fighter has its own: RIKU the crouch dash (f,n,d,df)
+ * and its just-frame PERFECT DRAGON, NEKO attacks out of sidesteps, a slide and a backflip, ROBO a command throw and
+ * heavy power crushes, BLAZE the d,df,f+2 burning fist. H shows the move list; P cycles practice (a dummy that stands,
+ * blocks everything, or fights - and your moves' frame data shown).
  */
 public class Showdown extends ArcadeGame {
-    private static final int GROUND = 128, ROUND_TICKS = 60 * 20, WALL_L = 10, WALL_R = W - 10;
-    private static final int MAX_HP = 100;
+    /** It runs at 60 frames a second, like the real thing: every move's frame data is in those frames. */
+    private static final int FPS = 60;
+    private static final int GROUND = 128, ROUND_FRAMES = 60 * FPS, WALL_L = 10, WALL_R = W - 10;
+    private static final int MAX_HP = 170;
+    /** Gravity a frame: standing jumps, and someone juggled (floatier). */
+    private static final float GRAVITY = 0.4F / 9, GRAVITY_AIR = 0.06F;
+    /** How much a frame takes off a slide (a push back on block or hit). */
+    private static final float SLIDE = 0.9086F;
+
+    @Override
+    public int rate() {
+        return FPS;
+    }
 
     private enum Level { HIGH, MID, LOW, THROW }
 
     /** How a move looks while it's out: which limb, at which height. */
     private enum Pose { JAB, CROSS, LOWPUNCH, MIDKICK, HIGHKICK, LOWKICK, SWEEP, UPPER, THROW, AIRKICK, TACKLE, RAGE, SPIN, PALM }
 
-    // what else a move does: a screw (spins someone juggled, carrying them on - once a combo), a power crush (soaks up
-    // highs and mids while it comes out), ducks highs, hops over lows, carries them off (to the wall), hits them on the floor
-    private static final int SCREW = 1, CRUSH = 2, DUCK = 4, HOP = 8, CARRY = 16;
+    // what else a move does
+    private static final int SCREW = 1;      // spins someone juggled and carries them on - once a combo
+    private static final int CRUSH = 2;      // power crush: soaks up highs and mids while it comes out
+    private static final int DUCK = 4;       // goes under highs
+    private static final int HOP = 8;        // goes over lows
+    private static final int CARRY = 16;     // sends them flying off (to the wall: a wall splat)
+    private static final int KND = 32;       // knocks them down
+    private static final int HOMING = 64;    // turns to catch a sidestep
+    private static final int CH_LAUNCH = 128; // a counter hit launches
+    private static final int CH_CRUMPLE = 256; // a counter hit crumples them (time for a launcher)
+    private static final int ELECTRIC = 512; // a just-frame one: faster, safe, crackling
+    private static final int BREAK_BOTH = 1024; // a command throw: broken with 1+2
+    private static final int UNBLOCKABLE = 2048;
+    private static final int GROUND_HIT = 4096; // hits someone lying down
 
-    /** A move: its button (1-4), its speed (ticks before, during, after it hits), where and how hard, what it does on hit
-     *  and block, and the moves that can follow it in a string. */
+    /**
+     * A move, in frames: its button (1-4; 0 for none), its startup (the frame it first hits on - "i15"), how long it's
+     * out, its recovery after; where and how hard; the frames it leaves you ahead (+) or behind (-) when it's blocked and
+     * when it hits, as in the move lists; what it does; the moves that can follow it in a string.
+     */
     private record Move(String name, int button, Pose pose, Level level, int startup, int active, int recovery, int damage,
-                        int reach, int hitstun, int blockstun, float launch, boolean knockdown, boolean homing, int flags,
-                        Move[] next) {
+                        int reach, int onBlock, int onHit, float launch, int flags, Move[] next) {
         boolean is(int flag) {
             return (flags & flag) != 0;
         }
+
+        int total() {
+            return startup + active + recovery;
+        }
     }
 
-    // ---- the strings: 1,1,2  1,2,4  1,2,3  3,4 ----
-    private static final Move ELBOW_FINISH = new Move("RISING ELBOW", 2, Pose.UPPER, Level.MID, 4, 2, 12, 10, 24, 16, 1, 0, false, false, 0, null);
-    private static final Move JAB_2 = new Move("JAB", 1, Pose.JAB, Level.HIGH, 2, 2, 5, 5, 22, 9, 6, 0, false, false, 0, new Move[] {ELBOW_FINISH});
-    private static final Move CROSS_KICK = new Move("CROSS KICK", 4, Pose.HIGHKICK, Level.HIGH, 5, 2, 10, 12, 30, 14, 4, 0, true, false, 0, null);
-    private static final Move CROSS_LOW = new Move("LOW SNAP", 3, Pose.LOWKICK, Level.LOW, 5, 2, 12, 8, 27, 10, -4, 0, false, false, 0, null);
-    private static final Move CROSS = new Move("CROSS", 2, Pose.CROSS, Level.HIGH, 3, 2, 6, 8, 25, 10, 6, 0, false, false, 0, new Move[] {CROSS_KICK, CROSS_LOW});
-    private static final Move JAB = new Move("JAB", 1, Pose.JAB, Level.HIGH, 2, 2, 4, 5, 22, 8, 6, 0, false, false, 0, new Move[] {JAB_2, CROSS});
-    private static final Move WHIRL_KICK = new Move("WHIRL KICK", 4, Pose.HIGHKICK, Level.HIGH, 5, 3, 12, 13, 30, 0, -2, 0, true, false, 0, null);
-    private static final Move MID_KICK = new Move("MID KICK", 3, Pose.MIDKICK, Level.MID, 4, 2, 8, 10, 28, 12, 3, 0, false, false, 0, new Move[] {WHIRL_KICK});
-    private static final Move HIGH_KICK = new Move("HIGH KICK", 4, Pose.HIGHKICK, Level.HIGH, 5, 3, 9, 13, 30, 14, 2, 0, false, true, 0, null);
-    // ---- forward, back ----
-    private static final Move HOMING = new Move("HOMING KICK", 4, Pose.MIDKICK, Level.MID, 6, 3, 11, 13, 30, 16, 1, 0, true, true, 0, null);
-    private static final Move LUNGE_PUNCH = new Move("LUNGE PUNCH", 2, Pose.CROSS, Level.MID, 5, 3, 13, 14, 32, 0, -4, 0, true, false, CARRY, null);
-    private static final Move SPIRAL_KICK = new Move("SPIRAL KICK", 3, Pose.MIDKICK, Level.MID, 5, 3, 13, 11, 28, 14, -3, 0, false, false, SCREW, null);
-    private static final Move SPIN_FIST = new Move("SPIN FIST", 2, Pose.SPIN, Level.HIGH, 5, 2, 12, 12, 28, 14, -2, 0, false, false, SCREW, null);
-    private static final Move IRON_PALM = new Move("IRON PALM", 2, Pose.PALM, Level.MID, 7, 3, 15, 16, 28, 0, -8, 0, true, false, CRUSH | CARRY, null);
-    // ---- down, down-forward, down-back ----
-    private static final Move LOW_PUNCH = new Move("CROUCH JAB", 1, Pose.LOWPUNCH, Level.MID, 2, 2, 4, 4, 20, 6, 5, 0, false, false, DUCK, null);
-    private static final Move CROUCH_STRAIGHT = new Move("CROUCH STRAIGHT", 2, Pose.LOWPUNCH, Level.MID, 3, 2, 7, 8, 24, 10, 2, 0, false, false, DUCK, null);
-    private static final Move LOW_KICK = new Move("LOW KICK", 3, Pose.LOWKICK, Level.LOW, 4, 2, 8, 6, 26, 9, 2, 0, false, false, DUCK, null);
-    private static final Move TOE_KICK = new Move("TOE KICK", 4, Pose.LOWKICK, Level.LOW, 3, 2, 7, 5, 24, 8, 0, 0, false, false, DUCK, null);
-    private static final Move SWEEP = new Move("SWEEP", 4, Pose.SWEEP, Level.LOW, 6, 3, 14, 9, 30, 0, -2, 0, true, false, DUCK, null);
-    private static final Move MID_CHECK = new Move("MID CHECK", 1, Pose.JAB, Level.MID, 3, 2, 5, 7, 24, 12, 8, 0, false, false, 0, null);
-    private static final Move LAUNCHER = new Move("LAUNCHER", 2, Pose.UPPER, Level.MID, 6, 2, 15, 12, 22, 0, -4, 6.2F, false, false, 0, null);
-    private static final Move FRONT_KICK = new Move("FRONT KICK", 3, Pose.MIDKICK, Level.MID, 4, 2, 8, 11, 28, 14, 2, 0, false, false, 0, null);
-    private static final Move STEP_KICK = new Move("STEP KICK", 4, Pose.MIDKICK, Level.MID, 4, 2, 9, 12, 30, 15, 1, 0, false, false, 0, null);
-    // ---- the crouch dash (f,n,d,df) ----
-    private static final Move SNAP_ELBOW = new Move("SNAP ELBOW", 1, Pose.LOWPUNCH, Level.MID, 3, 2, 8, 9, 24, 12, 0, 0, false, false, DUCK, null);
-    private static final Move DRAGON_UPPER = new Move("DRAGON UPPER", 2, Pose.UPPER, Level.MID, 5, 2, 18, 15, 24, 0, -8, 7.0F, false, false, DUCK, null);
-    private static final Move HOOK_SWEEP = new Move("HOOK SWEEP", 4, Pose.SWEEP, Level.LOW, 5, 3, 14, 10, 30, 0, -4, 0, true, false, DUCK, null);
-    // ---- while standing up from a crouch ----
-    private static final Move RISING_JAB = new Move("RISING JAB", 1, Pose.JAB, Level.MID, 2, 2, 6, 7, 24, 11, 4, 0, false, false, HOP, null);
-    private static final Move RISING_UPPER = new Move("RISING UPPER", 2, Pose.UPPER, Level.MID, 4, 2, 14, 13, 22, 0, -6, 6.0F, false, false, HOP, null);
-    private static final Move RISING_KNEE = new Move("RISING KNEE", 3, Pose.MIDKICK, Level.MID, 3, 2, 8, 11, 24, 14, 2, 0, false, false, HOP, null);
-    private static final Move RISING_KICK = new Move("RISING KICK", 4, Pose.MIDKICK, Level.MID, 3, 2, 9, 12, 28, 18, -2, 0, false, false, HOP | CARRY, null);
-    // ---- up-forward, the floor, throws, the rest ----
-    private static final Move HOPKICK = new Move("HOPKICK", 4, Pose.AIRKICK, Level.MID, 4, 3, 14, 13, 26, 0, -6, 5.4F, false, false, HOP, null);
-    private static final Move GETUP_KICK = new Move("GET-UP KICK", 4, Pose.LOWKICK, Level.MID, 3, 2, 10, 8, 26, 12, -2, 0, false, false, 0, null);
-    private static final Move THROW_L = new Move("THROW", 1, Pose.THROW, Level.THROW, 4, 2, 10, 20, 18, 0, 0, 0, true, false, 0, null);
-    private static final Move THROW_R = new Move("THROW", 2, Pose.THROW, Level.THROW, 4, 2, 10, 22, 18, 0, 0, 0, true, false, 0, null);
-    private static final Move AIR_KICK = new Move("JUMP KICK", 4, Pose.AIRKICK, Level.MID, 3, 8, 4, 10, 26, 12, 4, 0, false, false, 0, null);
-    private static final Move TACKLE = new Move("RUNNING TACKLE", 0, Pose.TACKLE, Level.MID, 0, 3, 14, 10, 20, 0, -2, 0, true, false, 0, null);
-    private static final Move RAGE_ART = new Move("RAGE ART", 0, Pose.RAGE, Level.MID, 7, 3, 20, 36, 34, 0, -6, 0, true, true, CRUSH, null);
+    private static Move m(String name, int button, Pose pose, Level level, int i, int a, int r, int dmg, int reach,
+                          int onBlock, int onHit, float launch, int flags, Move... next) {
+        return new Move(name, button, pose, level, i, a, r, dmg, reach, onBlock, onHit, launch / 3, flags, next.length == 0 ? null : next);
+    }
 
-    private enum State { STAND, CROUCH, DASH, RUN, BACKDASH, SIDESTEP, SIDEWALK, CROUCH_DASH, JUMP, ATTACK, THROWN, HIT, BLOCK, AIR, SPLAT, DOWN, RISE, KO, WIN }
+    // ---- everyone: the strings 1,1,2  1,2,4  1,2,3  3,4 ----
+    private static final Move ELBOW_FINISH = m("RISING ELBOW", 2, Pose.UPPER, Level.MID, 13, 2, 24, 12, 24, -12, 4, 0, 0);
+    private static final Move JAB_2 = m("JAB", 1, Pose.JAB, Level.HIGH, 10, 2, 16, 8, 22, 1, 8, 0, 0, ELBOW_FINISH);
+    private static final Move CROSS_KICK = m("CROSS KICK", 4, Pose.HIGHKICK, Level.HIGH, 15, 3, 26, 18, 30, -12, 0, 0, KND);
+    private static final Move CROSS_LOW = m("LOW SNAP", 3, Pose.LOWKICK, Level.LOW, 18, 3, 28, 10, 27, -15, 2, 0, DUCK);
+    private static final Move CROSS = m("CROSS", 2, Pose.CROSS, Level.HIGH, 10, 2, 18, 10, 25, -1, 6, 0, 0, CROSS_KICK, CROSS_LOW);
+    private static final Move JAB = m("JAB", 1, Pose.JAB, Level.HIGH, 10, 2, 16, 7, 22, 1, 8, 0, 0, JAB_2, CROSS);
+    private static final Move WHIRL_KICK = m("WHIRL KICK", 4, Pose.HIGHKICK, Level.HIGH, 16, 3, 26, 20, 30, -9, 0, 0, KND);
+    private static final Move MID_KICK = m("MID KICK", 3, Pose.MIDKICK, Level.MID, 14, 3, 20, 13, 28, -7, 4, 0, 0, WHIRL_KICK);
+    private static final Move HIGH_KICK = m("HIGH KICK", 4, Pose.HIGHKICK, Level.HIGH, 12, 3, 22, 15, 30, -9, 4, 0, 0);
+    // ---- forward, back ----
+    private static final Move HOMING_KICK = m("HOMING KICK", 4, Pose.MIDKICK, Level.MID, 17, 3, 28, 18, 30, -9, 4, 0, HOMING | CH_LAUNCH);
+    private static final Move LUNGE_PUNCH = m("LUNGE PUNCH", 2, Pose.CROSS, Level.MID, 15, 3, 30, 18, 32, -13, 0, 0, KND | CARRY);
+    private static final Move SPIRAL_KICK = m("SPIRAL KICK", 3, Pose.MIDKICK, Level.MID, 16, 3, 26, 15, 28, -9, 3, 0, SCREW);
+    private static final Move SPIN_FIST = m("SPIN FIST", 2, Pose.SPIN, Level.HIGH, 14, 2, 20, 16, 28, -5, 5, 0, SCREW | CH_CRUMPLE);
+    private static final Move IRON_PALM = m("IRON PALM", 0, Pose.PALM, Level.MID, 18, 3, 30, 20, 28, -14, 0, 0, CRUSH | CARRY | KND);
+    // ---- down, down-forward, down-back ----
+    private static final Move CROUCH_JAB = m("CROUCH JAB", 1, Pose.LOWPUNCH, Level.MID, 10, 2, 14, 5, 20, -5, 6, 0, DUCK);
+    private static final Move CROUCH_STRAIGHT = m("CROUCH STRAIGHT", 2, Pose.LOWPUNCH, Level.MID, 11, 2, 18, 9, 24, -4, 7, 0, DUCK);
+    private static final Move LOW_KICK = m("LOW KICK", 3, Pose.LOWKICK, Level.LOW, 16, 2, 24, 10, 26, -13, -2, 0, DUCK | GROUND_HIT);
+    private static final Move TOE_KICK = m("TOE KICK", 4, Pose.LOWKICK, Level.LOW, 12, 2, 22, 7, 24, -12, -3, 0, DUCK | GROUND_HIT);
+    private static final Move SWEEP = m("SWEEP", 4, Pose.SWEEP, Level.LOW, 20, 3, 36, 16, 30, -26, 0, 0, KND | DUCK);
+    private static final Move MID_CHECK = m("MID CHECK", 1, Pose.JAB, Level.MID, 13, 2, 18, 10, 24, 1, 8, 0, CH_CRUMPLE);
+    private static final Move LAUNCHER = m("LAUNCHER", 2, Pose.UPPER, Level.MID, 15, 2, 32, 15, 22, -13, 0, 6.2F, 0);
+    private static final Move FRONT_KICK = m("FRONT KICK", 3, Pose.MIDKICK, Level.MID, 14, 2, 22, 13, 28, -6, 5, 0, 0);
+    private static final Move STEP_KICK = m("STEP KICK", 4, Pose.MIDKICK, Level.MID, 13, 2, 20, 12, 30, -3, 8, 0, 0);
+    // ---- while standing up from a crouch ----
+    private static final Move RISING_JAB = m("RISING JAB", 1, Pose.JAB, Level.MID, 13, 2, 18, 10, 24, 1, 8, 0, HOP);
+    private static final Move RISING_UPPER = m("RISING UPPER", 2, Pose.UPPER, Level.MID, 15, 2, 32, 15, 22, -13, 0, 6.0F, HOP);
+    private static final Move RISING_KNEE = m("RISING KNEE", 3, Pose.MIDKICK, Level.MID, 13, 2, 20, 14, 24, 2, 7, 0, HOP);
+    private static final Move RISING_KICK = m("RISING KICK", 4, Pose.MIDKICK, Level.MID, 11, 2, 22, 15, 28, -3, 8, 0, HOP);
+    // ---- up-forward, the floor, throws, the rest ----
+    private static final Move HOPKICK = m("HOPKICK", 4, Pose.AIRKICK, Level.MID, 15, 4, 30, 15, 26, -13, 0, 5.4F, HOP);
+    private static final Move GETUP_KICK = m("GET-UP KICK", 4, Pose.LOWKICK, Level.MID, 14, 2, 28, 12, 26, -12, 2, 0, 0);
+    private static final Move GETUP_LOW = m("GET-UP LOW", 3, Pose.LOWKICK, Level.LOW, 14, 2, 28, 10, 26, -12, 2, 0, 0);
+    private static final Move THROW_L = m("THROW", 1, Pose.THROW, Level.THROW, 12, 2, 30, 35, 18, 0, 0, 0, KND);
+    private static final Move THROW_R = m("THROW", 2, Pose.THROW, Level.THROW, 12, 2, 30, 38, 18, 0, 0, 0, KND);
+    private static final Move AIR_KICK = m("JUMP KICK", 4, Pose.AIRKICK, Level.MID, 8, 18, 12, 14, 26, -4, 6, 0, 0);
+    private static final Move TACKLE = m("RUNNING TACKLE", 0, Pose.TACKLE, Level.MID, 3, 6, 40, 15, 20, -15, 0, 0, KND);
+    private static final Move RAGE_ART = m("RAGE ART", 0, Pose.RAGE, Level.MID, 20, 3, 50, 55, 34, -15, 0, 0, KND | CRUSH | HOMING | CARRY);
+
+    // ---- RIKU: the crouch dash (f,n,d,df), and its just-frame dragon upper ----
+    private static final Move SNAP_ELBOW = m("SNAP ELBOW", 1, Pose.LOWPUNCH, Level.MID, 14, 2, 22, 12, 24, 2, 8, 0, DUCK);
+    private static final Move DRAGON_UPPER = m("DRAGON UPPER", 2, Pose.UPPER, Level.MID, 15, 2, 34, 16, 24, -15, 0, 6.6F, DUCK);
+    private static final Move PERFECT_DRAGON = m("PERFECT DRAGON", 2, Pose.UPPER, Level.MID, 11, 2, 24, 18, 24, 5, 0, 6.6F, DUCK | ELECTRIC);
+    private static final Move HELL_SWEEP = m("HELL SWEEP", 4, Pose.SWEEP, Level.LOW, 20, 3, 34, 16, 30, -23, 0, 0, KND | DUCK);
+    private static final Move DEVIL_RUSH = m("DEVIL RUSH", 0, Pose.PALM, Level.MID, 14, 3, 24, 25, 30, 8, 0, 0, KND | CARRY | ELECTRIC);
+    // ---- NEKO: quick on its feet - attacks out of a sidestep, a slide, a backflip ----
+    private static final Move CLAW_SWIPE = m("CLAW SWIPE", 1, Pose.CROSS, Level.MID, 14, 2, 20, 14, 26, -4, 6, 0, HOMING);
+    private static final Move CAT_SLIDE = m("CAT SLIDE", 3, Pose.SWEEP, Level.LOW, 16, 4, 30, 15, 32, -14, 0, 0, KND | DUCK);
+    private static final Move BACKFLIP = m("BACKFLIP", 3, Pose.AIRKICK, Level.MID, 16, 3, 28, 16, 26, -14, 0, 6.3F, HOP);
+    private static final Move NINE_LIVES = m("NINE LIVES", 0, Pose.HIGHKICK, Level.MID, 13, 3, 24, 22, 30, 3, 0, 6.6F, HOMING);
+    // ---- ROBO: heavy - power crushes, a command throw, a slam for someone on the floor ----
+    private static final Move IRON_GRAB = m("IRON GRAB", 0, Pose.THROW, Level.THROW, 14, 2, 30, 45, 20, 0, 0, 0, KND | BREAK_BOTH);
+    private static final Move PISTON = m("PISTON", 0, Pose.PALM, Level.MID, 16, 3, 28, 22, 30, -10, 0, 0, CRUSH | CARRY | KND);
+    private static final Move GROUND_SLAM = m("GROUND SLAM", 0, Pose.LOWPUNCH, Level.MID, 20, 3, 36, 18, 26, -15, 0, 0, GROUND_HIT | DUCK);
+    private static final Move OVERDRIVE = m("OVERDRIVE", 0, Pose.PALM, Level.MID, 16, 3, 26, 26, 30, 2, 0, 6.4F, CRUSH);
+    // ---- BLAZE: d,df,f+2 - the burning fist ----
+    private static final Move BURNING_FIST = m("BURNING FIST", 2, Pose.CROSS, Level.MID, 14, 3, 32, 25, 32, -18, 0, 0, KND | CARRY);
+    private static final Move FLAME_HEEL = m("FLAME HEEL", 4, Pose.HIGHKICK, Level.HIGH, 16, 3, 26, 18, 30, -8, 6, 0, CH_LAUNCH);
+    private static final Move HEAT_RUSH = m("HEAT RUSH", 0, Pose.PALM, Level.MID, 16, 3, 28, 20, 30, -12, 0, 0, CRUSH | KND);
+    private static final Move INFERNO = m("INFERNO FIST", 0, Pose.CROSS, Level.MID, 14, 3, 30, 34, 34, 5, 0, 0, KND | CARRY | ELECTRIC);
+
+    private enum State { STAND, CROUCH, DASH, RUN, BACKDASH, SIDESTEP, SIDEWALK, CROUCH_DASH, JUMP, ATTACK, THROWN, HIT, BLOCK, AIR, SPLAT, DOWN, RISE, KI, KO, WIN }
 
     /** A fighter: its look (palette colours), speed and strength. */
     private record Style(String name, int gi, int skin, int band, int hair, int kind, float speed, float power) {}
@@ -96,33 +154,36 @@ public class Showdown extends ArcadeGame {
     // kind: 0 a headband, 1 cat ears, 2 an antenna, 3 flame hair
     private static final Style[] FIGHTERS = {
             new Style("RIKU", 10, 7, 6, 13, 0, 1.0F, 1.0F),
-            new Style("NEKO", 7, 8, 15, 4, 1, 1.25F, 0.85F),
-            new Style("ROBO", 13, 5, 12, 12, 2, 0.8F, 1.3F),
-            new Style("BLAZE", 6, 8, 8, 7, 3, 1.05F, 1.1F)};
+            new Style("NEKO", 7, 8, 15, 4, 1, 1.2F, 0.9F),
+            new Style("ROBO", 13, 5, 12, 12, 2, 0.85F, 1.15F),
+            new Style("BLAZE", 6, 8, 8, 7, 3, 1.05F, 1.05F)};
 
     private static final class Body {
         final Style style;
+        final int who;
         float x, y, vx, vy;
-        /** Where it was a tick ago (drawn smoothly between that and now). */
+        /** Where it was a frame ago (drawn smoothly between that and now). */
         float ox, oy, oDepth;
         /** How far off the line between them it has stepped (pixels; + into the screen). */
         float depth;
-        int facing = 1, hp = MAX_HP, wins, t, stun, combo, sideDir, airHits;
+        int facing = 1, hp = MAX_HP, wins, t, stun, combo, sideDir, airHits, wallHits;
         State state = State.STAND;
         Move move;
         boolean hitDone, landed, rage, rageUsed, buffered;
         Move queued;
-        /** A throw it's caught in: which punch breaks it (0 left, 1 right), and who threw. */
+        /** A throw it's caught in: what breaks it (0: 1, 1: 2, 2: 1+2), who threw, with what. */
         int breakWith = -1;
         Body thrower;
         Move grab;
-        /** Tekken bits: spun by a screw this juggle; can tech when it lands; while-standing up until; parried at;
-         *  blocking low; the combo's damage, and how long its counter stays up after. */
-        boolean screwed, techable = true, blockLow, blockedLow;
-        int wsUntil = -100, parryAt = -100, comboDmg, comboShow;
+        /** Spun by a screw this juggle; can tech when it lands; crumpling; blocking low; ki charged. */
+        boolean screwed, techable = true, crumple, blockLow, blockedLow, ki, advancing;
+        /** While-standing up until; parried at; the combo's damage, how long its counter stays up after; how many moves
+         *  it's started (so the cabinet's fighter reacts once to each). */
+        int wsUntil = -100, parryAt = -100, comboDmg, comboShow, serial;
 
-        Body(Style style, float x) {
+        Body(Style style, int who, float x) {
             this.style = style;
+            this.who = who;
             this.x = x;
         }
 
@@ -137,22 +198,27 @@ public class Showdown extends ArcadeGame {
         /** Down low: highs go over it. (A ducking move only while it's out, not its recovery.) */
         boolean crouching() {
             return state == State.CROUCH || state == State.CROUCH_DASH || (state == State.BLOCK && blockLow)
-                    || (state == State.ATTACK && move != null && move.is(DUCK) && t < move.startup() + move.active() + 2);
+                    || (state == State.ATTACK && move != null && move.is(DUCK) && t < move.startup() + move.active() + 6);
         }
 
         /** Up off the floor: lows go under it. */
         boolean hopping() {
-            return state == State.ATTACK && move != null && move.is(HOP) && t >= 1 && t < move.startup() + move.active();
+            return state == State.ATTACK && move != null && move.is(HOP) && t >= 4 && t < move.startup() + move.active();
         }
 
         boolean down() {
             return state == State.DOWN || state == State.RISE || state == State.KO;
         }
+
+        /** How many frames until it's free again (a move's recovery). */
+        int left() {
+            return state == State.ATTACK && move != null ? Math.max(0, move.total() - t) : 0;
+        }
     }
 
     private Body me, foe;
-    private final List<float[]> sparks = new ArrayList<>(); // x, y, ticks left, colour
-    private final List<Object[]> callouts = new ArrayList<>(); // text, x, y, ticks left
+    private final List<float[]> sparks = new ArrayList<>(); // x, y, frames left (in 20ths), colour
+    private final List<Object[]> callouts = new ArrayList<>(); // text, x, y, frames left
     private int pick, ladder, round, clock, roundOver, shake, thinkIn, lap;
     private boolean picking;
     private String banner = "";
@@ -160,16 +226,26 @@ public class Showdown extends ArcadeGame {
     /** The camera turning round as the two step about (pixels the backdrop has slid). */
     private float spin;
 
-    // input: what's held, and when the directions were last tapped (for dashes and sidesteps)
+    // input: what's held; the way it's held over the last frames (for motions: f,f  f,n,d,df  d,df,f ...)
     private final Set<Integer> held = new HashSet<>();
     private boolean kL, kR, kU, kD;
-    private int tapFwd = -100, tapBack = -100, upAt = -100, downAt = -100, fwdUpAt = -100;
-    /** A jump about to go (held off a moment so up-forward + 4 can be a hopkick instead): its way, and when. */
+    private final List<int[]> dirs = new ArrayList<>(); // numpad direction, the frame it began
+    private int upAt = -100, downAt = -100, qcfAt = -100, dfAt = -100;
+    /** When each button was last pressed (1-4). */
+    private final int[] pressedAt = {-100, -100, -100, -100, -100};
+    /** A jump about to go (held off a moment, so up-forward + 4 can be a hopkick instead): its way, and when. */
     private int jumpDir, jumpAt = -1;
     /** The move list up (the fight paused). */
     private boolean showList;
-    /** The cabinet's fighter: how far into a juggle it is, and whether it's just blocked a low (to punish rising). */
-    private int cpuJuggle;
+    /** Practice: 0 off; 1 the dummy stands; 2 it blocks everything; 3 it fights back. (Health refills, no clock.) */
+    private int practice;
+    /** Practice: what your last move was and how it went (frame data). */
+    private String frameInfo = "";
+    private int frameInfoFor;
+    /** The cabinet's fighter: the move of yours it's already reacted to; how far into a juggle it is; blocking a
+     *  moment ago (to punish what it blocked). */
+    private int cpuSeen = -1, cpuJuggle;
+    private boolean cpuWasBlocking;
 
     @Override
     public String name() {
@@ -178,7 +254,7 @@ public class Showdown extends ArcadeGame {
 
     @Override
     public String[] help() {
-        return new String[] {"WASD  U I J K = 1 2 3 4  H: move list", "W/S tap: step  FF dash  F,N,D,DF crouch dash  uf+4 hop"};
+        return new String[] {"WASD  U I J K = 1 2 3 4  H: moves  P: practice", "W/S tap: step  FF dash  BB back  W+A/D: jump"};
     }
 
     @Override
@@ -190,8 +266,10 @@ public class Showdown extends ArcadeGame {
         lap = 0;
         banner = "";
         held.clear();
+        dirs.clear();
         kL = kR = kU = kD = false;
         showList = false;
+        practice = 0;
         jumpAt = -1;
     }
 
@@ -210,8 +288,9 @@ public class Showdown extends ArcadeGame {
         poses.clear(); // (the last match's fighters: forgotten)
         shownHp.clear();
         trails.clear();
-        me = new Body(FIGHTERS[pick], 60);
-        foe = new Body(foeStyle(), W - 60);
+        me = new Body(FIGHTERS[pick], pick, 60);
+        int f = styleIndex(foeStyle());
+        foe = new Body(FIGHTERS[f], f, W - 60);
         newRound();
     }
 
@@ -223,31 +302,33 @@ public class Showdown extends ArcadeGame {
             b.y = b.vx = b.vy = b.depth = 0;
             b.hp = MAX_HP;
             b.state = State.STAND;
-            b.stun = b.combo = b.t = 0;
+            b.stun = b.combo = b.t = b.airHits = b.wallHits = 0;
             b.move = null;
             b.queued = null;
             b.rage = b.rageUsed = false;
             b.thrower = null;
             b.breakWith = -1;
-            b.screwed = b.blockLow = b.blockedLow = false;
+            b.screwed = b.blockLow = b.blockedLow = b.crumple = b.ki = false;
             b.techable = true;
             b.comboDmg = b.comboShow = 0;
             b.wsUntil = b.parryAt = -100;
         }
         jumpAt = -1;
         cpuJuggle = 0;
+        cpuSeen = -1;
         me.facing = 1;
         foe.facing = -1;
         sparks.clear();
         callouts.clear();
-        clock = ROUND_TICKS;
-        roundOver = -40;
-        say(round == 3 ? "FINAL ROUND" : "ROUND " + round, 40);
+        clock = ROUND_FRAMES;
+        roundOver = practice > 0 ? -2 : -120;
+        if (practice == 0) say(round == 3 ? "FINAL ROUND" : "ROUND " + round, 40);
     }
 
-    private void say(String s, int ticks) {
+    /** A banner across the screen, for so many 20ths of a second. */
+    private void say(String s, int twentieths) {
         banner = s;
-        bannerFor = ticks;
+        bannerFor = twentieths * 3;
     }
 
     private int difficulty() {
@@ -258,12 +339,7 @@ public class Showdown extends ArcadeGame {
         return b == me ? foe : me;
     }
 
-    /** Toward the other one (+1) or away (-1), from a screen direction. */
-    private static int fwd(Body b, int screenDir) {
-        return screenDir * b.facing;
-    }
-
-    // ================= ticking =================
+    // ================= ticking (60 a second) =================
 
     @Override
     public void tick() {
@@ -276,29 +352,33 @@ public class Showdown extends ArcadeGame {
         if (slowmo > 0) { // (a K.O.: the fight in slow motion for a moment)
             slowmo--;
             if (slowmo % 2 == 1) {
-                hold(); // (nothing moves this tick: drawn standing still, not replaying the last one)
+                hold(); // (nothing moves this frame: drawn standing still, not replaying the last one)
                 return;
             }
         }
         animate();
-        if (shake > 0) shake--;
+        if (ticks % 3 == 0 && shake > 0) shake--;
         if (bannerFor > 0 && --bannerFor == 0 && roundOver == 0) banner = "";
-        sparks.removeIf(s -> --s[2] <= 0);
+        if (frameInfoFor > 0) frameInfoFor--;
+        sparks.removeIf(s -> (s[2] -= 1 / 3.0F) <= 0);
         callouts.removeIf(c -> {
             c[3] = (Integer) c[3] - 1;
             return (Integer) c[3] <= 0;
         });
         if (roundOver < 0) {
             if (++roundOver == 0) banner = "";
-            if (roundOver == -12) say("FIGHT!", 14);
+            if (roundOver == -36) say("FIGHT!", 14);
             return;
         }
         if (roundOver > 0) {
-            for (Body b : new Body[] {me, foe}) physics(b);
+            for (Body b : new Body[] {me, foe}) {
+                physics(b);
+                b.x = Mth.clamp(b.x, WALL_L, WALL_R);
+            }
             if (--roundOver == 0) endRound();
             return;
         }
-        if (--clock <= 0) {
+        if (practice == 0 && --clock <= 0) {
             finishRound(me.hp >= foe.hp ? me : foe, "TIME");
             return;
         }
@@ -308,7 +388,8 @@ public class Showdown extends ArcadeGame {
             jump(me, jumpDir);
         }
         player();
-        cpu();
+        if (practice == 0 || practice == 3) cpu();
+        else dummy();
         for (Body b : new Body[] {me, foe}) {
             step(b);
             physics(b);
@@ -324,11 +405,12 @@ public class Showdown extends ArcadeGame {
         for (Body b : new Body[] {me, foe}) {
             if (b.x < WALL_L || b.x > WALL_R) {
                 // slammed into the wall while reeling: a wall splat
-                if ((b.state == State.AIR || b.state == State.HIT) && Math.abs(b.vx) > 1.0F) {
+                if ((b.state == State.AIR || b.state == State.HIT) && Math.abs(b.vx) > 0.33F && b.wallHits == 0) {
                     b.state = State.SPLAT;
-                    b.stun = 26;
+                    b.stun = 42;
                     b.vx = 0;
                     b.vy = 0;
+                    b.wallHits = 1;
                     shake = 6;
                     call("WALL SPLAT!", b.x, GROUND - b.y - 40);
                 }
@@ -339,7 +421,7 @@ public class Showdown extends ArcadeGame {
         boolean stepping = me.state == State.SIDESTEP || me.state == State.SIDEWALK || foe.state == State.SIDESTEP || foe.state == State.SIDEWALK;
         if (!stepping) {
             for (Body b : new Body[] {me, foe}) {
-                float d = Mth.clamp(-b.depth, -1.2F, 1.2F);
+                float d = Mth.clamp(-b.depth, -0.4F, 0.4F);
                 b.depth += d;
                 spin += d * (b == me ? 3.0F : -3.0F) * b.facing;
             }
@@ -347,10 +429,19 @@ public class Showdown extends ArcadeGame {
         face(me);
         face(foe);
         for (Body b : new Body[] {me, foe}) {
-            if (!b.rage && b.hp > 0 && b.hp <= MAX_HP / 4) {
+            if (!b.rage && !b.rageUsed && b.hp > 0 && b.hp <= MAX_HP / 4) {
                 b.rage = true;
-                if (b == me) call("RAGE", b.x, GROUND - 50);
+                call("RAGE", b.x, GROUND - 50);
             }
+        }
+        if (practice > 0) { // (practice: nobody's beaten - health comes back between combos)
+            for (Body b : new Body[] {me, foe}) {
+                Body o = other(b, me, foe);
+                if (b.hp <= 0) b.hp = 1;
+                if (o.comboShow == 0 && b.free() && b.hp < MAX_HP) b.hp = Math.min(MAX_HP, b.hp + 4);
+                if (b.hp > MAX_HP / 4) b.rage = false;
+            }
+            return;
         }
         if (me.hp <= 0) finishRound(foe, "K.O.");
         else if (foe.hp <= 0) finishRound(me, "K.O.");
@@ -363,16 +454,20 @@ public class Showdown extends ArcadeGame {
 
     // ================= the player =================
 
+    private boolean fwdHeld(Body b) {
+        return (kR && b.facing > 0) || (kL && b.facing < 0);
+    }
+
+    private boolean backHeld(Body b) {
+        if (b == me) return (kL && b.facing > 0) || (kR && b.facing < 0);
+        return b.state == State.BLOCK;
+    }
+
     private void player() {
         Body b = me;
-        boolean fwdHeld = (kR && b.facing > 0) || (kL && b.facing < 0);
-        boolean backHeld = (kL && b.facing > 0) || (kR && b.facing < 0);
-        if (b.state == State.THROWN || !b.free() && b.state != State.ATTACK) {
-            return;
-        }
-        if (b.state == State.ATTACK) return;
+        if (!b.free()) return;
         if (b.state == State.RUN) {
-            if (!fwdHeld) b.state = State.STAND;
+            if (!fwdHeld(b)) b.state = State.STAND;
             return;
         }
         if (b.state == State.SIDEWALK) {
@@ -381,86 +476,102 @@ public class Showdown extends ArcadeGame {
             return;
         }
         if (kD) {
+            if (b.state != State.CROUCH) b.t = 0;
             b.state = State.CROUCH;
             b.vx = 0;
             return;
         }
         b.state = State.STAND;
-        if (fwdHeld) b.x += b.facing * 1.0F * b.style.speed();
-        else if (backHeld) b.x -= b.facing * 0.8F * b.style.speed();
+        if (fwdHeld(b)) b.x += b.facing * 0.36F * b.style.speed();
+        else if (backHeld(b)) b.x -= b.facing * 0.28F * b.style.speed();
     }
 
     // ================= moving =================
 
-    /** Every tick: what its state does - dashing, stepping, getting up ... */
+    /** Every frame: what its state does - dashing, stepping, getting up ... */
     private void step(Body b) {
         b.t++;
         switch (b.state) {
             case DASH -> {
-                b.x += b.facing * Math.max(0.6F, 3.4F - b.t * 0.25F) * b.style.speed();
-                boolean holding = b == me ? (b.facing > 0 ? kR : kL) : b.buffered;
-                if (b.t >= 9) {
-                    b.state = holding && b.t >= 9 ? State.RUN : State.STAND;
+                b.x += b.facing * Math.max(0.2F, 1.15F - b.t * 0.028F) * b.style.speed();
+                boolean holding = b == me ? fwdHeld(b) : b.buffered;
+                if (b.t >= 24) {
+                    b.state = holding ? State.RUN : State.STAND;
                     b.t = 0;
                 }
             }
             case RUN -> {
-                b.x += b.facing * Math.min(3.2F, 1.6F + b.t * 0.08F) * b.style.speed();
+                b.x += b.facing * Math.min(1.1F, 0.55F + b.t * 0.009F) * b.style.speed();
                 Body o = other(b, me, foe);
-                if (b.t > 8 && Math.abs(o.x - b.x) < 22 && Math.abs(o.depth - b.depth) < 8 && !o.down()) {
+                if (b.t > 24 && Math.abs(o.x - b.x) < 22 && Math.abs(o.depth - b.depth) < 8 && !o.down()) {
                     attack(b, TACKLE); // (running into them: a shoulder tackle)
                 }
             }
             case CROUCH_DASH -> { // (low and fast in: highs sail over; it comes up into the while-standing moves)
-                b.x += b.facing * Math.max(0.5F, 3.8F - b.t * 0.26F) * b.style.speed();
-                if (b.t >= 12) {
+                b.x += b.facing * Math.max(0.17F, 1.27F - b.t * 0.03F) * b.style.speed();
+                if (b.t >= 26) {
                     b.state = b == me && kD ? State.CROUCH : State.STAND;
-                    b.wsUntil = ticks + 6;
+                    b.wsUntil = ticks + 12;
                     b.t = 0;
                 }
             }
             case BACKDASH -> {
-                b.x -= b.facing * Math.max(0.3F, 3.6F - b.t * 0.3F) * b.style.speed();
-                if (b.t >= 12) {
+                b.x -= b.facing * Math.max(0.1F, 1.2F - b.t * 0.035F) * b.style.speed();
+                if (b.t >= 30) {
                     b.state = State.STAND;
                     b.t = 0;
                 }
             }
             case SIDESTEP -> {
-                b.depth += b.sideDir * Math.max(0.4F, 3.0F - b.t * 0.22F);
-                if (b.t >= 10) {
+                b.depth += b.sideDir * Math.max(0.13F, 1.0F - b.t * 0.025F);
+                if (b.t >= 24) {
                     boolean holding = b == me ? (b.sideDir > 0 ? kU : kD) : b.buffered;
                     b.state = holding ? State.SIDEWALK : State.STAND;
                     b.t = 0;
                 }
             }
             case SIDEWALK -> {
-                b.depth += b.sideDir * 1.1F;
+                b.depth += b.sideDir * 0.37F;
                 // circling round them: the camera follows
-                spin += b.sideDir * 1.6F * b.facing * (b == me ? 1 : -1);
+                spin += b.sideDir * 0.53F * b.facing * (b == me ? 1 : -1);
                 b.depth = Mth.clamp(b.depth, -30, 30);
                 if (b != me && !b.buffered) b.state = State.STAND;
             }
             case BLOCK, HIT -> {
-                if (--b.stun <= 0) b.state = State.STAND;
-                b.x += b.vx;
-                b.vx *= 0.75F;
-            }
-            case SPLAT -> {
                 if (--b.stun <= 0) {
-                    b.state = State.AIR;
-                    b.vy = 0.5F;
-                    b.y = Math.max(b.y, 0.5F);
+                    b.state = State.STAND;
+                    b.crumple = false;
+                }
+                b.x += b.vx;
+                b.vx *= SLIDE;
+            }
+            case SPLAT -> { // (stuck to the wall a moment - then sliding down it)
+                if (--b.stun <= 0) {
+                    b.state = State.DOWN;
+                    b.stun = 70;
+                    b.t = 0;
+                    b.y = 0;
+                    b.wallHits = 0;
+                    b.screwed = false;
+                    b.airHits = 0;
+                    b.techable = false;
                 }
             }
-            case DOWN -> {
+            case DOWN -> { // (lying there: get up with a direction, a kick, or after a while on its own)
                 if (--b.stun <= 0) {
                     b.state = State.RISE;
-                    b.stun = 10;
+                    b.stun = 20;
                 }
             }
             case RISE -> {
                 if (--b.stun <= 0) b.state = State.STAND;
+            }
+            case KI -> { // (charging up: wide open, then the next hit can't be blocked)
+                if (b.t >= 40) {
+                    b.state = State.STAND;
+                    b.ki = true;
+                    call("CHARGED", b.x, GROUND - 46);
+                }
             }
             case THROWN -> {
                 if (--b.stun <= 0) {
@@ -475,32 +586,42 @@ public class Showdown extends ArcadeGame {
                 Move m = b.move;
                 if (m == null) {
                     b.state = State.STAND;
-                } else if (b.queued != null && b.t >= m.startup() + m.active() + 1) { // (a string: straight into its next hit)
+                } else if (b.queued != null && b.t >= m.startup() + m.active() + 2) { // (a string: straight into its next hit)
                     Move q = b.queued;
                     b.queued = null;
                     attack(b, q, true);
-                } else if (b.t >= m.startup() + m.active() + m.recovery()) {
-                    if (b.queued != null) {
-                        Move q = b.queued;
-                        b.queued = null;
-                        attack(b, q, true);
-                    } else {
-                        // a crouching move: still crouched after, so standing up from it is while-standing too
-                        if (m.is(DUCK) && b.move.level() != Level.THROW) b.wsUntil = b == me && kD ? -100 : ticks + 6;
-                        b.state = b == me && kD ? State.CROUCH : State.STAND;
-                        b.move = null;
-                    }
-                } else if (m == TACKLE || m == RAGE_ART || m == LUNGE_PUNCH || m == IRON_PALM) {
-                    b.x += b.facing * (b.t < 4 ? 2.5F : 0.3F);
-                } else if (m == HOPKICK && b.t == 1) { // (a hop up off the floor - over any low)
-                    b.vy = 3.2F;
-                    b.y = 0.01F;
-                    b.vx = b.facing * 0.8F;
-                } else if (m == DRAGON_UPPER && b.t < m.startup()) {
-                    b.x += b.facing * 1.2F;
+                } else if (b.t >= m.total()) {
+                    // a crouching move: still crouched after, so standing up from it is while-standing too
+                    if (m.is(DUCK)) b.wsUntil = b == me && kD ? -100 : ticks + 12;
+                    if (b == me && b.landed == false && b.hitDone == false && practice > 0) info(m, "WHIFF");
+                    b.state = b == me && kD ? State.CROUCH : State.STAND;
+                    b.move = null;
+                    b.t = 0;
+                } else {
+                    moveAlong(b, m);
                 }
             }
             default -> {}
+        }
+    }
+
+    /** Some moves carry you along while they come out. */
+    private void moveAlong(Body b, Move m) {
+        if (m == TACKLE || m == RAGE_ART || m == LUNGE_PUNCH || m == IRON_PALM || m == BURNING_FIST || m == INFERNO
+                || m == PISTON || m == DEVIL_RUSH || m == HEAT_RUSH) {
+            b.x += b.facing * (b.t < 12 ? 0.83F : 0.1F);
+        } else if (m == CAT_SLIDE && b.t < m.startup() + m.active()) {
+            b.x += b.facing * 1.2F;
+        } else if (m == HOPKICK && b.t == 3) { // (a hop up off the floor - over any low)
+            b.vy = 1.07F;
+            b.y = 0.01F;
+            b.vx = b.facing * 0.27F;
+        } else if (m == BACKFLIP && b.t == 3) {
+            b.vy = 1.2F;
+            b.y = 0.01F;
+            b.vx = -b.facing * 0.2F;
+        } else if ((m == DRAGON_UPPER || m == PERFECT_DRAGON) && b.t < m.startup()) {
+            b.x += b.facing * 0.4F;
         }
     }
 
@@ -508,16 +629,18 @@ public class Showdown extends ArcadeGame {
         if (b.airborne()) {
             b.y += b.vy;
             b.x += b.vx;
-            b.vy -= b.state == State.AIR ? 0.32F : 0.4F;
+            b.vy -= b.state == State.AIR ? GRAVITY_AIR : GRAVITY;
+            if (b.state == State.AIR) b.vx *= 0.96F; // (a juggle's carry dies off: you can dash in after it)
             if (b.y <= 0) {
                 b.y = 0;
                 b.vy = 0;
                 b.vx = 0;
                 if (b.state == State.AIR) { // (a juggle ends on the floor)
                     b.state = State.DOWN;
-                    b.stun = 22;
+                    b.stun = 70;
                     b.t = 0;
                     b.airHits = 0;
+                    b.wallHits = 0;
                     b.screwed = false;
                     shake = Math.max(shake, 3);
                 } else if (b.state == State.JUMP || b.state == State.ATTACK && b.move == AIR_KICK) {
@@ -532,25 +655,25 @@ public class Showdown extends ArcadeGame {
         if (b.airborne() || !b.free()) return;
         b.state = State.JUMP;
         b.t = 0;
-        b.vy = 5.0F;
+        b.vy = 1.67F;
         b.y = 0.01F;
-        b.vx = dir * b.facing * 1.3F * b.style.speed();
+        b.vx = dir * b.facing * 0.43F * b.style.speed();
     }
 
     private void dash(Body b) {
-        if (!b.free() || b.airborne()) return;
+        if ((!b.free() && b.state != State.CROUCH_DASH) || b.airborne()) return;
         b.state = State.DASH;
         b.t = 0;
     }
 
     private void backdash(Body b) {
-        boolean chain = b.state == State.BACKDASH && b.t >= 5; // (cancelled into the next: chained backdashes)
+        boolean chain = b.state == State.BACKDASH && b.t >= 14; // (cancelled into the next: chained backdashes)
         if ((!b.free() && !chain) || b.airborne()) return;
         b.state = State.BACKDASH;
-        b.t = chain ? 2 : 0;
+        b.t = chain ? 4 : 0;
     }
 
-    /** Forward, neutral, down(-forward): a crouch dash. */
+    /** Forward, neutral, down(-forward): a crouch dash (RIKU's). */
     private void crouchDash(Body b) {
         if ((!b.free() && b.state != State.DASH) || b.airborne()) return;
         b.state = State.CROUCH_DASH;
@@ -559,17 +682,33 @@ public class Showdown extends ArcadeGame {
 
     /** Hitting the floor and rolling straight back up (to the side), not lying there to be hit. */
     private void tech(Body b) {
-        if (b.state != State.DOWN || b.t > 6 || !b.techable) return;
+        if (b.state != State.DOWN || b.t > 10 || !b.techable) return;
         b.state = State.RISE;
-        b.stun = 5;
+        b.stun = 14;
         b.depth += (random.nextBoolean() ? 1 : -1) * 10;
         call("TECH", b.x, GROUND - 30);
+    }
+
+    /** Getting up off the floor with a roll (back, or to the side). */
+    private void roll(Body b, int side) {
+        if (b.state != State.DOWN || b.t < 12) return;
+        b.state = State.RISE;
+        b.stun = 18;
+        if (side == 0) b.x -= b.facing * 10;
+        else b.depth += side * 12;
     }
 
     private void sidestep(Body b, int dir) {
         if ((!b.free() && b.state != State.CROUCH) || b.airborne()) return;
         b.state = State.SIDESTEP;
         b.sideDir = dir;
+        b.t = 0;
+    }
+
+    private void kiCharge(Body b) {
+        if (!b.free() || b.airborne() || b.ki) return;
+        b.move = null;
+        b.state = State.KI;
         b.t = 0;
     }
 
@@ -583,31 +722,41 @@ public class Showdown extends ArcadeGame {
         if (b.state == State.ATTACK && !chained) return; // (mid-move: only the next hit of a string - see chain())
         boolean from = b.free() || b.state == State.DASH || b.state == State.BACKDASH || b.state == State.SIDESTEP
                 || b.state == State.CROUCH_DASH || (b.state == State.JUMP && m == AIR_KICK)
-                || ((b.state == State.DOWN || b.state == State.RISE) && m == GETUP_KICK);
+                || ((b.state == State.DOWN || b.state == State.RISE) && (m == GETUP_KICK || m == GETUP_LOW));
         if (!chained && !from) return;
-        if (m == RAGE_ART) {
+        if (m == RAGE_ART || isRageDrive(m)) {
             if (!b.rage || b.rageUsed) return;
             b.rageUsed = true;
             b.rage = false;
-            say(b.style.name() + " RAGE ART!", 30);
-            shake = 8;
+            if (m == RAGE_ART) {
+                say(b.style.name() + " RAGE ART!", 30);
+                shake = 8;
+            } else {
+                call("RAGE DRIVE", b.x, GROUND - 52);
+            }
         }
-        if (m == IRON_PALM || m == RAGE_ART) call("POWER CRUSH", b.x, GROUND - 48);
+        if (m.is(CRUSH)) call("POWER CRUSH", b.x, GROUND - 48);
+        if (m.is(ELECTRIC) && b == me) call(m == PERFECT_DRAGON ? "PERFECT!" : "", b.x, GROUND - 56);
         b.state = State.ATTACK;
         b.move = m;
         b.t = 0;
         b.hitDone = false;
         b.landed = false;
+        b.serial++;
+    }
+
+    private static boolean isRageDrive(Move m) {
+        return m == DEVIL_RUSH || m == NINE_LIVES || m == OVERDRIVE || m == INFERNO;
     }
 
     /** A button mid-move: the next hit of its string (1,1,2  1,2,4  1,2,3  3,4), queued in time. */
     private void chain(Body b, int button) {
         Move cur = b.move;
-        if (b.state != State.ATTACK || cur == null || cur.next() == null || b.t < cur.startup()) return;
+        if (b.state != State.ATTACK || cur == null || cur.next() == null || b.t < 4) return;
         for (Move n : cur.next()) {
             if (n.button() != button) continue;
             b.queued = n;
-            if (b.t >= cur.startup() + cur.active()) { // (cancels the rest of the recovery)
+            if (b.t >= cur.startup() + cur.active() + 2) { // (late in it: straight away)
                 b.queued = null;
                 attack(b, n, true);
             }
@@ -615,7 +764,17 @@ public class Showdown extends ArcadeGame {
         }
     }
 
-    /** Its attack's active ticks: does it reach them - at the right height, and on the line or homing? */
+    /** Practice: what your move did, in frames. */
+    private void info(Move m, String how) {
+        frameInfo = m.name() + "  i" + m.startup() + "  " + how;
+        frameInfoFor = 150;
+    }
+
+    private static String plus(int f) {
+        return f > 0 ? "+" + f : Integer.toString(f);
+    }
+
+    /** Its attack's active frames: does it reach them - at the right height, and on the line or homing? */
     private void strike(Body b, Body o) {
         if (b.state != State.ATTACK || b.hitDone || b.move == null) return;
         Move m = b.move;
@@ -624,32 +783,33 @@ public class Showdown extends ArcadeGame {
         if (reach < -4 || reach > m.reach()) return;
         if (Math.abs(o.y - b.y) > 30) return;
         // off the line: a straight attack misses (a homing one turns to follow)
-        if (Math.abs(o.depth - b.depth) > 7 && !m.homing()) return;
+        if (Math.abs(o.depth - b.depth) > 7 && !m.is(HOMING)) return;
         if (o.state == State.KO || o.state == State.RISE) return;
-        if (o.state == State.DOWN && m.level() != Level.LOW) return; // (only lows hit someone lying down)
+        if (o.state == State.DOWN && !(m.level() == Level.LOW || m.is(GROUND_HIT))) return; // (only some moves hit someone lying down)
         if (o.state == State.THROWN) return;
         if (m.level() == Level.THROW) {
-            if (o.crouching() || o.airborne() || o.down() || o.state == State.HIT || o.state == State.AIR) return; // (throws whiff on crouchers)
+            if (o.crouching() || o.airborne() || o.down() || o.state == State.HIT || o.state == State.AIR || o.state == State.SPLAT) return;
             b.hitDone = true;
             o.state = State.THROWN;
             o.thrower = b;
-            o.stun = 18;
-            o.breakWith = m == THROW_L ? 0 : 1;
+            o.stun = 54;
+            o.breakWith = m.is(BREAK_BOTH) ? 2 : m == THROW_L ? 0 : 1;
             o.grab = m;
             o.t = 0;
+            o.ki = false;
             return;
         }
         if (m.level() == Level.HIGH && o.crouching()) return; // (ducked)
         if (m.level() == Level.LOW && o.hopping()) return; // (hopped over)
         boolean juggled = o.state == State.AIR || o.state == State.SPLAT;
         // a low parry: down-forward just as a low comes in - it's knocked up off its feet instead
-        if (m.level() == Level.LOW && !juggled && ticks - o.parryAt <= 6
+        if (m.level() == Level.LOW && !juggled && ticks - o.parryAt <= 8
                 && (o.state == State.STAND || o.state == State.CROUCH || o.state == State.BLOCK)) {
             b.hitDone = true;
             b.state = State.AIR;
             b.move = null;
-            b.vy = 2.8F;
-            b.vx = -b.facing * 0.6F;
+            b.vy = 0.93F;
+            b.vx = -b.facing * 0.2F;
             b.y = 1.0F;
             b.airHits = 0;
             o.state = State.STAND;
@@ -663,59 +823,80 @@ public class Showdown extends ArcadeGame {
         // a power crush coming out: soaks up a high or a mid (still hurts) and keeps going
         if (o.state == State.ATTACK && o.move != null && o.move.is(CRUSH) && o.t < o.move.startup() + o.move.active()
                 && m.level() != Level.LOW) {
-            int soak = Math.max(1, Math.round(m.damage() * b.style.power() * 0.8F));
+            int soak = Math.max(1, Math.round(m.damage() * b.style.power()));
             o.hp = Math.max(0, o.hp - soak);
             spark(o.x - o.facing * 4, GROUND - o.y - 20, 6);
             flash = 2;
             return;
         }
-        boolean standGuard = !o.crouching() && (o.state == State.STAND || o.state == State.BLOCK);
+        // (no guard: ki charged, an unblockable, practice's dummy - or walking in, as the cabinet's fighter does)
+        boolean guard = !o.ki && !m.is(UNBLOCKABLE) && !b.ki && !(o == foe && practice == 1) && !o.advancing;
         boolean blocked;
-        if (juggled || o.state == State.DOWN) {
+        if (juggled || o.state == State.DOWN || !guard) {
             blocked = false;
         } else if (m.level() == Level.LOW) {
             blocked = (o.state == State.CROUCH || o.state == State.BLOCK && o.blockLow) && (o == me ? kD : true);
         } else {
-            blocked = standGuard && !forwardHeld(o);
+            blocked = !o.crouching() && (o.state == State.STAND || o.state == State.BLOCK) && !(o == me && fwdHeld(o));
         }
+        int left = b.left();
         if (blocked) {
             o.state = State.BLOCK;
             o.blockLow = m.level() == Level.LOW;
             o.blockedLow = o.blockLow;
-            o.stun = Math.max(4, 8 + m.blockstun());
-            o.vx = -o.facing * 2.0F;
-            o.hp -= m.level() == Level.MID ? 1 : 0;
+            o.stun = Math.max(6, left + m.onBlock()); // (so it's as far ahead or behind as its frame data says)
+            o.vx = -o.facing * 0.67F;
             spark(o.x - o.facing * 4, GROUND - o.y - (m.level() == Level.LOW ? 6 : 20), 6);
+            if (b == me && practice > 0) info(m, "BLOCK " + plus(m.onBlock()));
             return;
         }
-        // a hit: a counter hit if they were mid-move or mid-step
+        // a hit: a counter hit if they were in the middle of starting something (or dashing about)
         boolean counter = o.state == State.ATTACK && o.t < (o.move == null ? 0 : o.move.startup() + o.move.active())
-                || o.state == State.SIDESTEP || o.state == State.DASH || o.state == State.BACKDASH || o.state == State.CROUCH_DASH;
-        float scale = (b.rage ? 1.1F : 1.0F) * (counter ? 1.25F : 1.0F) * b.style.power();
-        // juggles hurt less the longer they go (and less again once screwed)
-        if (juggled) scale *= Math.max(0.3F, 0.78F - o.airHits * 0.07F) * (o.screwed ? 0.85F : 1.0F);
+                || o.state == State.DASH || o.state == State.BACKDASH || o.state == State.CROUCH_DASH || o.state == State.KI;
+        float scale = (b.rage ? 1.1F : 1.0F) * (counter ? 1.2F : 1.0F) * b.style.power() * (b.ki ? 1.2F : 1.0F);
+        // juggles hurt less the longer they go (less again once screwed, and at the wall)
+        if (juggled) scale *= Math.max(0.3F, 0.85F - o.airHits * 0.06F) * (o.screwed ? 0.85F : 1.0F) * (o.wallHits > 0 ? 0.8F : 1.0F);
         if (o.state == State.DOWN) scale *= 0.5F;
         int dmg = Math.max(1, Math.round(m.damage() * scale));
         o.hp = Math.max(0, o.hp - dmg);
         b.landed = true;
+        if (b.ki) {
+            b.ki = false;
+            call("UNBLOCKABLE", o.x, GROUND - 50);
+        }
+        o.ki = false;
         boolean inCombo = o.state == State.HIT || juggled || o.state == State.DOWN;
         b.combo = inCombo ? b.combo + 1 : 1;
         b.comboDmg = inCombo ? b.comboDmg + dmg : dmg;
-        if (b.combo >= 2) b.comboShow = 50;
-        if (b == me) score += dmg * 10 * Math.max(1, b.combo);
-        if (counter) call("COUNTER HIT", o.x, GROUND - o.y - 44);
+        if (b.combo >= 2) b.comboShow = 150;
+        if (b == me && practice == 0) score += dmg * 10 * Math.max(1, b.combo);
         if (counter) {
+            call("COUNTER HIT", o.x, GROUND - o.y - 44);
             lastCounter = true;
             flash = 3;
         }
+        if (b == me && practice > 0) info(m, m.is(KND) || m.launch() > 0 ? "HIT (DOWN)" : "HIT " + plus(m.onHit() + (counter ? 4 : 0)));
+        if (m.is(ELECTRIC)) lastCounter = true; // (a blue spark: it crackles)
         spark(b.x + b.facing * m.reach() * 0.8F, GROUND - b.y - (m.level() == Level.LOW ? 4 : m.level() == Level.HIGH ? 28 : 18), 9);
-        o.techable = !m.knockdown() || m.level() != Level.LOW; // (swept off your feet: no tech roll)
-        if (m.is(CARRY) && (juggled || m.knockdown() || counter)) {
+        o.techable = !(m.is(KND) && m.level() == Level.LOW); // (swept off your feet: no tech roll)
+        o.crumple = false;
+        if (o.state == State.SPLAT) {
+            // against the wall: it holds them there a little less each hit; a big one bounces them off it
+            o.wallHits++;
+            if (m.is(KND) || m.is(CARRY) || m.launch() > 0 || o.wallHits > 4) {
+                o.state = State.AIR;
+                o.vy = 0.8F;
+                o.vx = -o.facing * 0.2F;
+                o.y = Math.max(o.y, 4.0F);
+            } else {
+                o.stun = Math.max(12, 40 - o.wallHits * 7);
+            }
+        } else if (m.is(CARRY) && (juggled || m.is(KND) || counter)) {
             // a big one: they're sent flying off - into the wall, if it's near (a wall splat)
             o.state = State.AIR;
             o.airHits++;
-            o.vy = juggled ? 2.0F : 2.6F;
-            o.vx = b.facing * 4.2F;
+            o.vy = juggled ? 0.67F : 0.87F;
+            o.vx = b.facing * 1.4F;
             o.y = Math.max(o.y, 1.0F);
             shake = Math.max(shake, 4);
         } else if (juggled && m.is(SCREW) && !o.screwed) {
@@ -723,8 +904,8 @@ public class Showdown extends ArcadeGame {
             o.state = State.AIR;
             o.screwed = true;
             o.airHits++;
-            o.vy = 3.1F;
-            o.vx = b.facing * 2.3F;
+            o.vy = 1.25F;
+            o.vx = b.facing * 0.45F;
             o.y = Math.max(o.y, 4.0F);
             o.t = 0;
             shake = Math.max(shake, 4);
@@ -732,32 +913,34 @@ public class Showdown extends ArcadeGame {
         } else if (juggled) { // (keeps them up: the juggle goes on, each hit lifting them less)
             o.state = State.AIR;
             o.airHits++;
-            o.vy = Math.max(o.vy, (o.screwed ? 1.9F : 2.6F) - o.airHits * 0.25F);
-            o.vx = b.facing * (o.screwed ? 1.2F : 1.6F);
+            o.vy = Math.max(o.vy, (o.screwed ? 0.63F : 0.87F) - o.airHits * 0.083F);
+            o.vx = b.facing * (o.screwed ? 0.2F : 0.15F);
             o.y = Math.max(o.y, 1.0F);
-        } else if (m.launch() > 0 || counter && m == HOMING) { // (launched)
+        } else if (m.launch() > 0 || counter && m.is(CH_LAUNCH)) { // (launched)
             o.state = State.AIR;
-            o.vy = m.launch() > 0 ? m.launch() : 4.5F;
-            o.vx = b.facing * 0.9F;
+            o.vy = m.launch() > 0 ? m.launch() : 1.8F;
+            o.vx = b.facing * 0.05F;
             o.y = 1.0F;
             o.airHits = 0;
             o.screwed = false;
             o.t = 0;
             shake = 4;
             call("LAUNCH!", o.x, GROUND - 52);
-        } else if (m.knockdown() || o.airborne()) {
+        } else if (m.is(KND) || o.airborne()) {
             land(o, b, m);
         } else if (o.state == State.DOWN) {
-            o.stun = Math.max(o.stun, 8);
+            o.stun = Math.max(o.stun, 24);
         } else {
             o.state = State.HIT;
-            o.stun = m.hitstun() + (counter ? 4 : 0);
-            o.vx = b.facing * 2.4F;
+            o.stun = Math.max(6, left + m.onHit() + (counter ? 4 : 0)); // (as far ahead as its frame data says)
+            o.vx = b.facing * 0.8F;
             o.t = 0;
-            // a counter-hit spin fist or mid check: a stagger (long enough for a launcher)
-            if (counter && (m == SPIN_FIST || m == MID_CHECK)) {
-                o.stun += 8;
-                call("STAGGER", o.x, GROUND - 36);
+            // a counter-hit spin fist or mid check: a crumple (long enough for a launcher)
+            if (counter && m.is(CH_CRUMPLE)) {
+                o.stun += 36;
+                o.crumple = true;
+                o.vx = 0;
+                call("CRUMPLE", o.x, GROUND - 36);
             }
         }
     }
@@ -768,13 +951,15 @@ public class Showdown extends ArcadeGame {
             o.hp = Math.max(0, o.hp - Math.round(m.damage() * (by != null ? by.style.power() : 1.0F)));
             if (by != null) {
                 o.x = by.x - by.facing * 16; // (thrown over their shoulder)
-                if (by == me) score += 300;
+                if (by == me && practice == 0) score += 300;
+                by.combo = 1;
+                by.comboDmg = m.damage();
             }
             o.techable = false; // (thrown down hard: no tech roll)
             shake = 6;
         }
         o.state = State.DOWN;
-        o.stun = 24;
+        o.stun = 70;
         o.vx = 0;
         o.vy = 0;
         o.y = 0;
@@ -782,40 +967,30 @@ public class Showdown extends ArcadeGame {
         shake = Math.max(shake, 4);
     }
 
-    private boolean backHeld(Body b) {
-        if (b == me) return (kL && b.facing > 0) || (kR && b.facing < 0);
-        return b.state == State.BLOCK;
-    }
-
-    private boolean forwardHeld(Body b) {
-        if (b == me) return (kR && b.facing > 0) || (kL && b.facing < 0);
-        return b.state == State.DASH || b.state == State.RUN;
-    }
-
-    private void spark(float x, float y, int ticks) {
-        sparks.add(new float[] {x, GROUND - y, ticks, lastCounter ? 1 : 0}); // (along, height up; how long; a counter hit's)
+    private void spark(float x, float y, int twentieths) {
+        sparks.add(new float[] {x, GROUND - y, twentieths, lastCounter ? 1 : 0}); // (along, height up; how long; a counter hit's)
         lastCounter = false;
     }
 
     private void call(String text, float x, float y) {
-        callouts.add(new Object[] {text, x, y, 28});
+        if (!text.isEmpty()) callouts.add(new Object[] {text, x, y, 84});
     }
 
     private void finishRound(Body winner, String how) {
-        roundOver = 90;
+        roundOver = 270;
         winner.wins++;
         Body loser = winner == me ? foe : me;
         if (loser.hp <= 0) {
             loser.state = State.KO;
             loser.y = 0;
             shake = 12;
-            slowmo = 40;
+            slowmo = 120;
             flash = 4;
         }
         winner.state = State.WIN;
         boolean perfect = winner.hp == MAX_HP;
         say(how + "  " + (winner == me ? "YOU WIN" : foe.style.name() + " WINS") + (perfect ? " - PERFECT" : ""), 90);
-        if (winner == me) score += 300 + me.hp * 5 + (perfect ? 2000 : 0) + clock / 20 * 10;
+        if (winner == me) score += 300 + me.hp * 3 + (perfect ? 2000 : 0) + clock / FPS * 10;
     }
 
     private void endRound() {
@@ -828,7 +1003,7 @@ public class Showdown extends ArcadeGame {
             }
             newMatch();
             say((ladder % (FIGHTERS.length - 1) == 0 ? "CHAMPION! NEXT: " : "NEXT: ") + foe.style.name(), 70);
-            roundOver = -70;
+            roundOver = -210;
         } else if (foe.wins >= 2) {
             over = true;
         } else {
@@ -838,128 +1013,166 @@ public class Showdown extends ArcadeGame {
 
     // ================= the cabinet's fighter =================
 
+    /** Its best answer to having this many frames before you can block again: a launcher if there's time, else 1,2. */
+    private Move punisher(Body b, int frames, boolean low) {
+        if (frames >= 15) {
+            if (low) return RISING_UPPER;
+            if (b.who == 0 && frames >= 15) return DRAGON_UPPER;
+            return LAUNCHER;
+        }
+        if (frames >= 12 && low) return RISING_KICK;
+        if (frames >= 10) return low ? CROUCH_JAB : JAB;
+        return null;
+    }
+
     private void cpu() {
         Body b = foe, o = me;
-        int d = difficulty();
-        if (b.state == State.THROWN) { // (breaking a throw: the right punch, in time)
-            if (b.t == 3 + Math.max(0, 4 - d) && random.nextFloat() < 0.25F + 0.12F * d) breakThrow(b);
+        b.advancing = false;
+        int d = Math.min(difficulty(), 6);
+        float dist = Math.abs(o.x - b.x);
+        int react = Math.max(9, 22 - d * 2); // (how quick it sees what you're doing, in frames)
+        if (b.state == State.THROWN) { // (breaking a throw: the right buttons, in time)
+            if (b.t == Math.max(6, 18 - d * 2) && random.nextFloat() < 0.2F + 0.1F * d) breakThrow(b);
             return;
         }
-        float dist = Math.abs(o.x - b.x);
         if (b.state == State.DOWN) {
-            if (b.t == 2 && b.techable && random.nextFloat() < 0.2F + 0.1F * d) {
-                tech(b);
-            } else if (b.stun > 6 && dist < 26 && random.nextFloat() < 0.04F + 0.02F * d) {
-                attack(b, GETUP_KICK);
-            } else if (b.stun > 6 && random.nextFloat() < 0.08F + 0.03F * d) { // (rolling up)
-                b.state = State.RISE;
-                b.stun = 6;
-                b.x -= b.facing * 10;
-            }
+            if (b.t == 4 && b.techable && random.nextFloat() < 0.25F + 0.1F * d) tech(b);
+            else if (b.t == 20 && dist < 26 && random.nextFloat() < 0.15F) attack(b, random.nextBoolean() ? GETUP_KICK : GETUP_LOW);
+            else if (b.t == 20 && random.nextFloat() < 0.5F + 0.08F * d) roll(b, random.nextInt(3) - 1);
             return;
         }
         // a juggle: jab, jab ... the screw ... dash in, the lunge punch to finish (into the wall if it's near)
-        if (o.state == State.AIR && (b.free() || b.state == State.DASH) && random.nextFloat() < 0.55F + 0.12F * d) {
+        if (o.state == State.AIR && (b.free() || b.state == State.DASH)) {
+            boolean falling = o.y < 26 && (o.vy < 0.3F || o.y < 12);
             if (o.screwed) {
-                if (dist > 28 && b.state != State.DASH) dash(b);
-                else if (dist <= 32) attack(b, LUNGE_PUNCH);
-            } else if (dist < 28) {
+                if (dist > 26 && b.state != State.DASH) dash(b);
+                else if (dist <= 30 && o.y < 20) attack(b, b.who == 3 ? BURNING_FIST : LUNGE_PUNCH);
+            } else if (dist < 26 && falling) {
                 if (cpuJuggle >= 2 || o.airHits >= 3) {
-                    attack(b, random.nextBoolean() ? SPIN_FIST : SPIRAL_KICK);
+                    attack(b, b.who == 1 ? SPIRAL_KICK : SPIN_FIST);
                     cpuJuggle = 0;
-                } else {
+                } else if (random.nextFloat() < 0.6F + 0.1F * d) {
                     attack(b, JAB);
                     b.queued = random.nextFloat() < 0.5F + 0.1F * d ? JAB_2 : null;
                     cpuJuggle += 2;
                 }
-            } else if (b.state != State.DASH) {
+            } else if (dist >= 26 && b.state != State.DASH) {
                 dash(b);
             }
             return;
         }
         if (o.state != State.AIR) cpuJuggle = 0;
-        if (b.state == State.CROUCH_DASH) { // (out of a crouch dash: the dragon upper, or a low)
-            if (b.t >= 5 && dist < 30) attack(b, random.nextFloat() < 0.7F ? DRAGON_UPPER : HOOK_SWEEP);
+        if (b.state == State.CROUCH_DASH) { // (out of a crouch dash: the dragon upper, or the hell sweep)
+            if (b.t >= 10 && dist < 30) {
+                boolean perfect = random.nextFloat() < 0.15F + 0.1F * d;
+                attack(b, random.nextFloat() < 0.7F ? (perfect ? PERFECT_DRAGON : DRAGON_UPPER) : HELL_SWEEP);
+            }
             return;
         }
-        if (!b.free() || b.airborne()) return;
-        b.buffered = b.state == State.SIDEWALK && random.nextFloat() < 0.7F;
-        // a low just blocked: punish it standing up (the rising upper)
-        if (b.blockedLow) {
+        // blockstun just over: punish what it blocked (it knows how far behind you are)
+        boolean wasBlocking = cpuWasBlocking;
+        cpuWasBlocking = b.state == State.BLOCK;
+        if (wasBlocking && b.free()) {
+            boolean low = b.blockedLow;
             b.blockedLow = false;
-            if (dist < 28 && random.nextFloat() < 0.35F + 0.12F * d) {
-                attack(b, random.nextFloat() < 0.6F ? RISING_UPPER : RISING_KICK);
+            Move p = o.state == State.ATTACK ? punisher(b, o.left(), low) : null;
+            if (p != null && dist < p.reach() + 4 && random.nextFloat() < 0.3F + 0.12F * d) {
+                if (p == RISING_UPPER || p == RISING_KICK || p == CROUCH_JAB) b.state = State.STAND;
+                attack(b, p);
                 return;
             }
         }
-        if (o.state == State.DOWN && dist < 30 && random.nextFloat() < 0.15F) {
-            attack(b, random.nextBoolean() ? LOW_KICK : TOE_KICK);
+        if (!b.free() || b.airborne()) return;
+        b.buffered = b.state == State.SIDEWALK && random.nextFloat() < 0.98F;
+        // crumpled: a free launcher
+        if (o.state == State.HIT && o.crumple && dist < 26) {
+            attack(b, b.who == 0 ? DRAGON_UPPER : LAUNCHER);
             return;
         }
-        // the player attacking: block it right, low-parry a low, power-crush a string, step a straight one, or back off
-        if (o.state == State.ATTACK && o.move != null && o.t < o.move.startup() + o.move.active() && dist < o.move.reach() + 10) {
-            float r = random.nextFloat();
-            Level lv = o.move.level();
-            if (lv == Level.LOW && r < 0.06F + 0.03F * d) {
-                b.parryAt = ticks;
-                b.state = State.STAND;
-            } else if (r < 0.12F + 0.06F * d && !o.move.homing() && lv != Level.THROW) {
-                sidestep(b, random.nextBoolean() ? 1 : -1);
-            } else if (r < 0.5F + 0.1F * d) {
-                b.state = lv == Level.LOW || lv == Level.THROW || (lv == Level.HIGH && random.nextFloat() < 0.4F) ? State.CROUCH : State.STAND;
-            } else if (r < 0.55F + 0.05F * d && lv != Level.LOW && o.move.next() != null) {
-                attack(b, IRON_PALM);
-            } else if (r < 0.62F + 0.05F * d) {
-                backdash(b);
+        // you whiffed something slow: whiff punish
+        if (o.state == State.ATTACK && o.move != null && !o.hitDone && o.t >= o.move.startup() + o.move.active()
+                && o.left() >= 15 && dist < 30 && random.nextFloat() < 0.04F + 0.02F * d) {
+            Move p = punisher(b, o.left(), false);
+            if (p != null) {
+                attack(b, p);
+                return;
             }
+        }
+        if (o.state == State.DOWN && dist < 30 && random.nextFloat() < 0.02F) {
+            attack(b, b.who == 2 ? GROUND_SLAM : random.nextBoolean() ? LOW_KICK : TOE_KICK);
             return;
         }
-        // the player recovering from a big move: punish it - a launcher, and a juggle
-        if (o.state == State.ATTACK && o.move != null && o.t >= o.move.startup() + o.move.active() && o.move.recovery() >= 12 && dist < 28
-                && random.nextFloat() < 0.3F + 0.15F * d) {
-            attack(b, o.move.level() == Level.LOW ? RISING_UPPER : LAUNCHER);
-            return;
+        // your move coming out: once it's seen it (in time), block it right, duck it, low-parry it, power-crush it,
+        // step it, or back off
+        if (o.state == State.ATTACK && o.move != null && o.serial != cpuSeen && o.t >= react) {
+            cpuSeen = o.serial;
+            Level lv = o.move.level();
+            boolean inTime = o.t < o.move.startup() + o.move.active();
+            float r = random.nextFloat();
+            if (inTime && dist < o.move.reach() + 12) {
+                if (lv == Level.LOW && r < 0.1F + 0.04F * d) {
+                    b.parryAt = ticks;
+                    b.state = State.STAND;
+                } else if (r < 0.1F + 0.05F * d && !o.move.is(HOMING) && lv != Level.THROW) {
+                    sidestep(b, random.nextBoolean() ? 1 : -1);
+                } else if (r < 0.55F + 0.08F * d) {
+                    b.state = lv == Level.LOW || lv == Level.THROW || (lv == Level.HIGH && random.nextFloat() < 0.35F) ? State.CROUCH : State.STAND;
+                    b.t = 0;
+                } else if (r < 0.62F + 0.05F * d && lv != Level.LOW && o.move.next() != null) {
+                    attack(b, b.who == 2 ? PISTON : b.who == 3 ? HEAT_RUSH : IRON_PALM);
+                } else if (r < 0.68F + 0.04F * d) {
+                    backdash(b);
+                }
+                return;
+            }
         }
-        // staggered: a free launcher
-        if (o.state == State.HIT && o.stun > 8 && dist < 26 && random.nextFloat() < 0.3F + 0.1F * d) {
-            attack(b, LAUNCHER);
-            return;
+        // its own guard: mostly standing (it can't see a fast low coming - it guesses, now and then)
+        if (b.state == State.CROUCH && b.t > 20 && random.nextFloat() < 0.08F) b.state = State.STAND;
+        if (b.state == State.STAND && dist < 40 && random.nextFloat() < 0.002F * (d + 1)) {
+            b.state = State.CROUCH;
+            b.t = 0;
         }
-        if (b.state == State.CROUCH && random.nextFloat() < 0.3F) b.state = State.STAND;
         if (--thinkIn > 0) {
-            if (b.state == State.STAND && dist > 40 && random.nextFloat() < 0.6F) b.x += b.facing * b.style.speed();
+            b.advancing = b.state == State.STAND && dist > 44;
+            if (b.advancing) b.x += b.facing * 0.33F * b.style.speed();
+            else if (b.state == State.STAND && dist < 24 && random.nextFloat() < 0.3F) b.x -= b.facing * 0.25F * b.style.speed();
             return;
         }
-        thinkIn = Math.max(3, 10 - d * 2);
+        thinkIn = Math.max(8, 30 - d * 4) + random.nextInt(12);
         float r = random.nextFloat();
-        if (b.rage && !b.rageUsed && dist < 32 && r < 0.25F) {
-            attack(b, RAGE_ART);
+        if (b.rage && !b.rageUsed && dist < 32 && r < 0.2F) {
+            attack(b, random.nextBoolean() ? RAGE_ART : rageDrive(b));
         } else if (dist > 70) {
-            if (r < 0.35F) dash(b);
-            else if (r < 0.45F) sidestep(b, random.nextBoolean() ? 1 : -1);
+            if (r < 0.4F) dash(b);
+            else if (r < 0.5F) sidestep(b, random.nextBoolean() ? 1 : -1);
             else b.state = State.STAND;
-            b.buffered = r < 0.2F;
+            b.buffered = r < 0.25F;
         } else if (dist > 32) {
             if (r < 0.2F) dash(b);
-            else if (r < 0.32F) crouchDash(b);
-            else if (r < 0.42F) attack(b, HOMING);
-            else if (r < 0.52F) sidestep(b, random.nextBoolean() ? 1 : -1);
-            else if (r < 0.62F) backdash(b);
-            else if (r < 0.68F) attack(b, LUNGE_PUNCH);
+            else if (r < 0.3F && b.who == 0) crouchDash(b);
+            else if (r < 0.4F) attack(b, HOMING_KICK);
+            else if (r < 0.5F) sidestep(b, random.nextBoolean() ? 1 : -1);
+            else if (r < 0.58F) backdash(b);
+            else if (r < 0.64F) attack(b, b.who == 3 ? BURNING_FIST : b.who == 1 ? CAT_SLIDE : LUNGE_PUNCH);
+            else if (r < 0.66F && !b.ki && d >= 2) kiCharge(b);
             else b.state = State.STAND;
         } else {
-            if (r < 0.16F) attack(b, JAB);
-            else if (r < 0.24F) attack(b, MID_CHECK);
-            else if (r < 0.32F) attack(b, MID_KICK);
-            else if (r < 0.40F) attack(b, random.nextBoolean() ? LOW_KICK : CROUCH_STRAIGHT);
-            else if (r < 0.45F) attack(b, SWEEP);
-            else if (r < 0.52F) attack(b, random.nextBoolean() ? THROW_L : THROW_R);
-            else if (r < 0.58F) attack(b, LAUNCHER);
-            else if (r < 0.63F) attack(b, random.nextBoolean() ? SPIN_FIST : HIGH_KICK);
-            else if (r < 0.67F) attack(b, HOPKICK);
-            else if (r < 0.75F) backdash(b);
-            else if (r < 0.83F) sidestep(b, random.nextBoolean() ? 1 : -1);
-            else b.state = random.nextBoolean() ? State.CROUCH : State.STAND;
+            if (r < 0.14F) attack(b, JAB);
+            else if (r < 0.22F) attack(b, MID_CHECK);
+            else if (r < 0.30F) attack(b, MID_KICK);
+            else if (r < 0.38F) attack(b, random.nextBoolean() ? LOW_KICK : TOE_KICK);
+            else if (r < 0.42F) attack(b, b.who == 0 ? HELL_SWEEP : SWEEP);
+            else if (r < 0.49F) attack(b, b.who == 2 && random.nextBoolean() ? IRON_GRAB : random.nextBoolean() ? THROW_L : THROW_R);
+            else if (r < 0.54F) attack(b, LAUNCHER);
+            else if (r < 0.59F) attack(b, b.who == 3 ? FLAME_HEEL : random.nextBoolean() ? SPIN_FIST : HIGH_KICK);
+            else if (r < 0.63F) attack(b, b.who == 1 ? BACKFLIP : HOPKICK);
+            else if (r < 0.68F) attack(b, STEP_KICK);
+            else if (r < 0.76F) backdash(b);
+            else if (r < 0.84F) sidestep(b, random.nextBoolean() ? 1 : -1);
+            else {
+                b.state = random.nextBoolean() ? State.CROUCH : State.STAND;
+                b.t = 0;
+            }
         }
         // strings: carry on with the next hits
         if (b.state == State.ATTACK && b.move == JAB && random.nextFloat() < 0.5F + 0.1F * d) {
@@ -967,6 +1180,30 @@ public class Showdown extends ArcadeGame {
         } else if (b.state == State.ATTACK && b.move == MID_KICK && random.nextFloat() < 0.3F + 0.1F * d) {
             b.queued = WHIRL_KICK;
         }
+    }
+
+    /** Practice's dummy: stands there, or blocks everything. */
+    private void dummy() {
+        Body b = foe, o = me;
+        if (b.state == State.THROWN || b.state == State.DOWN) {
+            if (b.state == State.DOWN && b.t == 30) roll(b, 0);
+            return;
+        }
+        if (practice != 2 || !b.free()) return;
+        if (o.state == State.ATTACK && o.move != null) {
+            b.state = o.move.level() == Level.LOW ? State.CROUCH : State.STAND;
+        } else if (b.state == State.CROUCH && o.state != State.ATTACK) {
+            b.state = State.STAND;
+        }
+    }
+
+    private static Move rageDrive(Body b) {
+        return switch (b.who) {
+            case 1 -> NINE_LIVES;
+            case 2 -> OVERDRIVE;
+            case 3 -> INFERNO;
+            default -> DEVIL_RUSH;
+        };
     }
 
     private void breakThrow(Body b) {
@@ -994,6 +1231,38 @@ public class Showdown extends ArcadeGame {
         return row * 3 + col + 1;
     }
 
+    /** The way held just changed: remember it (for motions), and see what motion it's finished. */
+    private void newDir() {
+        if (me == null) return;
+        int d = dir(me);
+        if (!dirs.isEmpty() && dirs.get(dirs.size() - 1)[0] == d) return;
+        dirs.add(new int[] {d, ticks});
+        while (dirs.size() > 8) dirs.remove(0);
+        if (roundOver != 0) return;
+        Body b = me;
+        if (d == 3) dfAt = ticks;
+        if (motion(15, 6, 5, 6)) dash(b); // f,f
+        else if (motion(15, 4, 5, 4) || (b.state == State.BACKDASH && d == 4)) backdash(b); // b,b (and again: chained)
+        if (b.who == 0 && (motion(18, 6, 5, 2) || motion(18, 6, 5, 3) || motion(18, 6, 5, 2, 3))) crouchDash(b); // f,n,d,df
+        if (motion(20, 2, 3, 6)) qcfAt = ticks; // d,df,f
+    }
+
+    /** The last few ways held were these, in this order, all within so many frames. */
+    private boolean motion(int window, int... seq) {
+        int n = dirs.size();
+        if (n < seq.length) return false;
+        for (int i = 0; i < seq.length; i++) {
+            if (dirs.get(n - seq.length + i)[0] != seq[i]) return false;
+        }
+        return ticks - dirs.get(n - seq.length)[1] <= window + 4 && ticks - dirs.get(n - seq.length + 1)[1] <= window;
+    }
+
+    private boolean together(int button, int other) {
+        return held.contains(BUTTON_KEYS[other]) && ticks - pressedAt[other] <= 4 || other == button;
+    }
+
+    private static final int[] BUTTON_KEYS = {0, GLFW.GLFW_KEY_U, GLFW.GLFW_KEY_I, GLFW.GLFW_KEY_J, GLFW.GLFW_KEY_K};
+
     @Override
     public void keyPressed(int key) {
         boolean repeat = !held.add(key); // (a held key repeating: not a new press)
@@ -1012,91 +1281,95 @@ public class Showdown extends ArcadeGame {
             showList = !showList;
             return;
         }
+        if (key == GLFW.GLFW_KEY_P && me != null) { // (practice: off, the dummy stands, it blocks, it fights)
+            practice = (practice + 1) % 4;
+            frameInfo = "";
+            say(practice == 0 ? "PRACTICE OFF" : practice == 1 ? "PRACTICE: DUMMY" : practice == 2 ? "PRACTICE: BLOCK ALL" : "PRACTICE: CPU", 30);
+            me.hp = foe.hp = MAX_HP;
+            if (practice == 0) {
+                me.wins = foe.wins = 0;
+                round = 0;
+                newRound();
+            }
+            return;
+        }
         if (showList) return;
         if (left(key)) kL = true;
         if (right(key)) kR = true;
         if (up(key)) kU = true;
         if (down(key)) kD = true;
+        if (left(key) || right(key) || up(key) || down(key)) newDir();
         if (roundOver != 0 || me == null) return;
         Body b = me;
-        // the directions: forward twice dashes, back twice backdashes (and again: chained), up or down tapped steps aside,
-        // forward, let go, down(-forward) crouch dashes, down-forward just before a low parries it
-        boolean isFwd = (right(key) && b.facing > 0) || (left(key) && b.facing < 0);
-        boolean isBack = (left(key) && b.facing > 0) || (right(key) && b.facing < 0);
-        if (isFwd) {
-            if (ticks - tapFwd <= 8) dash(b);
-            tapFwd = ticks;
-        }
-        if (isBack) {
-            if (ticks - tapBack <= 8 || b.state == State.BACKDASH) backdash(b);
-            tapBack = ticks;
-        }
-        if ((down(key) || isFwd) && dir(b) == 3) b.parryAt = ticks;
+        if ((down(key) || left(key) || right(key)) && dir(b) == 3) b.parryAt = ticks; // (df just as a low comes in)
         if (up(key)) {
             upAt = ticks;
             if (b.state == State.DOWN) {
-                roll(b);
+                roll(b, 1);
             } else if (kL || kR) { // (up with a direction: a jump that way - in a moment, so up-forward + 4 can hopkick)
-                boolean f = (kR && b.facing > 0) || (kL && b.facing < 0);
                 if (b.free() && !b.airborne()) {
-                    jumpDir = f ? 1 : -1;
-                    jumpAt = ticks + 3;
+                    jumpDir = fwdHeld(b) ? 1 : -1;
+                    jumpAt = ticks + 8;
                 }
             } else {
                 sidestep(b, 1); // (a tap: a sidestep into the screen, straight away)
             }
         }
         if (key == GLFW.GLFW_KEY_SPACE && b.free() && !b.airborne()) { // (the jump key: straight up, or the way you're held)
-            boolean f = (kR && b.facing > 0) || (kL && b.facing < 0), bk = (kL && b.facing > 0) || (kR && b.facing < 0);
-            jumpDir = f ? 1 : bk ? -1 : 0;
-            jumpAt = ticks + 3;
+            jumpDir = fwdHeld(b) ? 1 : backHeld(b) ? -1 : 0;
+            jumpAt = ticks + 8;
         }
         if (down(key)) {
             downAt = ticks;
-            if (b.state == State.DOWN) {
-                roll(b);
-            } else if (ticks - fwdUpAt <= 6 && fwdUpAt - tapFwd <= 7 && fwdUpAt > tapFwd - 1) {
-                crouchDash(b); // (f, n, d: the crouch dash)
-            }
+            if (b.state == State.DOWN) roll(b, -1);
         }
-        if (b.state == State.THROWN) {
-            if ((key == GLFW.GLFW_KEY_U && b.breakWith == 0) || (key == GLFW.GLFW_KEY_I && b.breakWith == 1)) breakThrow(b);
+        if (b.state == State.DOWN && (left(key) || right(key))) roll(b, 0);
+        int button = key == GLFW.GLFW_KEY_U ? 1 : key == GLFW.GLFW_KEY_I ? 2 : key == GLFW.GLFW_KEY_J ? 3 : key == GLFW.GLFW_KEY_K ? 4 : 0;
+        if (button > 0) pressedAt[button] = ticks;
+        if (b.state == State.THROWN) { // (breaking a throw: 1, 2 or 1+2 - whichever arm's grabbing you)
+            boolean both = together(button, 1) && together(button, 2);
+            boolean right = b.breakWith == 2 ? both : button == b.breakWith + 1;
+            if (right && b.t <= 22) breakThrow(b);
             return;
         }
-        int button = key == GLFW.GLFW_KEY_U ? 1 : key == GLFW.GLFW_KEY_I ? 2 : key == GLFW.GLFW_KEY_J ? 3 : key == GLFW.GLFW_KEY_K ? 4 : 0;
         if (key == GLFW.GLFW_KEY_L) {
             attack(b, RAGE_ART);
             return;
         }
         if (button == 0) return;
-        // on the floor: a punch as you land rolls you up (a tech); a kick is a get-up kick
+        // on the floor: a punch as you land rolls you up (a tech); a kick is a get-up kick (3 low, 4 mid)
         if (b.state == State.DOWN || b.state == State.RISE) {
             if (button <= 2) tech(b);
-            else attack(b, GETUP_KICK);
+            else attack(b, button == 3 ? GETUP_LOW : GETUP_KICK);
             return;
         }
-        // two together (pressed within a moment, so the first may have already started): throws, the power crush,
-        // the rage art
-        boolean fresh = b.state == State.ATTACK && b.t <= 2 && b.move != null && b.move.level() != Level.THROW;
-        boolean with1 = held.contains(GLFW.GLFW_KEY_U), with2 = held.contains(GLFW.GLFW_KEY_I),
-                with3 = held.contains(GLFW.GLFW_KEY_J), with4 = held.contains(GLFW.GLFW_KEY_K);
+        int d = dir(b);
+        // buttons together (pressed within a few frames, so the first may have already started): ki charge (all
+        // four), throws, the rage art and rage drive, power crushes, command moves
+        boolean fresh = b.state == State.ATTACK && b.t <= 4 && b.move != null;
+        boolean p12 = together(button, 1) && together(button, 2) && (button == 1 || button == 2);
         Move pair = null;
-        if (button == 1 && with3 || button == 3 && with1) pair = THROW_L;
-        else if (button == 2 && with4 || button == 4 && with2) pair = THROW_R;
-        else if ((button == 1 && with2 || button == 2 && with1) && b.rage && !b.rageUsed) pair = RAGE_ART;
-        else if ((button == 1 && with2 || button == 2 && with1) && (dir(b) == 4 || dir(b) == 1 || dir(b) == 7)) pair = IRON_PALM;
+        if (together(button, 1) && together(button, 2) && together(button, 3) && together(button, 4)) {
+            b.state = fresh ? State.STAND : b.state;
+            kiCharge(b);
+            return;
+        } else if (button == 1 && together(1, 3) || button == 3 && together(3, 1)) {
+            pair = THROW_L;
+        } else if (button == 2 && together(2, 4) || button == 4 && together(4, 2)) {
+            pair = THROW_R;
+        } else if (p12 && b.rage && !b.rageUsed && d == 3) {
+            pair = RAGE_ART; // (df+1+2)
+        } else if (p12 && b.rage && !b.rageUsed && rageDriveInput(b, d)) {
+            pair = rageDrive(b);
+        } else if (p12) {
+            pair = pairMove(b, d);
+        }
         if (pair != null) {
             if (fresh) {
                 b.queued = null;
-                if (pair == RAGE_ART) {
-                    b.state = State.STAND; // (the rage art's own checks: it goes from standing)
-                    attack(b, pair);
-                } else {
-                    attack(b, pair, true);
-                }
-            } else {
-                attack(b, pair);
+                b.state = State.STAND; // (the first button's move undone: the pair instead)
             }
+            if (b.state != State.ATTACK) attack(b, pair);
             return;
         }
         // mid-move: the next hit of a string
@@ -1109,8 +1382,7 @@ public class Showdown extends ArcadeGame {
             if (button >= 3) attack(b, AIR_KICK);
             return;
         }
-        int d = dir(b);
-        // about to jump: up(-forward) + 4 is a hopkick instead (and a punch just stays on the floor)
+        // about to jump: up(-forward) + 4 is a hopkick instead (3: NEKO's backflip; a punch just stays on the floor)
         if (jumpAt >= 0) {
             jumpAt = -1;
             if (button == 4 || button == 3 && d == 9) {
@@ -1119,53 +1391,73 @@ public class Showdown extends ArcadeGame {
             }
             d = 5;
         }
-        Move m;
-        if (b.state == State.CROUCH_DASH) {
-            m = button == 1 ? SNAP_ELBOW : button == 2 ? DRAGON_UPPER : HOOK_SWEEP;
-        } else if (ticks <= b.wsUntil && !kD && (b.state == State.STAND || b.state == State.CROUCH)) {
-            m = button == 1 ? RISING_JAB : button == 2 ? RISING_UPPER : button == 3 ? RISING_KNEE : RISING_KICK; // (while standing)
-        } else if ((b.state == State.DASH || b.state == State.RUN) && button == 2) {
-            m = LUNGE_PUNCH;
-        } else {
-            m = switch (d) {
-                case 1 -> button == 1 ? LOW_PUNCH : button == 2 ? CROUCH_STRAIGHT : SWEEP;
-                case 2 -> button == 1 ? LOW_PUNCH : button == 2 ? CROUCH_STRAIGHT : button == 3 ? LOW_KICK : TOE_KICK;
-                case 3 -> button == 1 ? MID_CHECK : button == 2 ? LAUNCHER : button == 3 ? FRONT_KICK : STEP_KICK;
-                case 4 -> button == 1 ? JAB : button == 2 ? SPIN_FIST : button == 3 ? MID_KICK : HIGH_KICK;
-                case 6 -> button == 1 ? JAB : button == 2 ? LUNGE_PUNCH : button == 3 ? SPIRAL_KICK : HOMING;
-                default -> button == 1 ? JAB : button == 2 ? CROSS : button == 3 ? MID_KICK : HIGH_KICK;
-            };
-        }
-        attack(b, m);
+        attack(b, pickMove(b, d, button));
     }
 
-    /** Getting up off the floor with a roll. */
-    private void roll(Body b) {
-        if (b.stun < 4) return;
-        b.state = State.RISE;
-        b.stun = 6;
-        b.x -= b.facing * 10;
+    /** What 1+2 does with the way held: power crushes, command throws, slams. */
+    private Move pairMove(Body b, int d) {
+        boolean back = d == 1 || d == 4 || d == 7;
+        return switch (b.who) {
+            case 2 -> d == 3 ? IRON_GRAB : d == 6 ? PISTON : d == 2 ? GROUND_SLAM : back ? IRON_PALM : null;
+            case 3 -> d == 6 && b.state == State.DASH ? HEAT_RUSH : back ? IRON_PALM : null;
+            default -> back ? IRON_PALM : null;
+        };
+    }
+
+    private boolean rageDriveInput(Body b, int d) {
+        return switch (b.who) {
+            case 2 -> d == 4 || d == 1 || d == 7; // (b+1+2)
+            case 3 -> ticks - qcfAt <= 10; // (d,df,f+1+2)
+            default -> d == 6; // (f+1+2)
+        };
+    }
+
+    /** A button, with the way held (and what it's in the middle of): which move. */
+    private Move pickMove(Body b, int d, int button) {
+        // RIKU's crouch dash: 1 snap elbow, 2 dragon upper (2 on the very frame you hit df: the perfect one), 3/4 hell sweep
+        if (b.state == State.CROUCH_DASH) {
+            if (button == 2) return ticks - dfAt <= 1 ? PERFECT_DRAGON : DRAGON_UPPER;
+            return button == 1 ? SNAP_ELBOW : HELL_SWEEP;
+        }
+        // BLAZE: d,df,f+2 - the burning fist
+        if (b.who == 3 && button == 2 && ticks - qcfAt <= 10) return BURNING_FIST;
+        // NEKO: out of a sidestep, 1 or 2 a claw swipe; dashing, 3 a slide; b+3 a backflip
+        if (b.who == 1) {
+            if ((b.state == State.SIDESTEP || b.state == State.SIDEWALK) && button <= 2) return CLAW_SWIPE;
+            if ((b.state == State.DASH || b.state == State.RUN) && button == 3) return CAT_SLIDE;
+            if (d == 4 && button == 3) return BACKFLIP;
+        }
+        if (b.who == 3 && d == 4 && button == 4) return FLAME_HEEL;
+        if (ticks <= b.wsUntil && !kD && (b.state == State.STAND || b.state == State.CROUCH)) {
+            b.state = State.STAND;
+            return button == 1 ? RISING_JAB : button == 2 ? RISING_UPPER : button == 3 ? RISING_KNEE : RISING_KICK; // (while standing)
+        }
+        if ((b.state == State.DASH || b.state == State.RUN) && button == 2) return LUNGE_PUNCH;
+        return switch (d) {
+            case 1 -> button == 1 ? CROUCH_JAB : button == 2 ? CROUCH_STRAIGHT : button == 3 ? LOW_KICK : SWEEP;
+            case 2 -> button == 1 ? CROUCH_JAB : button == 2 ? CROUCH_STRAIGHT : button == 3 ? LOW_KICK : TOE_KICK;
+            case 3 -> button == 1 ? MID_CHECK : button == 2 ? LAUNCHER : button == 3 ? FRONT_KICK : STEP_KICK;
+            case 4 -> button == 1 ? JAB : button == 2 ? SPIN_FIST : button == 3 ? MID_KICK : HIGH_KICK;
+            case 6 -> button == 1 ? JAB : button == 2 ? LUNGE_PUNCH : button == 3 ? SPIRAL_KICK : HOMING_KICK;
+            default -> button == 1 ? JAB : button == 2 ? CROSS : button == 3 ? MID_KICK : HIGH_KICK;
+        };
     }
 
     @Override
     public void keyReleased(int key) {
         held.remove(key);
-        if (me != null && ((right(key) && me.facing > 0) || (left(key) && me.facing < 0))) fwdUpAt = ticks;
         if (left(key)) kL = false;
         if (right(key)) kR = false;
-        if (up(key)) {
-            kU = false;
-        }
-        if (down(key)) {
-            kD = false;
-            if (me != null && !picking && roundOver == 0 && me.state == State.CROUCH) {
-                // a quick tap: a sidestep out of the screen; a held crouch let go: standing up - the while-standing moves
-                if (ticks - downAt < 4) sidestep(me, -1);
-                else me.wsUntil = ticks + 6;
-            }
+        if (up(key)) kU = false;
+        boolean wasDown = down(key) && kD;
+        if (down(key)) kD = false;
+        if (left(key) || right(key) || up(key) || down(key)) newDir();
+        if (wasDown && me != null && !picking && roundOver == 0 && me.state == State.CROUCH) {
+            // a quick tap: a sidestep out of the screen; a held crouch let go: standing up - the while-standing moves
+            if (ticks - downAt < 10) sidestep(me, -1);
+            else me.wsUntil = ticks + 12;
         }
     }
-
 
     // ================= how they look: real 3D =================
     //
@@ -1210,9 +1502,9 @@ public class Showdown extends ArcadeGame {
         oCamD = camD;
         oSpin = spin;
         float sep = Math.abs(me.x - foe.x);
-        camU += ((me.x + foe.x) / 2 - camU) * 0.25F;
-        camV += ((me.depth + foe.depth) / 2 - camV) * 0.25F;
-        camD += (Mth.clamp(sep * 0.8F + 95, 130, 240) - camD) * 0.15F;
+        camU += ((me.x + foe.x) / 2 - camU) * 0.091F; // (as quick a frame as a quarter a 20th)
+        camV += ((me.depth + foe.depth) / 2 - camV) * 0.091F;
+        camD += (Mth.clamp(sep * 0.8F + 95, 130, 240) - camD) * 0.053F;
         for (Body b : new Body[] {me, foe}) {
             b.ox = b.x;
             b.oy = b.y;
@@ -1220,35 +1512,36 @@ public class Showdown extends ArcadeGame {
             float[][] p = poseOf(b);
             System.arraycopy(p[1], 0, p[0], 0, P);
             float[] want = target(b);
-            boolean snap = b.state == State.ATTACK && b.move != null && b.t >= b.move.startup() - 1 && b.t <= b.move.startup() + b.move.active();
-            float k = snap ? 0.9F : 0.62F;
+            boolean snap = b.state == State.ATTACK && b.move != null && b.t >= b.move.startup() - 4 && b.t <= b.move.startup() + b.move.active();
+            float k = snap ? 0.54F : 0.28F; // (a frame's share of easing there: snapping out as a move hits)
             for (int i = 0; i < P; i++) {
                 float d = want[i] - p[1][i];
                 if (i == 12) d = Mth.wrapDegrees(d);
                 p[1][i] += d * k;
             }
             float[] hp = shownHp.computeIfAbsent(b, x -> new float[] {MAX_HP});
-            hp[0] = hp[0] > b.hp ? Math.max(b.hp, hp[0] - 0.6F) : b.hp;
+            hp[0] = hp[0] > b.hp ? Math.max(b.hp, hp[0] - 0.35F) : b.hp;
             List<float[]> tr = trails.computeIfAbsent(b, x -> new ArrayList<>());
-            boolean active = b.state == State.ATTACK && b.move != null && b.t >= b.move.startup() - 1 && b.t < b.move.startup() + b.move.active() + 1;
+            boolean active = b.state == State.ATTACK && b.move != null && b.t >= b.move.startup() - 4 && b.t < b.move.startup() + b.move.active() + 3;
             if (active) {
                 float[] tip = tip(b);
                 if (tip != null) tr.add(tip);
             }
-            while (tr.size() > (active ? 5 : 0)) tr.remove(0);
-            if ((b.state == State.DASH || b.state == State.BACKDASH || b.state == State.RUN) && ticks % 3 == 0 || b.state == State.DOWN && b.t == 1) {
+            while (tr.size() > (active ? 10 : 0)) tr.remove(0);
+            if ((b.state == State.DASH || b.state == State.BACKDASH || b.state == State.RUN || b.state == State.CROUCH_DASH) && ticks % 9 == 0
+                    || b.state == State.DOWN && b.t == 1) {
                 for (int i = 0; i < 3; i++) {
                     dust.add(new float[] {b.x + (random.nextFloat() - 0.5F) * 10, 1, b.depth + (random.nextFloat() - 0.5F) * 8, 14,
-                            -b.facing * random.nextFloat() * 0.6F});
+                            -b.facing * random.nextFloat() * 0.2F});
                 }
             }
         }
         dust.removeIf(d -> {
             d[0] += d[4];
-            d[1] += 0.25F;
-            return --d[3] <= 0;
+            d[1] += 0.083F;
+            return (d[3] -= 1 / 3.0F) <= 0;
         });
-        if (flash > 0) flash--;
+        if (flash > 0 && ticks % 3 == 0) flash--;
     }
 
     private void hold() {
@@ -1268,7 +1561,7 @@ public class Showdown extends ArcadeGame {
     /** What its pose should be now. */
     private float[] target(Body b) {
         float[] p = GUARD.clone();
-        float w = ticks * 0.55F;
+        float w = ticks / 3.0F * 0.55F;
         Move m = b.move;
         boolean windup = b.state == State.ATTACK && m != null && b.t < m.startup() - 1;
         boolean out = b.state == State.ATTACK && m != null && !windup && b.t < m.startup() + m.active() + 2;
@@ -1322,6 +1615,16 @@ public class Showdown extends ArcadeGame {
                 p[11] = -8;
             }
             case HIT -> {
+                if (b.crumple) { // (crumpling: knees going, slumping forward)
+                    crouch(p);
+                    p[0] = 35;
+                    p[11] = 30;
+                    p[7] = 10;
+                    p[8] = 20;
+                    p[9] = 5;
+                    p[10] = 15;
+                    break;
+                }
                 p[0] = -20;
                 p[11] = -25;
                 p[7] = 15;
@@ -1331,7 +1634,7 @@ public class Showdown extends ArcadeGame {
             }
             case AIR -> {
                 // (screwed: spinning over and over, turned side-on)
-                p[12] = b.screwed ? 60 + b.t * 30 : 40 + b.airHits * 30 + b.t * 6;
+                p[12] = b.screwed ? 60 + b.t * 10 : 40 + b.airHits * 30 + b.t * 2;
                 if (b.screwed) p[13] = 55;
                 p[7] = 130;
                 p[8] = 20;
@@ -1356,7 +1659,7 @@ public class Showdown extends ArcadeGame {
                 p[11] = 0;
             }
             case THROWN -> {
-                if (b.t > 8) {
+                if (b.t > 24) {
                     p[12] = 88;
                 } else {
                     p[0] = -15;
@@ -1375,6 +1678,17 @@ public class Showdown extends ArcadeGame {
                 p[5] = -6;
                 p[11] = -15;
             }
+            case KI -> { // (fists down at the sides, braced, charging up)
+                p[1] = 3;
+                p[0] = -4;
+                p[3] = 28;
+                p[5] = -24;
+                p[7] = 15;
+                p[8] = 70;
+                p[9] = 15;
+                p[10] = 70;
+                p[11] = -12;
+            }
             case WIN -> {
                 p[7] = 170;
                 p[8] = 10;
@@ -1390,7 +1704,7 @@ public class Showdown extends ArcadeGame {
                     p[4] = -22 - 18 * Math.max(0, Mth.cos(w));
                     p[6] = -20 - 18 * Math.max(0, -Mth.cos(w));
                 } else {
-                    p[1] += Mth.sin(ticks * 0.15F) * 0.6F; // (breathing, bouncing a little on its feet)
+                    p[1] += Mth.sin(ticks * 0.05F) * 0.6F; // (breathing, bouncing a little on its feet)
                 }
             }
         }
@@ -1584,7 +1898,7 @@ public class Showdown extends ArcadeGame {
                 out.add(new Bone(crown, new float[] {headTop[0] + hd[0] * 0.8F, headTop[1] + hd[1] * 0.8F, 0}, 7.4F, 7.4F, hair, hr));
                 float[] bandAt = {headBase[0] + hd[0] * 5.4F, headBase[1] + hd[1] * 5.4F, 0};
                 out.add(new Bone(bandAt, new float[] {bandAt[0] + hd[0] * 1.1F, bandAt[1] + hd[1] * 1.1F, 0}, 7.5F, 7.5F, accent, band));
-                float flap = Mth.sin(ticks * 0.4F) * 15;
+                float flap = Mth.sin(vt() * 0.4F) * 15;
                 float[] tail = at(new float[] {bandAt[0] - fwd[0] * 3.6F, bandAt[1] - fwd[1] * 3.6F}, dir(-80 + flap), 6, 0);
                 out.add(new Bone(new float[] {bandAt[0] - fwd[0] * 3.6F, bandAt[1] - fwd[1] * 3.6F, 0}, tail, 1.0F, 1.6F, accent, band));
             }
@@ -1594,7 +1908,7 @@ public class Showdown extends ArcadeGame {
                     float[] e0 = {headTop[0], headTop[1], side};
                     out.add(new Bone(e0, new float[] {e0[0] + hd[0] * 3.2F, e0[1] + hd[1] * 3.2F, side}, 2.4F, 1.6F, hair, hr));
                 }
-                float sway = Mth.sin(ticks * 0.2F) * 20;
+                float sway = Mth.sin(vt() * 0.2F) * 20;
                 float[] t0 = {pelvis[0] - up[1] * 0 - 3.5F, pelvis[1] + 2, 0};
                 float[] t1 = at(t0, dir(-120 + sway), 6, 0);
                 float[] t2 = at(t1, dir(-170 + sway * 1.5F), 6, 0);
@@ -1608,12 +1922,12 @@ public class Showdown extends ArcadeGame {
                 float[] a1 = {a0[0] + hd[0] * 4.5F, a0[1] + hd[1] * 4.5F, 0};
                 out.add(new Bone(a0, a1, 0.7F, 0.7F, legs, gi));
                 out.add(new Bone(a1, new float[] {a1[0] + hd[0] * 1.4F, a1[1] + hd[1] * 1.4F, 0}, 1.6F, 1.6F,
-                        (ticks / 8) % 2 == 0 ? 0xFF4040 : accent, hr));
+                        ((int) vt() / 8) % 2 == 0 ? 0xFF4040 : accent, hr));
             }
             default -> { // flames for hair
                 out.add(new Bone(crown, new float[] {headTop[0] + hd[0] * 0.6F, headTop[1] + hd[1] * 0.6F, 0}, 7.4F, 7.4F, hair, hr));
                 for (int i = 0; i < 4; i++) {
-                    float flick = Mth.sin(ticks * 0.6F + i * 1.7F) * 1.2F;
+                    float flick = Mth.sin(vt() * 0.6F + i * 1.7F) * 1.2F;
                     float side = -2.4F + i * 1.6F;
                     float[] f0 = {headTop[0] - fwd[0] * (i % 2) * 1.5F, headTop[1] - fwd[1] * (i % 2) * 1.5F, side};
                     float[] f1 = at(f0, dir(195 + i * 4 - lean), 3.5F + flick + (i % 2), side);
@@ -1680,7 +1994,7 @@ public class Showdown extends ArcadeGame {
 
     /** How far up or down to put it so its feet (or, lying, its back) are on the floor. */
     private float lift(Body b, float[] p) {
-        boolean lying = b.state == State.DOWN || b.state == State.KO || b.state == State.THROWN && b.t > 8;
+        boolean lying = b.state == State.DOWN || b.state == State.KO || b.state == State.THROWN && b.t > 24;
         boolean grounded = !b.airborne() && b.state != State.AIR && b.state != State.SPLAT;
         if (!grounded && !lying) return 0;
         float low = Float.MAX_VALUE;
@@ -1698,6 +2012,11 @@ public class Showdown extends ArcadeGame {
     // ---- the camera ----
 
     private float pt;
+
+    /** Time for drawing, in 20ths of a second (smooth between frames): what the looks were made for. */
+    private float vt() {
+        return (ticks + pt) / 3.0F;
+    }
     private float cu, cd, csp, horizon, camH;
     private static final float FL = 170;
 
@@ -1821,9 +2140,16 @@ public class Showdown extends ArcadeGame {
         curBody = b;
         curPose = p;
         curLift = lift(b, p);
-        boolean hurt = (b.state == State.HIT || b.state == State.AIR) && (ticks / 2) % 2 == 0;
+        boolean hurt = (b.state == State.HIT || b.state == State.AIR) && ((int) vt() / 2) % 2 == 0;
         if (b.rage) {
-            for (Bone bone : bones) box(b, p, bone, 1.2F + 0.4F * Mth.sin(ticks * 0.8F), 0.28F, 0xFF3020);
+            for (Bone bone : bones) box(b, p, bone, 1.2F + 0.4F * Mth.sin(vt() * 0.8F), 0.28F, 0xFF3020);
+        }
+        if (b.state == State.KI || b.ki) { // (ki charge: a gold glow - flaring while it charges)
+            float grow = b.state == State.KI ? 1.0F + b.t * 0.04F : 0.9F + 0.3F * Mth.sin(vt() * 1.2F);
+            for (Bone bone : bones) box(b, p, bone, grow, 0.3F, 0xFFD040);
+        }
+        if (b.state == State.ATTACK && b.move != null && b.move.is(ELECTRIC) && b.t < b.move.startup() + b.move.active() + 6) {
+            for (Bone bone : bones) box(b, p, bone, 1.4F + 0.6F * Mth.sin(vt() * 3), 0.4F, 0x50A0FF); // (crackling blue)
         }
         if (b.state == State.ATTACK && b.move != null && b.move.is(CRUSH) && b.t < b.move.startup() + b.move.active()) {
             for (Bone bone : bones) box(b, p, bone, 1.0F, 0.35F, 0x60C0FF); // (a power crush: armoured, glowing)
@@ -1855,7 +2181,7 @@ public class Showdown extends ArcadeGame {
         for (int i = 0; i < 40; i++) {
             float sx = Math.floorMod((int) (i * 53 - turn * 140), W + 20) - 10;
             float sy = (i * 29) % Math.max(1, (int) (horizon * 0.5F));
-            int a = (int) (90 + 80 * Mth.sin(ticks * 0.1F + i)) << 24;
+            int a = (int) (90 + 80 * Mth.sin(vt() * 0.1F + i)) << 24;
             box(g, x0, y0, sx, sy, 1, 1, a | 0xFFFFFF);
         }
         // the sun, low, with its glow
@@ -1889,7 +2215,7 @@ public class Showdown extends ArcadeGame {
                 float lx = Math.floorMod((int) (i * 27 + 13 - slide * 1.0F), W + 20) - 10;
                 float wx = lx + slide;
                 float h = 14 * (0.55F + 0.25F * Mth.sin(wx * 0.06F) + 0.2F * Mth.sin(wx * 0.06F * 2.7F + 1.3F));
-                float fl = 0.7F + 0.3F * Mth.sin(ticks * 0.3F + i);
+                float fl = 0.7F + 0.3F * Mth.sin(vt() * 0.3F + i);
                 box(g, x0, y0, lx - 1, horizon - h - 3, 3, 3, ((int) (255 * fl) << 24) | 0xFFC060);
             }
         }
@@ -1997,36 +2323,64 @@ public class Showdown extends ArcadeGame {
         g.flush();
     }
 
-    private static final String[][] MOVE_LIST = {
-            {"MOVE LIST", "1 U  2 I  3 J  4 K  (H: back)"},
-            {"1,1,2  1,2,4  1,2,3  3,4", "strings"},
-            {"df+1  mid check", "df+2  LAUNCHER"},
-            {"d+3 / d+4  lows", "db+4  sweep"},
-            {"f+2 / ff+2  lunge punch", "f+4  homing kick"},
-            {"b+2  spin fist", "f+3  spiral kick   (SCREWS)"},
-            {"b+1+2  iron palm", "POWER CRUSH (soaks hits)"},
-            {"f,n,d,df  crouch dash", "then 2: DRAGON UPPER  1 / 4"},
-            {"let go of down:", "ws1  ws2 LAUNCHER  ws4"},
-            {"uf+4  hopkick (LAUNCHER)", "hops over lows"},
-            {"1+3 / 2+4  throws", "break: 1 / 2 as you're caught"},
-            {"df just before a low", "LOW PARRY"},
-            {"down: punch as you land", "TECH   kick: get-up kick"},
-            {"rage: L or 1+2", "RAGE ART"},
-            {"COMBO: df+2, 1,1, b+2,", "dash, f+2 (to the wall)"}};
+    private static String rageDriveName(Body b) {
+        return b.who == 2 ? "b+1+2" : b.who == 3 ? "qcf+1+2" : "f+1+2";
+    }
+
+    /** The move list: everyone's moves, then this fighter's own. */
+    private String[][] moveListFor(Body b) {
+        List<String[]> l = new ArrayList<>();
+        l.add(new String[] {"MOVE LIST - " + b.style.name(), "1 U  2 I  3 J  4 K   H: back"});
+        l.add(new String[] {"1,1,2  1,2,4  1,2,3  3,4", "strings"});
+        l.add(new String[] {"df+1 mid check  df+2 LAUNCHER", "df+3  df+4  mids"});
+        l.add(new String[] {"d+1  d+2  crouching mids", "d+3 d+4 lows   db+4 sweep"});
+        l.add(new String[] {"f+2 / dash 2  lunge punch", "f+4  homing (CH launches)"});
+        l.add(new String[] {"b+2 spin fist  f+3 spiral", "SCREWS (one a juggle)"});
+        l.add(new String[] {"b+1+2  iron palm", "POWER CRUSH (soaks hits)"});
+        l.add(new String[] {"let go of down: ws1 ws2 ws4", "ws2: LAUNCHER"});
+        l.add(new String[] {"uf+4  hopkick", "LAUNCHER, hops over lows"});
+        switch (b.who) {
+            case 0 -> {
+                l.add(new String[] {"f,n,d,df  crouch dash", "+1  +2 DRAGON UPPER  +4 low"});
+                l.add(new String[] {"2 on the very frame of df:", "PERFECT DRAGON (+5, i11)"});
+            }
+            case 1 -> {
+                l.add(new String[] {"sidestep + 1 / 2", "claw swipe (homing)"});
+                l.add(new String[] {"dash + 3  cat slide (low)", "b+3  backflip (LAUNCHER)"});
+            }
+            case 2 -> {
+                l.add(new String[] {"df+1+2  iron grab", "command throw (break: 1+2)"});
+                l.add(new String[] {"f+1+2  piston (CRUSH)", "d+1+2  ground slam"});
+            }
+            default -> {
+                l.add(new String[] {"d,df,f+2  burning fist", "into the wall"});
+                l.add(new String[] {"b+4 flame heel (CH launch)", "dash f+1+2 heat rush"});
+            }
+        }
+        l.add(new String[] {"1+3 / 2+4  throws", "break: 1 / 2 in time"});
+        l.add(new String[] {"df just as a low comes", "LOW PARRY"});
+        l.add(new String[] {"down: 1 or 2 as you land", "TECH    3 / 4 get-up kicks"});
+        l.add(new String[] {"1+2+3+4  ki charge", "next hit can't be blocked"});
+        l.add(new String[] {"rage: df+1+2  RAGE ART", rageDriveName(b) + "  RAGE DRIVE"});
+        l.add(new String[] {"COMBO: df+2, 1,1, b+2,", "dash, f+2 (to the wall)"});
+        l.add(new String[] {"P: practice (frame data)", "W/S tap step  FF dash  BB back"});
+        return l.toArray(new String[0][]);
+    }
 
     /** The move list over the paused fight. */
     private void moveList(GuiGraphics g, Font font, int x0, int y0) {
-        box(g, x0, y0, 6, 6, W - 12, H - 12, 0xE0100A20);
-        box(g, x0, y0, 6, 6, W - 12, 1, 0xFFFFC850);
-        box(g, x0, y0, 6, H - 7, W - 12, 1, 0xFFFFC850);
+        box(g, x0, y0, 4, 4, W - 8, H - 8, 0xE8100A20);
+        box(g, x0, y0, 4, 4, W - 8, 1, 0xFFFFC850);
+        box(g, x0, y0, 4, H - 5, W - 8, 1, 0xFFFFC850);
+        String[][] list = moveListFor(me);
         g.pose().pushPose();
-        g.pose().translate(x0 + 10, y0 + 10, 0);
-        g.pose().scale(0.5F, 0.5F, 1);
-        for (int i = 0; i < MOVE_LIST.length; i++) {
-            int y = i * 15;
+        g.pose().translate(x0 + 8, y0 + 8, 0);
+        g.pose().scale(0.45F, 0.45F, 1);
+        for (int i = 0; i < list.length; i++) {
+            int y = i * 13;
             boolean head = i == 0;
-            g.drawString(font, MOVE_LIST[i][0], 0, y, head ? 0xFFFFC850 : 0xFFFFFFFF, true);
-            g.drawString(font, MOVE_LIST[i][1], 176, y, head ? 0xFFB0B0C8 : 0xFFFFE070, true);
+            g.drawString(font, list[i][0], 0, y, head ? 0xFFFFC850 : 0xFFFFFFFF, true);
+            g.drawString(font, list[i][1], 190, y, head ? 0xFFB0B0C8 : 0xFFFFE070, true);
         }
         g.pose().popPose();
     }
@@ -2120,11 +2474,11 @@ public class Showdown extends ArcadeGame {
         // the clock
         box(g, x0, y0, W / 2.0F - 11, 6, 22, 14, 0xC0101020);
         box(g, x0, y0, W / 2.0F - 11, 6, 22, 1, 0xFFFFC850);
-        String c = Integer.toString(Math.max(0, clock / 20));
+        String c = practice > 0 ? "--" : Integer.toString(Math.max(0, (clock + FPS - 1) / FPS));
         g.pose().pushPose();
         g.pose().translate(x0 + W / 2.0F, y0 + 8, 0);
         g.pose().scale(1.2F, 1.2F, 1);
-        g.drawString(font, c, -font.width(c) / 2, 0, clock < 200 && (ticks / 5) % 2 == 0 ? 0xFFFF5050 : 0xFFFFE070, true);
+        g.drawString(font, c, -font.width(c) / 2, 0, clock < 10 * FPS && ((int) vt() / 5) % 2 == 0 ? 0xFFFF5050 : 0xFFFFE070, true);
         g.pose().popPose();
         // names under the bars, rounds won as lights
         g.pose().pushPose();
@@ -2141,7 +2495,7 @@ public class Showdown extends ArcadeGame {
             g.pose().pushPose();
             g.pose().translate(x0 + 8, y0 + 30, 0);
             g.pose().scale(0.75F, 0.75F, 1);
-            g.drawString(font, "RAGE ART: L", 0, 0, (ticks / 4) % 2 == 0 ? 0xFFFF4040 : 0xFFFF9A2E, true);
+            g.drawString(font, "RAGE: df+1+2 ART  " + rageDriveName(me) + " DRIVE", 0, 0, ((int) vt() / 4) % 2 == 0 ? 0xFFFF4040 : 0xFFFF9A2E, true);
             g.pose().popPose();
         }
         // the combo counters: hits and damage, on the side of whoever's doing it
@@ -2149,7 +2503,7 @@ public class Showdown extends ArcadeGame {
             if (b.combo < 2 || b.comboShow <= 0) continue;
             boolean left = b == me;
             float cx = left ? x0 + 30 : x0 + W - 30;
-            int fade = b.comboShow < 10 ? b.comboShow * 25 : 255;
+            int fade = b.comboShow < 30 ? b.comboShow * 8 + 10 : 255;
             big(g, font, b.combo + " HITS", cx, y0 + 40, 1.0F, (fade << 24) | 0xFFC850);
             big(g, font, b.comboDmg + " DAMAGE", cx, y0 + 50, 0.6F, (fade << 24) | 0xFFFFFF);
         }
@@ -2157,19 +2511,23 @@ public class Showdown extends ArcadeGame {
             String text = (String) co[0];
             float[] s = screen(view((Float) co[1], GROUND - (Float) co[2], camV));
             if (s == null) continue;
-            float rise = (28 - (Integer) co[3]) * 0.4F;
+            float rise = (84 - (Integer) co[3]) * 0.4F / 3;
             big(g, font, text, x0 + s[0], y0 + s[1] - rise, 0.8F, text.startsWith("COUNTER") ? 0xFF80D0FF : 0xFFFFE74A);
+        }
+        if (practice > 0) { // (practice: which dummy, and the frame data of your last move)
+            big(g, font, practice == 1 ? "PRACTICE - DUMMY" : practice == 2 ? "PRACTICE - BLOCK ALL" : "PRACTICE - CPU", x0 + W / 2.0F, y0 + 24, 0.55F, 0xFF80D0FF);
+            if (frameInfoFor > 0 && !frameInfo.isEmpty()) big(g, font, frameInfo, x0 + W / 2.0F, y0 + H - 12, 0.6F, 0xFFFFFFFF);
         }
         if (!banner.isEmpty()) {
             float sc = banner.length() <= 8 ? 2.4F : banner.length() <= 14 ? 1.6F : 1.1F;
-            big(g, font, banner, x0 + W / 2.0F, y0 + 54, sc, (ticks / 4) % 2 == 0 ? 0xFFFFE74A : 0xFFFF9A2E);
+            big(g, font, banner, x0 + W / 2.0F, y0 + 54, sc, ((int) vt() / 4) % 2 == 0 ? 0xFFFFE74A : 0xFFFF9A2E);
         }
     }
 
     private void healthBar(GuiGraphics g, int x0, int y0, int x, Body b, boolean right) {
         float shown = shownHp.computeIfAbsent(b, k -> new float[] {MAX_HP})[0];
         int w = 78;
-        box(g, x0, y0, x - 1, 8, w + 2, 9, b.rage && (ticks / 4) % 2 == 0 ? 0xFFFF3030 : 0xFF0A0812);
+        box(g, x0, y0, x - 1, 8, w + 2, 9, b.rage && ((int) vt() / 4) % 2 == 0 ? 0xFFFF3030 : 0xFF0A0812);
         box(g, x0, y0, x, 9, w, 7, 0xFF3A0A14);
         float fShown = w * shown / MAX_HP, fNow = w * b.hp / (float) MAX_HP;
         box(g, x0, y0, right ? x + w - fShown : x, 9, fShown, 7, 0xFFFFFFFF); // (the damage just taken, draining away)
@@ -2207,7 +2565,7 @@ public class Showdown extends ArcadeGame {
         for (int i = 0; i < FIGHTERS.length; i++) {
             Body b = picks[i];
             if (b == null) {
-                b = picks[i] = new Body(FIGHTERS[i], 30 + i * 44);
+                b = picks[i] = new Body(FIGHTERS[i], i, 30 + i * 44);
                 b.facing = 1;
             }
             b.state = i == pick ? State.WIN : State.STAND;
@@ -2215,7 +2573,7 @@ public class Showdown extends ArcadeGame {
             System.arraycopy(pp[1], 0, pp[0], 0, P);
             float[] want = target(b);
             for (int k = 0; k < P; k++) pp[1][k] += (want[k] - pp[1][k]) * 0.2F;
-            pp[1][13] = i == pick ? (ticks + partial) * 3 % 360 - 180 : 20;
+            pp[1][13] = i == pick ? (ticks + partial) % 360 - 180 : 20;
             pp[0][13] = pp[1][13];
             if (i == pick) {
                 for (int k = 0; k < 12; k++) {
@@ -2236,7 +2594,7 @@ public class Showdown extends ArcadeGame {
         Style s = FIGHTERS[pick];
         String stats = "SPEED " + "■".repeat(Math.round(s.speed() * 4)) + "  POWER " + "■".repeat(Math.round(s.power() * 4));
         big(g, font, stats, x0 + W / 2.0F, y0 + 122, 0.7F, 0xFF9AD8FF);
-        if ((ticks / 10) % 2 == 0) big(g, font, "< >   U: FIGHT", x0 + W / 2.0F, y0 + 133, 0.75F, 0xFFFFFFFF);
+        if (((int) vt() / 10) % 2 == 0) big(g, font, "< >   U: FIGHT", x0 + W / 2.0F, y0 + 133, 0.75F, 0xFFFFFFFF);
         g.flush();
     }
 

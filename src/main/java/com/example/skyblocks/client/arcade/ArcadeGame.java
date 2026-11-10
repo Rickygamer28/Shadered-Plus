@@ -27,6 +27,11 @@ public abstract class ArcadeGame {
 
     public abstract void tick();
 
+    /** How many times a second it ticks: 20 (with the game), or more - then the screen runs it on its own clock. */
+    public int rate() {
+        return 20;
+    }
+
     public void keyPressed(int key) {}
 
     public void keyReleased(int key) {}
