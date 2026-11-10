@@ -3328,6 +3328,8 @@ public class Showdown extends ArcadeGame {
             int c = t < 0.6F ? mixRgb(sg.skyTop(), sg.skyMid(), t / 0.6F) : mixRgb(sg.skyMid(), sg.skyLow(), (t - 0.6F) / 0.4F);
             box(g, x0, y0, 0, y, W, 2, 0xFF000000 | c);
         }
+        // the ground far off, in the haze (where the floor's drawn out to, it covers this)
+        box(g, x0, y0, 0, hz, W, H - hz, 0xFF000000 | mixRgb(st().walls() ? st().outside() : st().tileB(), st().haze(), 0.7F));
         float turn = csp * 0.011F; // (radians the camera has swung round)
         // stars up high
         for (int i = 0; i < 40; i++) {
