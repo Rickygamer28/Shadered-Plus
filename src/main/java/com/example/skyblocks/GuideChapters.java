@@ -42,7 +42,7 @@ public final class GuideChapters {
                 ModItems.CONTAINMENT_FRAME, ModItems.PORT_FRAME, ModItems.DISPLAY_FRAME, ModItems.MONITOR_FRAME, ModItems.REDSTONE_FRAME,
                 ModItems.WHIRLPOOL, ModItems.TANK_FRAME, ModItems.TANK_GLASS));
         out.add(of("mirrors", ModItems.MIRROR, ModItems.ROUND_MIRROR, ModItems.CRACKED_MIRROR, ModItems.VANITY_MIRROR,
-                ModItems.INFINITY_MIRROR, ModItems.INFINITY_CUBE, ModItems.PORTAL_MIRROR, ModItems.LIGHT_BRIDGE_EMITTER, ModItems.LIGHT_BRIDGE_BENDER));
+                ModItems.INFINITY_MIRROR, ModItems.INFINITY_CUBE, ModItems.PORTAL_MIRROR, ModItems.LIGHT_BRIDGE_EMITTER, ModItems.LIGHT_BRIDGE_BENDER, ModItems.TELEPORT_PAD));
         List<ItemStack> toys = new ArrayList<>();
         for (var p : ModItems.PLUSHIES) {
             toys.add(new ItemStack(p.get()));

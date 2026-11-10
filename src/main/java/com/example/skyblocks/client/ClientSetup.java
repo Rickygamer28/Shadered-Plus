@@ -76,6 +76,7 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.SPOTLIGHT.get(), SpotlightRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.TERRARIUM.get(), TerrariumRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.NEON_TUBE.get(), NeonTubeRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.TELEPORT_PAD.get(), TeleportPadRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.FIRE.get(), WallFireRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.BRICK_HEARTH.get(), ClientSetup::hearthRenderer);
         event.registerBlockEntityRenderer(ModBlockEntities.VISUALIZER.get(), VisualizerRenderer::new);
@@ -451,11 +452,19 @@ public final class ClientSetup {
             float h = pos == null ? 0.5F : ((pos.getX() + pos.getZ()) * 0.11F) % 1.0F;
             return 0xFF000000 | net.minecraft.util.Mth.hsvToRgb(h < 0 ? h + 1 : h, 0.55F, 1.0F);
         }, com.example.skyblocks.ModBlocks.LIGHT_BRIDGE_EMITTER.get());
+        event.register((state, level, pos, tint) -> {
+            int c = state.getValue(com.example.skyblocks.TeleportPadBlock.COLOR);
+            if (c < 16) {
+                return 0xFF000000 | neon(net.minecraft.world.item.DyeColor.byId(c));
+            }
+            float h = pos == null ? 0.5F : ((pos.getX() * 0.07F + pos.getZ() * 0.13F) % 1.0F);
+            return 0xFF000000 | net.minecraft.util.Mth.hsvToRgb(h < 0 ? h + 1 : h, 0.55F, 1.0F);
+        }, com.example.skyblocks.ModBlocks.TELEPORT_PAD.get());
     }
 
     @SubscribeEvent
     public static void lightBridgeItemColour(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Item event) {
-        event.register((stack, tint) -> 0xFFA8ECFF, com.example.skyblocks.ModItems.LIGHT_BRIDGE_EMITTER.get());
+        event.register((stack, tint) -> 0xFFA8ECFF, com.example.skyblocks.ModItems.LIGHT_BRIDGE_EMITTER.get(), com.example.skyblocks.ModItems.TELEPORT_PAD.get());
     }
 
     /** Portal mirrors: their colour. */

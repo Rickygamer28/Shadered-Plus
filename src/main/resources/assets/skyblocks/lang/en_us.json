@@ -654,5 +654,9 @@
   "screen.skyblocks.light_bridge.glow.bright": "Bright",
   "screen.skyblocks.light_bridge.glow.solid": "Solid",
   "screen.skyblocks.light_bridge.rails": "Rails: %s",
-  "screen.skyblocks.light_bridge.rainbow": "Rainbow"
+  "screen.skyblocks.light_bridge.rainbow": "Rainbow",
+  "block.skyblocks.teleport_pad": "Teleport Pad",
+  "tooltip.skyblocks.teleport_pad": "Pads of the same colour are linked: crouch on one to beam to the next. Items and animals left on it go too. A dye sets its colour; glowstone dust: rainbow",
+  "message.skyblocks.teleport_pad.none": "No other teleport pad of this colour",
+  "guide.skyblocks.teleport_pad": "Teleport pads of the same colour are linked. Stand on one and crouch: a beam of light charges up and takes you to the next pad of that colour - with three or more, round them all in turn. Items you drop on one and animals that stay on it go too. Dye a pad to change its colour (glowstone dust for rainbow) and make as many separate networks as you like. Same dimension only."
 }

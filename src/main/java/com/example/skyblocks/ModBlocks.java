@@ -182,6 +182,10 @@ public final class ModBlocks {
     public static final DeferredBlock<LightBridgeEmitterBlock> LIGHT_BRIDGE_EMITTER = BLOCKS.registerBlock("light_bridge_emitter", LightBridgeEmitterBlock::new,
             BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.METAL).lightLevel(state -> 7).noOcclusion()
                     .mapColor(net.minecraft.world.level.material.MapColor.METAL));
+    /** Linked by colour: crouch on one to beam to the next (TeleportPadBlock). */
+    public static final DeferredBlock<TeleportPadBlock> TELEPORT_PAD = BLOCKS.registerBlock("teleport_pad", TeleportPadBlock::new,
+            BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.METAL).lightLevel(state -> 7).noOcclusion()
+                    .mapColor(net.minecraft.world.level.material.MapColor.METAL));
     /** Turns a light bridge round a corner (LightBridgeBenderBlock). */
     public static final DeferredBlock<LightBridgeBenderBlock> LIGHT_BRIDGE_BENDER = BLOCKS.registerBlock("light_bridge_bender", LightBridgeBenderBlock::new,
             BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.METAL).lightLevel(state -> 6).noOcclusion()

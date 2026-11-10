@@ -29,6 +29,9 @@
     "skyblocks:monitor_frame",
     "skyblocks:redstone_frame",
     "skyblocks:whirlpool",
-    "skyblocks:tank_frame"
+    "skyblocks:tank_frame",
+    "skyblocks:teleport_pad",
+    "skyblocks:light_bridge_emitter",
+    "skyblocks:light_bridge_bender"
   ]
 }
