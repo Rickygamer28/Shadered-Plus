@@ -14,6 +14,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.DyeItem;
@@ -23,110 +24,116 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.PipeBlock;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * A neon tube: a thin glowing glass tube that joins to the tubes next to it in any direction - straight runs, corners,
- * T's and crosses - to draw shapes on walls and ceilings. On its own it lies along the way it was placed. A dye recolours
- * the whole joined run (sneak: just this one).
+ * Neon tubes, laid flat on whatever they're placed on - floors, walls, ceilings, several in one block space (a floor's
+ * and a wall's): they join up with the tubes next to them on the same surface, bend into the corner where a floor meets
+ * a wall, and wrap over edges - up walls, across ceilings (client/NeonTubeRenderer). A dye recolours the whole joined
+ * run (sneak: just this block).
  */
-public class NeonTubeBlock extends Block {
+public class NeonTubeBlock extends BaseEntityBlock {
     public static final MapCodec<NeonTubeBlock> CODEC = simpleCodec(NeonTubeBlock::new);
     public static final EnumProperty<DyeColor> COLOR = EnumProperty.create("color", DyeColor.class);
-    public static final EnumProperty<Direction.Axis> AXIS = BlockStateProperties.AXIS;
-    public static final Map<Direction, BooleanProperty> SIDES = PipeBlock.PROPERTY_BY_DIRECTION;
-    private static final VoxelShape CORE = Block.box(6.5, 6.5, 6.5, 9.5, 9.5, 9.5);
-    private static final Map<Direction, VoxelShape> ARMS = Map.of(
-            Direction.NORTH, Block.box(6.5, 6.5, 0, 9.5, 9.5, 6.5), Direction.SOUTH, Block.box(6.5, 6.5, 9.5, 9.5, 9.5, 16),
-            Direction.WEST, Block.box(0, 6.5, 6.5, 6.5, 9.5, 9.5), Direction.EAST, Block.box(9.5, 6.5, 6.5, 16, 9.5, 9.5),
-            Direction.DOWN, Block.box(6.5, 0, 6.5, 9.5, 6.5, 9.5), Direction.UP, Block.box(6.5, 9.5, 6.5, 9.5, 16, 9.5));
+    /** A tube on that side of the space: laid on the block that way (DOWN: on the floor). */
+    public static final Map<Direction, BooleanProperty> FACES = PipeBlock.PROPERTY_BY_DIRECTION;
+    private static final Map<Direction, VoxelShape> SHAPES = Map.of(
+            Direction.DOWN, Block.box(0, 0, 0, 16, 3, 16), Direction.UP, Block.box(0, 13, 0, 16, 16, 16),
+            Direction.NORTH, Block.box(0, 0, 0, 16, 16, 3), Direction.SOUTH, Block.box(0, 0, 13, 16, 16, 16),
+            Direction.WEST, Block.box(0, 0, 0, 3, 16, 16), Direction.EAST, Block.box(13, 0, 0, 16, 16, 16));
 
     public NeonTubeBlock(Properties properties) {
         super(properties);
-        BlockState s = stateDefinition.any().setValue(COLOR, DyeColor.PINK).setValue(AXIS, Direction.Axis.X);
-        for (BooleanProperty p : SIDES.values()) {
+        BlockState s = stateDefinition.any().setValue(COLOR, DyeColor.PINK);
+        for (BooleanProperty p : FACES.values()) {
             s = s.setValue(p, false);
         }
-        registerDefaultState(s);
+        registerDefaultState(s.setValue(FACES.get(Direction.DOWN), true));
     }
 
     @Override
-    protected MapCodec<? extends Block> codec() {
+    protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(COLOR, AXIS);
-        SIDES.values().forEach(builder::add);
+        builder.add(COLOR);
+        FACES.values().forEach(builder::add);
     }
 
-    /** The arms shown: towards each tube next to it; alone, both ways along its axis; with one, straight on through. */
-    private BlockState connect(BlockState state, LevelAccessor level, BlockPos pos) {
-        int n = 0;
-        Direction only = null;
-        for (Direction d : Direction.values()) {
-            boolean tube = level.getBlockState(pos.relative(d)).getBlock() instanceof NeonTubeBlock;
-            state = state.setValue(SIDES.get(d), tube);
-            if (tube) {
-                n++;
-                only = d;
-            }
-        }
-        if (n == 0) {
-            Direction.Axis a = state.getValue(AXIS);
-            state = state.setValue(SIDES.get(Direction.fromAxisAndDirection(a, Direction.AxisDirection.POSITIVE)), true)
-                    .setValue(SIDES.get(Direction.fromAxisAndDirection(a, Direction.AxisDirection.NEGATIVE)), true);
-        } else if (n == 1) {
-            state = state.setValue(SIDES.get(only.getOpposite()), true).setValue(AXIS, only.getAxis());
-        }
-        return state;
+    @Override
+    protected RenderShape getRenderShape(BlockState state) {
+        return RenderShape.ENTITYBLOCK_ANIMATED; // (drawn by its renderer: how it joins depends on its neighbours)
+    }
+
+    public static boolean has(BlockState state, Direction face) {
+        return state.getBlock() instanceof NeonTubeBlock && state.getValue(FACES.get(face));
+    }
+
+    /** Another tube can go in this space if it's on a side that has none yet. */
+    @Override
+    protected boolean canBeReplaced(BlockState state, BlockPlaceContext context) {
+        return context.getItemInHand().is(asItem()) && !state.getValue(FACES.get(context.getClickedFace().getOpposite()))
+                && !context.isSecondaryUseActive();
     }
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        Direction.Axis axis = context.getClickedFace().getAxis() == Direction.Axis.Y
-                ? context.getHorizontalDirection().getAxis() : context.getClickedFace().getClockWise().getAxis();
-        if (context.getPlayer() != null && context.getPlayer().isShiftKeyDown()) {
-            axis = Direction.Axis.Y; // (sneaking: standing up)
+        Direction face = context.getClickedFace().getOpposite();
+        BlockState here = context.getLevel().getBlockState(context.getClickedPos());
+        if (here.getBlock() instanceof NeonTubeBlock) {
+            return here.setValue(FACES.get(face), true);
         }
-        BlockState s = defaultBlockState().setValue(AXIS, axis);
-        // (the colour of a tube it's joined to)
-        for (Direction d : Direction.values()) {
+        BlockState s = defaultBlockState().setValue(FACES.get(Direction.DOWN), false).setValue(FACES.get(face), true);
+        for (Direction d : Direction.values()) { // (the colour of a tube next to it)
             BlockState n = context.getLevel().getBlockState(context.getClickedPos().relative(d));
             if (n.getBlock() instanceof NeonTubeBlock) {
-                s = s.setValue(COLOR, n.getValue(COLOR));
-                break;
+                return s.setValue(COLOR, n.getValue(COLOR));
             }
         }
-        return connect(s, context.getLevel(), context.getClickedPos());
+        return s;
     }
 
+    /** Which way a lone tube on the side just added lies: along the way you were looking (sneaking: up a wall). */
     @Override
-    protected BlockState updateShape(BlockState state, Direction dir, BlockState next, LevelAccessor level, BlockPos pos, BlockPos nextPos) {
-        return connect(state, level, pos);
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (level.getBlockEntity(pos) instanceof NeonTubeBlockEntity be && placer != null) {
+            for (Direction face : Direction.values()) {
+                if (state.getValue(FACES.get(face)) && !be.known(face)) {
+                    Direction.Axis along;
+                    if (face.getAxis() == Direction.Axis.Y) {
+                        along = placer.getDirection().getAxis();
+                    } else {
+                        along = placer.isShiftKeyDown() ? Direction.Axis.Y : face.getClockWise().getAxis();
+                    }
+                    be.setAxis(face, along);
+                }
+            }
+        }
     }
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        VoxelShape s = CORE;
+        VoxelShape s = Shapes.empty();
         for (Direction d : Direction.values()) {
-            if (state.getValue(SIDES.get(d))) {
-                s = Shapes.or(s, ARMS.get(d));
-            }
+            if (state.getValue(FACES.get(d))) s = Shapes.or(s, SHAPES.get(d));
         }
-        return s;
+        return s.isEmpty() ? SHAPES.get(Direction.DOWN) : s;
     }
 
     @Override
@@ -141,29 +148,32 @@ public class NeonTubeBlock extends Block {
         }
         if (!level.isClientSide) {
             DyeColor colour = dye.getDyeColor();
-            // the whole joined run (sneaking: just this tube)
+            // the whole joined run - tubes touching it, edges and corners included (sneaking: just this one)
             Set<BlockPos> seen = new HashSet<>();
             ArrayDeque<BlockPos> todo = new ArrayDeque<>();
             todo.add(pos);
             seen.add(pos);
-            while (!todo.isEmpty() && seen.size() <= 1024) {
+            while (!todo.isEmpty() && seen.size() <= 2048) {
                 BlockPos p = todo.poll();
-                BlockState s = level.getBlockState(p);
-                level.setBlock(p, s.setValue(COLOR, colour), Block.UPDATE_CLIENTS);
-                if (player.isShiftKeyDown()) {
-                    break;
-                }
-                for (Direction d : Direction.values()) {
-                    BlockPos n = p.relative(d);
+                level.setBlock(p, level.getBlockState(p).setValue(COLOR, colour), Block.UPDATE_CLIENTS);
+                if (player.isShiftKeyDown()) break;
+                for (BlockPos n : BlockPos.betweenClosed(p.offset(-1, -1, -1), p.offset(1, 1, 1))) {
                     if (!seen.contains(n) && level.getBlockState(n).getBlock() instanceof NeonTubeBlock) {
-                        seen.add(n);
-                        todo.add(n);
+                        BlockPos im = n.immutable();
+                        seen.add(im);
+                        todo.add(im);
                     }
                 }
             }
             level.playSound(null, pos, SoundEvents.DYE_USE, SoundSource.BLOCKS, 1.0F, 1.0F);
         }
         return ItemInteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    @Nullable
+    @Override
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new NeonTubeBlockEntity(pos, state);
     }
 
     @Override

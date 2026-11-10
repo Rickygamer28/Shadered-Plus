@@ -1,10 +1,184 @@
 {
-  "variants": {
-    "scene=0": {
-      "model": "skyblocks:block/terrarium_desert"
+  "multipart": [
+    {
+      "when": {
+        "scene": "0"
+      },
+      "apply": {
+        "model": "skyblocks:block/terrarium_desert"
+      }
     },
-    "scene=1": {
-      "model": "skyblocks:block/terrarium_jungle"
+    {
+      "when": {
+        "scene": "1"
+      },
+      "apply": {
+        "model": "skyblocks:block/terrarium_jungle"
+      }
+    },
+    {
+      "when": {
+        "north": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/terrarium_wall_north"
+      }
+    },
+    {
+      "when": {
+        "north": "true",
+        "scene": "0"
+      },
+      "apply": {
+        "model": "skyblocks:block/terrarium_join_north_desert"
+      }
+    },
+    {
+      "when": {
+        "north": "true",
+        "scene": "1"
+      },
+      "apply": {
+        "model": "skyblocks:block/terrarium_join_north_jungle"
+      }
+    },
+    {
+      "when": {
+        "south": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/terrarium_wall_south"
+      }
+    },
+    {
+      "when": {
+        "south": "true",
+        "scene": "0"
+      },
+      "apply": {
+        "model": "skyblocks:block/terrarium_join_south_desert"
+      }
+    },
+    {
+      "when": {
+        "south": "true",
+        "scene": "1"
+      },
+      "apply": {
+        "model": "skyblocks:block/terrarium_join_south_jungle"
+      }
+    },
+    {
+      "when": {
+        "west": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/terrarium_wall_west"
+      }
+    },
+    {
+      "when": {
+        "west": "true",
+        "scene": "0"
+      },
+      "apply": {
+        "model": "skyblocks:block/terrarium_join_west_desert"
+      }
+    },
+    {
+      "when": {
+        "west": "true",
+        "scene": "1"
+      },
+      "apply": {
+        "model": "skyblocks:block/terrarium_join_west_jungle"
+      }
+    },
+    {
+      "when": {
+        "east": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/terrarium_wall_east"
+      }
+    },
+    {
+      "when": {
+        "east": "true",
+        "scene": "0"
+      },
+      "apply": {
+        "model": "skyblocks:block/terrarium_join_east_desert"
+      }
+    },
+    {
+      "when": {
+        "east": "true",
+        "scene": "1"
+      },
+      "apply": {
+        "model": "skyblocks:block/terrarium_join_east_jungle"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "north": "false"
+          },
+          {
+            "west": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/terrarium_post_nw"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "north": "false"
+          },
+          {
+            "east": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/terrarium_post_ne"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "south": "false"
+          },
+          {
+            "west": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/terrarium_post_sw"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "south": "false"
+          },
+          {
+            "east": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "skyblocks:block/terrarium_post_se"
+      }
     }
-  }
+  ]
 }

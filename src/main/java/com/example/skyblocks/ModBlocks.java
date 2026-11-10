@@ -180,7 +180,7 @@ public final class ModBlocks {
 
     /** A light bridge emitter: two facing each other make a walkable bridge of light (LightBridgeEmitterBlock). */
     public static final DeferredBlock<LightBridgeEmitterBlock> LIGHT_BRIDGE_EMITTER = BLOCKS.registerBlock("light_bridge_emitter", LightBridgeEmitterBlock::new,
-            BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.METAL).lightLevel(state -> 7)
+            BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.METAL).lightLevel(state -> 7).noOcclusion()
                     .mapColor(net.minecraft.world.level.material.MapColor.METAL));
     /** The bridge's blocks, put down and taken away by the emitters (LightBridgeBlock). */
     public static final DeferredBlock<LightBridgeBlock> LIGHT_BRIDGE = BLOCKS.registerBlock("light_bridge", LightBridgeBlock::new,
@@ -225,7 +225,7 @@ public final class ModBlocks {
                     .mapColor(net.minecraft.world.level.material.MapColor.SAND));
 
     /** The plushies (PlushieBlock): won from a claw machine. */
-    public static final String[] PLUSHIE_NAMES = {"cat", "ember", "frost", "moss", "bloom", "frog"};
+    public static final String[] PLUSHIE_NAMES = {"cat", "ember", "frost", "moss", "bloom", "frog", "clownfish", "blue_tang", "goldfish", "angelfish", "shark", "octopus", "crab", "ocean_sunfish"};
     public static final java.util.List<DeferredBlock<PlushieBlock>> PLUSHIES = new java.util.ArrayList<>();
 
     static {

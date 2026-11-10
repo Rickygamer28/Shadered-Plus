@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "skyblocks:block/plushie_octopus"
+    },
+    "facing=east": {
+      "model": "skyblocks:block/plushie_octopus",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "skyblocks:block/plushie_octopus",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "skyblocks:block/plushie_octopus",
+      "y": 270
+    }
+  }
+}

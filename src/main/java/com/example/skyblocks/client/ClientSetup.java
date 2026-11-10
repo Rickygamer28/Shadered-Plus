@@ -75,6 +75,7 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.STAGE.get(), StageRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SPOTLIGHT.get(), SpotlightRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.TERRARIUM.get(), TerrariumRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.NEON_TUBE.get(), NeonTubeRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.FIRE.get(), WallFireRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.BRICK_HEARTH.get(), ClientSetup::hearthRenderer);
         event.registerBlockEntityRenderer(ModBlockEntities.VISUALIZER.get(), VisualizerRenderer::new);
@@ -421,13 +422,6 @@ public final class ClientSetup {
             net.minecraft.world.level.block.state.BlockState block = tint < PondModel.FLOOR_TINT ? pond.rim() : pond.floor();
             return block == null ? -1 : event.getBlockColors().getColor(block, level, pos, tint % 100);
         }, com.example.skyblocks.ModBlocks.VANILLA_KOI_POND.get());
-    }
-
-    /** Neon tubes: their colour, brightened to neon. */
-    @SubscribeEvent
-    public static void neonColours(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Block event) {
-        event.register((state, level, pos, tint) -> neon(state.getValue(com.example.skyblocks.NeonTubeBlock.COLOR)),
-                com.example.skyblocks.ModBlocks.NEON_TUBE.get());
     }
 
     @SubscribeEvent

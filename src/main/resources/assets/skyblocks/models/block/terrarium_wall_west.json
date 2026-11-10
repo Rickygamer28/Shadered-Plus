@@ -1,0 +1,33 @@
+{
+  "parent": "block/block",
+  "render_type": "minecraft:translucent",
+  "textures": {
+    "frame": "minecraft:block/dark_oak_planks",
+    "glass": "minecraft:block/white_stained_glass",
+    "mesh": "minecraft:block/iron_bars",
+    "lamp": "minecraft:block/glowstone",
+    "particle": "minecraft:block/dark_oak_planks"
+  },
+  "elements": [
+    {
+      "from": [
+        1,
+        1,
+        1.5
+      ],
+      "to": [
+        1.5,
+        14,
+        14.5
+      ],
+      "faces": {
+        "east": {
+          "texture": "#glass"
+        },
+        "west": {
+          "texture": "#glass"
+        }
+      }
+    }
+  ]
+}

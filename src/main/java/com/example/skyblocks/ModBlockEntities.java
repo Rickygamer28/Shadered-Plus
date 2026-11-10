@@ -94,6 +94,8 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(LavaPillarBlockEntity::new, ModBlocks.LAVA_PILLAR.get()).build(null));
     public static final Supplier<BlockEntityType<LightBridgeEmitterBlockEntity>> LIGHT_BRIDGE_EMITTER = TYPES.register("light_bridge_emitter",
             () -> BlockEntityType.Builder.of(LightBridgeEmitterBlockEntity::new, ModBlocks.LIGHT_BRIDGE_EMITTER.get()).build(null));
+    public static final Supplier<BlockEntityType<NeonTubeBlockEntity>> NEON_TUBE = TYPES.register("neon_tube",
+            () -> BlockEntityType.Builder.of(NeonTubeBlockEntity::new, ModBlocks.NEON_TUBE.get()).build(null));
     public static final Supplier<BlockEntityType<ClawMachineBlockEntity>> CLAW_MACHINE = TYPES.register("claw_machine",
             () -> BlockEntityType.Builder.of(ClawMachineBlockEntity::new, ModBlocks.CLAW_MACHINE.get()).build(null));
     public static final Supplier<BlockEntityType<TrophyBlockEntity>> TROPHY = TYPES.register("trophy",

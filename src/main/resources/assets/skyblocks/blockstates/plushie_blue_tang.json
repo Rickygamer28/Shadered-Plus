@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "skyblocks:block/plushie_blue_tang"
+    },
+    "facing=east": {
+      "model": "skyblocks:block/plushie_blue_tang",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "skyblocks:block/plushie_blue_tang",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "skyblocks:block/plushie_blue_tang",
+      "y": 270
+    }
+  }
+}

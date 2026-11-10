@@ -20,7 +20,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 public final class ClawPayloads {
     private ClawPayloads() {}
 
-    /** Client -> server: a go is over; {@code prize}: the plushie won (ModBlocks.PLUSHIE_NAMES), -1 none. */
+    /** Client -> server: a go is over; {@code prize}: the id of the prize that went down the chute, -1 none. */
     public record Play(BlockPos pos, int prize) implements CustomPacketPayload {
         public static final Type<Play> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "claw_play"));
         public static final StreamCodec<ByteBuf, Play> STREAM_CODEC = StreamCodec.composite(
@@ -39,8 +39,9 @@ public final class ClawPayloads {
                         || !(level.getBlockEntity(p.pos()) instanceof ClawMachineBlockEntity be) || !be.useCredit(player)) {
                     return;
                 }
-                if (p.prize() >= 0 && p.prize() < ModItems.PLUSHIES.size()) {
-                    ItemStack prize = new ItemStack(ModItems.PLUSHIES.get(p.prize()).get());
+                int kind = p.prize() >= 0 ? be.take(p.prize(), level.random) : -1;
+                if (kind >= 0 && kind < ModItems.PLUSHIES.size()) {
+                    ItemStack prize = new ItemStack(ModItems.PLUSHIES.get(kind).get());
                     if (!player.getInventory().add(prize)) {
                         player.drop(prize, false);
                     }
@@ -52,7 +53,7 @@ public final class ClawPayloads {
         }
     }
 
-    /** Both ways: the claw now (each 0-1000), open or not, holding which plushie (-1 none). */
+    /** Both ways: the claw now (each 0-1000; depth + 2000: closed), holding which prize (its id; -1 none). */
     public record State(BlockPos pos, int x, int z, int depth, int holding) implements CustomPacketPayload {
         public static final Type<State> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "claw_state"));
         public static final StreamCodec<ByteBuf, State> STREAM_CODEC = StreamCodec.composite(

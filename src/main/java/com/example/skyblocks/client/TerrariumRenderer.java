@@ -18,15 +18,24 @@ import net.minecraft.world.level.block.state.BlockState;
  * legs stepping, tails swaying. Desert: spotted yellow-orange; jungle: green with orange crests.
  */
 public class TerrariumRenderer implements BlockEntityRenderer<TerrariumBlockEntity> {
-    private static final float FLOOR = 3.0F, MIN = 3.0F, MAX = 13.0F;
+    private static final float FLOOR = 3.0F, MIN = 3.5F, MAX = 12.5F, SIZE = 1.6F;
     private static final BlockState[][] SKIN = {
-            {Blocks.YELLOW_TERRACOTTA.defaultBlockState(), Blocks.BROWN_CONCRETE.defaultBlockState(), Blocks.WHITE_TERRACOTTA.defaultBlockState()},
+            {Blocks.YELLOW_CONCRETE.defaultBlockState(), Blocks.BLACK_CONCRETE.defaultBlockState(), Blocks.WHITE_CONCRETE.defaultBlockState()},
             {Blocks.LIME_CONCRETE.defaultBlockState(), Blocks.ORANGE_CONCRETE.defaultBlockState(), Blocks.LIME_TERRACOTTA.defaultBlockState()}};
     private static final BlockState EYE = Blocks.BLACK_CONCRETE.defaultBlockState(), TONGUE = Blocks.PINK_CONCRETE.defaultBlockState();
 
     public TerrariumRenderer(BlockEntityRendererProvider.Context context) {}
 
+    /** Where its geckos may go: its own tank and, joined, the tanks next to it (pixels of its block). */
+    private static float[] bounds(TerrariumBlockEntity be) {
+        net.minecraft.world.level.block.state.BlockState s = be.getBlockState();
+        float x0 = s.getValue(TerrariumBlock.WEST) ? MIN - 16 : MIN, x1 = s.getValue(TerrariumBlock.EAST) ? MAX + 16 : MAX;
+        float z0 = s.getValue(TerrariumBlock.NORTH) ? MIN - 16 : MIN, z1 = s.getValue(TerrariumBlock.SOUTH) ? MAX + 16 : MAX;
+        return new float[] {x0, x1, z0, z1};
+    }
+
     private static void tick(TerrariumBlockEntity be, RandomSource r) {
+        float[] b = bounds(be);
         if (!be.placed) {
             be.placed = true;
             for (TerrariumBlockEntity.Gecko g : be.geckos) {
@@ -46,8 +55,8 @@ public class TerrariumRenderer implements BlockEntityRenderer<TerrariumBlockEnti
                 if (r.nextInt(60) == 0) g.tongue = 6;
                 if (r.nextInt(40) == 0) g.yaw += (r.nextFloat() - 0.5F) * 0.8F; // (looking round)
                 if (g.pause == 0) {
-                    g.tx = Mth.lerp(r.nextFloat(), MIN, MAX);
-                    g.tz = Mth.lerp(r.nextFloat(), MIN, MAX);
+                    g.tx = Mth.lerp(r.nextFloat(), b[0], b[1]);
+                    g.tz = Mth.lerp(r.nextFloat(), b[2], b[3]);
                 }
                 continue;
             }
@@ -67,6 +76,11 @@ public class TerrariumRenderer implements BlockEntityRenderer<TerrariumBlockEnti
                 g.walked += step;
             }
         }
+    }
+
+    @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox(TerrariumBlockEntity be) {
+        return new net.minecraft.world.phys.AABB(be.getBlockPos()).inflate(1.0, 0.0, 1.0);
     }
 
     @Override
@@ -93,6 +107,7 @@ public class TerrariumRenderer implements BlockEntityRenderer<TerrariumBlockEnti
             poseStack.pushPose();
             poseStack.translate(x / 16.0F, FLOOR / 16.0F, z / 16.0F);
             poseStack.mulPose(Axis.YP.rotation(yaw));
+            poseStack.scale(SIZE, SIZE, SIZE);
             var pos = be.getBlockPos();
             // (+z is its front) body, belly, spots / crest, head, eyes, legs, tail
             BlockSkin.box(body, level, pos, poseStack, buffers, light, overlay, -0.6F, 0.25F, -1.4F, 0.6F, 0.95F, 1.2F);

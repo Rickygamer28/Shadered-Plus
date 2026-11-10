@@ -29,16 +29,22 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A pet terrarium: a glass tank with a little desert (sand, rocks, a cactus) or jungle (moss, a branch, leaves, a water
  * dish) and two geckos living in it - wandering, stopping to look round, flicking their tongues (client/TerrariumRenderer).
- * Right-click: the other scene.
+ * Right-click: the other scene. Tanks side by side join into one bigger tank.
  */
 public class TerrariumBlock extends BaseEntityBlock {
     public static final MapCodec<TerrariumBlock> CODEC = simpleCodec(TerrariumBlock::new);
     public static final IntegerProperty SCENE = IntegerProperty.create("scene", 0, 1);
+    /** Joined to the tank on that side: one bigger tank (no glass between, the geckos free to wander across). */
+    public static final net.minecraft.world.level.block.state.properties.BooleanProperty NORTH = net.minecraft.world.level.block.state.properties.BlockStateProperties.NORTH,
+            SOUTH = net.minecraft.world.level.block.state.properties.BlockStateProperties.SOUTH,
+            EAST = net.minecraft.world.level.block.state.properties.BlockStateProperties.EAST,
+            WEST = net.minecraft.world.level.block.state.properties.BlockStateProperties.WEST;
     private static final VoxelShape SHAPE = Block.box(1, 0, 1, 15, 14, 15);
 
     public TerrariumBlock(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(SCENE, 0));
+        registerDefaultState(stateDefinition.any().setValue(SCENE, 0).setValue(NORTH, false).setValue(SOUTH, false)
+                .setValue(EAST, false).setValue(WEST, false));
     }
 
     @Override
@@ -48,7 +54,41 @@ public class TerrariumBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(SCENE);
+        builder.add(SCENE, NORTH, SOUTH, EAST, WEST);
+    }
+
+    public static net.minecraft.world.level.block.state.properties.BooleanProperty side(net.minecraft.core.Direction d) {
+        return switch (d) {
+            case NORTH -> NORTH;
+            case SOUTH -> SOUTH;
+            case EAST -> EAST;
+            default -> WEST;
+        };
+    }
+
+    private BlockState join(BlockState state, net.minecraft.world.level.LevelAccessor level, BlockPos pos) {
+        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            state = state.setValue(side(d), level.getBlockState(pos.relative(d)).getBlock() instanceof TerrariumBlock);
+        }
+        return state;
+    }
+
+    @Override
+    public BlockState getStateForPlacement(net.minecraft.world.item.context.BlockPlaceContext context) {
+        BlockState s = defaultBlockState();
+        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.Plane.HORIZONTAL) { // (the scene of a tank it joins)
+            BlockState n = context.getLevel().getBlockState(context.getClickedPos().relative(d));
+            if (n.getBlock() instanceof TerrariumBlock) {
+                s = s.setValue(SCENE, n.getValue(SCENE));
+                break;
+            }
+        }
+        return join(s, context.getLevel(), context.getClickedPos());
+    }
+
+    @Override
+    protected BlockState updateShape(BlockState state, net.minecraft.core.Direction dir, BlockState next, net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockPos nextPos) {
+        return dir.getAxis().isHorizontal() ? join(state, level, pos) : state;
     }
 
     @Override
@@ -64,7 +104,22 @@ public class TerrariumBlock extends BaseEntityBlock {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide) {
-            level.setBlock(pos, state.cycle(SCENE), Block.UPDATE_ALL);
+            int scene = 1 - state.getValue(SCENE);
+            java.util.ArrayDeque<BlockPos> todo = new java.util.ArrayDeque<>();
+            java.util.Set<BlockPos> seen = new java.util.HashSet<>();
+            todo.add(pos);
+            seen.add(pos);
+            while (!todo.isEmpty() && seen.size() < 256) { // (the whole joined tank)
+                BlockPos p = todo.poll();
+                level.setBlock(p, level.getBlockState(p).setValue(SCENE, scene), Block.UPDATE_ALL);
+                for (net.minecraft.core.Direction d : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+                    BlockPos n = p.relative(d);
+                    if (!seen.contains(n) && level.getBlockState(n).getBlock() instanceof TerrariumBlock) {
+                        seen.add(n);
+                        todo.add(n);
+                    }
+                }
+            }
             level.playSound(null, pos, SoundEvents.SAND_PLACE, SoundSource.BLOCKS, 0.7F, 1.2F);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);

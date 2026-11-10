@@ -40,6 +40,32 @@ public class LightBridgeEmitterBlock extends BaseEntityBlock {
     public static final MapCodec<LightBridgeEmitterBlock> CODEC = simpleCodec(LightBridgeEmitterBlock::new);
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
 
+    /** Slim: a deck flush with the bridge, a lens at the front, two posts at the back - not a whole block. */
+    private static final java.util.Map<Direction, net.minecraft.world.phys.shapes.VoxelShape> SHAPES = new java.util.EnumMap<>(Direction.class);
+
+    static {
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            SHAPES.put(d, net.minecraft.world.phys.shapes.Shapes.or(Block.box(0, 0, 0, 16, 2, 16), rot(d, 0, 2, 9, 2, 10, 15), rot(d, 14, 2, 9, 16, 10, 15),
+                    rot(d, 3, 2, 12, 13, 3, 16)));
+        }
+    }
+
+    /** A box given facing north, turned to face {@code d}. */
+    private static net.minecraft.world.phys.shapes.VoxelShape rot(Direction d, double x0, double y0, double z0, double x1, double y1, double z1) {
+        return switch (d) {
+            case SOUTH -> Block.box(16 - x1, y0, 16 - z1, 16 - x0, y1, 16 - z0);
+            case EAST -> Block.box(16 - z1, y0, x0, 16 - z0, y1, x1);
+            case WEST -> Block.box(z0, y0, 16 - x1, z1, y1, 16 - x0);
+            default -> Block.box(x0, y0, z0, x1, y1, z1);
+        };
+    }
+
+    @Override
+    protected net.minecraft.world.phys.shapes.VoxelShape getShape(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos,
+            net.minecraft.world.phys.shapes.CollisionContext context) {
+        return SHAPES.get(state.getValue(FACING));
+    }
+
     public LightBridgeEmitterBlock(Properties properties) {
         super(properties);
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
