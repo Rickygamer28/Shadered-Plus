@@ -39,14 +39,14 @@ public class NeonTubeRenderer implements BlockEntityRenderer<NeonTubeBlockEntity
         VertexConsumer glow = buffers.getBuffer(RenderType.debugQuads());
         // how many tubes each side's joins on its own surface (and over its edges): corners only join two that would
         // otherwise end there - an L where a tube turns from the floor up a wall, not rungs between two running alongside
-        int[] runs = new int[6];
+        int[] runs = new int[6]; // (which ways each one runs, as bits)
         for (Direction face : Direction.values()) {
             if (!NeonTubeBlock.has(state, face)) continue;
             for (Direction d : Direction.values()) {
                 if (d.getAxis() == face.getAxis()) continue;
                 if (NeonTubeBlock.has(level.getBlockState(pos.relative(d)), face)
                         || NeonTubeBlock.has(level.getBlockState(pos.relative(d).relative(face)), d.getOpposite())) {
-                    runs[face.ordinal()]++;
+                    runs[face.ordinal()] |= 1 << d.ordinal();
                 }
             }
         }
@@ -62,7 +62,7 @@ public class NeonTubeRenderer implements BlockEntityRenderer<NeonTubeBlockEntity
                     reach = 0.5F; // (on to the next tube on the same surface)
                 } else if (NeonTubeBlock.has(level.getBlockState(pos.relative(d).relative(face)), d.getOpposite())) {
                     reach = 0.5F + OFF; // (over the edge, round to the next surface)
-                } else if (NeonTubeBlock.has(state, d) && runs[face.ordinal()] <= 1 && runs[d.ordinal()] <= 1) {
+                } else if (NeonTubeBlock.has(state, d) && only(runs[face.ordinal()], d.getAxis()) && only(runs[d.ordinal()], face.getAxis())) {
                     reach = 0.5F - OFF; // (into the corner, to the tube on that side)
                 } else {
                     continue;
@@ -80,6 +80,14 @@ public class NeonTubeRenderer implements BlockEntityRenderer<NeonTubeBlockEntity
             }
             box(glow, m, c, c, GLOW * 0.6F, rgb, 255); // (the joint)
         }
+    }
+
+    /** Whether a tube runs only along this axis (or nowhere): then it turns the corner here. */
+    private static boolean only(int runs, Direction.Axis axis) {
+        for (Direction d : Direction.values()) {
+            if ((runs & (1 << d.ordinal())) != 0 && d.getAxis() != axis) return false;
+        }
+        return true;
     }
 
     /** A tube from the middle {@code c} out along {@code d} for {@code reach}: its bright core and its glow. */
