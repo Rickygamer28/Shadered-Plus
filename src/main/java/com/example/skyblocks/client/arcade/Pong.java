@@ -72,21 +72,26 @@ public class Pong extends ArcadeGame {
             if (by < 2) {
                 by = 2;
                 vy = Math.abs(vy);
+                sfx(Sfx.PONG_WALL);
             } else if (by > H - 2) {
                 by = H - 2;
                 vy = -Math.abs(vy);
+                sfx(Sfx.PONG_WALL);
             }
             if (vx < 0 && bx <= PX + PW + 2 && bx >= PX - 2 && Math.abs(by - py) <= PH / 2.0F + 2) {
                 vx = Math.min(Math.abs(vx) * 1.06F, 6.5F);
                 vy += (by - py) / PH * 2.6F;
                 score += 10;
+                sfx(Sfx.PONG_HIT);
             }
             if (vx > 0 && bx >= CX - 2 && bx <= CX + PW + 2 && Math.abs(by - cy) <= PH / 2.0F + 2) {
                 vx = -Math.min(Math.abs(vx) * 1.06F, 6.5F);
                 vy += (by - cy) / PH * 2.6F;
+                sfx(Sfx.PONG_HIT, 0.85F);
             }
         }
         if (bx < -4) {
+            sfx(Sfx.PONG_LOSE);
             if (++cpu >= 7) {
                 over = true;
             } else {
@@ -94,7 +99,9 @@ public class Pong extends ArcadeGame {
             }
         } else if (bx > W + 4) {
             score += 100;
+            sfx(Sfx.PONG_SCORE);
             if (++you >= 7) {
+                sfx(Sfx.WIN);
                 score += 500 * (match + 1);
                 match++;
                 cpuSpeed += 0.5F; // (the next one: quicker)

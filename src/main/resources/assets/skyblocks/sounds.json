@@ -1,0 +1,458 @@
+{
+  "arcade.blip": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/blip",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.block": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/block",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.bonus": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/bonus",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.boom": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/boom",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.brick": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/brick",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.catch": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/catch",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.chomp_a": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/chomp_a",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.chomp_b": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/chomp_b",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.coin": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/coin",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.counter": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/counter",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.crush": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/crush",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.death": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/death",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.drop": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/drop",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.electric": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/electric",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.fight": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/fight",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.flag": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/flag",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.flood": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/flood",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.four": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/four",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.gameover": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/gameover",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.hit_heavy": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/hit_heavy",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.hit_light": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/hit_light",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.home": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/home",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.hop": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/hop",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.ki": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/ki",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.ko": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/ko",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.land": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/land",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.launch": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/launch",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.levelup": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/levelup",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.line": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/line",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.lose": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/lose",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.maze_start": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/maze_start",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.move": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/move",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.paddle": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/paddle",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.parry": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/parry",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.pong_hit": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/pong_hit",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.pong_lose": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/pong_lose",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.pong_score": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/pong_score",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.pong_wall": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/pong_wall",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.power": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/power",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.rage": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/rage",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.reveal": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/reveal",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.rotate": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/rotate",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.round": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/round",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.screw": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/screw",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.select": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/select",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.snake_die": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/snake_die",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.snake_eat": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/snake_eat",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.splash": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/splash",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.squash": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/squash",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.start": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/start",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.step": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/step",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.throw": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/throw",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.thud": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/thud",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.wall": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/wall",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.wall_splat": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/wall_splat",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.whoosh": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/whoosh",
+        "stream": false
+      }
+    ]
+  },
+  "arcade.win": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/win",
+        "stream": false
+      }
+    ]
+  }
+}

@@ -49,6 +49,8 @@ public final class ClientAccess {
             be.liveScore = p.score();
             be.liveName = p.name();
             be.liveAt = mc.level.getGameTime();
+            // its sounds, from the cabinet (not for whoever's playing it: they've heard them already)
+            if (mc.player != null && !p.name().equals(mc.player.getGameProfile().getName())) ArcadeSounds.playAt(p.pos(), p.sounds());
         }
     }
 

@@ -243,14 +243,16 @@ public class WhiskerMaze extends ArcadeGame {
         if (left == 0) {
             clearing = 60;
             score += 500;
+            sfx(Sfx.LEVELUP);
         }
         if (!extraGiven && score >= 10000) {
             extraGiven = true;
             lives++;
+            sfx(Sfx.COIN);
         }
     }
 
-    private int lastDir = 2;
+    private int lastDir = 2, munch;
 
     private void moveCat() {
         if (cat.dir >= 0) lastDir = cat.dir;
@@ -285,10 +287,12 @@ public class WhiskerMaze extends ArcadeGame {
         if (treats[y][x]) {
             treats[y][x] = false;
             score += 10;
+            sfx((munch++ & 1) == 0 ? Sfx.CHOMP_A : Sfx.CHOMP_B); // (two notes, turn about)
             gone();
         } else if (yarn[y][x]) {
             yarn[y][x] = false;
             score += 50;
+            sfx(Sfx.POWER);
             gone();
             scared = SCARED[Math.min(level, SCARED.length - 1)]; // (later mazes: they only turn round)
             chain = 0;
@@ -305,6 +309,7 @@ public class WhiskerMaze extends ArcadeGame {
             score += v;
             popups.add(new int[] {13, 13, v, 40});
             fish = 0;
+            sfx(Sfx.BONUS);
         }
     }
 
@@ -428,8 +433,10 @@ public class WhiskerMaze extends ArcadeGame {
                     popups.add(new int[] {s.x, s.y, v, 40});
                     s.state = State.EYES;
                     pause = 12; // (a beat for the catch)
+                    sfx(Sfx.CATCH, 1.0F + chain * 0.1F);
                 } else {
                     dying = 50;
+                    sfx(Sfx.DEATH);
                     return;
                 }
             }

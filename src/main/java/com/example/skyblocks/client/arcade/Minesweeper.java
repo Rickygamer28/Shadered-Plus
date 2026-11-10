@@ -76,11 +76,13 @@ public class Minesweeper extends ArcadeGame {
             place(x, y);
         }
         if (mine[y][x]) {
+            sfx(Sfx.BOOM);
             over = true;
             open[y][x] = true;
             score = opened * 5;
             return;
         }
+        int before = opened;
         java.util.ArrayDeque<int[]> todo = new java.util.ArrayDeque<>();
         todo.add(new int[] {x, y});
         while (!todo.isEmpty()) {
@@ -98,6 +100,7 @@ public class Minesweeper extends ArcadeGame {
             }
         }
         score = opened * 5;
+        sfx(opened - before > 1 ? Sfx.FLOOD : Sfx.REVEAL); // (a whole patch opening: a sweep)
         if (opened == COLS * ROWS - MINES) {
             won = over = true;
             score = 1000 + Math.max(0, 3000 - ticks / 20 * 10);
@@ -107,6 +110,7 @@ public class Minesweeper extends ArcadeGame {
     private void toggleFlag(int x, int y) {
         if (!over && !open[y][x]) {
             flag[y][x] = !flag[y][x];
+            sfx(Sfx.FLAG, flag[y][x] ? 1.0F : 0.8F);
             flags += flag[y][x] ? 1 : -1;
         }
     }

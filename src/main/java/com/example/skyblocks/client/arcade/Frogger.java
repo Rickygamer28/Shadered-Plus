@@ -103,16 +103,19 @@ public class Frogger extends ArcadeGame {
         Lane l = lane(frogRow);
         if (frogRow >= 1 && frogRow <= 3 && l != null) {
             if (!l.at(frogX)) {
+                sfx(Sfx.SPLASH);
                 die(); // (in the water)
                 return;
             }
             frogX += l.speed; // (riding the log)
             if (frogX < 2 || frogX > W - 2) {
+                sfx(Sfx.SPLASH);
                 die();
                 return;
             }
         } else if (frogRow >= 5 && frogRow <= 7 && l != null) {
             if (l.at(frogX - 5) || l.at(frogX + 5) || l.at(frogX)) {
+                sfx(Sfx.SQUASH);
                 die();
             }
         }
@@ -124,6 +127,7 @@ public class Frogger extends ArcadeGame {
         int dx = left(key) ? -1 : right(key) ? 1 : 0, dy = up(key) ? -1 : down(key) ? 1 : 0;
         if (dx == 0 && dy == 0) return;
         hopWait = 2;
+        sfx(Sfx.HOP);
         frogX = Mth.clamp(frogX + dx * CELL, CELL / 2.0F, W - CELL / 2.0F);
         frogRow = Mth.clamp(frogRow + dy, 0, START);
         if (frogRow < best) {
@@ -136,10 +140,12 @@ public class Frogger extends ArcadeGame {
                 if (HOMES[i] == col && !home[i]) {
                     home[i] = true;
                     score += 100;
+                    sfx(Sfx.HOME);
                     boolean all = true;
                     for (boolean h : home) all &= h;
                     if (all) { // (all four: the next level)
                         score += 500;
+                        sfx(Sfx.LEVELUP);
                         level++;
                         java.util.Arrays.fill(home, false);
                         makeLanes();
@@ -148,6 +154,7 @@ public class Frogger extends ArcadeGame {
                     return;
                 }
             }
+            sfx(Sfx.SQUASH);
             die(); // (into the hedge, or a home already taken)
         }
     }

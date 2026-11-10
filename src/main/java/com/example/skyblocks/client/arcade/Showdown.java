@@ -322,7 +322,10 @@ public class Showdown extends ArcadeGame {
         callouts.clear();
         clock = ROUND_FRAMES;
         roundOver = practice > 0 ? -2 : -120;
-        if (practice == 0) say(round == 3 ? "FINAL ROUND" : "ROUND " + round, 40);
+        if (practice == 0) {
+            say(round == 3 ? "FINAL ROUND" : "ROUND " + round, 40);
+            sfx(Sfx.ROUND);
+        }
     }
 
     /** A banner across the screen, for so many 20ths of a second. */
@@ -367,7 +370,10 @@ public class Showdown extends ArcadeGame {
         });
         if (roundOver < 0) {
             if (++roundOver == 0) banner = "";
-            if (roundOver == -36) say("FIGHT!", 14);
+            if (roundOver == -36) {
+                say("FIGHT!", 14);
+                sfx(Sfx.FIGHT);
+            }
             return;
         }
         if (roundOver > 0) {
@@ -413,6 +419,7 @@ public class Showdown extends ArcadeGame {
                     b.wallHits = 1;
                     shake = 6;
                     call("WALL SPLAT!", b.x, GROUND - b.y - 40);
+                    sfx(Sfx.WALL_SPLAT);
                 }
                 b.x = Mth.clamp(b.x, WALL_L, WALL_R);
             }
@@ -432,6 +439,7 @@ public class Showdown extends ArcadeGame {
             if (!b.rage && !b.rageUsed && b.hp > 0 && b.hp <= MAX_HP / 4) {
                 b.rage = true;
                 call("RAGE", b.x, GROUND - 50);
+                sfx(Sfx.RAGE);
             }
         }
         if (practice > 0) { // (practice: nobody's beaten - health comes back between combos)
@@ -643,6 +651,7 @@ public class Showdown extends ArcadeGame {
                     b.wallHits = 0;
                     b.screwed = false;
                     shake = Math.max(shake, 3);
+                    sfx(Sfx.THUD);
                 } else if (b.state == State.JUMP || b.state == State.ATTACK && b.move == AIR_KICK) {
                     b.state = State.STAND;
                     b.move = null;
@@ -653,6 +662,7 @@ public class Showdown extends ArcadeGame {
 
     private void jump(Body b, int dir) {
         if (b.airborne() || !b.free()) return;
+        sfx(Sfx.STEP, 1.3F);
         b.state = State.JUMP;
         b.t = 0;
         b.vy = 1.67F;
@@ -662,6 +672,7 @@ public class Showdown extends ArcadeGame {
 
     private void dash(Body b) {
         if ((!b.free() && b.state != State.CROUCH_DASH) || b.airborne()) return;
+        sfx(Sfx.STEP);
         b.state = State.DASH;
         b.t = 0;
     }
@@ -669,6 +680,7 @@ public class Showdown extends ArcadeGame {
     private void backdash(Body b) {
         boolean chain = b.state == State.BACKDASH && b.t >= 14; // (cancelled into the next: chained backdashes)
         if ((!b.free() && !chain) || b.airborne()) return;
+        sfx(Sfx.STEP, 0.85F);
         b.state = State.BACKDASH;
         b.t = chain ? 4 : 0;
     }
@@ -676,6 +688,7 @@ public class Showdown extends ArcadeGame {
     /** Forward, neutral, down(-forward): a crouch dash (RIKU's). */
     private void crouchDash(Body b) {
         if ((!b.free() && b.state != State.DASH) || b.airborne()) return;
+        sfx(Sfx.STEP, 0.7F);
         b.state = State.CROUCH_DASH;
         b.t = 0;
     }
@@ -687,6 +700,7 @@ public class Showdown extends ArcadeGame {
         b.stun = 14;
         b.depth += (random.nextBoolean() ? 1 : -1) * 10;
         call("TECH", b.x, GROUND - 30);
+        sfx(Sfx.STEP, 1.4F);
     }
 
     /** Getting up off the floor with a roll (back, or to the side). */
@@ -700,6 +714,7 @@ public class Showdown extends ArcadeGame {
 
     private void sidestep(Body b, int dir) {
         if ((!b.free() && b.state != State.CROUCH) || b.airborne()) return;
+        sfx(Sfx.STEP, 1.1F, 0.7F);
         b.state = State.SIDESTEP;
         b.sideDir = dir;
         b.t = 0;
@@ -709,6 +724,7 @@ public class Showdown extends ArcadeGame {
         if (!b.free() || b.airborne() || b.ki) return;
         b.move = null;
         b.state = State.KI;
+        sfx(Sfx.KI);
         b.t = 0;
     }
 
@@ -735,7 +751,13 @@ public class Showdown extends ArcadeGame {
                 call("RAGE DRIVE", b.x, GROUND - 52);
             }
         }
-        if (m.is(CRUSH)) call("POWER CRUSH", b.x, GROUND - 48);
+        if (m.is(CRUSH)) {
+            call("POWER CRUSH", b.x, GROUND - 48);
+            sfx(Sfx.CRUSH, 0.8F);
+        }
+        if (m.is(ELECTRIC)) sfx(Sfx.ELECTRIC);
+        if (m == RAGE_ART) sfx(Sfx.RAGE, 1.2F);
+        sfx(Sfx.WHOOSH, Mth.clamp(1.5F - m.startup() * 0.03F, 0.7F, 1.4F)); // (a swish: quicker moves, higher)
         if (m.is(ELECTRIC) && b == me) call(m == PERFECT_DRAGON ? "PERFECT!" : "", b.x, GROUND - 56);
         b.state = State.ATTACK;
         b.move = m;
@@ -797,6 +819,7 @@ public class Showdown extends ArcadeGame {
             o.grab = m;
             o.t = 0;
             o.ki = false;
+            sfx(Sfx.THROW);
             return;
         }
         if (m.level() == Level.HIGH && o.crouching()) return; // (ducked)
@@ -817,6 +840,7 @@ public class Showdown extends ArcadeGame {
             shake = 3;
             spark(o.x + o.facing * 6, GROUND - o.y - 4, 8);
             call("LOW PARRY!", o.x, GROUND - 48);
+            sfx(Sfx.PARRY);
             return;
         }
         b.hitDone = true;
@@ -827,6 +851,8 @@ public class Showdown extends ArcadeGame {
             o.hp = Math.max(0, o.hp - soak);
             spark(o.x - o.facing * 4, GROUND - o.y - 20, 6);
             flash = 2;
+            sfx(Sfx.CRUSH, 1.2F);
+            sfx(Sfx.HIT_LIGHT, 0.8F);
             return;
         }
         // (no guard: ki charged, an unblockable, practice's dummy - or walking in, as the cabinet's fighter does)
@@ -847,6 +873,7 @@ public class Showdown extends ArcadeGame {
             o.stun = Math.max(6, left + m.onBlock()); // (so it's as far ahead or behind as its frame data says)
             o.vx = -o.facing * 0.67F;
             spark(o.x - o.facing * 4, GROUND - o.y - (m.level() == Level.LOW ? 6 : 20), 6);
+            sfx(Sfx.BLOCK, 0.9F + random.nextFloat() * 0.25F);
             if (b == me && practice > 0) info(m, "BLOCK " + plus(m.onBlock()));
             return;
         }
@@ -870,7 +897,10 @@ public class Showdown extends ArcadeGame {
         b.comboDmg = inCombo ? b.comboDmg + dmg : dmg;
         if (b.combo >= 2) b.comboShow = 150;
         if (b == me && practice == 0) score += dmg * 10 * Math.max(1, b.combo);
+        boolean big = dmg >= 14 || m.is(KND) || m.is(CARRY) || m.launch() > 0;
+        sfx(big ? Sfx.HIT_HEAVY : Sfx.HIT_LIGHT, 0.9F + random.nextFloat() * 0.2F);
         if (counter) {
+            sfx(Sfx.COUNTER);
             call("COUNTER HIT", o.x, GROUND - o.y - 44);
             lastCounter = true;
             flash = 3;
@@ -910,6 +940,7 @@ public class Showdown extends ArcadeGame {
             o.t = 0;
             shake = Math.max(shake, 4);
             call("SCREW!", o.x, GROUND - o.y - 40);
+            sfx(Sfx.SCREW);
         } else if (juggled) { // (keeps them up: the juggle goes on, each hit lifting them less)
             o.state = State.AIR;
             o.airHits++;
@@ -926,6 +957,7 @@ public class Showdown extends ArcadeGame {
             o.t = 0;
             shake = 4;
             call("LAUNCH!", o.x, GROUND - 52);
+            sfx(Sfx.LAUNCH);
         } else if (m.is(KND) || o.airborne()) {
             land(o, b, m);
         } else if (o.state == State.DOWN) {
@@ -957,6 +989,7 @@ public class Showdown extends ArcadeGame {
             }
             o.techable = false; // (thrown down hard: no tech roll)
             shake = 6;
+            sfx(Sfx.HIT_HEAVY, 0.7F);
         }
         o.state = State.DOWN;
         o.stun = 70;
@@ -981,6 +1014,7 @@ public class Showdown extends ArcadeGame {
         winner.wins++;
         Body loser = winner == me ? foe : me;
         if (loser.hp <= 0) {
+            sfx(Sfx.KO);
             loser.state = State.KO;
             loser.y = 0;
             shake = 12;
@@ -995,6 +1029,7 @@ public class Showdown extends ArcadeGame {
 
     private void endRound() {
         if (me.wins >= 2) {
+            sfx(Sfx.WIN);
             ladder++;
             score += 1500 * ladder;
             if (ladder % (FIGHTERS.length - 1) == 0) {
@@ -1219,6 +1254,7 @@ public class Showdown extends ArcadeGame {
         }
         b.x -= b.facing * 10;
         call("BREAK!", b.x, GROUND - 46);
+        sfx(Sfx.BLOCK, 1.4F);
     }
 
     // ================= keys =================
@@ -1270,7 +1306,9 @@ public class Showdown extends ArcadeGame {
             if (repeat) return;
             if (left(key)) pick = (pick + FIGHTERS.length - 1) % FIGHTERS.length;
             if (right(key)) pick = (pick + 1) % FIGHTERS.length;
+            if (left(key) || right(key)) sfx(Sfx.BLIP);
             if (key == GLFW.GLFW_KEY_J || key == GLFW.GLFW_KEY_U || key == GLFW.GLFW_KEY_SPACE || key == GLFW.GLFW_KEY_ENTER) {
+                sfx(Sfx.SELECT);
                 picking = false;
                 newMatch();
             }
@@ -1279,10 +1317,12 @@ public class Showdown extends ArcadeGame {
         if (repeat) return;
         if (key == GLFW.GLFW_KEY_H) {
             showList = !showList;
+            sfx(Sfx.BLIP);
             return;
         }
         if (key == GLFW.GLFW_KEY_P && me != null) { // (practice: off, the dummy stands, it blocks, it fights)
             practice = (practice + 1) % 4;
+            sfx(Sfx.BLIP);
             frameInfo = "";
             say(practice == 0 ? "PRACTICE OFF" : practice == 1 ? "PRACTICE: DUMMY" : practice == 2 ? "PRACTICE: BLOCK ALL" : "PRACTICE: CPU", 30);
             me.hp = foe.hp = MAX_HP;

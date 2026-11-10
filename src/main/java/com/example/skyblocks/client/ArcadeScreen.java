@@ -13,6 +13,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.neoforged.neoforge.network.PacketDistributor;
+import com.example.skyblocks.client.arcade.ArcadeGame.Sfx;
 import org.lwjgl.glfw.GLFW;
 
 /**
@@ -75,6 +76,7 @@ public class ArcadeScreen extends Screen {
         score = 0;
         ticks = 0;
         mode = Mode.PLAYING;
+        sfx(game == 3 ? Sfx.MAZE_START : Sfx.START);
         if (ext() != null) {
             ext().start();
             return;
@@ -117,9 +119,26 @@ public class ArcadeScreen extends Screen {
 
     private void over() {
         mode = Mode.OVER;
+        playQueued();
+        sfx(ext() != null && ext().won() ? Sfx.WIN : Sfx.GAMEOVER);
         if (score > 0) {
             PacketDistributor.sendToServer(new ArcadeScorePayload(pos, game, score));
         }
+    }
+
+    /** A sound for the game being played (or the cabinet's menus). */
+    private static void sfx(Sfx s) {
+        ArcadeSounds.play(s);
+    }
+
+    private static void sfx(Sfx s, float pitch) {
+        ArcadeSounds.play(s, pitch, 1.0F);
+    }
+
+    /** The sounds the game asked for since last time: played. */
+    private void playQueued() {
+        if (ext() == null) return;
+        for (com.example.skyblocks.client.arcade.ArcadeGame.SoundCall c : ext().drainSounds()) ArcadeSounds.play(c.sfx(), c.pitch(), c.volume());
     }
 
     // ================= snake =================
@@ -163,12 +182,14 @@ public class ArcadeScreen extends Screen {
         int nx = head[0] + dx, ny = head[1] + dy;
         boolean eats = nx == foodX && ny == foodY;
         if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS) {
+            sfx(Sfx.SNAKE_DIE);
             over();
             return;
         }
         int i = 0, keep = eats ? body.size() : body.size() - 1;
         for (int[] b : body) {
             if (i++ < keep && b[0] == nx && b[1] == ny) {
+                sfx(Sfx.SNAKE_DIE);
                 over();
                 return;
             }
@@ -176,6 +197,7 @@ public class ArcadeScreen extends Screen {
         body.addFirst(new int[] {nx, ny});
         if (eats) {
             score += 10;
+            sfx(Sfx.SNAKE_EAT, Math.min(2.0F, 0.8F + body.size() * 0.02F)); // (higher as it grows)
             if (body.size() % 5 == 0 && moveEvery > 2) {
                 moveEvery--; // (faster as it grows)
             }
@@ -197,6 +219,7 @@ public class ArcadeScreen extends Screen {
 
     private void launch() {
         ballHeld = false;
+        sfx(Sfx.PADDLE, 1.5F);
         float a = (random.nextFloat() - 0.5F) * 1.2F;
         float speed = 2.6F;
         vx = Mth.sin(a) * speed;
@@ -230,13 +253,16 @@ public class ArcadeScreen extends Screen {
             if (ballX < 2) {
                 ballX = 2;
                 vx = Math.abs(vx);
+                sfx(Sfx.WALL);
             } else if (ballX > W - 2) {
                 ballX = W - 2;
                 vx = -Math.abs(vx);
+                sfx(Sfx.WALL);
             }
             if (ballY < 2) {
                 ballY = 2;
                 vy = Math.abs(vy);
+                sfx(Sfx.WALL);
             }
             if (vy > 0 && ballY >= PADDLE_Y - 2 && ballY <= PADDLE_Y + 3 && ballX >= paddle - 2 && ballX <= paddle + PADDLE_W + 2) {
                 // off the paddle: the further from its middle, the more to the side
@@ -246,11 +272,13 @@ public class ArcadeScreen extends Screen {
                 vx = Mth.sin(a) * speed;
                 vy = -Mth.cos(a) * speed;
                 ballY = PADDLE_Y - 2;
+                sfx(Sfx.PADDLE);
             }
             int col = (int) Math.floor(ballX / BRICK_W), row = (int) Math.floor((ballY - BRICK_TOP) / BRICK_H);
             if (row >= 0 && row < BRICK_ROWS && col >= 0 && col < BRICK_COLS && bricks[row * BRICK_COLS + col]) {
                 bricks[row * BRICK_COLS + col] = false;
                 score += (BRICK_ROWS - row) * 10;
+                sfx(Sfx.BRICK, 0.8F + (BRICK_ROWS - row) * 0.1F); // (the higher rows: higher notes)
                 // back the way it came, on whichever side it came in by
                 float px = ballX - vx / 4.0F, py = ballY - vy / 4.0F;
                 int pcol = (int) Math.floor(px / BRICK_W), prow = (int) Math.floor((py - BRICK_TOP) / BRICK_H);
@@ -266,12 +294,14 @@ public class ArcadeScreen extends Screen {
                     any |= b;
                 }
                 if (!any) { // (all gone: a new wall, the ball a little faster)
+                    sfx(Sfx.LEVELUP);
                     java.util.Arrays.fill(bricks, true);
                     holdBall();
                     return;
                 }
             }
             if (ballY > H + 4) {
+                sfx(Sfx.LOSE);
                 if (--lives <= 0) {
                     over();
                 } else {
@@ -293,6 +323,7 @@ public class ArcadeScreen extends Screen {
         ticks++;
         if (mode == Mode.PLAYING && ext() != null) {
             if (ext().rate() == 20) ext().tick(); // (a faster game: ticked from render, on its own clock - see runFast)
+            playQueued();
             score = ext().score();
             if (ext().over()) {
                 over();
@@ -308,7 +339,7 @@ public class ArcadeScreen extends Screen {
         }
         // what's on the screen, to the cabinet (everyone near it sees it on its screen)
         if (mode != Mode.TITLE && ticks % 5 == 0) {
-            PacketDistributor.sendToServer(new com.example.skyblocks.ArcadeFramePayload(pos, game, score, "", frame()));
+            PacketDistributor.sendToServer(new com.example.skyblocks.ArcadeFramePayload(pos, game, score, "", frame(), ArcadeSounds.takeForPicture()));
             showing = true;
         } else if (mode == Mode.TITLE && showing) {
             stopShowing();
@@ -356,6 +387,7 @@ public class ArcadeScreen extends Screen {
     private void tetrisMove(int dx) {
         if (fits(piece, px + dx, py)) {
             px += dx;
+            sfx(Sfx.MOVE);
         }
     }
 
@@ -372,6 +404,7 @@ public class ArcadeScreen extends Screen {
             if (fits(turned, px + kick, py)) {
                 piece = turned;
                 px += kick;
+                sfx(Sfx.ROTATE);
                 return;
             }
         }
@@ -407,6 +440,7 @@ public class ArcadeScreen extends Screen {
             rows++;
         }
         score += rows * 2;
+        sfx(Sfx.DROP);
         land();
     }
 
@@ -432,6 +466,10 @@ public class ArcadeScreen extends Screen {
             }
         }
         int level = lines / 10;
+        if (cleared == 4) sfx(Sfx.FOUR);
+        else if (cleared > 0) sfx(Sfx.LINE, 0.9F + cleared * 0.1F);
+        else sfx(Sfx.LAND);
+        if ((lines + cleared) / 10 > level) sfx(Sfx.LEVELUP);
         score += new int[] {0, 100, 300, 500, 800}[cleared] * (level + 1);
         lines += cleared;
         dropEvery = Math.max(2, 20 - (lines / 10) * 2); // (faster every ten lines)
@@ -578,7 +616,7 @@ public class ArcadeScreen extends Screen {
 
     private void stopShowing() {
         showing = false;
-        PacketDistributor.sendToServer(new com.example.skyblocks.ArcadeFramePayload(pos, game, score, "", new byte[0]));
+        PacketDistributor.sendToServer(new com.example.skyblocks.ArcadeFramePayload(pos, game, score, "", new byte[0], ArcadeSounds.takeForPicture()));
     }
 
     @Override
@@ -601,8 +639,12 @@ public class ArcadeScreen extends Screen {
             if (key == GLFW.GLFW_KEY_TAB || (mode == Mode.TITLE && key == GLFW.GLFW_KEY_RIGHT)) {
                 game = (game + 1) % NAMES.length;
                 mode = Mode.TITLE;
+                sfx(Sfx.BLIP);
             } else if (mode == Mode.TITLE && key == GLFW.GLFW_KEY_LEFT) {
                 game = (game + NAMES.length - 1) % NAMES.length;
+                sfx(Sfx.BLIP);
+            } else if (key == GLFW.GLFW_KEY_M) {
+                ArcadeSounds.toggle();
             } else if (key == GLFW.GLFW_KEY_SPACE || key == GLFW.GLFW_KEY_ENTER) {
                 start();
             } else if (key == GLFW.GLFW_KEY_T && canClaim()) { // (the best score's holder: its trophy)
@@ -612,7 +654,11 @@ public class ArcadeScreen extends Screen {
             }
             return true;
         }
-        // playing: whatever this key is set to do in this game, as the game's own key for it
+        // playing: whatever this key is set to do in this game, as the game's own key for it (M, if it's not: the sound)
+        if (key == GLFW.GLFW_KEY_M && ArcadeControls.fromKey(game, key).isEmpty()) {
+            ArcadeSounds.toggle();
+            return true;
+        }
         for (int k : ArcadeControls.fromKey(game, key)) {
             gameKey(k);
         }
@@ -744,6 +790,7 @@ public class ArcadeScreen extends Screen {
         while (fastDue >= 1 && mode == Mode.PLAYING) {
             fastDue -= 1;
             g.tick();
+            playQueued();
             score = g.score();
             if (g.over()) {
                 over();
@@ -769,9 +816,11 @@ public class ArcadeScreen extends Screen {
             } else if (input == ArcadeControls.DLEFT || input == ArcadeControls.LS_LEFT || input == ArcadeControls.LB) {
                 game = (game + NAMES.length - 1) % NAMES.length;
                 mode = Mode.TITLE;
+                sfx(Sfx.BLIP);
             } else if (input == ArcadeControls.DRIGHT || input == ArcadeControls.LS_RIGHT || input == ArcadeControls.RB) {
                 game = (game + 1) % NAMES.length;
                 mode = Mode.TITLE;
+                sfx(Sfx.BLIP);
             } else if (input == ArcadeControls.Y && canClaim()) {
                 PacketDistributor.sendToServer(new com.example.skyblocks.TrophyClaimPayload(pos, game));
             } else if (input == ArcadeControls.X) {
@@ -881,6 +930,7 @@ public class ArcadeScreen extends Screen {
         }
         drawCentred(g, pad.connected ? "C / X: CONTROLS" : "C: CONTROLS (KEYS & CONTROLLER)", x0 + W / 2, y0 + 88, 0xFF9AD8FF);
         drawCentred(g, "< TAB: " + NAMES[(game + 1) % NAMES.length] + " >", x0 + W / 2, y0 + 124, 0xFF7788AA);
+        drawCentred(g, ArcadeSounds.muted() ? "M: SOUND OFF" : "M: SOUND ON", x0 + W / 2, y0 + 112, ArcadeSounds.muted() ? 0xFF886666 : 0xFF66AA77);
     }
 
     private void drawSnake(GuiGraphics g, int x0, int y0) {
