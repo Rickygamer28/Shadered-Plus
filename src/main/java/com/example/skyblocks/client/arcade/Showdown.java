@@ -1201,7 +1201,7 @@ public class Showdown extends ArcadeGame {
         float lean = p[0];
         float[] pelvis = {p[2], 18 - p[1]};
         float[] up = dir(180 - lean); // (leaning forward: its chest ahead of its hips)
-        float[] neck = {pelvis[0] + up[0] * 13, pelvis[1] + up[1] * 13};
+        float[] neck = {pelvis[0] + up[0] * 13, pelvis[1] + up[1] * 13, 0};
         // legs (near: the camera's side, the lead leg)
         for (int s = 0; s < 2; s++) {
             float side = s == 0 ? -2.8F : 2.8F;
@@ -1415,7 +1415,7 @@ public class Showdown extends ArcadeGame {
             float[] end = (i & 1) == 0 ? bone.a() : bone.b();
             float along = (i & 1) == 0 ? -grow : grow;
             float st = (i & 2) == 0 ? -t : t, sw = (i & 4) == 0 ? -w : w;
-            float[] local = {end[0] + dx * along + nx * st, end[1] + dy * along + ny * st, end[2] + sw};
+            float[] local = {end[0] + dx * along + nx * st, end[1] + dy * along + ny * st, (end.length > 2 ? end[2] : 0) + sw};
             float[] s = place(b, p, local);
             corner[i] = view(s[0], s[1], s[2]);
         }
