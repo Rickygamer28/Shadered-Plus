@@ -254,17 +254,29 @@ public class LightBridgeEmitterBlockEntity extends BlockEntity {
             if (only != null && (!box.contains(e.position()) || e.isSpectator() || e.isPassenger() || only.getAbilities().flying)) continue;
             Vec3 v = e.getDeltaMovement();
             if (p.mode == LightBridgePath.TUNNEL) {
-                LightBridgePath.Sample a = p.nearest(e.getX(), e.getY(), e.getZ(), dist);
-                if (a == null) continue;
+                int i = p.nearestIndex(e.getX(), e.getY(), e.getZ(), dist);
+                if (i < 0) continue;
+                LightBridgePath.Sample a = p.samples.get(i);
                 float along = reverse ? p.length - a.s() : a.s();
-                if (along > p.length - 0.6F) continue; // (at the end: let go)
-                double hx = a.dx() * sign, hz = a.dz() * sign;
                 double cy = a.y() + p.tunnelRadius() - 0.2, ey = e.getY() + e.getBbHeight() / 2;
                 double off = Math.hypot(dist[0], ey - cy);
-                if (off > p.tunnelRadius() + 0.05) continue;
-                double toX = a.x() - e.getX(), toY = cy - ey, toZ = a.z() - e.getZ();
+                if (off > p.tunnelRadius() + 0.6) continue;
+                double hx = a.dx() * sign, hz = a.dz() * sign;
                 double speed = 0.24;
-                e.setDeltaMovement(hx * speed + toX * 0.12, toY * 0.15, hz * speed + toZ * 0.12);
+                // up or down with it as it climbs (not trailing behind, into what's under its end), and centred in it
+                double rise = p.riseAt(i) * sign * speed;
+                double vy = rise + (cy - ey) * 0.3;
+                if (along > p.length - 1.2F) { // the end: up over the far emitter's deck, and set down on it
+                    double deck = (reverse ? p.samples.get(0) : p.samples.get(p.samples.size() - 1)).y() + 2.0 / 16;
+                    vy = Math.max(vy, (deck + 0.25 - e.getY()) * 0.4);
+                    if (along > p.length - 0.3F) {
+                        e.setDeltaMovement(hx * 0.12, Math.max(0.0, vy), hz * 0.12);
+                        e.resetFallDistance();
+                        e.hurtMarked = only == null;
+                        continue;
+                    }
+                }
+                e.setDeltaMovement(hx * speed + (a.x() - e.getX()) * 0.12, vy, hz * speed + (a.z() - e.getZ()) * 0.12);
                 e.resetFallDistance();
                 e.hurtMarked = only == null;
                 continue;

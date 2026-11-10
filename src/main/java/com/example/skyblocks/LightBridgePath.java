@@ -226,16 +226,34 @@ public final class LightBridgePath {
     /** The point along it nearest to (x, z) (flat), with its distance; null if there are none. */
     @Nullable
     public Sample nearest(double x, double y, double z, float[] dist) {
-        Sample best = null;
+        int i = nearestIndex(x, y, z, dist);
+        return i < 0 ? null : samples.get(i);
+    }
+
+    /** Which sample is nearest (x, z) of those near enough y, and how far it is (flat); -1 if none. */
+    public int nearestIndex(double x, double y, double z, float[] dist) {
+        int best = -1;
         double bd = Double.MAX_VALUE;
-        for (Sample a : samples) {
+        for (int i = 0; i < samples.size(); i++) {
+            Sample a = samples.get(i);
             double d = (a.x() - x) * (a.x() - x) + (a.z() - z) * (a.z() - z);
             double h = y - a.y();
-            if (h < -1.0 || h > 4.0) continue;
+            if (h < -3.0 || h > 4.0) continue;
             if (d < bd) {
                 bd = d;
-                best = a;
+                best = i;
             }
+        }
+        dist[0] = (float) Math.sqrt(bd);
+        return best;
+    }
+
+    /** How fast it rises (blocks up per block along) at sample {@code i}, going forwards. */
+    public float riseAt(int i) {
+        Sample a = samples.get(Math.max(0, i - 1)), b = samples.get(Math.min(samples.size() - 1, i + 1));
+        float ds = b.s() - a.s();
+        return ds < 1e-4F ? 0 : (float) (b.y() - a.y()) / ds;
+    }
         }
         dist[0] = (float) Math.sqrt(bd);
         return best;
