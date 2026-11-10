@@ -22,7 +22,7 @@ public class LightBridgeScreen extends Screen {
     private static final String[] PATTERNS = {"arrows", "honeycomb", "plain", "stripes", "stars"};
     private static final String[] GLOWS = {"faint", "soft", "bright", "solid"};
     private final BlockPos pos;
-    private int mode, width, pattern, opacity, colour;
+    private int mode, span, pattern, opacity, colour;
     private boolean reverse, rails;
     private int swatchX, swatchY;
 
@@ -31,7 +31,7 @@ public class LightBridgeScreen extends Screen {
         this.pos = pos;
         mode = be.mode();
         reverse = be.reverse();
-        width = be.width();
+        span = be.width();
         pattern = be.pattern();
         opacity = be.opacity();
         rails = be.rails();
@@ -45,7 +45,7 @@ public class LightBridgeScreen extends Screen {
                 () -> mode = (mode + 1) % LightBridgePath.MODES);
         row(x, y + 24, w, () -> label("carries", Component.translatable("screen.skyblocks.light_bridge." + (reverse ? "backward" : "forward"))),
                 () -> reverse = !reverse);
-        row(x, y + 48, w, () -> label("width", Component.literal(String.valueOf(width))), () -> width = width % 3 + 1);
+        row(x, y + 48, w, () -> label("width", Component.literal(String.valueOf(span))), () -> span = span % 3 + 1);
         row(x, y + 72, w, () -> label("pattern", Component.translatable("screen.skyblocks.light_bridge.pattern." + PATTERNS[pattern])),
                 () -> pattern = (pattern + 1) % PATTERNS.length);
         row(x, y + 96, w, () -> label("glow", Component.translatable("screen.skyblocks.light_bridge.glow." + GLOWS[opacity])),
@@ -70,7 +70,7 @@ public class LightBridgeScreen extends Screen {
     }
 
     private void send() {
-        PacketDistributor.sendToServer(new LightBridgeSettingsPayload(pos, mode, reverse, width, pattern, opacity, rails, colour));
+        PacketDistributor.sendToServer(new LightBridgeSettingsPayload(pos, mode, reverse, span, pattern, opacity, rails, colour));
     }
 
     @Override
