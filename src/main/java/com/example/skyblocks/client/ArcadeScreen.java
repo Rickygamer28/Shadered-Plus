@@ -63,8 +63,17 @@ public class ArcadeScreen extends Screen {
 
     @Override
     protected void init() {
-        left0 = (width - W) / 2;
-        top0 = (height - H) / 2 + 6;
+        layout();
+    }
+
+    /** How big the cabinet's drawn: the same share of the window whatever the GUI scale (it's all drawn scaled by this). */
+    private float scale = 1;
+
+    private void layout() {
+        // (the cabinet, frame and all, is W + 28 by H + 52: about four fifths of the window's height, or of its width)
+        scale = Math.max(0.25F, Math.min(height * 0.8F / (H + 52), width * 0.9F / (W + 28)));
+        left0 = Math.round((width / scale - W) / 2);
+        top0 = Math.round((height / scale - H) / 2 + 6);
     }
 
     @Override
@@ -757,6 +766,8 @@ public class ArcadeScreen extends Screen {
 
     @Override
     public void mouseMoved(double x, double y) {
+        x /= scale; // (into the cabinet's own, scaled, units)
+        y /= scale;
         if (game == 1 && mode == Mode.PLAYING) {
             mouseX = x;
         }
@@ -764,6 +775,8 @@ public class ArcadeScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
+        x /= scale;
+        y /= scale;
         if (mode == Mode.PLAYING && ext() != null) {
             ext().mouseClicked(x - left0, y - top0, button);
         } else if (mode != Mode.PLAYING) {
@@ -868,6 +881,17 @@ public class ArcadeScreen extends Screen {
         float fastPartial = runFast();
         playMusic(mode == Mode.PLAYING && ext() != null ? ext().music() : null);
         super.render(g, mx, my, partialTick);
+        layout();
+        g.pose().pushPose();
+        g.pose().scale(scale, scale, 1);
+        try {
+            drawCabinet(g, partialTick, fastPartial);
+        } finally {
+            g.pose().popPose();
+        }
+    }
+
+    private void drawCabinet(GuiGraphics g, float partialTick, float fastPartial) {
         int x0 = left0, y0 = top0;
         // the cabinet's frame round the screen
         g.fill(x0 - 14, y0 - 30, x0 + W + 14, y0 + H + 22, 0xFF1A1030);
@@ -879,7 +903,11 @@ public class ArcadeScreen extends Screen {
         if (mode == Mode.TITLE) {
             drawTitle(g, x0, y0, partialTick);
         } else if (ext() != null) {
-            g.enableScissor(x0, y0, x0 + W, y0 + H);
+            // (the scissor's in the screen's own units: worked out without the scale on, so it's right either way)
+            g.pose().pushPose();
+            g.pose().setIdentity();
+            g.enableScissor(Math.round(x0 * scale), Math.round(y0 * scale), Math.round((x0 + W) * scale), Math.round((y0 + H) * scale));
+            g.pose().popPose();
             ext().draw(g, font, x0, y0, ext().rate() == 20 ? partialTick : fastPartial);
             g.disableScissor();
         } else if (game == 0) {

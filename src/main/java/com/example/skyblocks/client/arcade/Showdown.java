@@ -340,7 +340,7 @@ public class Showdown extends ArcadeGame {
         final Set<Integer> held = new HashSet<>();
         boolean kL, kR, kU, kD;
         final List<int[]> dirs = new ArrayList<>(); // numpad direction, the frame it began
-        int upAt = -100, downAt = -100, qcfAt = -100, qcbAt = -100, dfAt = -100, kbdUntil = -100;
+        int upAt = -100, upTapAt = -100, downAt = -100, qcfAt = -100, qcbAt = -100, dfAt = -100, kbdUntil = -100;
         /** When each button was last pressed (1-4). */
         final int[] pressedAt = {-100, -100, -100, -100, -100};
         int jumpDir, jumpAt = -1;
@@ -351,7 +351,8 @@ public class Showdown extends ArcadeGame {
     private Pad myPad = new Pad();
     /** The move list up (the fight paused). */
     private boolean showList;
-    private int listPage;
+    /** The move list: which tab, which row's picked, how far it's scrolled. */
+    private int listTab, listSel, listTop;
     /** Practice: 0 off; 1 the dummy stands; 2 it blocks everything; 3 it fights back. (Health refills, no clock.) */
     private int practice;
     /** Practice: what your last move was and how it went (frame data). */
@@ -371,7 +372,7 @@ public class Showdown extends ArcadeGame {
 
     @Override
     public String[] help() {
-        return new String[] {"WASD  U I J K = 1 2 3 4  H moves  P practice", "W/S step  FF dash  BB back  W+A/D jump  O record"};
+        return new String[] {"WASD  U I J K = 1 2 3 4  H moves  P practice", "hold W jump  W,W step in  S tap step out  FF dash"};
     }
 
     @Override
@@ -544,9 +545,9 @@ public class Showdown extends ArcadeGame {
         if (practice >= 5 && trialStep > 0 && foe.free() && me.free() && me.combo > 0 && foe.comboShow == 0
                 && foe.state == State.STAND) trialStep = 0; // (the combo's over before it was done)
         for (Body b : new Body[] {me, foe}) {
-            if (b.in != null && b.in.jumpAt >= 0 && ticks >= b.in.jumpAt) { // (the held-off jump: nothing came of it, so it's a jump)
+            if (b.in != null && b.in.jumpAt >= 0 && ticks >= b.in.jumpAt) { // (up held long enough: a jump - the way held now)
                 b.in.jumpAt = -1;
-                jump(b, b.in.jumpDir);
+                jump(b, fwdHeld(b) ? 1 : backHeld(b) ? -1 : 0);
             }
         }
         player(me);
@@ -590,7 +591,7 @@ public class Showdown extends ArcadeGame {
         boolean stepping = me.state == State.SIDESTEP || me.state == State.SIDEWALK || foe.state == State.SIDESTEP || foe.state == State.SIDEWALK;
         if (!stepping) {
             for (Body b : new Body[] {me, foe}) {
-                float d = Mth.clamp(-b.depth, -0.4F, 0.4F);
+                float d = Mth.clamp(-b.depth * 0.05F, -0.35F, 0.35F); // (easing back onto the line, not snapping)
                 b.depth += d;
                 spin += d * (b == me ? 3.0F : -3.0F) * b.facing;
             }
@@ -719,21 +720,24 @@ public class Showdown extends ArcadeGame {
                     b.t = 0;
                 }
             }
-            case SIDESTEP -> { // (into the screen: quicker; out of it: slower, but further)
+            case SIDESTEP -> { // (into the screen: quicker; out of it: slower, but further) - eased in and out
                 boolean in = b.sideDir > 0;
-                b.depth += b.sideDir * Math.max(0.13F, (in ? 1.15F : 0.95F) - b.t * 0.025F);
-                if (b.t >= (in ? 20 : 26)) {
+                int frames = in ? 20 : 26;
+                float far = in ? 15 : 18;
+                b.depth += b.sideDir * far * (ease(Math.min(1, b.t / (float) frames)) - ease((b.t - 1) / (float) frames));
+                b.depth = Mth.clamp(b.depth, -34, 34);
+                if (b.t >= frames) {
                     boolean holding = b.in != null ? (b.sideDir > 0 ? b.in.kU : b.in.kD) : b.buffered;
                     b.state = holding ? State.SIDEWALK : State.STAND;
                     b.t = 0;
                 }
             }
-            case SIDEWALK -> {
-                b.depth += b.sideDir * 0.37F;
+            case SIDEWALK -> { // (circling: picking up speed out of the step)
+                b.depth += b.sideDir * Math.min(0.42F, 0.2F + b.t * 0.02F);
                 // circling round them: the camera follows
                 spin += b.sideDir * 0.53F * b.facing * (b == me ? 1 : -1);
-                b.depth = Mth.clamp(b.depth, -30, 30);
-                if (b != me && !b.buffered) b.state = State.STAND;
+                b.depth = Mth.clamp(b.depth, -34, 34);
+                if (b.in == null && !b.buffered) b.state = State.STAND;
             }
             case BLOCK, HIT -> {
                 if (--b.stun <= 0) {
@@ -866,6 +870,12 @@ public class Showdown extends ArcadeGame {
         } else if ((m == DRAGON_UPPER || m == PERFECT_DRAGON) && b.t < m.startup()) {
             b.x += b.facing * 0.4F;
         }
+    }
+
+    /** 0 to 1, slow at both ends. */
+    private static float ease(float x) {
+        x = Mth.clamp(x, 0, 1);
+        return x * x * (3 - 2 * x);
     }
 
     private void physics(Body b) {
@@ -1059,13 +1069,9 @@ public class Showdown extends ArcadeGame {
         if (b.state != State.ATTACK || b.hitDone || b.move == null) return;
         Move m = b.move;
         if (b.t < m.startup() || b.t >= m.startup() + m.active()) return;
-        float reach = (o.x - b.x) * b.facing * (m.is(BACKWARD) ? -1 : 1);
-        if (reach < -4 || reach > m.reach()) return;
+        if (!connects(b, o, m)) return; // (its limb against their body: reach, height, depth)
         // BLAZE swaying back: highs miss, and mids early on
         if (o.state == State.STANCE && o.stance == 3 && (m.level() == Level.HIGH || m.level() == Level.MID && o.t < 12)) return;
-        if (Math.abs(o.y - b.y) > 30) return;
-        // off the line: a straight attack misses (a homing one turns to follow)
-        if (Math.abs(o.depth - b.depth) > 7 && !m.is(HOMING)) return;
         if (o.state == State.KO || o.state == State.RISE) return;
         if (o.state == State.DOWN && !(m.level() == Level.LOW || m.is(GROUND_HIT))) return; // (only some moves hit someone lying down)
         if (o.state == State.THROWN) return;
@@ -1285,6 +1291,80 @@ public class Showdown extends ArcadeGame {
                 call("CRUMPLE", o.x, GROUND - 36);
             }
         }
+    }
+
+    // ---- hitboxes: from the fighters' own posed bodies ----
+
+    /** Its body, as posed now: the box round all its bones (along, up, depth), each bone's thickness included. */
+    private float[] hurtBox(Body o) {
+        float[] p = poseOf(o)[1];
+        float lift = lift(o, p);
+        float[] box = {Float.MAX_VALUE, -Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE};
+        for (Bone bone : skeleton(o, p, LOOKS[0], 0)) {
+            if (bone.t() < 1) continue; // (not the eyes)
+            float r = bone.t() / 2;
+            for (float[] q : new float[][] {bone.a(), bone.b()}) {
+                float[] w = world(o, p, q, lift);
+                box[0] = Math.min(box[0], w[0] - r);
+                box[1] = Math.max(box[1], w[0] + r);
+                box[2] = Math.min(box[2], w[1] - r);
+                box[3] = Math.max(box[3], w[1] + r);
+                box[4] = Math.min(box[4], w[2] - r);
+                box[5] = Math.max(box[5], w[2] + r);
+            }
+        }
+        return box;
+    }
+
+    /** Its striking limb as posed now: the elbow or knee, and the fist or foot (world points). */
+    private float[][] strikingLimb(Body b) {
+        float[] p = poseOf(b)[1];
+        float lift = lift(b, p);
+        List<Bone> bones = skeleton(b, p, LOOKS[0], 0);
+        int[] sl = limbOf(b.move);
+        int base = sl[1] == 1 ? sl[0] * 3 : bones.size() - 6 + sl[0] * 3;
+        return new float[][] {world(b, p, bones.get(base + 1).a(), lift), world(b, p, bones.get(base + 2).b(), lift)};
+    }
+
+    /** Which limb a move strikes with: side (0 near, 1 far), and leg (1) or arm (0). */
+    private static int[] limbOf(Move m) {
+        if (m == null) return new int[] {0, 0};
+        return switch (m.pose()) {
+            case JAB, LOWPUNCH, THROW -> new int[] {0, 0};
+            case CROSS, UPPER, RAGE, TACKLE, SPIN, PALM -> new int[] {1, 0};
+            case LOWKICK, AIRKICK -> new int[] {0, 1};
+            default -> new int[] {1, 1};
+        };
+    }
+
+    private float[] world(Body b, float[] p, float[] q, float lift) {
+        float[] r = turn(p, q);
+        return new float[] {b.x + r[0] * b.facing, b.y + r[1] + lift, b.depth + r[2]};
+    }
+
+    /**
+     * Does its move reach them? Along: to the near edge of their body (not their middle), within the move's reach.
+     * Up: its striking limb at their body's height (a low only reaches low on them - someone juggled high is out of
+     * its reach; a crouch takes the body down under a high). Depth: on the line with them, unless it's homing.
+     */
+    private boolean connects(Body b, Body o, Move m) {
+        int way = b.facing * (m.is(BACKWARD) ? -1 : 1);
+        float[] box = hurtBox(o);
+        float near = way > 0 ? box[0] : box[1], far = way > 0 ? box[1] : box[0];
+        if ((far - b.x) * way < -2) return false; // (behind it)
+        // (out of reach: a move's reach is to their middle, standing guarded - their guard sticks out about 13 ahead of
+        // that; leaning back, crouching, lying down, their edge is somewhere else)
+        // (and never shorter than to their middle: reeling back from a hit doesn't take them out of a string)
+        if (Math.min((near - b.x) * way + 13, (o.x - b.x) * way) > m.reach()) return false;
+        float[][] limb = strikingLimb(b);
+        float lo = Math.min(limb[0][1], limb[1][1]) - 3, hi = Math.max(limb[0][1], limb[1][1]) + 3;
+        if (m.level() == Level.LOW) lo = Math.min(lo, b.y); // (a low sweeps along the floor)
+        if (hi < box[2] || lo > box[3]) return false;
+        if (!m.is(HOMING)) {
+            float z = limb[1][2];
+            if (z < box[4] - 5 || z > box[5] + 5) return false;
+        }
+        return true;
     }
 
     /** Knocked to the floor (thrown, swept, tackled ...). */
@@ -1846,14 +1926,8 @@ public class Showdown extends ArcadeGame {
         }
         if (repeat) return;
         if (key == GLFW.GLFW_KEY_H) { // (the move list: two pages, then gone)
-            if (!showList) {
-                showList = true;
-                listPage = 0;
-            } else if (listPage == 0) {
-                listPage = 1;
-            } else {
-                showList = false;
-            }
+            showList = !showList;
+            listSel = listTop = 0;
             sfx(Sfx.BLIP);
             return;
         }
@@ -1886,7 +1960,18 @@ public class Showdown extends ArcadeGame {
             }
             return;
         }
-        if (showList) return;
+        if (showList) { // (the move list: W/S a row, A/D a tab)
+            if (me == null) return;
+            int rows = listRows(me, listTab).size();
+            if (up(key)) listSel = Math.max(0, listSel - 1);
+            if (down(key)) listSel = Math.min(rows - 1, listSel + 1);
+            if (left(key) || right(key)) {
+                listTab = Math.floorMod(listTab + (right(key) ? 1 : -1), LIST_TABS.length);
+                listSel = listTop = 0;
+            }
+            if (up(key) || down(key) || left(key) || right(key)) sfx(Sfx.BLIP, 1.2F, 0.6F);
+            return;
+        }
         if (me == null) return;
         record(key, true);
         press(me, key);
@@ -1905,21 +1990,18 @@ public class Showdown extends ArcadeGame {
         if (roundOver != 0) return;
         if ((down(key) || left(key) || right(key)) && dir(b) == 3) b.parryAt = ticks; // (df just as a low comes in)
         if (up(key)) {
+            // as in Tekken: hold up to jump (straight up, or with a direction that way - after a moment's crouch, so
+            // up-forward + 4 can be a hopkick); tap it twice to sidestep into the screen (hold the second: sidewalk)
             in.upAt = ticks;
             if (b.state == State.DOWN) {
                 roll(b, 1);
-            } else if (in.kL || in.kR) { // (up with a direction: a jump that way - in a moment, so up-forward + 4 can hopkick)
-                if (b.free() && !b.airborne()) {
-                    in.jumpDir = fwdHeld(b) ? 1 : -1;
-                    in.jumpAt = ticks + 8;
-                }
-            } else {
-                sidestep(b, 1); // (a tap: a sidestep into the screen, straight away)
+            } else if (ticks - in.upTapAt <= 15 && !(in.kL || in.kR)) {
+                in.jumpAt = -1;
+                in.upTapAt = -100;
+                sidestep(b, 1);
+            } else if (b.free() && !b.airborne()) {
+                in.jumpAt = ticks + 9; // (its way: whatever's held when it goes)
             }
-        }
-        if (key == GLFW.GLFW_KEY_SPACE && b.free() && !b.airborne()) { // (the jump key: straight up, or the way you're held)
-            in.jumpDir = fwdHeld(b) ? 1 : backHeld(b) ? -1 : 0;
-            in.jumpAt = ticks + 8;
         }
         if (down(key)) {
             in.downAt = ticks;
@@ -2133,7 +2215,14 @@ public class Showdown extends ArcadeGame {
         if (b != me) in.held.remove(key);
         if (left(key)) in.kL = false;
         if (right(key)) in.kR = false;
-        if (up(key)) in.kU = false;
+        if (up(key)) {
+            in.kU = false;
+            // let go before the jump went (no direction held): a tap - the first of a double tap
+            if (in.jumpAt >= 0 && !(in.kL || in.kR)) {
+                in.jumpAt = -1;
+                in.upTapAt = ticks;
+            }
+        }
         boolean wasDown = down(key) && in.kD;
         if (down(key)) in.kD = false;
         if (left(key) || right(key) || up(key) || down(key)) newDir(b);
@@ -2285,9 +2374,16 @@ public class Showdown extends ArcadeGame {
                 p[6] = -45;
             }
             case SIDESTEP, SIDEWALK -> {
-                p[13] = 40 * b.sideDir;
-                p[3] = 18 + 12 * Mth.sin(w * 1.4F);
-                p[5] = -14 - 12 * Mth.sin(w * 1.4F);
+                // stepping across: the feet in time with how far it's gone (no skating), body turned a little into
+                // the step, bobbing as each foot lands, guard kept up and eyes on them
+                float phase = b.depth * 0.55F;
+                p[13] = 24 * b.sideDir;
+                p[3] = 16 + 16 * Mth.sin(phase);
+                p[5] = -12 - 16 * Mth.sin(phase);
+                p[4] = -24 - 20 * Math.max(0, Mth.cos(phase));
+                p[6] = -22 - 20 * Math.max(0, -Mth.cos(phase));
+                p[1] = 2.2F + 1.4F * Math.abs(Mth.sin(phase));
+                p[0] = 8;
             }
             case JUMP -> {
                 p[3] = 60;
@@ -3184,82 +3280,259 @@ public class Showdown extends ArcadeGame {
         return b.who == 2 ? "b+1+2" : b.who == 3 ? "qcf+1+2" : "f+1+2";
     }
 
-    /** The move list: everyone's moves (page 1), then the systems and this fighter's own (page 2). */
-    private String[][] moveListFor(Body b, int page) {
-        List<String[]> l = new ArrayList<>();
-        if (page == 0) {
-            l.add(new String[] {"MOVE LIST - " + b.style.name() + "  1/2", "1 U  2 I  3 J  4 K   H: next"});
-            l.add(new String[] {"1,1,2  1,2,4  1,2,3  3,4", "strings"});
-            l.add(new String[] {"df+1 mid check  df+2 LAUNCHER", "df+3  df+4  mids"});
-            l.add(new String[] {"d+1  d+2  crouching mids", "d+3 d+4 lows   db+4 sweep"});
-            l.add(new String[] {"f+2 / dash 2  lunge punch", "f+4  homing (CH launches)"});
-            l.add(new String[] {"b+2 spin fist  f+3 spiral", "SCREWS (one a juggle)"});
-            l.add(new String[] {"b+1+2  iron palm", "POWER CRUSH (soaks hits)"});
-            l.add(new String[] {"let go of down: ws1 ws2 ws4", "ws2: LAUNCHER"});
-            l.add(new String[] {"uf+4  hopkick", "LAUNCHER, hops over lows"});
-            l.add(new String[] {"running: 1/2 chop  3 slide", "4 jump kick  (or: tackle)"});
-            l.add(new String[] {"1+3 / 2+4  throws", "break: 1 / 2 in time"});
-            l.add(new String[] {"from the side: side throw", "behind: back throw (no break)"});
-            l.add(new String[] {"df just as a low comes", "LOW PARRY"});
-            l.add(new String[] {"1+2+3+4  ki charge", "next hit can't be blocked"});
-            l.add(new String[] {"rage: df+1+2  RAGE ART", rageDriveName(b) + "  RAGE DRIVE"});
-            l.add(new String[] {"d+3+4  stomp", "hits them lying down"});
-            l.add(new String[] {"COMBO: df+2, 1,1, b+2,", "dash, f+2 (to the wall)"});
-            return l.toArray(new String[0][]);
-        }
-        l.add(new String[] {"MOVE LIST - " + b.style.name() + "  2/2", "H: close"});
-        switch (b.who) {
+    // ---- the move list: tabs of moves, each with its command (arrows, the four-button diamond), hit level, startup ----
+
+    private static final String[] LIST_TABS = {"BASICS", "STRINGS", "SPECIAL", "SYSTEMS"};
+
+    /** A row: the command (move-list notation), the move (or none: a system), its name and what to know about it. */
+    private record Row(String cmd, Move move, String name, String note) {}
+
+    private static Row row(String cmd, Move m, String note) {
+        return new Row(cmd, m, m.name(), note);
+    }
+
+    private static Row sys(String cmd, String name, String note) {
+        return new Row(cmd, null, name, note);
+    }
+
+    private List<Row> listRows(Body b, int tab) {
+        List<Row> l = new ArrayList<>();
+        switch (tab) {
             case 0 -> {
-                l.add(new String[] {"f,n,d,df  crouch dash", "1  2 DRAGON UPPER  4 hell sweep"});
-                l.add(new String[] {"2 on the very frame of df:", "PERFECT DRAGON (+5, i11)"});
-                l.add(new String[] {"crouch dash again from one:", "WAVEDASH"});
-                l.add(new String[] {"b+4 demon heel (CH launch)", "f+1+2 twin palm"});
+                l.add(row("1", JAB, "Quick, safe. Your fastest punish"));
+                l.add(row("2", CROSS, "Starts 1,2 strings"));
+                l.add(row("3", MID_KICK, ""));
+                l.add(row("4", HIGH_KICK, ""));
+                l.add(row("df+1", MID_CHECK, "Plus on block. Counter hit: crumple"));
+                l.add(row("df+2", LAUNCHER, "LAUNCHER - start your juggle"));
+                l.add(row("df+3", FRONT_KICK, ""));
+                l.add(row("df+4", STEP_KICK, "Plus on hit"));
+                l.add(row("d+1", CROUCH_JAB, "Ducks highs"));
+                l.add(row("d+2", CROUCH_STRAIGHT, "Ducks highs"));
+                l.add(row("d+3", LOW_KICK, "Hits them lying down"));
+                l.add(row("d+4", TOE_KICK, "Quick low"));
+                l.add(row("db+4", SWEEP, "Knocks down - no tech"));
+                l.add(row("f+2", LUNGE_PUNCH, "Juggle ender: carries to the wall"));
+                l.add(row("f+3", SPIRAL_KICK, "SCREW - spins a juggle on"));
+                l.add(row("f+4", HOMING_KICK, "Catches sidesteps. Counter hit: launch"));
+                l.add(row("b+2", SPIN_FIST, "SCREW. Counter hit: crumple"));
+                l.add(row("b+1+2", IRON_PALM, "POWER CRUSH - soaks highs and mids"));
+                l.add(row("uf+4", HOPKICK, "LAUNCHER - hops over lows"));
+                l.add(row("WS 1", RISING_JAB, "Standing up from a crouch"));
+                l.add(row("WS 2", RISING_UPPER, "LAUNCHER - punish a blocked low"));
+                l.add(row("WS 3", RISING_KNEE, ""));
+                l.add(row("WS 4", RISING_KICK, "Quick punisher after a low"));
+                l.add(row("1+3", THROW_L, "Break: 1"));
+                l.add(row("2+4", THROW_R, "Break: 2"));
+                l.add(row("d+3+4", STOMP, "Only on someone lying down"));
+                l.add(row("RUN 1", RUN_CHOP, "Running: f,f,f held"));
+                l.add(row("RUN 3", RUN_SLIDE, ""));
+                l.add(row("RUN 4", RUN_KICK, ""));
+                l.add(row("BT 1", BT_BACKFIST, "Back turned: turns you round"));
+                l.add(row("BT 4", MULE_KICK, "Back turned: kicks behind you"));
             }
             case 1 -> {
-                l.add(new String[] {"f+3+4 CAT STANCE (low)", "1 paw  2 POUNCE  3 tail  4 flip"});
-                l.add(new String[] {"3+4  turn your back", "back turned: 1-4 turning attacks"});
-                l.add(new String[] {"sidestep + 1 / 2", "claw swipe (homing)"});
-                l.add(new String[] {"dash + 3  cat slide (low)", "b+3  backflip (LAUNCHER)"});
+                l.add(row("1,1", JAB_2, "Natural combo"));
+                l.add(row("1,1,2", ELBOW_FINISH, ""));
+                l.add(row("1,2", CROSS, "Natural combo"));
+                l.add(row("1,2,4", CROSS_KICK, "High - duckable"));
+                l.add(row("1,2,3", CROSS_LOW, "Low ender - mix it with 1,2,4"));
+                l.add(row("3,4", WHIRL_KICK, ""));
+                l.add(sys("df+2 1,1 b+2 f,f+2", "BASIC JUGGLE", "Launch, jab twice, screw, dash in, finish"));
             }
             case 2 -> {
-                l.add(new String[] {"b+3+4  SIEGE (soaks hits)", "1 jab  2 CANNON  3 sweep  4 kick"});
-                l.add(new String[] {"df+1+2  iron grab, then 1+2:", "CHAIN THROW (escape: 1+2)"});
-                l.add(new String[] {"db+1+2  scrap grab", "throws someone crouching"});
-                l.add(new String[] {"f+1+2  piston (CRUSH)", "d+1+2  ground slam"});
+                switch (b.who) {
+                    case 0 -> {
+                        l.add(sys("f,n,d,df", "CROUCH DASH", "Low and fast - under highs"));
+                        l.add(row("CD 1", SNAP_ELBOW, ""));
+                        l.add(row("CD 2", DRAGON_UPPER, "LAUNCHER"));
+                        l.add(row("CD df+2", PERFECT_DRAGON, "Just frame: 2 on the very frame you hit df"));
+                        l.add(row("CD 4", HELL_SWEEP, "Low, knocks down"));
+                        l.add(sys("CD f,n,d,df", "WAVEDASH", "Crouch dash out of a crouch dash"));
+                        l.add(row("b+4", DEMON_HEEL, "Counter hit: launch"));
+                        l.add(row("f+1+2", TWIN_PALM, "Carries to the wall"));
+                    }
+                    case 1 -> {
+                        l.add(sys("f+3+4", "CAT STANCE", "Low: highs go over you. b: out"));
+                        l.add(row("CAT 1", PAW_JAB, ""));
+                        l.add(row("CAT 2", POUNCE, "LAUNCHER"));
+                        l.add(row("CAT 3", TAIL_SWEEP, "Low, knocks down"));
+                        l.add(row("CAT 4", CAT_FLIP, "LAUNCHER - leaves you back turned"));
+                        l.add(sys("3+4", "TURN AWAY", "Back turned: BT moves (can't block!)"));
+                        l.add(row("SS 1", CLAW_SWIPE, "Out of a sidestep"));
+                        l.add(row("f,f+3", CAT_SLIDE, "Dashing low"));
+                        l.add(row("b+3", BACKFLIP, "LAUNCHER"));
+                    }
+                    case 2 -> {
+                        l.add(sys("b+3+4", "SIEGE", "Planted: soaks highs and mids"));
+                        l.add(row("SIEGE 1", PISTON_JAB, ""));
+                        l.add(row("SIEGE 2", CANNON, "POWER CRUSH, huge"));
+                        l.add(row("SIEGE 3", TREAD_SWEEP, ""));
+                        l.add(row("SIEGE 4", STOMP_KICK, "Counter hit: crumple"));
+                        l.add(row("df+1+2", IRON_GRAB, "Break: 1+2. Then 1+2: chain throw"));
+                        l.add(row("db+1+2", SCRAP_GRAB, "Only catches someone crouching"));
+                        l.add(row("f+1+2", PISTON, "POWER CRUSH"));
+                        l.add(row("d+1+2", GROUND_SLAM, "Hits them lying down"));
+                    }
+                    default -> {
+                        l.add(sys("d,db,b", "SWAY", "Leans out of highs (and mids, at first)"));
+                        l.add(row("SWAY 1", SWAY_JAB, ""));
+                        l.add(row("SWAY 2", SWAY_BURNER, "Carries to the wall"));
+                        l.add(row("SWAY 3", SWAY_SWEEP, ""));
+                        l.add(row("SWAY 4", SWAY_KICK, ""));
+                        l.add(row("d,df,f+2", BURNING_FIST, "Carries to the wall"));
+                        l.add(row("b+4", FLAME_HEEL, "Counter hit: launch"));
+                        l.add(row("f,f+1+2", HEAT_RUSH, "POWER CRUSH"));
+                    }
+                }
+                l.add(row("df+1+2", RAGE_ART, "In rage (low health). Also L"));
+                l.add(row(rageDriveName(b), rageDrive(b), "RAGE DRIVE - in rage"));
             }
             default -> {
-                l.add(new String[] {"d,db,b  SWAY (leans out)", "1 jab  2 BURNER  3 sweep  4 kick"});
-                l.add(new String[] {"d,df,f+2  burning fist", "into the wall"});
-                l.add(new String[] {"b+4 flame heel (CH launch)", "dash f+1+2 heat rush"});
+                l.add(sys("u (hold)", "JUMP", "ub / uf: back / forward"));
+                l.add(sys("u,u", "SIDESTEP IN", "Quick. Hold: sidewalk"));
+                l.add(sys("d (tap)", "SIDESTEP OUT", "Further. Hold: crouch"));
+                l.add(sys("f,f", "DASH", "Hold f: run"));
+                l.add(sys("b,b", "BACKDASH", "b,b again: chained"));
+                l.add(sys("b,b,db,b", "KOREAN BACKDASH", "Backdash, crouch-cancel, again"));
+                l.add(sys("df", "LOW PARRY", "Just as a low comes in"));
+                l.add(sys("1+2+3+4", "KI CHARGE", "Next hit can't be blocked"));
+                l.add(sys("1 / 2", "THROW BREAK", "The arm that grabs you"));
+                l.add(sys("1 / 2", "TECH ROLL", "As you hit the floor"));
+                l.add(sys("f", "KIP-UP", "Lying down: up at once"));
+                l.add(sys("b / u / d", "ROLL", "Lying down: away or aside"));
+                l.add(sys("3 / 4", "GET-UP KICK", "Lying down: low / mid"));
+                l.add(sys("3+4", "SPRING KICK", "Lying down"));
+                l.add(sys("BT", "BACK TURNED", "Can't block. A direction turns you"));
+                l.add(sys("P", "PRACTICE", "Dummy, block all, CPU, playback, trials"));
+                l.add(sys("O", "RECORD", "Practice: record, then P to playback"));
             }
         }
-        l.add(new String[] {"back turned (can't block!)", "a direction turns  1-4 attacks"});
-        l.add(new String[] {"b,b  backdash   then db, b ...", "KOREAN BACKDASH"});
-        l.add(new String[] {"W tap: step in (quick)", "S tap: step out (further)"});
-        l.add(new String[] {"knocked down: 1/2 as you land", "TECH ROLL"});
-        l.add(new String[] {"down: f kip-up  b roll back", "W/S aside  3/4 get-up  3+4 spring"});
-        l.add(new String[] {"wall splat: heavy hit at a", "breakable wall: WALL BREAK"});
-        l.add(new String[] {"P: practice (frame data)", "O: record  then P: playback"});
-        l.add(new String[] {"P past playback: COMBO TRIALS", "the moves in order, in one combo"});
-        return l.toArray(new String[0][]);
+        return l;
     }
+
+    private static final int ROW_H = 11, LIST_ROWS = 9;
 
     /** The move list over the paused fight. */
     private void moveList(GuiGraphics g, Font font, int x0, int y0) {
-        box(g, x0, y0, 4, 4, W - 8, H - 8, 0xE8100A20);
-        box(g, x0, y0, 4, 4, W - 8, 1, 0xFFFFC850);
-        box(g, x0, y0, 4, H - 5, W - 8, 1, 0xFFFFC850);
-        String[][] list = moveListFor(me, listPage);
+        box(g, x0, y0, 0, 0, W, H, 0xE00A0614);
+        // the header: the fighter's name on a red bar, gold edged
+        box(g, x0, y0, 0, 0, W, 15, 0xFF6A0A14);
+        box(g, x0, y0, 0, 15, W, 1, 0xFFFFC850);
         g.pose().pushPose();
-        g.pose().translate(x0 + 8, y0 + 8, 0);
-        g.pose().scale(0.45F, 0.45F, 1);
-        for (int i = 0; i < list.length; i++) {
-            int y = i * 15;
-            boolean head = i == 0;
-            g.drawString(font, list[i][0], 0, y, head ? 0xFFFFC850 : 0xFFFFFFFF, true);
-            g.drawString(font, list[i][1], 186, y, head ? 0xFFB0B0C8 : 0xFFFFE070, true);
-        }
+        g.pose().translate(x0 + 4, y0 + 4, 0);
+        g.pose().scale(0.75F, 0.75F, 1);
+        g.drawString(font, "MOVE LIST", 0, 0, 0xFFFFC850, true);
+        g.drawString(font, me.style.name(), (int) ((W - 8) / 0.75F) - font.width(me.style.name()), 0, 0xFFFFFFFF, true);
         g.pose().popPose();
+        // the tabs
+        float tw = W / (float) LIST_TABS.length;
+        for (int i = 0; i < LIST_TABS.length; i++) {
+            boolean on = i == listTab;
+            box(g, x0, y0, i * tw + 1, 17, tw - 2, 9, on ? 0xFFFFC850 : 0xFF2A2036);
+            small(g, font, LIST_TABS[i], x0 + i * tw + tw / 2, y0 + 19, on ? 0xFF1A0A14 : 0xFFB0A8C0, true);
+        }
+        List<Row> rows = listRows(me, listTab);
+        listSel = Mth.clamp(listSel, 0, rows.size() - 1);
+        if (listSel < listTop) listTop = listSel;
+        if (listSel >= listTop + LIST_ROWS) listTop = listSel - LIST_ROWS + 1;
+        int top = 29;
+        for (int k = 0; k < LIST_ROWS && listTop + k < rows.size(); k++) {
+            int i = listTop + k;
+            Row r = rows.get(i);
+            int y = top + k * ROW_H;
+            boolean sel = i == listSel;
+            box(g, x0, y0, 2, y, W - 4, ROW_H - 1, sel ? 0xC0FFC850 : k % 2 == 0 ? 0x60201830 : 0x40100C1C);
+            if (sel) box(g, x0, y0, 2, y, 2, ROW_H - 1, 0xFFFFFFFF);
+            // its name, its command, its level and startup
+            int nameCol = sel ? 0xFF1A0A14 : 0xFFFFFFFF;
+            small(g, font, r.name(), x0 + 6, y0 + y + 3, nameCol, false);
+            command(g, font, r.cmd(), x0 + 92, y0 + y + 1, sel);
+            if (r.move() != null) {
+                Level lv = r.move().level();
+                int lc = lv == Level.HIGH ? 0xFFE0405A : lv == Level.MID ? 0xFFE8C040 : lv == Level.LOW ? 0xFF40B8E8 : 0xFFB060E0;
+                box(g, x0, y0, W - 28, y + 2, 7, 6, lc);
+                small(g, font, lv == Level.THROW ? "T" : lv.name().substring(0, 1), x0 + W - 24.5F, y0 + y + 3, 0xFF101018, true);
+                small(g, font, "i" + r.move().startup(), x0 + W - 6, y0 + y + 3, sel ? 0xFF1A0A14 : 0xFFB0D8FF, true, true);
+            }
+        }
+        // the scroll bar
+        if (rows.size() > LIST_ROWS) {
+            float barH = LIST_ROWS * ROW_H * LIST_ROWS / (float) rows.size();
+            float barY = top + (LIST_ROWS * ROW_H - barH) * listTop / (float) (rows.size() - LIST_ROWS);
+            box(g, x0, y0, W - 2, top, 1, LIST_ROWS * ROW_H, 0x40FFFFFF);
+            box(g, x0, y0, W - 2, barY, 1, barH, 0xFFFFC850);
+        }
+        // the one picked: its frame data and what it does
+        Row r = rows.get(listSel);
+        int fy = top + LIST_ROWS * ROW_H + 2;
+        box(g, x0, y0, 0, fy - 1, W, 1, 0xFFFFC850);
+        String data = r.move() == null ? "" : "BLOCK " + plus(r.move().onBlock())
+                + (r.move().is(KND) || r.move().launch() > 0 ? "   HIT: DOWN" : "   HIT " + plus(r.move().onHit())) + "   DMG " + r.move().damage() + "   ";
+        small(g, font, data + r.note(), x0 + 4, y0 + fy + 2, 0xFFFFE070, false);
+        small(g, font, "W/S: move   A/D: tab   H: back to the fight", x0 + W / 2.0F, y0 + H - 6, 0xFF8A80A0, true);
+    }
+
+    /** Small writing (half size): centred, or right-aligned. */
+    private static void small(GuiGraphics g, Font font, String s, float x, float y, int colour, boolean centred) {
+        small(g, font, s, x, y, colour, centred, false);
+    }
+
+    private static void small(GuiGraphics g, Font font, String s, float x, float y, int colour, boolean centred, boolean right) {
+        g.pose().pushPose();
+        g.pose().translate(x, y, 0);
+        g.pose().scale(0.5F, 0.5F, 1);
+        int w = font.width(s);
+        g.drawString(font, s, right ? -w : centred ? -w / 2 : 0, 0, colour, false);
+        g.pose().popPose();
+    }
+
+    private static final String[] ARROWS = {"", "\u2199", "\u2193", "\u2198", "\u2190", "\u2022", "\u2192", "\u2196", "\u2191", "\u2197"};
+
+    /**
+     * A command as the move lists draw it: each direction an arrow, each button press the four-button diamond (1 top
+     * left, 2 top right, 3 bottom left, 4 bottom right) with the pressed ones lit, commas as little gaps, and the rest
+     * (WS, CD, RUN, BT, a stance's name ...) as words.
+     */
+    private void command(GuiGraphics g, Font font, String cmd, float x, float y, boolean sel) {
+        float cx = x;
+        int ink = sel ? 0xFF1A0A14 : 0xFFFFFFFF;
+        for (String step : cmd.split(",")) {
+            step = step.trim();
+            for (String part : step.split(" ")) {
+                if (part.isEmpty()) continue;
+                String dirPart = part, buttons = "";
+                int plus = part.indexOf('+');
+                if (part.matches("[1-4](\\+[1-4])*")) {
+                    dirPart = "";
+                    buttons = part;
+                } else if (plus > 0 && part.substring(plus + 1).matches("[1-4](\\+[1-4])*")) {
+                    dirPart = part.substring(0, plus);
+                    buttons = part.substring(plus + 1);
+                }
+                int d = java.util.Arrays.asList(NOTATION).indexOf(dirPart);
+                if (d > 0) { // (an arrow in a little ring; n a dot)
+                    box(g, 0, 0, cx, y + 1, 7, 7, sel ? 0x60000000 : 0x60FFFFFF);
+                    small(g, font, ARROWS[d], cx + 3.5F, y + 2.5F, ink, true);
+                    cx += 8;
+                } else if (!dirPart.isEmpty() && d < 0) { // (a word)
+                    small(g, font, dirPart, cx, y + 2.5F, sel ? 0xFF5A1020 : 0xFFFF9AB0, false);
+                    cx += font.width(dirPart) * 0.5F + 2;
+                }
+                if (!buttons.isEmpty()) {
+                    if (d > 0) cx -= 0.5F;
+                    boolean[] on = new boolean[5];
+                    for (String bt : buttons.split("\\+")) on[Integer.parseInt(bt)] = true;
+                    // the diamond of four: lit ones bright
+                    float[][] at = {{0, 0}, {0, 0}, {4, 0}, {0, 4}, {4, 4}};
+                    for (int k = 1; k <= 4; k++) {
+                        box(g, 0, 0, cx + at[k][0], y + 1 + at[k][1], 3, 3, on[k] ? (k <= 2 ? 0xFFFFE070 : 0xFF80E0FF) : (sel ? 0x50000000 : 0x40FFFFFF));
+                    }
+                    cx += 9;
+                }
+            }
+            cx += 2; // (a comma: a little gap)
+        }
     }
 
     /** Draws what's been gathered, furthest first. */
