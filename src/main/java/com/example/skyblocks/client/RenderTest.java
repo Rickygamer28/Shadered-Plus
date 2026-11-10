@@ -361,7 +361,7 @@ public final class RenderTest {
                             if (controls) {
                                 arcade.testControls();
                             } else if (playGame >= 0) {
-                                arcade.testPlay(playGame, playGame == 7 && !pickOnly ? new int[] {org.lwjgl.glfw.GLFW.GLFW_KEY_U} : new int[0]);
+                                arcade.testPlay(playGame, playGame == 7 && !pickOnly ? new int[] {org.lwjgl.glfw.GLFW.GLFW_KEY_U, org.lwjgl.glfw.GLFW.GLFW_KEY_U} : new int[0]);
                             }
                         }
                         if (ticks == 94 && playGame == 7 && !pickOnly && mc.screen instanceof ArcadeScreen arcade) {

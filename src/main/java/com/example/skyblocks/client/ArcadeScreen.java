@@ -624,7 +624,20 @@ public class ArcadeScreen extends Screen {
         if (showing) {
             stopShowing();
         }
+        playMusic(null);
         super.removed();
+    }
+
+    // the game's music (a loop: the fighting game's select screen and stages)
+    private net.minecraft.client.resources.sounds.SoundInstance musicNow;
+    private String musicName;
+
+    private void playMusic(String name) {
+        if (ArcadeSounds.muted()) name = null;
+        if (java.util.Objects.equals(name, musicName)) return;
+        if (musicNow != null) Minecraft.getInstance().getSoundManager().stop(musicNow);
+        musicName = name;
+        musicNow = ArcadeSounds.music(name);
     }
 
     // ================= keys =================
@@ -853,6 +866,7 @@ public class ArcadeScreen extends Screen {
     public void render(GuiGraphics g, int mx, int my, float partialTick) {
         pollPad();
         float fastPartial = runFast();
+        playMusic(mode == Mode.PLAYING && ext() != null ? ext().music() : null);
         super.render(g, mx, my, partialTick);
         int x0 = left0, y0 = top0;
         // the cabinet's frame round the screen

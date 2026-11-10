@@ -72,6 +72,17 @@ public final class ArcadeSounds {
         play(s, 1.0F, 1.0F);
     }
 
+    /** A music loop (on the Music volume), or none if the sound's off. */
+    public static SoundInstance music(String name) {
+        if (muted() || name == null) return null;
+        SoundInstance s = new SimpleSoundInstance(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "arcade." + name), SoundSource.MUSIC,
+                0.55F, 1.0F, SoundInstance.createUnseededRandom(), true, 0, SoundInstance.Attenuation.NONE, 0, 0, 0, true);
+        Minecraft mc = Minecraft.getInstance();
+        mc.getMusicManager().stopPlaying(); // (the world's own music: quiet while the cabinet's plays)
+        mc.getSoundManager().play(s);
+        return s;
+    }
+
     /** The sounds since the last picture, to go with it to the cabinet. */
     public static byte[] takeForPicture() {
         byte[] out = sincePicture.toByteArray();

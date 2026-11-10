@@ -78,6 +78,11 @@ public abstract class ArcadeGame {
 
     public abstract void tick();
 
+    /** The music it wants playing now (a looping track: arcade.<name>), or none. */
+    public String music() {
+        return null;
+    }
+
     /** How many times a second it ticks: 20 (with the game), or more - then the screen runs it on its own clock. */
     public int rate() {
         return 20;

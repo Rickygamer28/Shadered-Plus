@@ -255,6 +255,54 @@
       }
     ]
   },
+  "arcade.music_cavern": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/music_cavern",
+        "stream": true
+      }
+    ]
+  },
+  "arcade.music_forge": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/music_forge",
+        "stream": true
+      }
+    ]
+  },
+  "arcade.music_rooftop": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/music_rooftop",
+        "stream": true
+      }
+    ]
+  },
+  "arcade.music_select": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/music_select",
+        "stream": true
+      }
+    ]
+  },
+  "arcade.music_temple": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/music_temple",
+        "stream": true
+      }
+    ]
+  },
+  "arcade.music_void": {
+    "sounds": [
+      {
+        "name": "skyblocks:arcade/music_void",
+        "stream": true
+      }
+    ]
+  },
   "arcade.paddle": {
     "sounds": [
       {
