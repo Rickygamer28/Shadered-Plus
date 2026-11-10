@@ -607,12 +607,27 @@ public class ArcadeScreen extends Screen {
                 start();
             } else if (key == GLFW.GLFW_KEY_T && canClaim()) { // (the best score's holder: its trophy)
                 PacketDistributor.sendToServer(new com.example.skyblocks.TrophyClaimPayload(pos, game));
+            } else if (key == GLFW.GLFW_KEY_C) {
+                openControls();
             }
             return true;
         }
+        // playing: whatever this key is set to do in this game, as the game's own key for it
+        for (int k : ArcadeControls.fromKey(game, key)) {
+            gameKey(k);
+        }
+        return true;
+    }
+
+    private void openControls() {
+        Minecraft.getInstance().setScreen(new ArcadeControlsScreen(this, game));
+    }
+
+    /** A game's own key, pressed. */
+    private void gameKey(int key) {
         if (ext() != null) {
             ext().keyPressed(key);
-            return true;
+            return;
         }
         boolean l = key == GLFW.GLFW_KEY_LEFT || key == GLFW.GLFW_KEY_A, r = key == GLFW.GLFW_KEY_RIGHT || key == GLFW.GLFW_KEY_D;
         boolean u = key == GLFW.GLFW_KEY_UP || key == GLFW.GLFW_KEY_W, d = key == GLFW.GLFW_KEY_DOWN || key == GLFW.GLFW_KEY_S;
@@ -622,7 +637,7 @@ public class ArcadeScreen extends Screen {
             if (u || key == GLFW.GLFW_KEY_X) tetrisRotate();
             if (d) tetrisDown(true);
             if (key == GLFW.GLFW_KEY_SPACE) tetrisHardDrop();
-            return true;
+            return;
         }
         if (game == 0) {
             if (l) turn(-1, 0);
@@ -639,14 +654,24 @@ public class ArcadeScreen extends Screen {
                 launch();
             }
         }
-        return true;
+        return;
     }
 
     @Override
     public boolean keyReleased(int key, int scan, int modifiers) {
+        if (mode == Mode.PLAYING) {
+            for (int k : ArcadeControls.fromKey(game, key)) {
+                gameKeyUp(k);
+            }
+        }
+        return true;
+    }
+
+    /** A game's own key, let go. */
+    private void gameKeyUp(int key) {
         if (ext() != null) {
             ext().keyReleased(key);
-            return true;
+            return;
         }
         if (key == GLFW.GLFW_KEY_LEFT || key == GLFW.GLFW_KEY_A) {
             left = false;
@@ -654,7 +679,6 @@ public class ArcadeScreen extends Screen {
         if (key == GLFW.GLFW_KEY_RIGHT || key == GLFW.GLFW_KEY_D) {
             right = false;
         }
-        return true;
     }
 
     @Override
@@ -683,8 +707,58 @@ public class ArcadeScreen extends Screen {
         g.fill(0, 0, width, height, 0xC0000000);
     }
 
+    private final ArcadeControls.Pad pad = new ArcadeControls.Pad();
+
+    /** A controller: in a game, what its buttons are set to there; at the title, start, change game, the controls. */
+    private void pollPad() {
+        java.util.List<Integer> pressed = new java.util.ArrayList<>(), released = new java.util.ArrayList<>();
+        pad.poll(pressed, released);
+        for (int input : pressed) {
+            if (input == ArcadeControls.BACK) {
+                onClose();
+                return;
+            }
+            if (mode == Mode.PLAYING) {
+                for (int k : ArcadeControls.fromPad(game, input)) gameKey(k);
+            } else if (input == ArcadeControls.START || input == ArcadeControls.A) {
+                start();
+            } else if (input == ArcadeControls.DLEFT || input == ArcadeControls.LS_LEFT || input == ArcadeControls.LB) {
+                game = (game + NAMES.length - 1) % NAMES.length;
+                mode = Mode.TITLE;
+            } else if (input == ArcadeControls.DRIGHT || input == ArcadeControls.LS_RIGHT || input == ArcadeControls.RB) {
+                game = (game + 1) % NAMES.length;
+                mode = Mode.TITLE;
+            } else if (input == ArcadeControls.Y && canClaim()) {
+                PacketDistributor.sendToServer(new com.example.skyblocks.TrophyClaimPayload(pos, game));
+            } else if (input == ArcadeControls.X) {
+                openControls();
+                return;
+            } else if (input == ArcadeControls.B) {
+                onClose();
+                return;
+            }
+        }
+        long now = System.currentTimeMillis();
+        for (int input : pressed) heldSince[input] = now;
+        if (mode == Mode.PLAYING) {
+            for (int input : released) {
+                for (int k : ArcadeControls.fromPad(game, input)) gameKeyUp(k);
+            }
+            // held down: it repeats, as a held key does
+            for (int input = 0; input < ArcadeControls.PAD_INPUTS; input++) {
+                if (pad.down[input] && now - heldSince[input] > 260 && now - lastRepeat[input] > 55) {
+                    lastRepeat[input] = now;
+                    for (int k : ArcadeControls.fromPad(game, input)) gameKey(k);
+                }
+            }
+        }
+    }
+
+    private final long[] heldSince = new long[ArcadeControls.PAD_INPUTS], lastRepeat = new long[ArcadeControls.PAD_INPUTS];
+
     @Override
     public void render(GuiGraphics g, int mx, int my, float partialTick) {
+        pollPad();
         super.render(g, mx, my, partialTick);
         int x0 = left0, y0 = top0;
         // the cabinet's frame round the screen
@@ -758,8 +832,9 @@ public class ArcadeScreen extends Screen {
             drawCentred(g, "Space or click: launch", x0 + W / 2, y0 + 72, 0xFFBBBBBB);
         }
         if (((int) t / 10) % 2 == 0) {
-            drawCentred(g, "PRESS SPACE", x0 + W / 2, y0 + 100, 0xFFFFFFFF);
+            drawCentred(g, pad.connected ? "PRESS SPACE / START" : "PRESS SPACE", x0 + W / 2, y0 + 100, 0xFFFFFFFF);
         }
+        drawCentred(g, pad.connected ? "C / X: CONTROLS" : "C: CONTROLS (KEYS & CONTROLLER)", x0 + W / 2, y0 + 88, 0xFF9AD8FF);
         drawCentred(g, "< TAB: " + NAMES[(game + 1) % NAMES.length] + " >", x0 + W / 2, y0 + 124, 0xFF7788AA);
     }
 
