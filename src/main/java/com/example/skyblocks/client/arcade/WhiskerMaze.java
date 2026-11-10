@@ -7,10 +7,17 @@ import net.minecraft.client.gui.GuiGraphics;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Whisker Maze: a hungry cat eating every treat in the maze, four slimes after it - Ember chases it straight, Bloom
- * cuts it off ahead, Frost comes round the far side, Moss closes in then shies off - by turns going after it and back to
- * their corners. A ball of yarn makes them pale and catchable for a while (they flee home as eyes). A fish now and then
- * for bonus points; a life more at 10000; each cleared maze the next, faster.
+ * Whisker Maze: a hungry cat eating every treat in the maze, four slimes after it, each with the classic maze-chase
+ * brains: Ember heads straight for the cat (and, when few treats are left, speeds up and stops going back to its corner),
+ * Bloom aims four squares ahead of it (and, as in the old machines, four up and four left when it faces up), Frost aims
+ * at the point mirroring Ember through two squares ahead of it, Moss closes in until it's within eight squares and then
+ * shies off to its corner. They take turns scattering to their corners and chasing on a set timetable (frozen while
+ * they're scared), all turn round when it changes, choose at each crossing the way nearest their target (never straight
+ * back; ties up, left, down, right), won't turn up at the crossings just above their house and the cat's start, and slow
+ * down in the side tunnel. They leave their house by treat counts, or when the cat stops eating for a while. A ball of
+ * yarn makes them pale and wander at random for a time that shrinks with each maze (later, not at all); they flee home
+ * as eyes when caught. Speeds and timings rise with the mazes as on the old machines. A fish now and then for bonus
+ * points; a life more at 10000.
  */
 public class WhiskerMaze extends ArcadeGame {
     private static final String[] MAZE = {
@@ -41,13 +48,24 @@ public class WhiskerMaze extends ArcadeGame {
     private static final int[] TINTS = {0xFFFF5A3A, 0xFFFF7AD9, 0xFF3AE8FF, 0xFF6AE85A};
     private static final int[][] CORNERS = {{25, -2}, {1, -2}, {25, 22}, {1, 22}};
     private static final int DOOR_X = 13, DOOR_Y = 8, OUT_Y = 7, HOME_Y = 9;
-    /** Scatter, chase, scatter, chase ... in ticks (then chasing for good). */
-    private static final int[] SCHEDULE = {140, 400, 140, 400, 100};
+    /** Scatter, chase, scatter, chase ... in ticks (then chasing for good): maze 1, mazes 2-4, mazes 5 on. */
+    private static final int[][] SCHEDULES = {{140, 400, 140, 400, 100, 400, 100}, {140, 400, 140, 400, 100, 20660, 1},
+            {100, 400, 100, 400, 100, 20740, 1}};
+    /** How long the yarn scares them (ticks), maze by maze - shorter and shorter, then not at all. */
+    private static final int[] SCARED = {120, 100, 80, 60, 40, 100, 40, 40, 20, 100, 40, 20, 20, 60, 20, 20, 0, 20, 0};
+    /** How few treats left makes Ember hurry, maze by maze. */
+    private static final int[] HURRY = {20, 30, 40, 40, 40, 50, 50, 50, 60, 60, 60, 80, 80, 80, 100, 100, 100, 100, 120};
+    /** Where they may not turn up (the crossings above their house and above the cat's start). */
+    private static final int[][] NO_UP = {{12, 7}, {14, 7}, {11, 13}, {15, 13}};
+    /** Top speed (squares a tick), which the others are shares of. */
+    private static final float TOP = 0.25F;
 
     private enum State { HOUSE, LEAVING, ACTIVE, EYES }
 
     private static final class Mover {
         int x, y, dir = -1, startX, startY, release;
+        /** Scared by the last ball of yarn (not one caught and come back since). */
+        boolean fright;
         float prog;
         State state = State.ACTIVE;
 
@@ -63,7 +81,7 @@ public class WhiskerMaze extends ArcadeGame {
     private final boolean[][] treats = new boolean[MH][MW], yarn = new boolean[MH][MW];
     private final Mover cat = new Mover();
     private final Mover[] slimes = new Mover[4];
-    private int want = -1, lives, level, scared, chain, left, eaten, pause, dying, clearing, phaseTick, fish, fishShown;
+    private int want = -1, lives, level, scared, chain, left, eaten, pause, dying, clearing, phaseTick, fish, fishShown, sinceTreat;
     private boolean extraGiven;
     private final List<int[]> popups = new ArrayList<>(); // (x, y, points, ticks left)
 
@@ -116,7 +134,7 @@ public class WhiskerMaze extends ArcadeGame {
         cat.prog = 0;
         want = -1;
         int[][] starts = {{13, OUT_Y}, {13, HOME_Y}, {11, HOME_Y}, {15, HOME_Y}};
-        int[] releases = {0, 0, 30, 70};
+        int[] releases = level == 0 ? new int[] {0, 0, 30, 60} : level == 1 ? new int[] {0, 0, 0, 50} : new int[] {0, 0, 0, 0};
         for (int i = 0; i < 4; i++) {
             Mover s = slimes[i] == null ? (slimes[i] = new Mover()) : slimes[i];
             s.x = s.startX = starts[i][0];
@@ -128,30 +146,45 @@ public class WhiskerMaze extends ArcadeGame {
         }
         scared = 0;
         phaseTick = 0;
+        sinceTreat = 0;
         pause = 50;
         popups.clear();
     }
 
     private boolean scatter() {
+        int[] schedule = SCHEDULES[level == 0 ? 0 : level < 4 ? 1 : 2];
         int t = phaseTick;
-        for (int i = 0; i < SCHEDULE.length; i++) {
-            if (t < SCHEDULE[i]) return i % 2 == 0;
-            t -= SCHEDULE[i];
+        for (int i = 0; i < schedule.length; i++) {
+            if (t < schedule[i]) return i % 2 == 0;
+            t -= schedule[i];
         }
         return false;
     }
 
+    /** Which of the three speed tables this maze uses (maze 1; 2-4; 5 on). */
+    private int band() {
+        return level == 0 ? 0 : level < 4 ? 1 : 2;
+    }
+
     private float catSpeed() {
-        return Math.min(0.24F, 0.17F + level * 0.008F) * (scared > 0 ? 1.1F : 1.0F);
+        float[] normal = {0.8F, 0.9F, 1.0F}, eating = {0.9F, 0.95F, 1.0F};
+        return TOP * (scared > 0 ? eating : normal)[band()];
+    }
+
+    /** 0: not hurrying; 1, 2: Ember hurrying (fewer treats left, faster). */
+    private int hurry() {
+        int h = HURRY[Math.min(level, HURRY.length - 1)];
+        return left <= h / 2 ? 2 : left <= h ? 1 : 0;
     }
 
     private float slimeSpeed(int i, Mover s) {
         if (s.state == State.EYES) return 0.4F;
-        if (s.state == State.HOUSE || s.state == State.LEAVING) return 0.08F;
-        if (s.y == 9 && (s.x < 5 || s.x > 21)) return 0.08F; // (slow in the tunnel)
-        if (scared > 0) return 0.09F;
-        float v = Math.min(0.22F, 0.15F + level * 0.01F);
-        if (i == 0 && left < 30) v += 0.02F; // (Ember hurries when few treats are left)
+        if (s.state == State.HOUSE || s.state == State.LEAVING) return 0.1F;
+        int b = band();
+        if (s.y == 9 && (s.x < 5 || s.x > 21)) return TOP * new float[] {0.4F, 0.45F, 0.5F}[b]; // (slow in the tunnel)
+        if (scared > 0 && s.fright) return TOP * new float[] {0.5F, 0.55F, 0.6F}[b];
+        float v = TOP * new float[] {0.75F, 0.85F, 0.95F}[b];
+        if (i == 0) v += TOP * 0.05F * hurry(); // (Ember hurries when few treats are left)
         return v;
     }
 
@@ -186,6 +219,16 @@ public class WhiskerMaze extends ArcadeGame {
         } else {
             phaseTick++;
         }
+        // nobody eating for a while: the next one out of the house comes out anyway
+        if (++sinceTreat >= (level < 4 ? 80 : 60)) {
+            sinceTreat = 0;
+            for (int k = 1; k < 4; k++) {
+                if (slimes[k].state == State.HOUSE) {
+                    slimes[k].release = 0;
+                    break;
+                }
+            }
+        }
         if (scatter() != wasScatter) { // (the mode changes: they all turn round)
             for (Mover s : slimes) {
                 if (s.state == State.ACTIVE && s.dir >= 0) s.dir = (s.dir + 2) % 4;
@@ -207,7 +250,10 @@ public class WhiskerMaze extends ArcadeGame {
         }
     }
 
+    private int lastDir = 2;
+
     private void moveCat() {
+        if (cat.dir >= 0) lastDir = cat.dir;
         if (cat.dir < 0 && want >= 0 && !wall(cat.x + DIRS[want][0], cat.y + DIRS[want][1], false)) {
             cat.dir = want;
         }
@@ -244,8 +290,11 @@ public class WhiskerMaze extends ArcadeGame {
             yarn[y][x] = false;
             score += 50;
             gone();
-            scared = Math.max(60, 200 - level * 25);
+            scared = SCARED[Math.min(level, SCARED.length - 1)]; // (later mazes: they only turn round)
             chain = 0;
+            for (Mover s : slimes) {
+                s.fright = s.state != State.EYES;
+            }
             for (Mover s : slimes) {
                 if (s.state == State.ACTIVE && s.dir >= 0) s.dir = (s.dir + 2) % 4;
             }
@@ -266,15 +315,20 @@ public class WhiskerMaze extends ArcadeGame {
             fishShown++;
             fish = 180;
         }
-        for (Mover s : slimes) { // (the ones in the house come out as treats are eaten)
-            if (s.state == State.HOUSE && s.release > 0) s.release--;
+        sinceTreat = 0;
+        for (int k = 1; k < 4; k++) { // (the next one due out of the house counts the treats eaten)
+            Mover s = slimes[k];
+            if (s.state == State.HOUSE) {
+                if (s.release > 0) s.release--;
+                break;
+            }
         }
     }
 
     private void moveSlime(int i) {
         Mover s = slimes[i];
         if (s.state == State.HOUSE) {
-            if (s.release <= 0 || ticks % 600 == 0) {
+            if (s.release <= 0) {
                 s.state = State.LEAVING;
                 s.dir = -1;
             } else {
@@ -307,19 +361,19 @@ public class WhiskerMaze extends ArcadeGame {
         } else if (s.state == State.EYES) {
             tx = DOOR_X;
             ty = s.y >= OUT_Y && s.x == DOOR_X ? HOME_Y : OUT_Y;
-        } else if (scatter()) {
+        } else if (scatter() && !(i == 0 && hurry() > 0 && slimes[3].state != State.HOUSE)) {
             tx = CORNERS[i][0];
             ty = CORNERS[i][1];
         } else if (i == 0) {
             tx = cat.x;
             ty = cat.y;
         } else if (i == 1) {
-            int d = cat.dir < 0 ? 3 : cat.dir;
-            tx = cat.x + DIRS[d][0] * 4;
+            int d = cat.dir < 0 ? lastDir : cat.dir;
+            tx = cat.x + DIRS[d][0] * 4 - (d == 3 ? 4 : 0); // (facing up: up and left, as the old machines did)
             ty = cat.y + DIRS[d][1] * 4;
         } else if (i == 2) {
-            int d = cat.dir < 0 ? 3 : cat.dir;
-            int ax = cat.x + DIRS[d][0] * 2, ay = cat.y + DIRS[d][1] * 2;
+            int d = cat.dir < 0 ? lastDir : cat.dir;
+            int ax = cat.x + DIRS[d][0] * 2 - (d == 3 ? 2 : 0), ay = cat.y + DIRS[d][1] * 2;
             tx = ax * 2 - slimes[0].x;
             ty = ay * 2 - slimes[0].y;
         } else {
@@ -335,6 +389,7 @@ public class WhiskerMaze extends ArcadeGame {
             int nx = s.x + DIRS[d][0], ny = s.y + DIRS[d][1];
             if (wall(nx, ny, door)) continue;
             if (s.state == State.ACTIVE && MAZE[ny].charAt(Math.floorMod(nx, MW)) == '-') continue;
+            if (d == 3 && s.state == State.ACTIVE && !(scared > 0 && s.fright) && noUp(s.x, s.y)) continue;
             open.add(d);
             double dist = Math.pow(nx - tx, 2) + Math.pow(ny - ty, 2);
             if (dist < bestD) {
@@ -346,10 +401,17 @@ public class WhiskerMaze extends ArcadeGame {
             int back = s.dir < 0 ? 3 : (s.dir + 2) % 4;
             return wall(s.x + DIRS[back][0], s.y + DIRS[back][1], door) ? -1 : back;
         }
-        if (scared > 0 && s.state == State.ACTIVE) {
+        if (scared > 0 && s.fright && s.state == State.ACTIVE) {
             return open.get(random.nextInt(open.size()));
         }
         return best;
+    }
+
+    private static boolean noUp(int x, int y) {
+        for (int[] c : NO_UP) {
+            if (c[0] == x && c[1] == y) return true;
+        }
+        return false;
     }
 
     private void meet() {
@@ -358,7 +420,8 @@ public class WhiskerMaze extends ArcadeGame {
             float dx = s.px() - cat.px(), dy = s.py() - cat.py();
             if (Math.abs(dx) > MW / 2.0F) dx = MW - Math.abs(dx);
             if (dx * dx + dy * dy < 0.45F) {
-                if (scared > 0) {
+                if (scared > 0 && s.fright) {
+                    s.fright = false;
                     chain++;
                     int v = 100 << chain;
                     score += v;
@@ -458,7 +521,7 @@ public class WhiskerMaze extends ArcadeGame {
         int look = s.dir < 0 ? 1 : s.dir;
         int ex = DIRS[look][0], ey = DIRS[look][1];
         if (s.state != State.EYES) {
-            boolean pale = scared > 0 && s.state == State.ACTIVE;
+            boolean pale = scared > 0 && s.fright;
             int c = pale ? (scared < 50 && (ticks / 5) % 2 == 0 ? 0xFFFFFFFF : 0xFF5A7AFF) : TINTS[i];
             box(g, x0, y0, sx + 1, sy, 5, 1, c);           // a round top
             box(g, x0, y0, sx, sy + 1, 7, 5, c);
@@ -485,7 +548,7 @@ public class WhiskerMaze extends ArcadeGame {
             Mover s = slimes[i];
             if (Math.abs(cx - s.px() - 0.5F) < 0.8F && Math.abs(cy - s.py() - 0.5F) < 0.8F) {
                 if (s.state == State.EYES) return 4;
-                return scared > 0 && s.state == State.ACTIVE ? 10 : COLOURS[i];
+                return scared > 0 && s.fright ? 10 : COLOURS[i];
             }
         }
         int ix = (int) Math.floor(cx), iy = (int) Math.floor(cy);
