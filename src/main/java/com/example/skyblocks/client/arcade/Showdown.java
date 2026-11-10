@@ -66,6 +66,8 @@ public class Showdown extends ArcadeGame {
     private static final class Body {
         final Style style;
         float x, y, vx, vy;
+        /** Where it was a tick ago (drawn smoothly between that and now). */
+        float ox, oy, oDepth;
         /** How far off the line between them it has stepped (pixels; + into the screen). */
         float depth;
         int facing = 1, hp = MAX_HP, wins, t, stun, combo, sideDir, airHits;
@@ -123,7 +125,7 @@ public class Showdown extends ArcadeGame {
 
     @Override
     public String[] help() {
-        return new String[] {"WASD  U I punch  J K kick  L rage", "tap W/S sidestep  FF dash  BB backdash"};
+        return new String[] {"WASD  U I punch  J K kick  L rage", "W/S tap: step  W+A/D, SPACE: jump  FF dash  BB back"};
     }
 
     @Override
@@ -209,6 +211,7 @@ public class Showdown extends ArcadeGame {
         if (slowmo > 0) { // (a K.O.: the fight in slow motion for a moment)
             slowmo--;
             if (slowmo % 2 == 1) {
+                hold(); // (nothing moves this tick: drawn standing still, not replaying the last one)
                 return;
             }
         }
@@ -298,11 +301,6 @@ public class Showdown extends ArcadeGame {
             return;
         }
         if (b.state == State.ATTACK) return;
-        // holding up past a tap: a jump (forward, back or straight)
-        if (kU && ticks - upAt >= 4 && b.state != State.SIDEWALK && b.state != State.RUN) {
-            jump(b, fwdHeld ? 1 : backHeld ? -1 : 0);
-            return;
-        }
         if (b.state == State.RUN) {
             if (!fwdHeld) b.state = State.STAND;
             return;
@@ -809,7 +807,18 @@ public class Showdown extends ArcadeGame {
         }
         if (up(key)) {
             upAt = ticks;
-            if (b.state == State.DOWN) roll(b);
+            if (b.state == State.DOWN) {
+                roll(b);
+            } else if (kL || kR) { // (up with a direction: a jump that way)
+                boolean f = (kR && b.facing > 0) || (kL && b.facing < 0);
+                jump(b, f ? 1 : -1);
+            } else {
+                sidestep(b, 1); // (a tap: a sidestep into the screen, straight away)
+            }
+        }
+        if (key == GLFW.GLFW_KEY_SPACE) { // (the jump key: straight up, or the way you're holding)
+            boolean f = (kR && b.facing > 0) || (kL && b.facing < 0), bk = (kL && b.facing > 0) || (kR && b.facing < 0);
+            jump(b, f ? 1 : bk ? -1 : 0);
         }
         if (down(key)) {
             downAt = ticks;
@@ -856,8 +865,6 @@ public class Showdown extends ArcadeGame {
         if (right(key)) kR = false;
         if (up(key)) {
             kU = false;
-            // a quick tap: a sidestep into the screen
-            if (me != null && !picking && roundOver == 0 && ticks - upAt < 4) sidestep(me, 1);
         }
         if (down(key)) {
             kD = false;
@@ -914,11 +921,14 @@ public class Showdown extends ArcadeGame {
         camV += ((me.depth + foe.depth) / 2 - camV) * 0.25F;
         camD += (Mth.clamp(sep * 0.8F + 95, 130, 240) - camD) * 0.15F;
         for (Body b : new Body[] {me, foe}) {
+            b.ox = b.x;
+            b.oy = b.y;
+            b.oDepth = b.depth;
             float[][] p = poseOf(b);
             System.arraycopy(p[1], 0, p[0], 0, P);
             float[] want = target(b);
             boolean snap = b.state == State.ATTACK && b.move != null && b.t >= b.move.startup() - 1 && b.t <= b.move.startup() + b.move.active();
-            float k = snap ? 0.75F : 0.45F;
+            float k = snap ? 0.9F : 0.62F;
             for (int i = 0; i < P; i++) {
                 float d = want[i] - p[1][i];
                 if (i == 12) d = Mth.wrapDegrees(d);
@@ -946,6 +956,20 @@ public class Showdown extends ArcadeGame {
             return --d[3] <= 0;
         });
         if (flash > 0) flash--;
+    }
+
+    private void hold() {
+        if (me == null) return;
+        oCamU = camU;
+        oCamD = camD;
+        oSpin = spin;
+        for (Body b : new Body[] {me, foe}) {
+            b.ox = b.x;
+            b.oy = b.y;
+            b.oDepth = b.depth;
+            float[][] p = poseOf(b);
+            System.arraycopy(p[1], 0, p[0], 0, P);
+        }
     }
 
     /** What its pose should be now. */
@@ -1595,6 +1619,23 @@ public class Showdown extends ArcadeGame {
         }
     }
 
+    /** Draws a fighter where it is between its last tick and this one (smooth at any frame rate), then puts it back. */
+    private static void between(Body b, float partial, Runnable draw) {
+        float x = b.x, y = b.y, d = b.depth;
+        if (Math.abs(b.x - b.ox) < 40) { // (not across a teleport-like jump: a throw over the shoulder)
+            b.x = Mth.lerp(partial, b.ox, x);
+            b.y = Mth.lerp(partial, b.oy, y);
+            b.depth = Mth.lerp(partial, b.oDepth, d);
+        }
+        try {
+            draw.run();
+        } finally {
+            b.x = x;
+            b.y = y;
+            b.depth = d;
+        }
+    }
+
     private void shadow(Body b) {
         float r = 9 * Math.max(0.4F, 1 - b.y / 60);
         for (int k = 0; k < 10; k++) {
@@ -1622,10 +1663,10 @@ public class Showdown extends ArcadeGame {
         quads.clear();
         floor();
         flush(g, x0, y0, false); // (the floor under everything)
-        for (Body b : new Body[] {me, foe}) shadow(b);
+        for (Body b : new Body[] {me, foe}) between(b, partial, () -> shadow(b));
         flush(g, x0, y0, false);
         walls();
-        for (Body b : new Body[] {me, foe}) fighter(b, partial);
+        for (Body b : new Body[] {me, foe}) between(b, partial, () -> fighter(b, partial));
         flush(g, x0, y0, true);
         effects(g, x0, y0);
         g.pose().popPose();
@@ -1653,6 +1694,7 @@ public class Showdown extends ArcadeGame {
         if (keep) {
             lastFrame.clear();
             lastFrame.addAll(quads);
+            frameId++;
         }
         quads.clear();
     }
@@ -1837,13 +1879,39 @@ public class Showdown extends ArcadeGame {
 
     private final Body[] picks = new Body[FIGHTERS.length];
 
+    private int frameId, gridOf = -1;
+    private static final int GW = 48, GH = 36;
+    private final byte[] grid = new byte[GW * GH];
+
     @Override
     public int sample(float x, float y) {
-        for (int i = lastFrame.size() - 1; i >= 0; i--) {
-            Quad q = lastFrame.get(i);
-            if (inside(q, x, y)) return q.palette();
+        if (gridOf != frameId) { // (a small picture of the last frame, made once: far shapes first, near ones over them)
+            gridOf = frameId;
+            java.util.Arrays.fill(grid, (byte) 0);
+            for (int gy = 0; gy < GH; gy++) {
+                if ((gy + 0.5F) * H / GH >= horizon && !picking) {
+                    for (int gx = 0; gx < GW; gx++) grid[gy * GW + gx] = 11;
+                }
+            }
+            for (Quad q : lastFrame) {
+                float x0 = Float.MAX_VALUE, y0 = Float.MAX_VALUE, x1 = -Float.MAX_VALUE, y1 = -Float.MAX_VALUE;
+                for (int i = 0; i < 4; i++) {
+                    x0 = Math.min(x0, q.xs()[i]);
+                    x1 = Math.max(x1, q.xs()[i]);
+                    y0 = Math.min(y0, q.ys()[i]);
+                    y1 = Math.max(y1, q.ys()[i]);
+                }
+                int cx0 = Math.max(0, (int) (x0 * GW / W)), cx1 = Math.min(GW - 1, (int) (x1 * GW / W));
+                int cy0 = Math.max(0, (int) (y0 * GH / H)), cy1 = Math.min(GH - 1, (int) (y1 * GH / H));
+                for (int gy = cy0; gy <= cy1; gy++) {
+                    for (int gx = cx0; gx <= cx1; gx++) {
+                        if (inside(q, (gx + 0.5F) * W / GW, (gy + 0.5F) * H / GH)) grid[gy * GW + gx] = (byte) q.palette();
+                    }
+                }
+            }
         }
-        return picking ? 0 : y >= horizon ? 11 : 0;
+        int gx = Mth.clamp((int) (x * GW / W), 0, GW - 1), gy = Mth.clamp((int) (y * GH / H), 0, GH - 1);
+        return grid[gy * GW + gx];
     }
 
     private static boolean inside(Quad q, float x, float y) {

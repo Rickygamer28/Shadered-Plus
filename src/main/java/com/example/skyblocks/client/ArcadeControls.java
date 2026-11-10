@@ -74,7 +74,8 @@ public final class ArcadeControls {
                     button("Flag", GLFW.GLFW_KEY_F, NONE, X, Y)},
             {up(), down(), left(), right(), button("Left punch", GLFW.GLFW_KEY_U, NONE, X, NONE),
                     button("Right punch", GLFW.GLFW_KEY_I, NONE, Y, NONE), button("Left kick", GLFW.GLFW_KEY_J, NONE, A, NONE),
-                    button("Right kick", GLFW.GLFW_KEY_K, NONE, B, NONE), button("Rage art", GLFW.GLFW_KEY_L, NONE, RB, RT)}};
+                    button("Right kick", GLFW.GLFW_KEY_K, NONE, B, NONE), button("Rage art", GLFW.GLFW_KEY_L, NONE, RB, RT),
+                    button("Jump", GLFW.GLFW_KEY_SPACE, NONE, LB, LT)}};
 
     /** Your choices: [game][action][slot] (two of each). */
     private static int[][][] keys, pads;
