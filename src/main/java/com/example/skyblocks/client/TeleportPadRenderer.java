@@ -51,6 +51,7 @@ public class TeleportPadRenderer implements BlockEntityRenderer<TeleportPadBlock
 
     @Override
     public void render(TeleportPadBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
+        nameplate(be, poseStack, buffers);
         float glow = Mth.lerp(partialTick, be.oGlow, be.glow);
         float burst = be.flash > 0 ? (be.flash - partialTick) / 16.0F : 0.0F;
         float strength = Math.max(glow * 0.8F, burst);
@@ -79,6 +80,23 @@ public class TeleportPadRenderer implements BlockEntityRenderer<TeleportPadBlock
         if (!LatePass.later(draw)) {
             draw.accept(DrawNow.now(buffers));
         }
+    }
+
+    /** Its name, floating over it, facing you, when you're near. */
+    private static void nameplate(TeleportPadBlockEntity be, PoseStack poseStack, MultiBufferSource buffers) {
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        if (be.name().isEmpty() || mc.player == null || mc.player.distanceToSqr(be.getBlockPos().getCenter()) > 12 * 12) return;
+        net.minecraft.client.gui.Font font = mc.font;
+        poseStack.pushPose();
+        poseStack.translate(0.5F, 1.1F, 0.5F);
+        poseStack.mulPose(mc.getEntityRenderDispatcher().cameraOrientation());
+        poseStack.scale(0.025F, -0.025F, 0.025F);
+        float w = -font.width(be.name()) / 2.0F;
+        Matrix4f m = poseStack.last().pose();
+        int bg = (int) (mc.options.getBackgroundOpacity(0.25F) * 255.0F) << 24;
+        font.drawInBatch(be.name(), w, 0, 0x20FFFFFF, false, m, buffers, net.minecraft.client.gui.Font.DisplayMode.SEE_THROUGH, bg, 0xF000F0);
+        font.drawInBatch(be.name(), w, 0, 0xFFFFFFFF, false, m, buffers, net.minecraft.client.gui.Font.DisplayMode.NORMAL, 0, 0xF000F0);
+        poseStack.popPose();
     }
 
     @Override

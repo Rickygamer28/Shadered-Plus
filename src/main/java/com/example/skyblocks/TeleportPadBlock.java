@@ -33,9 +33,9 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A teleport pad. Pads of the same colour (in the same dimension) are linked: crouch on one and a beam of light takes you
- * to the next of that colour - round them all in turn when there are more than two. Anything else left on it (items,
- * animals) goes too after a moment. A dye sets its colour; glowstone dust: rainbow.
+ * A teleport pad. Pads of the same colour (in the same dimension) make a network. Right-click one for its menu: name it,
+ * pick its network, keep it to yourself, and pick any pad on the network to go to - or which one crouching on it takes you
+ * to (the next in line, if none). Items and animals left on it go there too. A dye sets its colour; glowstone: rainbow.
  */
 public class TeleportPadBlock extends BaseEntityBlock {
     public static final MapCodec<TeleportPadBlock> CODEC = simpleCodec(TeleportPadBlock::new);
@@ -74,25 +74,33 @@ public class TeleportPadBlock extends BaseEntityBlock {
         if (!dye && !stack.is(Items.GLOWSTONE_DUST)) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
-        if (!level.isClientSide) {
-            int c = dye ? ((DyeItem) stack.getItem()).getDyeColor().getId() : 16;
-            level.setBlock(pos, state.setValue(COLOR, c), Block.UPDATE_ALL);
+        if (!level.isClientSide && level.getBlockEntity(pos) instanceof TeleportPadBlockEntity be && be.canEdit(player)) {
+            be.setColour(dye ? ((DyeItem) stack.getItem()).getDyeColor().getId() : 16);
             level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.0F, 1.0F);
         }
         return ItemInteractionResult.sidedSuccess(level.isClientSide);
     }
 
+    /** Right-click: its menu - its name, network and who may use it, and every pad you can go to from it. */
     @Override
-    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moving) {
-        super.onPlace(state, level, pos, old, moving);
-        if (level instanceof ServerLevel server) {
-            TeleportPads.get(server).put(pos, state.getValue(COLOR));
+    protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        if (player instanceof net.minecraft.server.level.ServerPlayer sp && level.getBlockEntity(pos) instanceof TeleportPadBlockEntity be) {
+            be.openMenu(sp);
+        }
+        return net.minecraft.world.InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable net.minecraft.world.entity.LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (!level.isClientSide && placer instanceof Player p && level.getBlockEntity(pos) instanceof TeleportPadBlockEntity be) {
+            be.setOwner(p.getUUID());
         }
     }
 
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moving) {
-        if (level instanceof ServerLevel server && !newState.is(this)) {
+        if (level instanceof ServerLevel server && !newState.is(this)) { // (taken away: off the list)
             TeleportPads.get(server).remove(pos);
         }
         super.onRemove(state, level, pos, newState, moving);

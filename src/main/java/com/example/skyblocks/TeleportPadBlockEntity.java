@@ -31,6 +31,12 @@ import net.minecraft.world.phys.Vec3;
 public class TeleportPadBlockEntity extends BlockEntity {
     private static final int PLAYER_CHARGE = 20, OTHER_CHARGE = 40;
     private final Map<UUID, Integer> charge = new HashMap<>();
+    /** Its name, who placed it, whether only they may use it, and where crouching on it sends you (none: next in line). */
+    private String name = "";
+    @org.jetbrains.annotations.Nullable
+    private UUID owner;
+    private boolean priv;
+    private long target = Long.MIN_VALUE;
     private final Set<UUID> arrived = new HashSet<>();
     /** Client: how charged it looks (0-1), a tick ago, and the flash (ticks left). */
     public float glow, oGlow;
@@ -43,6 +49,101 @@ public class TeleportPadBlockEntity extends BlockEntity {
     private AABB top() {
         return new AABB(worldPosition.getX() + 0.05, worldPosition.getY() + 0.1, worldPosition.getZ() + 0.05,
                 worldPosition.getX() + 0.95, worldPosition.getY() + 0.7, worldPosition.getZ() + 0.95);
+    }
+
+    public String name() {
+        return name;
+    }
+
+    public TeleportPads.Pad pad() {
+        return new TeleportPads.Pad(getBlockState().getValue(TeleportPadBlock.COLOR), name, owner, priv);
+    }
+
+    public boolean canEdit(Player p) {
+        return owner == null || owner.equals(p.getUUID()) || p.hasPermissions(2);
+    }
+
+    private void changed() {
+        setChanged();
+        if (level instanceof ServerLevel server) {
+            TeleportPads.get(server).put(worldPosition, pad());
+            server.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+        }
+    }
+
+    public void setOwner(UUID id) {
+        owner = id;
+        changed();
+    }
+
+    public void setColour(int c) {
+        if (level == null) return;
+        level.setBlock(worldPosition, getBlockState().setValue(TeleportPadBlock.COLOR, c), net.minecraft.world.level.block.Block.UPDATE_ALL);
+        target = Long.MIN_VALUE; // (a new network: wherever it sent you is likely not on it)
+        changed();
+    }
+
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level instanceof ServerLevel server) {
+            TeleportPads.get(server).put(worldPosition, pad());
+        }
+    }
+
+    /** Sends {@code p} this pad's menu: its settings, and every pad on its network they may go to. */
+    public void openMenu(ServerPlayer p) {
+        if (!(level instanceof ServerLevel server)) return;
+        int colour = getBlockState().getValue(TeleportPadBlock.COLOR);
+        List<TeleportPadPayloads.Entry> list = new java.util.ArrayList<>();
+        for (Map.Entry<BlockPos, TeleportPads.Pad> e : TeleportPads.get(server).network(server, worldPosition, colour, p)) {
+            if (list.size() >= 64) break;
+            list.add(new TeleportPadPayloads.Entry(e.getKey(), e.getValue().name()));
+        }
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new TeleportPadPayloads.Menu(worldPosition, name, colour, priv, canEdit(p),
+                target, list));
+    }
+
+    /** Something chosen in the menu. */
+    public void act(ServerPlayer p, int action, String text, long to, int value) {
+        if (!(level instanceof ServerLevel server)) return;
+        boolean edit = canEdit(p);
+        switch (action) {
+            case TeleportPadPayloads.RENAME -> {
+                if (edit) {
+                    name = text.length() > 32 ? text.substring(0, 32) : text;
+                    changed();
+                }
+            }
+            case TeleportPadPayloads.COLOUR -> {
+                if (edit) setColour(Math.max(0, Math.min(16, value)));
+            }
+            case TeleportPadPayloads.PRIVATE -> {
+                if (edit) {
+                    priv = value != 0;
+                    changed();
+                }
+            }
+            case TeleportPadPayloads.TARGET -> {
+                if (edit) {
+                    target = to;
+                    changed();
+                }
+            }
+            case TeleportPadPayloads.GO -> {
+                if (!pad().usableBy(p) || p.distanceToSqr(worldPosition.getCenter()) > 4.5 * 4.5) {
+                    p.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.skyblocks.teleport_pad.too_far"), true);
+                    return;
+                }
+                BlockPos dest = BlockPos.of(to);
+                if (TeleportPads.get(server).reachable(server, dest, getBlockState().getValue(TeleportPadBlock.COLOR), p)) {
+                    send(server, p, dest);
+                }
+                return;
+            }
+            default -> {}
+        }
+        openMenu(p); // (the menu again, as it is now)
     }
 
     private static boolean ready(Entity e) {
@@ -58,7 +159,7 @@ public class TeleportPadBlockEntity extends BlockEntity {
         be.charge.keySet().retainAll(here);
         for (Entity e : on) {
             UUID id = e.getUUID();
-            if (be.arrived.contains(id) || !ready(e)) {
+            if (be.arrived.contains(id) || !ready(e) || e instanceof Player p && !be.pad().usableBy(p)) {
                 be.charge.remove(id);
                 continue;
             }
@@ -77,10 +178,13 @@ public class TeleportPadBlockEntity extends BlockEntity {
         }
     }
 
-    /** Off to the next pad of its colour. */
+    /** Off to where crouching on it sends you: the pad it's set to, or the next in line. */
     private void send(ServerLevel level, Entity e) {
         int colour = getBlockState().getValue(TeleportPadBlock.COLOR);
-        BlockPos to = TeleportPads.get(level).next(level, worldPosition, colour);
+        Player who = e instanceof Player p ? p : null;
+        TeleportPads pads = TeleportPads.get(level);
+        BlockPos to = target != Long.MIN_VALUE && pads.reachable(level, BlockPos.of(target), colour, who) ? BlockPos.of(target)
+                : pads.next(level, worldPosition, colour, who);
         if (to == null) {
             level.playSound(null, worldPosition, SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 0.5F, 1.6F);
             if (e instanceof Player p) {
@@ -88,6 +192,10 @@ public class TeleportPadBlockEntity extends BlockEntity {
             }
             return;
         }
+        send(level, e, to);
+    }
+
+    private void send(ServerLevel level, Entity e, BlockPos to) {
         double x = to.getX() + 0.5, y = to.getY() + 3.0 / 16, z = to.getZ() + 0.5;
         if (level.getBlockEntity(to) instanceof TeleportPadBlockEntity there) {
             there.arrived.add(e.getUUID());
@@ -131,6 +239,38 @@ public class TeleportPadBlockEntity extends BlockEntity {
         int rgb = c < 16 ? net.minecraft.world.item.DyeColor.byId(c).getTextureDiffuseColor()
                 : net.minecraft.util.Mth.hsvToRgb((System.currentTimeMillis() % 4000L) / 4000.0F, 0.6F, 1.0F);
         return new float[] {((rgb >> 16) & 255) / 255.0F, ((rgb >> 8) & 255) / 255.0F, (rgb & 255) / 255.0F};
+    }
+
+    @Override
+    protected void saveAdditional(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        tag.putString("name", name);
+        if (owner != null) tag.putUUID("owner", owner);
+        tag.putBoolean("private", priv);
+        tag.putLong("target", target);
+    }
+
+    @Override
+    protected void loadAdditional(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        name = tag.getString("name");
+        owner = tag.hasUUID("owner") ? tag.getUUID("owner") : null;
+        priv = tag.getBoolean("private");
+        target = tag.contains("target") ? tag.getLong("target") : Long.MIN_VALUE;
+    }
+
+    @Override
+    public net.minecraft.nbt.CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+        net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+        tag.putString("name", name);
+        tag.putBoolean("private", priv);
+        return tag;
+    }
+
+    @org.jetbrains.annotations.Nullable
+    @Override
+    public net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
     }
 
     @Override

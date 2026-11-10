@@ -63,6 +63,16 @@ public final class ClientAccess {
         }
     }
 
+    /** A teleport pad's menu, from the server: opened, or brought up to date if it's open. */
+    public static void teleportMenu(com.example.skyblocks.TeleportPadPayloads.Menu p) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen instanceof TeleportPadScreen s && s.pos().equals(p.pos())) {
+            s.update(p);
+        } else {
+            mc.setScreen(new TeleportPadScreen(p));
+        }
+    }
+
     /** This client's own player. */
     @org.jetbrains.annotations.Nullable
     public static net.minecraft.world.entity.player.Player player() {

@@ -656,7 +656,19 @@
   "screen.skyblocks.light_bridge.rails": "Rails: %s",
   "screen.skyblocks.light_bridge.rainbow": "Rainbow",
   "block.skyblocks.teleport_pad": "Teleport Pad",
-  "tooltip.skyblocks.teleport_pad": "Pads of the same colour are linked: crouch on one to beam to the next. Items and animals left on it go too. A dye sets its colour; glowstone dust: rainbow",
+  "tooltip.skyblocks.teleport_pad": "Pads of the same colour make a network. Right-click: name it, pick its network, keep it to yourself, and choose any pad to go to (or star one for crouching on it). Crouch on it to beam to the starred pad (or the next in line). Items and animals left on it go too",
   "message.skyblocks.teleport_pad.none": "No other teleport pad of this colour",
-  "guide.skyblocks.teleport_pad": "Teleport pads of the same colour are linked. Stand on one and crouch: a beam of light charges up and takes you to the next pad of that colour - with three or more, round them all in turn. Items you drop on one and animals that stay on it go too. Dye a pad to change its colour (glowstone dust for rainbow) and make as many separate networks as you like. Same dimension only."
+  "guide.skyblocks.teleport_pad": "Teleport pads of the same colour make a network. Right-click a pad for its menu: give it a name, pick its network colour, make it yours only, and see every pad you can reach from it, nearest first. Press Go to beam there at once, or star a pad so crouching on this one always takes you there (with no star: the next pad in line). Items you drop on it and animals that stay on it go too. Same dimension only.",
+  "screen.skyblocks.teleport_pad.name": "Name",
+  "screen.skyblocks.teleport_pad.name_hint": "Name this pad...",
+  "screen.skyblocks.teleport_pad.unnamed": "(unnamed pad)",
+  "screen.skyblocks.teleport_pad.only_me": "Only me",
+  "screen.skyblocks.teleport_pad.everyone": "Everyone",
+  "screen.skyblocks.teleport_pad.network": "Network (pads of the same colour are linked)",
+  "screen.skyblocks.teleport_pad.go_to": "Go to:",
+  "screen.skyblocks.teleport_pad.go": "Go",
+  "screen.skyblocks.teleport_pad.next": "Next pad in line",
+  "screen.skyblocks.teleport_pad.star": "Crouching on this pad sends you here",
+  "screen.skyblocks.teleport_pad.alone": "No other pads on this network yet",
+  "message.skyblocks.teleport_pad.too_far": "Stand on or next to the pad to use it"
 }
