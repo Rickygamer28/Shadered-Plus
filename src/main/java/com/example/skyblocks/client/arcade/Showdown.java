@@ -333,7 +333,7 @@ public class Showdown extends ArcadeGame {
     private static final Move SWAY_SWEEP = m("SWAY SWEEP", 3, Pose.SWEEP, Level.LOW, 18, 3, 32, 15, 30, -18, 0, 0, KND | DUCK);
     private static final Move SWAY_KICK = m("SWAY KICK", 4, Pose.MIDKICK, Level.MID, 14, 2, 22, 14, 28, -4, 6, 0, 0);
     // ---- NYX, the boss: a beam you can't block, a dark uppercut ----
-    // ---- JUNO, the kicker: kick strings, a long side kick, an axe kick, a launcher kick; the crane stance on one leg ----
+    // ---- JUNO, the kicker: kick strings, a long side kick, an axe kick, a launcher kick; the flamingo stance on one leg ----
     private static final Move FLURRY_3 = m("FLURRY", 3, Pose.HIGHKICK, Level.HIGH, 13, 2, 26, 14, 30, -11, 0, 0, KND);
     private static final Move FLURRY_2 = m("FLURRY", 3, Pose.MIDKICK, Level.MID, 12, 2, 20, 10, 28, -6, 5, 0, 0, FLURRY_3);
     private static final Move SNAP_KICK = m("SNAP KICK", 3, Pose.MIDKICK, Level.MID, 12, 2, 18, 11, 28, -5, 6, 0, 0, FLURRY_2, WHIRL_KICK);
@@ -342,10 +342,10 @@ public class Showdown extends ArcadeGame {
     private static final Move LANCE_KICK = m("LANCE KICK", 4, Pose.MIDKICK, Level.MID, 15, 3, 26, 17, 35, -9, 0, 0, KND | CARRY);
     private static final Move AXE_KICK = m("AXE KICK", 4, Pose.HIGHKICK, Level.MID, 19, 3, 26, 19, 27, -10, 0, 0, KND | GROUND_HIT);
     private static final Move CRESCENT_LIFT = m("CRESCENT LIFT", 3, Pose.AIRKICK, Level.MID, 15, 2, 32, 15, 25, -13, 0, 6.2F, 0);
-    private static final Move CRANE_SNAP = m("CRANE SNAP", 1, Pose.MIDKICK, Level.MID, 11, 2, 18, 11, 27, 1, 8, 0, 0);
-    private static final Move CRANE_LIFT = m("CRANE LIFT", 2, Pose.AIRKICK, Level.MID, 15, 2, 30, 15, 25, -12, 0, 6.4F, 0);
-    private static final Move CRANE_LOW = m("CRANE LOW", 3, Pose.LOWKICK, Level.LOW, 14, 2, 26, 12, 28, -13, 2, 0, DUCK);
-    private static final Move CRANE_HOOK = m("CRANE HOOK", 4, Pose.HIGHKICK, Level.HIGH, 13, 3, 24, 17, 31, -8, 6, 0, CH_LAUNCH);
+    private static final Move FLAMINGO_SNAP = m("FLAMINGO SNAP", 1, Pose.MIDKICK, Level.MID, 11, 2, 18, 11, 27, 1, 8, 0, 0);
+    private static final Move FLAMINGO_LIFT = m("FLAMINGO LIFT", 2, Pose.AIRKICK, Level.MID, 15, 2, 30, 15, 25, -12, 0, 6.4F, 0);
+    private static final Move FLAMINGO_LOW = m("FLAMINGO LOW", 3, Pose.LOWKICK, Level.LOW, 14, 2, 26, 12, 28, -13, 2, 0, DUCK);
+    private static final Move FLAMINGO_HOOK = m("FLAMINGO HOOK", 4, Pose.HIGHKICK, Level.HIGH, 13, 3, 24, 17, 31, -8, 6, 0, CH_LAUNCH);
     private static final Move COMET_KICK = m("COMET KICK", 0, Pose.AIRKICK, Level.MID, 15, 3, 30, 26, 33, 4, 0, 0, KND | CARRY | ELECTRIC);
 
     private static final Move VOID_BEAM = m("VOID BEAM", 0, Pose.PALM, Level.MID, 30, 4, 34, 40, 64, 0, 0, 0, KND | UNBLOCKABLE | CARRY);
@@ -1110,7 +1110,7 @@ public class Showdown extends ArcadeGame {
             }
             case STANCE -> { // (a stance: its own moves; back to stand after a while, or on back)
                 if (b.stance == 2) b.x += b.facing * (fwdHeld(b) ? 0.15F : backHeld(b) ? -0.12F : 0);
-                if (b.stance == 4 && fwdHeld(b) && b.t % 12 < 6) b.x += b.facing * 0.35F; // (the crane: hopping in)
+                if (b.stance == 4 && fwdHeld(b) && b.t % 12 < 6) b.x += b.facing * 0.35F; // (the flamingo: hopping in)
                 if (b.t >= 90) {
                     b.state = State.STAND;
                     b.stance = 0;
@@ -1430,7 +1430,7 @@ public class Showdown extends ArcadeGame {
         if (!connects(b, o, m)) return; // (its limb against their body: reach, height, depth)
         // BLAZE swaying back: highs miss, and mids early on
         if (o.state == State.STANCE && o.stance == 3 && (m.level() == Level.HIGH || m.level() == Level.MID && o.t < 12)) return;
-        // JUNO's crane: on one leg, the other up - a low passes under it (for a while)
+        // JUNO's flamingo: on one leg, the other up - a low passes under it (for a while)
         if (o.state == State.STANCE && o.stance == 4 && m.level() == Level.LOW && o.t < 30) return;
         if (o.state == State.KO || o.state == State.RISE) return;
         if (o.state == State.DOWN && !(m.level() == Level.LOW || m.is(GROUND_HIT))) return; // (only some moves hit someone lying down)
@@ -2243,7 +2243,7 @@ public class Showdown extends ArcadeGame {
         return switch (b.stance) {
             case 1 -> new Move[] {PAW_JAB, POUNCE, TAIL_SWEEP, CAT_FLIP}[button - 1];
             case 2 -> new Move[] {PISTON_JAB, CANNON, TREAD_SWEEP, STOMP_KICK}[button - 1];
-            case 4 -> new Move[] {CRANE_SNAP, CRANE_LIFT, CRANE_LOW, CRANE_HOOK}[button - 1];
+            case 4 -> new Move[] {FLAMINGO_SNAP, FLAMINGO_LIFT, FLAMINGO_LOW, FLAMINGO_HOOK}[button - 1];
             default -> new Move[] {SWAY_JAB, SWAY_BURNER, SWAY_SWEEP, SWAY_KICK}[button - 1];
         };
     }
@@ -2573,7 +2573,7 @@ public class Showdown extends ArcadeGame {
                     b.state = State.STANCE;
                     b.stance = b.who == 1 ? 1 : b.who == 2 ? 2 : 4;
                     b.t = 0;
-                    call(b.who == 1 ? "CAT STANCE" : b.who == 2 ? "SIEGE" : "CRANE", b.x, GROUND - 46);
+                    call(b.who == 1 ? "CAT STANCE" : b.who == 2 ? "SIEGE" : "FLAMINGO", b.x, GROUND - 46);
                 }
                 return;
             } else if (b.who == 1) {
@@ -2641,7 +2641,7 @@ public class Showdown extends ArcadeGame {
             return switch (b.stance) {
                 case 1 -> button == 1 ? PAW_JAB : button == 2 ? POUNCE : button == 3 ? TAIL_SWEEP : CAT_FLIP;
                 case 2 -> button == 1 ? PISTON_JAB : button == 2 ? CANNON : button == 3 ? TREAD_SWEEP : STOMP_KICK;
-                case 4 -> button == 1 ? CRANE_SNAP : button == 2 ? CRANE_LIFT : button == 3 ? CRANE_LOW : CRANE_HOOK;
+                case 4 -> button == 1 ? FLAMINGO_SNAP : button == 2 ? FLAMINGO_LIFT : button == 3 ? FLAMINGO_LOW : FLAMINGO_HOOK;
                 default -> button == 1 ? SWAY_JAB : button == 2 ? SWAY_BURNER : button == 3 ? SWAY_SWEEP : SWAY_KICK;
             };
         }
@@ -3017,7 +3017,7 @@ public class Showdown extends ArcadeGame {
                     p[8] = 120;
                     p[9] = 80;
                     p[10] = 125;
-                } else if (b.stance == 4) { // (the crane: on one leg, the near knee up high, arms out for balance)
+                } else if (b.stance == 4) { // (the flamingo: on one leg, the near knee up high, arms out for balance)
                     p[3] = 100 + 4 * Mth.sin(w * 1.3F);
                     p[4] = -125;
                     p[5] = -6;
@@ -3312,10 +3312,10 @@ public class Showdown extends ArcadeGame {
         anim(LANCE_KICK, "0 L   | w: 3=92 4=-125 13=45 0=-4 | h: 3=96 4=-2 0=-24 13=75 2=5 7=40 9=20 | f: 3=90 13=70 | r: 3=40 4=-60 13=20");
         anim(AXE_KICK, "0 L   | w: 3=110 4=-20 0=-12 | W: 3=168 4=-2 0=-26 7=70 9=70 | h: 3=92 4=-2 0=-4 1=1 | f: 3=55 0=10 | r: 3=25");
         anim(CRESCENT_LIFT, "1 L | w: 5=40 6=-60 13=-20 1=3 | h: 5=166 6=-5 0=-30 13=15 1=-1 11=-10 | f: 5=140 | r: 5=30 6=-40");
-        anim(CRANE_SNAP, "0 L   | w: 3=100 4=-128 | h: 3=95 4=-4 0=-12 | r: 3=95 4=-120");
-        anim(CRANE_LIFT, "0 L   | w: 3=92 4=-122 1=2 | h: 3=170 4=-5 0=-30 1=-2 11=-10 | f: 3=150 | r: 3=50 4=-60");
-        anim(CRANE_LOW, "0 L   | w: 3=85 4=-120 1=4 | h: 3=46 4=-5 1=7 0=14 | r: 3=40 4=-60");
-        anim(CRANE_HOOK, "0 L | w: 3=100 4=-120 13=40 | h: 3=126 4=-30 0=-20 13=-40 | f: 13=-70 | r: 3=60 13=-20");
+        anim(FLAMINGO_SNAP, "0 L   | w: 3=100 4=-128 | h: 3=95 4=-4 0=-12 | r: 3=95 4=-120");
+        anim(FLAMINGO_LIFT, "0 L   | w: 3=92 4=-122 1=2 | h: 3=170 4=-5 0=-30 1=-2 11=-10 | f: 3=150 | r: 3=50 4=-60");
+        anim(FLAMINGO_LOW, "0 L   | w: 3=85 4=-120 1=4 | h: 3=46 4=-5 1=7 0=14 | r: 3=40 4=-60");
+        anim(FLAMINGO_HOOK, "0 L | w: 3=100 4=-120 13=40 | h: 3=126 4=-30 0=-20 13=-40 | f: 13=-70 | r: 3=60 13=-20");
         anim(COMET_KICK, "0 L   | w: 1=6 3=40 4=-100 0=8 | W: 1=-6 3=60 4=-110 | h: 1=-8 3=122 4=-2 5=60 6=-120 0=-20 7=60 9=-20 2=6 | f: 3=100 | r: 3=40 1=2");
     }
 
@@ -4645,11 +4645,11 @@ public class Showdown extends ArcadeGame {
                         l.add(row("d+1+2", GROUND_SLAM, "Hits them lying down"));
                     }
                     case 4 -> {
-                        l.add(sys("3+4", "CRANE", "On one leg: lows go under you. f: hop in. b: out"));
-                        l.add(row("CRANE 1", CRANE_SNAP, "Fast, +1 on block"));
-                        l.add(row("CRANE 2", CRANE_LIFT, "LAUNCHER"));
-                        l.add(row("CRANE 3", CRANE_LOW, ""));
-                        l.add(row("CRANE 4", CRANE_HOOK, "Counter hit: launch"));
+                        l.add(sys("3+4", "FLAMINGO", "FLA: on one leg - lows go under you. f: hop in. b: out"));
+                        l.add(row("FLA 1", FLAMINGO_SNAP, "Fast, +1 on block"));
+                        l.add(row("FLA 2", FLAMINGO_LIFT, "LAUNCHER"));
+                        l.add(row("FLA 3", FLAMINGO_LOW, ""));
+                        l.add(row("FLA 4", FLAMINGO_HOOK, "Counter hit: launch"));
                         l.add(row("3,3,3", FLURRY_3, "Mid, mid, high"));
                         l.add(row("4,4", SPIN_HEEL, "High, then a mid"));
                         l.add(row("f+4", LANCE_KICK, "Long reach, carries to the wall"));
