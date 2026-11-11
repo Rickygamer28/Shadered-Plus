@@ -209,6 +209,19 @@ public class BonsaiBlock extends BaseEntityBlock implements BonemealableBlock {
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
+    /** An empty hand: what's growing here - the sapling, and the wood and leaves its tree has. */
+    @Override
+    protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        if (state.getValue(KIND) == Kind.NONE || !(level.getBlockEntity(pos) instanceof BonsaiBlockEntity be) || be.log == null || be.leaves == null) {
+            return net.minecraft.world.InteractionResult.PASS;
+        }
+        if (!level.isClientSide) {
+            player.displayClientMessage(Component.translatable("message.skyblocks.bonsai.tree", be.sapling().getHoverName(),
+                    be.log.getBlock().getName(), be.leaves.getBlock().getName()).withStyle(ChatFormatting.GRAY), true);
+        }
+        return net.minecraft.world.InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
     /** The leaves of the tree in this pot (its own, any mod's; by its kind while that's not known yet). */
     static BlockState leavesAt(Level level, BlockPos pos, BlockState state) {
         return level.getBlockEntity(pos) instanceof BonsaiBlockEntity be && be.leaves != null ? be.leaves : leaves(state.getValue(KIND), false);

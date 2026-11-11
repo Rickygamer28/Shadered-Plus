@@ -90,7 +90,7 @@ public class BonsaiRenderer implements BlockEntityRenderer<BonsaiBlockEntity> {
         TextureAtlasSprite flower = flowering != null && age == 4 ? sprite(flowering, Direction.UP) : leaf;
         int tint = tint(leaves, be);
         // (the leaves' solid core: a plain colour like the leaves', darker - their colour if tinted, else their map colour)
-        int coreColour = shade(tint != 0xFFFFFF ? tint : leaves.getMapColor(be.getLevel(), be.getBlockPos()).col, 0.62F);
+        int coreColour = shade(tint != 0xFFFFFF ? tint : leaves.getMapColor(be.getLevel(), be.getBlockPos()).col, 0.45F);
 
         poseStack.pushPose();
         poseStack.translate(0.5F, SOIL / 16.0F, 0.5F);
@@ -152,10 +152,13 @@ public class BonsaiRenderer implements BlockEntityRenderer<BonsaiBlockEntity> {
         } catch (RuntimeException ignored) {
             // (no quads to ask: untinted)
         }
+        var colours = Minecraft.getInstance().getBlockColors();
         if (index < 0) {
-            return 0xFFFFFF;
+            // (no quad says it's tinted - some mods' leaf models don't - but the block may still have a colour of its own)
+            int c = colours.getColor(leaves, be.getLevel(), be.getBlockPos(), 0);
+            return c == -1 ? 0xFFFFFF : c & 0xFFFFFF;
         }
-        int c = Minecraft.getInstance().getBlockColors().getColor(leaves, be.getLevel(), be.getBlockPos(), index);
+        int c = colours.getColor(leaves, be.getLevel(), be.getBlockPos(), index);
         return c == -1 ? leaves.getMapColor(be.getLevel(), be.getBlockPos()).col : c & 0xFFFFFF;
     }
 
@@ -201,10 +204,11 @@ public class BonsaiRenderer implements BlockEntityRenderer<BonsaiBlockEntity> {
         Vector3f u = new Vector3f(d).cross(up).normalize();
         Vector3f v = new Vector3f(u).cross(d).normalize();
         Vector3f[] s = corners(a, u, v, w0 / 2), e = corners(b, u, v, w1 / 2);
-        float vl = Math.min(1.0F, len / 16.0F);
+        // (the bark at half scale: fine grain on a little trunk)
+        float vl = Math.min(1.0F, len / 8.0F);
         for (int i = 0; i < 4; i++) {
             int j = (i + 1) % 4;
-            float uw = Math.min(1.0F, Math.max(w0, w1) / 16.0F);
+            float uw = Math.min(1.0F, Math.max(w0, w1) / 8.0F);
             quad(vc, pose, bark, light, overlay, 0xFFFFFF, s[i], s[j], e[j], e[i], 0, uw, 0, vl);
         }
         float cw = Math.min(1.0F, w1 / 16.0F) * 0.5F;
@@ -234,16 +238,15 @@ public class BonsaiRenderer implements BlockEntityRenderer<BonsaiBlockEntity> {
         for (float[] b : boxes) {
             float cy = y + sy * b[0];
             box(vc, pose, leaf, x, cy, z, b[2], b[3], b[4], tint, light, overlay);
-            box(core, pose, leaf, x, cy, z, b[2] * 0.86F, b[3] * 0.84F, b[4] * 0.86F, coreColour, light, overlay);
+            box(core, pose, leaf, x, cy, z, b[2] * 0.68F, b[3] * 0.66F, b[4] * 0.68F, coreColour, light, overlay);
         }
     }
 
     private static void box(VertexConsumer vc, PoseStack.Pose pose, TextureAtlasSprite sp, float cx, float cy, float cz, float sx, float sy, float sz,
                             int tint, int light, int overlay) {
         float x0 = cx - sx / 2, x1 = cx + sx / 2, y0 = cy - sy / 2, y1 = cy + sy / 2, z0 = cz - sz / 2, z1 = cz + sz / 2;
-        float ux = Math.min(1.0F, sx / 16.0F), uy = Math.min(1.0F, sy / 16.0F), uz = Math.min(1.0F, sz / 16.0F);
-        // (the texture taken from a spot that depends on the box, so neighbouring clouds don't look stamped)
-        float ox = Math.abs((cx * 7.3F + cz * 3.1F) % 1.0F) * (1 - ux), oz = Math.abs((cz * 5.7F + cy * 2.3F) % 1.0F) * (1 - uz);
+        // (the whole leaf texture on each face, however small: a miniature tree's leaves are miniature too)
+        float ux = 1.0F, uy = 1.0F, uz = 1.0F, ox = 0.0F, oz = 0.0F;
         Vector3f[] c = {new Vector3f(x0, y0, z0), new Vector3f(x1, y0, z0), new Vector3f(x1, y0, z1), new Vector3f(x0, y0, z1),
                 new Vector3f(x0, y1, z0), new Vector3f(x1, y1, z0), new Vector3f(x1, y1, z1), new Vector3f(x0, y1, z1)};
         quad(vc, pose, sp, light, overlay, tint, c[4], c[7], c[6], c[5], ox, ox + ux, oz, oz + uz); // up

@@ -734,5 +734,6 @@
   "message.skyblocks.photo_frame.room": "No room for the frame there",
   "guide.skyblocks.small_photo_frame": "A small dark wooden frame for a photo, on a wall or a desk.",
   "guide.skyblocks.medium_photo_frame": "A bigger light wooden frame: two blocks wide on a wall, or on an easel.",
-  "guide.skyblocks.large_photo_frame": "A big gilded frame: three blocks wide on a wall, or on a tall easel."
+  "guide.skyblocks.large_photo_frame": "A big gilded frame: three blocks wide on a wall, or on a tall easel.",
+  "message.skyblocks.bonsai.tree": "%s: %s, %s"
 }
