@@ -73,6 +73,14 @@ public class SkyBlocksMod {
             .displayItems((parameters, output) -> fillTab(output::accept))
             .build());
 
+    /** "Shadered+: New": everything added since the last upload (GuideChapters.newest), right after the main tab. */
+    public static final java.util.function.Supplier<CreativeModeTab> NEW_TAB = TABS.register("new", () -> CreativeModeTab.builder()
+            .title(net.minecraft.network.chat.Component.translatable("itemGroup.skyblocks.new"))
+            .icon(() -> GuideChapters.newest().isEmpty() ? new net.minecraft.world.item.ItemStack(ModItems.GUIDE_BOOK.get()) : GuideChapters.newest().get(0))
+            .withTabsBefore(ResourceKey.create(Registries.CREATIVE_MODE_TAB, ResourceLocation.fromNamespaceAndPath(MOD_ID, "shadered_plus")))
+            .displayItems((parameters, output) -> GuideChapters.newest().forEach(output::accept))
+            .build());
+
     /** Our skies and their liquids, in Shadered's tab with its own (Illusorite ores for our skies are added by Shadered). */
     private static void addToShaderedTab(BuildCreativeModeTabContentsEvent event) {
         if (!event.getTabKey().equals(SHADERED_TAB)) {
@@ -94,7 +102,9 @@ public class SkyBlocksMod {
     private static void fillTab(java.util.function.Consumer<net.minecraft.world.item.ItemStack> out) {
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.GUIDE_BOOK.get()));
         for (GuideChapters.Chapter chapter : GuideChapters.all()) {
-            chapter.items().forEach(out);
+            if (!chapter.id().equals("new")) { // (they're in their own chapters too)
+                chapter.items().forEach(out);
+            }
         }
     }
 

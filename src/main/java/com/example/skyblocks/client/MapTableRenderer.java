@@ -141,7 +141,7 @@ public class MapTableRenderer implements BlockEntityRenderer<MapTableBlockEntity
         }
     }
 
-    private static final float[] EXAGGERATE = {1.0F, 1.3F, 1.7F, 2.2F, 2.8F};
+    private static final float[] EXAGGERATE = {2.0F, 2.4F, 2.8F, 3.2F, 3.6F};
 
     static Mesh build(MapTableBlockEntity be, int side, BlockPos tablePos, Square sq) {
         Mesh mesh = new Mesh();

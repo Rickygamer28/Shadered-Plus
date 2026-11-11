@@ -55,8 +55,8 @@ public class BonsaiRenderer implements BlockEntityRenderer<SimpleRenderedBlockEn
                     new Pad[] {p(6.2F, 7.6F, 0.2F, 3.8F, 1.5F, 3.2F), p(3.6F, 6.6F, 0.6F, 3, 1.3F, 2.6F), p(-1.6F, 4.6F, 0.6F, 2.4F, 1.1F, 2.2F)}),
             // cascade: up, then over the pot's front edge and down
             new Tree(new Seg[] {s(0, 0, 0, 0.5F, 2.6F, 0.8F, 1.6F, 1.25F), s(0.5F, 2.6F, 0.8F, 0.5F, 2.9F, 3.6F, 1.25F, 1), s(0.5F, 2.9F, 3.6F, 0.3F, 0, 5.4F, 1, 0.8F),
-                    s(0.3F, 0, 5.4F, 0, -3.2F, 6.1F, 0.8F, 0.55F)},
-                    new Pad[] {p(0.5F, 3.8F, 1, 2.8F, 1.3F, 2.6F), p(0.3F, 1, 5.3F, 2.8F, 1.3F, 2.4F), p(0, -3.6F, 6.3F, 3.2F, 1.5F, 2.6F)}),
+                    s(0.3F, 0, 5.4F, 0, -2.2F, 6.1F, 0.8F, 0.55F)},
+                    new Pad[] {p(0.5F, 3.8F, 1, 2.8F, 1.3F, 2.6F), p(0.3F, 1, 5.3F, 2.8F, 1.3F, 2.4F), p(0, -2.4F, 6.3F, 3.2F, 1.4F, 2.6F)}),
             // cloud pruned: a twisting trunk, round puffs on bare branches
             new Tree(new Seg[] {s(0, 0, 0, 1, 3, 0, 1.5F, 1.15F), s(1, 3, 0, -1, 6, 0.2F, 1.15F, 0.85F), s(-1, 6, 0.2F, 0.5F, 9, 0, 0.85F, 0.55F),
                     s(1, 3, 0, 3.6F, 3.9F, 0.5F, 0.5F, 0.35F), s(-1, 6, 0.2F, -3.6F, 6.6F, -0.5F, 0.45F, 0.3F)},

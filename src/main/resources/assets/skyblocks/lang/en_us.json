@@ -721,5 +721,7 @@
   "guide.skyblocks.camera": "Take photos of your world and hang them on the wall.",
   "guide.skyblocks.photo": "A photo taken with the camera.",
   "guide.skyblocks.map_table": "A table that turns a map into a little 3D model of its land.",
-  "guide.skyblocks.oiia_cat_spawn_egg": "An OIIA cat companion, ready to follow you about."
+  "guide.skyblocks.oiia_cat_spawn_egg": "An OIIA cat companion, ready to follow you about.",
+  "itemGroup.skyblocks.new": "Shadered+: New",
+  "guide.skyblocks.chapter.new": "New in This Update"
 }

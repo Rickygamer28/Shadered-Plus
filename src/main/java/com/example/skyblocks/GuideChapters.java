@@ -24,8 +24,26 @@ public final class GuideChapters {
         return new Chapter(id, list.get(0).copy(), list);
     }
 
+    /**
+     * What's new since the last CurseForge upload: its own guide chapter (first) and creative tab ("Shadered+: New").
+     * Emptied with every upload (the version bump), then filled again as things are added.
+     */
+    @SuppressWarnings("unchecked")
+    public static List<ItemStack> newest() {
+        List<ItemStack> list = new ArrayList<>();
+        for (Supplier<? extends ItemLike> i : new Supplier[] {ModItems.ZEN_SAND, ModItems.ZEN_RAKE, ModItems.ZEN_STONE, ModItems.BONSAI, ModItems.HOT_SPRING,
+                ModItems.OIIA_CAT_SPAWN_EGG, ModItems.CAMERA, ModItems.PHOTO, ModItems.MAP_TABLE}) {
+            list.add(new ItemStack(i.get()));
+        }
+        return list;
+    }
+
     public static List<Chapter> all() {
         List<Chapter> out = new ArrayList<>();
+        List<ItemStack> fresh = newest();
+        if (!fresh.isEmpty()) {
+            out.add(new Chapter("new", fresh.get(0).copy(), fresh));
+        }
         out.add(of("lights", ModItems.EFFECT_BLOCK, ModItems.EFFECT_GLASS, ModItems.NEON_SIGN, ModItems.LAVA_LAMP, ModItems.BIG_LAVA_LAMP,
                 ModItems.LAVA_PILLAR, ModItems.PLASMA_BALL, ModItems.TESLA_COIL, ModItems.KALEIDOSCOPE, ModItems.HOLOGRAM_PROJECTOR,
                 ModItems.GALAXY_PROJECTOR, ModItems.WEATHER_GLOBE, ModItems.NEON_TUBE));
