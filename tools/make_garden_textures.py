@@ -181,3 +181,43 @@ item([
 
 save(Image.new("RGBA", (16, 16), (255, 255, 255, 255)), "misc/white.png")
 print("ok")
+
+# ---------- the camera's 3D model texture (32x32; the model's UVs count in 16ths) ----------
+cam = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+def fill(x0, y0, x1, y1, fn):
+    for y in range(y0, y1):
+        for x in range(x0, x1):
+            cam.putpixel((x, y), fn(x - x0, y - y0, x1 - x0, y1 - y0))
+crng = random.Random(3)
+# leather body (0..16, 0..16): dark, pebbled
+fill(0, 0, 16, 16, lambda x, y, w, h: tuple([clamp(34 + crng.uniform(-6, 6) + (6 if (x * 7 + y * 3) % 5 == 0 else 0))] * 2
+                                            + [clamp(38 + crng.uniform(-6, 6))]) + (255,))
+# brushed metal (16..32, 0..8)
+fill(16, 0, 32, 8, lambda x, y, w, h: (clamp(178 + 30 * math.sin(y * 1.7) * 0.3 + crng.uniform(-8, 8)),) * 3 + (255,))
+# lens front (16..24, 8..16): ring, dark glass, a highlight
+def lens(x, y, w, h):
+    d = math.hypot(x - 3.5, y - 3.5)
+    if d > 3.6:
+        return (70, 70, 76, 255)
+    if d > 2.7:
+        return (120, 120, 128, 255)
+    if math.hypot(x - 2.3, y - 2.3) < 0.9:
+        return (200, 230, 255, 255)
+    return (clamp(20 + d * 8), clamp(36 + d * 10), clamp(70 + d * 14), 255)
+fill(16, 8, 24, 16, lens)
+# lens barrel sides (24..32, 8..16): ridged metal
+fill(24, 8, 32, 16, lambda x, y, w, h: (clamp(70 + (40 if x % 2 == 0 else 0)),) * 3 + (255,))
+# back screen (0..12, 16..24): a little picture of the view
+def screen(x, y, w, h):
+    if x == 0 or y == 0 or x == w - 1 or y == h - 1:
+        return (20, 20, 24, 255)
+    if y < 4:
+        return (110, 170, 230, 255)
+    if y < 6:
+        return (90, 160, 80, 255)
+    return (70, 120, 60, 255)
+fill(0, 16, 12, 24, screen)
+# red button (16..20, 16..20), flash (20..28, 16..20)
+fill(16, 16, 20, 20, lambda x, y, w, h: (200, 40, 40, 255) if 0 < x < 3 and 0 < y < 3 else (150, 30, 30, 255))
+fill(20, 16, 28, 20, lambda x, y, w, h: (240, 240, 230, 255) if 0 < x < 7 and 0 < y < 3 else (160, 160, 165, 255))
+save(cam, "item/camera_model.png")

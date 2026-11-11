@@ -20,6 +20,8 @@ import org.joml.Matrix4f;
  * napping it's the curled-up loaf (napping, low and breathing); petted, the loaf does the OIIA spin.
  */
 public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
+    /** Render test only: every cat walks on the spot (so its stepping shows in a still picture). */
+    static boolean testWalk;
     /** A bit smaller than the block's cat. */
     private static final float SIZE = 0.75F;
 
@@ -60,18 +62,67 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
             pose.scale(scale, scale * breathe * (napping ? 0.92F : 1.0F), scale);
             // (the loaf rests on the ground: the spin model floats SPIN_BOTTOM above its feet)
             pose.translate(0, OiiaCatModel.FEET - OiiaCatModel.SPIN_BOTTOM, 0);
+        } else if (walkParts(cat, pose, scale, age, partialTick)) {
+            return; // (drawn in pieces, walking)
         } else {
-            float walk = cat.walkAnimation.position(partialTick), speed = Math.min(1.0F, cat.walkAnimation.speed(partialTick));
-            float hop = cat.mood() == OiiaCatEntity.PLAYING && !cat.onGround() ? 0.08F : 0.0F;
-            pose.translate(0, Math.abs(Mth.sin(walk * 0.7F)) * 0.06F * speed + hop, 0);
-            pose.mulPose(Axis.ZP.rotationDegrees(Mth.sin(walk * 0.7F) * 9.0F * speed)); // (a waddle)
-            pose.mulPose(Axis.XP.rotationDegrees(4.0F * speed)); // (leaning into it)
             pose.scale(scale, scale, scale);
             pose.translate(0, OiiaCatModel.FEET, 0);
         }
         Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         model.modelMatrix = new Matrix4f().translation((float) camera.x, (float) camera.y, (float) camera.z).mul(new Matrix4f(pose.last().pose()));
         AssimpRenderer.getInstance().addModel(model);
+    }
+
+    /**
+     * Standing or walking: the cat in its pieces, the legs stepping in a trot (diagonal pairs together, as fast as it's
+     * going), the body bobbing a little with each step, the tail swaying (more as it walks, raised a bit). False while
+     * the pieces haven't loaded (then it's the whole model, still).
+     */
+    private static boolean walkParts(OiiaCatEntity cat, PoseStack pose, float scale, float age, float partialTick) {
+        int n = OiiaCatModel.PARTS.length;
+        if (!(cat.clientParts instanceof Object[] parts) || parts.length != n) {
+            cat.clientParts = parts = new Object[n];
+        }
+        for (int i = 0; i < n; i++) {
+            if (!(parts[i] instanceof RenderableModel)) {
+                parts[i] = OiiaCatModel.create(OiiaCatModel.part(i));
+                if (parts[i] == null) {
+                    return false;
+                }
+            }
+        }
+        float walk = cat.walkAnimation.position(partialTick), speed = Math.min(1.0F, cat.walkAnimation.speed(partialTick) * 1.4F);
+        if (testWalk) {
+            walk = age * 0.35F;
+            speed = 1.0F;
+        }
+        float phase = walk * 0.9F;
+        boolean hop = cat.mood() == OiiaCatEntity.PLAYING && !cat.onGround();
+        pose.translate(0, Math.abs(Mth.sin(phase)) * 0.025F * speed + (hop ? 0.06F : 0.0F), 0);
+        pose.mulPose(Axis.ZP.rotationDegrees(Mth.sin(phase) * 2.5F * speed)); // (a little roll from side to side)
+        pose.scale(scale, scale, scale);
+        pose.translate(0, OiiaCatModel.FEET, 0);
+        Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        Matrix4f world = new Matrix4f().translation((float) camera.x, (float) camera.y, (float) camera.z).mul(new Matrix4f(pose.last().pose()));
+        float swing = 30.0F * speed;
+        for (int i = 0; i < n; i++) {
+            float[] pv = OiiaCatModel.PIVOTS[i];
+            Matrix4f m = new Matrix4f(world);
+            if (i >= 1 && i <= 4) {
+                // (front left with back right, front right with back left: a trot)
+                float legPhase = i == 1 || i == 4 ? 0.0F : Mth.PI;
+                float a = hop ? (i <= 2 ? -35.0F : 30.0F) : Mth.sin(phase + legPhase) * swing;
+                m.translate(pv[0], pv[1], pv[2]).rotateX(a * Mth.DEG_TO_RAD).translate(-pv[0], -pv[1], -pv[2]);
+            } else if (i == 5) {
+                float sway = Mth.sin(age * 0.07F) * 9.0F + Mth.sin(phase * 0.5F) * 14.0F * speed;
+                float lift = -8.0F * speed + Mth.sin(age * 0.05F) * 3.0F;
+                m.translate(pv[0], pv[1], pv[2]).rotateY(sway * Mth.DEG_TO_RAD).rotateX(lift * Mth.DEG_TO_RAD).translate(-pv[0], -pv[1], -pv[2]);
+            }
+            RenderableModel part = (RenderableModel) parts[i];
+            part.modelMatrix = m;
+            AssimpRenderer.getInstance().addModel(part);
+        }
+        return true;
     }
 
     @Override

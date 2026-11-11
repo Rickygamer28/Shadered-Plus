@@ -25,6 +25,19 @@ final class OiiaCatModel {
      */
     static final ResourceLocation SPIN_MODEL = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "models/complex/oiia_cat_spin.glb");
 
+    /**
+     * The standing cat in pieces that move on their own (tools/models/oiia_cat/split_walk.py), for the companion's walk:
+     * the body with the head, the four legs (front left, front right, back left, back right) and the tail.
+     */
+    static final String[] PARTS = {"body", "leg_fl", "leg_fr", "leg_bl", "leg_br", "tail"};
+    /** Where each piece turns (model units): the hips, where the tail leaves the body. */
+    static final float[][] PIVOTS = {{0, 0, 0}, {8.10F, 6.20F, 16.90F}, {-5.60F, 6.20F, 17.40F}, {6.00F, 7.60F, -13.60F}, {-7.20F, 7.60F, -15.30F},
+            {0, 22.12F, -22.5F}};
+
+    static ResourceLocation part(int i) {
+        return ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "models/complex/oiia_cat_" + PARTS[i] + ".glb");
+    }
+
     /** Model units -> blocks. The model is about 38.7 units tall, so this makes it about 0.8 blocks tall. */
     static final float SCALE = 0.02F;
     /** The model's feet are 1.1 units below its origin. */

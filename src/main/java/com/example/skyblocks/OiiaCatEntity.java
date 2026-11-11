@@ -58,7 +58,7 @@ public class OiiaCatEntity extends TamableAnimal {
     /** Client: when it was last petted (its tickCount), for the spin. */
     public int spinStart = -1000;
     /** Client: its models (Shadered's renderables). */
-    public Object clientModel, clientSpinModel;
+    public Object clientModel, clientSpinModel, clientParts;
     private int spinUntil, napCooldown = 200, playCooldown = 100;
 
     public OiiaCatEntity(EntityType<? extends TamableAnimal> type, Level level) {
