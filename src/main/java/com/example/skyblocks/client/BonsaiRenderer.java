@@ -19,7 +19,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.joml.Vector3f;
 
 /**
- * The bonsai's little tree, from its own kind's bark and leaves: trunk and branches as tapering boxes, the foliage as
+ * The bonsai's little tree, built of its own kind's logs and leaves (drawn as Minecraft draws them, any mod's): its real
+ * tree in miniature (natural), or a shaped one - trunk and branches of logs, clouds of leaves -
  * blocky clouds - grown to its age, shaped to its style (BonsaiBlock).
  */
 public class BonsaiRenderer implements BlockEntityRenderer<BonsaiBlockEntity> {
@@ -104,30 +105,20 @@ public class BonsaiRenderer implements BlockEntityRenderer<BonsaiBlockEntity> {
                 : BonsaiBlock.log(kind);
         BlockState leaves = be.leaves != null ? be.leaves : BonsaiBlock.leaves(kind, false);
         BlockState flowering = be.leaves != null ? be.flowering : kind == BonsaiBlock.Kind.AZALEA ? BonsaiBlock.leaves(kind, true) : null;
-        TextureAtlasSprite bark = sprite(log, Direction.NORTH), barkEnd = sprite(log, Direction.UP);
-        TextureAtlasSprite leaf = sprite(leaves, Direction.UP);
-        TextureAtlasSprite flower = flowering != null && age == 4 ? sprite(flowering, Direction.UP) : leaf;
-        int tint = tint(leaves, be);
-        // (the leaves' solid core: a plain colour like the leaves', darker - their colour if tinted, else their map colour)
-        int coreColour = shade(tint != 0xFFFFFF ? tint : leaves.getMapColor(be.getLevel(), be.getBlockPos()).col, 0.45F);
 
         poseStack.pushPose();
         poseStack.translate(0.5F, SOIL / 16.0F, 0.5F);
         poseStack.mulPose(Axis.YP.rotationDegrees(yaw(state.getValue(BonsaiBlock.FACING))));
+        // the shape built of the tree's own blocks (a block a pixel), drawn as Minecraft draws them, grown to its age
+        final BlockState logF = log, leavesF = leaves, flowerF = age == 4 ? flowering : null;
+        int key = java.util.Objects.hash(shape, logF, leavesF, flowerF);
+        BonsaiNatural built = BonsaiNatural.shaped(be, key, () -> voxels(tree, logF, leavesF, flowerF));
+        poseStack.pushPose();
+        float vs = g / 16.0F;
+        poseStack.scale(vs, vs, vs); // (the shape's blocks are already centred on the trunk)
+        built.render(poseStack.last(), buffers, light);
+        poseStack.popPose();
         poseStack.scale(1 / 16.0F, 1 / 16.0F, 1 / 16.0F);
-        PoseStack.Pose pose = poseStack.last();
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS));
-        VertexConsumer core = buffers.getBuffer(RenderType.entitySolid(WHITE));
-        float wg = 0.45F + 0.55F * g; // (thickness grows slower than height)
-        for (Seg seg : tree.trunk) {
-            branch(vc, pose, bark, barkEnd, seg.x0 * g, seg.y0 * g, seg.z0 * g, seg.x1 * g, seg.y1 * g, seg.z1 * g, seg.w0 * wg, seg.w1 * wg, light, overlay);
-        }
-        float pg = 0.35F + 0.65F * g;
-        for (int i = 0; i < tree.pads.length; i++) {
-            Pad pad = tree.pads[i];
-            cloud(vc, core, coreColour, pose, i % 2 == 1 ? flower : leaf, pad.x * g, pad.y * g, pad.z * g, pad.sx * pg, pad.sy * pg, pad.sz * pg, tint,
-                    light, overlay, age == 4 ? 1.08F : 1.0F);
-        }
         // a fruit tree, grown: a few of its fruit hanging under the leaves
         if (age == 4 && !be.fruit.isEmpty()) {
             for (int i = 0; i < Math.min(3, tree.pads.length); i++) {
@@ -197,6 +188,59 @@ public class BonsaiRenderer implements BlockEntityRenderer<BonsaiBlockEntity> {
             // (its particle texture, then)
         }
         return model.getParticleIcon();
+    }
+
+    /**
+     * A shaped style as blocks, a block to a pixel of the drawing (from the soil's middle; +z the pot's front, the
+     * ground level at BonsaiTrees.GROUND as for a grown tree): the trunk and branches of logs (lying the way each runs),
+     * the clouds of leaves round the pads - here and there flowering leaves, on a tree that has them, fully grown.
+     */
+    static Map<BlockPos, BlockState> voxels(Tree tree, BlockState log, BlockState leaves, BlockState flowering) {
+        Map<BlockPos, BlockState> out = new java.util.HashMap<>();
+        int ground = com.example.skyblocks.BonsaiTrees.GROUND;
+        for (Seg seg : tree.trunk) {
+            float dx = seg.x1 - seg.x0, dy = seg.y1 - seg.y0, dz = seg.z1 - seg.z0;
+            float len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+            net.minecraft.core.Direction.Axis axis = Math.abs(dy) >= Math.abs(dx) && Math.abs(dy) >= Math.abs(dz) ? net.minecraft.core.Direction.Axis.Y
+                    : Math.abs(dx) >= Math.abs(dz) ? net.minecraft.core.Direction.Axis.X : net.minecraft.core.Direction.Axis.Z;
+            BlockState wood = log.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.AXIS)
+                    ? log.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.AXIS, axis) : log;
+            int steps = Math.max(2, (int) Math.ceil(len * 3));
+            for (int i = 0; i <= steps; i++) {
+                float t = i / (float) steps;
+                float px = seg.x0 + dx * t, py = seg.y0 + dy * t, pz = seg.z0 + dz * t;
+                float r = Math.max(0.5F, (seg.w0 + (seg.w1 - seg.w0) * t) / 2);
+                int reach = (int) Math.ceil(r);
+                for (int ox = -reach; ox <= reach; ox++) {
+                    for (int oy = -reach; oy <= reach; oy++) {
+                        for (int oz = -reach; oz <= reach; oz++) {
+                            int bx = (int) Math.floor(px + ox), by = (int) Math.floor(py + oy), bz = (int) Math.floor(pz + oz);
+                            float cx = bx + 0.5F - px, cy = by + 0.5F - py, cz = bz + 0.5F - pz;
+                            if (cx * cx + cy * cy + cz * cz <= (r + 0.25F) * (r + 0.25F) && by >= 0) {
+                                out.put(new BlockPos(bx, by + ground, bz), wood);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        for (int p = 0; p < tree.pads.length; p++) {
+            Pad pad = tree.pads[p];
+            float rx = pad.sx / 2 + 0.3F, ry = pad.sy / 2 + 0.3F, rz = pad.sz / 2 + 0.3F;
+            for (int bx = (int) Math.floor(pad.x - rx); bx <= (int) Math.ceil(pad.x + rx); bx++) {
+                for (int by = (int) Math.floor(pad.y - ry); by <= (int) Math.ceil(pad.y + ry); by++) {
+                    for (int bz = (int) Math.floor(pad.z - rz); bz <= (int) Math.ceil(pad.z + rz); bz++) {
+                        float ex = (bx + 0.5F - pad.x) / rx, ey = (by + 0.5F - pad.y) / ry, ez = (bz + 0.5F - pad.z) / rz;
+                        BlockPos at = new BlockPos(bx, by + ground, bz);
+                        if (ex * ex + ey * ey + ez * ez <= 1.0F && !out.containsKey(at)) {
+                            boolean bloom = flowering != null && Math.floorMod((bx * 73856093) ^ (by * 19349663) ^ (bz * 83492791), 5) < 2;
+                            out.put(at, bloom ? flowering : leaves);
+                        }
+                    }
+                }
+            }
+        }
+        return out;
     }
 
     /** The model's front (+z) turned to the block's facing. */

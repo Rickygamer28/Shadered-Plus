@@ -43,20 +43,29 @@ final class BonsaiNatural {
         this.version = version;
     }
 
-    private static final Map<BonsaiBlockEntity, BonsaiNatural> BUILT = new WeakHashMap<>();
+    private static final Map<BonsaiBlockEntity, BonsaiNatural> BUILT = new WeakHashMap<>(), SHAPED = new WeakHashMap<>();
 
     static BonsaiNatural of(BonsaiBlockEntity be) {
         BonsaiNatural n = BUILT.get(be);
         if (n == null || n.version != be.naturalVersion) {
-            n = build(be);
+            n = build(be.natural, be, be.naturalVersion);
             BUILT.put(be, n);
         }
         return n;
     }
 
-    private static BonsaiNatural build(BonsaiBlockEntity be) {
-        BonsaiNatural mesh = new BonsaiNatural(be.naturalVersion);
-        Map<BlockPos, BlockState> blocks = be.natural;
+    /** One of the shaped styles, built of the tree's own blocks (key: which shape, of which blocks). */
+    static BonsaiNatural shaped(BonsaiBlockEntity be, int key, java.util.function.Supplier<Map<BlockPos, BlockState>> blocks) {
+        BonsaiNatural n = SHAPED.get(be);
+        if (n == null || n.version != key) {
+            n = build(blocks.get(), be, key);
+            SHAPED.put(be, n);
+        }
+        return n;
+    }
+
+    private static BonsaiNatural build(Map<BlockPos, BlockState> blocks, BonsaiBlockEntity be, int version) {
+        BonsaiNatural mesh = new BonsaiNatural(version);
         if (blocks == null || blocks.isEmpty() || be.getLevel() == null) {
             return mesh;
         }
