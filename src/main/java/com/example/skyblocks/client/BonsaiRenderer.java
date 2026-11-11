@@ -12,6 +12,8 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.BakedModel;
+import java.util.Map;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.inventory.InventoryMenu;
@@ -20,8 +22,8 @@ import org.joml.Vector3f;
 
 /**
  * The bonsai's little tree, built of its own kind's logs and leaves (drawn as Minecraft draws them, any mod's): its real
- * tree in miniature (natural), or a shaped one - trunk and branches of logs, clouds of leaves -
- * blocky clouds - grown to its age, shaped to its style (BonsaiBlock).
+ * tree in miniature (natural), or a shaped one - trunk and branches of logs, clouds of leaves - grown to its age, shaped
+ * to its style (BonsaiBlock).
  */
 public class BonsaiRenderer implements BlockEntityRenderer<BonsaiBlockEntity> {
     /** A trunk or branch: from, to (pixels, from the soil's middle; +z the pot's front), thickness at each end. */
