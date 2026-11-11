@@ -110,6 +110,8 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(SpotlightBlockEntity::new, ModBlocks.SPOTLIGHT.get()).build(null));
     public static final Supplier<BlockEntityType<TerrariumBlockEntity>> TERRARIUM = TYPES.register("terrarium",
             () -> BlockEntityType.Builder.of(TerrariumBlockEntity::new, ModBlocks.TERRARIUM.get()).build(null));
+    public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> BIG_SCREEN = TYPES.register("big_screen",
+            () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.BIG_SCREEN.get(), p, st), ModBlocks.BIG_SCREEN.get()).build(null));
     public static final Supplier<BlockEntityType<ArcadeBlockEntity>> ARCADE = TYPES.register("arcade",
             () -> BlockEntityType.Builder.of(ArcadeBlockEntity::new, ModBlocks.ARCADE.get()).build(null));
     public static final Supplier<BlockEntityType<LaserProjectorBlockEntity>> LASER_PROJECTOR = TYPES.register("laser_projector",

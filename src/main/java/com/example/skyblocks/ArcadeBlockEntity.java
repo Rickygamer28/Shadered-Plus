@@ -16,13 +16,18 @@ public class ArcadeBlockEntity extends BlockEntity {
     public static final int[] PALETTE = {0x070B16, 0x3CC85A, 0xBEFF8C, 0xFF3A4A, 0xFFFFFF, 0x9AD8FF, 0xFF4D5E, 0xFF9A2E,
             0xFFE74A, 0x5BFF6A, 0x4DA6FF, 0xB45BFF, 0x00E5FF, 0x3A4A6A, 0x1A2238, 0xFF7AD9};
     /** The games' names as written on a trophy. */
-    public static final String[] TITLES = {"Snake", "Breakout", "Tetris", "Whisker Maze", "Pong", "Frogger", "Minesweeper", "Shadered Showdown"};
+    public static final String[] TITLES = {"Snake", "Breakout", "Tetris", "Whisker Maze", "Pong", "Frogger", "Minesweeper", "Tikkin"};
     private final int[] best = new int[GAMES.length];
     /** For each game, the best score a trophy has been given for (one trophy for each new best). */
     private final int[] claimed = new int[GAMES.length];
     private final String[] bestBy = java.util.Collections.nCopies(GAMES.length, "").toArray(new String[0]);
     /** Client only: what someone is playing on it now (the picture, the game, their score and name; when it came). */
-    public byte[] liveCells;
+    public int[] livePicture;
+    public int liveW, liveH, liveInput;
+    /** Client only: the stick (how far over, how far forward) and the six buttons (how far down), easing to what's held. */
+    public float stickX, stickY;
+    public final float[] pushed = new float[6];
+    public long pushedAt;
     public int liveGame, liveScore;
     public String liveName = "";
     public long liveAt = Long.MIN_VALUE / 2;

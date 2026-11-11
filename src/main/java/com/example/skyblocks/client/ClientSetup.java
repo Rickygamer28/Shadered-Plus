@@ -69,6 +69,7 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.LIGHT_BRIDGE_EMITTER.get(), LightBridgeRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.LASER_PROJECTOR.get(), LaserProjectorRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.ARCADE.get(), ArcadeRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.BIG_SCREEN.get(), BigScreenRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.CLAW_MACHINE.get(), ClawMachineRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.TROPHY.get(), TrophyRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.WATERFALL.get(), WaterfallRenderer::new);
@@ -410,6 +411,18 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void particles(net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent event) {
         event.registerSpriteSet(com.example.skyblocks.ModParticles.FOG.get(), FogParticle.Provider::new);
+    }
+
+    /** An arcade cabinet's paint: its dye's colour (a little lighter), over its grey sides and trim. */
+    @SubscribeEvent
+    public static void arcadeColours(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Block event) {
+        event.register((state, level, pos, tint) -> {
+            int c = state.getValue(com.example.skyblocks.ArcadeBlock.COLOR);
+            if (tint != 0 || c == 0) return -1;
+            int d = net.minecraft.world.item.DyeColor.byId(c - 1).getTextureDiffuseColor();
+            int r = d >> 16 & 255, g = d >> 8 & 255, b = d & 255;
+            return 0xFF000000 | (r + (255 - r) / 6) << 16 | (g + (255 - g) / 6) << 8 | (b + (255 - b) / 6);
+        }, com.example.skyblocks.ModBlocks.ARCADE.get());
     }
 
     /** The vanilla koi pond's rim and floor: the colour of the blocks chosen for them (grass, leaves... as the biome has them). */

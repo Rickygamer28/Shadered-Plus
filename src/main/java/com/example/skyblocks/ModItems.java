@@ -122,6 +122,7 @@ public final class ModItems {
     public static final DeferredItem<GuideBookItem> GUIDE_BOOK = ITEMS.register("guide_book",
             () -> new GuideBookItem(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<BlockItem> ARCADE = ITEMS.registerSimpleBlockItem("arcade", ModBlocks.ARCADE);
+    public static final DeferredItem<BlockItem> BIG_SCREEN = ITEMS.registerSimpleBlockItem("big_screen", ModBlocks.BIG_SCREEN);
     public static final DeferredItem<BlockItem> CLAW_MACHINE = ITEMS.registerSimpleBlockItem("claw_machine", ModBlocks.CLAW_MACHINE);
     public static final DeferredItem<BlockItem> TROPHY = ITEMS.registerSimpleBlockItem("trophy", ModBlocks.TROPHY);
     public static final DeferredItem<BlockItem> NEON_TUBE = ITEMS.registerSimpleBlockItem("neon_tube", ModBlocks.NEON_TUBE);

@@ -31,7 +31,7 @@ public class ArcadeControlsScreen extends Screen {
         this.game = game;
     }
 
-    private static final String[] TITLES = {"SNAKE", "BREAKOUT", "TETRIS", "WHISKER MAZE", "PONG", "FROGGER", "MINESWEEPER", "SHOWDOWN"};
+    private static final String[] TITLES = {"SNAKE", "BREAKOUT", "TETRIS", "WHISKER MAZE", "PONG", "FROGGER", "MINESWEEPER", "TIKKIN"};
 
     @Override
     protected void init() {

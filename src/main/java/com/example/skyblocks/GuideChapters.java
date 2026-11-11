@@ -30,7 +30,7 @@ public final class GuideChapters {
                 ModItems.LAVA_PILLAR, ModItems.PLASMA_BALL, ModItems.TESLA_COIL, ModItems.KALEIDOSCOPE, ModItems.HOLOGRAM_PROJECTOR,
                 ModItems.GALAXY_PROJECTOR, ModItems.WEATHER_GLOBE, ModItems.NEON_TUBE));
         out.add(of("music", ModItems.DISCO_BALL, ModItems.DANCE_FLOOR, ModItems.LASER_PROJECTOR, ModItems.FOG_MACHINE, ModItems.SPEAKER,
-                ModItems.MUSIC_VISUALIZER, ModItems.MUSIC_BOX, ModItems.ARCADE, ModItems.CLAW_MACHINE, ModItems.STAGE, ModItems.SPOTLIGHT));
+                ModItems.MUSIC_VISUALIZER, ModItems.MUSIC_BOX, ModItems.ARCADE, ModItems.BIG_SCREEN, ModItems.CLAW_MACHINE, ModItems.STAGE, ModItems.SPOTLIGHT));
         out.add(of("fire_water", ModItems.BRICK_HEARTH, ModItems.FIRE_TORNADO, ModItems.MAGMA_BASIN, ModItems.WATER_CAUSTICS,
                 ModItems.RAIN_GLASS, ModItems.WATERFALL));
         out.add(of("aquariums", ModItems.AQUARIUM, ModItems.OCEAN_AQUARIUM, ModItems.DEEP_SEA_AQUARIUM, ModItems.REEF_AQUARIUM,

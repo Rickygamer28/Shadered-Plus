@@ -207,6 +207,11 @@ public final class ModBlocks {
                     .pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE));
 
+    /** A big screen for the arcade: a wall of them is one screen, showing the nearest game being played (BigScreenBlock). */
+    public static final DeferredBlock<BigScreenBlock> BIG_SCREEN = BLOCKS.registerBlock("big_screen", BigScreenBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 10)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+
     /** A claw machine, two blocks tall: win plushies (ClawMachineBlock). */
     public static final DeferredBlock<ClawMachineBlock> CLAW_MACHINE = BLOCKS.registerBlock("claw_machine", ClawMachineBlock::new,
             BlockBehaviour.Properties.of().strength(2.0F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 9)

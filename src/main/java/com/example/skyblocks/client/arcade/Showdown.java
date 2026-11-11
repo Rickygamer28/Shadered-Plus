@@ -10,7 +10,7 @@ import net.minecraft.util.Mth;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Shadered Showdown: a 3D fighting game against the cabinet that moves and combos like Tekken 7 - its own fighters and
+ * Tikkin: a 3D fighting game against the cabinet that moves and combos like Tekken 7 - its own fighters and
  * moves, the same systems. It runs at 60 frames a second on its own clock (not the world's 20 ticks), and every move
  * has real frame data: its startup (i10 jab, i15 launchers), and how far ahead or behind it leaves you on block and on
  * hit - so a -13 launcher blocked gets launched back, a +1 jab keeps your turn. Four limbs, 1 2 3 4 (U I J K), and
@@ -694,7 +694,7 @@ public class Showdown extends ArcadeGame {
 
     @Override
     public String name() {
-        return "SHADERED SHOWDOWN";
+        return "TIKKIN";
     }
 
     @Override
@@ -4939,7 +4939,7 @@ public class Showdown extends ArcadeGame {
             g.flush();
             return;
         }
-        big(g, font, "SHADERED SHOWDOWN", x0 + W / 2.0F, y0 + 8, 1.0F, 0xFFFF7AD9);
+        big(g, font, "TIKKIN", x0 + W / 2.0F, y0 + 8, 1.0F, 0xFFFF7AD9);
         big(g, font, "CHOOSE YOUR FIGHTER", x0 + W / 2.0F, y0 + 20, 0.75F, 0xFFFFFFFF);
         for (int i = 0; i < PLAYABLE; i++) {
             big(g, font, FIGHTERS[i].name(), x0 + 30 + i * 44, y0 + 110, 0.75F, i == pick ? 0xFFFFE74A : 0xFFAAAAAA);

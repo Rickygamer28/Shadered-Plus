@@ -8,7 +8,8 @@ in vec2 uv;
 uniform float Time;
 uniform float Seed;
 uniform float Power;
-uniform float Live;   // 1: someone's playing - their game's picture (Sampler0, 32 x 24 cells) instead of the demo
+uniform float Live;   // 1: someone's playing - their game's picture (Sampler0, Cells wide and high) instead of the demo
+uniform vec2 Cells;
 uniform sampler2D Sampler0;
 
 out vec4 fragColor;
@@ -115,12 +116,13 @@ void main() {
     float t = mod(Time, CYCLE);
     vec3 col;
     if (Live > 0.5) {
-        // someone's game: its cells, each a little lit square
-        vec2 cells = vec2(32.0, 24.0);
+        // someone's game: its pixels, each a little lit square (a fine picture: only a little)
+        vec2 cells = max(Cells, vec2(1.0));
         vec2 id = floor(p * cells);
         vec2 f = fract(p * cells);
         col = texture(Sampler0, (id + 0.5) / cells * vec2(1.0, -1.0) + vec2(0.0, 1.0)).rgb;
-        col *= boxGlow(f, vec2(0.07), vec2(0.93), 30.0) * 0.85 + 0.15;
+        float own = cells.x > 48.0 ? 0.3 : 0.85;
+        col *= boxGlow(f, vec2(0.07), vec2(0.93), 30.0) * own + (1.0 - own);
     } else {
         float g = mod(rnd, 3.0);
         col = g < 0.5 ? snake(p, Time) : g < 1.5 ? breakout(p, t, rnd) : tetris(p, t, rnd);

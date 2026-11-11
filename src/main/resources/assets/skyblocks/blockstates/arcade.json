@@ -1,33 +1,513 @@
 {
   "variants": {
-    "facing=north,half=lower": {
+    "color=0,facing=north,half=lower": {
       "model": "skyblocks:block/arcade_lower"
     },
-    "facing=north,half=upper": {
+    "color=0,facing=north,half=upper": {
       "model": "skyblocks:block/arcade_upper"
     },
-    "facing=east,half=lower": {
+    "color=0,facing=east,half=lower": {
       "model": "skyblocks:block/arcade_lower",
       "y": 90
     },
-    "facing=east,half=upper": {
+    "color=0,facing=east,half=upper": {
       "model": "skyblocks:block/arcade_upper",
       "y": 90
     },
-    "facing=south,half=lower": {
+    "color=0,facing=south,half=lower": {
       "model": "skyblocks:block/arcade_lower",
       "y": 180
     },
-    "facing=south,half=upper": {
+    "color=0,facing=south,half=upper": {
       "model": "skyblocks:block/arcade_upper",
       "y": 180
     },
-    "facing=west,half=lower": {
+    "color=0,facing=west,half=lower": {
       "model": "skyblocks:block/arcade_lower",
       "y": 270
     },
-    "facing=west,half=upper": {
+    "color=0,facing=west,half=upper": {
       "model": "skyblocks:block/arcade_upper",
+      "y": 270
+    },
+    "color=1,facing=north,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed"
+    },
+    "color=1,facing=north,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed"
+    },
+    "color=1,facing=east,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 90
+    },
+    "color=1,facing=east,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 90
+    },
+    "color=1,facing=south,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 180
+    },
+    "color=1,facing=south,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 180
+    },
+    "color=1,facing=west,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 270
+    },
+    "color=1,facing=west,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 270
+    },
+    "color=2,facing=north,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed"
+    },
+    "color=2,facing=north,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed"
+    },
+    "color=2,facing=east,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 90
+    },
+    "color=2,facing=east,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 90
+    },
+    "color=2,facing=south,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 180
+    },
+    "color=2,facing=south,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 180
+    },
+    "color=2,facing=west,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 270
+    },
+    "color=2,facing=west,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 270
+    },
+    "color=3,facing=north,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed"
+    },
+    "color=3,facing=north,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed"
+    },
+    "color=3,facing=east,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 90
+    },
+    "color=3,facing=east,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 90
+    },
+    "color=3,facing=south,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 180
+    },
+    "color=3,facing=south,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 180
+    },
+    "color=3,facing=west,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 270
+    },
+    "color=3,facing=west,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 270
+    },
+    "color=4,facing=north,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed"
+    },
+    "color=4,facing=north,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed"
+    },
+    "color=4,facing=east,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 90
+    },
+    "color=4,facing=east,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 90
+    },
+    "color=4,facing=south,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 180
+    },
+    "color=4,facing=south,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 180
+    },
+    "color=4,facing=west,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 270
+    },
+    "color=4,facing=west,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 270
+    },
+    "color=5,facing=north,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed"
+    },
+    "color=5,facing=north,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed"
+    },
+    "color=5,facing=east,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 90
+    },
+    "color=5,facing=east,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 90
+    },
+    "color=5,facing=south,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 180
+    },
+    "color=5,facing=south,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 180
+    },
+    "color=5,facing=west,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 270
+    },
+    "color=5,facing=west,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 270
+    },
+    "color=6,facing=north,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed"
+    },
+    "color=6,facing=north,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed"
+    },
+    "color=6,facing=east,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 90
+    },
+    "color=6,facing=east,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 90
+    },
+    "color=6,facing=south,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 180
+    },
+    "color=6,facing=south,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 180
+    },
+    "color=6,facing=west,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 270
+    },
+    "color=6,facing=west,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 270
+    },
+    "color=7,facing=north,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed"
+    },
+    "color=7,facing=north,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed"
+    },
+    "color=7,facing=east,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 90
+    },
+    "color=7,facing=east,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 90
+    },
+    "color=7,facing=south,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 180
+    },
+    "color=7,facing=south,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 180
+    },
+    "color=7,facing=west,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 270
+    },
+    "color=7,facing=west,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 270
+    },
+    "color=8,facing=north,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed"
+    },
+    "color=8,facing=north,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed"
+    },
+    "color=8,facing=east,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 90
+    },
+    "color=8,facing=east,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 90
+    },
+    "color=8,facing=south,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 180
+    },
+    "color=8,facing=south,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 180
+    },
+    "color=8,facing=west,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 270
+    },
+    "color=8,facing=west,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 270
+    },
+    "color=9,facing=north,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed"
+    },
+    "color=9,facing=north,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed"
+    },
+    "color=9,facing=east,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 90
+    },
+    "color=9,facing=east,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 90
+    },
+    "color=9,facing=south,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 180
+    },
+    "color=9,facing=south,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 180
+    },
+    "color=9,facing=west,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 270
+    },
+    "color=9,facing=west,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 270
+    },
+    "color=10,facing=north,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed"
+    },
+    "color=10,facing=north,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed"
+    },
+    "color=10,facing=east,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 90
+    },
+    "color=10,facing=east,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 90
+    },
+    "color=10,facing=south,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 180
+    },
+    "color=10,facing=south,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 180
+    },
+    "color=10,facing=west,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 270
+    },
+    "color=10,facing=west,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 270
+    },
+    "color=11,facing=north,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed"
+    },
+    "color=11,facing=north,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed"
+    },
+    "color=11,facing=east,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 90
+    },
+    "color=11,facing=east,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 90
+    },
+    "color=11,facing=south,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 180
+    },
+    "color=11,facing=south,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 180
+    },
+    "color=11,facing=west,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 270
+    },
+    "color=11,facing=west,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 270
+    },
+    "color=12,facing=north,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed"
+    },
+    "color=12,facing=north,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed"
+    },
+    "color=12,facing=east,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 90
+    },
+    "color=12,facing=east,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 90
+    },
+    "color=12,facing=south,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 180
+    },
+    "color=12,facing=south,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 180
+    },
+    "color=12,facing=west,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 270
+    },
+    "color=12,facing=west,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 270
+    },
+    "color=13,facing=north,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed"
+    },
+    "color=13,facing=north,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed"
+    },
+    "color=13,facing=east,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 90
+    },
+    "color=13,facing=east,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 90
+    },
+    "color=13,facing=south,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 180
+    },
+    "color=13,facing=south,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 180
+    },
+    "color=13,facing=west,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 270
+    },
+    "color=13,facing=west,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 270
+    },
+    "color=14,facing=north,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed"
+    },
+    "color=14,facing=north,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed"
+    },
+    "color=14,facing=east,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 90
+    },
+    "color=14,facing=east,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 90
+    },
+    "color=14,facing=south,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 180
+    },
+    "color=14,facing=south,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 180
+    },
+    "color=14,facing=west,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 270
+    },
+    "color=14,facing=west,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 270
+    },
+    "color=15,facing=north,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed"
+    },
+    "color=15,facing=north,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed"
+    },
+    "color=15,facing=east,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 90
+    },
+    "color=15,facing=east,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 90
+    },
+    "color=15,facing=south,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 180
+    },
+    "color=15,facing=south,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 180
+    },
+    "color=15,facing=west,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 270
+    },
+    "color=15,facing=west,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 270
+    },
+    "color=16,facing=north,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed"
+    },
+    "color=16,facing=north,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed"
+    },
+    "color=16,facing=east,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 90
+    },
+    "color=16,facing=east,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 90
+    },
+    "color=16,facing=south,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 180
+    },
+    "color=16,facing=south,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
+      "y": 180
+    },
+    "color=16,facing=west,half=lower": {
+      "model": "skyblocks:block/arcade_lower_dyed",
+      "y": 270
+    },
+    "color=16,facing=west,half=upper": {
+      "model": "skyblocks:block/arcade_upper_dyed",
       "y": 270
     }
   }

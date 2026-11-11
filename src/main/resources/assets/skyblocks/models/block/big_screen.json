@@ -1,0 +1,66 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "front": "skyblocks:block/big_screen_front",
+    "case": "skyblocks:block/big_screen_case",
+    "particle": "skyblocks:block/big_screen_case"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        13
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#front"
+        },
+        "south": {
+          "texture": "#case"
+        },
+        "east": {
+          "texture": "#case",
+          "uv": [
+            0,
+            0,
+            3,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#case",
+          "uv": [
+            13,
+            0,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#case",
+          "uv": [
+            0,
+            13,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#case",
+          "uv": [
+            0,
+            0,
+            16,
+            3
+          ]
+        }
+      }
+    }
+  ]
+}

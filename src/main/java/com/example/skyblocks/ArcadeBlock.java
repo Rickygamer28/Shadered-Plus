@@ -41,11 +41,14 @@ public class ArcadeBlock extends BaseEntityBlock {
     public static final MapCodec<ArcadeBlock> CODEC = simpleCodec(ArcadeBlock::new);
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
     public static final EnumProperty<DoubleBlockHalf> HALF = BlockStateProperties.DOUBLE_BLOCK_HALF;
+    /** Its paint: 0 the classic purple; 1-16 a dye's colour (dye + 1). */
+    public static final net.minecraft.world.level.block.state.properties.IntegerProperty COLOR =
+            net.minecraft.world.level.block.state.properties.IntegerProperty.create("color", 0, 16);
     private static final VoxelShape SHAPE = Block.box(1.0, 0.0, 1.0, 15.0, 16.0, 15.0);
 
     public ArcadeBlock(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(HALF, DoubleBlockHalf.LOWER));
+        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(HALF, DoubleBlockHalf.LOWER).setValue(COLOR, 0));
     }
 
     @Override
@@ -55,7 +58,7 @@ public class ArcadeBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, HALF);
+        builder.add(FACING, HALF, COLOR);
     }
 
     @Override
@@ -106,6 +109,27 @@ public class ArcadeBlock extends BaseEntityBlock {
             }
         }
         return super.playerWillDestroy(level, pos, state, player);
+    }
+
+    /** A dye: the cabinet painted that colour (the same dye again: back to the classic purple). */
+    @Override
+    protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
+            net.minecraft.world.InteractionHand hand, BlockHitResult hit) {
+        if (!(stack.getItem() instanceof net.minecraft.world.item.DyeItem dye)) {
+            return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        }
+        int colour = dye.getDyeColor().getId() + 1;
+        int now = state.getValue(COLOR) == colour ? 0 : colour;
+        if (!level.isClientSide) {
+            BlockPos base = state.getValue(HALF) == DoubleBlockHalf.UPPER ? pos.below() : pos;
+            for (BlockPos p : new BlockPos[] {base, base.above()}) {
+                BlockState there = level.getBlockState(p);
+                if (there.is(this)) level.setBlock(p, there.setValue(COLOR, now), Block.UPDATE_ALL);
+            }
+            level.playSound(null, pos, net.minecraft.sounds.SoundEvents.DYE_USE, net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);
+            if (!player.getAbilities().instabuild && now != 0) stack.shrink(1);
+        }
+        return net.minecraft.world.ItemInteractionResult.sidedSuccess(level.isClientSide);
     }
 
     @Override

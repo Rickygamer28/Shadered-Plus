@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "skyblocks:block/big_screen"
+    },
+    "facing=east": {
+      "model": "skyblocks:block/big_screen",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "skyblocks:block/big_screen",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "skyblocks:block/big_screen",
+      "y": 270
+    }
+  }
+}

@@ -44,7 +44,15 @@ public final class ClientAccess {
     public static void arcadeFrame(com.example.skyblocks.ArcadeFramePayload p) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.level.getBlockEntity(p.pos()) instanceof com.example.skyblocks.ArcadeBlockEntity be) {
-            be.liveCells = p.cells().length == 0 ? null : p.cells();
+            int[] picture = p.picture().length == 0 ? null : ArcadePicture.decode(p.picture(), p.w(), p.h());
+            if (picture != null || p.picture().length == 0) { // (one that didn't come right: the last one stays)
+                be.livePicture = picture;
+                be.liveW = p.w();
+                be.liveH = p.h();
+            }
+            be.liveInput = p.input();
+            if (picture != null) ArcadeRenderer.LIVE.add(p.pos().immutable());
+            else if (p.picture().length == 0) ArcadeRenderer.LIVE.remove(p.pos());
             be.liveGame = p.game();
             be.liveScore = p.score();
             be.liveName = p.name();

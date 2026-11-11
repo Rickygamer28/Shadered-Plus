@@ -22,7 +22,7 @@ import org.lwjgl.glfw.GLFW;
  */
 public class ArcadeScreen extends Screen {
     private static final int COLS = 24, ROWS = 18, CELL = 8, W = COLS * CELL, H = ROWS * CELL;
-    private static final String[] NAMES = {"SNAKE", "BREAKOUT", "TETRIS", "WHISKER MAZE", "PONG", "FROGGER", "MINESWEEPER", "SHOWDOWN"};
+    private static final String[] NAMES = {"SNAKE", "BREAKOUT", "TETRIS", "WHISKER MAZE", "PONG", "FROGGER", "MINESWEEPER", "TIKKIN"};
     /** The games after the first three, each its own (client/arcade). */
     private final com.example.skyblocks.client.arcade.ArcadeGame[] extra = {new com.example.skyblocks.client.arcade.WhiskerMaze(),
             new com.example.skyblocks.client.arcade.Pong(), new com.example.skyblocks.client.arcade.Frogger(),
@@ -410,9 +410,8 @@ public class ArcadeScreen extends Screen {
             }
         }
         // what's on the screen, to the cabinet (everyone near it sees it on its screen)
-        if (mode != Mode.TITLE && ticks % 5 == 0) {
-            PacketDistributor.sendToServer(new com.example.skyblocks.ArcadeFramePayload(pos, game, score, "", frame(), ArcadeSounds.takeForPicture()));
-            showing = true;
+        if (mode != Mode.TITLE && ticks % 2 == 0) {
+            pictureDue = true; // (taken as it's next drawn: ten a second)
         } else if (mode == Mode.TITLE && showing) {
             stopShowing();
         }
@@ -688,7 +687,120 @@ public class ArcadeScreen extends Screen {
 
     private void stopShowing() {
         showing = false;
-        PacketDistributor.sendToServer(new com.example.skyblocks.ArcadeFramePayload(pos, game, score, "", new byte[0], ArcadeSounds.takeForPicture()));
+        PacketDistributor.sendToServer(com.example.skyblocks.ArcadeFramePayload.stopped(pos, game, score, ArcadeSounds.takeForPicture()));
+    }
+
+    // ---- the picture: the game drawn again, small, into a picture of its own - what the cabinet shows the room ----
+
+    private static final int PIC_W = 96, PIC_H = 72;
+    private boolean pictureDue, pictureBroken;
+    private com.mojang.blaze3d.pipeline.TextureTarget shot;
+
+    /** The game as it is now, to the cabinet (and everyone near it): its picture, and what's held on the controls. */
+    private void sendPicture(GuiGraphics g, float partialTick, float fastPartial) {
+        int[] px = null;
+        int w = PIC_W, h = PIC_H;
+        if (!pictureBroken) {
+            try {
+                px = capture(g, partialTick, fastPartial);
+            } catch (Throwable e) { // (can't draw it off the screen here: the plain little picture instead, from now on)
+                pictureBroken = true;
+                com.example.skyblocks.SkyBlocksMod.LOGGER.warn("Arcade: couldn't take the cabinet's picture, using the simple one: {}", e.toString());
+            }
+        }
+        if (px == null) {
+            byte[] cells = frame();
+            w = com.example.skyblocks.ArcadeFramePayload.WIDTH; // (32 x 24, the palette's colours)
+            h = com.example.skyblocks.ArcadeFramePayload.HEIGHT;
+            px = new int[w * h];
+            for (int i = 0; i < px.length && i < cells.length; i++) px[i] = ArcadeBlockEntity.PALETTE[cells[i] & 15];
+        }
+        byte[] data = ArcadePicture.encode(px, w, h);
+        if (data.length > com.example.skyblocks.ArcadeFramePayload.MAX_BYTES) return;
+        var frame = new com.example.skyblocks.ArcadeFramePayload(pos, game, score, "", w, h, data, ArcadeSounds.takeForPicture(), inputBits());
+        PacketDistributor.sendToServer(frame);
+        if (RenderTest.echoPictures()) {
+            ClientAccess.arcadeFrame(new com.example.skyblocks.ArcadeFramePayload(pos, game, score, "RENDER TEST", w, h, data, new byte[0], frame.input()));
+        }
+        showing = true;
+    }
+
+    /** The screen's insides drawn into a picture of their own (W x H), then halved: PIC_W x PIC_H, 0xRRGGBB. */
+    private int[] capture(GuiGraphics g, float partialTick, float fastPartial) {
+        Minecraft mc = Minecraft.getInstance();
+        g.flush(); // (whatever's waiting to be drawn on the real screen: drawn there first)
+        if (shot == null) shot = new com.mojang.blaze3d.pipeline.TextureTarget(W, H, true, Minecraft.ON_OSX);
+        shot.setClearColor(0.0F, 0.0F, 0.0F, 1.0F);
+        shot.clear(Minecraft.ON_OSX);
+        shot.bindWrite(true);
+        org.joml.Matrix4f projection = new org.joml.Matrix4f(com.mojang.blaze3d.systems.RenderSystem.getProjectionMatrix());
+        com.mojang.blaze3d.vertex.VertexSorting sorting = com.mojang.blaze3d.systems.RenderSystem.getVertexSorting();
+        com.mojang.blaze3d.systems.RenderSystem.setProjectionMatrix(new org.joml.Matrix4f().setOrtho(0.0F, W, H, 0.0F, 1000.0F, 21000.0F),
+                com.mojang.blaze3d.vertex.VertexSorting.ORTHOGRAPHIC_Z);
+        org.joml.Matrix4fStack view = com.mojang.blaze3d.systems.RenderSystem.getModelViewStack();
+        view.pushMatrix();
+        view.translation(0.0F, 0.0F, -11000.0F);
+        com.mojang.blaze3d.systems.RenderSystem.applyModelViewMatrix();
+        try {
+            GuiGraphics pic = new GuiGraphics(mc, mc.renderBuffers().bufferSource());
+            drawScreen(pic, 0, 0, partialTick, fastPartial, true);
+            pic.flush();
+        } finally {
+            view.popMatrix();
+            com.mojang.blaze3d.systems.RenderSystem.applyModelViewMatrix();
+            com.mojang.blaze3d.systems.RenderSystem.setProjectionMatrix(projection, sorting);
+            mc.getMainRenderTarget().bindWrite(true);
+        }
+        int[] full = new int[W * H];
+        try (com.mojang.blaze3d.platform.NativeImage img = new com.mojang.blaze3d.platform.NativeImage(W, H, false)) {
+            com.mojang.blaze3d.systems.RenderSystem.bindTexture(shot.getColorTextureId());
+            img.downloadTexture(0, false);
+            img.flipY();
+            for (int y = 0; y < H; y++) {
+                for (int x = 0; x < W; x++) {
+                    int abgr = img.getPixelRGBA(x, y);
+                    full[y * W + x] = (abgr & 255) << 16 | (abgr & 0xFF00) | (abgr >> 16 & 255);
+                }
+            }
+        }
+        int[] out = new int[PIC_W * PIC_H];
+        int sx = W / PIC_W, sy = H / PIC_H;
+        for (int y = 0; y < PIC_H; y++) {
+            for (int x = 0; x < PIC_W; x++) {
+                int r = 0, gr = 0, b = 0;
+                for (int yy = 0; yy < sy; yy++) {
+                    for (int xx = 0; xx < sx; xx++) {
+                        int c = full[(y * sy + yy) * W + x * sx + xx];
+                        r += c >> 16 & 255;
+                        gr += c >> 8 & 255;
+                        b += c & 255;
+                    }
+                }
+                int n = sx * sy;
+                out[y * PIC_W + x] = (r / n) << 16 | (gr / n) << 8 | (b / n);
+            }
+        }
+        return out;
+    }
+
+    /** The game's keys held now (whatever game): the way, as the cabinet's stick; six buttons. (ArcadeRenderer's) */
+    private final java.util.Set<Integer> heldKeys = new java.util.HashSet<>();
+
+    private int inputBits() {
+        int bits = 0;
+        for (int k : heldKeys) {
+            if (k == GLFW.GLFW_KEY_LEFT || k == GLFW.GLFW_KEY_A) bits |= 1;
+            else if (k == GLFW.GLFW_KEY_RIGHT || k == GLFW.GLFW_KEY_D) bits |= 2;
+            else if (k == GLFW.GLFW_KEY_UP || k == GLFW.GLFW_KEY_W) bits |= 4;
+            else if (k == GLFW.GLFW_KEY_DOWN || k == GLFW.GLFW_KEY_S) bits |= 8;
+            else if (k == GLFW.GLFW_KEY_U) bits |= 16;
+            else if (k == GLFW.GLFW_KEY_I) bits |= 32;
+            else if (k == GLFW.GLFW_KEY_L || k == GLFW.GLFW_KEY_X) bits |= 64;
+            else if (k == GLFW.GLFW_KEY_J) bits |= 128;
+            else if (k == GLFW.GLFW_KEY_K) bits |= 256;
+            else if (k == GLFW.GLFW_KEY_SPACE || k == GLFW.GLFW_KEY_ENTER) bits |= 512;
+        }
+        return bits;
     }
 
     @Override
@@ -782,6 +894,7 @@ public class ArcadeScreen extends Screen {
 
     /** A game's own key, pressed. */
     private void gameKey(int key) {
+        heldKeys.add(key);
         if (ext() != null) {
             ext().keyPressed(key);
             return;
@@ -826,6 +939,7 @@ public class ArcadeScreen extends Screen {
 
     /** A game's own key, let go. */
     private void gameKeyUp(int key) {
+        heldKeys.remove(key);
         if (ext() != null) {
             ext().keyReleased(key);
             return;
@@ -953,6 +1067,10 @@ public class ArcadeScreen extends Screen {
     public void render(GuiGraphics g, int mx, int my, float partialTick) {
         pollPad();
         float fastPartial = runFast();
+        if (pictureDue) {
+            pictureDue = false;
+            if (mode != Mode.TITLE) sendPicture(g, partialTick, fastPartial);
+        }
         playMusic(mode == Mode.PLAYING && ext() != null ? ext().music() : null);
         super.render(g, mx, my, partialTick);
         layout();
@@ -972,18 +1090,33 @@ public class ArcadeScreen extends Screen {
         g.fill(x0 - 12, y0 - 28, x0 + W + 12, y0 - 10, 0xFF2B1650);
         drawCentred(g, NAMES[game], x0 + W / 2, y0 - 23, rainbow(ticks + partialTick));
         g.fill(x0 - 4, y0 - 4, x0 + W + 4, y0 + H + 4, 0xFF05050A);
-        g.fill(x0, y0, x0 + W, y0 + H, 0xFF070B16);
+        drawScreen(g, x0, y0, partialTick, fastPartial, false);
+        ArcadeBlockEntity be = Minecraft.getInstance().level != null && Minecraft.getInstance().level.getBlockEntity(pos) instanceof ArcadeBlockEntity a ? a : null;
+        if (be != null) {
+            int best = be.best(game);
+            String line = best > 0 ? "HI-SCORE " + best + " - " + be.bestBy(game) : "NO HI-SCORE YET";
+            drawCentred(g, line, x0 + W / 2, y0 + H + 9, 0xFFE9F27A);
+            if (mode != Mode.PLAYING && canClaim() && (ticks / 10) % 2 == 0) {
+                drawCentred(g, "T: CLAIM YOUR TROPHY!", x0 + W / 2, y0 + H - 12, 0xFFFFC23A);
+            }
+        }
+    }
 
+    /** What's on the screen (W x H from x0, y0): the game, its score, game over. For a picture: no scissor, no scanlines
+     *  (the cabinet's tube has its own). */
+    private void drawScreen(GuiGraphics g, int x0, int y0, float partialTick, float fastPartial, boolean picture) {
+        g.fill(x0, y0, x0 + W, y0 + H, 0xFF070B16);
         if (mode == Mode.TITLE) {
             drawTitle(g, x0, y0, partialTick);
         } else if (ext() != null) {
-            // (the scissor's in the screen's own units: worked out without the scale on, so it's right either way)
-            g.pose().pushPose();
-            g.pose().setIdentity();
-            g.enableScissor(Math.round(x0 * scale), Math.round(y0 * scale), Math.round((x0 + W) * scale), Math.round((y0 + H) * scale));
-            g.pose().popPose();
+            if (!picture) { // (the scissor's in the screen's own units: worked out without the scale on, so it's right either way)
+                g.pose().pushPose();
+                g.pose().setIdentity();
+                g.enableScissor(Math.round(x0 * scale), Math.round(y0 * scale), Math.round((x0 + W) * scale), Math.round((y0 + H) * scale));
+                g.pose().popPose();
+            }
             ext().draw(g, font, x0, y0, ext().rate() == 20 ? partialTick : fastPartial);
-            g.disableScissor();
+            if (!picture) g.disableScissor();
         } else if (game == 0) {
             drawSnake(g, x0, y0);
         } else if (game == 2) {
@@ -1001,15 +1134,6 @@ public class ArcadeScreen extends Screen {
             String hearts = "❤".repeat(Math.max(lives, 0));
             g.drawString(font, hearts, x0 + W - 3 - font.width(hearts), y0 + 3, 0xFFFF4D5E, false);
         }
-        ArcadeBlockEntity be = Minecraft.getInstance().level != null && Minecraft.getInstance().level.getBlockEntity(pos) instanceof ArcadeBlockEntity a ? a : null;
-        if (be != null) {
-            int best = be.best(game);
-            String line = best > 0 ? "HI-SCORE " + best + " - " + be.bestBy(game) : "NO HI-SCORE YET";
-            drawCentred(g, line, x0 + W / 2, y0 + H + 9, 0xFFE9F27A);
-            if (mode != Mode.PLAYING && canClaim() && (ticks / 10) % 2 == 0) {
-                drawCentred(g, "T: CLAIM YOUR TROPHY!", x0 + W / 2, y0 + H - 12, 0xFFFFC23A);
-            }
-        }
         if (mode == Mode.OVER) {
             g.fill(x0, y0 + H / 2 - 22, x0 + W, y0 + H / 2 + 24, 0xC0000000);
             boolean win = ext() != null && ext().won();
@@ -1020,7 +1144,7 @@ public class ArcadeScreen extends Screen {
             }
         }
         // the tube's scanlines
-        for (int y = y0; y < y0 + H; y += 2) {
+        for (int y = y0; y < y0 + H && !picture; y += 2) {
             g.fill(x0, y, x0 + W, y + 1, 0x22000000);
         }
     }

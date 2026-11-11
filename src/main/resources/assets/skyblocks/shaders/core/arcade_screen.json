@@ -84,6 +84,15 @@
             "values": [
                 0.0
             ]
+        },
+        {
+            "name": "Cells",
+            "type": "float",
+            "count": 2,
+            "values": [
+                32.0,
+                24.0
+            ]
         }
     ]
 }
