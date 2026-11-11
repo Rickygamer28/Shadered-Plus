@@ -25,7 +25,7 @@ public final class GuideChapters {
     }
 
     /**
-     * What's new since the last CurseForge upload: its own guide chapter (first) and creative tab ("Shadered+: New").
+     * What's new since the last CurseForge upload: its own guide chapter (first), and its button by the Shadered+ creative tab.
      * Emptied with every upload (the version bump), then filled again as things are added.
      */
     @SuppressWarnings("unchecked")
