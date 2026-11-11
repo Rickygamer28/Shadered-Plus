@@ -1,0 +1,12 @@
+{
+  "_comment": "What Minecraft's trees do in a bonsai pot. Any mod or data pack can add a file like this in data/<namespace>/skyblocks_bonsai/ for its own saplings: every field but sapling is optional (log, leaves and flowering are found by themselves for most saplings), and entries for things that aren't installed are skipped.",
+  "trees": [
+    {"sapling": "minecraft:oak_sapling", "fruit": "minecraft:apple", "fruit_chance": 0.12},
+    {"sapling": "minecraft:dark_oak_sapling", "fruit": "minecraft:apple", "fruit_chance": 0.12},
+    {"sapling": "minecraft:jungle_sapling", "fruit": "minecraft:cocoa_beans", "fruit_chance": 0.1},
+    {"sapling": "minecraft:cherry_sapling", "particle": "minecraft:cherry_leaves"},
+    {"sapling": "minecraft:azalea", "log": "minecraft:oak_log", "leaves": "minecraft:azalea_leaves", "flowering": "minecraft:flowering_azalea_leaves"},
+    {"sapling": "minecraft:flowering_azalea", "log": "minecraft:oak_log", "leaves": "minecraft:azalea_leaves", "flowering": "minecraft:flowering_azalea_leaves"},
+    {"sapling": "minecraft:mangrove_propagule", "log": "minecraft:mangrove_log", "leaves": "minecraft:mangrove_leaves"}
+  ]
+}

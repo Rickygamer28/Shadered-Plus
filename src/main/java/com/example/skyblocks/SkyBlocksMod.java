@@ -48,6 +48,7 @@ public class SkyBlocksMod {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(ArcadeVersus::loggedOut);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(ArcadeVersus::stopped);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(MapHeights::tick);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(BonsaiTrees::register);
     }
 
     /** The guide book, once, the first time a player joins a world with Shadered+. */

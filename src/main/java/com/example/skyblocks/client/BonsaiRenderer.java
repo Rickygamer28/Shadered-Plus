@@ -1,7 +1,7 @@
 package com.example.skyblocks.client;
 
 import com.example.skyblocks.BonsaiBlock;
-import com.example.skyblocks.SimpleRenderedBlockEntity;
+import com.example.skyblocks.BonsaiBlockEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -22,7 +22,7 @@ import org.joml.Vector3f;
  * The bonsai's little tree, from its own kind's bark and leaves: trunk and branches as tapering boxes, the foliage as
  * blocky clouds - grown to its age, shaped to its style (BonsaiBlock).
  */
-public class BonsaiRenderer implements BlockEntityRenderer<SimpleRenderedBlockEntity> {
+public class BonsaiRenderer implements BlockEntityRenderer<BonsaiBlockEntity> {
     /** A trunk or branch: from, to (pixels, from the soil's middle; +z the pot's front), thickness at each end. */
     private record Seg(float x0, float y0, float z0, float x1, float y1, float z1, float w0, float w1) {}
 
@@ -70,7 +70,7 @@ public class BonsaiRenderer implements BlockEntityRenderer<SimpleRenderedBlockEn
     public BonsaiRenderer(BlockEntityRendererProvider.Context context) {}
 
     @Override
-    public void render(SimpleRenderedBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
+    public void render(BonsaiBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
         BlockState state = be.getBlockState();
         if (!(state.getBlock() instanceof BonsaiBlock) || state.getValue(BonsaiBlock.KIND) == BonsaiBlock.Kind.NONE) {
             return;
@@ -80,17 +80,17 @@ public class BonsaiRenderer implements BlockEntityRenderer<SimpleRenderedBlockEn
         Tree tree = TREES[state.getValue(BonsaiBlock.STYLE).ordinal()];
         float g = GROW[age];
         Minecraft mc = Minecraft.getInstance();
-        BlockState log = BonsaiBlock.log(kind);
-        BlockState leaves = BonsaiBlock.leaves(kind, false);
+        // (the planted sapling's own tree - any mod's - as the server worked it out; by its kind until that's here)
+        BlockState log = be.log != null ? be.log : kind == BonsaiBlock.Kind.AZALEA ? net.minecraft.world.level.block.Blocks.OAK_LOG.defaultBlockState()
+                : BonsaiBlock.log(kind);
+        BlockState leaves = be.leaves != null ? be.leaves : BonsaiBlock.leaves(kind, false);
+        BlockState flowering = be.leaves != null ? be.flowering : kind == BonsaiBlock.Kind.AZALEA ? BonsaiBlock.leaves(kind, true) : null;
         TextureAtlasSprite bark = sprite(log, Direction.NORTH), barkEnd = sprite(log, Direction.UP);
         TextureAtlasSprite leaf = sprite(leaves, Direction.UP);
-        TextureAtlasSprite flower = kind == BonsaiBlock.Kind.AZALEA && age == 4 ? sprite(BonsaiBlock.leaves(kind, true), Direction.UP) : leaf;
+        TextureAtlasSprite flower = flowering != null && age == 4 ? sprite(flowering, Direction.UP) : leaf;
         int tint = mc.getBlockColors().getColor(leaves, be.getLevel(), be.getBlockPos(), 0);
         if (tint == -1) {
             tint = 0xFFFFFF;
-        }
-        if (kind == BonsaiBlock.Kind.AZALEA) {
-            log = net.minecraft.world.level.block.Blocks.OAK_LOG.defaultBlockState();
         }
 
         poseStack.pushPose();
@@ -110,6 +110,19 @@ public class BonsaiRenderer implements BlockEntityRenderer<SimpleRenderedBlockEn
             Pad pad = tree.pads[i];
             cloud(vc, core, pose, i % 2 == 1 ? flower : leaf, pad.x * g, pad.y * g, pad.z * g, pad.sx * pg, pad.sy * pg, pad.sz * pg, tint,
                     light, overlay, age == 4 ? 1.08F : 1.0F);
+        }
+        // a fruit tree, grown: a few of its fruit hanging under the leaves
+        if (age == 4 && !be.fruit.isEmpty()) {
+            for (int i = 0; i < Math.min(3, tree.pads.length); i++) {
+                Pad pad = tree.pads[i];
+                poseStack.pushPose();
+                poseStack.translate(pad.x + (i == 1 ? -0.6F : 0.7F), pad.y - pad.sy * 0.5F - 1.1F, pad.z + 0.5F);
+                poseStack.mulPose(Axis.YP.rotationDegrees(40 + i * 70));
+                poseStack.scale(3.2F, 3.2F, 3.2F);
+                mc.getItemRenderer().renderStatic(be.fruit, net.minecraft.world.item.ItemDisplayContext.FIXED, light, overlay, poseStack, buffers,
+                        be.getLevel(), (int) be.getBlockPos().asLong() + i);
+                poseStack.popPose();
+            }
         }
         poseStack.popPose();
     }
@@ -228,7 +241,7 @@ public class BonsaiRenderer implements BlockEntityRenderer<SimpleRenderedBlockEn
     }
 
     @Override
-    public net.minecraft.world.phys.AABB getRenderBoundingBox(SimpleRenderedBlockEntity be) {
+    public net.minecraft.world.phys.AABB getRenderBoundingBox(BonsaiBlockEntity be) {
         return new net.minecraft.world.phys.AABB(be.getBlockPos()).inflate(0.25);
     }
 }

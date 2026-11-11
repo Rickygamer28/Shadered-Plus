@@ -46,7 +46,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A bonsai pot. Plant a sapling in it; the little tree grows slowly (a stage about every in-game day; bone meal hurries
+ * A bonsai pot. Plant a sapling in it (any mod's: BonsaiTrees works out its tree); the little tree grows slowly (a stage about every in-game day; bone meal hurries
  * it) and, once it's big enough, shears shape it: upright, round, windswept, cascading over the pot's edge, or cloud
  * pruned. The tree is drawn by client/BonsaiRenderer from the sapling's own wood and leaves.
  */
@@ -56,7 +56,9 @@ public class BonsaiBlock extends BaseEntityBlock implements BonemealableBlock {
     public enum Kind implements StringRepresentable {
         NONE("none", null), OAK("oak", Items.OAK_SAPLING), SPRUCE("spruce", Items.SPRUCE_SAPLING), BIRCH("birch", Items.BIRCH_SAPLING),
         JUNGLE("jungle", Items.JUNGLE_SAPLING), ACACIA("acacia", Items.ACACIA_SAPLING), DARK_OAK("dark_oak", Items.DARK_OAK_SAPLING),
-        MANGROVE("mangrove", Items.MANGROVE_PROPAGULE), CHERRY("cherry", Items.CHERRY_SAPLING), AZALEA("azalea", Items.AZALEA);
+        MANGROVE("mangrove", Items.MANGROVE_PROPAGULE), CHERRY("cherry", Items.CHERRY_SAPLING), AZALEA("azalea", Items.AZALEA),
+        /** Any other sapling (another mod's): which, and its tree, kept by the BonsaiBlockEntity. */
+        OTHER("other", null);
 
         private final String name;
         @Nullable
@@ -144,23 +146,40 @@ public class BonsaiBlock extends BaseEntityBlock implements BonemealableBlock {
 
     @Override
     protected boolean isRandomlyTicking(BlockState state) {
-        return state.getValue(KIND) != Kind.NONE && state.getValue(AGE) < 4;
+        return state.getValue(KIND) != Kind.NONE;
     }
 
+    /** Growing; grown, a fruit tree drops a fruit on the soil now and then (not while a couple are lying there already). */
     @Override
     protected void randomTick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
-        if (random.nextInt(GROW_CHANCE) == 0) {
-            level.setBlock(pos, state.setValue(AGE, state.getValue(AGE) + 1), Block.UPDATE_ALL);
+        if (state.getValue(AGE) < 4) {
+            if (random.nextInt(GROW_CHANCE) == 0) {
+                level.setBlock(pos, state.setValue(AGE, state.getValue(AGE) + 1), Block.UPDATE_ALL);
+            }
+            return;
+        }
+        if (level.getBlockEntity(pos) instanceof BonsaiBlockEntity be && !be.fruit.isEmpty() && random.nextFloat() < be.fruitChance) {
+            net.minecraft.world.phys.AABB round = new net.minecraft.world.phys.AABB(pos).inflate(1.0);
+            if (level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, round, i -> i.getItem().is(be.fruit.getItem())).size() < 2) {
+                net.minecraft.world.entity.item.ItemEntity drop = new net.minecraft.world.entity.item.ItemEntity(level, pos.getX() + 0.3 + random.nextDouble() * 0.4,
+                        pos.getY() + 0.75, pos.getZ() + 0.3 + random.nextDouble() * 0.4, be.fruit.copy());
+                drop.setDeltaMovement(0, 0.02, 0);
+                level.addFreshEntity(drop);
+                level.playSound(null, pos, SoundEvents.CAVE_VINES_PICK_BERRIES, SoundSource.BLOCKS, 0.5F, 1.2F);
+            }
         }
     }
 
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand,
                                               BlockHitResult hit) {
-        Kind kind = Kind.of(stack);
-        if (kind != null && state.getValue(KIND) == Kind.NONE) {
+        if (state.getValue(KIND) == Kind.NONE && BonsaiTrees.plantable(stack)) {
             if (!level.isClientSide) {
-                level.setBlock(pos, state.setValue(KIND, kind).setValue(AGE, 0).setValue(STYLE, Style.UPRIGHT), Block.UPDATE_ALL);
+                Kind kind = Kind.of(stack);
+                level.setBlock(pos, state.setValue(KIND, kind == null ? Kind.OTHER : kind).setValue(AGE, 0).setValue(STYLE, Style.UPRIGHT), Block.UPDATE_ALL);
+                if (level.getBlockEntity(pos) instanceof BonsaiBlockEntity be) {
+                    be.plant(stack);
+                }
                 level.playSound(null, pos, SoundEvents.GRASS_PLACE, SoundSource.BLOCKS, 1.0F, 1.1F);
                 stack.consume(1, player);
             }
@@ -178,7 +197,7 @@ public class BonsaiBlock extends BaseEntityBlock implements BonemealableBlock {
                 level.setBlock(pos, state.setValue(STYLE, style), Block.UPDATE_ALL);
                 level.playSound(null, pos, SoundEvents.SHEEP_SHEAR, SoundSource.BLOCKS, 0.8F, 1.3F);
                 if (level instanceof ServerLevel server) {
-                    server.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, leaves(state.getValue(KIND), false)),
+                    server.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, leavesAt(level, pos, state)),
                             pos.getX() + 0.5, pos.getY() + 0.6, pos.getZ() + 0.5, 12, 0.2, 0.2, 0.2, 0.05);
                 }
                 player.displayClientMessage(Component.translatable("message.skyblocks.bonsai.style",
@@ -188,6 +207,11 @@ public class BonsaiBlock extends BaseEntityBlock implements BonemealableBlock {
             return ItemInteractionResult.sidedSuccess(level.isClientSide);
         }
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
+    /** The leaves of the tree in this pot (its own, any mod's; by its kind while that's not known yet). */
+    static BlockState leavesAt(Level level, BlockPos pos, BlockState state) {
+        return level.getBlockEntity(pos) instanceof BonsaiBlockEntity be && be.leaves != null ? be.leaves : leaves(state.getValue(KIND), false);
     }
 
     /** The leaves a kind of tree has (for falling leaves and the bits shears snip off). */
@@ -219,12 +243,24 @@ public class BonsaiBlock extends BaseEntityBlock implements BonemealableBlock {
         };
     }
 
-    /** A grown cherry drops a petal now and then. */
+    /**
+     * A grown tree drops a leaf now and then: its own particle if it has one (a cherry's petals), else a bit of its own
+     * leaves drifting down.
+     */
     @Override
     public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
-        if (state.getValue(KIND) == Kind.CHERRY && state.getValue(AGE) >= 3 && random.nextInt(12) == 0) {
-            level.addParticle(ParticleTypes.CHERRY_LEAVES, pos.getX() + 0.25 + random.nextDouble() * 0.5, pos.getY() + 0.7,
-                    pos.getZ() + 0.25 + random.nextDouble() * 0.5, 0, 0, 0);
+        if (state.getValue(KIND) == Kind.NONE || state.getValue(AGE) < 3) {
+            return;
+        }
+        double x = pos.getX() + 0.25 + random.nextDouble() * 0.5, y = pos.getY() + 0.75, z = pos.getZ() + 0.25 + random.nextDouble() * 0.5;
+        net.minecraft.resources.ResourceLocation own = level.getBlockEntity(pos) instanceof BonsaiBlockEntity be ? be.particle : null;
+        if (own != null) {
+            if (random.nextInt(12) == 0 && net.minecraft.core.registries.BuiltInRegistries.PARTICLE_TYPE.get(own)
+                    instanceof net.minecraft.core.particles.SimpleParticleType type) {
+                level.addParticle(type, x, y, z, 0, 0, 0);
+            }
+        } else if (random.nextInt(45) == 0) {
+            level.addParticle(new BlockParticleOption(ParticleTypes.FALLING_DUST, leavesAt(level, pos, state)), x, y, z, 0, 0, 0);
         }
     }
 
@@ -250,7 +286,10 @@ public class BonsaiBlock extends BaseEntityBlock implements BonemealableBlock {
     protected List<ItemStack> getDrops(BlockState state, LootParams.Builder params) {
         List<ItemStack> drops = new ArrayList<>(super.getDrops(state, params));
         Kind kind = state.getValue(KIND);
-        if (kind.sapling != null) {
+        if (params.getOptionalParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.BLOCK_ENTITY) instanceof BonsaiBlockEntity be
+                && !be.sapling().isEmpty()) {
+            drops.add(be.sapling().copy());
+        } else if (kind.sapling != null) {
             drops.add(new ItemStack(kind.sapling));
         }
         return drops;
@@ -259,7 +298,7 @@ public class BonsaiBlock extends BaseEntityBlock implements BonemealableBlock {
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new SimpleRenderedBlockEntity(ModBlockEntities.BONSAI.get(), pos, state);
+        return new BonsaiBlockEntity(pos, state);
     }
 
     @Override

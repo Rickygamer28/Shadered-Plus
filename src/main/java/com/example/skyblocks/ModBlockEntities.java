@@ -120,8 +120,8 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(KaleidoscopeBlockEntity::new, ModBlocks.KALEIDOSCOPE.get()).build(null));
     public static final Supplier<BlockEntityType<SolarSystemBlockEntity>> SOLAR_SYSTEM = TYPES.register("solar_system",
             () -> BlockEntityType.Builder.of(SolarSystemBlockEntity::new, ModBlocks.ORRERY.get(), ModBlocks.PLANETARIUM.get()).build(null));
-    public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> BONSAI = TYPES.register("bonsai",
-            () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.BONSAI.get(), p, st), ModBlocks.BONSAI.get()).build(null));
+    public static final Supplier<BlockEntityType<BonsaiBlockEntity>> BONSAI = TYPES.register("bonsai",
+            () -> BlockEntityType.Builder.of(BonsaiBlockEntity::new, ModBlocks.BONSAI.get()).build(null));
     public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> HOT_SPRING = TYPES.register("hot_spring",
             () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.HOT_SPRING.get(), p, st), ModBlocks.HOT_SPRING.get()).build(null));
     public static final Supplier<BlockEntityType<PhotoFrameBlockEntity>> PHOTO_FRAME = TYPES.register("photo_frame",
