@@ -127,23 +127,23 @@ public class Showdown extends ArcadeGame {
      */
     private record Stage(String name, int skyTop, int skyMid, int skyLow, int haze, int tileA, int tileB, int ringA, int ringB,
                          int middle, int farHills, int nearHills, int feature, int wall, boolean walls, boolean wallBreak,
-                         boolean floorBreak, int lowA, int lowB, int outside) {}
+                         boolean floorBreak, int lowA, int lowB, int outside, int light, int rim, boolean glossy) {}
 
     private static final Stage[] STAGES = {
             new Stage("SUNSET TEMPLE", 0x1A1640, 0x8A3A6A, 0xFF9A5A, 0xC87A6A, 0x8A7A72, 0x6E5F5A, 0xB89A6A, 0xA0845A, 0xC83C3C,
-                    0xFF4A2A5A, 0xFF2A1838, 0, 0x3AE8FF, true, true, false, 0, 0, 0x3A5A2A),
+                    0xFF4A2A5A, 0xFF2A1838, 0, 0x3AE8FF, true, true, false, 0, 0, 0x3A5A2A, 0xFFE4CC, 0xFF9A50, false),
             new Stage("NEON ROOFTOP", 0x05051A, 0x2A0A4A, 0x6A1A8A, 0x3A2A6A, 0x3A3A4A, 0x2A2A38, 0x40E0FF, 0x30B0D0, 0xFF3AA0,
-                    0xFF1A1030, 0xFF0E0820, 1, 0xFF4AD0, true, false, true, 0x5A4A3A, 0x4A3A2E, 0x0A0A16),
+                    0xFF1A1030, 0xFF0E0820, 1, 0xFF4AD0, true, false, true, 0x5A4A3A, 0x4A3A2E, 0x0A0A16, 0xC8B8FF, 0xFF4AD0, true),
             new Stage("FROZEN CAVERN", 0x0A1A2A, 0x2A5A7A, 0x8AD0E8, 0x9AC8D8, 0xB8DCE8, 0x9CC4D4, 0xE0F4FF, 0xC8E8F4, 0x3A8AC8,
-                    0xFF5A8AA0, 0xFF3A6A80, 2, 0xFFFFFF, false, false, false, 0, 0, 0xC8E4F0),
+                    0xFF5A8AA0, 0xFF3A6A80, 2, 0xFFFFFF, false, false, false, 0, 0, 0xC8E4F0, 0xD8ECFF, 0x8AE0FF, true),
             new Stage("VOLCANO FORGE", 0x1A0505, 0x6A1A0A, 0xFF6A1A, 0xA0401A, 0x4A3A34, 0x3A2C28, 0xFF8A2A, 0xD06A1A, 0xFFD040,
-                    0xFF3A1208, 0xFF200A04, 3, 0xFF8A3A, true, true, true, 0x6A2A10, 0x5A200C, 0xFF4A10),
+                    0xFF3A1208, 0xFF200A04, 3, 0xFF8A3A, true, true, true, 0x6A2A10, 0x5A200C, 0xFF4A10, 0xFFC8A0, 0xFF6A20, false),
             new Stage("THE VOID", 0x000000, 0x1A0A2A, 0x4A1A6A, 0x2A1A3A, 0x1A1A24, 0x101018, 0x8A3AFF, 0x6A2ACC, 0xFF3AFF,
-                    0xFF120A1E, 0xFF0A0612, 4, 0xB04AFF, true, false, false, 0, 0, 0x05020A),
+                    0xFF120A1E, 0xFF0A0612, 4, 0xB04AFF, true, false, false, 0, 0, 0x05020A, 0xC8B0FF, 0xC040FF, true),
             new Stage("HARBOR NIGHT", 0x020614, 0x0A1A3A, 0x1A3A6A, 0x1A2A4A, 0x6A4A30, 0x5A3C26, 0x8A6A40, 0x7A5A34, 0xC8A040,
-                    0xFF0A1428, 0xFF060C1A, 5, 0xFFC860, true, true, true, 0x3A2A20, 0x2E2018, 0x1A3A6A),
+                    0xFF0A1428, 0xFF060C1A, 5, 0xFFC860, true, true, true, 0x3A2A20, 0x2E2018, 0x1A3A6A, 0xA8B8E0, 0xC8D8FF, false),
             new Stage("SAKURA COURT", 0x5AA8E8, 0xB8D8F0, 0xFFD8E8, 0xF0D0E0, 0xD8C8B8, 0xC8B4A4, 0xE89AB8, 0xD88AA8, 0xC83C5A,
-                    0xFF7A98B8, 0xFF5A7A6A, 6, 0xFF9AC8, true, true, false, 0, 0, 0x5A8A4A)};
+                    0xFF7A98B8, 0xFF5A7A6A, 6, 0xFF9AC8, true, true, false, 0, 0, 0x5A8A4A, 0xFFF4F0, 0xFFC0D8, false)};
     /** The stage now; the one picked (4: random); the floor broken through; how far each wall's been broken back. */
     private int stage, stageChoice, pickPhase;
     /** The stages you can pick (the fifth, THE VOID, is the boss's); after them, random. */
@@ -349,7 +349,7 @@ public class Showdown extends ArcadeGame {
             new Style("NEKO", 7, 8, 15, 4, 1, 1.2F, 0.9F),
             new Style("ROBO", 13, 5, 12, 12, 2, 0.85F, 1.15F),
             new Style("BLAZE", 6, 8, 8, 7, 3, 1.05F, 1.05F),
-            new Style("NYX", 1, 13, 10, 13, 3, 1.1F, 1.25F)};
+            new Style("NYX", 1, 13, 10, 13, 4, 1.1F, 1.25F)};
     /** The four you can pick; the fifth, NYX, is the boss at the end of the arcade ladder. */
     private static final int PLAYABLE = 4, BOSS = 4;
 
@@ -1410,7 +1410,7 @@ public class Showdown extends ArcadeGame {
         float lift = lift(o, p);
         float[] box = {Float.MAX_VALUE, -Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE};
         for (Bone bone : skeleton(o, p, LOOKS[0], 0)) {
-            if (bone.t() < 1) continue; // (not the eyes)
+            if (bone.t() < 1 || bone.decor()) continue; // (not the eyes, not its clothes and hair)
             float r = bone.t() / 2;
             for (float[] q : new float[][] {bone.a(), bone.b()}) {
                 float[] w = world(o, p, q, lift);
@@ -1471,7 +1471,7 @@ public class Showdown extends ArcadeGame {
             float lift = lift(ref, p);
             List<float[]> shape = new ArrayList<>();
             for (Bone bone : skeleton(ref, p, LOOKS[0], 0)) {
-                if (bone.t() < 1) continue;
+                if (bone.t() < 1 || bone.decor()) continue;
                 float[] a = turn(p, bone.a()), c = turn(p, bone.b());
                 shape.add(new float[] {a[0], a[1] + lift, c[0], c[1] + lift, bone.t() / 2});
             }
@@ -1516,7 +1516,7 @@ public class Showdown extends ArcadeGame {
         float[] p = poseOf(o)[1];
         float lift = lift(o, p);
         for (Bone bone : skeleton(o, p, LOOKS[0], 0)) {
-            if (bone.t() < 1) continue; // (not the eyes)
+            if (bone.t() < 1 || bone.decor()) continue; // (not the eyes, not its clothes and hair)
             float[] u = world(o, p, bone.a(), lift), v = world(o, p, bone.b(), lift);
             // (depth: that part of them on the strike's line, near enough - then how close, along and up)
             if (Math.abs((u[2] + v[2]) / 2 - tip[2]) > 6 + bone.t() / 2) continue;
@@ -3138,7 +3138,24 @@ public class Showdown extends ArcadeGame {
     // ---- the skeleton ----
 
     /** A bone: from a to b (local: forward, up, side - towards the camera negative), how thick, its colour and palette. */
-    private record Bone(float[] a, float[] b, float t, float w, int rgb, int palette) {}
+    private record Bone(float[] a, float[] b, float t, float w, int rgb, int palette, boolean decor) {
+        Bone(float[] a, float[] b, float t, float w, int rgb, int palette) {
+            this(a, b, t, w, rgb, palette, false);
+        }
+    }
+
+    /** A detail (cloth, hair, a face): drawn, but not part of it to hit. */
+    private static Bone decor(float[] a, float[] b, float t, float w, int rgb, int palette) {
+        return new Bone(a, b, t, w, rgb, palette, true);
+    }
+
+    private static float[] off(float[] from, float[] d1, float k1, float[] d2, float k2, float side) {
+        return new float[] {from[0] + d1[0] * k1 + d2[0] * k2, from[1] + d1[1] * k1 + d2[1] * k2, side};
+    }
+
+    private static int darker(int rgb, float k) {
+        return mixRgb(rgb, 0x000000, k);
+    }
 
     private static float[] dir(float deg) {
         float r = deg * Mth.DEG_TO_RAD;
@@ -3149,7 +3166,10 @@ public class Showdown extends ArcadeGame {
         return new float[] {from[0] + d[0] * len, from[1] + d[1] * len, side};
     }
 
-    /** Its bones, posed (local space, before it's turned and placed). */
+    /**
+     * Its bones, posed (local space, before it's turned and placed): the legs first (thigh, shin, shoe - six), then the
+     * body, head, face, hair, clothes and what makes each fighter itself, and the arms last (upper, fore, fist - six).
+     */
     private List<Bone> skeleton(Body b, float[] p, int[] look, int kind) {
         List<Bone> out = new ArrayList<>();
         int top = look[0], legs = look[1], skin = look[2], gloves = look[3], shoes = look[4], hair = look[5], accent = look[6];
@@ -3157,91 +3177,204 @@ public class Showdown extends ArcadeGame {
         float lean = p[0];
         float[] pelvis = {p[2], 18 - p[1]};
         float[] up = dir(180 - lean); // (leaning forward: its chest ahead of its hips)
+        float[] fwdB = dir(90 - lean);
         float[] neck = {pelvis[0] + up[0] * 13, pelvis[1] + up[1] * 13, 0};
-        // legs (near: the camera's side, the lead leg)
+        // ---- the legs (near: the camera's side, the lead leg): thigh, shin, shoe ----
+        float[][] knees = new float[2][], ankles = new float[2][];
         for (int s = 0; s < 2; s++) {
-            float side = s == 0 ? -2.8F : 2.8F;
+            float side = s == 0 ? -2.9F : 2.9F;
             float hip = s == 0 ? p[3] : p[5], knee = s == 0 ? p[4] : p[6];
             float[] h = {pelvis[0], pelvis[1], side};
             float[] k = at(h, dir(hip), 9.5F, side);
             float[] an = at(k, dir(hip + knee), 9.0F, side);
-            float[] toe = at(an, dir(hip + knee + 90), 4.0F, side);
-            out.add(new Bone(h, k, 4.4F, 4.4F, legs, gi));
-            out.add(new Bone(k, an, 3.6F, 3.6F, legs, gi));
-            out.add(new Bone(new float[] {an[0] - (toe[0] - an[0]) * 0.2F, an[1] - (toe[1] - an[1]) * 0.2F, side}, toe, 2.4F, 3.2F, shoes, gi));
+            float[] toe = at(an, dir(hip + knee + 90), 4.4F, side);
+            knees[s] = k;
+            ankles[s] = an;
+            out.add(new Bone(h, k, 5.0F, 5.0F, legs, gi));
+            out.add(new Bone(k, an, 3.9F, 3.9F, legs, gi));
+            out.add(new Bone(new float[] {an[0] - (toe[0] - an[0]) * 0.25F, an[1] - (toe[1] - an[1]) * 0.25F, side}, toe, 2.6F, 3.4F, shoes, gi));
         }
-        // the body: hips, chest (a belt between), neck, head
-        out.add(new Bone(new float[] {pelvis[0] + up[0] * -1, pelvis[1] + up[1] * -1, 0}, new float[] {pelvis[0] + up[0] * 3, pelvis[1] + up[1] * 3, 0},
-                6.4F, 9.0F, legs, gi));
-        out.add(new Bone(new float[] {pelvis[0] + up[0] * 2.4F, pelvis[1] + up[1] * 2.4F, 0}, new float[] {pelvis[0] + up[0] * 4, pelvis[1] + up[1] * 4, 0},
-                7.0F, 10.2F, accent, band));
-        out.add(new Bone(new float[] {pelvis[0] + up[0] * 3.6F, pelvis[1] + up[1] * 3.6F, 0}, neck, 6.6F, 10.0F, top, gi));
+        for (int s = 0; s < 2; s++) { // (soles under the shoes; and, for loose trousers, the hems flaring)
+            float side = s == 0 ? -2.9F : 2.9F;
+            float hip = s == 0 ? p[3] : p[5], knee = s == 0 ? p[4] : p[6];
+            float[] fd = dir(hip + knee + 90), dn = dir(hip + knee);
+            float[] an = ankles[s];
+            float[] heel = {an[0] - fd[0] * 1.1F + dn[0] * 1.5F, an[1] - fd[1] * 1.1F + dn[1] * 1.5F, side};
+            out.add(decor(heel, new float[] {heel[0] + fd[0] * 5.6F, heel[1] + fd[1] * 5.6F, side}, 0.8F, 3.6F, darker(shoes, 0.55F), gi));
+            if (kind == 0 || kind == 3) {
+                float[] hem0 = {an[0] - dn[0] * 2.4F, an[1] - dn[1] * 2.4F, side};
+                out.add(decor(hem0, new float[] {an[0] - dn[0] * 0.2F, an[1] - dn[1] * 0.2F, side}, 4.8F, 4.8F, legs, gi));
+            }
+            if (kind == 2) { // (knee pads)
+                float[] kp = {knees[s][0] + fwdB[0] * 1.6F, knees[s][1] + fwdB[1] * 1.6F, side};
+                out.add(decor(new float[] {kp[0], kp[1] + 1.4F, side}, new float[] {kp[0], kp[1] - 1.4F, side}, 2.6F, 4.6F, accent, band));
+            }
+        }
+        // ---- the body: hips, a belt, waist, chest, shoulders across, neck ----
+        float[] hipLo = off(pelvis, up, -1.2F, fwdB, 0, 0), hipHi = off(pelvis, up, 3.0F, fwdB, 0, 0);
+        out.add(new Bone(hipLo, hipHi, 6.6F, 9.6F, legs, gi));
+        float[] belt0 = off(pelvis, up, 2.6F, fwdB, 0, 0), belt1 = off(pelvis, up, 4.0F, fwdB, 0, 0);
+        int beltCol = kind == 0 ? 0x1A1A1E : kind == 2 ? darker(top, 0.4F) : accent;
+        out.add(decor(belt0, belt1, 7.2F, 10.4F, beltCol, band));
+        int waistCol = kind == 1 ? skin : kind == 2 ? darker(top, 0.25F) : top; // (NEKO's crop top: bare waist)
+        out.add(new Bone(off(pelvis, up, 3.8F, fwdB, 0, 0), off(pelvis, up, 7.6F, fwdB, 0, 0), 5.8F, 8.8F, waistCol, kind == 1 ? sk : gi));
+        float[] chest0 = off(pelvis, up, 7.2F, fwdB, 0.3F, 0);
+        out.add(new Bone(chest0, off(neck, up, -1.0F, fwdB, 0.2F, 0), 7.0F, 11.0F, top, gi));
+        float[] sh0 = off(neck, up, -2.6F, fwdB, -0.4F, 0), sh1 = off(neck, up, -0.4F, fwdB, -0.4F, 0);
+        out.add(new Bone(sh0, sh1, 5.6F, 13.6F, top, gi)); // (across the shoulders)
+        out.add(new Bone(neck, off(neck, up, 1.6F, fwdB, 0, 0), 3.0F, 3.0F, kind == 2 ? darker(top, 0.3F) : skin, sk));
+        // ---- the head: skull, jaw, nose, eyes, brows, mouth, ears ----
         float[] hd = dir(180 - lean - p[11]);
-        float[] headBase = {neck[0] + hd[0] * 1.2F, neck[1] + hd[1] * 1.2F, 0};
-        float[] headTop = {neck[0] + hd[0] * 8.6F, neck[1] + hd[1] * 8.6F, 0};
-        out.add(new Bone(neck, headBase, 2.8F, 2.8F, skin, sk));
-        out.add(new Bone(headBase, headTop, 7.0F, 7.0F, skin, sk));
-        // the face: eyes towards its front
         float[] fwd = dir(90 - lean - p[11]);
-        for (float side : new float[] {-1.6F, 1.6F}) {
-            float[] e = {headBase[0] + hd[0] * 4.4F + fwd[0] * 3.55F, headBase[1] + hd[1] * 4.4F + fwd[1] * 3.55F, side};
-            out.add(new Bone(e, new float[] {e[0] + hd[0] * 1.2F, e[1] + hd[1] * 1.2F, side}, 0.3F, 0.9F, kind == 2 ? accent : 0x141018, 0));
+        float[] headBase = {neck[0] + hd[0] * 1.2F, neck[1] + hd[1] * 1.2F, 0};
+        float[] headTop = {neck[0] + hd[0] * 8.8F, neck[1] + hd[1] * 8.8F, 0};
+        int face = kind == 2 ? 0x8A98B0 : skin;
+        out.add(new Bone(off(headBase, hd, 2.4F, fwd, 0, 0), headTop, 7.0F, 7.0F, face, sk));
+        out.add(new Bone(off(headBase, hd, 0.4F, fwd, 0.6F, 0), off(headBase, hd, 2.8F, fwd, 0.5F, 0), 5.6F, 5.8F, face, sk)); // (jaw)
+        if (kind != 2) {
+            out.add(decor(off(headBase, hd, 3.2F, fwd, 3.7F, 0), off(headBase, hd, 4.2F, fwd, 3.9F, 0), 1.0F, 1.0F, face, sk)); // (nose)
+            out.add(decor(off(headBase, hd, 2.0F, fwd, 3.25F, 0), off(headBase, hd, 2.35F, fwd, 3.25F, 0), 0.3F, 2.2F, darker(skin, 0.45F), sk)); // (mouth)
         }
-        // hair and what makes each one itself
+        boolean glow = kind == 2 || kind == 4;
+        for (float side : new float[] {-1.6F, 1.6F}) {
+            float[] e0 = off(headBase, hd, 4.5F, fwd, 3.55F, side);
+            if (!glow) out.add(decor(e0, off(headBase, hd, 5.6F, fwd, 3.55F, side), 0.3F, 1.5F, 0xF4F0F0, 0)); // (eye whites)
+            out.add(decor(off(headBase, hd, 4.6F, fwd, 3.62F, side), off(headBase, hd, 5.5F, fwd, 3.62F, side), 0.3F, glow ? 1.6F : 0.8F,
+                    glow ? accent : 0x141018, 0)); // (pupils - or glowing eyes)
+            if (kind != 2) out.add(decor(off(headBase, hd, 6.1F, fwd, 3.45F, side), off(headBase, hd, 6.5F, fwd, 3.45F, side), 0.5F, 1.9F,
+                    darker(hair, 0.15F), hr)); // (brows)
+            if (kind == 0 || kind == 3) out.add(decor(off(headBase, hd, 3.6F, fwd, 0.2F, side * 2.25F), off(headBase, hd, 5.6F, fwd, 0.2F, side * 2.25F),
+                    1.6F, 0.8F, skin, sk)); // (ears)
+        }
+        // ---- hair, and what makes each one itself ----
         float[] crown = {headBase[0] + hd[0] * 6.2F - fwd[0] * 0.6F, headBase[1] + hd[1] * 6.2F - fwd[1] * 0.6F, 0};
         switch (kind) {
-            case 0 -> { // a headband, its tails flying
+            case 0 -> { // RIKU: short spiky hair, a headband (its tails flying), a gi with lapels and a black belt
                 out.add(new Bone(crown, new float[] {headTop[0] + hd[0] * 0.8F, headTop[1] + hd[1] * 0.8F, 0}, 7.4F, 7.4F, hair, hr));
+                for (int i = 0; i < 3; i++) {
+                    float[] s0 = off(headTop, hd, 0.4F, fwd, -1.5F + i * 1.6F, -1.8F + i * 1.8F);
+                    out.add(decor(s0, at(s0, dir(170 - lean - p[11] - i * 15), 2.4F, s0[2]), 1.6F, 1.8F, hair, hr));
+                }
                 float[] bandAt = {headBase[0] + hd[0] * 5.4F, headBase[1] + hd[1] * 5.4F, 0};
-                out.add(new Bone(bandAt, new float[] {bandAt[0] + hd[0] * 1.1F, bandAt[1] + hd[1] * 1.1F, 0}, 7.5F, 7.5F, accent, band));
+                out.add(decor(bandAt, new float[] {bandAt[0] + hd[0] * 1.1F, bandAt[1] + hd[1] * 1.1F, 0}, 7.5F, 7.5F, accent, band));
                 float flap = Mth.sin(vt() * 0.4F) * 15;
-                float[] tail = at(new float[] {bandAt[0] - fwd[0] * 3.6F, bandAt[1] - fwd[1] * 3.6F}, dir(-80 + flap), 6, 0);
-                out.add(new Bone(new float[] {bandAt[0] - fwd[0] * 3.6F, bandAt[1] - fwd[1] * 3.6F, 0}, tail, 1.0F, 1.6F, accent, band));
+                float[] t0 = {bandAt[0] - fwd[0] * 3.6F, bandAt[1] - fwd[1] * 3.6F, 0};
+                float[] t1 = at(t0, dir(-80 + flap), 3.4F, 0);
+                out.add(decor(t0, t1, 1.0F, 1.6F, accent, band));
+                out.add(decor(t1, at(t1, dir(-70 + flap * 1.6F), 3.2F, 0), 0.9F, 1.4F, accent, band));
+                for (float side : new float[] {-1, 1}) { // (lapels crossing down to the belt)
+                    float[] l0 = off(neck, up, -1.4F, fwdB, 3.4F, side * 3.4F);
+                    out.add(decor(l0, off(pelvis, up, 4.6F, fwdB, 3.7F, -side * 0.8F), 0.4F, 1.6F, darker(top, 0.12F), gi));
+                }
+                float[] knot = off(pelvis, up, 3.3F, fwdB, 3.8F, -1.2F);
+                out.add(decor(knot, off(knot, up, 0.9F, fwdB, 0.2F, -1.2F), 1.4F, 1.8F, beltCol, band));
+                float swing = Mth.sin(vt() * 0.25F) * 6;
+                for (float side : new float[] {-2.0F, -0.4F}) {
+                    float[] k0 = off(pelvis, up, 3.0F, fwdB, 3.9F, side);
+                    out.add(decor(k0, at(k0, dir(180 - lean + 180 + swing), 4.6F, side), 0.4F, 1.1F, beltCol, band));
+                }
             }
-            case 1 -> { // cat ears and a tail
-                out.add(new Bone(crown, new float[] {headTop[0] + hd[0] * 0.6F, headTop[1] + hd[1] * 0.6F, 0}, 7.4F, 7.4F, hair, hr));
+            case 1 -> { // NEKO: hair with a fringe and side locks, cat ears (pink inside), a bell on a collar, a tail
+                out.add(new Bone(crown, new float[] {headTop[0] + hd[0] * 0.6F, headTop[1] + hd[1] * 0.6F, 0}, 7.6F, 7.6F, hair, hr));
+                out.add(decor(off(headBase, hd, 6.6F, fwd, 3.2F, 0), off(headBase, hd, 7.8F, fwd, 3.0F, 0), 1.2F, 7.0F, hair, hr)); // (fringe)
+                for (float side : new float[] {-3.6F, 3.6F}) {
+                    out.add(decor(off(headBase, hd, 6.4F, fwd, 1.0F, side), off(headBase, hd, 1.2F, fwd, 1.2F, side), 1.4F, 1.0F, hair, hr));
+                }
                 for (float side : new float[] {-2.4F, 2.4F}) {
                     float[] e0 = {headTop[0], headTop[1], side};
                     out.add(new Bone(e0, new float[] {e0[0] + hd[0] * 3.2F, e0[1] + hd[1] * 3.2F, side}, 2.4F, 1.6F, hair, hr));
+                    out.add(decor(off(e0, hd, 0.4F, fwd, 0.9F, side), off(e0, hd, 2.6F, fwd, 0.9F, side), 0.5F, 1.0F, 0xFF9AC8, hr));
                 }
+                out.add(decor(off(neck, up, 0.2F, fwdB, 0, 0), off(neck, up, 0.9F, fwdB, 0, 0), 3.6F, 3.6F, accent, band)); // (collar)
+                out.add(decor(off(neck, up, -0.6F, fwdB, 2.1F, 0), off(neck, up, 0.4F, fwdB, 2.1F, 0), 1.3F, 1.3F, 0xFFD040, band)); // (bell)
                 float sway = Mth.sin(vt() * 0.2F) * 20;
-                float[] t0 = {pelvis[0] - up[1] * 0 - 3.5F, pelvis[1] + 2, 0};
+                float[] t0 = {pelvis[0] - 3.5F, pelvis[1] + 2, 0};
                 float[] t1 = at(t0, dir(-120 + sway), 6, 0);
                 float[] t2 = at(t1, dir(-170 + sway * 1.5F), 6, 0);
-                out.add(new Bone(t0, t1, 1.8F, 1.8F, hair, hr));
-                out.add(new Bone(t1, t2, 1.6F, 1.6F, hair, hr));
+                out.add(decor(t0, t1, 1.8F, 1.8F, hair, hr));
+                out.add(decor(t1, t2, 1.6F, 1.6F, hair, hr));
+                out.add(decor(t2, at(t2, dir(-200 + sway * 2), 1.8F, 0), 2.0F, 2.0F, 0xFFFFFF, hr));
             }
-            case 2 -> { // a visor, an antenna with a light on top
-                float[] vis = {headBase[0] + hd[0] * 4.2F + fwd[0] * 3.4F, headBase[1] + hd[1] * 4.2F + fwd[1] * 3.4F, 0};
-                out.add(new Bone(vis, new float[] {vis[0] + hd[0] * 1.4F, vis[1] + hd[1] * 1.4F, 0}, 0.6F, 6.4F, accent, band));
+            case 2 -> { // ROBO: a helmet ridge, a visor, ear discs, an antenna; a chest plate with a glowing core, pauldrons
+                out.add(decor(off(headBase, hd, 4.2F, fwd, 3.4F, 0), off(headBase, hd, 5.6F, fwd, 3.4F, 0), 0.6F, 6.4F, accent, band)); // (visor)
+                out.add(decor(off(headTop, hd, -0.4F, fwd, -2.6F, 0), off(headTop, hd, 0.7F, fwd, 2.6F, 0), 1.2F, 1.4F, darker(top, 0.2F), gi)); // (ridge)
+                for (float side : new float[] {-3.8F, 3.8F}) {
+                    out.add(decor(off(headBase, hd, 3.6F, fwd, 0.4F, side), off(headBase, hd, 5.6F, fwd, 0.4F, side), 2.4F, 0.8F, legs, gi));
+                }
                 float[] a0 = {headTop[0], headTop[1], 0};
                 float[] a1 = {a0[0] + hd[0] * 4.5F, a0[1] + hd[1] * 4.5F, 0};
-                out.add(new Bone(a0, a1, 0.7F, 0.7F, legs, gi));
-                out.add(new Bone(a1, new float[] {a1[0] + hd[0] * 1.4F, a1[1] + hd[1] * 1.4F, 0}, 1.6F, 1.6F,
+                out.add(decor(a0, a1, 0.7F, 0.7F, legs, gi));
+                out.add(decor(a1, new float[] {a1[0] + hd[0] * 1.4F, a1[1] + hd[1] * 1.4F, 0}, 1.6F, 1.6F,
                         ((int) vt() / 8) % 2 == 0 ? 0xFF4040 : accent, hr));
+                out.add(decor(off(chest0, up, 1.2F, fwdB, 3.4F, 0), off(neck, up, -2.2F, fwdB, 3.6F, 0), 0.8F, 8.4F, darker(top, 0.18F), gi)); // (plate)
+                float pulse = 0.6F + 0.4F * Mth.sin(vt() * 0.3F);
+                out.add(decor(off(chest0, up, 2.4F, fwdB, 3.9F, 0), off(chest0, up, 4.0F, fwdB, 3.9F, 0), 0.4F, 2.2F, mixRgb(accent, 0xFFFFFF, pulse * 0.4F), band));
+                for (float side : new float[] {-5.6F, 5.6F}) {
+                    out.add(decor(off(neck, up, -3.2F, fwdB, 0, side), off(neck, up, 0.2F, fwdB, 0, side), 5.6F, 3.6F, darker(top, 0.1F), gi));
+                }
             }
-            default -> { // flames for hair
+            case 3 -> { // BLAZE: flames for hair, sideburns; an open jacket, its collar up; a gold buckle
                 out.add(new Bone(crown, new float[] {headTop[0] + hd[0] * 0.6F, headTop[1] + hd[1] * 0.6F, 0}, 7.4F, 7.4F, hair, hr));
-                for (int i = 0; i < 4; i++) {
+                for (int i = 0; i < 5; i++) {
                     float flick = Mth.sin(vt() * 0.6F + i * 1.7F) * 1.2F;
-                    float side = -2.4F + i * 1.6F;
+                    float side = -3.0F + i * 1.5F;
                     float[] f0 = {headTop[0] - fwd[0] * (i % 2) * 1.5F, headTop[1] - fwd[1] * (i % 2) * 1.5F, side};
-                    float[] f1 = at(f0, dir(195 + i * 4 - lean), 3.5F + flick + (i % 2), side);
-                    out.add(new Bone(f0, f1, 1.8F, 1.4F, i % 2 == 0 ? hair : accent, hr));
+                    float[] f1 = at(f0, dir(195 + i * 4 - lean), 3.8F + flick + (i % 2), side);
+                    out.add(decor(f0, f1, 1.8F, 1.4F, i % 2 == 0 ? hair : accent, hr));
+                    out.add(decor(f1, at(f1, dir(200 + i * 6 - lean), 1.6F + flick * 0.5F, side), 1.0F, 0.9F, accent, hr));
+                }
+                for (float side : new float[] {-3.4F, 3.4F}) {
+                    out.add(decor(off(headBase, hd, 2.8F, fwd, 1.2F, side), off(headBase, hd, 5.4F, fwd, 1.0F, side), 1.0F, 0.8F, darker(hair, 0.3F), hr));
+                }
+                out.add(decor(off(pelvis, up, 8.0F, fwdB, 3.55F, 0), off(neck, up, -1.6F, fwdB, 3.55F, 0), 0.3F, 3.0F, skin, sk)); // (open front)
+                for (float side : new float[] {-1, 1}) { // (the collar, turned up)
+                    out.add(decor(off(neck, up, -0.6F, fwdB, 1.2F, side * 4.2F), off(neck, up, 2.0F, fwdB, 0.4F, side * 4.6F), 2.2F, 0.8F, darker(top, 0.15F), gi));
+                }
+                out.add(decor(off(pelvis, up, 2.9F, fwdB, 3.9F, 0), off(pelvis, up, 3.9F, fwdB, 3.9F, 0), 0.6F, 2.0F, 0xFFD040, band)); // (buckle)
+            }
+            default -> { // NYX: a hood, its eyes glowing in it; a cape, swaying; spikes on the shoulders
+                out.add(new Bone(off(headBase, hd, 2.0F, fwd, -0.8F, 0), off(headTop, hd, 1.4F, fwd, -0.6F, 0), 8.8F, 8.6F, legs, gi)); // (hood)
+                out.add(decor(off(headTop, hd, 1.2F, fwd, -1.4F, 0), off(headTop, hd, 3.2F, fwd, -3.4F, 0), 3.0F, 3.0F, legs, gi)); // (its point)
+                float sway = Mth.sin(vt() * 0.12F) * 8;
+                for (float side : new float[] {-3.6F, 0, 3.6F}) {
+                    float[] c0 = off(neck, up, -1.0F, fwdB, -3.6F, side);
+                    float[] c1 = at(c0, dir(-8 + lean * 0.4F + sway + side * 2), 11, side); // (hanging down its back)
+                    float[] c2 = at(c1, dir(-14 + sway * 1.6F + side * 3), 10, side);
+                    out.add(decor(c0, c1, 0.8F, 4.0F, darker(legs, 0.1F), gi));
+                    out.add(decor(c1, c2, 0.8F, 4.2F, darker(legs, 0.2F), gi));
+                }
+                for (float side : new float[] {-6.0F, 6.0F}) {
+                    float[] s0 = off(neck, up, -0.6F, fwdB, 0, side);
+                    out.add(decor(s0, at(s0, dir(180 - lean + (side < 0 ? -25 : 25)), 3.0F, side), 1.4F, 1.4F, accent, band));
                 }
             }
         }
-        // arms (near first: the lead hand)
+        // ---- the arms (near first: the lead hand): upper, fore, fist - with wraps, cuffs, pads and the like ----
+        float[][] sp = new float[2][], el = new float[2][], hand = new float[2][];
+        float[][] fd = new float[2][];
         for (int s = 0; s < 2; s++) {
-            float side = s == 0 ? -5.6F : 5.6F;
-            float sh = s == 0 ? p[7] : p[9], el = s == 0 ? p[8] : p[10];
-            float[] sp = {neck[0] - up[0] * 1.6F, neck[1] - up[1] * 1.6F, side};
-            float[] e = at(sp, dir(sh), 7.0F, side);
-            float[] h = at(e, dir(sh + el), 6.5F, side);
-            out.add(new Bone(sp, e, 3.4F, 3.4F, kind == 3 ? top : kind == 2 ? top : top, gi));
-            out.add(new Bone(e, h, 3.0F, 3.0F, kind == 0 ? skin : top, kind == 0 ? sk : gi));
-            float[] d = dir(sh + el);
-            out.add(new Bone(h, new float[] {h[0] + d[0] * 3.4F, h[1] + d[1] * 3.4F, side}, 3.8F, 3.8F, gloves, band));
+            float side = s == 0 ? -5.5F : 5.5F;
+            float sh = s == 0 ? p[7] : p[9], elb = s == 0 ? p[8] : p[10];
+            sp[s] = new float[] {neck[0] - up[0] * 1.6F, neck[1] - up[1] * 1.6F, side};
+            el[s] = at(sp[s], dir(sh), 7.0F, side);
+            hand[s] = at(el[s], dir(sh + elb), 6.5F, side);
+            fd[s] = dir(sh + elb);
+            out.add(decor(off(sp[s], up, 0.4F, fwdB, 0, side), off(sp[s], up, -2.8F, fwdB, 0, side), 4.4F, 4.0F, kind == 1 ? skin : top, kind == 1 ? sk : gi)); // (deltoid)
+            if (kind == 0) { // (hand wraps)
+                out.add(decor(at(hand[s], dir(sh + elb + 180), 1.8F, side), at(hand[s], dir(sh + elb + 180), 0.2F, side), 3.4F, 3.4F, 0xF0EEE6, band));
+            } else if (kind == 3) { // (cuffs: the jacket's sleeve ends)
+                out.add(decor(at(hand[s], dir(sh + elb + 180), 2.4F, side), at(hand[s], dir(sh + elb + 180), 0.8F, side), 3.6F, 3.6F, darker(top, 0.15F), gi));
+            } else if (kind == 2) { // (glowing elbow joints)
+                out.add(decor(at(el[s], dir(sh + elb), -0.8F, side), at(el[s], dir(sh + elb), 0.8F, side), 3.4F, 3.4F, accent, band));
+            }
+        }
+        for (int s = 0; s < 2; s++) {
+            float side = s == 0 ? -5.5F : 5.5F;
+            out.add(new Bone(sp[s], el[s], 3.7F, 3.7F, kind == 1 ? skin : top, kind == 1 ? sk : gi));
+            out.add(new Bone(el[s], hand[s], 3.2F, 3.2F, kind == 0 || kind == 1 ? skin : top, kind == 0 || kind == 1 ? sk : gi));
+            float k = kind == 1 ? 4.4F : 3.6F; // (NEKO's paw gloves: bigger)
+            out.add(new Bone(hand[s], new float[] {hand[s][0] + fd[s][0] * k, hand[s][1] + fd[s][1] * k, side}, kind == 1 ? 4.6F : 4.0F, kind == 1 ? 4.6F : 4.2F,
+                    gloves, band));
         }
         return out;
     }
@@ -3352,10 +3485,19 @@ public class Showdown extends ArcadeGame {
     }
 
     private static int shade(int rgb, float k, float rim) {
-        int r = (int) Mth.clamp(((rgb >> 16) & 255) * k + 255 * rim * 0.9F, 0, 255);
-        int g = (int) Mth.clamp(((rgb >> 8) & 255) * k + 170 * rim * 0.9F, 0, 255);
-        int b = (int) Mth.clamp((rgb & 255) * k + 110 * rim * 0.9F, 0, 255);
+        return shade(rgb, k, rim, 0xFFAA6E);
+    }
+
+    /** Lit by k, with a rim of light (its colour) along the edges turned away. */
+    private static int shade(int rgb, float k, float rim, int rimRgb) {
+        int r = (int) Mth.clamp(((rgb >> 16) & 255) * k + ((rimRgb >> 16) & 255) * rim * 0.9F, 0, 255);
+        int g = (int) Mth.clamp(((rgb >> 8) & 255) * k + ((rimRgb >> 8) & 255) * rim * 0.9F, 0, 255);
+        int b = (int) Mth.clamp((rgb & 255) * k + (rimRgb & 255) * rim * 0.9F, 0, 255);
         return (r << 16) | (g << 8) | b;
+    }
+
+    private static int mulRgb(int a, int b) {
+        return ((((a >> 16) & 255) * ((b >> 16) & 255) / 255) << 16) | ((((a >> 8) & 255) * ((b >> 8) & 255) / 255) << 8) | ((a & 255) * (b & 255) / 255);
     }
 
     /** A bone as a lit box: each side facing the camera, lit by the low sun from the left, a warm rim along its edges. */
@@ -3378,7 +3520,7 @@ public class Showdown extends ArcadeGame {
             float st = (i & 2) == 0 ? -t : t, sw = (i & 4) == 0 ? -w : w;
             float[] local = {end[0] + dx * along + nx * st, end[1] + dy * along + ny * st, (end.length > 2 ? end[2] : 0) + sw};
             float[] s = place(b, p, local);
-            corner[i] = view(s[0], s[1], s[2]);
+            corner[i] = view(s[0], mirrored ? -s[1] : s[1], s[2]); // (in a glossy floor: upside down, under it)
         }
         float[] centre = new float[3];
         for (float[] c : corner) for (int k = 0; k < 3; k++) centre[k] += c[k] / 8;
@@ -3394,7 +3536,7 @@ public class Showdown extends ArcadeGame {
             float diff = Math.max(0, dot(n, light));
             float rim = (float) Math.pow(1 - Math.max(0, dot(n, toCam)), 3) * 0.55F;
             float k = 0.42F + 0.72F * diff;
-            int base = tint != 0 ? tint : bone.rgb();
+            int base = tint != 0 ? tint : mulRgb(bone.rgb(), st().light()); // (lit by the stage's own light)
             int[] cs = new int[4];
             float ymin = Float.MAX_VALUE, ymax = -Float.MAX_VALUE;
             for (float[] c : q) {
@@ -3403,7 +3545,7 @@ public class Showdown extends ArcadeGame {
             }
             for (int i = 0; i < 4; i++) {
                 float g = ymax - ymin < 0.01F ? 1 : 0.9F + 0.2F * (q[i][1] - ymin) / (ymax - ymin);
-                cs[i] = shade(base, k * g, tint != 0 ? 0 : rim);
+                cs[i] = shade(base, k * g, tint != 0 ? 0 : rim, st().rim());
             }
             quad(q, cs, alpha, bone.palette());
         }
@@ -3427,6 +3569,23 @@ public class Showdown extends ArcadeGame {
     }
 
     /** A fighter: its rage glow round it first, then its lit bones. */
+    /** Drawing its reflection in a glossy floor (mirrored under the floor, faint). */
+    private boolean mirrored;
+
+    private void reflection(Body b, float partial) {
+        if (!st().glossy() || (floorBroken && st().floorBreak())) return;
+        float[][] pp = poseOf(b);
+        float[] p = new float[P];
+        for (int i = 0; i < P; i++) p[i] = i >= 12 ? pp[0][i] + Mth.wrapDegrees(pp[1][i] - pp[0][i]) * partial : Mth.lerp(partial, pp[0][i], pp[1][i]);
+        List<Bone> bones = skeleton(b, p, LOOKS[styleIndex(b.style)], b.style.kind());
+        curBody = b;
+        curPose = p;
+        curLift = lift(b, p);
+        mirrored = true;
+        for (Bone bone : bones) if (!bone.decor() || bone.t() > 1) box(b, p, bone, 0, 0.16F, 0);
+        mirrored = false;
+    }
+
     private void fighter(Body b, float partial) {
         float[][] pp = poseOf(b);
         float[] p = new float[P];
@@ -3497,6 +3656,20 @@ public class Showdown extends ArcadeGame {
                 box(g, x0, y0, sunX - r, horizon - 12 - r * 0.5F, r * 2, r, ((int) (40 - r * 1.4F) << 24) | glow);
             }
             box(g, x0, y0, sunX - (red ? 9 : 6), horizon - (red ? 24 : 18), red ? 18 : 12, red ? 18 : 12, red ? 0xFFFF8A4A : 0xFFFFE6B0);
+        }
+        // clouds drifting (pink at dusk, white by day, smoke at the forge, none at night)
+        int f = st().feature();
+        if (f == 0 || f == 3 || f == 6) {
+            int cloud = f == 0 ? 0xE8A0A8 : f == 3 ? 0x5A3028 : 0xFFFFFF;
+            for (int i = 0; i < 7; i++) {
+                float cx = Math.floorMod((int) (i * 61 + vt() * 0.15F * (1 + i % 3) - turn * 90), W + 80) - 40;
+                float cy = 12 + (i * 17) % Math.max(10, (int) (horizon * 0.45F));
+                float wdt = 22 + (i * 11) % 18;
+                for (int k = 0; k < 4; k++) {
+                    float kw = wdt * (1 - Math.abs(k - 1.5F) * 0.25F);
+                    box(g, x0, y0, cx - kw / 2 + k * 2, cy + k * 2.2F, kw, 2.4F, ((f == 3 ? 150 : 110) << 24) | cloud);
+                }
+            }
         }
         // far hills, then nearer ones with what's on them - sliding at their own speeds as the camera turns
         ridge(g, x0, y0, turn * 160, 26, 0.035F, st().farHills(), 0);
@@ -3682,8 +3855,207 @@ public class Showdown extends ArcadeGame {
                         base = mixRgb(base, 0x000000, 0.18F); // (the edge by the walls, darker)
                     }
                 }
+                if (inside || !sg.walls()) { // (each tile a touch different; a glossy one catching the light)
+                    float vary = (Math.floorMod(gx * 73 + gz * 151, 17) - 8) * 0.006F;
+                    base = vary > 0 ? mixRgb(base, 0xFFFFFF, vary) : mixRgb(base, 0x000000, -vary);
+                }
                 int col = mixRgb(base, sg.haze(), (dist - 150) / 650);
-                quad(cam, new int[] {col, col, col, col}, 1.0F, 11);
+                boolean grout = dist < 420 && (inside || !sg.walls());
+                if (grout) { // (the grout: the tile drawn a little inside a darker square)
+                    int gc = mixRgb(darker(base, 0.35F), sg.haze(), (dist - 150) / 650);
+                    quad(cam, new int[] {gc, gc, gc, gc}, 1.0F, 11);
+                    float[][] in = new float[4][];
+                    float[][] innerCorners = {{gx * tile + 0.8F, gz * tile + 0.8F}, {gx * tile + 0.8F, (gz + 1) * tile - 0.8F},
+                            {(gx + 1) * tile - 0.8F, (gz + 1) * tile - 0.8F}, {(gx + 1) * tile - 0.8F, gz * tile + 0.8F}};
+                    for (int i = 0; i < 4; i++) {
+                        float[] l = toLine(innerCorners[i][0], innerCorners[i][1], csp, rTX, rTZ);
+                        in[i] = view(l[0], 0.02F, l[1]);
+                    }
+                    int hi = sg.glossy() ? mixRgb(col, 0xFFFFFF, 0.08F) : col;
+                    quad(in, new int[] {hi, col, col, hi}, sg.glossy() ? 0.86F : 1.0F, 11); // (glossy: see-through a touch, for the reflections)
+                } else {
+                    quad(cam, new int[] {col, col, col, col}, 1.0F, 11);
+                }
+            }
+        }
+    }
+
+    // ---- props round the arena, and the weather ----
+
+    /** A box standing in the arena's space (centre, size, from its bottom to its top), lit like the fighters. */
+    private void prop(float cx, float cz, float sx, float sz, float y0, float y1, int rgb, float alpha) {
+        float[] at = toStage(cu, camV, csp, rTX, rTZ);
+        if (Math.abs(cx - at[0]) > 320 || Math.abs(cz - at[1]) > 320) return;
+        float[][] corner = new float[8][];
+        for (int i = 0; i < 8; i++) {
+            float x = cx + ((i & 1) == 0 ? -sx : sx) / 2, z = cz + ((i & 4) == 0 ? -sz : sz) / 2, y = (i & 2) == 0 ? y0 : y1;
+            float[] l = toLine(x, z, csp, rTX, rTZ);
+            corner[i] = view(l[0], y, l[1]);
+            if (corner[i][2] < 6) return;
+        }
+        float[] centre = new float[3];
+        for (float[] c : corner) for (int k = 0; k < 3; k++) centre[k] += c[k] / 8;
+        int[][] faces = {{0, 2, 6, 4}, {1, 3, 7, 5}, {0, 1, 5, 4}, {2, 3, 7, 6}, {0, 1, 3, 2}, {4, 5, 7, 6}};
+        float[] light = norm(new float[] {-0.45F, 0.8F, -0.4F});
+        int base = mulRgb(rgb, st().light());
+        for (int[] fc : faces) {
+            float[][] q = {corner[fc[0]], corner[fc[1]], corner[fc[2]], corner[fc[3]]};
+            float[] n = norm(cross(sub(q[1], q[0]), sub(q[3], q[0])));
+            float[] fcen = {(q[0][0] + q[2][0]) / 2, (q[0][1] + q[2][1]) / 2, (q[0][2] + q[2][2]) / 2};
+            if (dot(n, sub(fcen, centre)) < 0) n = new float[] {-n[0], -n[1], -n[2]};
+            float[] toCam = norm(new float[] {-fcen[0], camH - fcen[1], -fcen[2]});
+            if (dot(n, toCam) <= 0.0F) continue;
+            float k = 0.45F + 0.65F * Math.max(0, dot(n, light));
+            int c = mixRgb(shade(base, k, 0), st().haze(), (fcen[2] - 150) / 650);
+            quad(q, new int[] {c, c, c, c}, alpha, 0);
+        }
+    }
+
+    /** A glowing thing (a lamp, a fire, a crystal): bright, with a soft halo. */
+    private void glowProp(float cx, float cz, float s, float y0, float y1, int rgb) {
+        prop(cx, cz, s, s, y0, y1, rgb, 1.0F);
+        float pulse = 0.85F + 0.15F * Mth.sin(vt() * 0.3F + cx);
+        prop(cx, cz, s * 2.6F, s * 2.6F, y0 - (y1 - y0) * 0.5F, y1 + (y1 - y0) * 0.5F, rgb, 0.16F * pulse);
+    }
+
+    /** What stands round each arena (outside its walls): it turns with the floor. */
+    private void props() {
+        float r = 112, mid = W / 2.0F;
+        switch (st().feature()) {
+            case 0 -> { // the temple: stone lanterns at the corners, a torii gate behind
+                for (float[] c : new float[][] {{-r, -r}, {r, -r}, {-r, r}, {r, r}, {0, -r - 20}, {0, r + 20}}) {
+                    float x = mid + c[0], z = c[1];
+                    prop(x, z, 7, 7, 0, 3, 0x8A8478, 1);
+                    prop(x, z, 3, 3, 3, 13, 0x9A9488, 1);
+                    glowProp(x, z, 5, 13, 19, 0xFFC860);
+                    prop(x, z, 10, 10, 19, 21, 0x6A645C, 1);
+                    prop(x, z, 4, 4, 21, 24, 0x6A645C, 1);
+                }
+                for (float side : new float[] {-22, 22}) prop(mid + side, r + 50, 4, 4, 0, 48, 0xC83228, 1);
+                prop(mid, r + 50, 64, 5, 44, 49, 0xC83228, 1);
+                prop(mid, r + 50, 52, 3, 36, 39, 0xC83228, 1);
+                prop(mid, r + 50, 70, 6, 49, 51, 0x2A2420, 1);
+            }
+            case 1 -> { // the rooftop: air-con units, a water tank, neon signs flickering
+                for (float[] c : new float[][] {{-r, -60}, {r, 40}, {-40, r}, {70, -r}}) {
+                    prop(mid + c[0], c[1], 22, 14, 0, 12, 0x5A5A66, 1);
+                    prop(mid + c[0], c[1], 10, 10, 12, 13, 0x2A2A30, 1);
+                }
+                for (float[] c : new float[][] {{-r + 10, r - 10}, {r - 10, -r + 10}}) {
+                    for (float sx : new float[] {-6, 6}) for (float sz : new float[] {-6, 6}) prop(mid + c[0] + sx, c[1] + sz, 1.5F, 1.5F, 0, 18, 0x3A3A44, 1);
+                    prop(mid + c[0], c[1], 18, 18, 18, 36, 0x6A5040, 1);
+                    prop(mid + c[0], c[1], 20, 20, 36, 38, 0x4A3A30, 1);
+                }
+                boolean on = ((int) vt() / 4) % 11 != 0;
+                for (float[] c : new float[][] {{-60, -r - 10}, {50, r + 10}, {r + 10, -20}}) {
+                    prop(mid + c[0], c[1], 2, 2, 0, 30, 0x2A2A30, 1);
+                    glowProp(mid + c[0], c[1], 3, 30, 48, on ? 0xFF4AD0 : 0x6A2050);
+                    glowProp(mid + c[0] + 0.1F, c[1] + 4, 3, 30, 48, on ? 0x40E0FF : 0x205060);
+                }
+            }
+            case 2 -> { // the cavern: ice pillars all round, glinting crystals
+                for (int i = 0; i < 12; i++) {
+                    float a = i * Mth.TWO_PI / 12, rr = 150 + (i % 3) * 25;
+                    float x = mid + Mth.cos(a) * rr, z = Mth.sin(a) * rr, h = 40 + (i * 13) % 30;
+                    prop(x, z, 12, 12, 0, h * 0.6F, 0xA8D4E8, 0.9F);
+                    prop(x, z, 8, 8, h * 0.6F, h, 0xC8E8F8, 0.9F);
+                    if (i % 2 == 0) glowProp(x + 9, z, 3, 0, 8, 0x8AE8FF);
+                }
+            }
+            case 3 -> { // the forge: braziers burning, anvils, stone pillars
+                for (float[] c : new float[][] {{-r, -r}, {r, -r}, {-r, r}, {r, r}}) {
+                    prop(mid + c[0], c[1], 14, 14, 0, 50, 0x3A2A24, 1);
+                    prop(mid + c[0], c[1], 18, 18, 50, 54, 0x2A1E1A, 1);
+                }
+                for (float[] c : new float[][] {{0, -r}, {0, r}, {-r, 0}, {r, 0}}) {
+                    prop(mid + c[0], c[1], 8, 8, 0, 10, 0x2A2A2E, 1);
+                    float flick = 12 + 3 * Mth.sin(vt() * 0.9F + c[0]);
+                    glowProp(mid + c[0], c[1], 6, 10, 10 + flick, 0xFF7A20);
+                }
+                prop(mid - r + 20, 30, 12, 6, 0, 6, 0x303034, 1);
+                prop(mid - r + 20, 30, 16, 6, 6, 9, 0x404048, 1);
+            }
+            case 5 -> { // the harbour: crates stacked, bollards, lamps on posts
+                for (float[] c : new float[][] {{-r, -50}, {-r + 4, -36}, {r, 60}, {50, -r}}) {
+                    prop(mid + c[0], c[1], 13, 13, 0, 13, 0x8A6A3A, 1);
+                }
+                prop(mid - r, -43, 13, 13, 13, 26, 0x7A5A30, 1);
+                for (float[] c : new float[][] {{-30, r}, {30, r}, {r, -30}, {-r, 30}}) {
+                    prop(mid + c[0], c[1], 5, 5, 0, 6, 0x202428, 1);
+                    prop(mid + c[0], c[1], 7, 7, 6, 7.5F, 0x202428, 1);
+                }
+                for (float[] c : new float[][] {{-r, -r}, {r, -r}, {-r, r}, {r, r}}) {
+                    prop(mid + c[0], c[1], 2, 2, 0, 36, 0x202428, 1);
+                    glowProp(mid + c[0], c[1], 4, 36, 41, 0xFFD890);
+                }
+            }
+            case 6 -> { // the court: cherry trees in bloom, stone lanterns
+                for (float[] c : new float[][] {{-r - 10, -r}, {r + 10, r}, {-r - 10, r - 20}, {r + 10, -r + 20}, {0, r + 30}}) {
+                    float x = mid + c[0], z = c[1];
+                    prop(x, z, 5, 5, 0, 26, 0x5A3A2A, 1);
+                    for (int k = 0; k < 4; k++) {
+                        float ox = Mth.sin(k * 2.1F + c[0]) * 8, oz = Mth.cos(k * 1.7F + c[1]) * 8;
+                        prop(x + ox, z + oz, 16, 16, 22 + k * 3, 34 + k * 3, k % 2 == 0 ? 0xFFB8D0 : 0xF098B8, 1);
+                    }
+                }
+                for (float[] c : new float[][] {{-r, 0}, {r, 0}}) {
+                    prop(mid + c[0], c[1], 7, 7, 0, 3, 0x8A8478, 1);
+                    prop(mid + c[0], c[1], 3, 3, 3, 12, 0x9A9488, 1);
+                    glowProp(mid + c[0], c[1], 5, 12, 17, 0xFFE0A0);
+                    prop(mid + c[0], c[1], 9, 9, 17, 19, 0x6A645C, 1);
+                }
+            }
+            default -> { // the void: crystals hanging in the dark, turning slowly
+                for (int i = 0; i < 8; i++) {
+                    float a = i * Mth.TWO_PI / 8 + vt() * 0.004F, rr = 130;
+                    float y = 20 + 10 * Mth.sin(vt() * 0.05F + i);
+                    glowProp(mid + Mth.cos(a) * rr, Mth.sin(a) * rr, 6, y, y + 16, i % 2 == 0 ? 0x8A3AFF : 0xFF3AFF);
+                }
+            }
+        }
+    }
+
+    /** Over everything: clouds of it - rain on the rooftop, fireflies at the temple, shafts of sunlight, snow, ash. */
+    private void weather(GuiGraphics g, int x0, int y0) {
+        float turn = csp * 0.011F;
+        switch (st().feature()) {
+            case 1 -> { // rain, slanting down
+                for (int i = 0; i < 70; i++) {
+                    float x = Math.floorMod((int) (i * 37 + vt() * 2.2F - turn * 120), W + 20) - 10;
+                    float y = Math.floorMod((int) (i * 61 + vt() * 7.5F), H + 10) - 10;
+                    box(g, x0, y0, x, y, 0.6F, 4, 0x60B0C8FF);
+                }
+            }
+            case 0 -> { // fireflies drifting low over the grass, and a warm shaft of evening light
+                for (int i = 0; i < 18; i++) {
+                    float x = Math.floorMod((int) (i * 47 + Mth.sin(vt() * 0.05F + i) * 14 - turn * 160), W);
+                    float y = horizon + 6 + (i * 13) % 30 + Mth.sin(vt() * 0.08F + i * 2) * 4;
+                    int a = (int) (120 + 120 * Mth.sin(vt() * 0.2F + i * 1.3F));
+                    box(g, x0, y0, x, y, 1, 1, (Math.max(0, a) << 24) | 0xFFF080);
+                }
+                shafts(g, x0, y0, 0xFFC890);
+            }
+            case 6 -> shafts(g, x0, y0, 0xFFF0E0);
+            case 3 -> { // ash drifting up through the heat
+                for (int i = 0; i < 26; i++) {
+                    float x = Math.floorMod((int) (i * 41 + Mth.sin(vt() * 0.04F + i) * 10 - turn * 100), W);
+                    float y = Math.floorMod((int) (i * 23 - vt() * 0.8F), H);
+                    box(g, x0, y0, x, y, 1, 1, 0x90FFA060);
+                }
+            }
+            default -> {}
+        }
+    }
+
+    /** Soft shafts of light slanting down from the sun. */
+    private void shafts(GuiGraphics g, int x0, int y0, int rgb) {
+        float turn = csp * 0.011F;
+        float sunX = W * 0.68F - Mth.wrapDegrees(turn * Mth.RAD_TO_DEG) * 3.0F;
+        for (int k = 0; k < 4; k++) {
+            float a = (0.05F + 0.03F * Mth.sin(vt() * 0.03F + k)) * 255;
+            for (int y = 0; y < H; y += 4) {
+                float x = sunX - 30 - k * 22 - y * 0.6F;
+                box(g, x0, y0, x, y, 6 + k * 2, 4, ((int) a << 24) | rgb);
             }
         }
     }
@@ -3761,12 +4133,16 @@ public class Showdown extends ArcadeGame {
         quads.clear();
         floor();
         flush(g, x0, y0, false); // (the floor under everything)
+        for (Body b : new Body[] {me, foe}) between(b, partial, () -> reflection(b, partial));
+        flush(g, x0, y0, false);
         for (Body b : new Body[] {me, foe}) between(b, partial, () -> shadow(b));
         flush(g, x0, y0, false);
         walls();
+        props();
         for (Body b : new Body[] {me, foe}) between(b, partial, () -> fighter(b, partial));
         flush(g, x0, y0, true);
         effects(g, x0, y0);
+        weather(g, x0, y0);
         g.pose().popPose();
         hud(g, font, x0, y0);
         if (showList) moveList(g, font, x0, y0);
