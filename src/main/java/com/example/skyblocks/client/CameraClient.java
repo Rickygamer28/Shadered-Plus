@@ -25,6 +25,8 @@ public final class CameraClient {
     private static int frames;
     private static boolean hadHidden;
     private static float flash;
+    /** How many photos this client has taken (each picture's pieces carry it). */
+    private static int takes;
 
     static void take() {
         if (frames > 0) {
@@ -45,9 +47,14 @@ public final class CameraClient {
         try {
             int[] rgb = grab(mc);
             if (rgb != null) {
-                byte[] data = PhotoCodec.encode(rgb, PhotoStore.W, PhotoStore.H);
+                byte[] data = PhotoCodec.encodeFull(rgb, PhotoStore.W, PhotoStore.H);
                 if (data.length <= PhotoStore.MAX_BYTES) {
-                    PacketDistributor.sendToServer(new PhotoPayloads.Take(data));
+                    // (in pieces: a packet to the server can't carry it all)
+                    int total = (data.length + PhotoStore.PIECE - 1) / PhotoStore.PIECE, take = ++takes;
+                    for (int i = 0; i < total; i++) {
+                        int from = i * PhotoStore.PIECE, to = Math.min(data.length, from + PhotoStore.PIECE);
+                        PacketDistributor.sendToServer(new PhotoPayloads.Take(take, i, total, java.util.Arrays.copyOfRange(data, from, to)));
+                    }
                 }
             }
         } catch (RuntimeException e) {
@@ -77,8 +84,8 @@ public final class CameraClient {
                     int x0 = ox + x * cw / W, x1 = Math.max(x0 + 1, ox + (x + 1) * cw / W);
                     long r = 0, g = 0, b = 0;
                     int n = 0;
-                    // (every other source pixel is plenty, and much quicker on a big screen)
-                    int step = Math.max(1, (x1 - x0) / 4);
+                    // (a few source pixels across each is plenty, and much quicker on a big screen)
+                    int step = Math.max(1, (x1 - x0) / 3);
                     for (int sy = y0; sy < y1; sy += step) {
                         for (int sx = x0; sx < x1; sx += step) {
                             int c = img.getPixelRGBA(sx, sy); // (ABGR)

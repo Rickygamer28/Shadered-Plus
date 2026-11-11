@@ -340,18 +340,23 @@ public final class RenderTest {
             int[] rgb = new int[w * h];
             for (int y = 0; y < h; y++) {
                 for (int x = 0; x < w; x++) {
-                    // (a test picture: a sunset sky, a sun, hills, a lake)
-                    float t = y / (float) h;
+                    // (a test picture: a sunset sky, a sun, hills, a lake - drawn at 160 x 120, scaled up)
+                    int ox = x, oy = y;
+                    x = x * 160 / w;
+                    y = y * 120 / h;
+                    float t = y / 120.0F;
                     int r = (int) (255 * (0.35F + 0.6F * t)), g = (int) (255 * (0.3F + 0.35F * t)), b = (int) (255 * (0.7F - 0.4F * t));
                     double sun = Math.hypot(x - 110, y - 52);
                     if (sun < 14) { r = 255; g = 220; b = 120; }
                     double hill = 78 + 10 * Math.sin(x * 0.05) + 6 * Math.sin(x * 0.13 + 1);
                     if (y > hill) { r = 50 + (int) (20 * Math.sin(x * 0.3)); g = 110 + (y - (int) hill); b = 60; }
                     if (y > 100) { r = 60; g = 110 + (int) (12 * Math.sin(x * 0.4 + y)); b = 170; }
-                    rgb[y * w + x] = Math.min(255, Math.max(0, r)) << 16 | Math.min(255, Math.max(0, g)) << 8 | Math.min(255, Math.max(0, b));
+                    rgb[oy * w + ox] = Math.min(255, Math.max(0, r)) << 16 | Math.min(255, Math.max(0, g)) << 8 | Math.min(255, Math.max(0, b));
+                    x = ox;
+                    y = oy;
                 }
             }
-            int id = com.example.skyblocks.PhotoStore.get(server).add(PhotoCodec.encode(rgb, w, h));
+            int id = com.example.skyblocks.PhotoStore.get(server).add(PhotoCodec.encodeFull(rgb, w, h));
             net.minecraft.core.BlockPos pos = new net.minecraft.core.BlockPos(Integer.parseInt(a[1]), Integer.parseInt(a[2]), Integer.parseInt(a[3]));
             lvl.setBlock(pos, com.example.skyblocks.ModBlocks.PHOTO_FRAME.get().defaultBlockState()
                     .setValue(com.example.skyblocks.PhotoFrameBlock.FACING, net.minecraft.core.Direction.byName(a[4]))

@@ -37,14 +37,14 @@ public final class PhotoCache {
     }
 
     static void received(int id, byte[] data) {
-        int[] px = data.length == 0 ? null : ArcadePicture.decode(data, PhotoStore.W, PhotoStore.H);
-        if (px == null || LOADED.containsKey(id)) {
+        PhotoCodec.Picture pic = data.length == 0 ? null : PhotoCodec.decode(data);
+        if (pic == null || LOADED.containsKey(id)) {
             return;
         }
-        NativeImage img = new NativeImage(PhotoStore.W, PhotoStore.H, false);
-        for (int y = 0; y < PhotoStore.H; y++) {
-            for (int x = 0; x < PhotoStore.W; x++) {
-                int c = px[y * PhotoStore.W + x];
+        NativeImage img = new NativeImage(pic.w(), pic.h(), false);
+        for (int y = 0; y < pic.h(); y++) {
+            for (int x = 0; x < pic.w(); x++) {
+                int c = pic.rgb()[y * pic.w() + x];
                 img.setPixelRGBA(x, y, 0xFF000000 | (c & 255) << 16 | (c >> 8 & 255) << 8 | (c >> 16 & 255)); // (ABGR)
             }
         }

@@ -10,12 +10,13 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Every photo taken in this world (CameraItem), kept with the world like maps: a photo item only holds its number.
- * Each picture is W x H, its own palette and squeezed (client/ArcadePicture's format).
+ * Each picture is W x H in full colour, squeezed (client/PhotoCodec).
  */
 public class PhotoStore extends SavedData {
-    public static final int W = 160, H = 120;
-    /** Biggest picture accepted (bytes). */
-    public static final int MAX_BYTES = 30000;
+    /** A photo's size (the first photos were 160 x 120, in 256 colours: still read). */
+    public static final int W = 384, H = 288;
+    /** Biggest picture accepted (bytes); it's sent to the server in pieces of at most PIECE. */
+    public static final int MAX_BYTES = 600_000, PIECE = 30_000;
 
     private final Map<Integer, byte[]> photos = new HashMap<>();
     private int next = 1;

@@ -26,10 +26,25 @@ public final class PhotoPayloads {
     /** Each player's last photo (game time): one a second at most. */
     private static final Map<UUID, Long> LAST = new ConcurrentHashMap<>();
 
-    /** Player -> server: the picture their camera just took. */
-    public record Take(byte[] data) implements CustomPacketPayload {
+    /** A picture coming in pieces from each player: which take, the pieces so far. */
+    private static final class Incoming {
+        final int take;
+        final byte[][] pieces;
+        int got, bytes;
+
+        Incoming(int take, int total) {
+            this.take = take;
+            this.pieces = new byte[total][];
+        }
+    }
+
+    private static final Map<UUID, Incoming> INCOMING = new ConcurrentHashMap<>();
+
+    /** Player -> server: piece {@code index} of {@code total} of the picture their camera just took (take: which photo). */
+    public record Take(int take, int index, int total, byte[] data) implements CustomPacketPayload {
         public static final Type<Take> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "photo_take"));
-        public static final StreamCodec<ByteBuf, Take> STREAM_CODEC = ByteBufCodecs.byteArray(PhotoStore.MAX_BYTES).map(Take::new, Take::data);
+        public static final StreamCodec<ByteBuf, Take> STREAM_CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, Take::take,
+                ByteBufCodecs.VAR_INT, Take::index, ByteBufCodecs.VAR_INT, Take::total, ByteBufCodecs.byteArray(PhotoStore.PIECE), Take::data, Take::new);
 
         @Override
         public Type<? extends CustomPacketPayload> type() {
@@ -38,35 +53,65 @@ public final class PhotoPayloads {
 
         public static void handle(Take m, IPayloadContext context) {
             context.enqueueWork(() -> {
-                if (!(context.player() instanceof ServerPlayer p) || m.data.length == 0) {
+                if (!(context.player() instanceof ServerPlayer p) || m.total <= 0 || m.total > PhotoStore.MAX_BYTES / PhotoStore.PIECE + 1
+                        || m.index < 0 || m.index >= m.total) {
                     return;
                 }
-                if (!(p.getMainHandItem().getItem() instanceof CameraItem) && !(p.getOffhandItem().getItem() instanceof CameraItem)) {
+                Incoming in = INCOMING.get(p.getUUID());
+                if (in == null || in.take != m.take || in.pieces.length != m.total) {
+                    in = new Incoming(m.take, m.total);
+                    INCOMING.put(p.getUUID(), in);
+                }
+                if (in.pieces[m.index] == null) {
+                    in.pieces[m.index] = m.data;
+                    in.got++;
+                    in.bytes += m.data.length;
+                }
+                if (in.bytes > PhotoStore.MAX_BYTES) {
+                    INCOMING.remove(p.getUUID());
                     return;
                 }
-                long now = p.serverLevel().getGameTime();
-                Long last = LAST.get(p.getUUID());
-                if (last != null && now - last < 15) {
+                if (in.got < in.pieces.length) {
                     return;
                 }
-                if (!p.getAbilities().instabuild) { // (a sheet of paper for each print)
-                    int slot = p.getInventory().findSlotMatchingItem(new ItemStack(Items.PAPER));
-                    if (slot < 0) {
-                        p.displayClientMessage(Component.translatable("message.skyblocks.camera.paper").withStyle(ChatFormatting.RED), true);
-                        return;
-                    }
-                    p.getInventory().removeItem(slot, 1);
+                INCOMING.remove(p.getUUID());
+                byte[] all = new byte[in.bytes];
+                int at = 0;
+                for (byte[] piece : in.pieces) {
+                    System.arraycopy(piece, 0, all, at, piece.length);
+                    at += piece.length;
                 }
-                LAST.put(p.getUUID(), now);
-                int id = PhotoStore.get(p.server).add(m.data);
-                ItemStack photo = new ItemStack(ModItems.PHOTO.get());
-                photo.set(ModComponents.PHOTO.get(), new ModComponents.Photo(id, p.getGameProfile().getName(), p.serverLevel().getDayTime() / 24000L + 1));
-                if (!p.getInventory().add(photo)) {
-                    p.drop(photo, false);
-                }
-                p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.UI_CARTOGRAPHY_TABLE_TAKE_RESULT, SoundSource.PLAYERS, 0.8F, 1.2F);
+                print(p, all);
             });
         }
+    }
+
+    /** A whole picture in: printed, if they've a camera in hand, paper, and haven't just taken one. */
+    private static void print(ServerPlayer p, byte[] data) {
+        if (data.length == 0 || cameraHand(p) == null) {
+            return;
+        }
+        long now = p.serverLevel().getGameTime();
+        Long last = LAST.get(p.getUUID());
+        if (last != null && now - last < 15) {
+            return;
+        }
+        if (!p.getAbilities().instabuild) { // (a sheet of paper for each print)
+            int slot = p.getInventory().findSlotMatchingItem(new ItemStack(Items.PAPER));
+            if (slot < 0) {
+                p.displayClientMessage(Component.translatable("message.skyblocks.camera.paper").withStyle(ChatFormatting.RED), true);
+                return;
+            }
+            p.getInventory().removeItem(slot, 1);
+        }
+        LAST.put(p.getUUID(), now);
+        int id = PhotoStore.get(p.server).add(data);
+        ItemStack photo = new ItemStack(ModItems.PHOTO.get());
+        photo.set(ModComponents.PHOTO.get(), new ModComponents.Photo(id, p.getGameProfile().getName(), p.serverLevel().getDayTime() / 24000L + 1));
+        if (!p.getInventory().add(photo)) {
+            p.drop(photo, false);
+        }
+        p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.UI_CARTOGRAPHY_TABLE_TAKE_RESULT, SoundSource.PLAYERS, 0.8F, 1.2F);
     }
 
     /** Client -> server: send me photo number id. */
