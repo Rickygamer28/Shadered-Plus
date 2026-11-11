@@ -3468,6 +3468,9 @@ public class Showdown extends ArcadeGame {
         return new float[] {W / 2.0F + c[0] * FL / c[2], horizon + (camH - c[1]) * FL / c[2]};
     }
 
+    /** Drawn as if this much nearer: a detail sits just in front of the surface it's on, never behind it. */
+    private float depthBias;
+
     private void quad(float[][] cam, int[] rgb, float alpha, int palette) {
         float[] xs = new float[4], ys = new float[4];
         float depth = 0;
@@ -3476,8 +3479,9 @@ public class Showdown extends ArcadeGame {
             if (s == null) return;
             xs[i] = s[0];
             ys[i] = s[1];
-            depth = Math.max(depth, cam[i][2]);
+            depth += cam[i][2] / 4; // (its middle's distance: boxes against boxes sort far better by it than by a corner)
         }
+        depth -= depthBias;
         int a = Mth.clamp((int) (alpha * 255), 0, 255) << 24;
         int[] cs = new int[4];
         for (int i = 0; i < 4; i++) cs[i] = a | (rgb[i] & 0xFFFFFF);
@@ -3502,6 +3506,15 @@ public class Showdown extends ArcadeGame {
 
     /** A bone as a lit box: each side facing the camera, lit by the low sun from the left, a warm rim along its edges. */
     private void box(Body b, float[] p, Bone bone, float grow, float alpha, int tint) {
+        depthBias = bone.decor() ? 0.35F : 0;
+        try {
+            boxFaces(b, p, bone, grow, alpha, tint);
+        } finally {
+            depthBias = 0;
+        }
+    }
+
+    private void boxFaces(Body b, float[] p, Bone bone, float grow, float alpha, int tint) {
         float dx = bone.b()[0] - bone.a()[0], dy = bone.b()[1] - bone.a()[1];
         float len = Mth.sqrt(dx * dx + dy * dy);
         if (len < 1e-3F) {
