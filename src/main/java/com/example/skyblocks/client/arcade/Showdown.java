@@ -301,6 +301,13 @@ public class Showdown extends ArcadeGame {
     private static final Move BT_LOW = m("TURN LOW", 3, Pose.LOWKICK, Level.LOW, 15, 2, 24, 12, 26, -12, 1, 0, DUCK);
     private static final Move MULE_KICK = m("MULE KICK", 4, Pose.MIDKICK, Level.MID, 14, 3, 26, 16, 28, -6, 4, 0, BACKWARD | CH_LAUNCH);
     // ---- throws from the side and behind (behind: no breaking it) ----
+    // ---- the thrower, once it's caught them: over the shoulder (turning round with them), or up and slammed in front;
+    // ROBO's chain throw: twice. (No hit of their own: the throw's already landed.)
+    private static final Move THROWING_OVER = m("THROW", 0, Pose.THROW, Level.THROW, 20, 1, 39, 0, 0, 0, 0, 0, 0);
+    private static final Move THROWING_FRONT = m("THROW", 0, Pose.THROW, Level.THROW, 20, 1, 39, 0, 0, 0, 0, 0, 0);
+    private static final Move THROWING_CHAIN = m("CHAIN THROW", 0, Pose.THROW, Level.THROW, 20, 1, 49, 0, 0, 0, 0, 0, 0);
+    /** When a throw's victim is in the air (frames into it), lands, and - chained - lands again. */
+    private static final int THROW_LIFT = 20, THROW_SLAM = 40, CHAIN_SLAM = 70;
     private static final Move SIDE_THROW = m("SIDE THROW", 1, Pose.THROW, Level.THROW, 12, 2, 30, 40, 18, 0, 0, 0, KND);
     private static final Move BACK_THROW = m("BACK THROW", 1, Pose.THROW, Level.THROW, 12, 2, 30, 50, 18, 0, 0, 0, KND);
     // ---- the floor: a spring kick up off it; a stomp on someone lying there ----
@@ -865,7 +872,7 @@ public class Showdown extends ArcadeGame {
             case THROWN -> {
                 // ROBO's iron grab: 1+2 in time chains it on (more damage) - unless the one thrown escapes first (1+2)
                 Body th = b.thrower;
-                if (b.grab == IRON_GRAB && th != null && b.t >= 24 && b.t <= 44) {
+                if (b.grab == IRON_GRAB && th != null && b.t >= 10 && b.t <= 36) {
                     if (th.in == null && th.chainAt < 0 && random.nextFloat() < 0.06F) th.chainAt = ticks;
                     if (b.in == null && b.escapeAt < 0 && random.nextFloat() < 0.02F * (1 + difficulty())) b.escapeAt = ticks;
                     if (b.escapeAt >= 0 && (th.chainAt < 0 || b.escapeAt < th.chainAt)) {
@@ -876,19 +883,42 @@ public class Showdown extends ArcadeGame {
                     }
                     if (th.chainAt >= 0 && b.grab == IRON_GRAB) {
                         b.grab = MELTDOWN;
-                        b.stun += 30;
+                        if (th.state == State.ATTACK) th.move = THROWING_CHAIN; // (same frames: just longer)
                         th.chainAt = b.escapeAt = -100;
                         shake = 6;
                         call("CHAIN THROW!", b.x, GROUND - 50);
                         sfx(Sfx.HIT_HEAVY, 0.8F);
                     }
                 }
-                if (--b.stun <= 0) {
-                    Body by = b.thrower;
+                // where they are: held in front; then up over the shoulder (or up and down in front); slammed
+                Move g = b.grab != null ? b.grab : THROW_L;
+                b.vy = 0;
+                if (th != null) {
+                    float k = Mth.clamp((b.t - THROW_LIFT) / (float) (THROW_SLAM - THROW_LIFT), 0, 1);
+                    if (b.t > THROW_SLAM && g == MELTDOWN) k = Mth.clamp((b.t - THROW_SLAM) / (float) (CHAIN_SLAM - THROW_SLAM), 0, 1);
+                    float arc = Mth.sin(k * Mth.PI);
+                    if (overShoulder(g)) {
+                        b.x = th.x + th.facing * (-1 + 15 * Mth.cos(k * Mth.PI)); // (from in front, over, to behind)
+                        b.y = 30 * arc;
+                    } else {
+                        b.x = th.x + th.facing * (14 + 4 * k);
+                        b.y = (g == MELTDOWN && b.t > THROW_SLAM ? 26 : 34) * arc;
+                    }
+                    b.depth = th.depth;
+                    if (b.t == THROW_SLAM && g == MELTDOWN) { // (the first slam of a chain: then up again)
+                        b.hp = Math.max(1, b.hp - 20);
+                        shake = 6;
+                        sfx(Sfx.HIT_HEAVY, 0.75F);
+                        spark(b.x, GROUND - 4, 10);
+                    }
+                }
+                if (b.t >= (g == MELTDOWN ? CHAIN_SLAM : THROW_SLAM)) { // (slammed down)
                     b.breakWith = -1;
                     b.thrower = null;
-                    land(b, by, b.grab != null ? b.grab : THROW_L);
+                    b.y = 0;
+                    land(b, th, g);
                     b.grab = null;
+                    spark(b.x, GROUND - 4, 12);
                 }
             }
             case ATTACK -> {
@@ -901,6 +931,12 @@ public class Showdown extends ArcadeGame {
                     b.queued2 = null;
                     attack(b, q, true);
                 } else if (b.t >= m.total()) {
+                    if (m == THROWING_OVER) { // (turned round with them: facing them, behind it now)
+                        b.facing = -b.facing;
+                        float[][] pp = poseOf(b);
+                        pp[0][13] += 180;
+                        pp[1][13] += 180;
+                    }
                     if (m.is(TURNS)) { // (it leaves you facing away)
                         b.bt = true;
                         b.facing = -toward(b);
@@ -1150,11 +1186,14 @@ public class Showdown extends ArcadeGame {
             Move g = o.bt ? BACK_THROW : side && !m.is(BREAK_BOTH) ? SIDE_THROW : m;
             o.state = State.THROWN;
             o.thrower = b;
-            o.stun = 54;
+            o.stun = 0;
             o.breakWith = g == BACK_THROW ? 3 : g == SIDE_THROW ? (b.depth > o.depth ? 0 : 1) : m.is(BREAK_BOTH) ? 2 : m == THROW_L ? 0 : 1;
             if (g != m) call(g.name(), o.x, GROUND - 52);
             o.chainAt = o.escapeAt = -100;
             o.grab = g;
+            b.move = overShoulder(g) ? THROWING_OVER : THROWING_FRONT; // (the thrower carries it through)
+            b.t = 0;
+            b.hitDone = true;
             o.t = 0;
             o.ki = false;
             sfx(Sfx.THROW);
@@ -1414,29 +1453,119 @@ public class Showdown extends ArcadeGame {
         return new float[] {b.x + r[0] * b.facing, b.y + r[1] + lift, b.depth + r[2]};
     }
 
+    /** The striking limb's thickness (half), and a little give. */
+    private static final float STRIKE_R = 3.0F;
+    /** Someone standing guarded, side on: each bone (from x, y, to x, y - from their middle) and its thickness. */
+    private float[][] guardShape;
+
     /**
-     * Does its move reach them? Along: to the near edge of their body (not their middle), within the move's reach.
-     * Up: its striking limb at their body's height (a low only reaches low on them - someone juggled high is out of
-     * its reach; a crouch takes the body down under a high). Depth: on the line with them, unless it's homing.
+     * Where the front of someone standing guarded is at this height (their guard up high, their feet down low), as far
+     * as a strike as thick as STRIKE_R touches it: a move's limb is taken out to its reach less this - so it just
+     * touches them at exactly the move's reach, standing guarded; anything of theirs sticking out further, it hits
+     * sooner; leaning or ducking away, later or not at all.
+     */
+    private float guardReach(float height) {
+        if (guardShape == null) {
+            Body ref = new Body(FIGHTERS[0], 0, 0);
+            float[] p = GUARD.clone();
+            float lift = lift(ref, p);
+            List<float[]> shape = new ArrayList<>();
+            for (Bone bone : skeleton(ref, p, LOOKS[0], 0)) {
+                if (bone.t() < 1) continue;
+                float[] a = turn(p, bone.a()), c = turn(p, bone.b());
+                shape.add(new float[] {a[0], a[1] + lift, c[0], c[1] + lift, bone.t() / 2});
+            }
+            guardShape = shape.toArray(new float[0][]);
+        }
+        float best = -Float.MAX_VALUE;
+        for (float[] g : guardShape) {
+            float r = g[4] + STRIKE_R;
+            for (int k = 0; k <= 8; k++) {
+                float x = g[0] + (g[2] - g[0]) * k / 8, y = g[1] + (g[3] - g[1]) * k / 8, dy = y - height;
+                if (Math.abs(dy) <= r) best = Math.max(best, x + Mth.sqrt(r * r - dy * dy));
+            }
+        }
+        return best == -Float.MAX_VALUE ? 0 : best - 0.5F;
+    }
+
+    /**
+     * Does its move reach them? Its striking limb - from elbow or knee out to fist or foot, reaching as far as the move
+     * reaches - against every part of their body: head, torso, arms and legs, each as thick as it's drawn. So a kick
+     * can catch an outstretched leg, a punch the arm thrown at it; a low only reaches what's low, a high goes over
+     * someone crouched, someone juggled is only where they are, someone stepped aside is off the line (unless it's
+     * homing). And someone reeling in a combo is never out of a string's reach.
      */
     private boolean connects(Body b, Body o, Move m) {
         int way = b.facing * (m.is(BACKWARD) ? -1 : 1);
-        float[] box = hurtBox(o);
-        float near = way > 0 ? box[0] : box[1], far = way > 0 ? box[1] : box[0];
-        if ((far - b.x) * way < -2) return false; // (behind it)
-        // (out of reach: a move's reach is to their middle, standing guarded - their guard sticks out about 13 ahead of
-        // that; leaning back, crouching, lying down, their edge is somewhere else)
-        // (and never shorter than to their middle: reeling back from a hit doesn't take them out of a string)
-        if (Math.min((near - b.x) * way + 13, (o.x - b.x) * way) > m.reach()) return false;
-        float[][] limb = strikingLimb(b);
-        float lo = Math.min(limb[0][1], limb[1][1]) - 3, hi = Math.max(limb[0][1], limb[1][1]) + 3;
-        if (m.level() == Level.LOW) lo = Math.min(lo, b.y); // (a low sweeps along the floor)
-        if (hi < box[2] || lo > box[3]) return false;
-        if (!m.is(HOMING)) {
-            float z = limb[1][2];
-            if (z < box[4] - 5 || z > box[5] + 5) return false;
+        if ((o.x - b.x) * way < -6) return false; // (behind it)
+        if (m.level() == Level.THROW) { // (a throw takes hold of the body, whichever way it's facing)
+            return (o.x - b.x) * way <= m.reach() && Math.abs(o.depth - b.depth) <= 8 && Math.abs(o.y - b.y) < 10;
         }
-        return true;
+        float[][] limb = strikingLimb(b);
+        float[] j = limb[0].clone(), tip = limb[1].clone();
+        float reachTo = b.x + way * (m.reach() - guardReach((m.level() == Level.LOW ? Math.min(tip[1], b.y + 3) : tip[1]) - o.y));
+        // (out to exactly the move's reach along its line - no further, however long the arm)
+        tip[0] = reachTo;
+        if ((j[0] - b.x) * way < 0 || (j[0] - reachTo) * way > 0) j[0] = b.x + way * 4; // (from just in front of it)
+        if (m.level() == Level.LOW) { // (a low sweeps along the floor)
+            j[1] = Math.min(j[1], b.y + 6);
+            tip[1] = Math.min(tip[1], b.y + 3);
+        }
+        // (on the line it's thrown along - a spin's limb swings round through it; homing: turning to follow them)
+        j[2] = tip[2] = m.is(HOMING) ? o.depth : b.depth;
+        float[] p = poseOf(o)[1];
+        float lift = lift(o, p);
+        for (Bone bone : skeleton(o, p, LOOKS[0], 0)) {
+            if (bone.t() < 1) continue; // (not the eyes)
+            float[] u = world(o, p, bone.a(), lift), v = world(o, p, bone.b(), lift);
+            // (depth: that part of them on the strike's line, near enough - then how close, along and up)
+            if (Math.abs((u[2] + v[2]) / 2 - tip[2]) > 6 + bone.t() / 2) continue;
+            u[2] = v[2] = tip[2];
+            if (segDist(j, tip, u, v) <= STRIKE_R + bone.t() / 2) return true;
+        }
+        // reeling in a combo: a string's next hit still reaches (as far as their middle)
+        if (o.state == State.HIT && (o.x - b.x) * way <= m.reach() && Math.abs(o.depth - b.depth) <= 8 && Math.abs(o.y - b.y) < 20
+                && m.level() != Level.LOW) return true;
+        return false;
+    }
+
+    /** The closest two line segments (3D) come to each other. */
+    private static float segDist(float[] p1, float[] q1, float[] p2, float[] q2) {
+        float[] d1 = {q1[0] - p1[0], q1[1] - p1[1], q1[2] - p1[2]}, d2 = {q2[0] - p2[0], q2[1] - p2[1], q2[2] - p2[2]};
+        float[] r = {p1[0] - p2[0], p1[1] - p2[1], p1[2] - p2[2]};
+        float a = dot(d1, d1), e = dot(d2, d2), f = dot(d2, r);
+        float sc, tc;
+        if (a < 1e-6F && e < 1e-6F) {
+            sc = tc = 0;
+        } else if (a < 1e-6F) {
+            sc = 0;
+            tc = Mth.clamp(f / e, 0, 1);
+        } else {
+            float c = dot(d1, r);
+            if (e < 1e-6F) {
+                tc = 0;
+                sc = Mth.clamp(-c / a, 0, 1);
+            } else {
+                float bb = dot(d1, d2), den = a * e - bb * bb;
+                sc = den != 0 ? Mth.clamp((bb * f - c * e) / den, 0, 1) : 0;
+                tc = (bb * sc + f) / e;
+                if (tc < 0) {
+                    tc = 0;
+                    sc = Mth.clamp(-c / a, 0, 1);
+                } else if (tc > 1) {
+                    tc = 1;
+                    sc = Mth.clamp((bb - c) / a, 0, 1);
+                }
+            }
+        }
+        float dx = p1[0] + d1[0] * sc - (p2[0] + d2[0] * tc), dy = p1[1] + d1[1] * sc - (p2[1] + d2[1] * tc),
+                dz = p1[2] + d1[2] * sc - (p2[2] + d2[2] * tc);
+        return Mth.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    /** Which throws go over the thrower's shoulder (the rest are slammed down in front). */
+    private static boolean overShoulder(Move g) {
+        return g == THROW_L || g == BACK_THROW;
     }
 
     /** Knocked to the floor (thrown, swept, tackled ...). */
@@ -1444,7 +1573,8 @@ public class Showdown extends ArcadeGame {
         if (m != null && m.level() == Level.THROW) {
             o.hp = Math.max(0, o.hp - Math.round(m.damage() * (by != null ? by.style.power() : 1.0F)));
             if (by != null) {
-                o.x = by.x - by.facing * 16; // (thrown over their shoulder)
+                // (where the throw put them: behind, over the shoulder - or in front)
+                o.x = overShoulder(m) ? by.x - by.facing * 16 : by.x + by.facing * 18;
                 if (by == me && practice == 0) score += 300;
                 by.combo = 1;
                 by.comboDmg = m.damage();
@@ -2103,14 +2233,14 @@ public class Showdown extends ArcadeGame {
         if (b.state == State.THROWN) { // (breaking a throw: 1, 2 or 1+2 - whichever arm's grabbing you)
             boolean both = together(in, button, 1) && together(in, button, 2);
             boolean right = b.breakWith == 2 ? both : button == b.breakWith + 1;
-            if (right && b.t <= 22) breakThrow(b);
-            else if (both && b.grab == IRON_GRAB && b.t >= 24) b.escapeAt = ticks; // (escaping the chain coming)
+            if (right && b.t <= THROW_LIFT) breakThrow(b);
+            else if (both && b.grab == IRON_GRAB && b.t >= 10) b.escapeAt = ticks; // (escaping the chain coming)
             return;
         }
         // throwing ROBO's iron grab: 1+2 in time chains it on
         Body o = other(b, me, foe);
         if (o.state == State.THROWN && o.thrower == b && o.grab == IRON_GRAB && together(in, button, 1) && together(in, button, 2)
-                && o.t >= 24 && o.t <= 44) {
+                && o.t >= 10 && o.t <= 36) {
             b.chainAt = ticks;
             return;
         }
@@ -2544,23 +2674,34 @@ public class Showdown extends ArcadeGame {
                 p[10] = 20;
                 p[11] = 0;
             }
-            case THROWN -> { // (grabbed, lifted and flipped over, slammed down)
-                if (b.t <= 10) {
+            case THROWN -> { // (grabbed and struggling; then flipped over through the air, limbs flying)
+                Move g = b.grab != null ? b.grab : THROW_L;
+                if (b.t <= THROW_LIFT) {
                     p[0] = -15;
                     p[11] = -20;
-                    p[7] = 60;
-                    p[9] = 60;
-                } else if (b.t <= 30) {
-                    float k = (b.t - 10) / 20.0F;
-                    p[1] = -8 * Mth.sin(k * Mth.PI);
-                    p[12] = -200 * k;
-                    p[7] = p[9] = 150;
-                    p[3] = 60;
-                    p[5] = 40;
+                    p[7] = 60 + 10 * Mth.sin(b.t * 0.9F);
+                    p[9] = 60 - 10 * Mth.sin(b.t * 0.9F);
+                    p[8] = p[10] = 40;
+                    p[3] = 10;
+                    p[4] = -30;
                 } else {
-                    p[12] = -272;
-                    p[7] = 140;
-                    p[9] = 160;
+                    float k = Mth.clamp((b.t - THROW_LIFT) / (float) (THROW_SLAM - THROW_LIFT), 0, 1);
+                    float spinTo = -272;
+                    if (b.t > THROW_SLAM && g == MELTDOWN) { // (up again and over a second time)
+                        k = Mth.clamp((b.t - THROW_SLAM) / (float) (CHAIN_SLAM - THROW_SLAM), 0, 1);
+                        p[12] = -272 - 360 * k;
+                    } else {
+                        p[12] = spinTo * k;
+                    }
+                    float fl = Mth.sin(b.t * 0.5F);
+                    p[7] = 150 + 20 * fl;
+                    p[9] = 160 - 20 * fl;
+                    p[8] = 20;
+                    p[10] = 30;
+                    p[3] = 50 + 20 * fl;
+                    p[4] = -40;
+                    p[5] = 20 - 20 * fl;
+                    p[6] = -60;
                 }
             }
             case SPLAT -> {
@@ -2851,6 +2992,9 @@ public class Showdown extends ArcadeGame {
     }
 
     static {
+        anim(THROWING_OVER, "0 A | w: 7=92 8=25 9=92 10=25 0=8 2=2 | W: 7=100 9=100 0=4 | h: 7=130 8=40 9=130 10=40 0=-8 13=-30 1=3 | f: 7=165 9=165 0=-18 13=-90 1=1 | r: 7=60 8=20 9=60 10=20 0=38 13=-180 1=4");
+        anim(THROWING_FRONT, "0 A | w: 7=92 8=25 9=92 10=25 0=8 2=2 | W: 7=100 9=100 0=2 1=3 | h: 7=140 8=30 9=140 10=30 0=-14 1=4 | f: 7=175 9=175 0=-20 1=2 | r: 7=70 8=10 9=70 10=10 0=45 1=6 2=3");
+        anim(THROWING_CHAIN, "0 A | w: 7=92 8=25 9=92 10=25 0=8 2=2 | W: 7=100 9=100 0=2 1=3 | h: 7=140 8=30 9=140 10=30 0=-14 1=4 | f: 7=175 9=175 0=-20 1=2 | r: 7=70 8=10 9=70 10=10 0=45 1=6 2=3");
         anim(JAB, "0 A   | w: 7=50 8=85 0=8 | h: 7=88 8=3 0=12 13=-6 2=1 | r: 7=55 8=70");
         anim(JAB_2, "0 A   | w: 7=55 8=75 2=2 | h: 7=90 8=2 0=14 2=3 13=-8 | r: 7=55 8=70 2=1");
         anim(ELBOW_FINISH, "1 A   | w: 9=30 10=130 1=4 0=10 | h: 9=150 10=95 0=-6 1=0 13=-25 11=-8 | r: 9=90 10=110");
@@ -2966,7 +3110,7 @@ public class Showdown extends ArcadeGame {
         float end = m.total();
         float[] last = base.clone();
         float[] lastKey = vals.get(vals.size() - 1);
-        last[13] = Math.round(lastKey[13] / 360) * 360; // (a spin ends a whole turn round, not unwinding)
+        last[13] = m == THROWING_OVER ? lastKey[13] : Math.round(lastKey[13] / 360) * 360; // (a spin ends a whole turn round, not unwinding)
         last[12] = Math.round(lastKey[12] / 360) * 360;
         times.add(Math.max(end, times.get(times.size() - 1) + 1));
         vals.add(last);
@@ -3141,7 +3285,8 @@ public class Showdown extends ArcadeGame {
 
     /** How far up or down to put it so its feet (or, lying, its back) are on the floor. */
     private float lift(Body b, float[] p) {
-        boolean lying = b.state == State.DOWN || b.state == State.KO || b.state == State.THROWN && b.t > 24;
+        boolean lying = b.state == State.DOWN || b.state == State.KO;
+        if (b.state == State.THROWN && b.t > THROW_LIFT) return 0; // (flying through the air: where the throw puts it)
         boolean grounded = !b.airborne() && b.state != State.AIR && b.state != State.SPLAT;
         if (!grounded && !lying) return 0;
         float low = Float.MAX_VALUE;
