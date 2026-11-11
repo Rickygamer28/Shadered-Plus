@@ -1,7 +1,7 @@
 {
   "parent": "minecraft:block/cube_bottom_top",
   "textures": {
-    "top": "skyblocks:block/zen_sand_ring_se",
+    "top": "skyblocks:block/zen_sand_ring_southeast",
     "side": "skyblocks:block/zen_sand_side",
     "bottom": "skyblocks:block/zen_sand_side"
   }

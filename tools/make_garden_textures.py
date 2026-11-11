@@ -53,7 +53,9 @@ def ring(x, y):
         return 0.0  # (the stone sits here)
     return furrow(d)
 ring_img = pattern_img(ring, big)
-names = {(0, 0): "nw", (1, 0): "n", (2, 0): "ne", (0, 1): "w", (1, 1): "", (2, 1): "e", (0, 2): "sw", (1, 2): "s", (2, 2): "se"}
+# (whole words: shader packs take a texture ending in _n or _s as another's normal or specular map)
+names = {(0, 0): "northwest", (1, 0): "north", (2, 0): "northeast", (0, 1): "west", (1, 1): "", (2, 1): "east", (0, 2): "southwest",
+         (1, 2): "south", (2, 2): "southeast"}
 for (cx, cy), nm in names.items():
     tile = ring_img.crop((cx * N, cy * N, cx * N + N, cy * N + N))
     save(tile, "block/zen_sand_ring%s.png" % ("_" + nm if nm else ""))

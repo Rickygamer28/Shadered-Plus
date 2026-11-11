@@ -99,6 +99,8 @@ public class BonsaiRenderer implements BlockEntityRenderer<SimpleRenderedBlockEn
         poseStack.scale(1 / 16.0F, 1 / 16.0F, 1 / 16.0F);
         PoseStack.Pose pose = poseStack.last();
         VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS));
+        // (the leaves' solid cores: the leaf texture with its holes filled - drawn whole, no see-through)
+        VertexConsumer core = buffers.getBuffer(RenderType.entitySolid(InventoryMenu.BLOCK_ATLAS));
         float wg = 0.45F + 0.55F * g; // (thickness grows slower than height)
         for (Seg seg : tree.trunk) {
             branch(vc, pose, bark, barkEnd, seg.x0 * g, seg.y0 * g, seg.z0 * g, seg.x1 * g, seg.y1 * g, seg.z1 * g, seg.w0 * wg, seg.w1 * wg, light, overlay);
@@ -106,7 +108,7 @@ public class BonsaiRenderer implements BlockEntityRenderer<SimpleRenderedBlockEn
         float pg = 0.35F + 0.65F * g;
         for (int i = 0; i < tree.pads.length; i++) {
             Pad pad = tree.pads[i];
-            cloud(vc, pose, i % 2 == 1 ? flower : leaf, pad.x * g, pad.y * g, pad.z * g, pad.sx * pg, pad.sy * pg, pad.sz * pg, tint,
+            cloud(vc, core, pose, i % 2 == 1 ? flower : leaf, pad.x * g, pad.y * g, pad.z * g, pad.sx * pg, pad.sy * pg, pad.sz * pg, tint,
                     light, overlay, age == 4 ? 1.08F : 1.0F);
         }
         poseStack.popPose();
@@ -169,15 +171,23 @@ public class BonsaiRenderer implements BlockEntityRenderer<SimpleRenderedBlockEn
                 new Vector3f(c).add(new Vector3f(u).mul(r)).add(new Vector3f(v).mul(-r))};
     }
 
-    /** A cloud of leaves round (x, y, z): a few overlapping boxes, so it's rounded in a blocky way. */
-    private static void cloud(VertexConsumer vc, PoseStack.Pose pose, TextureAtlasSprite leaf, float x, float y, float z, float sx, float sy, float sz,
-                              int tint, int light, int overlay, float full) {
+    /**
+     * A cloud of leaves round (x, y, z): a few overlapping boxes (none sharing a face's plane with another, so nothing
+     * flickers), rounded in a blocky way; behind the leaves a darker solid core, so the holes in the leaf texture show
+     * deep foliage rather than straight through the little cloud.
+     */
+    private static void cloud(VertexConsumer vc, VertexConsumer core, PoseStack.Pose pose, TextureAtlasSprite leaf, float x, float y, float z,
+                              float sx, float sy, float sz, int tint, int light, int overlay, float full) {
         sx *= full;
         sz *= full;
-        box(vc, pose, leaf, x, y, z, sx * 0.8F, sy, sz * 0.8F, tint, light, overlay);
-        box(vc, pose, leaf, x, y - sy * 0.1F, z, sx, sy * 0.62F, sz * 0.56F, tint, light, overlay);
-        box(vc, pose, leaf, x, y - sy * 0.1F, z, sx * 0.56F, sy * 0.62F, sz, tint, light, overlay);
-        box(vc, pose, leaf, x, y + sy * 0.55F, z, sx * 0.5F, sy * 0.35F, sz * 0.5F, tint, light, overlay);
+        float[][] boxes = {{0, 0, sx * 0.8F, sy, sz * 0.8F}, {-0.1F, 0, sx, sy * 0.62F, sz * 0.56F}, {-0.12F, 0, sx * 0.56F, sy * 0.6F, sz},
+                {0.55F, 0, sx * 0.5F, sy * 0.35F, sz * 0.5F}};
+        int dark = (int) (((tint >> 16) & 255) * 0.5F) << 16 | (int) (((tint >> 8) & 255) * 0.5F) << 8 | (int) ((tint & 255) * 0.5F);
+        for (float[] b : boxes) {
+            float cy = y + sy * b[0];
+            box(vc, pose, leaf, x, cy, z, b[2], b[3], b[4], tint, light, overlay);
+            box(core, pose, leaf, x, cy, z, b[2] * 0.86F, b[3] * 0.84F, b[4] * 0.86F, dark, light, overlay);
+        }
     }
 
     private static void box(VertexConsumer vc, PoseStack.Pose pose, TextureAtlasSprite sp, float cx, float cy, float cz, float sx, float sy, float sz,
