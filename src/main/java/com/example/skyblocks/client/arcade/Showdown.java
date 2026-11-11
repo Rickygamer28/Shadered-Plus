@@ -333,6 +333,21 @@ public class Showdown extends ArcadeGame {
     private static final Move SWAY_SWEEP = m("SWAY SWEEP", 3, Pose.SWEEP, Level.LOW, 18, 3, 32, 15, 30, -18, 0, 0, KND | DUCK);
     private static final Move SWAY_KICK = m("SWAY KICK", 4, Pose.MIDKICK, Level.MID, 14, 2, 22, 14, 28, -4, 6, 0, 0);
     // ---- NYX, the boss: a beam you can't block, a dark uppercut ----
+    // ---- JUNO, the kicker: kick strings, a long side kick, an axe kick, a launcher kick; the crane stance on one leg ----
+    private static final Move FLURRY_3 = m("FLURRY", 3, Pose.HIGHKICK, Level.HIGH, 13, 2, 26, 14, 30, -11, 0, 0, KND);
+    private static final Move FLURRY_2 = m("FLURRY", 3, Pose.MIDKICK, Level.MID, 12, 2, 20, 10, 28, -6, 5, 0, 0, FLURRY_3);
+    private static final Move SNAP_KICK = m("SNAP KICK", 3, Pose.MIDKICK, Level.MID, 12, 2, 18, 11, 28, -5, 6, 0, 0, FLURRY_2, WHIRL_KICK);
+    private static final Move SPIN_HEEL = m("SPINNING HEEL", 4, Pose.HIGHKICK, Level.MID, 16, 3, 28, 18, 30, -12, 0, 0, KND);
+    private static final Move ROUNDHOUSE = m("ROUNDHOUSE", 4, Pose.HIGHKICK, Level.HIGH, 12, 3, 22, 15, 31, -8, 4, 0, 0, SPIN_HEEL);
+    private static final Move LANCE_KICK = m("LANCE KICK", 4, Pose.MIDKICK, Level.MID, 15, 3, 26, 17, 35, -9, 0, 0, KND | CARRY);
+    private static final Move AXE_KICK = m("AXE KICK", 4, Pose.HIGHKICK, Level.MID, 19, 3, 26, 19, 27, -10, 0, 0, KND | GROUND_HIT);
+    private static final Move CRESCENT_LIFT = m("CRESCENT LIFT", 3, Pose.AIRKICK, Level.MID, 15, 2, 32, 15, 25, -13, 0, 6.2F, 0);
+    private static final Move CRANE_SNAP = m("CRANE SNAP", 1, Pose.MIDKICK, Level.MID, 11, 2, 18, 11, 27, 1, 8, 0, 0);
+    private static final Move CRANE_LIFT = m("CRANE LIFT", 2, Pose.AIRKICK, Level.MID, 15, 2, 30, 15, 25, -12, 0, 6.4F, 0);
+    private static final Move CRANE_LOW = m("CRANE LOW", 3, Pose.LOWKICK, Level.LOW, 14, 2, 26, 12, 28, -13, 2, 0, DUCK);
+    private static final Move CRANE_HOOK = m("CRANE HOOK", 4, Pose.HIGHKICK, Level.HIGH, 13, 3, 24, 17, 31, -8, 6, 0, CH_LAUNCH);
+    private static final Move COMET_KICK = m("COMET KICK", 0, Pose.AIRKICK, Level.MID, 15, 3, 30, 26, 33, 4, 0, 0, KND | CARRY | ELECTRIC);
+
     private static final Move VOID_BEAM = m("VOID BEAM", 0, Pose.PALM, Level.MID, 30, 4, 34, 40, 64, 0, 0, 0, KND | UNBLOCKABLE | CARRY);
     private static final Move DARK_UPPER = m("DARK UPPER", 2, Pose.UPPER, Level.MID, 13, 2, 26, 16, 24, -10, 0, 6.4F, ELECTRIC);
     private static final Move INFERNO = m("INFERNO FIST", 0, Pose.CROSS, Level.MID, 14, 3, 30, 34, 34, 5, 0, 0, KND | CARRY | ELECTRIC);
@@ -349,9 +364,10 @@ public class Showdown extends ArcadeGame {
             new Style("NEKO", 7, 8, 15, 4, 1, 1.2F, 0.9F),
             new Style("ROBO", 13, 5, 12, 12, 2, 0.85F, 1.15F),
             new Style("BLAZE", 6, 8, 8, 7, 3, 1.05F, 1.05F),
+            new Style("JUNO", 12, 8, 15, 13, 5, 1.15F, 0.95F),
             new Style("NYX", 1, 13, 10, 13, 4, 1.1F, 1.25F)};
-    /** The four you can pick; the fifth, NYX, is the boss at the end of the arcade ladder. */
-    private static final int PLAYABLE = 4, BOSS = 4;
+    /** The five you can pick; the sixth, NYX, is the boss at the end of the arcade ladder. */
+    private static final int PLAYABLE = 5, BOSS = 5;
 
     private static final class Body {
         final Style style;
@@ -1094,6 +1110,7 @@ public class Showdown extends ArcadeGame {
             }
             case STANCE -> { // (a stance: its own moves; back to stand after a while, or on back)
                 if (b.stance == 2) b.x += b.facing * (fwdHeld(b) ? 0.15F : backHeld(b) ? -0.12F : 0);
+                if (b.stance == 4 && fwdHeld(b) && b.t % 12 < 6) b.x += b.facing * 0.35F; // (the crane: hopping in)
                 if (b.t >= 90) {
                     b.state = State.STAND;
                     b.stance = 0;
@@ -1413,6 +1430,8 @@ public class Showdown extends ArcadeGame {
         if (!connects(b, o, m)) return; // (its limb against their body: reach, height, depth)
         // BLAZE swaying back: highs miss, and mids early on
         if (o.state == State.STANCE && o.stance == 3 && (m.level() == Level.HIGH || m.level() == Level.MID && o.t < 12)) return;
+        // JUNO's crane: on one leg, the other up - a low passes under it (for a while)
+        if (o.state == State.STANCE && o.stance == 4 && m.level() == Level.LOW && o.t < 30) return;
         if (o.state == State.KO || o.state == State.RISE) return;
         if (o.state == State.DOWN && !(m.level() == Level.LOW || m.is(GROUND_HIT))) return; // (only some moves hit someone lying down)
         if (o.state == State.THROWN) return;
@@ -1903,6 +1922,7 @@ public class Showdown extends ArcadeGame {
         if (frames >= 15) {
             if (low) return RISING_UPPER;
             if (b.who == 0 && frames >= 15) return DRAGON_UPPER;
+            if (b.who == 4) return CRESCENT_LIFT;
             return LAUNCHER;
         }
         if (frames >= 12 && low) return RISING_KICK;
@@ -1931,7 +1951,7 @@ public class Showdown extends ArcadeGame {
             boolean falling = o.y < 26 && (o.vy < 0.3F || o.y < 12);
             if (o.screwed) {
                 if (dist > 26 && b.state != State.DASH) dash(b);
-                else if (dist <= 30 && o.y < 20) attack(b, b.who == 3 ? BURNING_FIST : LUNGE_PUNCH);
+                else if (dist <= 30 && o.y < 20) attack(b, b.who == 3 ? BURNING_FIST : b.who == 4 ? LANCE_KICK : LUNGE_PUNCH);
             } else if (dist < 26 && falling) {
                 if (cpuJuggle >= 2 || o.airHits >= 3) {
                     attack(b, b.who == 1 ? SPIRAL_KICK : SPIN_FIST);
@@ -2084,9 +2104,9 @@ public class Showdown extends ArcadeGame {
             else if (r < 0.4F) attack(b, HOMING_KICK);
             else if (r < 0.5F) sidestep(b, rng.nextBoolean() ? 1 : -1);
             else if (r < 0.58F) backdash(b);
-            else if (r < 0.64F) attack(b, b.who == 3 ? BURNING_FIST : b.who == 1 ? CAT_SLIDE : LUNGE_PUNCH);
+            else if (r < 0.64F) attack(b, b.who == 3 ? BURNING_FIST : b.who == 1 ? CAT_SLIDE : b.who == 4 ? LANCE_KICK : LUNGE_PUNCH);
             else if (r < 0.66F && !b.ki && d >= 2) kiCharge(b);
-            else if (r < 0.72F && b.who >= 1 && b.who <= 3) { // (into its stance)
+            else if (r < 0.72F && b.who >= 1 && b.who <= 4) { // (into its stance)
                 b.state = State.STANCE;
                 b.stance = b.who;
                 b.t = 0;
@@ -2095,7 +2115,7 @@ public class Showdown extends ArcadeGame {
         } else {
             if (r < 0.14F) attack(b, JAB);
             else if (r < 0.22F) attack(b, MID_CHECK);
-            else if (r < 0.30F) attack(b, MID_KICK);
+            else if (r < 0.30F) attack(b, b.who == 4 ? (rng.nextBoolean() ? SNAP_KICK : ROUNDHOUSE) : MID_KICK);
             else if (r < 0.38F) attack(b, rng.nextBoolean() ? LOW_KICK : TOE_KICK);
             else if (r < 0.42F) attack(b, b.who == 0 ? HELL_SWEEP : SWEEP);
             else if (r < 0.49F) attack(b, b.who == 2 && rng.nextBoolean() ? IRON_GRAB : rng.nextBoolean() ? THROW_L : THROW_R);
@@ -2113,6 +2133,8 @@ public class Showdown extends ArcadeGame {
         // strings: carry on with the next hits
         if (b.state == State.ATTACK && b.move == JAB && rng.nextFloat() < 0.5F + 0.1F * d) {
             b.queued = rng.nextBoolean() ? CROSS : JAB_2;
+        } else if (b.state == State.ATTACK && (b.move == SNAP_KICK || b.move == FLURRY_2 || b.move == ROUNDHOUSE) && rng.nextFloat() < 0.4F + 0.1F * d) {
+            b.queued = b.move == SNAP_KICK ? FLURRY_2 : b.move == FLURRY_2 ? FLURRY_3 : SPIN_HEEL; // (JUNO's kicks, on and on)
         } else if (b.state == State.ATTACK && b.move == MID_KICK && rng.nextFloat() < 0.3F + 0.1F * d) {
             b.queued = WHIRL_KICK;
         }
@@ -2172,6 +2194,7 @@ public class Showdown extends ArcadeGame {
             case 1 -> new Move[][] {{POUNCE, JAB, JAB_2, SPIRAL_KICK, LUNGE_PUNCH}};
             case 2 -> new Move[][] {{HOPKICK, JAB, JAB_2, SPIN_FIST, PISTON}};
             case 3 -> new Move[][] {{HOPKICK, JAB, JAB_2, SPIN_FIST, BURNING_FIST}};
+            case 4 -> new Move[][] {{CRESCENT_LIFT, JAB, JAB_2, SPIN_FIST, LANCE_KICK}};
             default -> new Move[][] {{PERFECT_DRAGON, JAB, JAB_2, SPIN_FIST, LUNGE_PUNCH}};
         };
         return switch (practice) {
@@ -2220,6 +2243,7 @@ public class Showdown extends ArcadeGame {
         return switch (b.stance) {
             case 1 -> new Move[] {PAW_JAB, POUNCE, TAIL_SWEEP, CAT_FLIP}[button - 1];
             case 2 -> new Move[] {PISTON_JAB, CANNON, TREAD_SWEEP, STOMP_KICK}[button - 1];
+            case 4 -> new Move[] {CRANE_SNAP, CRANE_LIFT, CRANE_LOW, CRANE_HOOK}[button - 1];
             default -> new Move[] {SWAY_JAB, SWAY_BURNER, SWAY_SWEEP, SWAY_KICK}[button - 1];
         };
     }
@@ -2245,6 +2269,7 @@ public class Showdown extends ArcadeGame {
             case 1 -> NINE_LIVES;
             case 2 -> OVERDRIVE;
             case 3 -> INFERNO;
+            case 4 -> COMET_KICK;
             default -> DEVIL_RUSH;
         };
     }
@@ -2543,12 +2568,12 @@ public class Showdown extends ArcadeGame {
             }
             if (d == 2 || d == 1 || d == 3) {
                 pair = STOMP;
-            } else if (b.who == 1 && d == 6 || b.who == 2 && (d == 4 || d == 7)) {
+            } else if (b.who == 1 && d == 6 || b.who == 2 && (d == 4 || d == 7) || b.who == 4 && (d == 5 || d == 6)) {
                 if (b.state != State.ATTACK && (b.free() || b.state == State.DASH)) {
                     b.state = State.STANCE;
-                    b.stance = b.who == 1 ? 1 : 2;
+                    b.stance = b.who == 1 ? 1 : b.who == 2 ? 2 : 4;
                     b.t = 0;
-                    call(b.who == 1 ? "CAT STANCE" : "SIEGE", b.x, GROUND - 46);
+                    call(b.who == 1 ? "CAT STANCE" : b.who == 2 ? "SIEGE" : "CRANE", b.x, GROUND - 46);
                 }
                 return;
             } else if (b.who == 1) {
@@ -2593,7 +2618,7 @@ public class Showdown extends ArcadeGame {
         return switch (b.who) {
             case 0 -> d == 6 ? TWIN_PALM : back ? IRON_PALM : null;
             case 2 -> d == 3 ? IRON_GRAB : d == 6 ? PISTON : d == 2 ? GROUND_SLAM : d == 1 ? SCRAP_GRAB : back ? IRON_PALM : null;
-            case 4 -> d == 6 ? VOID_BEAM : back ? IRON_PALM : null;
+            case BOSS -> d == 6 ? VOID_BEAM : back ? IRON_PALM : null;
             case 3 -> d == 6 && b.state == State.DASH ? HEAT_RUSH : back ? IRON_PALM : null;
             default -> back ? IRON_PALM : null;
         };
@@ -2616,12 +2641,13 @@ public class Showdown extends ArcadeGame {
             return switch (b.stance) {
                 case 1 -> button == 1 ? PAW_JAB : button == 2 ? POUNCE : button == 3 ? TAIL_SWEEP : CAT_FLIP;
                 case 2 -> button == 1 ? PISTON_JAB : button == 2 ? CANNON : button == 3 ? TREAD_SWEEP : STOMP_KICK;
+                case 4 -> button == 1 ? CRANE_SNAP : button == 2 ? CRANE_LIFT : button == 3 ? CRANE_LOW : CRANE_HOOK;
                 default -> button == 1 ? SWAY_JAB : button == 2 ? SWAY_BURNER : button == 3 ? SWAY_SWEEP : SWAY_KICK;
             };
         }
         if (b.state == State.RUN && b.t >= 10) return button <= 2 ? RUN_CHOP : button == 3 ? RUN_SLIDE : RUN_KICK; // (running)
         if (b.who == 0 && d == 4 && button == 4) return DEMON_HEEL;
-        if (b.who == 4 && d == 3 && button == 2) return DARK_UPPER;
+        if (b.who == BOSS && d == 3 && button == 2) return DARK_UPPER;
         // RIKU's crouch dash: 1 snap elbow, 2 dragon upper (2 on the very frame you hit df: the perfect one), 3/4 hell sweep
         if (b.state == State.CROUCH_DASH) {
             if (button == 2) return ticks - in.dfAt <= 1 ? PERFECT_DRAGON : DRAGON_UPPER;
@@ -2641,6 +2667,13 @@ public class Showdown extends ArcadeGame {
             return button == 1 ? RISING_JAB : button == 2 ? RISING_UPPER : button == 3 ? RISING_KNEE : RISING_KICK; // (while standing)
         }
         if ((b.state == State.DASH || b.state == State.RUN) && button == 2) return LUNGE_PUNCH;
+        if (b.who == 4) { // (JUNO: kicks)
+            if (d == 6 && button == 4) return LANCE_KICK;
+            if (d == 4 && button == 4) return AXE_KICK;
+            if (d == 3 && button == 3) return CRESCENT_LIFT;
+            if (d == 5 && button == 3) return SNAP_KICK;
+            if (d == 5 && button == 4) return ROUNDHOUSE;
+        }
         return switch (d) {
             case 1 -> button == 1 ? CROUCH_JAB : button == 2 ? CROUCH_STRAIGHT : button == 3 ? LOW_KICK : SWEEP;
             case 2 -> button == 1 ? CROUCH_JAB : button == 2 ? CROUCH_STRAIGHT : button == 3 ? LOW_KICK : TOE_KICK;
@@ -2704,6 +2737,7 @@ public class Showdown extends ArcadeGame {
             {0xFF78BE, 0x2A1E3C, 0xFAD7BE, 0xFFFFFF, 0xFF78BE, 0xFFF0FA, 0xFF4FA8},
             {0x7887A0, 0x505A6E, 0x96A5BE, 0x3C465A, 0x3C465A, 0x3C465A, 0x3CE6FF},
             {0xC83C1E, 0x282830, 0xDCAA82, 0x1E1E1E, 0x1E1E1E, 0xFF8C28, 0xFFC83C},
+            {0x22B8A6, 0x1C2440, 0xE2B48E, 0xF2F2F2, 0xF4F4F4, 0x3A2418, 0xFFD23A},
             {0x2A1A3A, 0x1A1024, 0x9A8AB0, 0x8A3AFF, 0x1A1024, 0xE0D0FF, 0xFF3AFF}};
 
     private record Quad(float[] xs, float[] ys, int[] colours, float depth, int palette) {}
@@ -2983,6 +3017,17 @@ public class Showdown extends ArcadeGame {
                     p[8] = 120;
                     p[9] = 80;
                     p[10] = 125;
+                } else if (b.stance == 4) { // (the crane: on one leg, the near knee up high, arms out for balance)
+                    p[3] = 100 + 4 * Mth.sin(w * 1.3F);
+                    p[4] = -125;
+                    p[5] = -6;
+                    p[6] = -6;
+                    p[0] = -6;
+                    p[7] = 75;
+                    p[8] = 50;
+                    p[9] = 55;
+                    p[10] = 70;
+                    p[1] = -0.5F;
                 } else { // (sway: leaning right back)
                     p[0] = -30;
                     p[11] = -10;
@@ -3024,7 +3069,16 @@ public class Showdown extends ArcadeGame {
                         p[9] = 30;
                         p[10] = 100;
                     }
-                    case 4 -> { // (floating, arms wide)
+                    case 4 -> { // (JUNO: a high kick held up, balanced, arms out)
+                        p[3] = 150 + 6 * Mth.sin(w);
+                        p[4] = -4;
+                        p[0] = -16;
+                        p[7] = 100;
+                        p[8] = 10;
+                        p[9] = 80;
+                        p[10] = 20;
+                    }
+                    case BOSS -> { // (floating, arms wide)
                         p[7] = p[9] = 110;
                         p[8] = p[10] = 5;
                         p[11] = -20;
@@ -3194,7 +3248,14 @@ public class Showdown extends ArcadeGame {
                 p[10] = 110;
                 p[0] = 10 * Mth.sin(b.t * 0.15F);
             }
-            case 4 -> { // (arms spread, hovering)
+            case 4 -> { // (JUNO: a stretch - the leg up behind the head, then down)
+                p[3] = 160 * (float) Math.max(0, Mth.sin(b.t * 0.05F));
+                p[4] = -6;
+                p[0] = -12;
+                p[7] = 120;
+                p[9] = 120;
+            }
+            case BOSS -> { // (arms spread, hovering)
                 p[7] = 100;
                 p[9] = 100;
                 p[8] = p[10] = 10;
@@ -3240,6 +3301,22 @@ public class Showdown extends ArcadeGame {
         char[] ats = new char[at.size()];
         for (int i = 0; i < ats.length; i++) ats[i] = at.get(i);
         ANIMS.put(m, new Anim(Integer.parseInt(head[0]), head[1].equals("L"), head.length > 2 && head[2].equals("C"), ats, keys.toArray(new float[0][])));
+    }
+
+    static { // (JUNO's)
+        anim(SNAP_KICK, "0 L   | w: 3=80 4=-120 | h: 3=86 4=-6 0=-10 13=-6 | r: 3=40 4=-60");
+        anim(FLURRY_2, "1 L   | w: 5=70 6=-110 | h: 5=90 6=-4 0=-12 13=-15 | r: 5=40 6=-60");
+        anim(FLURRY_3, "0 L   | w: 3=90 4=-120 13=20 | h: 3=132 4=-4 0=-26 13=-10 | f: 3=110 | r: 3=40 4=-50");
+        anim(ROUNDHOUSE, "1 L | w: 5=70 6=-100 13=30 | h: 5=122 6=-6 0=-22 13=-35 | f: 5=95 13=-60 | r: 5=30 6=-40 13=-20");
+        anim(SPIN_HEEL, "1 L | w: 13=170 5=40 0=-6 | h: 13=355 5=105 6=-4 0=-18 | f: 13=390 | r: 13=400 5=20");
+        anim(LANCE_KICK, "0 L   | w: 3=92 4=-125 13=45 0=-4 | h: 3=96 4=-2 0=-24 13=75 2=5 7=40 9=20 | f: 3=90 13=70 | r: 3=40 4=-60 13=20");
+        anim(AXE_KICK, "0 L   | w: 3=110 4=-20 0=-12 | W: 3=168 4=-2 0=-26 7=70 9=70 | h: 3=92 4=-2 0=-4 1=1 | f: 3=55 0=10 | r: 3=25");
+        anim(CRESCENT_LIFT, "1 L | w: 5=40 6=-60 13=-20 1=3 | h: 5=166 6=-5 0=-30 13=15 1=-1 11=-10 | f: 5=140 | r: 5=30 6=-40");
+        anim(CRANE_SNAP, "0 L   | w: 3=100 4=-128 | h: 3=95 4=-4 0=-12 | r: 3=95 4=-120");
+        anim(CRANE_LIFT, "0 L   | w: 3=92 4=-122 1=2 | h: 3=170 4=-5 0=-30 1=-2 11=-10 | f: 3=150 | r: 3=50 4=-60");
+        anim(CRANE_LOW, "0 L   | w: 3=85 4=-120 1=4 | h: 3=46 4=-5 1=7 0=14 | r: 3=40 4=-60");
+        anim(CRANE_HOOK, "0 L | w: 3=100 4=-120 13=40 | h: 3=126 4=-30 0=-20 13=-40 | f: 13=-70 | r: 3=60 13=-20");
+        anim(COMET_KICK, "0 L   | w: 1=6 3=40 4=-100 0=8 | W: 1=-6 3=60 4=-110 | h: 1=-8 3=122 4=-2 5=60 6=-120 0=-20 7=60 9=-20 2=6 | f: 3=100 | r: 3=40 1=2");
     }
 
     static {
@@ -3482,7 +3559,7 @@ public class Showdown extends ArcadeGame {
         int face = kind == 2 ? 0x8A98B0 : skin;
         // (a head with hair is built of pieces that meet but never overlap - the face, the hair at the back, the hair on top - so
         // that however it turns, no piece is drawn over one that's in front of it: the hair never vanishes into the skull)
-        float hairLine = kind == 0 ? 6.55F : kind == 1 || kind == 3 ? 6.6F : 0;
+        float hairLine = kind == 0 ? 6.55F : kind == 1 || kind == 3 || kind == 5 ? 6.6F : 0;
         if (hairLine > 0) {
             out.add(new Bone(off(headBase, hd, 2.4F, fwd, 1.4F, 0), off(headBase, hd, hairLine, fwd, 1.4F, 0), 4.2F, 7.0F, face, sk)); // (the face)
             out.add(new Bone(off(headBase, hd, 2.4F, fwd, -2.15F, 0), off(headBase, hd, hairLine, fwd, -2.15F, 0), 2.9F, 7.2F, hair, hr)); // (hair: back)
@@ -3504,7 +3581,7 @@ public class Showdown extends ArcadeGame {
                     glow ? accent : 0x141018, 0)); // (pupils - or glowing eyes)
             if (kind != 2) out.add(decor(off(headBase, hd, 6.1F, fwd, 3.45F, side), off(headBase, hd, 6.5F, fwd, 3.45F, side), 0.5F, 1.9F,
                     darker(hair, 0.15F), hr)); // (brows)
-            if (kind == 0 || kind == 3) out.add(decor(off(headBase, hd, 3.6F, fwd, 0.2F, side * 2.25F), off(headBase, hd, 5.6F, fwd, 0.2F, side * 2.25F),
+            if (kind == 0 || kind == 3 || kind == 5) out.add(decor(off(headBase, hd, 3.6F, fwd, 0.2F, side * 2.25F), off(headBase, hd, 5.6F, fwd, 0.2F, side * 2.25F),
                     1.6F, 0.8F, skin, sk)); // (ears)
         }
         // ---- hair, and what makes each one itself ----
@@ -3594,6 +3671,29 @@ public class Showdown extends ArcadeGame {
                 }
                 out.add(decor(off(pelvis, up, 2.9F, fwdB, 3.9F, 0), off(pelvis, up, 3.9F, fwdB, 3.9F, 0), 0.6F, 2.0F, 0xFFD040, band)); // (buckle)
             }
+            case 5 -> { // JUNO: a high ponytail (swinging), a sweatband; a track jacket - zip, stripes down the sleeves and legs
+                out.add(new Bone(off(headBase, hd, 6.6F, fwd, -0.05F, 0), off(headTop, hd, 0.6F, fwd, -0.05F, 0), 7.3F, 7.4F, hair, hr));
+                out.add(decor(off(headBase, hd, 6.6F, fwd, 3.2F, 0), off(headBase, hd, 7.4F, fwd, 3.05F, 0), 1.1F, 7.0F, hair, hr)); // (fringe)
+                float[] band0 = off(headBase, hd, 7.6F, fwd, 3.75F, 0);
+                out.add(decor(band0, off(band0, hd, 0.7F, fwd, 0, 0), 0.5F, 6.8F, accent, band)); // (a sweatband, over the hair)
+                float swing = Mth.sin(vt() * 0.35F) * 14;
+                float[] t0 = off(headTop, hd, 0.3F, fwd, -3.9F, 0);
+                out.add(decor(t0, off(t0, hd, 0.6F, fwd, -0.9F, 0), 1.6F, 1.6F, accent, band)); // (its tie)
+                float[] t1 = at(t0, dir(-60 - lean * 0.5F + swing), 4.5F, 0);
+                float[] t2 = at(t1, dir(-15 - lean * 0.3F + swing * 1.5F), 4.5F, 0);
+                out.add(decor(t0, t1, 2.2F, 2.6F, hair, hr));
+                out.add(decor(t1, t2, 1.7F, 2.0F, hair, hr));
+                out.add(decor(off(pelvis, up, 6.0F, fwdB, 3.6F, 0), off(neck, up, -0.6F, fwdB, 3.65F, 0), 0.3F, 0.8F, accent, band)); // (zip)
+                for (float side : new float[] {-1, 1}) { // (the collar, standing)
+                    out.add(decor(off(neck, up, -0.4F, fwdB, 1.0F, side * 2.0F), off(neck, up, 1.1F, fwdB, 0.6F, side * 2.0F), 1.6F, 1.4F, top, gi));
+                }
+                for (int s = 0; s < 2; s++) { // (stripes down the outside of each leg)
+                    float side = s == 0 ? -2.9F : 2.9F;
+                    float hip = s == 0 ? p[3] : p[5];
+                    float[] h0 = {pelvis[0], pelvis[1], side * 1.92F};
+                    out.add(decor(h0, at(h0, dir(hip), 9.0F, side * 1.92F), 1.4F, 0.3F, accent, band));
+                }
+            }
             default -> { // NYX: a hood, its eyes glowing in it; a cape, swaying; spikes on the shoulders
                 out.add(new Bone(off(headBase, hd, 2.0F, fwd, -0.8F, 0), off(headTop, hd, 1.4F, fwd, -0.6F, 0), 8.8F, 8.6F, legs, gi)); // (hood)
                 out.add(decor(off(headTop, hd, 1.2F, fwd, -1.4F, 0), off(headTop, hd, 3.2F, fwd, -3.4F, 0), 3.0F, 3.0F, legs, gi)); // (its point)
@@ -3626,6 +3726,8 @@ public class Showdown extends ArcadeGame {
                 out.add(decor(at(hand[s], dir(sh + elb + 180), 1.8F, side), at(hand[s], dir(sh + elb + 180), 0.2F, side), 3.4F, 3.4F, 0xF0EEE6, band));
             } else if (kind == 3) { // (cuffs: the jacket's sleeve ends)
                 out.add(decor(at(hand[s], dir(sh + elb + 180), 2.4F, side), at(hand[s], dir(sh + elb + 180), 0.8F, side), 3.6F, 3.6F, darker(top, 0.15F), gi));
+            } else if (kind == 5) { // (a stripe down each sleeve)
+                out.add(decor(off(sp[s], up, 0.2F, fwdB, 0, side * 1.36F), at(el[s], dir(sh), -0.4F, side * 1.36F), 0.8F, 0.3F, accent, band));
             } else if (kind == 2) { // (glowing elbow joints)
                 out.add(decor(at(el[s], dir(sh + elb), -0.8F, side), at(el[s], dir(sh + elb), 0.8F, side), 3.4F, 3.4F, accent, band));
             }
@@ -4542,6 +4644,18 @@ public class Showdown extends ArcadeGame {
                         l.add(row("f+1+2", PISTON, "POWER CRUSH"));
                         l.add(row("d+1+2", GROUND_SLAM, "Hits them lying down"));
                     }
+                    case 4 -> {
+                        l.add(sys("3+4", "CRANE", "On one leg: lows go under you. f: hop in. b: out"));
+                        l.add(row("CRANE 1", CRANE_SNAP, "Fast, +1 on block"));
+                        l.add(row("CRANE 2", CRANE_LIFT, "LAUNCHER"));
+                        l.add(row("CRANE 3", CRANE_LOW, ""));
+                        l.add(row("CRANE 4", CRANE_HOOK, "Counter hit: launch"));
+                        l.add(row("3,3,3", FLURRY_3, "Mid, mid, high"));
+                        l.add(row("4,4", SPIN_HEEL, "High, then a mid"));
+                        l.add(row("f+4", LANCE_KICK, "Long reach, carries to the wall"));
+                        l.add(row("b+4", AXE_KICK, "Hits them lying down"));
+                        l.add(row("df+3", CRESCENT_LIFT, "LAUNCHER"));
+                    }
                     default -> {
                         l.add(sys("d,db,b", "SWAY", "Leans out of highs (and mids, at first)"));
                         l.add(row("SWAY 1", SWAY_JAB, ""));
@@ -4912,7 +5026,7 @@ public class Showdown extends ArcadeGame {
         for (int i = 0; i < PLAYABLE; i++) {
             Body b = picks[i];
             if (b == null) {
-                b = picks[i] = new Body(FIGHTERS[i], i, 30 + i * 44);
+                b = picks[i] = new Body(FIGHTERS[i], i, pickX(i));
                 b.facing = 1;
             }
             boolean chosen = versus ? i == vsPick[0] || i == vsPick[1] : i == pick;
@@ -4942,7 +5056,7 @@ public class Showdown extends ArcadeGame {
         big(g, font, "TIKKIN", x0 + W / 2.0F, y0 + 8, 1.0F, 0xFFFF7AD9);
         big(g, font, "CHOOSE YOUR FIGHTER", x0 + W / 2.0F, y0 + 20, 0.75F, 0xFFFFFFFF);
         for (int i = 0; i < PLAYABLE; i++) {
-            big(g, font, FIGHTERS[i].name(), x0 + 30 + i * 44, y0 + 110, 0.75F, i == pick ? 0xFFFFE74A : 0xFFAAAAAA);
+            big(g, font, FIGHTERS[i].name(), x0 + pickX(i), y0 + 110, 0.75F, i == pick ? 0xFFFFE74A : 0xFFAAAAAA);
         }
         big(g, font, (mode == 0 ? "ARCADE" : "SURVIVAL") + "  (W/S)", x0 + W / 2.0F, y0 + 30, 0.6F, 0xFF80D0FF);
         Style s = FIGHTERS[pick];
@@ -4954,6 +5068,11 @@ public class Showdown extends ArcadeGame {
     }
 
     private final Body[] picks = new Body[PLAYABLE];
+
+    /** Where each fighter stands on the select screen (across it, evenly). */
+    private static float pickX(int i) {
+        return ArcadeGame.W / 2.0F + (i - (PLAYABLE - 1) / 2.0F) * 34; // (close enough that the camera's perspective keeps the ends in)
+    }
 
     private static final int P1_COLOUR = 0xFF5AB4FF, P2_COLOUR = 0xFFFF6464, BOTH_COLOUR = 0xFFD488FF;
 
@@ -4967,11 +5086,11 @@ public class Showdown extends ArcadeGame {
         for (int i = 0; i < PLAYABLE; i++) {
             boolean one = vsPick[0] == i, two = vsPick[1] == i;
             int colour = one && two ? BOTH_COLOUR : one ? P1_COLOUR : two ? P2_COLOUR : 0xFFAAAAAA;
-            big(g, font, FIGHTERS[i].name(), x0 + 30 + i * 44, y0 + 110, 0.75F, colour);
+            big(g, font, FIGHTERS[i].name(), x0 + pickX(i), y0 + 110, 0.75F, colour);
             String tag = one && two ? "1P 2P" : one ? "1P" : two ? "2P" : "";
-            if (!tag.isEmpty()) big(g, font, tag, x0 + 30 + i * 44, y0 + 38, 0.7F, colour);
+            if (!tag.isEmpty()) big(g, font, tag, x0 + pickX(i), y0 + 38, 0.7F, colour);
             String ready = (one && vsReady[0] || two && vsReady[1]) ? "READY" : "";
-            if (!ready.isEmpty()) big(g, font, ready, x0 + 30 + i * 44, y0 + 46, 0.5F, 0xFF70FF90);
+            if (!ready.isEmpty()) big(g, font, ready, x0 + pickX(i), y0 + 46, 0.5F, 0xFF70FF90);
         }
         int side = localSide();
         if (vsNoticeFor > 0) {
