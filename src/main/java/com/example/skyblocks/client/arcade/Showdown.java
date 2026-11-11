@@ -3229,7 +3229,17 @@ public class Showdown extends ArcadeGame {
         float[] headBase = {neck[0] + hd[0] * 1.2F, neck[1] + hd[1] * 1.2F, 0};
         float[] headTop = {neck[0] + hd[0] * 8.8F, neck[1] + hd[1] * 8.8F, 0};
         int face = kind == 2 ? 0x8A98B0 : skin;
-        out.add(new Bone(off(headBase, hd, 2.4F, fwd, 0, 0), headTop, 7.0F, 7.0F, face, sk));
+        // (a head with hair is built of pieces that meet but never overlap - the face, the hair at the back, the hair on top - so
+        // that however it turns, no piece is drawn over one that's in front of it: the hair never vanishes into the skull)
+        float hairLine = kind == 0 ? 6.55F : kind == 1 || kind == 3 ? 6.6F : 0;
+        if (hairLine > 0) {
+            out.add(new Bone(off(headBase, hd, 2.4F, fwd, 1.4F, 0), off(headBase, hd, hairLine, fwd, 1.4F, 0), 4.2F, 7.0F, face, sk)); // (the face)
+            out.add(new Bone(off(headBase, hd, 2.4F, fwd, -2.15F, 0), off(headBase, hd, hairLine, fwd, -2.15F, 0), 2.9F, 7.2F, hair, hr)); // (hair: back)
+            if (kind == 1) // (hers: longer, down to the neck, behind the jaw)
+                out.add(new Bone(off(headBase, hd, 0.6F, fwd, -2.95F, 0), off(headBase, hd, 2.4F, fwd, -2.95F, 0), 1.3F, 7.2F, hair, hr));
+        } else {
+            out.add(new Bone(off(headBase, hd, 2.4F, fwd, 0, 0), headTop, 7.0F, 7.0F, face, sk));
+        }
         out.add(new Bone(off(headBase, hd, 0.4F, fwd, 0.6F, 0), off(headBase, hd, 2.8F, fwd, 0.5F, 0), 5.6F, 5.8F, face, sk)); // (jaw)
         if (kind != 2) {
             out.add(decor(off(headBase, hd, 3.2F, fwd, 3.7F, 0), off(headBase, hd, 4.2F, fwd, 3.9F, 0), 1.0F, 1.0F, face, sk)); // (nose)
@@ -3247,16 +3257,17 @@ public class Showdown extends ArcadeGame {
                     1.6F, 0.8F, skin, sk)); // (ears)
         }
         // ---- hair, and what makes each one itself ----
-        float[] crown = {headBase[0] + hd[0] * 6.2F - fwd[0] * 0.6F, headBase[1] + hd[1] * 6.2F - fwd[1] * 0.6F, 0};
         switch (kind) {
             case 0 -> { // RIKU: short spiky hair, a headband (its tails flying), a gi with lapels and a black belt
-                out.add(new Bone(crown, new float[] {headTop[0] + hd[0] * 0.8F, headTop[1] + hd[1] * 0.8F, 0}, 7.4F, 7.4F, hair, hr));
+                // (the hair above the headband, the headband round the forehead: one on the other, not into each other)
+                out.add(new Bone(off(headBase, hd, 7.5F, fwd, -0.1F, 0), off(headTop, hd, 0.9F, fwd, -0.1F, 0), 7.4F, 7.4F, hair, hr));
                 for (int i = 0; i < 3; i++) {
-                    float[] s0 = off(headTop, hd, 0.4F, fwd, -1.5F + i * 1.6F, -1.8F + i * 1.8F);
+                    float[] s0 = off(headTop, hd, 0.9F, fwd, -1.5F + i * 1.6F, -1.8F + i * 1.8F);
                     out.add(decor(s0, at(s0, dir(170 - lean - p[11] - i * 15), 2.4F, s0[2]), 1.6F, 1.8F, hair, hr));
                 }
-                float[] bandAt = {headBase[0] + hd[0] * 5.4F, headBase[1] + hd[1] * 5.4F, 0};
-                out.add(decor(bandAt, new float[] {bandAt[0] + hd[0] * 1.1F, bandAt[1] + hd[1] * 1.1F, 0}, 7.5F, 7.5F, accent, band));
+                // (the headband: round the forehead, above the brows, just under the hair - not into it)
+                float[] bandAt = {headBase[0] + hd[0] * 6.55F, headBase[1] + hd[1] * 6.55F, 0};
+                out.add(decor(bandAt, new float[] {bandAt[0] + hd[0] * 0.95F, bandAt[1] + hd[1] * 0.95F, 0}, 7.5F, 7.5F, accent, band));
                 float flap = Mth.sin(vt() * 0.4F) * 15;
                 float[] t0 = {bandAt[0] - fwd[0] * 3.6F, bandAt[1] - fwd[1] * 3.6F, 0};
                 float[] t1 = at(t0, dir(-80 + flap), 3.4F, 0);
@@ -3275,13 +3286,13 @@ public class Showdown extends ArcadeGame {
                 }
             }
             case 1 -> { // NEKO: hair with a fringe and side locks, cat ears (pink inside), a bell on a collar, a tail
-                out.add(new Bone(crown, new float[] {headTop[0] + hd[0] * 0.6F, headTop[1] + hd[1] * 0.6F, 0}, 7.6F, 7.6F, hair, hr));
+                out.add(new Bone(off(headBase, hd, 6.6F, fwd, -0.05F, 0), off(headTop, hd, 0.6F, fwd, -0.05F, 0), 7.3F, 7.4F, hair, hr));
                 out.add(decor(off(headBase, hd, 6.6F, fwd, 3.2F, 0), off(headBase, hd, 7.8F, fwd, 3.0F, 0), 1.2F, 7.0F, hair, hr)); // (fringe)
-                for (float side : new float[] {-3.6F, 3.6F}) {
-                    out.add(decor(off(headBase, hd, 6.4F, fwd, 1.0F, side), off(headBase, hd, 1.2F, fwd, 1.2F, side), 1.4F, 1.0F, hair, hr));
+                for (float side : new float[] {-4.0F, 4.0F}) {
+                    out.add(decor(off(headBase, hd, 6.6F, fwd, 1.0F, side), off(headBase, hd, 1.2F, fwd, 1.2F, side), 1.4F, 1.0F, hair, hr));
                 }
                 for (float side : new float[] {-2.4F, 2.4F}) {
-                    float[] e0 = {headTop[0], headTop[1], side};
+                    float[] e0 = {headTop[0] + hd[0] * 0.6F, headTop[1] + hd[1] * 0.6F, side}; // (on top of the hair, not in it)
                     out.add(new Bone(e0, new float[] {e0[0] + hd[0] * 3.2F, e0[1] + hd[1] * 3.2F, side}, 2.4F, 1.6F, hair, hr));
                     out.add(decor(off(e0, hd, 0.4F, fwd, 0.9F, side), off(e0, hd, 2.6F, fwd, 0.9F, side), 0.5F, 1.0F, 0xFF9AC8, hr));
                 }
@@ -3314,11 +3325,11 @@ public class Showdown extends ArcadeGame {
                 }
             }
             case 3 -> { // BLAZE: flames for hair, sideburns; an open jacket, its collar up; a gold buckle
-                out.add(new Bone(crown, new float[] {headTop[0] + hd[0] * 0.6F, headTop[1] + hd[1] * 0.6F, 0}, 7.4F, 7.4F, hair, hr));
+                out.add(new Bone(off(headBase, hd, 6.6F, fwd, -0.05F, 0), off(headTop, hd, 0.6F, fwd, -0.05F, 0), 7.3F, 7.4F, hair, hr));
                 for (int i = 0; i < 5; i++) {
                     float flick = Mth.sin(vt() * 0.6F + i * 1.7F) * 1.2F;
                     float side = -3.0F + i * 1.5F;
-                    float[] f0 = {headTop[0] - fwd[0] * (i % 2) * 1.5F, headTop[1] - fwd[1] * (i % 2) * 1.5F, side};
+                    float[] f0 = off(headTop, hd, 0.6F, fwd, -(i % 2) * 1.5F, side);
                     float[] f1 = at(f0, dir(195 + i * 4 - lean), 3.8F + flick + (i % 2), side);
                     out.add(decor(f0, f1, 1.8F, 1.4F, i % 2 == 0 ? hair : accent, hr));
                     out.add(decor(f1, at(f1, dir(200 + i * 6 - lean), 1.6F + flick * 0.5F, side), 1.0F, 0.9F, accent, hr));
@@ -3506,7 +3517,9 @@ public class Showdown extends ArcadeGame {
 
     /** A bone as a lit box: each side facing the camera, lit by the low sun from the left, a warm rim along its edges. */
     private void box(Body b, float[] p, Bone bone, float grow, float alpha, int tint) {
-        depthBias = bone.decor() ? 0.35F : 0;
+        // (a flat detail on a surface - an eye, a mouth, a lapel, a buckle - drawn just in front of it; anything that wraps
+        // round or stands out - hair, a headband, a belt - sorts as itself)
+        depthBias = bone.decor() && Math.min(bone.t(), bone.w()) <= 1.3F ? 0.35F : 0;
         try {
             boxFaces(b, p, bone, grow, alpha, tint);
         } finally {
