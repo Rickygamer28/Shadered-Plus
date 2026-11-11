@@ -94,7 +94,9 @@ public class BonsaiRenderer implements BlockEntityRenderer<BonsaiBlockEntity> {
                 return;
             }
         }
-        Tree tree = TREES[state.getValue(BonsaiBlock.STYLE).ordinal()];
+        // (natural with its tree not here yet - just planted, still on its way from the server: upright meanwhile)
+        int shape = state.getValue(BonsaiBlock.STYLE).ordinal();
+        Tree tree = TREES[shape < TREES.length ? shape : 0];
         float g = GROW[age];
         Minecraft mc = Minecraft.getInstance();
         // (the planted sapling's own tree - any mod's - as the server worked it out; by its kind until that's here)
