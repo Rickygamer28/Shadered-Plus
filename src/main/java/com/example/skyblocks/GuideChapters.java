@@ -49,7 +49,9 @@ public final class GuideChapters {
         }
         toys.add(new ItemStack(ModItems.TROPHY.get()));
         out.add(new Chapter("toys", toys.get(0).copy(), toys));
-        out.add(of("islands", ModItems.ISLAND_SCANNER, ModItems.ISLAND_PAINTING, ModItems.OIIA_CAT));
+        out.add(of("garden", ModItems.ZEN_SAND, ModItems.ZEN_RAKE, ModItems.ZEN_STONE, ModItems.BONSAI, ModItems.HOT_SPRING));
+        out.add(of("keepsakes", ModItems.CAMERA, ModItems.PHOTO, ModItems.MAP_TABLE, ModItems.OIIA_CAT, ModItems.OIIA_CAT_SPAWN_EGG));
+        out.add(of("islands", ModItems.ISLAND_SCANNER, ModItems.ISLAND_PAINTING));
         List<ItemStack> skies = SkyBlocksMod.skyStacks();
         out.add(new Chapter("skies", skies.isEmpty() ? new ItemStack(ModItems.GUIDE_BOOK.get()) : skies.get(0).copy(), skies));
         return out;

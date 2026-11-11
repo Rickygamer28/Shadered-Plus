@@ -1,0 +1,46 @@
+{
+  "variants": {
+    "pattern=smooth": {
+      "model": "skyblocks:block/zen_sand_smooth"
+    },
+    "pattern=lines_x": {
+      "model": "skyblocks:block/zen_sand_lines_x"
+    },
+    "pattern=lines_z": {
+      "model": "skyblocks:block/zen_sand_lines_z"
+    },
+    "pattern=waves_x": {
+      "model": "skyblocks:block/zen_sand_waves_x"
+    },
+    "pattern=waves_z": {
+      "model": "skyblocks:block/zen_sand_waves_z"
+    },
+    "pattern=ring": {
+      "model": "skyblocks:block/zen_sand_ring"
+    },
+    "pattern=ring_n": {
+      "model": "skyblocks:block/zen_sand_ring_n"
+    },
+    "pattern=ring_s": {
+      "model": "skyblocks:block/zen_sand_ring_s"
+    },
+    "pattern=ring_e": {
+      "model": "skyblocks:block/zen_sand_ring_e"
+    },
+    "pattern=ring_w": {
+      "model": "skyblocks:block/zen_sand_ring_w"
+    },
+    "pattern=ring_ne": {
+      "model": "skyblocks:block/zen_sand_ring_ne"
+    },
+    "pattern=ring_nw": {
+      "model": "skyblocks:block/zen_sand_ring_nw"
+    },
+    "pattern=ring_se": {
+      "model": "skyblocks:block/zen_sand_ring_se"
+    },
+    "pattern=ring_sw": {
+      "model": "skyblocks:block/zen_sand_ring_sw"
+    }
+  }
+}

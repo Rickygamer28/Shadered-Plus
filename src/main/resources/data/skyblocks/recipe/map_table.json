@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " M ",
+    "PPP",
+    "S S"
+  ],
+  "key": {
+    "M": {
+      "item": "minecraft:map"
+    },
+    "P": {
+      "tag": "minecraft:planks"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    }
+  },
+  "result": {
+    "id": "skyblocks:map_table",
+    "count": 1
+  }
+}

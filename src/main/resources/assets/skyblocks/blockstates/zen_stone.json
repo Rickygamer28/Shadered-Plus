@@ -1,0 +1,49 @@
+{
+  "variants": {
+    "facing=north,rocks=0": {
+      "model": "skyblocks:block/zen_stone_0"
+    },
+    "facing=north,rocks=1": {
+      "model": "skyblocks:block/zen_stone_1"
+    },
+    "facing=north,rocks=2": {
+      "model": "skyblocks:block/zen_stone_2"
+    },
+    "facing=east,rocks=0": {
+      "model": "skyblocks:block/zen_stone_0",
+      "y": 90
+    },
+    "facing=east,rocks=1": {
+      "model": "skyblocks:block/zen_stone_1",
+      "y": 90
+    },
+    "facing=east,rocks=2": {
+      "model": "skyblocks:block/zen_stone_2",
+      "y": 90
+    },
+    "facing=south,rocks=0": {
+      "model": "skyblocks:block/zen_stone_0",
+      "y": 180
+    },
+    "facing=south,rocks=1": {
+      "model": "skyblocks:block/zen_stone_1",
+      "y": 180
+    },
+    "facing=south,rocks=2": {
+      "model": "skyblocks:block/zen_stone_2",
+      "y": 180
+    },
+    "facing=west,rocks=0": {
+      "model": "skyblocks:block/zen_stone_0",
+      "y": 270
+    },
+    "facing=west,rocks=1": {
+      "model": "skyblocks:block/zen_stone_1",
+      "y": 270
+    },
+    "facing=west,rocks=2": {
+      "model": "skyblocks:block/zen_stone_2",
+      "y": 270
+    }
+  }
+}

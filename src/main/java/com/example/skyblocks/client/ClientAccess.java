@@ -144,4 +144,14 @@ public final class ClientAccess {
     }
 
     private ClientAccess() {}
+
+    /** A photo's picture came (PhotoPayloads.Picture). */
+    public static void photo(int id, byte[] data) {
+        PhotoCache.received(id, data);
+    }
+
+    /** The camera's button: take a photo of the view on the next frame (CameraItem). */
+    public static void takePhoto() {
+        CameraClient.take();
+    }
 }

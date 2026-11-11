@@ -1,0 +1,21 @@
+{
+  "multipart": [
+    {
+      "when": {
+        "facing": "north|south"
+      },
+      "apply": {
+        "model": "skyblocks:block/bonsai_pot"
+      }
+    },
+    {
+      "when": {
+        "facing": "east|west"
+      },
+      "apply": {
+        "model": "skyblocks:block/bonsai_pot",
+        "y": 90
+      }
+    }
+  ]
+}

@@ -142,5 +142,17 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> ORRERY = ITEMS.registerSimpleBlockItem("orrery", ModBlocks.ORRERY);
     public static final DeferredItem<BlockItem> PLANETARIUM = ITEMS.registerSimpleBlockItem("planetarium", ModBlocks.PLANETARIUM);
 
+    // ---- the garden, keepsakes ----
+    public static final DeferredItem<BlockItem> ZEN_SAND = ITEMS.registerSimpleBlockItem("zen_sand", ModBlocks.ZEN_SAND);
+    public static final DeferredItem<ZenRakeItem> ZEN_RAKE = ITEMS.register("zen_rake", () -> new ZenRakeItem(new Item.Properties().durability(250)));
+    public static final DeferredItem<BlockItem> ZEN_STONE = ITEMS.registerSimpleBlockItem("zen_stone", ModBlocks.ZEN_STONE);
+    public static final DeferredItem<BlockItem> BONSAI = ITEMS.registerSimpleBlockItem("bonsai", ModBlocks.BONSAI);
+    public static final DeferredItem<BlockItem> HOT_SPRING = ITEMS.registerSimpleBlockItem("hot_spring", ModBlocks.HOT_SPRING);
+    public static final DeferredItem<net.neoforged.neoforge.common.DeferredSpawnEggItem> OIIA_CAT_SPAWN_EGG = ITEMS.register("oiia_cat_spawn_egg",
+            () -> new net.neoforged.neoforge.common.DeferredSpawnEggItem(ModEntities.OIIA_CAT, 0x8C8C8C, 0xE8E2D8, new Item.Properties()));
+    public static final DeferredItem<CameraItem> CAMERA = ITEMS.register("camera", () -> new CameraItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<PhotoItem> PHOTO = ITEMS.register("photo", () -> new PhotoItem(new Item.Properties().stacksTo(16)));
+    public static final DeferredItem<BlockItem> MAP_TABLE = ITEMS.registerSimpleBlockItem("map_table", ModBlocks.MAP_TABLE);
+
     private ModItems() {}
 }

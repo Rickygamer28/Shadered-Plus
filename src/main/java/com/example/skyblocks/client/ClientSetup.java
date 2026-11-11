@@ -88,6 +88,11 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.MUSIC_BOX.get(), MusicBoxRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.NEON_SIGN.get(), NeonSignRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.FOG_MACHINE.get(), FogMachineRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.BONSAI.get(), BonsaiRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.HOT_SPRING.get(), HotSpringRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.PHOTO_FRAME.get(), PhotoFrameRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.MAP_TABLE.get(), MapTableRenderer::new);
+        event.registerEntityRenderer(com.example.skyblocks.ModEntities.OIIA_CAT.get(), OiiaCatEntityRenderer::new);
         BlockEntityRendererProvider<OiiaCatBlockEntity> big = OiiaCatRenderer::new;
         event.registerBlockEntityRenderer(ModBlockEntities.BIG_OIIA_CAT.get(), big);
         event.registerBlockEntityRenderer(ModBlockEntities.SKY_ISLAND.get(), SkyIslandRenderer::new);
@@ -411,6 +416,7 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void particles(net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent event) {
         event.registerSpriteSet(com.example.skyblocks.ModParticles.FOG.get(), FogParticle.Provider::new);
+        event.registerSpriteSet(com.example.skyblocks.ModParticles.STEAM.get(), SteamParticle.Provider::new);
     }
 
     /** An arcade cabinet's paint: its dye's colour (a little lighter), over its grey sides and trim. */

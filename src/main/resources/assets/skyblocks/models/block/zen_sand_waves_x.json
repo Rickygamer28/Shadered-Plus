@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "skyblocks:block/zen_sand_waves_x",
+    "side": "skyblocks:block/zen_sand_side",
+    "bottom": "skyblocks:block/zen_sand_side"
+  }
+}

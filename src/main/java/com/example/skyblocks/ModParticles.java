@@ -12,5 +12,8 @@ public final class ModParticles {
     /** The fog machine's fog (client/FogParticle). */
     public static final Supplier<SimpleParticleType> FOG = TYPES.register("fog", () -> new SimpleParticleType(false));
 
+    /** A hot spring's steam (client/SteamParticle). */
+    public static final Supplier<SimpleParticleType> STEAM = TYPES.register("steam", () -> new SimpleParticleType(false));
+
     private ModParticles() {}
 }

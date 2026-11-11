@@ -163,6 +163,11 @@ public class GuideScreen extends Screen {
 
     // ================= drawing =================
 
+    /** How far apart the chapter tabs are: 24 while they fit along the book, closer when there are many. */
+    private int tabStep() {
+        return Math.min(24, (BW - 8) / Math.max(1, tabs.size()));
+    }
+
     @Override
     public void render(GuiGraphics g, int mx, int my, float partialTick) {
         super.render(g, mx, my, partialTick);
@@ -170,10 +175,10 @@ public class GuideScreen extends Screen {
         int l = left, t = top, mid = l + BW / 2;
         // the tabs over the book
         for (int i = 0; i < tabs.size(); i++) {
-            int tx = l + 6 + i * 24, ty = t - 24, h = i == tab ? 27 : 22;
-            g.fill(tx, ty, tx + 22, ty + h, 0xFF5A3A22);
-            g.fill(tx + 1, ty + 1, tx + 21, ty + h - (i == tab ? 0 : 1), i == tab ? PAPER : PAPER_DARK);
-            item(g, tabs.get(i).icon, tx + 3, ty + 3);
+            int tx = l + 6 + i * tabStep(), ty = t - 24, h = i == tab ? 27 : 22, tw = tabStep() - 2;
+            g.fill(tx, ty, tx + tw, ty + h, 0xFF5A3A22);
+            g.fill(tx + 1, ty + 1, tx + tw - 1, ty + h - (i == tab ? 0 : 1), i == tab ? PAPER : PAPER_DARK);
+            item(g, tabs.get(i).icon, tx + (tw - 16) / 2, ty + 3);
         }
         // the book
         g.fill(l - 5, t - 3, l + BW + 5, t + BH + 5, 0xFF5A3A22);
@@ -182,7 +187,7 @@ public class GuideScreen extends Screen {
         g.fill(mid - 1, t, mid + 1, t + BH, 0xFFC9B48C);
         for (int i = 0; i < tabs.size(); i++) { // (the chosen tab joined to its page)
             if (i == tab) {
-                g.fill(l + 7 + i * 24, t - 2, l + 27 + i * 24, t + 1, PAPER);
+                g.fill(l + 7 + i * tabStep(), t - 2, l + 5 + (i + 1) * tabStep(), t + 1, PAPER);
             }
         }
         Tab tb = tabs.get(tab);
@@ -190,8 +195,8 @@ public class GuideScreen extends Screen {
         drawRight(g, tb, mid + 9, t, mx, my, partialTick);
         // the hovered tab's or item's name
         for (int i = 0; i < tabs.size(); i++) {
-            int tx = l + 6 + i * 24, ty = t - 24;
-            if (mx >= tx && mx < tx + 22 && my >= ty && my < ty + 22) {
+            int tx = l + 6 + i * tabStep(), ty = t - 24;
+            if (mx >= tx && mx < tx + tabStep() - 2 && my >= ty && my < ty + 22) {
                 g.renderTooltip(font, Component.translatable("guide.skyblocks.chapter." + tabs.get(i).id), mx, my);
                 return;
             }
@@ -334,8 +339,8 @@ public class GuideScreen extends Screen {
     public boolean mouseClicked(double mx, double my, int button) {
         int l = left, t = top;
         for (int i = 0; i < tabs.size(); i++) {
-            int tx = l + 6 + i * 24, ty = t - 24;
-            if (mx >= tx && mx < tx + 22 && my >= ty && my < ty + 22) {
+            int tx = l + 6 + i * tabStep(), ty = t - 24;
+            if (mx >= tx && mx < tx + tabStep() - 2 && my >= ty && my < ty + 22) {
                 leftScroll = 0;
                 select(i, 0);
                 click();

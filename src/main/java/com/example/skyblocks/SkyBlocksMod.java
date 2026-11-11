@@ -31,6 +31,8 @@ public class SkyBlocksMod {
         ModBlocks.BLOCKS.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
         ModBlockEntities.TYPES.register(modEventBus);
+        ModEntities.TYPES.register(modEventBus);
+        modEventBus.addListener(ModEntities::attributes);
         ModParticles.TYPES.register(modEventBus);
         ModComponents.COMPONENTS.register(modEventBus);
         ModFluids.TYPES.register(modEventBus);
@@ -45,6 +47,7 @@ public class SkyBlocksMod {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(ArcadeVersus::tick);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(ArcadeVersus::loggedOut);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(ArcadeVersus::stopped);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(MapHeights::tick);
     }
 
     /** The guide book, once, the first time a player joins a world with Shadered+. */
@@ -133,6 +136,9 @@ public class SkyBlocksMod {
                 .playBidirectional(ArcadeFramePayload.TYPE, ArcadeFramePayload.STREAM_CODEC, ArcadeFramePayload::handle)
                 .playBidirectional(ArcadeVersusPayload.TYPE, ArcadeVersusPayload.STREAM_CODEC, ArcadeVersusPayload::handle)
                 .playToServer(ArcadeGhostPayload.TYPE, ArcadeGhostPayload.STREAM_CODEC, ArcadeGhostPayload::handle)
+                .playToServer(PhotoPayloads.Take.TYPE, PhotoPayloads.Take.STREAM_CODEC, PhotoPayloads.Take::handle)
+                .playToServer(PhotoPayloads.Want.TYPE, PhotoPayloads.Want.STREAM_CODEC, PhotoPayloads.Want::handle)
+                .playToClient(PhotoPayloads.Picture.TYPE, PhotoPayloads.Picture.STREAM_CODEC, PhotoPayloads.Picture::handle)
                 .playToServer(PondMaterialsPayload.TYPE, PondMaterialsPayload.STREAM_CODEC, PondMaterialsPayload::handle)
                 .playToServer(SolarSystemClickPayload.TYPE, SolarSystemClickPayload.STREAM_CODEC, SolarSystemClickPayload::handle)
                 .playToServer(PortalCrossPayload.TYPE, PortalCrossPayload.STREAM_CODEC, PortalCrossPayload::handle)

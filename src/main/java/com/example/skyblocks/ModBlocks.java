@@ -401,6 +401,31 @@ public final class ModBlocks {
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE).lightLevel(state -> 12)
                     .isValidSpawn((s, l, p, e) -> false));
 
+    // ---- the garden, keepsakes ----
+
+    /** Zen sand: rake patterns into it (ZenSandBlock, ZenRakeItem). */
+    public static final DeferredBlock<ZenSandBlock> ZEN_SAND = BLOCKS.registerBlock("zen_sand", ZenSandBlock::new,
+            BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.SAND).mapColor(net.minecraft.world.level.material.MapColor.SAND));
+    /** Garden stones for zen sand (ZenStoneBlock). */
+    public static final DeferredBlock<ZenStoneBlock> ZEN_STONE = BLOCKS.registerBlock("zen_stone", ZenStoneBlock::new,
+            BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.STONE).noOcclusion().pushReaction(PushReaction.DESTROY)
+                    .mapColor(net.minecraft.world.level.material.MapColor.STONE));
+    /** A bonsai pot and the little tree growing in it (BonsaiBlock, client/BonsaiRenderer). */
+    public static final DeferredBlock<BonsaiBlock> BONSAI = BLOCKS.registerBlock("bonsai", BonsaiBlock::new,
+            BlockBehaviour.Properties.of().strength(0.6F).sound(SoundType.DECORATED_POT).noOcclusion().pushReaction(PushReaction.DESTROY)
+                    .mapColor(net.minecraft.world.level.material.MapColor.TERRACOTTA_BROWN));
+    /** A hot spring (HotSpringBlock, client/HotSpringRenderer). */
+    public static final DeferredBlock<HotSpringBlock> HOT_SPRING = BLOCKS.registerBlock("hot_spring", HotSpringBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.TUFF).noOcclusion().lightLevel(state -> 6)
+                    .mapColor(net.minecraft.world.level.material.MapColor.WATER).isValidSpawn((s, l, p, e) -> false));
+    /** A framed photo (PhotoFrameBlock; placed from a PhotoItem, gives the photo back when broken). */
+    public static final DeferredBlock<PhotoFrameBlock> PHOTO_FRAME = BLOCKS.registerBlock("photo_frame", PhotoFrameBlock::new,
+            BlockBehaviour.Properties.of().strength(0.3F).sound(SoundType.WOOD).noOcclusion().noCollission().noLootTable()
+                    .pushReaction(PushReaction.DESTROY));
+    /** A map table: the map's land in 3D (MapTableBlock, client/MapTableRenderer). */
+    public static final DeferredBlock<MapTableBlock> MAP_TABLE = BLOCKS.registerBlock("map_table", MapTableBlock::new,
+            BlockBehaviour.Properties.of().strength(2.0F).sound(SoundType.WOOD).noOcclusion().ignitedByLava()
+                    .mapColor(net.minecraft.world.level.material.MapColor.WOOD));
 
     private ModBlocks() {}
 }

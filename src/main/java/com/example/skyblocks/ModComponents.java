@@ -34,5 +34,21 @@ public final class ModComponents {
     public static final Supplier<DataComponentType<Trophy>> TROPHY = COMPONENTS.register("trophy",
             () -> DataComponentType.<Trophy>builder().persistent(Trophy.CODEC).networkSynchronized(Trophy.STREAM_CODEC).build());
 
+    /** A photo (CameraItem): which picture (PhotoStore), who took it, on which day. */
+    public record Photo(int id, String by, long day) {
+        public static final com.mojang.serialization.Codec<Photo> CODEC = com.mojang.serialization.codecs.RecordCodecBuilder.create(i -> i.group(
+                com.mojang.serialization.Codec.INT.fieldOf("id").forGetter(Photo::id),
+                com.mojang.serialization.Codec.STRING.fieldOf("by").forGetter(Photo::by),
+                com.mojang.serialization.Codec.LONG.fieldOf("day").forGetter(Photo::day)).apply(i, Photo::new));
+        public static final net.minecraft.network.codec.StreamCodec<io.netty.buffer.ByteBuf, Photo> STREAM_CODEC =
+                net.minecraft.network.codec.StreamCodec.composite(
+                        net.minecraft.network.codec.ByteBufCodecs.VAR_INT, Photo::id,
+                        net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8, Photo::by,
+                        net.minecraft.network.codec.ByteBufCodecs.VAR_LONG, Photo::day, Photo::new);
+    }
+
+    public static final Supplier<DataComponentType<Photo>> PHOTO = COMPONENTS.register("photo",
+            () -> DataComponentType.<Photo>builder().persistent(Photo.CODEC).networkSynchronized(Photo.STREAM_CODEC).build());
+
     private ModComponents() {}
 }

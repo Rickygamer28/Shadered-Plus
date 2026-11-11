@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "facing=north,standing=true": {
+      "model": "skyblocks:block/photo_frame_standing"
+    },
+    "facing=north,standing=false": {
+      "model": "skyblocks:block/photo_frame_wall"
+    },
+    "facing=east,standing=true": {
+      "model": "skyblocks:block/photo_frame_standing",
+      "y": 90
+    },
+    "facing=east,standing=false": {
+      "model": "skyblocks:block/photo_frame_wall",
+      "y": 90
+    },
+    "facing=south,standing=true": {
+      "model": "skyblocks:block/photo_frame_standing",
+      "y": 180
+    },
+    "facing=south,standing=false": {
+      "model": "skyblocks:block/photo_frame_wall",
+      "y": 180
+    },
+    "facing=west,standing=true": {
+      "model": "skyblocks:block/photo_frame_standing",
+      "y": 270
+    },
+    "facing=west,standing=false": {
+      "model": "skyblocks:block/photo_frame_wall",
+      "y": 270
+    }
+  }
+}

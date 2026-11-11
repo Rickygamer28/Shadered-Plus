@@ -53,6 +53,32 @@ public class OiiaCatBlock extends HorizontalDirectionalBlock implements EntityBl
         return RenderShape.ENTITYBLOCK_ANIMATED;
     }
 
+    /** Fed a fish, the cat hops off its block: your companion now (OiiaCatEntity). */
+    @Override
+    protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                                                 net.minecraft.world.entity.player.Player player, net.minecraft.world.InteractionHand hand,
+                                                                 net.minecraft.world.phys.BlockHitResult hit) {
+        if (this != ModBlocks.OIIA_CAT.get() || !stack.is(net.minecraft.tags.ItemTags.CAT_FOOD)) {
+            return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        }
+        if (!level.isClientSide) {
+            OiiaCatEntity cat = ModEntities.OIIA_CAT.get().create(level);
+            if (cat != null) {
+                level.removeBlock(pos, false);
+                float yaw = state.getValue(FACING).toYRot();
+                cat.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, yaw, 0.0F);
+                cat.setYHeadRot(yaw);
+                cat.setYBodyRot(yaw);
+                cat.tame(player);
+                level.addFreshEntity(cat);
+                level.broadcastEntityEvent(cat, (byte) 7); // (hearts)
+                level.playSound(null, pos, net.minecraft.sounds.SoundEvents.CAT_EAT, net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 1.0F);
+                stack.consume(1, player);
+            }
+        }
+        return net.minecraft.world.ItemInteractionResult.sidedSuccess(level.isClientSide);
+    }
+
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         return defaultBlockState()
