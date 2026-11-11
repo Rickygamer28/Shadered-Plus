@@ -25,6 +25,11 @@ public class BonsaiBlockEntity extends BlockEntity {
     public ResourceLocation particle;
     public ItemStack fruit = ItemStack.EMPTY;
     public float fruitChance;
+    /** The sapling's real tree (BonsaiTrees.grow): its blocks, from the ground up; null if it couldn't be grown. */
+    @Nullable
+    public java.util.Map<BlockPos, BlockState> natural;
+    /** Changes whenever the real tree does (clients: build its picture again). */
+    public int naturalVersion;
 
     public BonsaiBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.BONSAI.get(), pos, state);
@@ -58,6 +63,10 @@ public class BonsaiBlockEntity extends BlockEntity {
             sapling = new ItemStack(kind.sapling);
         }
         BonsaiTrees.Tree t = BonsaiTrees.resolve(level, sapling);
+        if (level instanceof net.minecraft.server.level.ServerLevel server) {
+            natural = BonsaiTrees.grow(server, sapling, worldPosition.asLong() * 31 + BuiltInRegistries.ITEM.getKey(sapling.getItem()).hashCode());
+            naturalVersion++;
+        }
         log = t.log();
         leaves = t.leaves();
         flowering = t.flowering();
@@ -69,6 +78,7 @@ public class BonsaiBlockEntity extends BlockEntity {
     public void clear() {
         sapling = ItemStack.EMPTY;
         log = leaves = flowering = null;
+        natural = null;
         particle = null;
         fruit = ItemStack.EMPTY;
         setChanged();
@@ -96,6 +106,26 @@ public class BonsaiBlockEntity extends BlockEntity {
             tag.put("fruit", fruit.save(registries));
             tag.putFloat("fruitChance", fruitChance);
         }
+        if (natural != null) { // (its blocks: a palette, and each one's place (x, y, z packed) and palette number)
+            java.util.List<BlockState> palette = new java.util.ArrayList<>();
+            java.util.Map<BlockState, Integer> index = new java.util.HashMap<>();
+            int[] at = new int[natural.size()], which = new int[natural.size()];
+            int i = 0;
+            for (var e : natural.entrySet()) {
+                BlockPos p = e.getKey();
+                at[i] = (p.getX() + 512 & 1023) | (p.getY() - BonsaiTrees.GROUND + 512 & 1023) << 10 | (p.getZ() + 512 & 1023) << 20;
+                which[i] = index.computeIfAbsent(e.getValue(), st -> {
+                    palette.add(st);
+                    return palette.size() - 1;
+                });
+                i++;
+            }
+            net.minecraft.nbt.ListTag pal = new net.minecraft.nbt.ListTag();
+            palette.forEach(st -> pal.add(NbtUtils.writeBlockState(st)));
+            tag.put("treePalette", pal);
+            tag.putIntArray("treeAt", at);
+            tag.putIntArray("treeBlock", which);
+        }
     }
 
     @Override
@@ -109,6 +139,24 @@ public class BonsaiBlockEntity extends BlockEntity {
         particle = tag.contains("particle") ? ResourceLocation.tryParse(tag.getString("particle")) : null;
         fruit = tag.contains("fruit") ? ItemStack.parseOptional(registries, tag.getCompound("fruit")) : ItemStack.EMPTY;
         fruitChance = tag.getFloat("fruitChance");
+        if (tag.contains("treeAt")) {
+            net.minecraft.nbt.ListTag pal = tag.getList("treePalette", net.minecraft.nbt.Tag.TAG_COMPOUND);
+            BlockState[] palette = new BlockState[pal.size()];
+            for (int i = 0; i < palette.length; i++) {
+                palette[i] = NbtUtils.readBlockState(blocks, pal.getCompound(i));
+            }
+            int[] at = tag.getIntArray("treeAt"), which = tag.getIntArray("treeBlock");
+            java.util.Map<BlockPos, BlockState> m = new java.util.HashMap<>();
+            for (int i = 0; i < Math.min(at.length, which.length); i++) {
+                if (which[i] >= 0 && which[i] < palette.length) {
+                    m.put(new BlockPos((at[i] & 1023) - 512, ((at[i] >> 10) & 1023) - 512 + BonsaiTrees.GROUND, ((at[i] >> 20) & 1023) - 512), palette[which[i]]);
+                }
+            }
+            natural = m;
+        } else {
+            natural = null;
+        }
+        naturalVersion++;
     }
 
     @Override

@@ -69,7 +69,8 @@ public final class BonsaiTrees {
         Entry e = ENTRIES.get(item);
         BlockState log = null, leaves = null;
         if (item instanceof BlockItem bi) {
-            TreeConfiguration tc = treeOf(level, bi.getBlock());
+            ConfiguredFeature<?, ?> feature = featureOf(level, bi.getBlock());
+            TreeConfiguration tc = feature != null && feature.config() instanceof TreeConfiguration t ? t : null;
             if (tc != null) {
                 RandomSource r = RandomSource.create(1L);
                 try {
@@ -118,9 +119,9 @@ public final class BonsaiTrees {
         return null;
     }
 
-    /** The tree a sapling grows (its tree grower's tree, read without growing it), or null. */
+    /** The tree a sapling grows (its tree grower's tree, as it's defined), or null. */
     @Nullable
-    private static TreeConfiguration treeOf(Level level, Block sapling) {
+    private static ConfiguredFeature<?, ?> featureOf(Level level, Block sapling) {
         try {
             for (Class<?> c = sapling.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
                 for (Field f : c.getDeclaredFields()) {
@@ -147,8 +148,8 @@ public final class BonsaiTrees {
                             @SuppressWarnings("unchecked")
                             ConfiguredFeature<?, ?> cf = level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE)
                                     .get((ResourceKey<ConfiguredFeature<?, ?>>) key);
-                            if (cf != null && cf.config() instanceof TreeConfiguration tc) {
-                                return tc;
+                            if (cf != null) {
+                                return cf;
                             }
                         }
                     }
@@ -158,6 +159,159 @@ public final class BonsaiTrees {
             // (not a sapling we can read: by name)
         }
         return null;
+    }
+
+    // ---- the real tree, grown somewhere nobody sees ----
+
+    /** The ground the tree's grown on (its trunk starts at 0, GROUND, 0); a tree bigger than this many blocks isn't kept. */
+    public static final int GROUND = 64, MOST_BLOCKS = 6000;
+
+    /**
+     * The sapling's real tree, grown (as the sapling would grow it, with this seed) in a pretend world of grass with
+     * nothing else in it: every block it placed, from the ground up. Null if it can't be grown that way (not a sapling
+     * with a tree to read, a tree that needs a real world, or one too big for a pot).
+     */
+    @Nullable
+    public static Map<BlockPos, BlockState> grow(net.minecraft.server.level.ServerLevel level, ItemStack sapling, long seed) {
+        if (!(sapling.getItem() instanceof BlockItem bi)) {
+            return null;
+        }
+        ConfiguredFeature<?, ?> feature = featureOf(level, bi.getBlock());
+        if (feature == null) {
+            return null;
+        }
+        Map<BlockPos, BlockState> placed = new HashMap<>();
+        RandomSource random = RandomSource.create(seed);
+        net.minecraft.world.level.WorldGenLevel fake = PretendWorld.of(level, placed, random);
+        try {
+            if (!feature.place(fake, level.getChunkSource().getGenerator(), random, new BlockPos(0, GROUND, 0))) {
+                return null;
+            }
+        } catch (RuntimeException | LinkageError e) {
+            SkyBlocksMod.LOGGER.debug("Couldn't grow {} for a bonsai: {}", BuiltInRegistries.ITEM.getKey(sapling.getItem()), e.toString());
+            return null;
+        }
+        placed.keySet().removeIf(p -> p.getY() < GROUND); // (the dirt it put under itself)
+        placed.values().removeIf(BlockState::isAir);
+        return placed.isEmpty() || placed.size() > MOST_BLOCKS ? null : placed;
+    }
+
+    /** A world for growing one tree in: grass below GROUND, air above, everything it places kept. */
+    private static final class PretendWorld implements java.lang.reflect.InvocationHandler {
+        private final net.minecraft.server.level.ServerLevel level;
+        private final Map<BlockPos, BlockState> placed;
+        private final RandomSource random;
+
+        private PretendWorld(net.minecraft.server.level.ServerLevel level, Map<BlockPos, BlockState> placed, RandomSource random) {
+            this.level = level;
+            this.placed = placed;
+            this.random = random;
+        }
+
+        static net.minecraft.world.level.WorldGenLevel of(net.minecraft.server.level.ServerLevel level, Map<BlockPos, BlockState> placed, RandomSource random) {
+            return (net.minecraft.world.level.WorldGenLevel) java.lang.reflect.Proxy.newProxyInstance(
+                    net.minecraft.world.level.WorldGenLevel.class.getClassLoader(), new Class<?>[] {net.minecraft.world.level.WorldGenLevel.class},
+                    new PretendWorld(level, placed, random));
+        }
+
+        private BlockState at(BlockPos pos) {
+            BlockState s = placed.get(pos);
+            if (s != null) {
+                return s;
+            }
+            return pos.getY() < GROUND - 1 ? Blocks.DIRT.defaultBlockState() : pos.getY() == GROUND - 1 ? Blocks.GRASS_BLOCK.defaultBlockState()
+                    : Blocks.AIR.defaultBlockState();
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public Object invoke(Object proxy, java.lang.reflect.Method m, Object[] a) throws Throwable {
+            String n = m.getName();
+            int argc = a == null ? 0 : a.length;
+            switch (n) {
+                case "getBlockState":
+                    if (argc == 1 && a[0] instanceof BlockPos p) return at(p.immutable());
+                    break;
+                case "getFluidState":
+                    if (argc == 1 && a[0] instanceof BlockPos p) return at(p.immutable()).getFluidState();
+                    break;
+                case "isStateAtPosition":
+                    return ((java.util.function.Predicate<BlockState>) a[1]).test(at(((BlockPos) a[0]).immutable()));
+                case "isFluidAtPosition":
+                    return ((java.util.function.Predicate<net.minecraft.world.level.material.FluidState>) a[1]).test(at(((BlockPos) a[0]).immutable()).getFluidState());
+                case "setBlock":
+                    placed.put(((BlockPos) a[0]).immutable(), (BlockState) a[1]);
+                    return true;
+                case "removeBlock":
+                    placed.put(((BlockPos) a[0]).immutable(), Blocks.AIR.defaultBlockState());
+                    return true;
+                case "destroyBlock":
+                    placed.put(((BlockPos) a[0]).immutable(), Blocks.AIR.defaultBlockState());
+                    return true;
+                case "getMinBuildHeight":
+                    return 0;
+                case "getHeight":
+                    if (argc == 0) return 384;
+                    if (argc == 3) return GROUND;
+                    break;
+                case "getHeightmapPos":
+                    return new BlockPos(((BlockPos) a[1]).getX(), GROUND, ((BlockPos) a[1]).getZ());
+                case "getRandom":
+                    return random;
+                case "getLevel":
+                    return level;
+                case "getServer":
+                    return level.getServer();
+                case "registryAccess":
+                    return level.registryAccess();
+                case "enabledFeatures":
+                    return level.enabledFeatures();
+                case "dimensionType":
+                    return level.dimensionType();
+                case "getBiome":
+                    return level.getBiome(level.getSharedSpawnPos());
+                case "getBiomeManager":
+                    return level.getBiomeManager();
+                case "getWorldBorder":
+                    return level.getWorldBorder();
+                case "getLevelData":
+                    return level.getLevelData();
+                case "getCurrentDifficultyAt":
+                    return level.getCurrentDifficultyAt(BlockPos.ZERO);
+                case "ensureCanWrite":
+                case "hasChunk":
+                case "hasChunkAt":
+                case "isLoaded":
+                    return true;
+                case "isClientSide":
+                    return false;
+                case "getBlockEntity":
+                    if (argc == 1) return null;
+                    break;
+                case "toString":
+                    return "bonsai's pretend world";
+                case "hashCode":
+                    return System.identityHashCode(proxy);
+                case "equals":
+                    return proxy == a[0];
+                default:
+                    break;
+            }
+            if (m.isDefault()) {
+                return java.lang.reflect.InvocationHandler.invokeDefault(proxy, m, a);
+            }
+            Class<?> r = m.getReturnType();
+            if (r == boolean.class) return false;
+            if (r == int.class) return 0;
+            if (r == long.class) return 0L;
+            if (r == float.class) return 0.0F;
+            if (r == double.class) return 0.0;
+            if (r == byte.class) return (byte) 0;
+            if (r == short.class) return (short) 0;
+            if (r == char.class) return (char) 0;
+            if (r == Optional.class) return Optional.empty();
+            return null;
+        }
     }
 
     // ---- the data files ----

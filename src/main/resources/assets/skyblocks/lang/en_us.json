@@ -684,7 +684,7 @@
   "block.skyblocks.bonsai": "Bonsai Pot",
   "tooltip.skyblocks.bonsai": "Plant any sapling in it: Minecraft's, or another mod's (it grows that tree's own wood and leaves)",
   "tooltip.skyblocks.bonsai.grow": "The little tree grows slowly, about a stage a day. Bone meal hurries it. Grown, some flower, drop leaves or petals, and fruit trees drop fruit (oak: apples)",
-  "tooltip.skyblocks.bonsai.shears": "Once it's grown a bit, shears shape it: upright, round, windswept, cascading or cloud pruned",
+  "tooltip.skyblocks.bonsai.shears": "Once it's grown a bit, shears shape it: natural (the real tree, in miniature), upright, round, windswept, cascading or cloud pruned",
   "message.skyblocks.bonsai.small": "Too small to shape yet: let it grow a bit",
   "message.skyblocks.bonsai.style": "Shaped: %s",
   "message.skyblocks.bonsai.style.upright": "Upright",
@@ -734,5 +734,6 @@
   "guide.skyblocks.small_photo_frame": "A small dark wooden frame for a photo, on a wall or a desk.",
   "guide.skyblocks.medium_photo_frame": "A bigger light wooden frame: two blocks wide on a wall, or on an easel.",
   "guide.skyblocks.large_photo_frame": "A big gilded frame: three blocks wide on a wall, or on a tall easel.",
-  "message.skyblocks.bonsai.tree": "%s: %s, %s"
+  "message.skyblocks.bonsai.tree": "%s: %s, %s",
+  "message.skyblocks.bonsai.style.natural": "Natural (its own tree)"
 }

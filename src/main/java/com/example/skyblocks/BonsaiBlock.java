@@ -89,7 +89,9 @@ public class BonsaiBlock extends BaseEntityBlock implements BonemealableBlock {
     }
 
     public enum Style implements StringRepresentable {
-        UPRIGHT("upright"), ROUND("round"), WINDSWEPT("windswept"), CASCADE("cascade"), CLOUDS("clouds");
+        UPRIGHT("upright"), ROUND("round"), WINDSWEPT("windswept"), CASCADE("cascade"), CLOUDS("clouds"),
+        /** The sapling's own tree, as it really grows, in miniature (BonsaiTrees.grow). */
+        NATURAL("natural");
 
         private final String name;
 
@@ -179,6 +181,9 @@ public class BonsaiBlock extends BaseEntityBlock implements BonemealableBlock {
                 level.setBlock(pos, state.setValue(KIND, kind == null ? Kind.OTHER : kind).setValue(AGE, 0).setValue(STYLE, Style.UPRIGHT), Block.UPDATE_ALL);
                 if (level.getBlockEntity(pos) instanceof BonsaiBlockEntity be) {
                     be.plant(stack);
+                    if (be.natural != null) { // (its own tree, to start with)
+                        level.setBlock(pos, level.getBlockState(pos).setValue(STYLE, Style.NATURAL), Block.UPDATE_ALL);
+                    }
                 }
                 level.playSound(null, pos, SoundEvents.GRASS_PLACE, SoundSource.BLOCKS, 1.0F, 1.1F);
                 stack.consume(1, player);
@@ -194,6 +199,9 @@ public class BonsaiBlock extends BaseEntityBlock implements BonemealableBlock {
             }
             if (!level.isClientSide) {
                 Style style = Style.values()[(state.getValue(STYLE).ordinal() + 1) % Style.values().length];
+                if (style == Style.NATURAL && !(level.getBlockEntity(pos) instanceof BonsaiBlockEntity be && be.natural != null)) {
+                    style = Style.UPRIGHT; // (a tree that can't be grown here: only the shaped ones)
+                }
                 level.setBlock(pos, state.setValue(STYLE, style), Block.UPDATE_ALL);
                 level.playSound(null, pos, SoundEvents.SHEEP_SHEAR, SoundSource.BLOCKS, 0.8F, 1.3F);
                 if (level instanceof ServerLevel server) {

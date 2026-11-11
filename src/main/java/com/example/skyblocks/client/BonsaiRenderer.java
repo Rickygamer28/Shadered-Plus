@@ -77,6 +77,23 @@ public class BonsaiRenderer implements BlockEntityRenderer<BonsaiBlockEntity> {
         }
         BonsaiBlock.Kind kind = state.getValue(BonsaiBlock.KIND);
         int age = state.getValue(BonsaiBlock.AGE);
+        if (state.getValue(BonsaiBlock.STYLE) == BonsaiBlock.Style.NATURAL && be.natural != null) {
+            BonsaiNatural tree = BonsaiNatural.of(be);
+            if (!tree.empty()) {
+                // its own tree, shrunk to fit the pot (wide trees by their spread from the trunk, tall ones by their height)
+                float spread = 2 * Math.max(Math.max(Math.abs(tree.minX - 0.5F), Math.abs(tree.maxX - 0.5F)),
+                        Math.max(Math.abs(tree.minZ - 0.5F), Math.abs(tree.maxZ - 0.5F)));
+                float s = Math.min(0.85F / Math.max(1.0F, spread), 0.95F / Math.max(1.0F, tree.height)) * GROW[age];
+                poseStack.pushPose();
+                poseStack.translate(0.5F, SOIL / 16.0F, 0.5F);
+                poseStack.mulPose(Axis.YP.rotationDegrees(yaw(state.getValue(BonsaiBlock.FACING))));
+                poseStack.scale(s, s, s);
+                poseStack.translate(-0.5F, 0, -0.5F);
+                tree.render(poseStack.last(), buffers, light);
+                poseStack.popPose();
+                return;
+            }
+        }
         Tree tree = TREES[state.getValue(BonsaiBlock.STYLE).ordinal()];
         float g = GROW[age];
         Minecraft mc = Minecraft.getInstance();
@@ -280,6 +297,6 @@ public class BonsaiRenderer implements BlockEntityRenderer<BonsaiBlockEntity> {
 
     @Override
     public net.minecraft.world.phys.AABB getRenderBoundingBox(BonsaiBlockEntity be) {
-        return new net.minecraft.world.phys.AABB(be.getBlockPos()).inflate(0.25);
+        return new net.minecraft.world.phys.AABB(be.getBlockPos()).inflate(0.5);
     }
 }
