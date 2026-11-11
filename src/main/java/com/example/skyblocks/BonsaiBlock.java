@@ -225,7 +225,9 @@ public class BonsaiBlock extends BaseEntityBlock implements BonemealableBlock {
         }
         if (!level.isClientSide) {
             player.displayClientMessage(Component.translatable("message.skyblocks.bonsai.tree", be.sapling().getHoverName(),
-                    be.log.getBlock().getName(), be.leaves.getBlock().getName()).withStyle(ChatFormatting.GRAY), true);
+                    be.log.getBlock().getName(), be.leaves.getBlock().getName()).append(" - ")
+                    .append(Component.translatable(be.natural != null ? "message.skyblocks.bonsai.natural" : "message.skyblocks.bonsai.no_natural"))
+                    .withStyle(ChatFormatting.GRAY), true);
         }
         return net.minecraft.world.InteractionResult.sidedSuccess(level.isClientSide);
     }

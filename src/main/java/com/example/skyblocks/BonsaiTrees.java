@@ -188,7 +188,7 @@ public final class BonsaiTrees {
                 return null;
             }
         } catch (RuntimeException | LinkageError e) {
-            SkyBlocksMod.LOGGER.debug("Couldn't grow {} for a bonsai: {}", BuiltInRegistries.ITEM.getKey(sapling.getItem()), e.toString());
+            SkyBlocksMod.LOGGER.warn("Couldn't grow {} for a bonsai's natural style (the shaped styles still work)", BuiltInRegistries.ITEM.getKey(sapling.getItem()), e);
             return null;
         }
         placed.keySet().removeIf(p -> p.getY() < GROUND); // (the dirt it put under itself)
@@ -288,6 +288,21 @@ public final class BonsaiTrees {
                 case "getBlockEntity":
                     if (argc == 1) return null;
                     break;
+                // (block updates, ticks, sounds, game events: nothing happens here - leaves settling schedule ticks)
+                case "scheduleTick":
+                case "gameEvent":
+                case "blockUpdated":
+                case "updateNeighborsAt":
+                case "updateNeighbourForOutputSignal":
+                case "neighborShapeChanged":
+                case "playSound":
+                case "levelEvent":
+                case "addParticle":
+                case "addFreshEntity":
+                    return m.getReturnType() == boolean.class ? Boolean.FALSE : null;
+                case "getBlockTicks":
+                case "getFluidTicks":
+                    return net.minecraft.world.ticks.BlackholeTickAccess.emptyLevelList();
                 case "toString":
                     return "bonsai's pretend world";
                 case "hashCode":
