@@ -143,7 +143,9 @@ public final class Netplay {
             Rewind.restore(game, states[Math.floorMod(rewindFrom, RING)]);
             rewound = frame - rewindFrom;
             rewoundMost = Math.max(rewoundMost, rewound);
+            game.replaying = true; // (nothing learned from it twice)
             for (int f = rewindFrom; f < frame; f++) play(f);
+            game.replaying = false;
             game.drainSounds(); // (heard the first time round)
             rewindFrom = Integer.MAX_VALUE;
         }

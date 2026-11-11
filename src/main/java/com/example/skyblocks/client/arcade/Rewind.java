@@ -34,7 +34,8 @@ final class Rewind {
     /** Not the fight: only for drawing it (or the link to the other cabinet). */
     private static final Set<String> SKIP = Set.of("guardShape", "quads", "lastFrame", "camU", "camV", "camD", "oCamU", "oCamD",
             "curBody", "curPose", "curLift", "pt", "cu", "cd", "csp", "horizon", "camH", "rTX", "rTZ", "depthBias", "mirrored", "picks",
-            "frameId", "gridOf", "grid", "showList", "listTab", "listSel", "listTop", "netplay", "random", "sounds");
+            "frameId", "gridOf", "grid", "showList", "listTab", "listSel", "listTop", "netplay", "random", "sounds",
+            "cineYaw", "oCineYaw", "cineBars", "oCineBars", "cyRad", "cyCos", "cySin", "bars", "silhouette", "learned", "replaying", "ghostly", "ghostBrain");
     /** Kept per fighter (their poses - which the hits are judged by - shown health, trails): only the two fighting
      *  (the select screen's are only drawn). */
     private static final Set<String> BY_FIGHTER = Set.of("poses", "shownHp", "trails");

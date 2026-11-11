@@ -32,6 +32,24 @@ public class ArcadeBlockEntity extends BlockEntity {
     public String liveName = "";
     public long liveAt = Long.MIN_VALUE / 2;
 
+    /** The ghosts kept here (Tikkin: how each player fights, to fight at this cabinet) - the newest eight. */
+    public record GhostEntry(String name, int fighter, String profile, long time) {}
+
+    private final java.util.List<GhostEntry> ghosts = new java.util.ArrayList<>();
+
+    public java.util.List<GhostEntry> ghosts() {
+        return ghosts;
+    }
+
+    /** A player's ghost, kept (theirs replaced; past eight, the oldest gone). */
+    public void putGhost(String name, int fighter, String profile) {
+        ghosts.removeIf(g -> g.name().equals(name));
+        ghosts.add(0, new GhostEntry(name, fighter, profile, level == null ? 0 : level.getGameTime()));
+        while (ghosts.size() > 8) ghosts.remove(ghosts.size() - 1);
+        setChanged();
+        if (level != null) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+    }
+
     public ArcadeBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ARCADE.get(), pos, state);
     }
@@ -78,6 +96,16 @@ public class ArcadeBlockEntity extends BlockEntity {
             tag.putString(GAMES[i] + "_by", bestBy[i]);
             tag.putInt(GAMES[i] + "_claimed", claimed[i]);
         }
+        net.minecraft.nbt.ListTag list = new net.minecraft.nbt.ListTag();
+        for (GhostEntry g : ghosts) {
+            CompoundTag t = new CompoundTag();
+            t.putString("name", g.name());
+            t.putInt("fighter", g.fighter());
+            t.putString("profile", g.profile());
+            t.putLong("time", g.time());
+            list.add(t);
+        }
+        tag.put("ghosts", list);
     }
 
     @Override
@@ -87,6 +115,12 @@ public class ArcadeBlockEntity extends BlockEntity {
             best[i] = tag.getInt(GAMES[i]);
             bestBy[i] = tag.getString(GAMES[i] + "_by");
             claimed[i] = tag.getInt(GAMES[i] + "_claimed");
+        }
+        ghosts.clear();
+        net.minecraft.nbt.ListTag list = tag.getList("ghosts", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        for (int i = 0; i < list.size(); i++) {
+            CompoundTag t = list.getCompound(i);
+            ghosts.add(new GhostEntry(t.getString("name"), t.getInt("fighter"), t.getString("profile"), t.getLong("time")));
         }
     }
 

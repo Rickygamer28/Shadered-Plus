@@ -132,6 +132,7 @@ public class SkyBlocksMod {
                 .playToServer(TrophyClaimPayload.TYPE, TrophyClaimPayload.STREAM_CODEC, TrophyClaimPayload::handle)
                 .playBidirectional(ArcadeFramePayload.TYPE, ArcadeFramePayload.STREAM_CODEC, ArcadeFramePayload::handle)
                 .playBidirectional(ArcadeVersusPayload.TYPE, ArcadeVersusPayload.STREAM_CODEC, ArcadeVersusPayload::handle)
+                .playToServer(ArcadeGhostPayload.TYPE, ArcadeGhostPayload.STREAM_CODEC, ArcadeGhostPayload::handle)
                 .playToServer(PondMaterialsPayload.TYPE, PondMaterialsPayload.STREAM_CODEC, PondMaterialsPayload::handle)
                 .playToServer(SolarSystemClickPayload.TYPE, SolarSystemClickPayload.STREAM_CODEC, SolarSystemClickPayload::handle)
                 .playToServer(PortalCrossPayload.TYPE, PortalCrossPayload.STREAM_CODEC, PortalCrossPayload::handle)

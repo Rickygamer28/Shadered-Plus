@@ -364,6 +364,10 @@ public class Showdown extends ArcadeGame {
     private static final Move RETALIATE = m("RETALIATE", 0, Pose.CROSS, Level.MID, 10, 3, 26, 26, 30, -6, 0, 0, KND | CARRY);
     private static final Move WRECKING_BALL = m("WRECKING BALL", 0, Pose.PALM, Level.MID, 18, 3, 32, 34, 32, 6, 0, 0, KND | CARRY | CRUSH | ELECTRIC);
 
+    // ---- everyone: the surge (2+3) - a burst that starts it, a smash that spends it ----
+    private static final Move SURGE_BURST = m("SURGE BURST", 0, Pose.PALM, Level.MID, 14, 3, 30, 12, 30, -6, 8, 0, CRUSH);
+    private static final Move SURGE_SMASH = m("SURGE SMASH", 0, Pose.RAGE, Level.MID, 18, 3, 34, 38, 33, -4, 0, 0, KND | CARRY | ELECTRIC);
+
     private static final Move VOID_BEAM = m("VOID BEAM", 0, Pose.PALM, Level.MID, 30, 4, 34, 40, 64, 0, 0, 0, KND | UNBLOCKABLE | CARRY);
     private static final Move DARK_UPPER = m("DARK UPPER", 2, Pose.UPPER, Level.MID, 13, 2, 26, 16, 24, -10, 0, 6.4F, ELECTRIC);
     private static final Move INFERNO = m("INFERNO FIST", 0, Pose.CROSS, Level.MID, 14, 3, 30, 34, 34, 5, 0, 0, KND | CARRY | ELECTRIC);
@@ -418,6 +422,14 @@ public class Showdown extends ArcadeGame {
         int wsUntil = -100, parryAt = -100, comboDmg, comboShow, serial;
         /** Its controls, if it's on a pad (you; the dummy playing back what you recorded); none: the cabinet plays it. */
         Pad in;
+        /** Health that can come back (part of each hit: the pale end of the bar - it fills back in while you're out of
+         *  trouble a while), and when it was last hit. */
+        int recover, hitAt = -1000;
+        /** NYX's last shadow step. */
+        int stepAt = -1000;
+        /** Surge: one a round - ready; how many frames it has left (on: stronger, chipping through blocks, a smash). */
+        boolean surgeReady = true;
+        int surgeFor;
 
         Body(Style style, int who, float x) {
             this.style = style;
@@ -531,6 +543,12 @@ public class Showdown extends ArcadeGame {
     private Netplay netplay;
 
     /** A versus match begins: both cabinets start this exactly the same (same dice, same everything), on the select screen. */
+    public void startVersus(Netplay link, long seed, String name1, String name2, boolean nyx1, boolean nyx2) {
+        vsUnlocked[0] = nyx1;
+        vsUnlocked[1] = nyx2;
+        startVersus(link, seed, name1, name2);
+    }
+
     public void startVersus(Netplay link, long seed, String name1, String name2) {
         netplay = link;
         versus = true;
@@ -618,7 +636,7 @@ public class Showdown extends ArcadeGame {
                 if (!vsReady[p]) {
                     int step = (e[p] & IN_L) != 0 ? -1 : (e[p] & IN_R) != 0 ? 1 : 0;
                     if (step != 0) {
-                        vsPick[p] = Math.floorMod(vsPick[p] + step, PLAYABLE);
+                        vsPick[p] = Math.floorMod(vsPick[p] + step, vsRoster(p));
                         sfx(Sfx.BLIP);
                     }
                     if ((e[p] & (IN_1 | IN_START)) != 0) {
@@ -687,7 +705,7 @@ public class Showdown extends ArcadeGame {
     private int pick, ladder, round, clock, roundOver, shake, thinkIn, lap;
     private boolean picking;
     private String banner = "";
-    private int bannerFor;
+    private int bannerFor, bannerMax;
     /** The camera turning round as the two step about (pixels the backdrop has slid). */
     private float spin;
 
@@ -753,11 +771,13 @@ public class Showdown extends ArcadeGame {
     private Style foeStyle() {
         if (mode == 1) {
             if (survived > 0 && survived % 5 == 4) return FIGHTERS[BOSS]; // (every fifth: the boss)
+            if (pick >= PLAYABLE) return FIGHTERS[rng.nextInt(PLAYABLE)];
             int f = rng.nextInt(PLAYABLE - 1);
             return FIGHTERS[f >= pick ? f + 1 : f];
         }
-        int k = ladder % PLAYABLE;
-        if (k == PLAYABLE - 1) return FIGHTERS[BOSS];
+        int others = pick >= PLAYABLE ? PLAYABLE : PLAYABLE - 1; // (playing as NYX: all six, then NYX)
+        int k = ladder % (others + 1);
+        if (k == others) return FIGHTERS[BOSS];
         int n = 0;
         for (int i = 0; i < PLAYABLE; i++) {
             if (i == pick) continue;
@@ -774,7 +794,13 @@ public class Showdown extends ArcadeGame {
         trails.clear();
         me = new Body(FIGHTERS[pick], pick, 60);
         me.in = myPad;
+        ghostBrain = null;
         int f = styleIndex(foeStyle());
+        if (mode == 2 && !GHOSTS.isEmpty()) { // (a ghost: its player's fighter, its player's ways)
+            Ghost gh = GHOSTS.get(Math.min(ghostPick, GHOSTS.size() - 1));
+            f = Math.max(0, Math.min(FIGHTERS.length - 1, gh.fighter()));
+            ghostBrain = brainOf(gh.profile());
+        }
         foe = new Body(FIGHTERS[f], f, W - 60);
         pickStage();
         newRound();
@@ -795,6 +821,10 @@ public class Showdown extends ArcadeGame {
             b.move = null;
             b.queued = b.queued2 = null;
             b.rage = b.rageUsed = false;
+            b.recover = 0;
+            b.hitAt = -1000;
+            b.surgeReady = true;
+            b.surgeFor = 0;
             b.thrower = null;
             b.breakWith = -1;
             b.screwed = b.blockLow = b.blockedLow = b.crumple = b.ki = false;
@@ -815,7 +845,8 @@ public class Showdown extends ArcadeGame {
         roundOver = practice > 0 ? -2 : intro ? -240 : -120;
         if (intro) { // (the first round: their entrances, then the round)
             me.state = foe.state = State.INTRO;
-            say(me.style.name() + "  VS  " + foe.style.name(), 40);
+            say(mode == 2 && ghostBrain != null && !GHOSTS.isEmpty() ? "GHOST OF " + GHOSTS.get(Math.min(ghostPick, GHOSTS.size() - 1)).name()
+                    : me.style.name() + "  VS  " + foe.style.name(), 40);
         } else if (practice == 0) {
             roundCall();
         }
@@ -829,12 +860,220 @@ public class Showdown extends ArcadeGame {
     /** A banner across the screen, for so many 20ths of a second. */
     private void say(String s, int twentieths) {
         banner = s;
-        bannerFor = twentieths * 3;
+        bannerFor = bannerMax = twentieths * 3;
     }
 
     private int difficulty() {
-        return ladder + lap;
+        return Math.max(0, ladder + lap + (level - 1) * 2);
     }
+
+    /** How hard the cabinet's fighter is: 0 EASY, 1 NORMAL, 2 HARD, 3 MASTER (beat NYX on MASTER: NYX is yours). */
+    private int level = 1;
+    private static final String[] LEVELS = {"EASY", "NORMAL", "HARD", "MASTER"};
+    /** NYX unlocked on this computer (remembered: TikkinSave); and what to call to remember it. */
+    public static boolean nyxUnlocked;
+    public static Runnable saveUnlocks = () -> {};
+    /** In versus: whether each side has NYX. */
+    private final boolean[] vsUnlocked = new boolean[2];
+
+    // ================= ghosts: how a player fights, learned - and fought, at their cabinet =================
+
+    /** A ghost at this cabinet: whose, which fighter, what it learned (situation:action=count;...). */
+    public record Ghost(String name, int fighter, String profile) {}
+
+    /** The ghosts at the cabinet being played (the screen keeps it up to date). */
+    public static List<Ghost> GHOSTS = List.of();
+    /** What's been learned of the player since it was last taken (fighter|situation:action -> times) - not the fight. */
+    private final java.util.Map<String, Integer> learned = new java.util.HashMap<>();
+    /** Being played again after a rewind (versus): nothing learned from it twice. */
+    boolean replaying;
+    /** In ghost mode: which ghost; its brain (situation:action -> weight), while it fights. */
+    private int ghostPick;
+    private java.util.Map<String, Integer> ghostBrain;
+    private int ghostSeen = -1;
+
+    private int modes() {
+        return GHOSTS.isEmpty() ? 2 : 3;
+    }
+
+    /** What's been learned (and forgotten here: it's the caller's now). */
+    public java.util.Map<String, Integer> takeLearned() {
+        java.util.Map<String, Integer> out = new java.util.HashMap<>(learned);
+        learned.clear();
+        return out;
+    }
+
+    /** Every move's own name (its field's), both ways - what a ghost's brain is written in. */
+    private static java.util.Map<Move, String> moveIds;
+    private static java.util.Map<String, Move> movesById;
+
+    private static void moveNames() {
+        if (moveIds != null) return;
+        java.util.Map<Move, String> ids = new java.util.IdentityHashMap<>();
+        java.util.Map<String, Move> back = new java.util.HashMap<>();
+        for (java.lang.reflect.Field f : Showdown.class.getDeclaredFields()) {
+            if (f.getType() != Move.class || !java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
+            try {
+                f.setAccessible(true);
+                Move m = (Move) f.get(null);
+                ids.put(m, f.getName());
+                back.put(f.getName(), m);
+            } catch (IllegalAccessException e) {
+                // (not readable: not learnable)
+            }
+        }
+        moveIds = ids;
+        movesById = back;
+    }
+
+    /** Whose play is being learned: yours (alone, not practising, not against a ghost), or - versus - this side's. */
+    private Body student() {
+        if (replaying || me == null || picking) return null;
+        if (netplay != null) return netplay.side == 0 ? me : foe;
+        return practice == 0 && mode != 2 && me.in == myPad ? me : null;
+    }
+
+    /** The situation, as a ghost sees it: how far (0 close .. 3 far), and what they're doing (0 nothing much, 1 starting
+     *  a move, 2 in a move's recovery or blocking or reeling, 3 in the air or down). */
+    private static String situation(Body b, Body o) {
+        float dist = Math.abs(o.x - b.x);
+        int d = dist < 26 ? 0 : dist < 40 ? 1 : dist < 64 ? 2 : 3;
+        int s = o.state == State.AIR || o.state == State.SPLAT || o.down() ? 3
+                : o.state == State.ATTACK && o.move != null && o.t < o.move.startup() ? 1
+                : o.state == State.ATTACK || o.state == State.BLOCK || o.state == State.HIT ? 2 : 0;
+        return d + "" + s;
+    }
+
+    private void learn(Body b, String what) {
+        String key = b.who + "|" + situation(b, other(b, me, foe)) + ":" + what;
+        learned.merge(key, 1, Integer::sum);
+    }
+
+    /** A move started: learned (a string's next hit, as what follows what). */
+    private void learnMove(Body b, Move m, boolean chained) {
+        if (b != student()) return;
+        moveNames();
+        String id = moveIds.get(m);
+        if (id == null) return;
+        if (chained && b.move != null && moveIds.get(b.move) != null) {
+            learned.merge(b.who + "|s:" + moveIds.get(b.move) + ">" + id, 1, Integer::sum);
+        } else {
+            learn(b, id);
+        }
+    }
+
+    /** Now and then, not attacking: how it's moving. */
+    private void learnMoving(Body b) {
+        if (b != student() || ticks % 12 != 0 || b.state == State.ATTACK || b.in == null) return;
+        Body o = other(b, me, foe);
+        String what = switch (b.state) {
+            case DASH, RUN -> "~dash";
+            case BACKDASH -> "~bdash";
+            case SIDESTEP, SIDEWALK -> b.sideDir > 0 ? "~ssin" : "~ssout";
+            case JUMP -> "~jump";
+            case STANCE -> "~stance";
+            case BLOCK -> "~block";
+            case CROUCH -> "~crouch";
+            default -> fwdHeld(b) ? "~fwd" : backHeld(b) ? (o.state == State.ATTACK ? "~block" : "~back") : "~idle";
+        };
+        if (b.free() || b.state != State.HIT && b.state != State.AIR && b.state != State.DOWN && b.state != State.THROWN) learn(b, what);
+    }
+
+    /** The ghost's turn to do something: what its player did most in this situation, by chance as often as they did. */
+    private boolean ghostThink(Body b, Body o) {
+        if (ghostBrain == null) return false;
+        moveNames();
+        String sit = situation(b, o) + ":";
+        int total = 0;
+        for (var e : ghostBrain.entrySet()) if (e.getKey().startsWith(sit)) total += e.getValue();
+        if (total == 0) return false;
+        int r = rng.nextInt(total);
+        String act = null;
+        for (var e : ghostBrain.entrySet()) {
+            if (!e.getKey().startsWith(sit)) continue;
+            r -= e.getValue();
+            if (r < 0) {
+                act = e.getKey().substring(sit.length());
+                break;
+            }
+        }
+        if (act == null) return false;
+        b.advancing = false;
+        switch (act) {
+            case "~dash" -> dash(b);
+            case "~bdash" -> backdash(b);
+            case "~ssin" -> sidestep(b, 1);
+            case "~ssout" -> sidestep(b, -1);
+            case "~jump" -> jump(b, 1);
+            case "~crouch" -> {
+                b.state = State.CROUCH;
+                b.t = 0;
+            }
+            case "~fwd" -> b.advancing = true;
+            case "~back" -> b.x -= b.facing * 1.5F * b.style.speed();
+            case "~stance" -> {
+                if (b.who >= 1 && b.who <= 5) {
+                    b.state = State.STANCE;
+                    b.stance = b.who == 3 ? 3 : b.who;
+                    b.t = 0;
+                }
+            }
+            case "~block", "~idle" -> b.state = State.STAND;
+            default -> {
+                Move m = movesById.get(act);
+                if (m != null && !isRageDrive(m) && m != RAGE_ART || m != null && b.rage && !b.rageUsed) attack(b, m);
+            }
+        }
+        return true;
+    }
+
+    /** The ghost in a string: carrying on as its player did, as often as they did. */
+    private void ghostString(Body b) {
+        if (ghostBrain == null || b.state != State.ATTACK || b.move == null || b.move.next() == null || b.queued != null || ghostSeen == b.serial) return;
+        ghostSeen = b.serial;
+        moveNames();
+        String from = "s:" + moveIds.get(b.move) + ">";
+        int starts = Math.max(1, ghostBrain.getOrDefault("starts:" + moveIds.get(b.move), 1));
+        for (Move n : b.move.next()) {
+            int c = ghostBrain.getOrDefault(from + moveIds.get(n), 0);
+            if (c > 0 && rng.nextInt(starts + c) < c) {
+                b.queued = n;
+                return;
+            }
+        }
+    }
+
+    /** A ghost's profile (as saved) made a brain: its situations and their actions, and how often each move began. */
+    private static java.util.Map<String, Integer> brainOf(String profile) {
+        java.util.Map<String, Integer> brain = new java.util.HashMap<>();
+        for (String part : profile.split(";")) {
+            int eq = part.lastIndexOf('=');
+            if (eq <= 0) continue;
+            try {
+                int n = Integer.parseInt(part.substring(eq + 1));
+                String key = part.substring(0, eq);
+                brain.merge(key, n, Integer::sum);
+                int colon = key.indexOf(':');
+                if (!key.startsWith("s:") && colon > 0 && !key.substring(colon + 1).startsWith("~")) brain.merge("starts:" + key.substring(colon + 1), n, Integer::sum);
+            } catch (NumberFormatException e) {
+                // (a bad part: skipped)
+            }
+        }
+        return brain;
+    }
+
+    /** How many you can pick from: the six - and NYX, once unlocked. */
+    private int roster() {
+        return PLAYABLE + (nyxUnlocked ? 1 : 0);
+    }
+
+    private int vsRoster(int side) {
+        return PLAYABLE + (vsUnlocked[side] ? 1 : 0);
+    }
+
+    /** A short line about each. */
+    private static final String[] TAGLINES = {"Karate all-rounder", "Quick cat: stances and tricks", "Machine: armour and throws",
+            "Brawler: sways and rushes", "Kicker: the flamingo stance", "Heavy hitter: brace and smash", "The boss: shadow and void"};
 
     private static Body other(Body b, Body me, Body foe) {
         return b == me ? foe : me;
@@ -854,15 +1093,16 @@ public class Showdown extends ArcadeGame {
     /** One frame of the fight (or the select screen). */
     private void stepFrame() {
         ticks++;
+        if (finale > 0) finale--;
         if (vsNoticeFor > 0) vsNoticeFor--;
         if (picking) return;
         if (showList) { // (the move list up: everything waits)
             hold();
             return;
         }
-        if (slowmo > 0) { // (a K.O.: the fight in slow motion for a moment)
+        if (slowmo > 0) { // (a K.O.: the fight in slow motion for a moment - the match's last, slower still at first)
             slowmo--;
-            if (slowmo % 2 == 1) {
+            if (slowmo % (finale > 0 && slowmo > 70 ? 4 : 2) != 0) {
                 hold(); // (nothing moves this frame: drawn standing still, not replaying the last one)
                 return;
             }
@@ -948,6 +1188,17 @@ public class Showdown extends ArcadeGame {
         face(me);
         face(foe);
         for (Body b : new Body[] {me, foe}) {
+            // health coming back: out of trouble a second and a half, a point every three frames
+            learnMoving(b);
+            b.recover = Math.max(0, Math.min(b.recover, MAX_HP - b.hp)); // (never past full - practice fills it up its own way)
+            if (b.recover > 0 && b.hp > 0 && ticks - b.hitAt > 90 && (b.free() || b.state == State.BLOCK) && ticks % 3 == 0) {
+                b.hp++;
+                b.recover--;
+            }
+            if (b.surgeFor > 0 && --b.surgeFor == 0) {
+                call("SURGE OVER", b.x, GROUND - 50);
+                if (practice > 0) b.surgeReady = true; // (practice: another, whenever)
+            }
             if (!b.rage && !b.rageUsed && b.hp > 0 && b.hp <= MAX_HP / 4) {
                 b.rage = true;
                 call("RAGE", b.x, GROUND - 50);
@@ -1128,6 +1379,7 @@ public class Showdown extends ArcadeGame {
             case STANCE -> { // (a stance: its own moves; back to stand after a while, or on back)
                 if (b.stance == 2) b.x += b.facing * (fwdHeld(b) ? 0.15F : backHeld(b) ? -0.12F : 0);
                 if (b.stance == 4 && fwdHeld(b) && b.t % 12 < 6) b.x += b.facing * 0.35F; // (the flamingo: hopping in)
+                if (b.stance == 1 && (b.in != null ? fwdHeld(b) : b.advancing)) b.x += b.facing * 0.3F * b.style.speed(); // (the cat: prowling)
                 if (b.t >= 90) {
                     b.state = State.STAND;
                     b.stance = 0;
@@ -1231,7 +1483,7 @@ public class Showdown extends ArcadeGame {
     private void moveAlong(Body b, Move m) {
         if (m == TACKLE || m == RAGE_ART || m == LUNGE_PUNCH || m == IRON_PALM || m == BURNING_FIST || m == INFERNO
                 || m == PISTON || m == DEVIL_RUSH || m == HEAT_RUSH || m == LANCE_KICK || m == COMET_KICK || m == BULL_RUSH
-                || m == WRECKING_BALL || m == RETALIATE || m == BLADE_KICK) {
+                || m == WRECKING_BALL || m == RETALIATE || m == BLADE_KICK || m == SURGE_BURST || m == SURGE_SMASH) {
             b.x += b.facing * (b.t < 12 ? 0.83F : 0.1F);
         } else if (m == CAT_SLIDE && b.t < m.startup() + m.active()) {
             b.x += b.facing * 1.2F;
@@ -1370,6 +1622,7 @@ public class Showdown extends ArcadeGame {
                 || b.state == State.CROUCH_DASH || b.state == State.STANCE || (b.state == State.JUMP && m == AIR_KICK)
                 || ((b.state == State.DOWN || b.state == State.RISE) && (m == GETUP_KICK || m == GETUP_LOW || m == SPRING_KICK));
         if (!chained && !from) return;
+        learnMove(b, m, chained);
         if (m == RAGE_ART || isRageDrive(m)) {
             if (!b.rage || b.rageUsed) return;
             b.rageUsed = true;
@@ -1381,7 +1634,19 @@ public class Showdown extends ArcadeGame {
                 call("RAGE DRIVE", b.x, GROUND - 52);
             }
         }
-        if (m.is(CRUSH)) {
+        if (m == SURGE_BURST) {
+            if (!b.surgeReady) return;
+            b.surgeReady = false;
+            b.surgeFor = SURGE_FRAMES;
+            call("SURGE!", b.x, GROUND - 56);
+            flash = 3;
+            sfx(Sfx.RAGE, 1.4F);
+        } else if (m == SURGE_SMASH) {
+            if (b.surgeFor <= 0) return;
+            b.surgeFor = 0;
+            say("SURGE SMASH", 24);
+            sfx(Sfx.RAGE, 0.9F);
+        } else if (m.is(CRUSH)) {
             call("POWER CRUSH", b.x, GROUND - 48);
             sfx(Sfx.CRUSH, 0.8F);
         }
@@ -1398,6 +1663,25 @@ public class Showdown extends ArcadeGame {
         b.hitDone = false;
         b.landed = false;
         b.serial++;
+    }
+
+    /** How long a surge lasts (frames, while the fight's moving). */
+    private static final int SURGE_FRAMES = 6 * FPS;
+
+    /** NYX's shadow step: through the shadows to behind them (they're left facing away) - once every three seconds. */
+    private boolean shadowStep(Body b) {
+        Body o = other(b, me, foe);
+        if (ticks - b.stepAt < 3 * FPS || o.airborne() || o.down() || !(b.free() || b.state == State.DASH)) return false;
+        b.stepAt = ticks;
+        b.x = o.x - o.facing * 18;
+        keepInArena(b, false);
+        b.facing = toward(b);
+        b.state = State.STAND;
+        o.bt = true; // (it's behind you: you're facing away from it)
+        flash = 3;
+        call("SHADOW STEP", b.x, GROUND - 50);
+        sfx(Sfx.ELECTRIC, 0.6F);
+        return true;
     }
 
     private static boolean isRageDrive(Move m) {
@@ -1497,7 +1781,9 @@ public class Showdown extends ArcadeGame {
         }
         b.hitDone = true;
         if (o.state == State.STANCE && o.stance == 5 && o.t < 60 && m.level() != Level.LOW && !m.is(UNBLOCKABLE)) {
-            o.hp = Math.max(0, o.hp - Math.max(1, Math.round(m.damage() * b.style.power() * 0.5F)));
+            int took = Math.max(1, Math.round(m.damage() * b.style.power() * 0.5F));
+            o.hp = Math.max(0, o.hp - took);
+            o.recover = Math.min(MAX_HP - o.hp, o.recover + took / 2);
             spark(o.x - o.facing * 4, GROUND - o.y - 20, 8);
             flash = 2;
             shake = 3;
@@ -1512,6 +1798,7 @@ public class Showdown extends ArcadeGame {
                 || o.state == State.STANCE && o.stance == 2) && m.level() != Level.LOW) {
             int soak = Math.max(1, Math.round(m.damage() * b.style.power()));
             o.hp = Math.max(0, o.hp - soak);
+            o.recover = Math.min(MAX_HP - o.hp, o.recover + soak / 2);
             spark(o.x - o.facing * 4, GROUND - o.y - 20, 6);
             flash = 2;
             sfx(Sfx.CRUSH, 1.2F);
@@ -1530,6 +1817,13 @@ public class Showdown extends ArcadeGame {
         }
         int left = b.left();
         if (blocked) {
+            if (b.surgeFor > 0 || m == SURGE_SMASH) { // (a surge chips through a block - health that can come back)
+                int chip = Math.max(1, Math.round(m.damage() * 0.18F * b.style.power()));
+                if (o.hp > chip) {
+                    o.hp -= chip;
+                    o.recover = Math.min(MAX_HP - o.hp, o.recover + chip);
+                }
+            }
             o.state = State.BLOCK;
             o.blockLow = m.level() == Level.LOW;
             o.blockedLow = o.blockLow;
@@ -1551,8 +1845,13 @@ public class Showdown extends ArcadeGame {
         // juggles hurt less the longer they go (less again once screwed, and at the wall)
         if (juggled) scale *= Math.max(0.3F, 0.85F - o.airHits * 0.06F) * (o.screwed ? 0.85F : 1.0F) * (o.wallHits > 0 ? 0.8F : 1.0F);
         if (o.state == State.DOWN) scale *= 0.5F;
+        if (b.surgeFor > 0) scale *= 1.1F;
         int dmg = Math.max(1, Math.round(m.damage() * scale));
+        boolean freshCombo = !(o.state == State.HIT || juggled || o.state == State.DOWN);
+        if (freshCombo) o.recover /= 2; // (caught again before it came back: half of it's gone for good)
         o.hp = Math.max(0, o.hp - dmg);
+        o.recover = Math.min(MAX_HP - o.hp, o.recover + Math.round(dmg * 0.25F));
+        o.hitAt = ticks;
         b.landed = true;
         if (b.ki) {
             b.ki = false;
@@ -1902,6 +2201,13 @@ public class Showdown extends ArcadeGame {
             flash = 4;
         }
         winner.state = State.WIN;
+        boolean last = loser.hp <= 0 && (mode == 1 && !versus || winner.wins >= 2);
+        if (last) { // (the match's last hit: slower, closer - the camera circling them)
+            finale = FINALE;
+            slowmo = 190;
+            flash = 4;
+            shake = 16;
+        }
         boolean perfect = winner.hp == MAX_HP;
         String who = versus ? vsNames[winner == me ? 0 : 1] + " WINS" : winner == me ? "YOU WIN" : foe.style.name() + " WINS";
         say(how + "  " + who + (perfect ? " - PERFECT" : ""), 90);
@@ -1911,6 +2217,19 @@ public class Showdown extends ArcadeGame {
     private void endRound() {
         if (versus) {
             versusEndRound();
+            return;
+        }
+        if (mode == 2) { // (a ghost: one match - beaten, or not)
+            if (me.wins >= 2) {
+                sfx(Sfx.WIN);
+                score += 5000 + me.hp * 10;
+                won = true;
+                over = true;
+            } else if (foe.wins >= 2) {
+                over = true;
+            } else {
+                newRound();
+            }
             return;
         }
         if (mode == 1) { // (survival: one round each - win it and on to the next, with a little health back)
@@ -1930,12 +2249,17 @@ public class Showdown extends ArcadeGame {
             boolean beatBoss = foe.who == BOSS;
             ladder++;
             score += 1500 * ladder;
-            if (ladder % PLAYABLE == 0) {
+            if (ladder % ((pick >= PLAYABLE ? PLAYABLE : PLAYABLE - 1) + 1) == 0) {
                 lap++;
                 score += 5000;
             }
+            boolean unlock = beatBoss && level == 3 && !nyxUnlocked; // (NYX beaten on MASTER: yours)
+            if (unlock) {
+                nyxUnlocked = true;
+                saveUnlocks.run();
+            }
             newMatch();
-            say((beatBoss ? "CHAMPION! NEXT: " : foe.who == BOSS ? "BOSS: " : "NEXT: ") + foe.style.name(), 70);
+            say(unlock ? "NYX UNLOCKED!" : (beatBoss ? "CHAMPION! NEXT: " : foe.who == BOSS ? "BOSS: " : "NEXT: ") + foe.style.name(), 70);
         } else if (foe.wins >= 2) {
             over = true;
         } else {
@@ -1962,6 +2286,7 @@ public class Showdown extends ArcadeGame {
 
     private void cpu() {
         Body b = foe, o = me;
+        ghostString(b);
         b.advancing = false;
         int d = Math.min(difficulty(), 6);
         float dist = Math.abs(o.x - b.x);
@@ -2103,25 +2428,23 @@ public class Showdown extends ArcadeGame {
             return;
         }
         thinkIn = Math.max(8, 30 - d * 4) + rng.nextInt(12);
+        if (ghostThink(b, o)) return; // (a ghost: as its player would)
         float r = rng.nextFloat();
         if (b.who == BOSS) { // (NYX: a beam from afar; stepping through the shadows behind you)
             if (dist > 36 && dist < 64 && r < 0.18F) {
                 attack(b, VOID_BEAM);
                 return;
             }
-            if (r > 0.9F && o.free() && !o.airborne()) {
-                b.x = o.x - o.facing * 18;
-                keepInArena(b, false);
-                b.facing = toward(b);
-                o.bt = true; // (it's behind you: you're facing away from it)
-                flash = 3;
-                call("SHADOW STEP", b.x, GROUND - 50);
-                sfx(Sfx.ELECTRIC, 0.6F);
+            if (r > 0.9F && o.free() && !o.airborne() && shadowStep(b)) {
                 thinkIn = 6;
                 return;
             }
         }
-        if (b.rage && !b.rageUsed && dist < 32 && r < 0.2F) {
+        if (b.surgeReady && dist < 30 && r < 0.06F + 0.01F * d && round > 1 - (o.hp < MAX_HP / 2 ? 1 : 0)) {
+            attack(b, SURGE_BURST);
+        } else if (b.surgeFor > 0 && dist < 30 && r < 0.25F) {
+            attack(b, SURGE_SMASH);
+        } else if (b.rage && !b.rageUsed && dist < 32 && r < 0.2F) {
             attack(b, rng.nextBoolean() ? RAGE_ART : rageDrive(b));
         } else if (dist > 70) {
             if (r < 0.4F) dash(b);
@@ -2226,6 +2549,7 @@ public class Showdown extends ArcadeGame {
             case 3 -> new Move[][] {{HOPKICK, JAB, JAB_2, SPIN_FIST, BURNING_FIST}};
             case 4 -> new Move[][] {{CRESCENT_LIFT, JAB, JAB_2, SPIN_FIST, LANCE_KICK}};
             case 5 -> new Move[][] {{MOUNTAIN_UPPER, JAB, JAB_2, SPIN_FIST, SLEDGE}};
+            case BOSS -> new Move[][] {{DARK_UPPER, JAB, JAB_2, SPIN_FIST, VOID_BEAM}};
             default -> new Move[][] {{PERFECT_DRAGON, JAB, JAB_2, SPIN_FIST, LUNGE_PUNCH}};
         };
         return switch (practice) {
@@ -2407,11 +2731,24 @@ public class Showdown extends ArcadeGame {
             if (repeat) return;
             boolean ok = key == GLFW.GLFW_KEY_J || key == GLFW.GLFW_KEY_U || key == GLFW.GLFW_KEY_SPACE || key == GLFW.GLFW_KEY_ENTER;
             if (pickPhase == 0) { // (the fighter, and up/down: the mode)
-                if (left(key)) pick = (pick + PLAYABLE - 1) % PLAYABLE;
-                if (right(key)) pick = (pick + 1) % PLAYABLE;
-                if (up(key) || down(key)) mode = 1 - mode;
-                if (left(key) || right(key) || up(key) || down(key)) sfx(Sfx.BLIP);
+                if (left(key)) pick = (pick + roster() - 1) % roster();
+                if (right(key)) pick = (pick + 1) % roster();
+                if (up(key) || down(key)) mode = Math.floorMod(mode + (down(key) ? 1 : -1), modes());
+                if (key == GLFW.GLFW_KEY_I) level = (level + 1) % LEVELS.length;
+                if (left(key) || right(key) || up(key) || down(key) || key == GLFW.GLFW_KEY_I) sfx(Sfx.BLIP);
                 if (ok) {
+                    sfx(Sfx.SELECT);
+                    pickPhase = mode == 2 && !GHOSTS.isEmpty() ? 3 : 1; // (ghost mode: whose ghost, first)
+                    ghostPick = Math.min(ghostPick, Math.max(0, GHOSTS.size() - 1));
+                }
+            } else if (pickPhase == 3) { // (the ghost to fight)
+                if (left(key)) ghostPick = Math.floorMod(ghostPick - 1, GHOSTS.size());
+                if (right(key)) ghostPick = Math.floorMod(ghostPick + 1, GHOSTS.size());
+                if (left(key) || right(key)) sfx(Sfx.BLIP);
+                if (key == GLFW.GLFW_KEY_K || key == GLFW.GLFW_KEY_I) {
+                    pickPhase = 0;
+                    sfx(Sfx.BLIP, 0.8F);
+                } else if (ok) {
                     sfx(Sfx.SELECT);
                     pickPhase = 1;
                 }
@@ -2420,7 +2757,7 @@ public class Showdown extends ArcadeGame {
                 if (right(key)) stageChoice = (stageChoice + 1) % (PICKABLE.length + 1);
                 if (left(key) || right(key)) sfx(Sfx.BLIP);
                 if (key == GLFW.GLFW_KEY_K || key == GLFW.GLFW_KEY_I) {
-                    pickPhase = 0;
+                    pickPhase = mode == 2 && !GHOSTS.isEmpty() ? 3 : 0;
                     sfx(Sfx.BLIP, 0.8F);
                 } else if (ok) {
                     sfx(Sfx.SELECT);
@@ -2583,6 +2920,8 @@ public class Showdown extends ArcadeGame {
             b.state = fresh ? State.STAND : b.state;
             kiCharge(b);
             return;
+        } else if ((button == 2 || button == 3) && together(in, button, 2) && together(in, button, 3) && (b.surgeReady || b.surgeFor > 0)) {
+            pair = b.surgeFor > 0 ? SURGE_SMASH : SURGE_BURST; // (2+3: the surge - or, on, its smash)
         } else if (button == 1 && together(in, 1, 3) || button == 3 && together(in, 3, 1)) {
             pair = THROW_L;
         } else if (button == 2 && together(in, 2, 4) || button == 4 && together(in, 4, 2)) {
@@ -2611,6 +2950,9 @@ public class Showdown extends ArcadeGame {
                 return;
             } else if (b.who == 1) {
                 turnAway(b);
+                return;
+            } else if (b.who == BOSS && d == 5) {
+                shadowStep(b);
                 return;
             }
         }
@@ -2790,6 +3132,12 @@ public class Showdown extends ArcadeGame {
     private float camU = W / 2.0F, camV, camD = 160, oCamU = W / 2.0F, oCamD = 160, oSpin;
     private final List<float[]> dust = new ArrayList<>(); // u, h, v, life, du
     private int slowmo, flash;
+    /** The match's last K.O.: its slow motion, the camera close in and circling (frames left). */
+    private int finale;
+    private static final int FINALE = 210;
+    /** The camera's own moves (drawing only - never part of the fight): turned round the action (degrees), the black
+     *  bars of a cinematic (0-1) - and a frame ago. */
+    private float cineYaw, oCineYaw, cineBars, oCineBars;
     private boolean lastCounter;
 
     /** Per fighter: its pose now and a tick ago, its shown health (draining after a hit), its striking limb's trail. */
@@ -2818,6 +3166,7 @@ public class Showdown extends ArcadeGame {
             if (b.state == State.ATTACK && b.move == RAGE_ART && b.t < b.move.startup() + b.move.active() + 10) art = true;
         }
         camD += ((art ? 105 : Mth.clamp(sep * 0.8F + 95, 130, 240)) - camD) * (art ? 0.1F : 0.053F);
+        cinematic();
         for (Body b : new Body[] {me, foe}) {
             b.ox = b.x;
             b.oy = b.y;
@@ -2860,6 +3209,14 @@ public class Showdown extends ArcadeGame {
 
     private void hold() {
         if (me == null) return;
+        oCineYaw = cineYaw;
+        oCineBars = cineBars;
+        if (finale > 0) { // (the last K.O.'s camera keeps moving through the slow motion - and its flash fades)
+            if (flash > 0 && ticks % 3 == 0) flash--;
+            oCamU = camU;
+            oCamD = camD;
+            cinematic();
+        }
         oCamU = camU;
         oCamD = camD;
         oSpin = spin;
@@ -2872,6 +3229,35 @@ public class Showdown extends ArcadeGame {
             float[][] p = poseOf(b);
             System.arraycopy(p[1], 0, p[0], 0, P);
         }
+    }
+
+    /**
+     * The camera's own moves: the match's last K.O. - in close on whoever's falling, circling round them, black bars;
+     * a rage art, a rage drive, a surge smash - swung round to face it, in close, black bars. Else back to the side.
+     */
+    private void cinematic() {
+        oCineYaw = cineYaw;
+        oCineBars = cineBars;
+        float wantYaw = 0, wantBars = 0;
+        Body star = null;
+        for (Body b : new Body[] {me, foe}) {
+            Move m = b.move;
+            if (b.state == State.ATTACK && m != null && (m == RAGE_ART || isRageDrive(m) || m == SURGE_SMASH) && b.t < m.startup() + m.active() + 14) star = b;
+        }
+        if (finale > 0) {
+            Body down = me.hp <= 0 ? me : foe;
+            float k = 1 - finale / (float) FINALE;
+            wantYaw = -down.facing * (20 + 45 * k);
+            wantBars = finale > 20 ? 1 : 0;
+            camD += (70 - camD) * 0.05F;
+            camU += (down.x - camU) * 0.06F;
+        } else if (star != null) {
+            wantYaw = star.facing * 32;
+            wantBars = 1;
+            camD += (95 - camD) * 0.08F;
+        }
+        cineYaw += (wantYaw - cineYaw) * 0.07F;
+        cineBars += (wantBars - cineBars) * 0.12F;
     }
 
     /** What its pose should be now. */
@@ -3043,13 +3429,20 @@ public class Showdown extends ArcadeGame {
                 p[11] = -15;
             }
             case STANCE -> {
-                if (b.stance == 1) { // (the cat: crouched low, forward, paws up)
-                    crouch(p);
-                    p[0] = 38;
-                    p[7] = 70;
-                    p[8] = 60;
-                    p[9] = 60;
-                    p[10] = 70;
+                if (b.stance == 1) { // (the cat: down on all fours - hands on the floor, back low, head up; prowling on f)
+                    float prowl = (b.in != null ? fwdHeld(b) : b.advancing) ? Mth.sin(b.t * 0.32F) : 0;
+                    float breathe = Mth.sin(w * 1.1F);
+                    p[0] = 90 + breathe * 2; // (the back level - the hips up, the shoulders down between the elbows)
+                    p[1] = 7.0F + breathe * 0.3F;
+                    p[3] = -4 + 14 * prowl;
+                    p[4] = -84 - 8 * prowl; // (the shins flat along the floor behind)
+                    p[5] = -12 - 14 * prowl;
+                    p[6] = -76 + 8 * prowl;
+                    p[7] = 42 - 14 * prowl;
+                    p[8] = -64;
+                    p[9] = 34 + 14 * prowl;
+                    p[10] = -58;
+                    p[11] = -32; // (the head forward, up a little: watching them)
                 } else if (b.stance == 2) { // (siege: wide, planted, fists high)
                     p[1] = 5;
                     p[3] = 40;
@@ -3404,6 +3797,8 @@ public class Showdown extends ArcadeGame {
         anim(TRUNK_KICK, "1 L   | w: 5=85 6=-115 0=4 | h: 5=88 6=-2 0=-16 2=5 | r: 5=30 6=-60");
         anim(RETALIATE, "1 A   | w: 9=40 10=110 13=25 | h: 9=90 10=0 0=22 2=5 13=-30 3=50 4=-50 | r: 9=50 10=100 0=10");
         anim(WRECKING_BALL, "1 A | w: 1=6 13=170 9=90 10=10 0=-5 | h: 13=360 9=90 10=0 0=18 2=6 | f: 13=400 | r: 13=400 9=60 10=90");
+        anim(SURGE_BURST, "1 A   | w: 7=40 8=120 9=40 10=120 1=4 0=-10 | h: 7=82 8=0 9=80 10=0 0=24 2=5 1=3 3=45 4=-40 | f: 0=26 | r: 7=50 9=50 0=10");
+        anim(SURGE_SMASH, "1 A   | w: 1=7 7=170 9=170 8=20 10=20 0=-16 13=20 | W: 1=-5 0=-22 2=3 | h: 7=70 9=70 8=4 10=4 0=42 1=6 2=7 13=-10 | f: 0=46 1=7 | r: 7=50 9=50 0=14 1=3");
         anim(COMET_KICK, "0 L   | w: 1=6 3=40 4=-100 0=8 | W: 1=-6 3=60 4=-110 | h: 1=-8 3=122 4=-2 5=60 6=-120 0=-20 7=60 9=-20 2=6 | f: 3=100 | r: 3=40 1=2");
     }
 
@@ -3722,12 +4117,13 @@ public class Showdown extends ArcadeGame {
                 out.add(decor(off(neck, up, 0.2F, fwdB, 0, 0), off(neck, up, 0.9F, fwdB, 0, 0), 3.6F, 3.6F, accent, band)); // (collar)
                 out.add(decor(off(neck, up, -0.6F, fwdB, 2.1F, 0), off(neck, up, 0.4F, fwdB, 2.1F, 0), 1.3F, 1.3F, 0xFFD040, band)); // (bell)
                 float sway = Mth.sin(vt() * 0.2F) * 20;
-                float[] t0 = {pelvis[0] - 3.5F, pelvis[1] + 2, 0};
-                float[] t1 = at(t0, dir(-120 + sway), 6, 0);
-                float[] t2 = at(t1, dir(-170 + sway * 1.5F), 6, 0);
+                boolean cat = b.state == State.STANCE && b.stance == 1; // (on all fours: the tail up, swishing at its tip)
+                float[] t0 = cat ? off(pelvis, up, -0.5F, fwdB, -3.0F, 0) : new float[] {pelvis[0] - 3.5F, pelvis[1] + 2, 0};
+                float[] t1 = at(t0, dir(cat ? -150 + sway * 0.3F : -120 + sway), 6, 0);
+                float[] t2 = at(t1, dir(cat ? 175 + sway * 0.8F : -170 + sway * 1.5F), 6, 0);
                 out.add(decor(t0, t1, 1.8F, 1.8F, hair, hr));
                 out.add(decor(t1, t2, 1.6F, 1.6F, hair, hr));
-                out.add(decor(t2, at(t2, dir(-200 + sway * 2), 1.8F, 0), 2.0F, 2.0F, 0xFFFFFF, hr));
+                out.add(decor(t2, at(t2, dir(cat ? 130 + sway * 1.6F : -200 + sway * 2), 1.8F, 0), 2.0F, 2.0F, 0xFFFFFF, hr));
             }
             case 2 -> { // ROBO: a helmet ridge, a visor, ear discs, an antenna; a chest plate with a glowing core, pauldrons
                 out.add(decor(off(headBase, hd, 4.2F, fwd, 3.4F, 0), off(headBase, hd, 5.6F, fwd, 3.4F, 0), 0.6F, 6.4F, accent, band)); // (visor)
@@ -3868,7 +4264,7 @@ public class Showdown extends ArcadeGame {
     /** A fighter's colours: its own - or, 2P in a versus mirror match, another set (so you can tell which is which). */
     private int[] lookOf(Body b) {
         int[] look = LOOKS[styleIndex(b.style)];
-        if (versus && b == foe && me != null && me.style == foe.style) {
+        if (b == foe && me != null && me.style == foe.style) {
             look = look.clone();
             for (int i : new int[] {0, 1, 3, 4, 6}) look[i] = altColour(look[i]); // (not the skin, not the hair)
         }
@@ -3933,6 +4329,8 @@ public class Showdown extends ArcadeGame {
         return (ticks + pt) / 3.0F;
     }
     private float cu, cd, csp, horizon, camH;
+    /** The cinematic turn, as drawn: its angle (radians), cosine, sine; the bars. */
+    private float cyRad, cyCos = 1, cySin, bars;
     /** The line's place in the arena as drawn (between frames). */
     private float rTX, rTZ;
     private static final float FL = 170;
@@ -3941,6 +4339,10 @@ public class Showdown extends ArcadeGame {
         cu = Mth.lerp(partial, oCamU, camU);
         cd = Mth.lerp(partial, oCamD, camD);
         csp = Mth.lerp(partial, oSpin, spin);
+        cyRad = Mth.lerp(partial, oCineYaw, cineYaw) * Mth.DEG_TO_RAD;
+        cyCos = Mth.cos(cyRad);
+        cySin = Mth.sin(cyRad);
+        bars = Mth.lerp(partial, oCineBars, cineBars);
         rTX = Mth.lerp(partial, oTX, tX);
         rTZ = Mth.lerp(partial, oTZ, tZ);
         camH = 26 + cd * 0.1F;
@@ -3949,7 +4351,8 @@ public class Showdown extends ArcadeGame {
 
     /** Stage space -> camera: (x, y, z: distance ahead). */
     private float[] view(float u, float h, float v) {
-        return new float[] {u - cu, h, cd + (v - camV)};
+        float dx = u - cu, dz = v - camV; // (turned round the point it's looking at: a cinematic's swing)
+        return new float[] {dx * cyCos - dz * cySin, h, cd + dx * cySin + dz * cyCos};
     }
 
     /** Camera -> screen (field coordinates); null if it's behind the lens. */
@@ -4104,6 +4507,10 @@ public class Showdown extends ArcadeGame {
         if (b.rage) {
             for (Bone bone : bones) box(b, p, bone, 1.2F + 0.4F * Mth.sin(vt() * 0.8F), 0.28F, 0xFF3020);
         }
+        if (b.surgeFor > 0) { // (in a surge: a glow in its own colour, pulsing)
+            int glow = look[6];
+            for (Bone bone : bones) box(b, p, bone, 0.9F + 0.5F * Mth.sin(vt() * 1.4F), 0.3F, glow);
+        }
         if (b.state == State.KI || b.ki) { // (ki charge: a gold glow - flaring while it charges)
             float grow = b.state == State.KI ? 1.0F + b.t * 0.04F : 0.9F + 0.3F * Mth.sin(vt() * 1.2F);
             for (Bone bone : bones) box(b, p, bone, grow, 0.3F, 0xFFD040);
@@ -4114,7 +4521,12 @@ public class Showdown extends ArcadeGame {
         if (b.state == State.ATTACK && b.move != null && b.move.is(CRUSH) && b.t < b.move.startup() + b.move.active()) {
             for (Bone bone : bones) box(b, p, bone, 1.0F, 0.35F, 0x60C0FF); // (a power crush: armoured, glowing)
         }
-        for (Bone bone : bones) box(b, p, bone, 0, 1.0F, hurt ? 0xFFFFFF : 0);
+        if (ghostly || b == foe && ghostBrain != null && !picking) { // (a ghost: pale blue, see-through, shimmering)
+            for (Bone bone : bones) box(b, p, bone, 0.6F + 0.3F * Mth.sin(vt() * 0.9F), 0.25F, 0x9AD8FF);
+            for (Bone bone : bones) box(b, p, bone, 0, 0.55F, 0xB8E8FF);
+            return;
+        }
+        for (Bone bone : bones) box(b, p, bone, 0, 1.0F, silhouette ? 0x0C0816 : hurt ? 0xFFFFFF : 0);
     }
 
     // ---- the stage ----
@@ -4139,7 +4551,7 @@ public class Showdown extends ArcadeGame {
         }
         // the ground far off, in the haze (where the floor's drawn out to, it covers this)
         box(g, x0, y0, 0, hz, W, H - hz, 0xFF000000 | mixRgb(st().walls() ? st().outside() : st().tileB(), st().haze(), 0.7F));
-        float turn = csp * 0.011F; // (radians the camera has swung round)
+        float turn = csp * 0.011F + cyRad; // (radians the camera has swung round)
         // stars up high
         for (int i = 0; i < 40; i++) {
             float sx = Math.floorMod((int) (i * 53 - turn * 140), W + 20) - 10;
@@ -4522,7 +4934,7 @@ public class Showdown extends ArcadeGame {
 
     /** Over everything: clouds of it - rain on the rooftop, fireflies at the temple, shafts of sunlight, snow, ash. */
     private void weather(GuiGraphics g, int x0, int y0) {
-        float turn = csp * 0.011F;
+        float turn = csp * 0.011F + cyRad;
         switch (st().feature()) {
             case 1 -> { // rain, slanting down
                 for (int i = 0; i < 70; i++) {
@@ -4554,7 +4966,7 @@ public class Showdown extends ArcadeGame {
 
     /** Soft shafts of light slanting down from the sun. */
     private void shafts(GuiGraphics g, int x0, int y0, int rgb) {
-        float turn = csp * 0.011F;
+        float turn = csp * 0.011F + cyRad;
         float sunX = W * 0.68F - Mth.wrapDegrees(turn * Mth.RAD_TO_DEG) * 3.0F;
         for (int k = 0; k < 4; k++) {
             float a = (0.05F + 0.03F * Mth.sin(vt() * 0.03F + k)) * 255;
@@ -4648,6 +5060,11 @@ public class Showdown extends ArcadeGame {
         flush(g, x0, y0, true);
         effects(g, x0, y0);
         weather(g, x0, y0);
+        if (bars > 0.01F) { // (a cinematic's black bars)
+            float bh = 17 * bars;
+            box(g, x0, y0, -4, -4, W + 8, bh + 4, 0xFF000000);
+            box(g, x0, y0, -4, H - bh, W + 8, bh + 4, 0xFF000000);
+        }
         g.pose().popPose();
         hud(g, font, x0, y0);
         if (showList) moveList(g, font, x0, y0);
@@ -4767,6 +5184,12 @@ public class Showdown extends ArcadeGame {
                         l.add(row("SS 4", WHEEL_KICK, "Homing - catches a sidestep"));
                         l.add(row("f+1+2", BLADE_KICK, "POWER CRUSH"));
                     }
+                    case BOSS -> {
+                        l.add(sys("3+4", "SHADOW STEP", "Behind them - they face away. Every 3 s"));
+                        l.add(row("df+2", DARK_UPPER, "LAUNCHER, electric"));
+                        l.add(row("f+1+2", VOID_BEAM, "Unblockable, from afar"));
+                        l.add(row("b+1+2", IRON_PALM, "POWER CRUSH"));
+                    }
                     case 5 -> {
                         l.add(sys("3+4", "BRACE", "Takes a high or mid (half damage) and hits back. Lows get through"));
                         l.add(row("BRACE 1", IRON_KNUCKLE, "Fast, safe"));
@@ -4801,6 +5224,9 @@ public class Showdown extends ArcadeGame {
                 l.add(sys("b,b", "BACKDASH", "b,b again: chained"));
                 l.add(sys("b,b,db,b", "KOREAN BACKDASH", "Backdash, crouch-cancel, again"));
                 l.add(sys("df", "LOW PARRY", "Just as a low comes in"));
+                l.add(sys("2+3", "SURGE BURST", "Once a round: 6 s stronger, chips blocks"));
+                l.add(sys("2+3", "SURGE SMASH", "In a surge: a huge hit, ends it"));
+                l.add(sys("-", "RECOVERY", "The pale health comes back, out of trouble"));
                 l.add(sys("1+2+3+4", "KI CHARGE", "Next hit can't be blocked"));
                 l.add(sys("1 / 2", "THROW BREAK", "The arm that grabs you"));
                 l.add(sys("1 / 2", "TECH ROLL", "As you hit the floor"));
@@ -5023,53 +5449,92 @@ public class Showdown extends ArcadeGame {
 
     // ---- the bars, the clock, the words ----
 
+    // ================= the fight's screen: bars, names, clock, meters, combos, banners =================
+
+    /** A flat four-cornered shape, each corner its own colour (argb) - the UI's slanted bars and plates. */
+    private static void shape(GuiGraphics g, int x0, int y0, float[] xs, float[] ys, int[] argb) {
+        com.mojang.blaze3d.vertex.VertexConsumer vc = g.bufferSource().getBuffer(net.minecraft.client.renderer.RenderType.gui());
+        org.joml.Matrix4f m = g.pose().last().pose();
+        float area = 0;
+        for (int i = 0; i < 4; i++) {
+            int j = (i + 1) % 4;
+            area += xs[i] * ys[j] - xs[j] * ys[i];
+        }
+        for (int k = 0; k < 4; k++) {
+            int i = area > 0 ? 3 - k : k; // (wound the way the screen draws)
+            vc.addVertex(m, x0 + xs[i], y0 + ys[i], 0).setColor(argb[i]);
+        }
+        g.flush();
+    }
+
+    /** A slanted bar from x to x + w (its ends leaning by skew), top colour fading to bottom colour. */
+    private static void slant(GuiGraphics g, int x0, int y0, float x, float y, float w, float h, float skew, int top, int bottom) {
+        if (w <= 0) return;
+        shape(g, x0, y0, new float[] {x + skew, x + w + skew, x + w, x}, new float[] {y, y, y + h, y + h}, new int[] {top, top, bottom, bottom});
+    }
+
+    private static int argb(int a, int rgb) {
+        return a << 24 | rgb & 0xFFFFFF;
+    }
+
+    /** Words with a thick outline (all eight ways) and a drop shadow, centred on cx. */
+    private static void outlined(GuiGraphics g, Font font, String s, float cx, float cy, float scale, int colour, int edge) {
+        g.pose().pushPose();
+        g.pose().translate(cx, cy, 0);
+        g.pose().scale(scale, scale, 1);
+        int w = font.width(s);
+        g.drawString(font, s, -w / 2 + 2, 2, 0x90000000, false);
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                if (dx != 0 || dy != 0) g.drawString(font, s, -w / 2 + dx, dy, edge, false);
+            }
+        }
+        g.drawString(font, s, -w / 2, 0, colour, false);
+        g.pose().popPose();
+    }
+
+    /** Small words, plain (with a shadow), left at x - or, right-aligned, ending at x. */
+    private static void small(GuiGraphics g, Font font, String s, float x, float y, float scale, int colour, boolean right) {
+        g.pose().pushPose();
+        g.pose().translate(x, y, 0);
+        g.pose().scale(scale, scale, 1);
+        g.drawString(font, s, right ? -font.width(s) : 0, 0, colour, true);
+        g.pose().popPose();
+    }
+
     private void hud(GuiGraphics g, Font font, int x0, int y0) {
-        healthBar(g, x0, y0, 6, me, false);
-        healthBar(g, x0, y0, W - 6 - 78, foe, true);
-        // the clock
-        box(g, x0, y0, W / 2.0F - 11, 6, 22, 14, 0xC0101020);
-        box(g, x0, y0, W / 2.0F - 11, 6, 22, 1, 0xFFFFC850);
-        String c = practice > 0 ? "--" : Integer.toString(Math.max(0, (clock + FPS - 1) / FPS));
-        g.pose().pushPose();
-        g.pose().translate(x0 + W / 2.0F, y0 + 8, 0);
-        g.pose().scale(1.2F, 1.2F, 1);
-        g.drawString(font, c, -font.width(c) / 2, 0, clock < 10 * FPS && ((int) vt() / 5) % 2 == 0 ? 0xFFFF5050 : 0xFFFFE070, true);
-        g.pose().popPose();
-        // names under the bars, rounds won as lights
-        g.pose().pushPose();
-        g.pose().translate(x0, y0, 0);
-        g.pose().scale(0.75F, 0.75F, 1);
-        String n1 = versus ? vsNames[0] : me.style.name(), n2 = versus ? vsNames[1] : foe.style.name();
-        g.drawString(font, n1, (int) (8 / 0.75F), (int) (21 / 0.75F), versus ? P1_COLOUR : 0xFFFFFFFF, true);
-        g.drawString(font, n2, (int) ((W - 8) / 0.75F) - font.width(n2), (int) (21 / 0.75F), versus ? P2_COLOUR : 0xFFFFFFFF, true);
-        g.pose().popPose();
-        if (versus && vsWins[0] + vsWins[1] > 0) big(g, font, vsWins[0] + " - " + vsWins[1], x0 + W / 2.0F, y0 + 22, 0.5F, 0xFFFFE070);
-        for (int i = 0; i < 2; i++) {
-            box(g, x0, y0, 70 - i * 7, 21, 5, 5, i < me.wins ? 0xFFFFC850 : 0x80404050);
-            box(g, x0, y0, W - 75 + i * 7, 21, 5, 5, i < foe.wins ? 0xFFFFC850 : 0x80404050);
+        if (bars > 0.55F) { // (a cinematic: nothing over it but the banner)
+            drawBanner(g, font, x0, y0);
+            return;
         }
-        if (me.rage && !me.rageUsed) {
-            g.pose().pushPose();
-            g.pose().translate(x0 + 8, y0 + 30, 0);
-            g.pose().scale(0.75F, 0.75F, 1);
-            g.drawString(font, "RAGE: df+1+2 ART  " + rageDriveName(me) + " DRIVE", 0, 0, ((int) vt() / 4) % 2 == 0 ? 0xFFFF4040 : 0xFFFF9A2E, true);
-            g.pose().popPose();
-        }
-        // the combo counters: hits and damage, on the side of whoever's doing it
+        // the band along the top: both bars, the clock between them
+        slant(g, x0, y0, 0, 0, W, 30, 0, 0xB0000000, 0x00000000);
+        healthBar(g, font, x0, y0, me, false);
+        healthBar(g, font, x0, y0, foe, true);
+        clockPlate(g, font, x0, y0);
+        // the combo counters: hits and damage, on the side of whoever's doing it - popping up with each hit
         for (Body b : new Body[] {me, foe}) {
             if (b.combo < 2 || b.comboShow <= 0) continue;
             boolean left = b == me;
-            float cx = left ? x0 + 30 : x0 + W - 30;
+            float cx = left ? x0 + 34 : x0 + W - 34;
             int fade = b.comboShow < 30 ? b.comboShow * 8 + 10 : 255;
-            big(g, font, b.combo + " HITS", cx, y0 + 40, 1.0F, (fade << 24) | 0xFFC850);
-            big(g, font, b.comboDmg + " DAMAGE", cx, y0 + 50, 0.6F, (fade << 24) | 0xFFFFFF);
+            float pop = b.comboShow > 142 ? 1 + (b.comboShow - 142) * 0.04F : 1;
+            g.pose().pushPose();
+            g.pose().translate(cx, y0 + 50, 0);
+            outlined(g, font, Integer.toString(b.combo), 0, -6, 1.7F * pop, argb(fade, 0xFFE070), argb(fade, 0x5A1A00));
+            outlined(g, font, "HITS", 0, 8, 0.7F, argb(fade, 0xFFFFFF), argb(fade, 0x1A1020));
+            outlined(g, font, b.comboDmg + " DMG", 0, 16, 0.55F, argb(fade, 0xFF9A50), argb(fade, 0x1A1020));
+            g.pose().popPose();
         }
         for (Object[] co : callouts) {
             String text = (String) co[0];
-            float[] s = screen(view((Float) co[1], GROUND - (Float) co[2], camV));
-            if (s == null) continue;
+            float[] sc = screen(view((Float) co[1], GROUND - (Float) co[2], camV));
+            if (sc == null) continue;
             float rise = (84 - (Integer) co[3]) * 0.4F / 3;
-            big(g, font, text, x0 + s[0], y0 + s[1] - rise, 0.8F, text.startsWith("COUNTER") ? 0xFF80D0FF : 0xFFFFE74A);
+            int life = Math.min(255, (Integer) co[3] * 10);
+            boolean counter = text.startsWith("COUNTER");
+            outlined(g, font, text, x0 + sc[0], y0 + sc[1] - rise, 0.72F, argb(life, counter ? 0x8AD8FF : 0xFFE74A),
+                    argb(life, counter ? 0x0A2A5A : 0x3A1A00));
         }
         if (practice > 0) { // (practice: which dummy, and the frame data of your last move)
             big(g, font, practiceName() + (recordingNow ? "  - REC " + (RECORD_MAX - (ticks - recordFrom)) / FPS : ""), x0 + W / 2.0F, y0 + 24, 0.55F,
@@ -5098,24 +5563,111 @@ public class Showdown extends ArcadeGame {
             }
             if (frameInfoFor > 0 && !frameInfo.isEmpty()) big(g, font, frameInfo, x0 + W / 2.0F, y0 + H - 12, 0.6F, 0xFFFFFFFF);
         }
-        if (!banner.isEmpty()) {
-            float sc = banner.length() <= 8 ? 2.4F : banner.length() <= 14 ? 1.6F : 1.1F;
-            big(g, font, banner, x0 + W / 2.0F, y0 + 54, sc, ((int) vt() / 4) % 2 == 0 ? 0xFFFFE74A : 0xFFFF9A2E);
+        drawBanner(g, font, x0, y0);
+    }
+
+    /**
+     * A fighter's bar, slanted, from its side of the screen: its frame (red-edged and pulsing in rage), the damage just
+     * taken (draining white), the health that can come back (pale, striped), its health (gold - red when low); under it, a
+     * plate with its name (and in versus, its player's), the rounds it's won, its surge.
+     */
+    private void healthBar(GuiGraphics g, Font font, int x0, int y0, Body b, boolean right) {
+        float shown = shownHp.computeIfAbsent(b, k -> new float[] {MAX_HP})[0];
+        float w = 76, h = 8, y = 7, skew = right ? -3 : 3;
+        float x = right ? W - 6 - w : 6;
+        boolean rage = b.rage && !b.rageUsed;
+        int edge = rage ? (((int) vt() / 3) % 2 == 0 ? 0xFFFF3A2A : 0xFFB01A10) : 0xFFE8C060;
+        slant(g, x0, y0, x - 2, y - 2, w + 4, h + 4, skew, 0xFF0A0610, 0xFF0A0610);
+        slant(g, x0, y0, x - 1, y - 1, w + 2, h + 2, skew, edge, argb(255, darker(edge, 0.4F)));
+        slant(g, x0, y0, x, y, w, h, skew, 0xFF2A0A12, 0xFF14060A);
+        float fShown = w * shown / MAX_HP, fNow = w * b.hp / (float) MAX_HP, fBack = w * Math.min(MAX_HP, b.hp + b.recover) / (float) MAX_HP;
+        // (filled from the outside edge in: the left bar from its left, the right bar from its right)
+        slant(g, x0, y0, right ? x + w - fShown : x, y, fShown, h, skew * fShown / w, 0xFFFFFFFF, 0xFFFFC8C8);
+        if (b.recover > 0) {
+            slant(g, x0, y0, right ? x + w - fBack : x, y, fBack, h, skew * fBack / w, 0xFFE8E4F0, 0xFFA8A4B8);
+            for (float sx = 0; sx < fBack - fNow; sx += 4) { // (its stripes)
+                float px = right ? x + w - fNow - sx - 2 : x + fNow + sx;
+                slant(g, x0, y0, px, y, 1.5F, h, 2, 0x40FFFFFF, 0x40FFFFFF);
+            }
+        }
+        boolean low = b.hp <= MAX_HP / 4;
+        int top = low ? (((int) vt() / 4) % 2 == 0 ? 0xFFFF6A50 : 0xFFE03A2A) : 0xFFFFF070, bottom = low ? 0xFFA01818 : 0xFFF08A10;
+        if (b.surgeFor > 0) { // (in a surge: the bar in its colour)
+            int c = lookOf(b)[6];
+            top = 0xFF000000 | mixRgb(c, 0xFFFFFF, 0.45F);
+            bottom = 0xFF000000 | c;
+        }
+        slant(g, x0, y0, right ? x + w - fNow : x, y, fNow, h, skew * fNow / w, top, bottom);
+        slant(g, x0, y0, right ? x + w - fNow : x, y, fNow, 1.5F, skew * fNow / w * 0.2F, 0x90FFFFFF, 0x30FFFFFF); // (its gloss)
+        // the plate under it: the name, the rounds won (diamonds), the surge
+        float py = y + h + 3, pw = 58;
+        float px = right ? W - 8 - pw : 8;
+        slant(g, x0, y0, px, py, pw, 9, skew, 0xE0141020, 0xE0201830);
+        String name = versus ? vsNames[b == me ? 0 : 1] : b.style.name();
+        int nameCol = versus ? (b == me ? P1_COLOUR : P2_COLOUR) : 0xFFFFFFFF;
+        small(g, font, name, x0 + (right ? px + pw - 3 : px + 3), y0 + py + 1.5F, 0.62F, nameCol, right);
+        if (versus) small(g, font, b.style.name(), x0 + (right ? px + pw - 3 - font.width(name) * 0.62F - 4 : px + 3 + font.width(name) * 0.62F + 4),
+                y0 + py + 2.5F, 0.45F, 0xFFB0A8C8, right);
+        for (int i = 0; i < 2; i++) {
+            float dx = right ? px - 6 - i * 7 : px + pw + 2 + i * 7, dy = py + 4.5F;
+            int on = i < b.wins ? 0xFFFFD050 : 0xFF2A2438;
+            shape(g, x0, y0, new float[] {dx + 2.5F, dx + 5, dx + 2.5F, dx}, new float[] {dy - 3, dy, dy + 3, dy}, new int[] {on, on, darker(on, 0.4F) | 0xFF000000, on});
+        }
+        // the surge: ready (lit, pulsing), running down (its colour), spent (dark)
+        float sy = py + 11, sw = 34;
+        float sx = right ? W - 8 - sw : 8;
+        int accent = 0xFF000000 | lookOf(b)[6];
+        slant(g, x0, y0, sx - 1, sy - 1, sw + 2, 5, skew * 0.5F, 0xFF0A0610, 0xFF0A0610);
+        if (b.surgeFor > 0) {
+            float f = sw * b.surgeFor / (float) SURGE_FRAMES;
+            slant(g, x0, y0, right ? sx + sw - f : sx, sy, f, 3, skew * 0.5F, 0xFF000000 | mixRgb(accent, 0xFFFFFF, 0.5F), accent);
+        } else if (b.surgeReady) {
+            float pulse = 0.5F + 0.5F * Mth.sin(vt() * 0.5F);
+            slant(g, x0, y0, sx, sy, sw, 3, skew * 0.5F, 0xFF000000 | mixRgb(accent, 0xFFFFFF, 0.3F + 0.4F * pulse), accent);
+        }
+        small(g, font, b.surgeFor > 0 ? "SURGE ON" : b.surgeReady ? "SURGE 2+3" : "SURGE", x0 + (right ? sx - 3 : sx + sw + 3), y0 + sy - 0.5F, 0.42F,
+                b.surgeFor > 0 || b.surgeReady ? 0xFFFFFFFF : 0xFF6A6080, right);
+        if (rage) { // (rage: its art and drive, ready)
+            float ry = sy + 6;
+            String t = b == me || versus ? "RAGE  df+1+2 / " + rageDriveName(b) : "RAGE";
+            small(g, font, t, x0 + (right ? W - 8 : 8), y0 + ry, 0.42F, ((int) vt() / 4) % 2 == 0 ? 0xFFFF4A3A : 0xFFFFA040, right);
         }
     }
 
-    private void healthBar(GuiGraphics g, int x0, int y0, int x, Body b, boolean right) {
-        float shown = shownHp.computeIfAbsent(b, k -> new float[] {MAX_HP})[0];
-        int w = 78;
-        box(g, x0, y0, x - 1, 8, w + 2, 9, b.rage && ((int) vt() / 4) % 2 == 0 ? 0xFFFF3030 : 0xFF0A0812);
-        box(g, x0, y0, x, 9, w, 7, 0xFF3A0A14);
-        float fShown = w * shown / MAX_HP, fNow = w * b.hp / (float) MAX_HP;
-        box(g, x0, y0, right ? x + w - fShown : x, 9, fShown, 7, 0xFFFFFFFF); // (the damage just taken, draining away)
-        int top = b.hp > MAX_HP / 4 ? 0xFFFFE050 : 0xFFFF5040, bottom = b.hp > MAX_HP / 4 ? 0xFFFF9A20 : 0xFFC02020;
-        float fx = right ? x + w - fNow : x;
-        box(g, x0, y0, fx, 9, fNow, 4, top);
-        box(g, x0, y0, fx, 13, fNow, 3, bottom);
-        box(g, x0, y0, fx, 9, fNow, 1, 0x80FFFFFF);
+    /** The clock: a six-sided plate between the bars; red and flashing in the last ten seconds. */
+    private void clockPlate(GuiGraphics g, Font font, int x0, int y0) {
+        float cx = W / 2.0F, cy = 13, r = 10;
+        int rim = 0xFFE8C060, face = 0xF0120C1E;
+        shape(g, x0, y0, new float[] {cx - r - 1, cx - r / 2 - 1, cx + r / 2 + 1, cx + r + 1}, new float[] {cy, cy - r - 1, cy - r - 1, cy}, new int[] {rim, rim, rim, rim});
+        shape(g, x0, y0, new float[] {cx - r - 1, cx - r / 2 - 1, cx + r / 2 + 1, cx + r + 1}, new float[] {cy, cy + r + 1, cy + r + 1, cy}, new int[] {rim, rim, rim, rim});
+        shape(g, x0, y0, new float[] {cx - r, cx - r / 2, cx + r / 2, cx + r}, new float[] {cy, cy - r, cy - r, cy}, new int[] {face, face, face, face});
+        shape(g, x0, y0, new float[] {cx - r, cx - r / 2, cx + r / 2, cx + r}, new float[] {cy, cy + r, cy + r, cy}, new int[] {0xF0201430, 0xF0201430, 0xF0201430, 0xF0201430});
+        String c = practice > 0 ? "--" : Integer.toString(Math.max(0, (clock + FPS - 1) / FPS));
+        boolean hurry = practice == 0 && clock < 10 * FPS && ((int) vt() / 5) % 2 == 0;
+        outlined(g, font, c, x0 + cx, y0 + cy - 5, 1.15F, hurry ? 0xFFFF5040 : 0xFFFFE890, 0xFF2A1400);
+        if (versus && vsWins[0] + vsWins[1] > 0) small(g, font, vsWins[0] + " - " + vsWins[1], x0 + cx - font.width(vsWins[0] + " - " + vsWins[1]) * 0.22F,
+                y0 + cy + r + 2, 0.45F, 0xFFFFE070, false);
+    }
+
+    /** The banner: words on a band across the screen that slides in, holds, and fades - ROUND 1, FIGHT!, K.O. ... */
+    private void drawBanner(GuiGraphics g, Font font, int x0, int y0) {
+        if (banner.isEmpty() || bannerFor <= 0) return;
+        float total = Math.max(1, bannerMax), t = 1 - bannerFor / total; // (0 at its start, 1 at its end)
+        float in = Mth.clamp(t * 7, 0, 1), out = Mth.clamp((1 - t) * 6, 0, 1), k = Math.min(in, out);
+        float sc = banner.length() <= 6 ? 2.6F : banner.length() <= 12 ? 1.7F : 1.15F;
+        sc = Math.min(sc, W * 0.9F / Math.max(1, font.width(banner))); // (it fits across, however long)
+        boolean ko = banner.startsWith("K.O") || banner.startsWith("TIME") || banner.contains("WINS");
+        float cy = 54, bh = 9 * sc + 6;
+        int band = ko ? 0x8A0A08 : 0x140A28;
+        float slide = (1 - in) * W * 0.6F;
+        slant(g, x0, y0, -slide, cy - bh / 2, W, bh / 2, 0, argb((int) (0xC0 * k), band), argb((int) (0xE0 * k), band));
+        slant(g, x0, y0, slide, cy, W, bh / 2, 0, argb((int) (0xE0 * k), band), argb((int) (0x60 * k), band));
+        slant(g, x0, y0, -slide, cy - bh / 2 - 1, W, 1, 0, argb((int) (255 * k), 0xFFD050), argb((int) (255 * k), 0xFFD050));
+        slant(g, x0, y0, slide, cy + bh / 2, W, 1, 0, argb((int) (255 * k), 0xFFD050), argb((int) (255 * k), 0xFFD050));
+        float pop = 1 + (1 - in) * 0.6F;
+        int colour = ko ? 0xFFFFFFFF : ((int) vt() / 4) % 2 == 0 ? 0xFFFFE74A : 0xFFFFB02A;
+        outlined(g, font, banner, x0 + W / 2.0F, y0 + cy - 4.5F * sc * pop, sc * pop, argb((int) (255 * Math.max(0.2F, k)), colour),
+                argb((int) (255 * Math.max(0.2F, k)), ko ? 0x5A0000 : 0x2A1000));
     }
 
     /** Big outlined words. */
@@ -5138,6 +5690,8 @@ public class Showdown extends ArcadeGame {
         cu = W / 2.0F;
         cd = 150;
         csp = 0;
+        cyRad = cySin = bars = 0;
+        cyCos = 1;
         camV = 0;
         camH = 26;
         horizon = 104 - camH * FL / cd;
@@ -5146,12 +5700,19 @@ public class Showdown extends ArcadeGame {
             drawStagePick(g, font, x0, y0, partial);
             return;
         }
-        for (int i = 0; i < PLAYABLE; i++) {
+        if (pickPhase == 3 && !versus && !GHOSTS.isEmpty()) {
+            drawGhostPick(g, font, x0, y0, partial);
+            return;
+        }
+        int slots = PLAYABLE + 1; // (the six, and NYX - a shadow until unlocked)
+        boolean nyxOpen = versus ? vsUnlocked[0] || vsUnlocked[1] : nyxUnlocked;
+        for (int i = 0; i < slots; i++) {
             Body b = picks[i];
             if (b == null) {
                 b = picks[i] = new Body(FIGHTERS[i], i, pickX(i));
                 b.facing = 1;
             }
+            silhouette = i == BOSS && !nyxOpen;
             boolean chosen = versus ? i == vsPick[0] || i == vsPick[1] : i == pick;
             b.state = chosen ? State.WIN : State.STAND;
             float[][] pp = poseOf(b);
@@ -5169,6 +5730,7 @@ public class Showdown extends ArcadeGame {
                 }
             }
             fighter(b, partial);
+            silhouette = false;
         }
         flush(g, x0, y0, true);
         if (versus) {
@@ -5176,55 +5738,115 @@ public class Showdown extends ArcadeGame {
             g.flush();
             return;
         }
-        big(g, font, "TIKKIN", x0 + W / 2.0F, y0 + 8, 1.0F, 0xFFFF7AD9);
-        big(g, font, "CHOOSE YOUR FIGHTER", x0 + W / 2.0F, y0 + 20, 0.75F, 0xFFFFFFFF);
-        for (int i = 0; i < PLAYABLE; i++) {
-            big(g, font, FIGHTERS[i].name(), x0 + pickX(i), y0 + 110, 0.75F, i == pick ? 0xFFFFE74A : 0xFFAAAAAA);
+        // the title band
+        slant(g, x0, y0, 0, 0, W, 22, 0, 0xF0100820, 0xC0100820);
+        slant(g, x0, y0, 0, 22, W, 1, 0, 0xFFE8C060, 0xFFE8C060);
+        outlined(g, font, "TIKKIN", x0 + W / 2.0F, y0 + 3, 1.15F, 0xFFFF7AD9, 0xFF3A0A30);
+        outlined(g, font, "CHOOSE YOUR FIGHTER", x0 + W / 2.0F, y0 + 14, 0.5F, 0xFFFFFFFF, 0xFF100818);
+        pill(g, font, x0, y0, 4, 5, MODES[mode], "W/S", 0xFF5AB4FF);
+        pill(g, font, x0, y0, W - 52, 5, LEVELS[level], "I", level == 3 ? 0xFFFF5A5A : 0xFFFFC850);
+        // the name cards
+        for (int i = 0; i < slots; i++) {
+            boolean open = i < PLAYABLE || nyxUnlocked;
+            nameCard(g, font, x0, y0, pickX(i), 104, open ? FIGHTERS[i].name() : "?", i == pick, open ? 0xFFFFE74A : 0xFF605870);
+            if (!open) small(g, font, "LOCKED", x0 + pickX(i) - font.width("LOCKED") * 0.2F, y0 + 96, 0.4F, 0xFF8A80A0, false);
         }
-        big(g, font, (mode == 0 ? "ARCADE" : "SURVIVAL") + "  (W/S)", x0 + W / 2.0F, y0 + 30, 0.6F, 0xFF80D0FF);
-        Style s = FIGHTERS[pick];
-        String stats = "SPEED " + "■".repeat(Math.round(s.speed() * 4)) + "  POWER " + "■".repeat(Math.round(s.power() * 4));
-        if (vsNoticeFor > 0) big(g, font, vsNotice, x0 + W / 2.0F, y0 + 122, 0.75F, 0xFFFF9A2E); // (why a versus match ended)
-        else big(g, font, stats, x0 + W / 2.0F, y0 + 122, 0.7F, 0xFF9AD8FF);
-        if (((int) vt() / 10) % 2 == 0) big(g, font, "< >   U: FIGHT", x0 + W / 2.0F, y0 + 133, 0.75F, 0xFFFFFFFF);
+        // the panel: who it is, a line about them, how fast and strong
+        infoPanel(g, font, x0, y0, FIGHTERS[pick], TAGLINES[Math.min(pick, TAGLINES.length - 1)], 0xFFFFE74A);
+        if (vsNoticeFor > 0) outlined(g, font, vsNotice, x0 + W / 2.0F, y0 + 84, 0.7F, 0xFFFF9A2E, 0xFF2A1000); // (why a versus match ended)
+        hints(g, font, x0, y0, "\u25C0 \u25B6 FIGHTER   W/S MODE   I LEVEL   U FIGHT");
+        if (!nyxUnlocked && pick == 0 && ((int) vt() / 40) % 3 == 2) small(g, font, "Beat NYX on MASTER to unlock her", x0 + 4, y0 + 26, 0.42F, 0xFF8A80A0, false);
         g.flush();
     }
 
-    private final Body[] picks = new Body[PLAYABLE];
+    private final Body[] picks = new Body[PLAYABLE + 1];
 
     /** Where each fighter stands on the select screen (across it, evenly). */
     private static float pickX(int i) {
-        return ArcadeGame.W / 2.0F + (i - (PLAYABLE - 1) / 2.0F) * 29; // (close enough that the camera's perspective keeps the ends in)
+        return pickX(i, PLAYABLE + 1);
+    }
+
+    private static float pickX(int i, int n) {
+        float gap = n <= 5 ? 34 : n == 6 ? 29 : 25; // (close enough that the camera's perspective keeps the ends in)
+        return ArcadeGame.W / 2.0F + (i - (n - 1) / 2.0F) * gap;
     }
 
     private static final int P1_COLOUR = 0xFF5AB4FF, P2_COLOUR = 0xFFFF6464, BOTH_COLOUR = 0xFFD488FF;
+    private static final String[] MODES = {"ARCADE", "SURVIVAL", "GHOST"};
+    /** (the select screen: this one drawn as a dark shape - locked) */
+    private boolean silhouette;
+
+    /** A slanted pill: what's set, and the key that changes it. */
+    private static void pill(GuiGraphics g, Font font, int x0, int y0, float x, float y, String text, String key, int colour) {
+        float w = 48;
+        slant(g, x0, y0, x, y, w, 11, 2, 0xE0181028, 0xE0281838);
+        slant(g, x0, y0, x, y + 10, w, 1, 0, colour, colour);
+        small(g, font, text, x0 + x + 4, y0 + y + 2, 0.55F, colour, false);
+        small(g, font, key, x0 + x + w - 2, y0 + y + 3, 0.4F, 0xFF9A90B0, true);
+    }
+
+    /** A name on a little slanted card - lit gold, framed, when it's the one picked. */
+    private static void nameCard(GuiGraphics g, Font font, int x0, int y0, float cx, float y, String name, boolean on, int colour) {
+        float w = Math.max(24, font.width(name) * 0.58F + 8);
+        if (on) slant(g, x0, y0, cx - w / 2 - 1.5F, y - 1.5F, w + 3, 11, 2, 0xFFE8C060, 0xFF8A5A10);
+        slant(g, x0, y0, cx - w / 2, y, w, 8, 2, on ? 0xF02A1A08 : 0xE0141020, on ? 0xF0180E04 : 0xE00A0814);
+        small(g, font, name, x0 + cx - font.width(name) * 0.29F + 1, y0 + y + 1.5F, 0.58F, on ? colour : 0xFFB0A8C0, false);
+    }
+
+    /** The panel at the foot of the select screen: the name big, a line about them, speed and power as bars. */
+    private static void infoPanel(GuiGraphics g, Font font, int x0, int y0, Style s, String line, int colour) {
+        float y = 114;
+        slant(g, x0, y0, 6, y, W - 12, 18, 3, 0xE8140C24, 0xE80A0614);
+        slant(g, x0, y0, 6, y, 3, 18, 3, colour, darker(colour, 0.5F) | 0xFF000000);
+        small(g, font, s.name(), x0 + 13, y0 + y + 2, 0.8F, colour, false);
+        small(g, font, line, x0 + 13, y0 + y + 11, 0.42F, 0xFFB8B0D0, false);
+        float bx = W - 74;
+        statBar(g, font, x0, y0, bx, y + 3, "SPEED", s.speed() / 1.3F, 0xFF5AD8FF);
+        statBar(g, font, x0, y0, bx, y + 10, "POWER", s.power() / 1.3F, 0xFFFF7A4A);
+    }
+
+    private static void statBar(GuiGraphics g, Font font, int x0, int y0, float x, float y, String label, float f, int colour) {
+        small(g, font, label, x0 + x, y0 + y, 0.42F, 0xFF9A90B0, false);
+        float bx = x + 20, w = 44;
+        slant(g, x0, y0, bx, y, w, 4, 1, 0xFF0A0610, 0xFF0A0610);
+        for (int k = 0; k < 8; k++) { // (eight segments, lit up to how much)
+            if (k + 0.5F > f * 8) break;
+            slant(g, x0, y0, bx + 0.5F + k * 5.4F, y + 0.5F, 4.6F, 3, 1, 0xFF000000 | mixRgb(colour, 0xFFFFFF, 0.35F), colour);
+        }
+    }
+
+    /** The keys, along the foot of the screen. */
+    private static void hints(GuiGraphics g, Font font, int x0, int y0, String text) {
+        slant(g, x0, y0, 0, H - 9, W, 9, 0, 0xC0000000, 0xF0000000);
+        small(g, font, text, x0 + W / 2.0F - font.width(text) * 0.21F, y0 + H - 7, 0.42F, 0xFFD0C8E0, false);
+    }
 
     /** The versus select screen's words: both names, matches won, each one's pick (1P blue, 2P red) and ready. */
     private void versusPickLabels(GuiGraphics g, Font font, int x0, int y0) {
-        big(g, font, "VERSUS", x0 + W / 2.0F, y0 + 6, 1.0F, 0xFFFF7AD9);
-        big(g, font, vsNames[0], x0 + W / 2.0F - 8 - font.width(vsNames[0]) * 0.35F, y0 + 18, 0.7F, P1_COLOUR);
-        big(g, font, "VS", x0 + W / 2.0F, y0 + 18, 0.7F, 0xFFFFFFFF);
-        big(g, font, vsNames[1], x0 + W / 2.0F + 8 + font.width(vsNames[1]) * 0.35F, y0 + 18, 0.7F, P2_COLOUR);
-        if (vsWins[0] + vsWins[1] > 0) big(g, font, "WINS  " + vsWins[0] + " - " + vsWins[1], x0 + W / 2.0F, y0 + 28, 0.55F, 0xFFFFE070);
-        for (int i = 0; i < PLAYABLE; i++) {
+        // the title band: the two names either side of VS, slanted plates in their colours
+        slant(g, x0, y0, 0, 0, W, 22, 0, 0xF0100820, 0xC0100820);
+        slant(g, x0, y0, 0, 22, W, 1, 0, 0xFFE8C060, 0xFFE8C060);
+        slant(g, x0, y0, 6, 6, W / 2.0F - 20, 11, 3, 0xE0102850, 0xE0081428);
+        slant(g, x0, y0, W / 2.0F + 14, 6, W / 2.0F - 20, 11, -3, 0xE0501010, 0xE0280808);
+        small(g, font, vsNames[0], x0 + 10, y0 + 8, 0.6F, P1_COLOUR, false);
+        small(g, font, vsNames[1], x0 + W - 10, y0 + 8, 0.6F, P2_COLOUR, true);
+        outlined(g, font, "VS", x0 + W / 2.0F, y0 + 5, 1.0F, 0xFFFF7AD9, 0xFF3A0A30);
+        if (vsWins[0] + vsWins[1] > 0) small(g, font, "WINS " + vsWins[0] + " - " + vsWins[1], x0 + W / 2.0F - 14, y0 + 25, 0.45F, 0xFFFFE070, false);
+        int slots = PLAYABLE + 1;
+        for (int i = 0; i < slots; i++) {
+            boolean open = i < PLAYABLE || vsUnlocked[0] || vsUnlocked[1];
             boolean one = vsPick[0] == i, two = vsPick[1] == i;
             int colour = one && two ? BOTH_COLOUR : one ? P1_COLOUR : two ? P2_COLOUR : 0xFFAAAAAA;
-            big(g, font, FIGHTERS[i].name(), x0 + pickX(i), y0 + 110, 0.75F, colour);
+            nameCard(g, font, x0, y0, pickX(i), 104, open ? FIGHTERS[i].name() : "?", one || two, colour);
             String tag = one && two ? "1P 2P" : one ? "1P" : two ? "2P" : "";
-            if (!tag.isEmpty()) big(g, font, tag, x0 + pickX(i), y0 + 38, 0.7F, colour);
-            String ready = (one && vsReady[0] || two && vsReady[1]) ? "READY" : "";
-            if (!ready.isEmpty()) big(g, font, ready, x0 + pickX(i), y0 + 46, 0.5F, 0xFF70FF90);
+            if (!tag.isEmpty()) outlined(g, font, tag, x0 + pickX(i), y0 + 32, 0.6F, colour, 0xFF100818);
+            if (one && vsReady[0] || two && vsReady[1]) outlined(g, font, "READY", x0 + pickX(i), y0 + 40, 0.45F, 0xFF70FF90, 0xFF0A2A10);
         }
         int side = localSide();
-        if (vsNoticeFor > 0) {
-            big(g, font, vsNotice, x0 + W / 2.0F, y0 + 122, 0.75F, 0xFFFF9A2E);
-        } else {
-            Style s = FIGHTERS[vsPick[side]];
-            String stats = "SPEED " + "■".repeat(Math.round(s.speed() * 4)) + "  POWER " + "■".repeat(Math.round(s.power() * 4));
-            big(g, font, stats, x0 + W / 2.0F, y0 + 122, 0.7F, side == 0 ? P1_COLOUR : P2_COLOUR);
-        }
-        String hint = !vsReady[side] ? "< >   U: READY" : !vsReady[1 - side] ? "WAITING FOR " + vsNames[1 - side] + "   I: BACK" : "";
-        if (!hint.isEmpty() && ((int) vt() / 10) % 2 == 0) big(g, font, hint, x0 + W / 2.0F, y0 + 133, 0.7F, 0xFFFFFFFF);
+        Style s = FIGHTERS[vsPick[side]];
+        infoPanel(g, font, x0, y0, s, TAGLINES[Math.min(vsPick[side], TAGLINES.length - 1)], side == 0 ? P1_COLOUR : P2_COLOUR);
+        if (vsNoticeFor > 0) outlined(g, font, vsNotice, x0 + W / 2.0F, y0 + 84, 0.7F, 0xFFFF9A2E, 0xFF2A1000);
+        hints(g, font, x0, y0, !vsReady[side] ? "\u25C0 \u25B6 FIGHTER   U READY" : !vsReady[1 - side] ? "WAITING FOR " + vsNames[1 - side] + "   I BACK" : "READY!");
         netStatus(g, font, x0, y0);
     }
 
@@ -5237,6 +5859,66 @@ public class Showdown extends ArcadeGame {
             big(g, font, st, x0 + W / 2.0F, y0 + H / 2.0F - 5, 0.7F, 0xFFFFE070);
         }
     }
+
+    /** Picking a ghost: its fighter, pale and see-through, turning in the hall; whose it is; what it's learned to like. */
+    private void drawGhostPick(GuiGraphics g, Font font, int x0, int y0, float partial) {
+        Ghost gh = GHOSTS.get(Math.min(ghostPick, GHOSTS.size() - 1));
+        int f = Math.max(0, Math.min(FIGHTERS.length - 1, gh.fighter()));
+        Body b = picks[f];
+        if (b == null) b = picks[f] = new Body(FIGHTERS[f], f, W / 2.0F);
+        float keepX = b.x;
+        b.x = W / 2.0F;
+        b.state = State.STAND;
+        float[][] pp = poseOf(b);
+        System.arraycopy(pp[1], 0, pp[0], 0, P);
+        float[] want = target(b);
+        for (int k = 0; k < P; k++) pp[1][k] += (want[k] - pp[1][k]) * 0.2F;
+        pp[1][13] = pp[0][13] = (ticks + partial) * 0.7F % 360 - 180;
+        ghostly = true;
+        fighter(b, partial);
+        ghostly = false;
+        b.x = keepX;
+        flush(g, x0, y0, true);
+        slant(g, x0, y0, 0, 0, W, 22, 0, 0xF0100820, 0xC0100820);
+        slant(g, x0, y0, 0, 22, W, 1, 0, 0xFF8AD8FF, 0xFF8AD8FF);
+        outlined(g, font, "GHOST BATTLE", x0 + W / 2.0F, y0 + 3, 1.0F, 0xFF8AD8FF, 0xFF0A1A3A);
+        outlined(g, font, "FIGHT THE WAY THEY FIGHT", x0 + W / 2.0F, y0 + 14, 0.5F, 0xFFFFFFFF, 0xFF100818);
+        outlined(g, font, "\u25C0  " + gh.name() + "  \u25B6", x0 + W / 2.0F, y0 + 92, 0.9F, 0xFFFFFFFF, 0xFF0A1A3A);
+        small(g, font, (ghostPick + 1) + " / " + GHOSTS.size(), x0 + W - 6, y0 + 26, 0.45F, 0xFF8AD8FF, true);
+        // what it learned: its favourite move, how much it attacks, how much it blocks
+        java.util.Map<String, Integer> brain = brainOf(gh.profile());
+        int moves = 0, blocks = 0, all = 0, best = 0;
+        String fav = "-";
+        for (var e : brain.entrySet()) {
+            String k = e.getKey();
+            if (k.startsWith("s:") || k.startsWith("starts:")) {
+                if (k.startsWith("starts:") && e.getValue() > best) {
+                    best = e.getValue();
+                    fav = k.substring(7);
+                }
+                continue;
+            }
+            all += e.getValue();
+            if (k.endsWith("~block")) blocks += e.getValue();
+            else if (!k.substring(k.indexOf(':') + 1).startsWith("~")) moves += e.getValue();
+        }
+        moveNames();
+        Move favMove = movesById.get(fav);
+        String line = favMove != null ? "LOVES " + favMove.name() : "STILL LEARNING";
+        Style st = FIGHTERS[f];
+        slant(g, x0, y0, 6, 104, W - 12, 28, 3, 0xE8140C24, 0xE80A0614);
+        slant(g, x0, y0, 6, 104, 3, 28, 3, 0xFF8AD8FF, 0xFF2A5A8A);
+        small(g, font, st.name(), x0 + 13, y0 + 106, 0.8F, 0xFF8AD8FF, false);
+        small(g, font, line, x0 + 13, y0 + 115, 0.45F, 0xFFD0C8E0, false);
+        small(g, font, "LEARNED FROM " + all + " MOMENTS", x0 + 13, y0 + 123, 0.4F, 0xFF8A80A0, false);
+        statBar(g, font, x0, y0, W - 74, 108, "ATTACK", all == 0 ? 0 : moves / (float) all * 1.6F, 0xFFFF7A4A);
+        statBar(g, font, x0, y0, W - 74, 116, "GUARD", all == 0 ? 0 : blocks / (float) all * 3.0F, 0xFF5AD8FF);
+        hints(g, font, x0, y0, "\u25C0 \u25B6 GHOST   U FIGHT   K BACK");
+        g.flush();
+    }
+
+    /** (drawn see-through and pale blue: a ghost) */
+    private boolean ghostly;
 
     /** Picking the stage: the stage itself, live behind its name. */
     private void drawStagePick(GuiGraphics g, Font font, int x0, int y0, float partial) {
@@ -5257,6 +5939,8 @@ public class Showdown extends ArcadeGame {
         cu = W / 2.0F;
         cd = 170;
         csp = vt() * 2;
+        cyRad = cySin = bars = 0;
+        cyCos = 1;
         camV = 0;
         float sa = csp * SPIN_RAD; // (turning round the arena's middle)
         rTX = W / 2.0F - W / 2.0F * Mth.cos(sa);
@@ -5268,13 +5952,24 @@ public class Showdown extends ArcadeGame {
         walls();
         flush(g, x0, y0, true);
         boolean mine = !versus || vsStagePicker == localSide();
-        big(g, font, mine ? "SELECT STAGE" : vsNames[vsStagePicker] + " IS PICKING THE STAGE", x0 + W / 2.0F, y0 + 10, mine ? 0.9F : 0.7F, 0xFFFFFFFF);
-        big(g, font, random ? "RANDOM" : STAGES[stage].name(), x0 + W / 2.0F, y0 + 60, 1.2F, 0xFFFFE74A);
+        slant(g, x0, y0, 0, 0, W, 20, 0, 0xF0100820, 0x80100820);
+        slant(g, x0, y0, 0, 20, W, 1, 0, 0xFFE8C060, 0xFFE8C060);
+        outlined(g, font, mine ? "SELECT STAGE" : vsNames[vsStagePicker] + " IS PICKING", x0 + W / 2.0F, y0 + 5, mine ? 0.95F : 0.7F, 0xFFFFFFFF, 0xFF100818);
         Stage sg = STAGES[stage];
-        String about = random ? "a different one each fight" : !sg.walls() ? "no walls" : sg.wallBreak() && sg.floorBreak() ? "walls and floor break"
-                : sg.wallBreak() ? "the walls break" : sg.floorBreak() ? "the floor breaks" : "walls";
-        big(g, font, about, x0 + W / 2.0F, y0 + 74, 0.6F, 0xFFB0D8FF);
-        if (mine && ((int) vt() / 10) % 2 == 0) big(g, font, "< >   U: FIGHT   K: BACK", x0 + W / 2.0F, y0 + 133, 0.7F, 0xFFFFFFFF);
+        String about = random ? "A different one each fight" : !sg.walls() ? "No walls: a ring out in the open" : sg.wallBreak() && sg.floorBreak()
+                ? "The walls and the floor break" : sg.wallBreak() ? "The walls break" : sg.floorBreak() ? "The floor breaks" : "Walls all round";
+        // the stage's card: its name big between arrows, what's special about it
+        slant(g, x0, y0, 14, 52, W - 28, 30, 4, 0xD8100820, 0xD8080410);
+        slant(g, x0, y0, 14, 52, W - 28, 1, 4, 0xFFE8C060, 0xFFE8C060);
+        slant(g, x0, y0, 10, 81, W - 28, 1, 4, 0xFFE8C060, 0xFFE8C060);
+        outlined(g, font, random ? "RANDOM" : sg.name(), x0 + W / 2.0F, y0 + 56, 1.25F, 0xFFFFE74A, 0xFF3A1A00);
+        small(g, font, about, x0 + W / 2.0F - font.width(about) * 0.25F, y0 + 72, 0.5F, 0xFFB0D8FF, false);
+        if (mine) {
+            float bob = Mth.sin(vt() * 0.4F) * 1.5F;
+            outlined(g, font, "\u25C0", x0 + 22 - bob, y0 + 61, 1.0F, 0xFFFFFFFF, 0xFF100818);
+            outlined(g, font, "\u25B6", x0 + W - 22 + bob, y0 + 61, 1.0F, 0xFFFFFFFF, 0xFF100818);
+            hints(g, font, x0, y0, "\u25C0 \u25B6 STAGE   U FIGHT   K BACK");
+        }
         netStatus(g, font, x0, y0);
         g.flush();
     }

@@ -59,6 +59,23 @@ public class ArcadeScreen extends Screen {
     public ArcadeScreen(BlockPos pos) {
         super(Component.translatable("block.skyblocks.arcade"));
         this.pos = pos;
+        TikkinSave.load();
+    }
+
+    /** What Tikkin learned of how you fight: remembered here, and your ghost for that fighter to this cabinet. */
+    private void sendGhost() {
+        var learned = showdown().takeLearned();
+        if (learned.isEmpty()) return;
+        var got = TikkinSave.merge(learned);
+        TikkinSave.save();
+        int f = -1, most = 0;
+        for (var e : got.entrySet()) {
+            if (e.getValue() > most) {
+                most = e.getValue();
+                f = e.getKey();
+            }
+        }
+        if (f >= 0) PacketDistributor.sendToServer(new com.example.skyblocks.ArcadeGhostPayload(pos, f, TikkinSave.profile(f)));
     }
 
     public BlockPos pos() {
@@ -79,7 +96,8 @@ public class ArcadeScreen extends Screen {
     private void seat() {
         boolean want = game == SHOWDOWN;
         if (want && (!seated || ticks % 20 == 0)) {
-            PacketDistributor.sendToServer(com.example.skyblocks.ArcadeVersusPayload.of(com.example.skyblocks.ArcadeVersusPayload.SEAT, pos, 0));
+            PacketDistributor.sendToServer(new com.example.skyblocks.ArcadeVersusPayload(com.example.skyblocks.ArcadeVersusPayload.SEAT, pos, 0,
+                    com.example.skyblocks.client.arcade.Showdown.nyxUnlocked ? 1 : 0, 0, ""));
             seated = true;
         } else if (!want && seated) {
             PacketDistributor.sendToServer(com.example.skyblocks.ArcadeVersusPayload.of(com.example.skyblocks.ArcadeVersusPayload.UNSEAT, pos, 0));
@@ -95,7 +113,7 @@ public class ArcadeScreen extends Screen {
         com.example.skyblocks.client.arcade.Showdown sd = new com.example.skyblocks.client.arcade.Showdown();
         extra[SHOWDOWN - 3] = sd;
         int id = p.match();
-        String[] names = p.text().split("\\|", 2);
+        String[] names = p.text().split("\\|");
         var link = new com.example.skyblocks.client.arcade.Netplay(sd, id, p.side(), new com.example.skyblocks.client.arcade.Netplay.Link() {
             @Override
             public void send(int kind, int frame, int x, int y, byte[] data) {
@@ -107,7 +125,8 @@ public class ArcadeScreen extends Screen {
                 PacketDistributor.sendToServer(com.example.skyblocks.ArcadeVersusPayload.of(com.example.skyblocks.ArcadeVersusPayload.LEAVE, pos, id));
             }
         });
-        sd.startVersus(link, p.seed(), names[0], names.length > 1 ? names[1] : "2P");
+        sd.startVersus(link, p.seed(), names[0], names.length > 1 ? names[1] : "2P", names.length > 2 && names[2].equals("1"),
+                names.length > 3 && names[3].equals("1"));
         link.activate();
         mode = Mode.PLAYING;
         score = 0;
@@ -190,6 +209,7 @@ public class ArcadeScreen extends Screen {
 
     private void over() {
         mode = Mode.OVER;
+        if (game == SHOWDOWN) sendGhost();
         playQueued();
         sfx(ext() != null && ext().won() ? Sfx.WIN : Sfx.GAMEOVER);
         if (score > 0) {
@@ -393,6 +413,12 @@ public class ArcadeScreen extends Screen {
         }
         ticks++;
         seat();
+        if (mc.level.getBlockEntity(pos) instanceof ArcadeBlockEntity cab) {
+            List<com.example.skyblocks.client.arcade.Showdown.Ghost> list = new ArrayList<>();
+            for (var g : cab.ghosts()) list.add(new com.example.skyblocks.client.arcade.Showdown.Ghost(g.name(), g.fighter(), g.profile()));
+            com.example.skyblocks.client.arcade.Showdown.GHOSTS = list;
+        }
+        if (game == SHOWDOWN && ticks % 1200 == 0) sendGhost();
         if (mode == Mode.PLAYING && ext() != null) {
             if (ext().rate() == 20) ext().tick(); // (a faster game: ticked from render, on its own clock - see runFast)
             playQueued();
@@ -803,6 +829,7 @@ public class ArcadeScreen extends Screen {
 
     @Override
     public void removed() {
+        sendGhost();
         com.example.skyblocks.client.arcade.Showdown sd = showdown();
         if (sd.inVersus()) { // (walking away from a match: it's off)
             var link = sd.link();

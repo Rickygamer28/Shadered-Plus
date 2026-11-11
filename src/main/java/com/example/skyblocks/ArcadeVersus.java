@@ -34,6 +34,8 @@ public final class ArcadeVersus {
         final ResourceKey<Level> dim;
         final long since;
         long heard;
+        /** Has NYX unlocked (can pick her in a match). */
+        boolean nyx;
 
         Seat(BlockPos pos, ResourceKey<Level> dim, long now) {
             this.pos = pos;
@@ -57,7 +59,7 @@ public final class ArcadeVersus {
     /** A player's message about sitting down, getting up, leaving. */
     static void control(ServerPlayer p, ArcadeVersusPayload m) {
         switch (m.kind()) {
-            case ArcadeVersusPayload.SEAT -> seat(p, m.pos());
+            case ArcadeVersusPayload.SEAT -> seat(p, m.pos(), m.side() == 1);
             case ArcadeVersusPayload.UNSEAT -> unseat(p.getUUID(), p.getServer());
             case ArcadeVersusPayload.LEAVE -> {
                 Integer id = MATCH_OF.get(p.getUUID());
@@ -72,17 +74,19 @@ public final class ArcadeVersus {
         return st.getBlock() instanceof ArcadeBlock && st.getValue(ArcadeBlock.HALF) == DoubleBlockHalf.LOWER;
     }
 
-    private static void seat(ServerPlayer p, BlockPos pos) {
+    private static void seat(ServerPlayer p, BlockPos pos, boolean nyx) {
         ServerLevel level = p.serverLevel();
         if (!level.isLoaded(pos) || !isCabinet(level, pos) || p.distanceToSqr(pos.getCenter()) > 8 * 8) return;
         long now = level.getGameTime();
         Seat s = SEATS.get(p.getUUID());
         if (s != null && s.pos.equals(pos) && s.dim == level.dimension()) {
             s.heard = now;
+            s.nyx = nyx;
         } else {
             Integer id = MATCH_OF.get(p.getUUID());
             if (id != null) end(id, p.getGameProfile().getName() + " LEFT", p.getUUID());
             s = new Seat(pos.immutable(), level.dimension(), now);
+            s.nyx = nyx;
             SEATS.put(p.getUUID(), s);
         }
         if (!MATCH_OF.containsKey(p.getUUID())) pair(p, s, level);
@@ -125,7 +129,9 @@ public final class ArcadeVersus {
         MATCHES.put(id, m);
         MATCH_OF.put(p1.getUUID(), id);
         MATCH_OF.put(p2.getUUID(), id);
-        String names = p1.getGameProfile().getName() + "|" + p2.getGameProfile().getName();
+        Seat s1 = SEATS.get(p1.getUUID()), s2 = SEATS.get(p2.getUUID());
+        String names = p1.getGameProfile().getName() + "|" + p2.getGameProfile().getName() + "|" + (s1 != null && s1.nyx ? 1 : 0) + "|"
+                + (s2 != null && s2.nyx ? 1 : 0);
         PacketDistributor.sendToPlayer(p1, new ArcadeVersusPayload(ArcadeVersusPayload.START, pos1, id, 0, seed, names));
         PacketDistributor.sendToPlayer(p2, new ArcadeVersusPayload(ArcadeVersusPayload.START, pos2, id, 1, seed, names));
     }
