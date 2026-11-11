@@ -88,10 +88,9 @@ public class BonsaiRenderer implements BlockEntityRenderer<BonsaiBlockEntity> {
         TextureAtlasSprite bark = sprite(log, Direction.NORTH), barkEnd = sprite(log, Direction.UP);
         TextureAtlasSprite leaf = sprite(leaves, Direction.UP);
         TextureAtlasSprite flower = flowering != null && age == 4 ? sprite(flowering, Direction.UP) : leaf;
-        int tint = mc.getBlockColors().getColor(leaves, be.getLevel(), be.getBlockPos(), 0);
-        if (tint == -1) {
-            tint = 0xFFFFFF;
-        }
+        int tint = tint(leaves, be);
+        // (the leaves' solid core: a plain colour like the leaves', darker - their colour if tinted, else their map colour)
+        int coreColour = shade(tint != 0xFFFFFF ? tint : leaves.getMapColor(be.getLevel(), be.getBlockPos()).col, 0.62F);
 
         poseStack.pushPose();
         poseStack.translate(0.5F, SOIL / 16.0F, 0.5F);
@@ -99,8 +98,7 @@ public class BonsaiRenderer implements BlockEntityRenderer<BonsaiBlockEntity> {
         poseStack.scale(1 / 16.0F, 1 / 16.0F, 1 / 16.0F);
         PoseStack.Pose pose = poseStack.last();
         VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS));
-        // (the leaves' solid cores: the leaf texture with its holes filled - drawn whole, no see-through)
-        VertexConsumer core = buffers.getBuffer(RenderType.entitySolid(InventoryMenu.BLOCK_ATLAS));
+        VertexConsumer core = buffers.getBuffer(RenderType.entitySolid(WHITE));
         float wg = 0.45F + 0.55F * g; // (thickness grows slower than height)
         for (Seg seg : tree.trunk) {
             branch(vc, pose, bark, barkEnd, seg.x0 * g, seg.y0 * g, seg.z0 * g, seg.x1 * g, seg.y1 * g, seg.z1 * g, seg.w0 * wg, seg.w1 * wg, light, overlay);
@@ -108,7 +106,7 @@ public class BonsaiRenderer implements BlockEntityRenderer<BonsaiBlockEntity> {
         float pg = 0.35F + 0.65F * g;
         for (int i = 0; i < tree.pads.length; i++) {
             Pad pad = tree.pads[i];
-            cloud(vc, core, pose, i % 2 == 1 ? flower : leaf, pad.x * g, pad.y * g, pad.z * g, pad.sx * pg, pad.sy * pg, pad.sz * pg, tint,
+            cloud(vc, core, coreColour, pose, i % 2 == 1 ? flower : leaf, pad.x * g, pad.y * g, pad.z * g, pad.sx * pg, pad.sy * pg, pad.sz * pg, tint,
                     light, overlay, age == 4 ? 1.08F : 1.0F);
         }
         // a fruit tree, grown: a few of its fruit hanging under the leaves
@@ -125,6 +123,44 @@ public class BonsaiRenderer implements BlockEntityRenderer<BonsaiBlockEntity> {
             }
         }
         poseStack.popPose();
+    }
+
+    private static final net.minecraft.resources.ResourceLocation WHITE =
+            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.example.skyblocks.SkyBlocksMod.MOD_ID, "textures/misc/white.png");
+
+    /**
+     * The leaves' colour here, as they'd be tinted as a block (with the tint their own model asks for: any mod's); a tinted
+     * texture with no colour given (a mod colouring it some other way) takes the block's map colour; untinted, white.
+     */
+    private static int tint(BlockState leaves, BonsaiBlockEntity be) {
+        BakedModel model = Minecraft.getInstance().getBlockRenderer().getBlockModel(leaves);
+        int index = -1;
+        try {
+            RandomSource r = RandomSource.create(42L);
+            for (Direction d : new Direction[] {Direction.UP, Direction.NORTH, null}) {
+                for (net.minecraft.client.renderer.block.model.BakedQuad q : model.getQuads(leaves, d, r,
+                        net.neoforged.neoforge.client.model.data.ModelData.EMPTY, null)) {
+                    if (q.isTinted()) {
+                        index = q.getTintIndex();
+                        break;
+                    }
+                }
+                if (index >= 0) {
+                    break;
+                }
+            }
+        } catch (RuntimeException ignored) {
+            // (no quads to ask: untinted)
+        }
+        if (index < 0) {
+            return 0xFFFFFF;
+        }
+        int c = Minecraft.getInstance().getBlockColors().getColor(leaves, be.getLevel(), be.getBlockPos(), index);
+        return c == -1 ? leaves.getMapColor(be.getLevel(), be.getBlockPos()).col : c & 0xFFFFFF;
+    }
+
+    private static int shade(int c, float f) {
+        return (int) (((c >> 16) & 255) * f) << 16 | (int) (((c >> 8) & 255) * f) << 8 | (int) ((c & 255) * f);
     }
 
     private static TextureAtlasSprite sprite(BlockState state, Direction side) {
@@ -189,17 +225,16 @@ public class BonsaiRenderer implements BlockEntityRenderer<BonsaiBlockEntity> {
      * flickers), rounded in a blocky way; behind the leaves a darker solid core, so the holes in the leaf texture show
      * deep foliage rather than straight through the little cloud.
      */
-    private static void cloud(VertexConsumer vc, VertexConsumer core, PoseStack.Pose pose, TextureAtlasSprite leaf, float x, float y, float z,
+    private static void cloud(VertexConsumer vc, VertexConsumer core, int coreColour, PoseStack.Pose pose, TextureAtlasSprite leaf, float x, float y, float z,
                               float sx, float sy, float sz, int tint, int light, int overlay, float full) {
         sx *= full;
         sz *= full;
         float[][] boxes = {{0, 0, sx * 0.8F, sy, sz * 0.8F}, {-0.1F, 0, sx, sy * 0.62F, sz * 0.56F}, {-0.12F, 0, sx * 0.56F, sy * 0.6F, sz},
                 {0.55F, 0, sx * 0.5F, sy * 0.35F, sz * 0.5F}};
-        int dark = (int) (((tint >> 16) & 255) * 0.5F) << 16 | (int) (((tint >> 8) & 255) * 0.5F) << 8 | (int) ((tint & 255) * 0.5F);
         for (float[] b : boxes) {
             float cy = y + sy * b[0];
             box(vc, pose, leaf, x, cy, z, b[2], b[3], b[4], tint, light, overlay);
-            box(core, pose, leaf, x, cy, z, b[2] * 0.86F, b[3] * 0.84F, b[4] * 0.86F, dark, light, overlay);
+            box(core, pose, leaf, x, cy, z, b[2] * 0.86F, b[3] * 0.84F, b[4] * 0.86F, coreColour, light, overlay);
         }
     }
 
