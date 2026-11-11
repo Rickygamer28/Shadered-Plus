@@ -7,7 +7,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -60,9 +59,9 @@ public record ArcadeFramePayload(BlockPos pos, int game, int score, String name,
                         && player.distanceToSqr(payload.pos().getCenter()) <= 10 * 10
                         && level.getBlockEntity(payload.pos()) instanceof ArcadeBlockEntity
                         && payload.w() >= 0 && payload.w() <= MAX_W && payload.h() >= 0 && payload.h() <= MAX_H && payload.sounds().length <= 32) {
-                    // (passed on with the real player's name, to everyone near - not back to them)
+                    // (passed on with the real player's name, to everyone near - them too: their own cabinet, the big screens round it)
                     var c = payload.pos().getCenter();
-                    PacketDistributor.sendToPlayersNear(level, player instanceof ServerPlayer sp ? sp : null, c.x, c.y, c.z, RANGE,
+                    PacketDistributor.sendToPlayersNear(level, null, c.x, c.y, c.z, RANGE,
                             new ArcadeFramePayload(payload.pos(), payload.game(), payload.score(), player.getGameProfile().getName(),
                                     payload.w(), payload.h(), payload.picture(), payload.sounds(), payload.input()));
                 }

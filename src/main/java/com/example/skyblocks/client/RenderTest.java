@@ -179,7 +179,7 @@ public final class RenderTest {
     private static int playGame = -1;
     private static boolean pickOnly, controls, moveList, watch;
     /** (the picture a cabinet sends, given back to its own player too: there's nobody else here to see it) */
-    static boolean echoPictures() {
+    static boolean keepPicture() {
         return ON && watch;
     }
 

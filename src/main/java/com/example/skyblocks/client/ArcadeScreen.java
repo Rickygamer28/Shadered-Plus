@@ -133,9 +133,9 @@ public class ArcadeScreen extends Screen {
 
     private void layout() {
         // (the cabinet, frame and all, is W + 28 by H + 52: about four fifths of the window's height, or of its width)
-        scale = Math.max(0.25F, Math.min(height * 0.8F / (H + 52), width * 0.9F / (W + 28)));
+        scale = Math.max(0.25F, Math.min(height * 0.84F / (H + 76), width * 0.9F / (W + 28)));
         left0 = Math.round((width / scale - W) / 2);
-        top0 = Math.round((height / scale - H) / 2 + 6);
+        top0 = Math.round((height / scale - H - 24) / 2 + 6);
     }
 
     @Override
@@ -687,6 +687,7 @@ public class ArcadeScreen extends Screen {
 
     private void stopShowing() {
         showing = false;
+        if (RenderTest.keepPicture()) return; // (the render test: looking at the cabinet from the room just after)
         PacketDistributor.sendToServer(com.example.skyblocks.ArcadeFramePayload.stopped(pos, game, score, ArcadeSounds.takeForPicture()));
     }
 
@@ -717,11 +718,8 @@ public class ArcadeScreen extends Screen {
         }
         byte[] data = ArcadePicture.encode(px, w, h);
         if (data.length > com.example.skyblocks.ArcadeFramePayload.MAX_BYTES) return;
-        var frame = new com.example.skyblocks.ArcadeFramePayload(pos, game, score, "", w, h, data, ArcadeSounds.takeForPicture(), inputBits());
-        PacketDistributor.sendToServer(frame);
-        if (RenderTest.echoPictures()) {
-            ClientAccess.arcadeFrame(new com.example.skyblocks.ArcadeFramePayload(pos, game, score, "RENDER TEST", w, h, data, new byte[0], frame.input()));
-        }
+        PacketDistributor.sendToServer(new com.example.skyblocks.ArcadeFramePayload(pos, game, score, "", w, h, data, ArcadeSounds.takeForPicture(),
+                inputBits()));
         showing = true;
     }
 
@@ -979,7 +977,7 @@ public class ArcadeScreen extends Screen {
 
     @Override
     public void renderBackground(GuiGraphics g, int mx, int my, float partialTick) {
-        g.fill(0, 0, width, height, 0xC0000000);
+        g.fill(0, 0, width, height, 0x70000000); // (dimmed, not hidden: the room - its big screens - still there round the cabinet)
     }
 
     private final ArcadeControls.Pad pad = new ArcadeControls.Pad();
@@ -1086,7 +1084,8 @@ public class ArcadeScreen extends Screen {
     private void drawCabinet(GuiGraphics g, float partialTick, float fastPartial) {
         int x0 = left0, y0 = top0;
         // the cabinet's frame round the screen
-        g.fill(x0 - 14, y0 - 30, x0 + W + 14, y0 + H + 22, 0xFF1A1030);
+        g.fill(x0 - 14, y0 - 30, x0 + W + 14, y0 + H + 46, 0xFF1A1030);
+        drawPanel(g, x0, y0 + H + 20);
         g.fill(x0 - 12, y0 - 28, x0 + W + 12, y0 - 10, 0xFF2B1650);
         drawCentred(g, NAMES[game], x0 + W / 2, y0 - 23, rainbow(ticks + partialTick));
         g.fill(x0 - 4, y0 - 4, x0 + W + 4, y0 + H + 4, 0xFF05050A);
@@ -1146,6 +1145,36 @@ public class ArcadeScreen extends Screen {
         // the tube's scanlines
         for (int y = y0; y < y0 + H && !picture; y += 2) {
             g.fill(x0, y, x0 + W, y + 1, 0x22000000);
+        }
+    }
+
+    /** The cabinet's control panel, under its screen: the stick leaning the way you push, the buttons going down. */
+    private void drawPanel(GuiGraphics g, int x0, int y) {
+        int in = inputBits();
+        g.fill(x0 - 8, y, x0 + W + 8, y + 22, 0xFF2B1A48);
+        g.fill(x0 - 8, y, x0 + W + 8, y + 1, 0xFFFF4FA8);
+        g.fill(x0 - 8, y + 21, x0 + W + 8, y + 22, 0xFF3CD8F0);
+        // the stick: a black plate, the shaft, a red ball pushed over
+        int sx = x0 + 34, sy = y + 13;
+        int dx = ((in & 2) != 0 ? 5 : 0) - ((in & 1) != 0 ? 5 : 0), dy = ((in & 8) != 0 ? 3 : 0) - ((in & 4) != 0 ? 3 : 0);
+        g.fill(sx - 7, sy - 2, sx + 7, sy + 4, 0xFF101014);
+        for (int i = 0; i <= 6; i++) { // (the shaft, from the plate to the ball)
+            int px = sx + dx * i / 6, py = sy - 1 - (9 - dy) * i / 6;
+            g.fill(px - 1, py - 1, px + 1, py + 1, 0xFFB8BCC8);
+        }
+        int bx = sx + dx, by = sy - 10 + dy;
+        g.fill(bx - 4, by - 4, bx + 4, by + 4, 0xFFD02830);
+        g.fill(bx - 3, by - 3, bx - 1, by - 1, 0xFFFF8A8A);
+        // six buttons: the back row 1 2 and the rage key, the front row 3 4 and start
+        int[] colours = {0xFF5BE05B, 0xFFD02830, 0xFF3050D8, 0xFFD02830, 0xFF3050D8, 0xFFF0C030};
+        for (int i = 0; i < 6; i++) {
+            boolean down = (in >> (4 + i) & 1) != 0;
+            int cx = x0 + W - 74 + (i % 3) * 20 + (i < 3 ? 0 : 6), cy = y + (i < 3 ? 6 : 15);
+            g.fill(cx - 6, cy - 4, cx + 6, cy + 4, 0xFF9098A8); // (its chrome ring)
+            int c = colours[i];
+            if (down) c = 0xFF000000 | ((c >> 16 & 255) * 3 / 5) << 16 | ((c >> 8 & 255) * 3 / 5) << 8 | (c & 255) * 3 / 5;
+            g.fill(cx - 4, cy - 3 + (down ? 1 : 0), cx + 4, cy + 3, c);
+            if (!down) g.fill(cx - 4, cy - 3, cx + 4, cy - 2, 0x60FFFFFF);
         }
     }
 
