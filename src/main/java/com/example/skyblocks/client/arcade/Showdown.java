@@ -1065,7 +1065,7 @@ public class Showdown extends ArcadeGame {
         if (b.state != State.DOWN || b.t < 12) return;
         b.state = State.RISE;
         b.stun = 18;
-        if (side == 0) b.x -= b.facing * 10;
+        if (side == 0) b.x -= toward(b) * 10; // (away from them - whichever way it fell)
         else b.depth += side * 12;
     }
 
