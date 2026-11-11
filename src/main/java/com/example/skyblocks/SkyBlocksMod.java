@@ -42,6 +42,9 @@ public class SkyBlocksMod {
         modEventBus.addListener(SkyBlocksMod::registerCapabilities);
         modEventBus.addListener(SkyBlocksMod::registerPayloads);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(SkyBlocksMod::giveGuide);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(ArcadeVersus::tick);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(ArcadeVersus::loggedOut);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(ArcadeVersus::stopped);
     }
 
     /** The guide book, once, the first time a player joins a world with Shadered+. */
@@ -115,6 +118,9 @@ public class SkyBlocksMod {
     }
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
+        // (versus at the arcade: each frame's buttons passed straight on as they come - not waiting for the next tick)
+        event.registrar("1").executesOn(net.neoforged.neoforge.network.registration.HandlerThread.NETWORK)
+                .playBidirectional(ArcadeNetPayload.TYPE, ArcadeNetPayload.STREAM_CODEC, ArcadeNetPayload::handle);
         event.registrar("1").playToServer(ScanIslandPayload.TYPE, ScanIslandPayload.STREAM_CODEC, ScanIslandPayload::handle)
                 .playToServer(FogAreaPayload.TYPE, FogAreaPayload.STREAM_CODEC, FogAreaPayload::handle)
                 .playToServer(NeonSignPayload.TYPE, NeonSignPayload.STREAM_CODEC, NeonSignPayload::handle)
@@ -125,6 +131,7 @@ public class SkyBlocksMod {
                 .playBidirectional(ClawPayloads.State.TYPE, ClawPayloads.State.STREAM_CODEC, ClawPayloads.State::handle)
                 .playToServer(TrophyClaimPayload.TYPE, TrophyClaimPayload.STREAM_CODEC, TrophyClaimPayload::handle)
                 .playBidirectional(ArcadeFramePayload.TYPE, ArcadeFramePayload.STREAM_CODEC, ArcadeFramePayload::handle)
+                .playBidirectional(ArcadeVersusPayload.TYPE, ArcadeVersusPayload.STREAM_CODEC, ArcadeVersusPayload::handle)
                 .playToServer(PondMaterialsPayload.TYPE, PondMaterialsPayload.STREAM_CODEC, PondMaterialsPayload::handle)
                 .playToServer(SolarSystemClickPayload.TYPE, SolarSystemClickPayload.STREAM_CODEC, SolarSystemClickPayload::handle)
                 .playToServer(PortalCrossPayload.TYPE, PortalCrossPayload.STREAM_CODEC, PortalCrossPayload::handle)

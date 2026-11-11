@@ -94,6 +94,21 @@ public final class ClientAccess {
         }
     }
 
+    /** Versus at the arcade: a match starting at the cabinet you're at, or ending. */
+    public static void arcadeVersus(com.example.skyblocks.ArcadeVersusPayload p) {
+        Minecraft mc = Minecraft.getInstance();
+        if (p.kind() == com.example.skyblocks.ArcadeVersusPayload.START) {
+            if (mc.screen instanceof ArcadeScreen s && s.pos().equals(p.pos())) {
+                s.startVersus(p);
+            } else { // (not at it any more)
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(com.example.skyblocks.ArcadeVersusPayload.of(
+                        com.example.skyblocks.ArcadeVersusPayload.LEAVE, p.pos(), p.match()));
+            }
+        } else if (p.kind() == com.example.skyblocks.ArcadeVersusPayload.END && mc.screen instanceof ArcadeScreen s) {
+            s.endVersus(p);
+        }
+    }
+
     public static void openArcade(net.minecraft.core.BlockPos pos) {
         Minecraft.getInstance().setScreen(new ArcadeScreen(pos));
     }

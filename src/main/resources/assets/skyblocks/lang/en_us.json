@@ -463,7 +463,7 @@
   "message.skyblocks.laser.pattern.scan": "Scanners",
   "message.skyblocks.laser.pattern.music": "With the music",
   "block.skyblocks.arcade": "Arcade Cabinet",
-  "tooltip.skyblocks.arcade": "Two blocks tall. Right-click to play: Snake, Breakout, Tetris, Whisker Maze, Pong, Frogger, Minesweeper or Shadered Showdown - everyone nearby sees your game on its screen, and it keeps the best scores",
+  "tooltip.skyblocks.arcade": "Two blocks tall. Right-click to play: Snake, Breakout, Tetris, Whisker Maze, Pong, Frogger, Minesweeper or Shadered Showdown - everyone nearby sees your game on its screen, and it keeps the best scores. Two cabinets side by side (or back to back): Showdown versus, one player at each",
   "item.skyblocks.guide_book": "Shadered+ Guide",
   "guide.skyblocks.chapter.start": "Shadered+",
   "guide.skyblocks.chapter.lights": "Lights and Decoration",

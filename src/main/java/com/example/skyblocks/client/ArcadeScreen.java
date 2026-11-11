@@ -61,6 +61,68 @@ public class ArcadeScreen extends Screen {
         this.pos = pos;
     }
 
+    public BlockPos pos() {
+        return pos;
+    }
+
+    // ================= versus: this cabinet linked to the one beside it (or back to back with it) =================
+
+    private static final int SHOWDOWN = 7;
+    /** On the fighting game here: sat down (the server knows - someone on it at a linked cabinet: a match). */
+    private boolean seated;
+
+    private com.example.skyblocks.client.arcade.Showdown showdown() {
+        return (com.example.skyblocks.client.arcade.Showdown) extra[SHOWDOWN - 3];
+    }
+
+    /** Sitting down at the fighting game (said again every second), or getting up from it. */
+    private void seat() {
+        boolean want = game == SHOWDOWN;
+        if (want && (!seated || ticks % 20 == 0)) {
+            PacketDistributor.sendToServer(com.example.skyblocks.ArcadeVersusPayload.of(com.example.skyblocks.ArcadeVersusPayload.SEAT, pos, 0));
+            seated = true;
+        } else if (!want && seated) {
+            PacketDistributor.sendToServer(com.example.skyblocks.ArcadeVersusPayload.of(com.example.skyblocks.ArcadeVersusPayload.UNSEAT, pos, 0));
+            seated = false;
+        }
+    }
+
+    /** A match (the server's word): a new fight, linked to the other cabinet, on its select screen - whatever was on. */
+    public void startVersus(com.example.skyblocks.ArcadeVersusPayload p) {
+        com.example.skyblocks.client.arcade.Showdown old = showdown();
+        if (old.inVersus()) old.link().deactivate();
+        game = SHOWDOWN;
+        com.example.skyblocks.client.arcade.Showdown sd = new com.example.skyblocks.client.arcade.Showdown();
+        extra[SHOWDOWN - 3] = sd;
+        int id = p.match();
+        String[] names = p.text().split("\\|", 2);
+        var link = new com.example.skyblocks.client.arcade.Netplay(sd, id, p.side(), new com.example.skyblocks.client.arcade.Netplay.Link() {
+            @Override
+            public void send(int kind, int frame, int x, int y, byte[] data) {
+                PacketDistributor.sendToServer(new com.example.skyblocks.ArcadeNetPayload(id, kind, frame, x, y, data == null ? new byte[0] : data));
+            }
+
+            @Override
+            public void quit(String why) {
+                PacketDistributor.sendToServer(com.example.skyblocks.ArcadeVersusPayload.of(com.example.skyblocks.ArcadeVersusPayload.LEAVE, pos, id));
+            }
+        });
+        sd.startVersus(link, p.seed(), names[0], names.length > 1 ? names[1] : "2P");
+        link.activate();
+        mode = Mode.PLAYING;
+        score = 0;
+        sfx(Sfx.COIN);
+    }
+
+    /** The match is off (the server's word: they left ...). */
+    public void endVersus(com.example.skyblocks.ArcadeVersusPayload p) {
+        com.example.skyblocks.client.arcade.Showdown sd = showdown();
+        if (sd.inVersus() && sd.link().matchId() == p.match()) {
+            sd.link().deactivate();
+            sd.endVersus(p.text().isEmpty() ? "MATCH OVER" : p.text());
+        }
+    }
+
     @Override
     protected void init() {
         layout();
@@ -330,6 +392,7 @@ public class ArcadeScreen extends Screen {
             return;
         }
         ticks++;
+        seat();
         if (mode == Mode.PLAYING && ext() != null) {
             if (ext().rate() == 20) ext().tick(); // (a faster game: ticked from render, on its own clock - see runFast)
             playQueued();
@@ -630,6 +693,17 @@ public class ArcadeScreen extends Screen {
 
     @Override
     public void removed() {
+        com.example.skyblocks.client.arcade.Showdown sd = showdown();
+        if (sd.inVersus()) { // (walking away from a match: it's off)
+            var link = sd.link();
+            link.deactivate();
+            PacketDistributor.sendToServer(com.example.skyblocks.ArcadeVersusPayload.of(com.example.skyblocks.ArcadeVersusPayload.LEAVE, pos, link.matchId()));
+            sd.endVersus("");
+        }
+        if (seated) {
+            seated = false;
+            PacketDistributor.sendToServer(com.example.skyblocks.ArcadeVersusPayload.of(com.example.skyblocks.ArcadeVersusPayload.UNSEAT, pos, 0));
+        }
         if (showing) {
             stopShowing();
         }
