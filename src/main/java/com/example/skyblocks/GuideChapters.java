@@ -32,7 +32,8 @@ public final class GuideChapters {
     public static List<ItemStack> newest() {
         List<ItemStack> list = new ArrayList<>();
         for (Supplier<? extends ItemLike> i : new Supplier[] {ModItems.ZEN_SAND, ModItems.ZEN_RAKE, ModItems.ZEN_STONE, ModItems.BONSAI, ModItems.HOT_SPRING,
-                ModItems.OIIA_CAT_SPAWN_EGG, ModItems.CAMERA, ModItems.PHOTO, ModItems.MAP_TABLE}) {
+                ModItems.OIIA_CAT_SPAWN_EGG, ModItems.CAMERA, ModItems.PHOTO, ModItems.SMALL_PHOTO_FRAME, ModItems.MEDIUM_PHOTO_FRAME,
+                ModItems.LARGE_PHOTO_FRAME, ModItems.MAP_TABLE}) {
             list.add(new ItemStack(i.get()));
         }
         return list;
@@ -68,7 +69,8 @@ public final class GuideChapters {
         toys.add(new ItemStack(ModItems.TROPHY.get()));
         out.add(new Chapter("toys", toys.get(0).copy(), toys));
         out.add(of("garden", ModItems.ZEN_SAND, ModItems.ZEN_RAKE, ModItems.ZEN_STONE, ModItems.BONSAI, ModItems.HOT_SPRING));
-        out.add(of("keepsakes", ModItems.CAMERA, ModItems.PHOTO, ModItems.MAP_TABLE, ModItems.OIIA_CAT, ModItems.OIIA_CAT_SPAWN_EGG));
+        out.add(of("keepsakes", ModItems.CAMERA, ModItems.PHOTO, ModItems.SMALL_PHOTO_FRAME, ModItems.MEDIUM_PHOTO_FRAME, ModItems.LARGE_PHOTO_FRAME,
+                ModItems.MAP_TABLE, ModItems.OIIA_CAT, ModItems.OIIA_CAT_SPAWN_EGG));
         out.add(of("islands", ModItems.ISLAND_SCANNER, ModItems.ISLAND_PAINTING));
         List<ItemStack> skies = SkyBlocksMod.skyStacks();
         out.add(new Chapter("skies", skies.isEmpty() ? new ItemStack(ModItems.GUIDE_BOOK.get()) : skies.get(0).copy(), skies));

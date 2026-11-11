@@ -1,34 +1,82 @@
 {
   "variants": {
-    "facing=north,standing=true": {
+    "facing=north,size=small,standing=true": {
       "model": "skyblocks:block/photo_frame_standing"
     },
-    "facing=north,standing=false": {
+    "facing=north,size=medium,standing=true": {
+      "model": "skyblocks:block/photo_frame_big"
+    },
+    "facing=north,size=large,standing=true": {
+      "model": "skyblocks:block/photo_frame_big"
+    },
+    "facing=north,size=small,standing=false": {
       "model": "skyblocks:block/photo_frame_wall"
     },
-    "facing=east,standing=true": {
+    "facing=north,size=medium,standing=false": {
+      "model": "skyblocks:block/photo_frame_big"
+    },
+    "facing=north,size=large,standing=false": {
+      "model": "skyblocks:block/photo_frame_big"
+    },
+    "facing=east,size=small,standing=true": {
       "model": "skyblocks:block/photo_frame_standing",
       "y": 90
     },
-    "facing=east,standing=false": {
+    "facing=east,size=medium,standing=true": {
+      "model": "skyblocks:block/photo_frame_big"
+    },
+    "facing=east,size=large,standing=true": {
+      "model": "skyblocks:block/photo_frame_big"
+    },
+    "facing=east,size=small,standing=false": {
       "model": "skyblocks:block/photo_frame_wall",
       "y": 90
     },
-    "facing=south,standing=true": {
+    "facing=east,size=medium,standing=false": {
+      "model": "skyblocks:block/photo_frame_big"
+    },
+    "facing=east,size=large,standing=false": {
+      "model": "skyblocks:block/photo_frame_big"
+    },
+    "facing=south,size=small,standing=true": {
       "model": "skyblocks:block/photo_frame_standing",
       "y": 180
     },
-    "facing=south,standing=false": {
+    "facing=south,size=medium,standing=true": {
+      "model": "skyblocks:block/photo_frame_big"
+    },
+    "facing=south,size=large,standing=true": {
+      "model": "skyblocks:block/photo_frame_big"
+    },
+    "facing=south,size=small,standing=false": {
       "model": "skyblocks:block/photo_frame_wall",
       "y": 180
     },
-    "facing=west,standing=true": {
+    "facing=south,size=medium,standing=false": {
+      "model": "skyblocks:block/photo_frame_big"
+    },
+    "facing=south,size=large,standing=false": {
+      "model": "skyblocks:block/photo_frame_big"
+    },
+    "facing=west,size=small,standing=true": {
       "model": "skyblocks:block/photo_frame_standing",
       "y": 270
     },
-    "facing=west,standing=false": {
+    "facing=west,size=medium,standing=true": {
+      "model": "skyblocks:block/photo_frame_big"
+    },
+    "facing=west,size=large,standing=true": {
+      "model": "skyblocks:block/photo_frame_big"
+    },
+    "facing=west,size=small,standing=false": {
       "model": "skyblocks:block/photo_frame_wall",
       "y": 270
+    },
+    "facing=west,size=medium,standing=false": {
+      "model": "skyblocks:block/photo_frame_big"
+    },
+    "facing=west,size=large,standing=false": {
+      "model": "skyblocks:block/photo_frame_big"
     }
   }
 }

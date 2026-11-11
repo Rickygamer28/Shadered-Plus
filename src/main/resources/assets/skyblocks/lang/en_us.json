@@ -704,7 +704,7 @@
   "tooltip.skyblocks.camera.paper": "Each photo uses a sheet of paper from your inventory",
   "message.skyblocks.camera.paper": "You need paper to print a photo",
   "item.skyblocks.photo": "Photo",
-  "tooltip.skyblocks.photo": "Right-click a wall to hang it, or the top of a block to stand it there in a little frame",
+  "tooltip.skyblocks.photo": "Right-click a frame to put it in, or a wall (or the top of a block) to hang it as it is",
   "tooltip.skyblocks.photo.by": "Taken by %s on day %s",
   "block.skyblocks.photo_frame": "Photo",
   "block.skyblocks.map_table": "Map Table",
@@ -723,5 +723,16 @@
   "guide.skyblocks.map_table": "A table that turns a map into a little 3D model of its land.",
   "guide.skyblocks.oiia_cat_spawn_egg": "An OIIA cat companion, ready to follow you about.",
   "itemGroup.skyblocks.new": "Shadered+: New",
-  "guide.skyblocks.chapter.new": "New in This Update"
+  "guide.skyblocks.chapter.new": "New in This Update",
+  "item.skyblocks.small_photo_frame": "Small Photo Frame",
+  "item.skyblocks.medium_photo_frame": "Medium Photo Frame",
+  "item.skyblocks.large_photo_frame": "Large Photo Frame",
+  "tooltip.skyblocks.photo_frame.small": "Dark wood. On a wall: one block. On the ground: a little desk frame",
+  "tooltip.skyblocks.photo_frame.medium": "Light wood. On a wall: two blocks wide. On the ground: on an easel",
+  "tooltip.skyblocks.photo_frame.large": "Gilded. On a wall: three blocks wide. On the ground: on a tall easel",
+  "tooltip.skyblocks.photo_frame.use": "Right-click a wall to hang it, the top of a block to stand it; then right-click it with a photo. Empty hand: take the photo out",
+  "message.skyblocks.photo_frame.room": "No room for the frame there",
+  "guide.skyblocks.small_photo_frame": "A small dark wooden frame for a photo, on a wall or a desk.",
+  "guide.skyblocks.medium_photo_frame": "A bigger light wooden frame: two blocks wide on a wall, or on an easel.",
+  "guide.skyblocks.large_photo_frame": "A big gilded frame: three blocks wide on a wall, or on a tall easel."
 }

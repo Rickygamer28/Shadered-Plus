@@ -14,6 +14,8 @@ import org.jetbrains.annotations.Nullable;
 public class PhotoFrameBlockEntity extends BlockEntity {
     @Nullable
     private ModComponents.Photo photo;
+    /** Placed from a frame item (it gives the frame back; a frame made straight from a photo goes with its photo). */
+    private boolean framed;
 
     public PhotoFrameBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PHOTO_FRAME.get(), pos, state);
@@ -24,7 +26,26 @@ public class PhotoFrameBlockEntity extends BlockEntity {
         return photo;
     }
 
-    public void setPhoto(ModComponents.Photo photo) {
+    public boolean framed() {
+        return framed;
+    }
+
+    public void setFramed(boolean framed) {
+        this.framed = framed;
+        setChanged();
+    }
+
+    /** The photo gone with its frame (taken out of a frame that came with it): nothing to give back when it's removed. */
+    public void forget() {
+        photo = null;
+        framed = false;
+    }
+
+    public ItemStack photoStack() {
+        return stack();
+    }
+
+    public void setPhoto(@Nullable ModComponents.Photo photo) {
         this.photo = photo;
         setChanged();
         if (level != null && !level.isClientSide) {
@@ -48,12 +69,14 @@ public class PhotoFrameBlockEntity extends BlockEntity {
             tag.putString("by", photo.by());
             tag.putLong("day", photo.day());
         }
+        tag.putBoolean("framed", framed);
     }
 
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         photo = tag.contains("photo") ? new ModComponents.Photo(tag.getInt("photo"), tag.getString("by"), tag.getLong("day")) : null;
+        framed = tag.getBoolean("framed");
     }
 
     @Override
