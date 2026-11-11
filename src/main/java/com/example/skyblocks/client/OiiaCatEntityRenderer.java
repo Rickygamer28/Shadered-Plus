@@ -80,9 +80,8 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
      */
     private static boolean walkParts(OiiaCatEntity cat, PoseStack pose, float scale, float age, float partialTick) {
         int n = OiiaCatModel.PARTS.length;
-        if (!(cat.clientParts instanceof Object[] parts) || parts.length != n) {
-            cat.clientParts = parts = new Object[n];
-        }
+        Object[] parts = cat.clientParts instanceof Object[] had && had.length == n ? had : new Object[n];
+        cat.clientParts = parts;
         for (int i = 0; i < n; i++) {
             if (!(parts[i] instanceof RenderableModel)) {
                 parts[i] = OiiaCatModel.create(OiiaCatModel.part(i));
