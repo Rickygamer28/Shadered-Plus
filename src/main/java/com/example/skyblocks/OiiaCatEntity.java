@@ -757,6 +757,7 @@ public class OiiaCatEntity extends TamableAnimal {
         private BlockPos post, spot;
         private int scratched, length;
         private float scratchYaw;
+        private boolean gaveUp;
 
         ScratchGoal() {
             setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK, Flag.JUMP));
@@ -776,6 +777,7 @@ public class OiiaCatEntity extends TamableAnimal {
         @Override
         public void start() {
             scratched = 0;
+            gaveUp = false;
             length = 60 + random.nextInt(60);
             getNavigation().moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 1.0);
         }
@@ -783,7 +785,7 @@ public class OiiaCatEntity extends TamableAnimal {
         @Override
         public boolean canContinueToUse() {
             Block b = level().getBlockState(post).getBlock();
-            return scratched < length && !isOrderedToSit() && (b instanceof ScratchingPostBlock || b instanceof CatTreeBlock);
+            return scratched < length && !gaveUp && !isOrderedToSit() && (b instanceof ScratchingPostBlock || b instanceof CatTreeBlock);
         }
 
         @Override
@@ -798,13 +800,26 @@ public class OiiaCatEntity extends TamableAnimal {
                     return;
                 }
                 getNavigation().stop();
-                // (a step up close to the post, facing it - then it stays put)
+                // (a step up close to the post - onto its base if need be - facing it; then it stays put. No room
+                // right up against it: no scratch)
                 Vec3 to = position().subtract(c).multiply(1, 0, 1);
+                boolean close = false;
                 if (to.lengthSqr() > 1.0E-4) {
-                    Vec3 at = c.add(to.normalize().scale(0.62));
-                    if (level().noCollision(OiiaCatEntity.this, getBoundingBox().move(at.x - getX(), 0, at.z - getZ()))) {
-                        hop(new Vec3(at.x, getY(), at.z));
+                    search:
+                    for (double d : new double[] {0.5, 0.56, 0.64, 0.72}) {
+                        for (double up : new double[] {0.0, 0.125, 0.1875}) {
+                            Vec3 at = c.add(to.normalize().scale(d)).add(0, getY() - c.y + up, 0);
+                            if (level().noCollision(OiiaCatEntity.this, getBoundingBox().move(at.x - getX(), at.y - getY(), at.z - getZ()))) {
+                                hop(at);
+                                close = true;
+                                break search;
+                            }
+                        }
                     }
+                }
+                if (!close) {
+                    gaveUp = true; // (can't get to it: off it goes)
+                    return;
                 }
                 scratchYaw = (float) (Mth.atan2(c.z - getZ(), c.x - getX()) * Mth.RAD_TO_DEG) - 90.0F;
                 setMood(SCRATCHING);
@@ -824,7 +839,7 @@ public class OiiaCatEntity extends TamableAnimal {
         public void stop() {
             setMood(AWAKE);
             scratchCooldown = 2400 + random.nextInt(2400);
-            if (scratched > 40) {
+            if (scratched > 40 && !gaveUp) {
                 ScratchingPostBlock.scratched(level(), post);
                 cheer(6);
             }
