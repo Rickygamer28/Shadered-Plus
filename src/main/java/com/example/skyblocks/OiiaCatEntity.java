@@ -144,8 +144,29 @@ public class OiiaCatEntity extends TamableAnimal {
         goalSelector.addGoal(5, new BoxGoal());
         goalSelector.addGoal(5, new PerchGoal());
         goalSelector.addGoal(5, new PlayGoal());
-        goalSelector.addGoal(6, new FollowOwnerGoal(this, 1.0, 10.0F, 3.0F));
-        goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 0.8));
+        goalSelector.addGoal(6, new FollowOwnerGoal(this, 1.0, 10.0F, 3.0F) {
+            @Override
+            public boolean canUse() {
+                return !wandering && super.canUse();
+            }
+
+            @Override
+            public boolean canContinueToUse() {
+                return !wandering && super.canContinueToUse();
+            }
+        });
+        goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 0.8) {
+            @Override
+            public boolean canUse() {
+                // (wandering, it potters about a bit more)
+                if (wandering && !isOrderedToSit()) {
+                    setInterval(60);
+                } else {
+                    setInterval(120);
+                }
+                return super.canUse();
+            }
+        });
         goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 6.0F));
         goalSelector.addGoal(9, new RandomLookAroundGoal(this));
     }
@@ -201,13 +222,25 @@ public class OiiaCatEntity extends TamableAnimal {
             if (stack.isEmpty()) {
                 if (!level().isClientSide) {
                     if (player.isShiftKeyDown()) {
-                        boolean sit = !isOrderedToSit();
-                        setOrderedToSit(sit);
-                        setInSittingPose(sit);
+                        // follow -> sit -> wander -> follow
+                        String said;
+                        if (isOrderedToSit()) {
+                            setOrderedToSit(false);
+                            setInSittingPose(false);
+                            setWandering(true);
+                            said = "message.skyblocks.oiia_cat.wander";
+                        } else if (wandering) {
+                            setWandering(false);
+                            said = "message.skyblocks.oiia_cat.follow";
+                        } else {
+                            setOrderedToSit(true);
+                            setInSittingPose(true);
+                            said = "message.skyblocks.oiia_cat.sit";
+                        }
                         setMood(AWAKE);
                         jumping = false;
                         getNavigation().stop();
-                        player.displayClientMessage(Component.translatable(sit ? "message.skyblocks.oiia_cat.sit" : "message.skyblocks.oiia_cat.follow"), true);
+                        player.displayClientMessage(Component.translatable(said), true);
                     } else {
                         pet(player);
                     }
@@ -324,6 +357,10 @@ public class OiiaCatEntity extends TamableAnimal {
         super.addAdditionalSaveData(tag);
         tag.putInt("NapCooldown", napCooldown);
         tag.putInt("Happiness", happiness);
+        tag.putBoolean("Wander", wandering);
+        if (wandering) {
+            tag.putLong("WanderHome", getRestrictCenter().asLong());
+        }
         tag.putInt("Hunger", hunger);
         tag.putInt("GiftCooldown", giftCooldown);
         tag.putByte("CollarColor", entityData.get(COLLAR));
@@ -337,6 +374,10 @@ public class OiiaCatEntity extends TamableAnimal {
             happiness = tag.getInt("Happiness");
             hunger = tag.getInt("Hunger");
             giftCooldown = tag.getInt("GiftCooldown");
+        }
+        if (tag.getBoolean("Wander")) {
+            wandering = true;
+            restrictTo(tag.contains("WanderHome") ? BlockPos.of(tag.getLong("WanderHome")) : blockPosition(), WANDER_RANGE);
         }
         if (tag.contains("CollarColor")) {
             entityData.set(COLLAR, tag.getByte("CollarColor"));
@@ -406,7 +447,30 @@ public class OiiaCatEntity extends TamableAnimal {
         return best;
     }
 
+    /**
+     * Wandering: it keeps to round where it was told to (WANDER_RANGE blocks), going off to its bed, bowl, post, tree,
+     * boxes and toys there by itself, whether you're about or not; it doesn't follow you.
+     */
+    private boolean wandering;
+    public static final int WANDER_RANGE = 16;
+
+    public boolean wandering() {
+        return wandering;
+    }
+
+    private void setWandering(boolean on) {
+        wandering = on;
+        if (on) {
+            restrictTo(blockPosition(), WANDER_RANGE);
+        } else {
+            clearRestriction();
+        }
+    }
+
     private boolean ownerNear(double range) {
+        if (wandering) {
+            return true;
+        }
         LivingEntity owner = getOwner();
         return owner == null || owner.distanceToSqr(this) < range * range;
     }
