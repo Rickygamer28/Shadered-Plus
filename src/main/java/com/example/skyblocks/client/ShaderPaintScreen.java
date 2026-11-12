@@ -769,6 +769,10 @@ public class ShaderPaintScreen extends Screen {
         // the colours: the one painting with (big), then each the texture uses
         g.drawString(font, Component.translatable("screen.skyblocks.shader_paint.colours"), colX, 28 - 11, 0xFFD0C0F0);
         g.fill(colX, 28, colX + colCols * 14, 28 + 18, 0xFF000000 | colour);
+        // (a little rainbow at its end: click it for the colour picker)
+        for (int i = 0; i < 18; i++) {
+            g.fill(colX + colCols * 14 - 7, 28 + i, colX + colCols * 14, 28 + i + 1, 0xFF000000 | Mth.hsvToRgb(i / 18.0F, 0.9F, 1.0F));
+        }
         g.renderOutline(colX - 1, 27, colCols * 14 + 2, 20, !skyBrush ? 0xFFFFFFFF : 0xFF606060);
         // its shades, darkest to lightest; the colours used lately
         int[] ramp = shades();
@@ -859,6 +863,10 @@ public class ShaderPaintScreen extends Screen {
             g.drawCenteredString(font, Component.translatable("screen.skyblocks.shader_paint.cost"), width / 2, height - 38, 0xFFB0A0D0);
         }
         drawPicker(g);
+        if (!picking && mouseX >= colX && mouseX < colX + colCols * 14 && mouseY >= 28 && mouseY < 28 + 18) {
+            g.renderTooltip(font, Component.translatable("screen.skyblocks.shader_paint.pick"), mouseX, mouseY);
+            return;
+        }
         if (picking && inPicker(mouseX, mouseY)) {
             return; // (no tooltips over the picker)
         }

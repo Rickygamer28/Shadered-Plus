@@ -811,5 +811,6 @@
   "screen.skyblocks.shader_paint.colours": "Colours",
   "screen.skyblocks.shader_paint.colour": "Colour",
   "screen.skyblocks.shader_paint.recent": "Recent",
-  "screen.skyblocks.shader_paint.used": "In the item"
+  "screen.skyblocks.shader_paint.used": "In the item",
+  "screen.skyblocks.shader_paint.pick": "Click to pick any colour"
 }
