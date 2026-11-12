@@ -128,6 +128,7 @@ public final class RenderTest {
             // the garden: raked zen sand (lines, waves, a ring round stones), bonsais of each style, a sunken hot spring,
             // OIIA cats (standing, sitting), photos (on a wall, standing); a map table (and a big one of four) over built land
             "forceload add 320 -70 450 70",
+            "forceload add 451 -20 500 20", // (the newest things, east of the rest)
             "fill 330 -61 0 336 -61 1 skyblocks:zen_sand[pattern=lines_x]", "fill 330 -61 5 336 -61 6 skyblocks:zen_sand[pattern=waves_x]",
             "fill 330 -61 2 331 -61 4 skyblocks:zen_sand[pattern=lines_z]", "fill 335 -61 2 336 -61 4 skyblocks:zen_sand[pattern=waves_z]",
             "setblock 332 -61 2 skyblocks:zen_sand[pattern=ring_nw]", "setblock 333 -61 2 skyblocks:zen_sand[pattern=ring_n]",
@@ -198,6 +199,14 @@ public final class RenderTest {
             "setblock 454 -60 -1 skyblocks:sky_lantern{sky:\"SKYBLOCKS_GOLDEN_HOUR\",pass:\"NORMAL\"}",
             "setblock 458 -60 -1 skyblocks:sky_lantern{sky:\"SKYBLOCKS_UNDERWATER\",pass:\"NORMAL\"}",
             "setblock 456 -56 1 skyblocks:sky_lantern[hanging=true]{sky:\"SKYBLOCKS_NEBULA\",pass:\"NORMAL\"}",
+            // a cat in its window perch looking out (butterflies outside); a cat by a koi pond; ferrofluid with redstone and
+            // without; a sky clock on a wall; a prism in the sun
+            "fill 463 -60 -1 466 -58 -1 minecraft:glass", "setblock 464 -59 0 skyblocks:cat_window_perch[facing=south]",
+            "summon skyblocks:oiia_cat 464.5 -58.725 0.344 {NoAI:1b,Mood:10b,CollarColor:4b,Rotation:[180f,0f]}",
+            "fill 468 -61 0 469 -61 1 skyblocks:koi_pond", "summon skyblocks:oiia_cat 470.4 -60 0.9 {NoAI:1b,Mood:11b,CollarColor:9b,Rotation:[90f,0f]}",
+            "setblock 473 -60 0 skyblocks:ferrofluid", "setblock 473 -60 1 minecraft:redstone_block", "setblock 475 -60 0 skyblocks:ferrofluid",
+            "fill 477 -60 -1 479 -58 -1 minecraft:stone_bricks", "setblock 478 -59 0 skyblocks:sky_clock[facing=south]",
+            "setblock 482 -60 0 skyblocks:prism[axis=x]",
     };
     /** The newer things (SKYBLOCKS_RENDER_SET=new: only these), well away from the rest. */
     static final boolean NEW = "new".equals(System.getenv("SKYBLOCKS_RENDER_SET"));
@@ -402,7 +411,7 @@ public final class RenderTest {
             "catwalk 338.8 -59.6 1.4 0 18", "catwalk 340.6 -59.7 3.2 90 12", "holdphoto 333.5 -60 -3 0 8", "holdcamera 333.5 -60 -3 0 8", "356.5 -59.4 4.5 0 8", "night 356.5 -59.4 4.5 0 8", "334 -59.5 10.2 0 22", "331 -59.7 10.9 0 25", 
             "376 -58.3 8.8 180 22", "373.5 -59.35 5.4 180 12", "376.5 -59.35 5.4 180 15", "379.5 -59.1 4.4 180 32", "382.5 -57.6 5.6 180 12",
             "370.5 -59.2 4.6 180 30", "374.5 -59.45 7.0 180 4", "372 -59.6 6.2 200 18", "387.5 -59.2 4.2 180 8", "night 397.5 -58.5 3.3 180 25", "397 -58.2 3.3 160 10", "405.5 -58.6 3.4 180 18", "405.5 -59.2 3.6 180 28", "411.5 -58.6 3.4 180 18", 
-            "watch 7 open 270 -60 0 270.5 -58.6 -7 0 3", "watch 7 open 270 -60 0 270.5 -59.3 -1.1 0 52", "watch 7 open 270 -60 0 night 270.5 -58.6 -7 0 3", "418 -59.1 3.9 180 10", "416.5 -58.7 2.2 180 14", "419.5 -58.7 2.2 180 14", "418 -59.1 -2.9 0 10", "worn open 422 -60 0 422.5 -60 -1.6 0 15", "wornflat open 422 -60 0 422.5 -60 -1.6 0 15", "open 422 -60 0 422.5 -60 -1.6 0 15", "426.5 -59 2.6 180 24", "431.5 -58.8 2.9 180 20", "437.5 -59 2.4 180 22", "444.8 -59.3 2.8 180 24", "449.5 -59 2.6 180 38", "456.5 -59.2 3.4 180 5", "night 456.5 -59.2 3.4 180 5", "456.5 -59.2 3.4 180 -32"};
+            "watch 7 open 270 -60 0 270.5 -58.6 -7 0 3", "watch 7 open 270 -60 0 270.5 -59.3 -1.1 0 52", "watch 7 open 270 -60 0 night 270.5 -58.6 -7 0 3", "418 -59.1 3.9 180 10", "416.5 -58.7 2.2 180 14", "419.5 -58.7 2.2 180 14", "418 -59.1 -2.9 0 10", "worn open 422 -60 0 422.5 -60 -1.6 0 15", "wornflat open 422 -60 0 422.5 -60 -1.6 0 15", "open 422 -60 0 422.5 -60 -1.6 0 15", "426.5 -59 2.6 180 24", "431.5 -58.8 2.9 180 20", "437.5 -59 2.4 180 22", "444.8 -59.3 2.8 180 24", "449.5 -59 2.6 180 38", "456.5 -59.2 3.4 180 5", "night 456.5 -59.2 3.4 180 5", "456.5 -59.2 3.4 180 -32", "464.5 -58.5 2.6 180 12", "464.5 -58.6 -3.4 0 8", "470 -59 2.6 160 32", "474 -59.2 1.7 180 38", "478.5 -58.6 1.5 180 0", "night 478.5 -58.6 1.5 180 0", "482.5 -58.3 2.6 180 42"};
 
     private static boolean burst, moving, burstOn;
     private static int burstFrame;

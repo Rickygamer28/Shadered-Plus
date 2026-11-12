@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "decorations",
+  "pattern": [
+    "SNS",
+    "WWW"
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:slime_ball"
+    },
+    "N": {
+      "item": "minecraft:iron_nugget"
+    },
+    "W": {
+      "item": "minecraft:white_wool"
+    }
+  },
+  "result": {
+    "id": "skyblocks:cat_window_perch",
+    "count": 1
+  }
+}

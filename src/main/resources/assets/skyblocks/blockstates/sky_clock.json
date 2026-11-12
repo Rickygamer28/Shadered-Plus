@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=south": {
+      "model": "skyblocks:block/sky_clock"
+    },
+    "facing=west": {
+      "model": "skyblocks:block/sky_clock",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "skyblocks:block/sky_clock",
+      "y": 180
+    },
+    "facing=east": {
+      "model": "skyblocks:block/sky_clock",
+      "y": 270
+    }
+  }
+}

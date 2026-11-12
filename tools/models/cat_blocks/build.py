@@ -356,3 +356,76 @@ swung = el((4, 1.75, -0.45), (12, 8.25, -0.05), {f: face("door") for f in ("nort
            rotation={"origin": [8, 8.25, -0.25], "axis": "x", "angle": 45})
 model("cat_flap_open", FLAP_TEX, [solid] + flap_side(0, -1) + flap_side(16, 1) + [hole(0, "north"), hole(16, "south"), swung])
 print("cat blocks built")
+
+
+# -- the window perch: a fleece hammock slung between two rods, held out from the window by suction cups (made facing
+# south: the window at z 0, the hammock out to z 10; turned by its blockstate)
+fleece = colour(np.array([226, 214, 206]), 0.95 + 0.07 * nrnd.rand(16, 16))
+for (x, y) in ((3, 4), (4, 3), (5, 4), (4, 5), (4, 4), (11, 10), (12, 9), (13, 10), (12, 11), (12, 10)):  # (two little paw prints)
+    fleece[y, x] = (196, 168, 172)
+save_tex("cat_window_perch_fleece", fleece)
+rod = colour(np.array([186, 190, 198]), 0.9 + 0.2 * (1 - np.abs(Y - 7.5) / 8) + noise(0.02))
+save_tex("cat_window_perch_frame", rod)
+cup = np.zeros((16, 16, 4))
+cup[..., :3] = (214, 226, 236)
+cup[..., 3] = 200
+cup[(X + Y) % 5 == 0] = (240, 246, 252, 220)
+Image.fromarray(cup.astype(np.uint8), "RGBA").save(os.path.join(ROOT, "textures/block/cat_window_perch_cup.png"))
+perch = [
+    # the suction cups on the glass, and their stems out to the back rod
+    cube((3, 6.5, 0), (5.5, 9, 0.6), "cup"), cube((10.5, 6.5, 0), (13, 9, 0.6), "cup"),
+    cube((3.75, 7.25, 0.6), (4.75, 8.25, 1.6), "frame"), cube((11.25, 7.25, 0.6), (12.25, 8.25, 1.6), "frame"),
+    cube((3.85, 5.5, 1.1), (4.65, 7.25, 1.6), "frame"), cube((11.35, 5.5, 1.1), (12.15, 7.25, 1.6), "frame"),
+    # the frame: two side rods out from the window, a back rod and a front one
+    cube((2, 5, 1), (3, 6, 10), "frame"), cube((13, 5, 1), (14, 6, 10), "frame"),
+    cube((3, 5, 1), (13, 6, 2), "frame"), cube((3, 5, 9), (13, 6, 10), "frame"),
+    # the fleece, sagging between them (lowest in the middle)
+    el((3, 4.5, 2), (13, 5.25, 3), {f: face("fleece") for f in ALL}),
+    el((3, 4.5, 8), (13, 5.25, 9), {f: face("fleece") for f in ALL}),
+    el((3, 3.75, 3), (13, 4.5, 8), {f: face("fleece") for f in ALL}),
+]
+model("cat_window_perch", {"fleece": "skyblocks:block/cat_window_perch_fleece", "frame": "skyblocks:block/cat_window_perch_frame",
+                           "cup": "skyblocks:block/cat_window_perch_cup", "particle": "skyblocks:block/cat_window_perch_fleece"},
+      perch, {"render_type": "minecraft:translucent"})
+json.dump({"variants": {"facing=south": {"model": "skyblocks:block/cat_window_perch"}, "facing=west": {"model": "skyblocks:block/cat_window_perch", "y": 90},
+                        "facing=north": {"model": "skyblocks:block/cat_window_perch", "y": 180}, "facing=east": {"model": "skyblocks:block/cat_window_perch", "y": 270}}},
+          open(os.path.join(ROOT, "blockstates/cat_window_perch.json"), "w"), indent=2)
+json.dump({"parent": "skyblocks:block/cat_window_perch"}, open(os.path.join(ROOT, "models/item/cat_window_perch.json"), "w"), indent=2)
+
+# -- what the cat watches out of the window: butterflies' wings (each 8 x 8: a monarch, a blue, a pale yellow) and a
+# bird's wing (a dark swallow), all on one texture; the body's along x 0 of each, the wing out to the right
+wings = np.zeros((8, 32, 4), np.uint8)
+shape = ["........",
+         "xxxx....",
+         "xxxxxxx.",
+         "xxxxxxxx",
+         "xxxxxxx.",
+         "xxxxx...",
+         "xxxx....",
+         "xx......"]
+palettes = [((236, 128, 32), (40, 28, 24), (250, 240, 220)), ((70, 140, 236), (24, 30, 60), (220, 236, 255)), ((244, 232, 140), (120, 100, 50), (255, 255, 240))]
+for k, (main, edge, dot) in enumerate(palettes):
+    for y, row in enumerate(shape):
+        for x, ch in enumerate(row):
+            if ch == "x":
+                outer = x == len(row.rstrip(".")) - 1 or y in (1, 7) or (y > 0 and shape[y - 1][x] != "x")
+                c = edge if outer else main
+                if outer and (x + y) % 3 == 0:
+                    c = dot
+                if x == 0:
+                    c = edge
+                wings[y, k * 8 + x] = c + (255,)
+bird = ["........",
+        "........",
+        "xxx.....",
+        "xxxxxx..",
+        "xxxxxxxx",
+        ".xxxx...",
+        "........",
+        "........"]
+for y, row in enumerate(bird):
+    for x, ch in enumerate(row):
+        if ch == "x":
+            wings[y, 24 + x] = (44, 46, 58, 255)
+Image.fromarray(wings, "RGBA").save(os.path.join(ROOT, "textures/entity/window_wings.png"))
+print("window perch built")

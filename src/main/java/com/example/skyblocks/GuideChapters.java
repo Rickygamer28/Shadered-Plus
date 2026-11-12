@@ -35,7 +35,7 @@ public final class GuideChapters {
                 ModItems.OIIA_CAT_SPAWN_EGG, ModItems.CAMERA, ModItems.PHOTO, ModItems.SMALL_PHOTO_FRAME, ModItems.MEDIUM_PHOTO_FRAME,
                 ModItems.LARGE_PHOTO_FRAME, ModItems.CAT_BED, ModItems.CAT_BOWL, ModItems.SCRATCHING_POST, ModItems.CAT_TREE,
                 ModItems.CARDBOARD_BOX, ModItems.CAT_FLAP, ModItems.YARN_BALL, ModItems.FEATHER_WAND, ModItems.LASER_POINTER, ModItems.GEODE_LAMP,
-                ModItems.INFUSION_ALTAR, ModItems.SKY_LANTERN}) {
+                ModItems.INFUSION_ALTAR, ModItems.SKY_LANTERN, ModItems.CAT_WINDOW_PERCH, ModItems.FERROFLUID, ModItems.SKY_CLOCK, ModItems.PRISM}) {
             list.add(new ItemStack(i.get()));
         }
         return list;
@@ -49,7 +49,7 @@ public final class GuideChapters {
         }
         out.add(of("lights", ModItems.EFFECT_BLOCK, ModItems.EFFECT_GLASS, ModItems.NEON_SIGN, ModItems.LAVA_LAMP, ModItems.BIG_LAVA_LAMP,
                 ModItems.LAVA_PILLAR, ModItems.PLASMA_BALL, ModItems.TESLA_COIL, ModItems.KALEIDOSCOPE, ModItems.HOLOGRAM_PROJECTOR,
-                ModItems.GALAXY_PROJECTOR, ModItems.WEATHER_GLOBE, ModItems.NEON_TUBE, ModItems.GEODE_LAMP, ModItems.SKY_LANTERN));
+                ModItems.GALAXY_PROJECTOR, ModItems.WEATHER_GLOBE, ModItems.NEON_TUBE, ModItems.GEODE_LAMP, ModItems.SKY_LANTERN, ModItems.SKY_CLOCK, ModItems.PRISM, ModItems.FERROFLUID));
         out.add(of("music", ModItems.DISCO_BALL, ModItems.DANCE_FLOOR, ModItems.LASER_PROJECTOR, ModItems.FOG_MACHINE, ModItems.SPEAKER,
                 ModItems.MUSIC_VISUALIZER, ModItems.MUSIC_BOX, ModItems.ARCADE, ModItems.BIG_SCREEN, ModItems.CLAW_MACHINE, ModItems.STAGE, ModItems.SPOTLIGHT));
         out.add(of("fire_water", ModItems.BRICK_HEARTH, ModItems.FIRE_TORNADO, ModItems.MAGMA_BASIN, ModItems.WATER_CAUSTICS,
@@ -74,7 +74,7 @@ public final class GuideChapters {
         out.add(of("keepsakes", ModItems.CAMERA, ModItems.PHOTO, ModItems.SMALL_PHOTO_FRAME, ModItems.MEDIUM_PHOTO_FRAME, ModItems.LARGE_PHOTO_FRAME));
         out.add(of("infusion", ModItems.INFUSION_ALTAR));
         out.add(of("cat", ModItems.OIIA_CAT_SPAWN_EGG, ModItems.OIIA_CAT, ModItems.CAT_BED, ModItems.CAT_BOWL, ModItems.SCRATCHING_POST, ModItems.CAT_TREE,
-                ModItems.CARDBOARD_BOX, ModItems.CAT_FLAP, ModItems.YARN_BALL, ModItems.FEATHER_WAND, ModItems.LASER_POINTER));
+                ModItems.CARDBOARD_BOX, ModItems.CAT_FLAP, ModItems.CAT_WINDOW_PERCH, ModItems.YARN_BALL, ModItems.FEATHER_WAND, ModItems.LASER_POINTER));
         out.add(of("islands", ModItems.ISLAND_SCANNER, ModItems.ISLAND_PAINTING));
         List<ItemStack> skies = SkyBlocksMod.skyStacks();
         out.add(new Chapter("skies", skies.isEmpty() ? new ItemStack(ModItems.GUIDE_BOOK.get()) : skies.get(0).copy(), skies));

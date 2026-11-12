@@ -458,5 +458,18 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(3.5F).sound(SoundType.LANTERN).noOcclusion().lightLevel(state -> 15)
                     .requiresCorrectToolForDrops().pushReaction(PushReaction.DESTROY).mapColor(net.minecraft.world.level.material.MapColor.METAL));
 
+    public static final DeferredBlock<CatWindowPerchBlock> CAT_WINDOW_PERCH = BLOCKS.registerBlock("cat_window_perch", CatWindowPerchBlock::new,
+            BlockBehaviour.Properties.of().strength(0.6F).sound(SoundType.WOOL).noOcclusion().pushReaction(PushReaction.DESTROY)
+                    .mapColor(net.minecraft.world.level.material.MapColor.WOOL));
+    public static final DeferredBlock<FerrofluidBlock> FERROFLUID = BLOCKS.registerBlock("ferrofluid", FerrofluidBlock::new,
+            BlockBehaviour.Properties.of().strength(2.0F).sound(SoundType.METAL).noOcclusion().requiresCorrectToolForDrops()
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+    public static final DeferredBlock<SkyClockBlock> SKY_CLOCK = BLOCKS.registerBlock("sky_clock", SkyClockBlock::new,
+            BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.WOOD).noOcclusion().pushReaction(PushReaction.DESTROY).lightLevel(state -> 6)
+                    .mapColor(net.minecraft.world.level.material.MapColor.GOLD));
+    public static final DeferredBlock<PrismBlock> PRISM = BLOCKS.registerBlock("prism", PrismBlock::new,
+            BlockBehaviour.Properties.of().strength(0.6F).sound(SoundType.GLASS).noOcclusion().pushReaction(PushReaction.DESTROY)
+                    .mapColor(net.minecraft.world.level.material.MapColor.NONE));
+
     private ModBlocks() {}
 }

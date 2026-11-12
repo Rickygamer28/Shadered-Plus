@@ -128,6 +128,14 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(InfusionAltarBlockEntity::new, ModBlocks.INFUSION_ALTAR.get()).build(null));
     public static final Supplier<BlockEntityType<SkyLanternBlockEntity>> SKY_LANTERN = TYPES.register("sky_lantern",
             () -> BlockEntityType.Builder.of(SkyLanternBlockEntity::new, ModBlocks.SKY_LANTERN.get()).build(null));
+    public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> CAT_WINDOW_PERCH = TYPES.register("cat_window_perch",
+            () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.CAT_WINDOW_PERCH.get(), p, st), ModBlocks.CAT_WINDOW_PERCH.get()).build(null));
+    public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> FERROFLUID = TYPES.register("ferrofluid",
+            () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.FERROFLUID.get(), p, st), ModBlocks.FERROFLUID.get()).build(null));
+    public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> SKY_CLOCK = TYPES.register("sky_clock",
+            () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.SKY_CLOCK.get(), p, st), ModBlocks.SKY_CLOCK.get()).build(null));
+    public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> PRISM = TYPES.register("prism",
+            () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.PRISM.get(), p, st), ModBlocks.PRISM.get()).build(null));
     public static final Supplier<BlockEntityType<CatFlapBlockEntity>> CAT_FLAP = TYPES.register("cat_flap",
             () -> BlockEntityType.Builder.of(CatFlapBlockEntity::new, ModBlocks.CAT_FLAP.get()).build(null));
     public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> GEODE_LAMP = TYPES.register("geode_lamp",

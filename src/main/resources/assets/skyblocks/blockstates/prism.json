@@ -1,0 +1,11 @@
+{
+  "variants": {
+    "axis=x": {
+      "model": "skyblocks:block/prism"
+    },
+    "axis=z": {
+      "model": "skyblocks:block/prism",
+      "y": 90
+    }
+  }
+}

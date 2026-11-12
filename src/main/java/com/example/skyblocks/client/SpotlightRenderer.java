@@ -129,6 +129,9 @@ public class SpotlightRenderer implements BlockEntityRenderer<SpotlightBlockEnti
         Vec3 from = lamp.add(dir.scale(0.8));
         BlockHitResult hit = level.clip(new ClipContext(from, from.add(dir.scale(REACH)), ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, CollisionContext.empty()));
         Vec3 to = hit.getType() == HitResult.Type.BLOCK ? hit.getLocation() : from.add(dir.scale(REACH));
+        if (hit.getType() == HitResult.Type.BLOCK && level.getBlockState(hit.getBlockPos()).getBlock() instanceof com.example.skyblocks.PrismBlock) {
+            PrismRenderer.shone(hit.getBlockPos(), dir, be.colour(), level.getGameTime()); // (a prism in the beam: it makes a rainbow of it)
+        }
         Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         int c = be.colour();
         boolean fog = com.example.skyblocks.FogMachineBlockEntity.fogNear(pos, 24.0);

@@ -65,6 +65,9 @@ public class OiiaCatEntity extends TamableAnimal {
     public static final byte AWAKE = 0, NAPPING = 1, PLAYING = 2, SCRATCHING = 3, EATING = 4, BOXED = 5, PERCHED = 6;
     /** With another cat it knows: grooming it, being groomed (eyes half shut, leaning in), touching noses hello. */
     public static final byte GROOMING = 7, GROOMED = 8, GREETING = 9;
+    /** Lying in its window perch looking out; sat by a pond or tank watching the fish. */
+    public static final byte WINDOW = 10, FISHING = 11;
+    public static final byte SWAT_EVENT = 72, CHATTER_EVENT = 73;
     /** Its entity event for being petted: the spin. */
     public static final byte SPIN_EVENT = 71;
     /** How long the spin is (the OIIA animation's loop), in ticks. */
@@ -81,6 +84,7 @@ public class OiiaCatEntity extends TamableAnimal {
     private int scratchCooldown = 600, boxCooldown = 800, perchCooldown = 900, yarnCooldown, petCooldown, giftCooldown = 6000;
     /** Ticks till it seeks out another cat again (grooming, a chase). */
     private int socialCooldown = 300;
+    private int windowCooldown = 1200, fishCooldown = 900;
     /** The cat grooming it (and till when: the groomer keeps putting that off while it grooms). */
     @Nullable
     private OiiaCatEntity groomer;
@@ -160,6 +164,8 @@ public class OiiaCatEntity extends TamableAnimal {
         goalSelector.addGoal(5, new PerchGoal());
         goalSelector.addGoal(5, new PlayGoal());
         goalSelector.addGoal(5, new GroomGoal());
+        goalSelector.addGoal(5, new WindowGoal());
+        goalSelector.addGoal(5, new FishGoal());
         goalSelector.addGoal(6, new FollowOwnerGoal(this, 1.0, 10.0F, 3.0F) {
             @Override
             public boolean canUse() {
@@ -199,6 +205,8 @@ public class OiiaCatEntity extends TamableAnimal {
         if (petCooldown > 0) petCooldown--;
         if (giftCooldown > 0) giftCooldown--;
         if (socialCooldown > 0) socialCooldown--;
+        if (windowCooldown > 0) windowCooldown--;
+        if (fishCooldown > 0) fishCooldown--;
         byte m = mood();
         if ((m == GROOMING || m == GROOMED || m == GREETING) && tickCount - socialTick > 10 && !isNoAi()) {
             setMood(AWAKE); // (left in a pose with another cat that nothing's holding it in)
@@ -301,6 +309,10 @@ public class OiiaCatEntity extends TamableAnimal {
     public void handleEntityEvent(byte id) {
         if (id == SPIN_EVENT) {
             spinStart = tickCount;
+        } else if (id == SWAT_EVENT) {
+            swatStart = tickCount;
+        } else if (id == CHATTER_EVENT) {
+            chatterStart = tickCount;
         } else {
             super.handleEntityEvent(id);
         }
@@ -862,6 +874,196 @@ public class OiiaCatEntity extends TamableAnimal {
             }
             getNavigation().stop();
             socialCooldown = 1000 + random.nextInt(1400);
+        }
+    }
+
+    // ---- the window perch and the fish ----
+
+    static boolean fishy(BlockState state) {
+        net.minecraft.world.level.block.Block b = state.getBlock();
+        return b instanceof KoiPondBlock || b instanceof AquariumBlock || b instanceof VanillaAquariumBlock || b instanceof SmallTankBlock
+                || b instanceof JellyfishTankBlock;
+    }
+
+    /** Client: when it last swatted at a fish, and last chattered at something outside (in ticks, -1000: not lately). */
+    private int swatStart = -1000, chatterStart = -1000;
+
+    /** How far (0 .. 1) through a swat at a fish it is; -1 if it isn't swatting. */
+    public float swat(float age) {
+        float t = (age - swatStart) / 9.0F;
+        return t >= 0 && t <= 1 ? t : -1;
+    }
+
+    /** Whether it's chattering at something outside (a quick run of little chirps). */
+    public boolean chattering(float age) {
+        return age - chatterStart >= 0 && age - chatterStart < 26;
+    }
+
+    /** Up in its window perch, lying looking out: following the butterflies and birds, chattering at them now and then. */
+    final class WindowGoal extends Goal {
+        private BlockPos perch;
+        private Vec3 watching;
+        private int lay, length, walking, nextLook;
+
+        WindowGoal() {
+            setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK, Flag.JUMP));
+        }
+
+        @Override
+        public boolean canUse() {
+            if (isOrderedToSit() || windowCooldown > 0 || tickCount < spinUntil || groomer != null || chase != null || random.nextInt(60) != 0
+                    || !ownerNear(12)) {
+                return false;
+            }
+            perch = find(st -> st.getBlock() instanceof CatWindowPerchBlock, 10);
+            return perch != null && free(perch);
+        }
+
+        @Override
+        public void start() {
+            lay = walking = 0;
+            length = 500 + random.nextInt(900);
+            getNavigation().moveTo(perch.getX() + 0.5, perch.getY(), perch.getZ() + 0.5, 1.0);
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return lay < length && !isOrderedToSit() && ownerNear(18) && level().getBlockState(perch).getBlock() instanceof CatWindowPerchBlock;
+        }
+
+        @Override
+        public void tick() {
+            BlockState state = level().getBlockState(perch);
+            Direction out = state.getValue(CatWindowPerchBlock.FACING);
+            if (mood() != WINDOW) {
+                if (!by(perch, 1.8)) {
+                    if (++walking > 240) {
+                        lay = length; // (can't get there: gives up)
+                        return;
+                    }
+                    walkTo(centre(perch), 1.0, 20);
+                    return;
+                }
+                hop(CatWindowPerchBlock.perch(perch, state));
+                // (lying along the window, facing it: looking out)
+                float yaw = out.getOpposite().toYRot();
+                setYRot(yaw);
+                setYBodyRot(yaw);
+                setYHeadRot(yaw);
+                setMood(WINDOW);
+                nextLook = 0;
+            }
+            getNavigation().stop();
+            lay++;
+            Direction in = out.getOpposite();
+            if (--nextLook <= 0 || watching == null) {
+                // (something outside to follow: out past the glass, here and there)
+                Vec3 c = Vec3.atCenterOf(perch.relative(in, 2 + random.nextInt(3)));
+                Direction side = in.getClockWise();
+                double across = (random.nextDouble() - 0.5) * 3.0;
+                watching = c.add(side.getStepX() * across, (random.nextDouble() - 0.3) * 1.6, side.getStepZ() * across);
+                nextLook = 25 + random.nextInt(40);
+            }
+            getLookControl().setLookAt(watching.x, watching.y, watching.z, 10.0F, 30.0F);
+            if (random.nextInt(140) == 0) {
+                level().broadcastEntityEvent(OiiaCatEntity.this, CHATTER_EVENT);
+                playSound(SoundEvents.CAT_AMBIENT, 0.35F, 1.75F);
+            }
+        }
+
+        @Override
+        public void stop() {
+            if (mood() == WINDOW) {
+                hopOff(perch);
+                if (lay > 200) {
+                    cheer(4);
+                }
+            }
+            setMood(AWAKE);
+            windowCooldown = 2400 + random.nextInt(3600);
+        }
+    }
+
+    /** Off to a pond or a tank: sat by it, eyes on the fish, swatting at them now and then. */
+    final class FishGoal extends Goal {
+        private BlockPos tank, spot;
+        private Vec3 fish;
+        private int sat, length, walking, nextLook;
+
+        FishGoal() {
+            setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK, Flag.JUMP));
+        }
+
+        @Override
+        public boolean canUse() {
+            if (isOrderedToSit() || fishCooldown > 0 || tickCount < spinUntil || groomer != null || chase != null || random.nextInt(70) != 0
+                    || !ownerNear(12)) {
+                return false;
+            }
+            tank = find(OiiaCatEntity::fishy, 10);
+            if (tank == null) {
+                return false;
+            }
+            // (beside it; or, a pond sunk in the ground, on the ground beside it)
+            spot = spotBy(tank, false);
+            if (spot == null) {
+                spot = spotBy(tank.above(), false);
+            }
+            return spot != null && free(spot);
+        }
+
+        @Override
+        public void start() {
+            sat = walking = 0;
+            length = 300 + random.nextInt(500);
+            getNavigation().moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 1.0);
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return sat < length && !isOrderedToSit() && ownerNear(18) && fishy(level().getBlockState(tank));
+        }
+
+        @Override
+        public void tick() {
+            if (mood() != FISHING) {
+                if (!near(centre(spot), 0.6)) {
+                    if (++walking > 240) {
+                        sat = length;
+                        return;
+                    }
+                    walkTo(centre(spot), 1.0, 20);
+                    return;
+                }
+                getNavigation().stop();
+                setMood(FISHING);
+                nextLook = 0;
+            }
+            getNavigation().stop();
+            sat++;
+            if (--nextLook <= 0 || fish == null) {
+                // (a fish swimming by: somewhere in the water)
+                fish = Vec3.atCenterOf(tank).add((random.nextDouble() - 0.5) * 0.8, (random.nextDouble() - 0.5) * 0.6, (random.nextDouble() - 0.5) * 0.8);
+                nextLook = 12 + random.nextInt(30);
+            }
+            getLookControl().setLookAt(fish.x, fish.y, fish.z, 30.0F, 40.0F);
+            if (random.nextInt(55) == 0) {
+                level().broadcastEntityEvent(OiiaCatEntity.this, SWAT_EVENT);
+                if (level().getBlockState(tank).getBlock() instanceof KoiPondBlock) {
+                    playSound(SoundEvents.GENERIC_SPLASH, 0.15F, 1.6F);
+                } else {
+                    playSound(SoundEvents.GLASS_HIT, 0.25F, 1.5F); // (a paw on the glass)
+                }
+            }
+        }
+
+        @Override
+        public void stop() {
+            setMood(AWAKE);
+            fishCooldown = 2000 + random.nextInt(3000);
+            if (sat > 150) {
+                cheer(3);
+            }
         }
     }
 

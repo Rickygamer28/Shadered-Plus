@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=south": {
+      "model": "skyblocks:block/cat_window_perch"
+    },
+    "facing=west": {
+      "model": "skyblocks:block/cat_window_perch",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "skyblocks:block/cat_window_perch",
+      "y": 180
+    },
+    "facing=east": {
+      "model": "skyblocks:block/cat_window_perch",
+      "y": 270
+    }
+  }
+}

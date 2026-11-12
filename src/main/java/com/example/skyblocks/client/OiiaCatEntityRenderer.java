@@ -153,6 +153,38 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
             t[EARS] = asleep ? 18.0F : 0.0F;
             t[BREATH] = asleep ? 1.6F : 0.6F;
             t[GAIT] = 0.0F;
+        } else if (mood == OiiaCatEntity.WINDOW) {
+            // lying in the window perch, looking out: legs tucked, head up following what's outside, tail hanging over
+            // the side, swishing; chattering at something now and then (a quick run of little head bobs, ears forward)
+            t[LIFT] = -5.5F;
+            t[FL] = t[FR] = -70.0F;
+            t[PAW_FL] = t[PAW_FR] = 70.0F;
+            t[BL] = t[BR] = -55.0F;
+            t[PAW_BL] = t[PAW_BR] = 80.0F;
+            t[HIPS] = -4.0F;
+            t[TAIL_YAW] = 14.0F * Mth.sin(age * 0.06F);
+            t[TAIL_CURL] = 12.0F;
+            t[TAIL_LIFT] = 58.0F;
+            t[EARS] = -4.0F;
+            t[BREATH] = 0.6F;
+            t[GAIT] = 0.0F;
+            if (cat.chattering(age)) {
+                t[HEAD_PITCH] += 5.0F * Mth.sin(age * 2.6F);
+                t[EARS] = -12.0F;
+                t[TAIL_YAW] += 10.0F * Mth.sin(age * 1.3F);
+            }
+        } else if (mood == OiiaCatEntity.FISHING) {
+            // sat by the water, eyes on the fish, tail tip twitching; a quick swat with a front paw now and then
+            sit(t);
+            t[EARS] = -8.0F;
+            t[TAIL_YAW] += 12.0F * Mth.sin(age * 0.9F);
+            float swat = cat.swat(age);
+            if (swat >= 0) {
+                float up = Mth.sin(swat * Mth.PI);
+                t[FR] = -105.0F * up + 6.0F * (1 - up);
+                t[PAW_FR] = -45.0F * up;
+                t[PITCH] = 6.0F * up;
+            }
         } else if (mood == OiiaCatEntity.GREETING) {
             // nose to nose with another cat: leaning in, neck stretched, ears forward, tail straight up (hello)
             t[PITCH] = 5.0F;
