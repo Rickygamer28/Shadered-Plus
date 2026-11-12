@@ -448,5 +448,10 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.AMETHYST).noOcclusion().lightLevel(state -> 12)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE));
 
+    /** The infusion altar: paint shaders onto an item (InfusionAltarBlock, client/ShaderPaintScreen). */
+    public static final DeferredBlock<InfusionAltarBlock> INFUSION_ALTAR = BLOCKS.registerBlock("infusion_altar", InfusionAltarBlock::new,
+            BlockBehaviour.Properties.of().strength(3.0F, 6.0F).sound(SoundType.DEEPSLATE_TILES).noOcclusion().lightLevel(state -> 5)
+                    .requiresCorrectToolForDrops().mapColor(net.minecraft.world.level.material.MapColor.DEEPSLATE));
+
     private ModBlocks() {}
 }

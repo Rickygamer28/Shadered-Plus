@@ -50,5 +50,52 @@ public final class ModComponents {
     public static final Supplier<DataComponentType<Photo>> PHOTO = COMPONENTS.register("photo",
             () -> DataComponentType.<Photo>builder().persistent(Photo.CODEC).networkSynchronized(Photo.STREAM_CODEC).build());
 
+    /**
+     * Shaders painted onto an item's texture at the infusion altar: for each pixel of its sprite (w x h, row by row from
+     * the top), which ShaderPaint style (0: none).
+     */
+    public record ShaderPaint(int w, int h, byte[] pixels) {
+        public static final com.mojang.serialization.Codec<ShaderPaint> CODEC = com.mojang.serialization.codecs.RecordCodecBuilder.create(i -> i.group(
+                com.mojang.serialization.Codec.INT.fieldOf("w").forGetter(ShaderPaint::w),
+                com.mojang.serialization.Codec.INT.fieldOf("h").forGetter(ShaderPaint::h),
+                com.mojang.serialization.Codec.BYTE_BUFFER.xmap(b -> {
+                    byte[] a = new byte[b.remaining()];
+                    b.duplicate().get(a);
+                    return a;
+                }, java.nio.ByteBuffer::wrap).fieldOf("pixels").forGetter(ShaderPaint::pixels)).apply(i, ShaderPaint::new));
+        public static final net.minecraft.network.codec.StreamCodec<io.netty.buffer.ByteBuf, ShaderPaint> STREAM_CODEC =
+                net.minecraft.network.codec.StreamCodec.composite(
+                        net.minecraft.network.codec.ByteBufCodecs.VAR_INT, ShaderPaint::w,
+                        net.minecraft.network.codec.ByteBufCodecs.VAR_INT, ShaderPaint::h,
+                        net.minecraft.network.codec.ByteBufCodecs.byteArray(64 * 64), ShaderPaint::pixels, ShaderPaint::new);
+
+        public int at(int x, int y) {
+            int i = y * w + x;
+            return i >= 0 && i < pixels.length ? pixels[i] & 255 : 0;
+        }
+
+        public boolean empty() {
+            for (byte b : pixels) {
+                if (b != 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof ShaderPaint p && p.w == w && p.h == h && java.util.Arrays.equals(p.pixels, pixels);
+        }
+
+        @Override
+        public int hashCode() {
+            return (w * 31 + h) * 31 + java.util.Arrays.hashCode(pixels);
+        }
+    }
+
+    public static final Supplier<DataComponentType<ShaderPaint>> SHADER_PAINT = COMPONENTS.register("shader_paint",
+            () -> DataComponentType.<ShaderPaint>builder().persistent(ShaderPaint.CODEC).networkSynchronized(ShaderPaint.STREAM_CODEC).build());
+
     private ModComponents() {}
 }

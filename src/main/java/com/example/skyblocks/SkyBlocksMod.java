@@ -129,6 +129,7 @@ public class SkyBlocksMod {
         event.registrar("1").playToServer(ScanIslandPayload.TYPE, ScanIslandPayload.STREAM_CODEC, ScanIslandPayload::handle)
                 .playToServer(FogAreaPayload.TYPE, FogAreaPayload.STREAM_CODEC, FogAreaPayload::handle)
                 .playToServer(NeonSignPayload.TYPE, NeonSignPayload.STREAM_CODEC, NeonSignPayload::handle)
+                .playToServer(ShaderPaintPayload.TYPE, ShaderPaintPayload.STREAM_CODEC, ShaderPaintPayload::handle)
                 .playToServer(EffectBlockPayload.TYPE, EffectBlockPayload.STREAM_CODEC, EffectBlockPayload::handle)
                 .playToServer(ArcadeScorePayload.TYPE, ArcadeScorePayload.STREAM_CODEC, ArcadeScorePayload::handle)
                 .playToServer(LightBridgeSettingsPayload.TYPE, LightBridgeSettingsPayload.STREAM_CODEC, LightBridgeSettingsPayload::handle)

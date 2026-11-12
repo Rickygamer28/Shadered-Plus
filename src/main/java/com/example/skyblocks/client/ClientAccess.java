@@ -62,6 +62,10 @@ public final class ClientAccess {
         }
     }
 
+    public static void openShaderPaint(net.minecraft.core.BlockPos pos) {
+        Minecraft.getInstance().setScreen(new ShaderPaintScreen(pos));
+    }
+
     public static void openClawMachine(net.minecraft.core.BlockPos pos) {
         Minecraft.getInstance().setScreen(new ClawScreen(pos));
     }

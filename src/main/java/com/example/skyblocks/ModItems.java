@@ -159,6 +159,7 @@ public final class ModItems {
     public static final DeferredItem<PhotoFrameItem> LARGE_PHOTO_FRAME = ITEMS.register("large_photo_frame",
             () -> new PhotoFrameItem(PhotoFrameBlock.Size.LARGE, new Item.Properties()));
     // ---- the cat companion's things ----
+    public static final DeferredItem<BlockItem> INFUSION_ALTAR = ITEMS.registerSimpleBlockItem("infusion_altar", ModBlocks.INFUSION_ALTAR);
     public static final DeferredItem<BlockItem> GEODE_LAMP = ITEMS.registerSimpleBlockItem("geode_lamp", ModBlocks.GEODE_LAMP);
     public static final DeferredItem<BlockItem> CAT_BED = ITEMS.registerSimpleBlockItem("cat_bed", ModBlocks.CAT_BED);
     public static final DeferredItem<BlockItem> SCRATCHING_POST = ITEMS.registerSimpleBlockItem("scratching_post", ModBlocks.SCRATCHING_POST);

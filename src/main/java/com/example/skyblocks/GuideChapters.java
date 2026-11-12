@@ -34,7 +34,8 @@ public final class GuideChapters {
         for (Supplier<? extends ItemLike> i : new Supplier[] {ModItems.ZEN_SAND, ModItems.ZEN_RAKE, ModItems.ZEN_STONE, ModItems.BONSAI, ModItems.HOT_SPRING,
                 ModItems.OIIA_CAT_SPAWN_EGG, ModItems.CAMERA, ModItems.PHOTO, ModItems.SMALL_PHOTO_FRAME, ModItems.MEDIUM_PHOTO_FRAME,
                 ModItems.LARGE_PHOTO_FRAME, ModItems.CAT_BED, ModItems.CAT_BOWL, ModItems.SCRATCHING_POST, ModItems.CAT_TREE,
-                ModItems.CARDBOARD_BOX, ModItems.CAT_FLAP, ModItems.YARN_BALL, ModItems.FEATHER_WAND, ModItems.LASER_POINTER, ModItems.GEODE_LAMP}) {
+                ModItems.CARDBOARD_BOX, ModItems.CAT_FLAP, ModItems.YARN_BALL, ModItems.FEATHER_WAND, ModItems.LASER_POINTER, ModItems.GEODE_LAMP,
+                ModItems.INFUSION_ALTAR}) {
             list.add(new ItemStack(i.get()));
         }
         return list;
@@ -71,6 +72,7 @@ public final class GuideChapters {
         out.add(new Chapter("toys", toys.get(0).copy(), toys));
         out.add(of("garden", ModItems.ZEN_SAND, ModItems.ZEN_RAKE, ModItems.ZEN_STONE, ModItems.BONSAI, ModItems.HOT_SPRING));
         out.add(of("keepsakes", ModItems.CAMERA, ModItems.PHOTO, ModItems.SMALL_PHOTO_FRAME, ModItems.MEDIUM_PHOTO_FRAME, ModItems.LARGE_PHOTO_FRAME));
+        out.add(of("infusion", ModItems.INFUSION_ALTAR));
         out.add(of("cat", ModItems.OIIA_CAT_SPAWN_EGG, ModItems.OIIA_CAT, ModItems.CAT_BED, ModItems.CAT_BOWL, ModItems.SCRATCHING_POST, ModItems.CAT_TREE,
                 ModItems.CARDBOARD_BOX, ModItems.CAT_FLAP, ModItems.YARN_BALL, ModItems.FEATHER_WAND, ModItems.LASER_POINTER));
         out.add(of("islands", ModItems.ISLAND_SCANNER, ModItems.ISLAND_PAINTING));

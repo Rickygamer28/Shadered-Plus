@@ -18,6 +18,7 @@
     "EntityTimingMixin",
     "EntityAccessor",
     "GameRendererIrisMixin",
+    "ItemRendererPaintMixin",
     "LevelRendererInvoker",
     "LevelRendererTranslucentMixin",
     "MirrorBlockChangeMixin",

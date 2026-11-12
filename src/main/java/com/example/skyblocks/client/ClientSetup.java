@@ -94,6 +94,7 @@ public final class ClientSetup {
         event.registerEntityRenderer(com.example.skyblocks.ModEntities.OIIA_CAT.get(), OiiaCatEntityRenderer::new);
         event.registerEntityRenderer(com.example.skyblocks.ModEntities.YARN_BALL.get(), YarnBallRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.GEODE_LAMP.get(), GeodeLampRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.INFUSION_ALTAR.get(), InfusionAltarRenderer::new);
         BlockEntityRendererProvider<OiiaCatBlockEntity> big = OiiaCatRenderer::new;
         event.registerBlockEntityRenderer(ModBlockEntities.BIG_OIIA_CAT.get(), big);
         event.registerBlockEntityRenderer(ModBlockEntities.SKY_ISLAND.get(), SkyIslandRenderer::new);
