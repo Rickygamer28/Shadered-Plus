@@ -26,39 +26,30 @@ final class OiiaCatCollar {
             11.5F, 9.6F, 9.5F, 9.7F, 10.2F, 10.5F, 10.4F, 10.8F, 11.7F, 12.1F, 10.9F, 9.9F, 10.0F, 9.6F, 9.6F, 10.1F, 10.4F, 10.4F});
     /**
      * The loaf's collar (the loaf model is the standing one with its blend shape on, vertex for vertex): the standing
-     * collar carried onto the loaf by the fur under it, then laid on the loaf's fur round its neck - a loop of points
-     * (x, y, z) and the way out from the fur at each; tucked into the fur at the back of the neck, where it'd be hidden.
+     * collar carried onto the loaf by the fur under it, then laid on the loaf's fur round its neck - points (x, y, z)
+     * and the way out from the fur at each, round the front from one side to the other, its ends sinking into the fur
+     * (the loaf has no neck to see at the back: there it's hidden in the fluff).
      * (Measured from the models: the band's plane leans forward like the standing one's.)
      */
     private static final float[] LOAF_LOOP = {
-            -9.44F, 23.17F, 15.01F, -9.23F, 23.99F, 14.07F, -8.71F, 24.79F, 13.13F, -7.86F, 25.47F, 12.30F,
-            -6.85F, 26.01F, 11.63F, -5.90F, 26.43F, 11.09F, -5.11F, 26.82F, 10.59F, -4.45F, 27.32F, 9.98F,
-            -3.83F, 28.11F, 9.04F, -3.12F, 29.30F, 7.65F, -2.06F, 30.56F, 6.15F, -0.54F, 31.42F, 5.08F,
-            1.28F, 31.76F, 4.58F, 3.05F, 31.61F, 4.63F, 4.54F, 31.04F, 5.18F, 5.74F, 30.22F, 6.03F,
-            6.76F, 29.34F, 6.95F, 7.62F, 28.43F, 7.92F, 8.32F, 27.46F, 8.98F, 8.92F, 26.45F, 10.09F,
-            9.48F, 25.45F, 11.18F, 10.02F, 24.49F, 12.23F, 10.49F, 23.56F, 13.25F, 10.80F, 22.64F, 14.27F,
-            10.93F, 21.78F, 15.23F, 10.94F, 21.00F, 16.11F, 10.84F, 20.30F, 16.91F, 10.58F, 19.58F, 17.75F,
-            10.14F, 18.74F, 18.72F, 9.30F, 17.86F, 19.78F, 7.74F, 17.14F, 20.70F, 5.49F, 16.70F, 21.34F,
+            9.32F, 21.91F, 15.19F, 9.78F, 21.17F, 16.00F, 10.18F, 20.42F, 16.82F, 10.32F, 19.64F, 17.70F,
+            10.08F, 18.76F, 18.71F, 9.29F, 17.86F, 19.78F, 7.74F, 17.14F, 20.70F, 5.49F, 16.70F, 21.34F,
             3.04F, 16.46F, 21.78F, 0.84F, 16.32F, 22.09F, -1.01F, 16.32F, 22.21F, -2.60F, 16.46F, 22.15F,
             -3.96F, 16.69F, 21.98F, -5.12F, 17.02F, 21.69F, -6.08F, 17.42F, 21.30F, -6.85F, 17.83F, 20.89F,
             -7.44F, 18.20F, 20.50F, -7.93F, 18.58F, 20.11F, -8.39F, 19.04F, 19.62F, -8.82F, 19.62F, 18.99F,
-            -9.15F, 20.27F, 18.27F, -9.34F, 20.93F, 17.54F, -9.42F, 21.62F, 16.77F, -9.46F, 22.37F, 15.92F};
+            -9.13F, 20.28F, 18.27F, -9.19F, 20.95F, 17.51F, -8.89F, 21.65F, 16.70F, -8.35F, 22.37F, 15.84F,
+            -7.80F, 23.08F, 15.00F};
     private static final float[] LOAF_OUT = {
-            -1.00F, 0.03F, 0.04F, -0.99F, 0.12F, -0.07F, -0.96F, 0.22F, -0.18F, -0.90F, 0.31F, -0.30F,
-            -0.82F, 0.40F, -0.40F, -0.74F, 0.47F, -0.48F, -0.65F, 0.52F, -0.55F, -0.55F, 0.57F, -0.61F,
-            -0.45F, 0.61F, -0.66F, -0.32F, 0.64F, -0.70F, -0.18F, 0.66F, -0.73F, -0.03F, 0.66F, -0.75F,
-            0.11F, 0.65F, -0.75F, 0.25F, 0.63F, -0.73F, 0.36F, 0.61F, -0.71F, 0.47F, 0.57F, -0.68F,
-            0.57F, 0.52F, -0.63F, 0.67F, 0.47F, -0.58F, 0.76F, 0.41F, -0.51F, 0.85F, 0.32F, -0.42F,
-            0.91F, 0.24F, -0.33F, 0.96F, 0.15F, -0.23F, 0.99F, 0.06F, -0.14F, 1.00F, -0.02F, -0.04F,
             0.99F, -0.10F, 0.05F, 0.98F, -0.17F, 0.13F, 0.96F, -0.22F, 0.19F, 0.93F, -0.28F, 0.25F,
             0.88F, -0.34F, 0.33F, 0.81F, -0.42F, 0.42F, 0.70F, -0.50F, 0.52F, 0.53F, -0.58F, 0.62F,
             0.30F, -0.64F, 0.71F, 0.09F, -0.66F, 0.74F, -0.09F, -0.66F, 0.75F, -0.24F, -0.63F, 0.73F,
             -0.37F, -0.60F, 0.71F, -0.48F, -0.57F, 0.67F, -0.57F, -0.52F, 0.63F, -0.65F, -0.48F, 0.59F,
             -0.70F, -0.45F, 0.56F, -0.74F, -0.42F, 0.52F, -0.79F, -0.38F, 0.49F, -0.85F, -0.32F, 0.42F,
-            -0.90F, -0.26F, 0.35F, -0.94F, -0.20F, 0.29F, -0.96F, -0.14F, 0.22F, -0.99F, -0.06F, 0.13F};
+            -0.90F, -0.26F, 0.35F, -0.94F, -0.20F, 0.29F, -0.96F, -0.14F, 0.22F, -0.99F, -0.06F, 0.13F,
+            -1.00F, 0.03F, 0.04F};
     private static final float LOAF_NX = 0.044F, LOAF_NY = 0.749F, LOAF_NZ = 0.661F;
     /** The loop's point under the chin (where a name tag hangs). */
-    private static final int LOAF_FRONT = 34;
+    private static final int LOAF_FRONT = 10;
     /** How far out from the fur, and how wide (model units). */
     private static final float OUT = 0.15F, HALF_WIDTH = 1.0F, THICK = 0.6F, SNUG = 0.95F;
 
@@ -116,8 +107,8 @@ final class OiiaCatCollar {
     private static void drawLoaf(OiiaCatEntity cat, PoseStack.Pose p, VertexConsumer vc, int colour, int light) {
         int n = LOAF_LOOP.length / 3;
         Vector3f w = new Vector3f(LOAF_NX, LOAF_NY, LOAF_NZ).normalize();
-        for (int i = 0; i < n; i++) {
-            int j = (i + 1) % n;
+        for (int i = 0; i + 1 < n; i++) {
+            int j = i + 1;
             Vector3f o0 = loafOut(i), o1 = loafOut(j);
             Vector3f p0 = loafAt(i, o0, OUT), p1 = loafAt(j, o1, OUT), q0 = loafAt(i, o0, OUT - THICK), q1 = loafAt(j, o1, OUT - THICK);
             Vector3f out = new Vector3f(o0).add(o1).normalize();
