@@ -52,6 +52,9 @@ public final class ShaderPaintRender {
             return null;
         }
         try {
+            // (its sky's picture brought up to date first, all of it, as sky liquids and paintings do: a sky nothing else
+            // shows isn't drawn every frame, and its picture could be out of date - or another sky's)
+            SkyUsage.ensureFresh(com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(skies[sky]));
             return ModRenderTypes.getSkyblockRenderType(skies[sky], passes[pass]);
         } catch (RuntimeException e) {
             return null;
