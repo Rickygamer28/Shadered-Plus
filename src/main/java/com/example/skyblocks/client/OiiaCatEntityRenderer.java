@@ -47,9 +47,10 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
         boolean spin = cat.spinning();
         byte mood = cat.mood();
         // (curled up: napping, in a box; the loaf is the spin model)
-        // (the loaf - the spin model - only spins now: lying down, napping or in a box, is a pose of the skeleton)
-        boolean loaf = spin;
-        if (!((loaf ? cat.clientSpinModel : cat.clientModel) instanceof RenderableModel model)) {
+        // (everything's a pose of the skeleton now - the OIIA spin too, sat up and turning; the loaf model is only the
+        // fallback while the rigged model isn't loaded)
+        boolean loaf = false;
+        if (!((spin && OiiaCatMesh.get() == null ? cat.clientSpinModel : cat.clientModel) instanceof RenderableModel model)) {
             return; // (Shadered hasn't loaded the model yet)
         }
         float age = cat.tickCount + partialTick;
@@ -60,7 +61,7 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
         // (the model faces +z: turned to face the way the cat does)
         pose.mulPose(Axis.YP.rotationDegrees(-body));
         float scale = OiiaCatModel.SCALE * SIZE;
-        if (spin) {
+        if (spin && OiiaCatMesh.get() == null) {
             pose.scale(scale, scale, scale);
             pose.translate(0, OiiaCatModel.FEET, 0);
             OiiaCatModel.animate(pose, cat.spinSeconds(partialTick));
@@ -152,7 +153,7 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
             t[EARS] = asleep ? 18.0F : 0.0F;
             t[BREATH] = asleep ? 1.6F : 0.6F;
             t[GAIT] = 0.0F;
-        } else if (cat.isInSittingPose() || mood == OiiaCatEntity.PERCHED) {
+        } else if (cat.spinning() || cat.isInSittingPose() || mood == OiiaCatEntity.PERCHED) {
             // sat down: rump down on the ground (its hips tipped down), front legs straight, back legs tucked, tail curled round
             t[SIT] = -6.0F;
             t[HIPS] = -40.0F;
@@ -244,6 +245,10 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
             pitch += Mth.sin(age * 0.5F) * 3.0F;
         } else if (mood == OiiaCatEntity.EATING) {
             pitch += Mth.sin(age * 0.6F) * 1.5F;
+        }
+        if (cat.spinning()) {
+            // the OIIA spin (its own animation: turning, and a little bounce), sat up, about its middle
+            OiiaCatModel.animate(pose, cat.spinSeconds(partialTick), true);
         }
         pose.translate(0, 0, FRONT_PAWS);
         pose.mulPose(Axis.XP.rotationDegrees(a[SIT]));

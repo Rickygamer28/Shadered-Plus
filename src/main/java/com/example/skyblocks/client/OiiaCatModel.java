@@ -57,6 +57,11 @@ final class OiiaCatModel {
      * @return the animation's vertical offset at that time, in model units (used for the shadow)
      */
     static float animate(PoseStack pose, float seconds) {
+        return animate(pose, seconds, false);
+    }
+
+    /** The same, never dipping below where it started (the cat sat on the ground: up and back down, not into it). */
+    static float animate(PoseStack pose, float seconds, boolean grounded) {
         float[] time = OiiaCatAnimation.TIME;
         int last = time.length - 1;
         float start = time[0];
@@ -74,7 +79,7 @@ final class OiiaCatModel {
         Quaternionf a = new Quaternionf(0, OiiaCatAnimation.ROT_Y[i], 0, OiiaCatAnimation.ROT_W[i]);
         Quaternionf b = new Quaternionf(0, OiiaCatAnimation.ROT_Y[i + 1], 0, OiiaCatAnimation.ROT_W[i + 1]);
 
-        pose.translate(0, y, 0);
+        pose.translate(0, grounded ? Math.max(0.0F, y) : y, 0);
         pose.mulPose(a.slerp(b, f).normalize());
         return y;
     }
