@@ -24,6 +24,8 @@ public abstract class ItemRendererPaintMixin {
     private static MultiBufferSource skyblocks$buffers;
     @Unique
     private static boolean skyblocks$pending;
+    @Unique
+    private static boolean skyblocks$gui;
 
     @Inject(method = "render(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;ZLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IILnet/minecraft/client/resources/model/BakedModel;)V",
             at = @At("HEAD"), require = 0)
@@ -31,6 +33,7 @@ public abstract class ItemRendererPaintMixin {
                                      int overlay, BakedModel model, CallbackInfo ci) {
         skyblocks$buffers = buffers;
         skyblocks$pending = true;
+        skyblocks$gui = context == ItemDisplayContext.GUI;
     }
 
     @Inject(method = "render(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;ZLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IILnet/minecraft/client/resources/model/BakedModel;)V",
@@ -45,7 +48,7 @@ public abstract class ItemRendererPaintMixin {
     private void skyblocks$afterModel(BakedModel model, ItemStack stack, int light, int overlay, PoseStack pose, VertexConsumer buffer, CallbackInfo ci) {
         if (skyblocks$pending) {
             skyblocks$pending = false;
-            ShaderPaintRender.afterModel(stack, model, pose, skyblocks$buffers);
+            ShaderPaintRender.afterModel(stack, model, pose, skyblocks$buffers, skyblocks$gui);
         }
     }
 }

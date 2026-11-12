@@ -39,11 +39,12 @@ public class ShaderPaintScreen extends Screen {
     private byte[] pixels;
     private final ArrayDeque<byte[]> undo = new ArrayDeque<>(), redo = new ArrayDeque<>();
     private Tool tool = Tool.PENCIL;
-    private int style = 1, brush = 1;
+    private int style = ShaderPaintStyles.LIVE, brush = 1;
     private boolean grid = true;
     // the canvas on screen; the swatches
     private int cx, cy, cell;
-    private int px0, py0, swatch = 22, cols = 4;
+    private int px0, py0, swatch = 18, cols = 5, rowsShown, scroll;
+    private final int[] order = ShaderPaintStyles.order();
     // a stroke in progress
     private boolean dragging, erasing;
     private int startX = -1, startY = -1, hoverX = -1, hoverY = -1;
@@ -85,13 +86,14 @@ public class ShaderPaintScreen extends Screen {
             }
         }
         // layout: tools | canvas | shaders + preview
-        int left = 8, toolW = 76, right = 4 * 24 + 16;
+        int left = 8, toolW = 76, right = cols * (swatch + 2) + 16;
         int room = Math.min(height - 64, width - toolW - right - 40);
         cell = Math.max(2, room / Math.max(1, Math.max(w, h)));
         cx = left + toolW + 12 + Math.max(0, (width - toolW - right - 40 - cell * w) / 2);
         cy = 28 + Math.max(0, (height - 64 - cell * h) / 2);
         px0 = width - right - 4;
         py0 = 28;
+        rowsShown = Math.max(3, Math.min((order.length + cols - 1) / cols, (height - py0 - 150) / (swatch + 2)));
         int y = 28;
         Tool[] tools = Tool.values();
         for (int i = 0; i < tools.length; i++) {
@@ -328,6 +330,11 @@ public class ShaderPaintScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double sx, double sy) {
+        if (mx >= px0) {
+            int rows = (order.length + cols - 1) / cols;
+            scroll = Math.max(0, Math.min(rows - rowsShown, scroll + (sy > 0 ? -1 : 1)));
+            return true;
+        }
         brush = Math.max(1, Math.min(8, brush + (sy > 0 ? 1 : -1)));
         return true;
     }
@@ -367,8 +374,8 @@ public class ShaderPaintScreen extends Screen {
             return -1;
         }
         int col = (int) ((mx - px0) / (swatch + 2)), row = (int) ((my - py0) / (swatch + 2));
-        int i = row * cols + col + 1;
-        return col < cols && i < ShaderPaintStyles.count() ? i : -1;
+        int i = (row + scroll) * cols + col;
+        return col < cols && row < rowsShown && i < order.length ? order[i] : -1;
     }
 
     private void apply() {
@@ -436,18 +443,32 @@ public class ShaderPaintScreen extends Screen {
         // the shaders to paint with
         g.drawString(font, Component.translatable("screen.skyblocks.shader_paint.shaders"), px0, py0 - 11, 0xFFD0C0F0);
         drawSwatches(g);
-        int sel = style - 1;
-        int sx = px0 + (sel % cols) * (swatch + 2), sy = py0 + (sel / cols) * (swatch + 2);
+        int sel = 0;
+        for (int i = 0; i < order.length; i++) {
+            if (order[i] == style) {
+                sel = i;
+            }
+        }
+        int selRow = sel / cols - scroll;
         g.pose().pushPose();
         g.pose().translate(0, 0, 60);
-        g.renderOutline(sx - 1, sy - 1, swatch + 2, swatch + 2, 0xFFFFFFFF);
+        if (selRow >= 0 && selRow < rowsShown) {
+            g.renderOutline(px0 + (sel % cols) * (swatch + 2) - 1, py0 + selRow * (swatch + 2) - 1, swatch + 2, swatch + 2, 0xFFFFFFFF);
+        }
+        int totalRows = (order.length + cols - 1) / cols;
+        if (totalRows > rowsShown) {
+            // (a scroll bar)
+            int barH = rowsShown * (swatch + 2), knob = Math.max(8, barH * rowsShown / totalRows);
+            int knobY = py0 + (barH - knob) * scroll / Math.max(1, totalRows - rowsShown);
+            g.fill(px0 + cols * (swatch + 2) + 2, py0, px0 + cols * (swatch + 2) + 5, py0 + barH, 0x40FFFFFF);
+            g.fill(px0 + cols * (swatch + 2) + 2, knobY, px0 + cols * (swatch + 2) + 5, knobY + knob, 0xC0D0C0F0);
+        }
         int hover = swatchAt(mouseX, mouseY);
         g.pose().popPose();
-        int rows = (ShaderPaintStyles.count() - 2) / cols + 1;
-        int below = py0 + rows * (swatch + 2) + 4;
+        int below = py0 + rowsShown * (swatch + 2) + 4;
         g.drawString(font, Component.translatable("shader_paint.skyblocks." + ShaderPaintStyles.NAMES[style]), px0, below, 0xFFFFFFFF);
         // the item as it'll look, turning
-        drawPreview(g, px0 + (cols * (swatch + 2)) / 2, below + 14 + 46, partialTick);
+        drawPreview(g, px0 + (cols * (swatch + 2)) / 2, below + 14 + 50, partialTick);
         if (!Minecraft.getInstance().player.getAbilities().instabuild) {
             g.drawCenteredString(font, Component.translatable("screen.skyblocks.shader_paint.cost"), width / 2, height - 38, 0xFFB0A0D0);
         }
@@ -464,17 +485,26 @@ public class ShaderPaintScreen extends Screen {
         }
         g.pose().pushPose();
         g.pose().translate(0, 0, 10);
-        VertexConsumer vc = g.bufferSource().getBuffer(ShaderPaintRender.Types.PAINT);
         var m = g.pose().last().pose();
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                int s = pixels[y * w + x] & 255;
-                if (s != 0) {
-                    ShaderPaintRender.square(vc, m, x0 + x * c, y0 + y * c, c, c, s, x / (float) w, y / (float) h, (x + 1) / (float) w, (y + 1) / (float) h, w);
+        boolean[] has = new boolean[256];
+        for (byte b : pixels) {
+            has[b & 255] = true;
+        }
+        for (int s = 1; s < ShaderPaintStyles.count(); s++) {
+            if (!has[s]) {
+                continue;
+            }
+            var type = ShaderPaintRender.type(s);
+            VertexConsumer vc = g.bufferSource().getBuffer(type);
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    if ((pixels[y * w + x] & 255) == s) {
+                        ShaderPaintRender.square(vc, m, x0 + x * c, y0 + y * c, c, c, s, x / (float) w, y / (float) h, (x + 1) / (float) w, (y + 1) / (float) h, w);
+                    }
                 }
             }
+            g.bufferSource().endBatch(type);
         }
-        g.bufferSource().endBatch(ShaderPaintRender.Types.PAINT);
         g.pose().popPose();
     }
 
@@ -482,13 +512,15 @@ public class ShaderPaintScreen extends Screen {
         if (ShaderPaintRender.shader == null) {
             return;
         }
-        VertexConsumer vc = g.bufferSource().getBuffer(ShaderPaintRender.Types.PAINT);
         var m = g.pose().last().pose();
-        for (int i = 1; i < ShaderPaintStyles.count(); i++) {
-            int col = (i - 1) % cols, row = (i - 1) / cols;
-            ShaderPaintRender.square(vc, m, px0 + col * (swatch + 2), py0 + row * (swatch + 2), swatch, swatch, i, 0, 0, 1, 1, 8);
+        for (int i = scroll * cols; i < Math.min(order.length, (scroll + rowsShown) * cols); i++) {
+            int s = order[i];
+            int col = i % cols, row = i / cols - scroll;
+            var type = ShaderPaintRender.type(s);
+            VertexConsumer vc = g.bufferSource().getBuffer(type);
+            ShaderPaintRender.square(vc, m, px0 + col * (swatch + 2), py0 + row * (swatch + 2), swatch, swatch, s, 0, 0, 1, 1, 8);
+            g.bufferSource().endBatch(type);
         }
-        g.bufferSource().endBatch(ShaderPaintRender.Types.PAINT);
     }
 
     private void drawPreview(GuiGraphics g, int x, int y, float partialTick) {

@@ -56,6 +56,16 @@ public final class ShaderPaintRender {
                         .setLayeringState(VIEW_OFFSET_Z_LAYERING)
                         .createCompositeState(false));
 
+        static RenderType live(int style, ResourceLocation picture) {
+            return create("skyblocks_shader_paint_" + style, DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 2048, false, false,
+                    CompositeState.builder()
+                            .setShaderState(new ShaderStateShard(() -> shader))
+                            .setTextureState(new TextureStateShard(picture, false, false))
+                            .setCullState(NO_CULL)
+                            .setLayeringState(VIEW_OFFSET_Z_LAYERING)
+                            .createCompositeState(false));
+        }
+
         private Types() {
             super("", DefaultVertexFormat.POSITION, VertexFormat.Mode.QUADS, 0, false, false, () -> {}, () -> {});
         }
@@ -112,9 +122,22 @@ public final class ShaderPaintRender {
     }
 
     private static boolean drawing;
+    private static final RenderType[] LIVE_TYPES = new RenderType[com.example.skyblocks.ShaderPaintStyles.count()];
 
-    /** Called after an item's model is drawn (pose: the model's own 0 .. 1 cube). */
-    public static void afterModel(ItemStack stack, BakedModel model, PoseStack pose, @Nullable MultiBufferSource buffers) {
+    /** What a style's drawn with: shader paint's own shader, or (a live style) that over its real shader's picture. */
+    static RenderType type(int style) {
+        if (!ShaderCapture.live(style)) {
+            return Types.PAINT;
+        }
+        ResourceLocation picture = ShaderCapture.texture(style); // (also: keep it drawn)
+        if (LIVE_TYPES[style] == null) {
+            LIVE_TYPES[style] = Types.live(style, picture);
+        }
+        return LIVE_TYPES[style];
+    }
+
+    /** Called after an item's model is drawn (pose: the model's own 0 .. 1 cube); gui: in a screen (flat, far from the eye). */
+    public static void afterModel(ItemStack stack, BakedModel model, PoseStack pose, @Nullable MultiBufferSource buffers, boolean gui) {
         if (drawing || buffers == null || shader == null || stack.isEmpty()) {
             return;
         }
@@ -124,39 +147,49 @@ public final class ShaderPaintRender {
         }
         drawing = true;
         try {
-            MultiBufferSource.BufferSource source = DrawNow.now(buffers);
-            draw(source.getBuffer(Types.PAINT), pose.last().pose(), paint, 1.0F / paint.w(), 1.0F / paint.h());
-            source.endBatch(Types.PAINT);
+            draw(DrawNow.now(buffers), pose.last().pose(), paint, gui ? 0.04F : 0.0012F);
         } finally {
             drawing = false;
         }
     }
 
-    /** The painted pixels over a flat item (its front at z 8.5 / 16, its back at 7.5 / 16). */
-    static void draw(VertexConsumer vc, Matrix4f m, ModComponents.ShaderPaint paint, float pw, float ph) {
-        float front = 8.5F / 16.0F + 0.0012F, back = 7.5F / 16.0F - 0.0012F;
-        for (int y = 0; y < paint.h(); y++) {
-            int x = 0;
-            while (x < paint.w()) {
-                int s = paint.at(x, y);
-                if (s == 0) {
-                    x++;
-                    continue;
-                }
-                int end = x + 1;
-                while (end < paint.w() && paint.at(end, y) == s) {
-                    end++;
-                }
-                float x0 = x * pw, x1 = end * pw, y0 = 1.0F - (y + 1) * ph, y1 = 1.0F - y * ph;
-                float u0 = x / (float) paint.w(), u1 = end / (float) paint.w(), v0 = y / (float) paint.h(), v1 = (y + 1) / (float) paint.h();
-                for (float z : new float[] {front, back}) {
-                    vertex(vc, m, x0, y0, z, u0, v1, s, paint.w());
-                    vertex(vc, m, x1, y0, z, u1, v1, s, paint.w());
-                    vertex(vc, m, x1, y1, z, u1, v0, s, paint.w());
-                    vertex(vc, m, x0, y1, z, u0, v0, s, paint.w());
-                }
-                x = end;
+    /** The painted pixels over a flat item (its front at z 8.5 / 16, its back at 7.5 / 16), lifted off them by `lift`. */
+    static void draw(MultiBufferSource.BufferSource source, Matrix4f m, ModComponents.ShaderPaint paint, float lift) {
+        float pw = 1.0F / paint.w(), ph = 1.0F / paint.h();
+        float front = 8.5F / 16.0F + lift, back = 7.5F / 16.0F - lift;
+        boolean[] has = new boolean[256];
+        for (byte b : paint.pixels()) {
+            has[b & 255] = true;
+        }
+        for (int style = 1; style < 256; style++) {
+            if (!has[style] || style >= com.example.skyblocks.ShaderPaintStyles.count()) {
+                continue;
             }
+            RenderType type = type(style);
+            VertexConsumer vc = source.getBuffer(type);
+            for (int y = 0; y < paint.h(); y++) {
+                int x = 0;
+                while (x < paint.w()) {
+                    if (paint.at(x, y) != style) {
+                        x++;
+                        continue;
+                    }
+                    int end = x + 1;
+                    while (end < paint.w() && paint.at(end, y) == style) {
+                        end++;
+                    }
+                    float x0 = x * pw, x1 = end * pw, y0 = 1.0F - (y + 1) * ph, y1 = 1.0F - y * ph;
+                    float u0 = x / (float) paint.w(), u1 = end / (float) paint.w(), v0 = y / (float) paint.h(), v1 = (y + 1) / (float) paint.h();
+                    for (float z : new float[] {front, back}) {
+                        vertex(vc, m, x0, y0, z, u0, v1, style, paint.w());
+                        vertex(vc, m, x1, y0, z, u1, v1, style, paint.w());
+                        vertex(vc, m, x1, y1, z, u1, v0, style, paint.w());
+                        vertex(vc, m, x0, y1, z, u0, v0, style, paint.w());
+                    }
+                    x = end;
+                }
+            }
+            source.endBatch(type);
         }
     }
 

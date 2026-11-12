@@ -7,6 +7,7 @@ in vec2 uv;
 flat in int style;
 flat in float texels;
 
+uniform sampler2D Sampler0;
 uniform float GameTime;
 
 out vec4 fragColor;
@@ -210,7 +211,15 @@ vec3 paint(int s, vec2 p, float t) {
     return mix(vec3(0.1, 0.35, 0.7), vec3(0.6, 0.85, 1.0), streak) + vec3(foam);
 }
 
+// From here on, a real shader block's own shader, drawn live into a picture (client/ShaderCapture) - shown here.
+const int LIVE = 21;
+
 void main() {
+    if (style >= LIVE) {
+        vec4 live = texture(Sampler0, vec2(uv.x, 1.0 - uv.y));
+        fragColor = vec4(live.rgb * live.a + vec3(0.03, 0.02, 0.05) * (1.0 - live.a), 1.0);
+        return;
+    }
     float t = GameTime * 1200.0;
     float steps = texels * 4.0;
     vec2 p = (floor(uv * steps) + 0.5) / steps;

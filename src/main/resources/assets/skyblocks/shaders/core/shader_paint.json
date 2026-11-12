@@ -1,7 +1,7 @@
 {
     "vertex": "skyblocks:shader_paint",
     "fragment": "skyblocks:shader_paint",
-    "samplers": [],
+    "samplers": [{"name": "Sampler0"}],
     "uniforms": [
         {
             "name": "ModelViewMat",

@@ -50,6 +50,7 @@ public class InfusionAltarBlockEntity extends BlockEntity {
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
         saveAdditional(tag, registries);
+        tag.putBoolean("altar", true); // (never empty: an empty update is skipped, and a taken item would stay showing)
         return tag;
     }
 

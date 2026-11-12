@@ -258,10 +258,15 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
 
     /** As an item: every side, its default look. */
     static void drawItem(PoseStack poseStack, MultiBufferSource buffers) {
+        drawItem(poseStack, buffers, EffectBlockEntity.Settings.DEFAULT);
+    }
+
+    /** The block as an item, running these settings (an effect as a shader paint: ShaderCapture). */
+    static void drawItem(PoseStack poseStack, MultiBufferSource buffers, EffectBlockEntity.Settings settings) {
         if (shader == null) {
             return;
         }
-        current = EffectBlockEntity.Settings.DEFAULT;
+        current = settings;
         time = seconds(0.0F);
         extent[0] = extent[1] = extent[2] = 1.0F;
         MultiBufferSource.BufferSource source = DrawNow.now(buffers);
