@@ -78,7 +78,7 @@ final class OiiaCatRig {
 
         /** A turn about a joint: yaw (about y), then pitch (about x), degrees. */
         static Matrix4f turn(float[] at, float yaw, float pitch) {
-            return new Matrix4f().translation(at[0], at[1], at[2]).rotateY(yaw * org.joml.Math.PI / 180.0F).rotateX(pitch * org.joml.Math.PI / 180.0F)
+            return new Matrix4f().translation(at[0], at[1], at[2]).rotateY(yaw * net.minecraft.util.Mth.DEG_TO_RAD).rotateX(pitch * net.minecraft.util.Mth.DEG_TO_RAD)
                     .translate(-at[0], -at[1], -at[2]);
         }
     }
