@@ -300,9 +300,10 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
         bones.set(OiiaCatRig.HEAD, head);
         // the ears: up (or as the pose has them), and a quick flick now and then, one or the other
         float seed = (cat.getId() * 0.618F) % 1.0F;
-        float flickL = earFlick(age * 0.05F + seed), flickR = earFlick(age * 0.043F + seed + 0.37F);
-        bones.set(OiiaCatRig.EAR_L, new Matrix4f(head).mul(OiiaCatRig.Posed.turn(OiiaCatRig.EAR_L_AT, -flickL * 25.0F, a[EARS] + flickL * 10.0F)));
-        bones.set(OiiaCatRig.EAR_R, new Matrix4f(head).mul(OiiaCatRig.Posed.turn(OiiaCatRig.EAR_R_AT, flickR * 25.0F, a[EARS] + flickR * 10.0F)));
+        // (rarely: one every ten seconds or so, a soft one)
+        float flickL = earFlick(age * 0.0045F + seed), flickR = earFlick(age * 0.0039F + seed + 0.37F);
+        bones.set(OiiaCatRig.EAR_L, new Matrix4f(head).mul(OiiaCatRig.Posed.turn(OiiaCatRig.EAR_L_AT, -flickL * 7.0F, a[EARS] * 0.35F + flickL * 3.0F)));
+        bones.set(OiiaCatRig.EAR_R, new Matrix4f(head).mul(OiiaCatRig.Posed.turn(OiiaCatRig.EAR_R_AT, flickR * 7.0F, a[EARS] * 0.35F + flickR * 3.0F)));
         int overlay = net.minecraft.client.renderer.texture.OverlayTexture.pack(0, net.minecraft.client.renderer.texture.OverlayTexture.v(cat.hurtTime > 0 || cat.deathTime > 0));
         mesh.render(pose.last(), buffers, bones.matrices(), light, overlay);
         return true;
@@ -311,7 +312,7 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
     /** An ear flick: mostly nothing, now and then a quick twitch out and back (0 .. 1). */
     private static float earFlick(float t) {
         float f = t - (float) Math.floor(t);
-        return f < 0.06F ? Mth.sin(f / 0.06F * Mth.PI) : 0.0F;
+        return f < 0.025F ? Mth.sin(f / 0.025F * Mth.PI) : 0.0F;
     }
 
     @Override
