@@ -121,12 +121,17 @@ def sleeve(inside, centre, shrink=0.965):
     remap = {int(k): i for i, k in enumerate(used)}
     et = np.array([[remap[int(k)] for k in t] for t in tris], dtype=np.int64).reshape(-1, 3)
     c = np.array(centre)
-    ep = c + (P[used] - c) * shrink
+    f = np.array([shrink(q) for q in P[used]])[:, None] if callable(shrink) else shrink
+    ep = c + (P[used] - c) * f
     return ep, N[used], T[used], et
 
+def neck_depth(p):
+    return -((np.array([p[2], p[1]]) - NECK_C) @ NECK_N)
+
 def neck_plug():
-    # (the body's fur up to 4 units behind the neck line)
-    return sleeve(lambda p: -4.0 < (np.array([p[2], p[1]]) - NECK_C) @ NECK_N <= 0.5, (1.6, 22.45, 13.0))
+    # (the body's fur up to 3 units behind the neck line, narrowing the further back it goes, so as the head turns the
+    # far end of it stays inside the body rather than poking out of the back of the neck)
+    return sleeve(lambda p: -0.5 <= neck_depth(p) < 3.0, (1.6, 22.45, 13.0), lambda p: 0.96 - 0.07 * max(0.0, neck_depth(p)))
 
 def hip(name):
     # (the body's fur round the top of the leg, a little wider than it and up to 4 units above it)

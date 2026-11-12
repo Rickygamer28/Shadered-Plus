@@ -107,8 +107,8 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
         t[GAIT] = 1.0F;
         // its head turned to what it's looking at (as far as a neck goes), its tail held up and swaying gently
         float headYaw = Mth.wrapDegrees(Mth.rotLerp(partialTick, cat.yHeadRotO, cat.yHeadRot) - Mth.rotLerp(partialTick, cat.yBodyRotO, cat.yBodyRot));
-        t[HEAD_YAW] = Mth.clamp(headYaw, -24.0F, 24.0F);
-        t[HEAD_PITCH] = Mth.clamp(Mth.lerp(partialTick, cat.xRotO, cat.getXRot()) * 0.6F, -14.0F, 14.0F);
+        t[HEAD_YAW] = Mth.clamp(headYaw * 0.6F, -16.0F, 16.0F);
+        t[HEAD_PITCH] = Mth.clamp(Mth.lerp(partialTick, cat.xRotO, cat.getXRot()) * 0.5F, -10.0F, 10.0F);
         t[TAIL_LIFT] = -10.0F - 8.0F * speed;
         byte mood = cat.mood();
         if (mood == OiiaCatEntity.SCRATCHING) {
@@ -117,17 +117,17 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
             t[FL] = t[FR] = -55.0F;
             t[BL] = t[BR] = 42.0F;
             t[HEAD_YAW] = 0.0F;
-            t[HEAD_PITCH] = 18.0F;
+            t[HEAD_PITCH] = 10.0F;
             t[TAIL_LIFT] = 30.0F;
             t[GAIT] = 0.0F;
         } else if (mood == OiiaCatEntity.EATING) {
             // leaning in over the bowl, head down
-            t[PITCH] = 9.0F;
+            t[PITCH] = 14.0F;
             t[LIFT] = -1.0F;
-            t[FL] = t[FR] = -9.0F;
-            t[BL] = t[BR] = -9.0F;
+            t[FL] = t[FR] = -14.0F;
+            t[BL] = t[BR] = -14.0F;
             t[HEAD_YAW] = 0.0F;
-            t[HEAD_PITCH] = 24.0F;
+            t[HEAD_PITCH] = 12.0F;
             t[TAIL_LIFT] = 4.0F;
             t[GAIT] = 0.0F;
         } else if (cat.isInSittingPose() || mood == OiiaCatEntity.PERCHED) {
@@ -137,7 +137,7 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
             t[LIFT] = 2.5F;
             t[FL] = t[FR] = 20.0F;
             t[BL] = t[BR] = -38.0F;
-            t[HEAD_PITCH] += 14.0F;
+            t[HEAD_PITCH] += 8.0F;
             t[TAIL_LIFT] = 26.0F;
             t[TAIL_YAW] = 25.0F;
             t[GAIT] = 0.0F;
@@ -249,7 +249,7 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
                 // the head: turned to what it looks at; nodding with its steps; chewing at the bowl
                 float nod = Mth.sin(phase * 2.0F) * 2.5F * gait;
                 if (mood == OiiaCatEntity.EATING) {
-                    nod += Mth.sin(age * 0.9F) * 6.0F;
+                    nod += Mth.sin(age * 0.9F) * 4.0F;
                 }
                 m.translate(pv[0], pv[1], pv[2]).rotateY(a[HEAD_YAW] * Mth.DEG_TO_RAD).rotateX((a[HEAD_PITCH] + nod) * Mth.DEG_TO_RAD)
                         .translate(-pv[0], -pv[1], -pv[2]);
