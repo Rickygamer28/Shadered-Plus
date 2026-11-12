@@ -36,7 +36,8 @@ import org.joml.Vector3f;
  * The geode lamp's crystals - faceted, glowing from inside, their colour shifting with the angle you see them at, the odd
  * sparkle (shaders/core/geode_crystal) - and the spots of light they throw: wherever a ray from the crystals meets a wall
  * (worked out again now and then), a soft patch of rippling, refracted light in the crystal's colour, bigger and fainter
- * the further it lands (shaders/core/geode_spot, added onto the wall's colours).
+ * the further it lands (shaders/core/geode_spot, added onto the wall's colours) - and the room round it washed in
+ * the crystals' coloured light, fading with distance (every face it can see).
  */
 public class GeodeLampRenderer implements BlockEntityRenderer<SimpleRenderedBlockEntity> {
     static ShaderInstance crystalShader, spotShader;
@@ -61,6 +62,15 @@ public class GeodeLampRenderer implements BlockEntityRenderer<SimpleRenderedBloc
                         .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                         .setCullState(CULL)
                         .setWriteMaskState(COLOR_DEPTH_WRITE)
+                        .createCompositeState(false));
+        /** The lamp's coloured glow on the blocks round it: added onto their colours, fading with distance. */
+        static final RenderType GLOW = create("skyblocks_geode_glow", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 8192,
+                false, true, CompositeState.builder()
+                        .setShaderState(RENDERTYPE_LIGHTNING_SHADER)
+                        .setTransparencyState(LIGHTNING_TRANSPARENCY)
+                        .setCullState(NO_CULL)
+                        .setWriteMaskState(COLOR_WRITE)
+                        .setLayeringState(VIEW_OFFSET_Z_LAYERING)
                         .createCompositeState(false));
         static final RenderType SPOTS = create("skyblocks_geode_spots", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 4096,
                 false, true, CompositeState.builder()
@@ -100,6 +110,8 @@ public class GeodeLampRenderer implements BlockEntityRenderer<SimpleRenderedBloc
         long at = -1000;
         int crystal = -1;
         final List<Spot> list = new ArrayList<>();
+        /** The glow: each lit face's four corners (x y z, relative to the lamp) and their colours (ARGB, the alpha how strong). */
+        final List<float[]> glow = new ArrayList<>();
     }
 
     private static final Map<SimpleRenderedBlockEntity, Spots> SPOTS = new WeakHashMap<>();
@@ -132,6 +144,19 @@ public class GeodeLampRenderer implements BlockEntityRenderer<SimpleRenderedBloc
             cast(level, pos, crystal, spots);
             spots.at = now + Math.floorMod(pos.hashCode(), 20); // (lamps take turns)
             spots.crystal = crystal;
+        }
+        if (!spots.glow.isEmpty()) {
+            VertexConsumer vc = source.getBuffer(Types.GLOW);
+            PoseStack.Pose p = poseStack.last();
+            float flicker = 0.92F + 0.08F * Mth.sin((level.getGameTime() + partialTick) * 0.13F + pos.hashCode());
+            for (float[] f : spots.glow) {
+                for (int c = 0; c < 4; c++) {
+                    int argb = Float.floatToRawIntBits(f[12 + c]);
+                    int alpha = (int) (((argb >>> 24) & 255) * flicker);
+                    vc.addVertex(p, f[c * 3], f[c * 3 + 1], f[c * 3 + 2]).setColor((argb >> 16) & 255, (argb >> 8) & 255, argb & 255, alpha);
+                }
+            }
+            source.endBatch(Types.GLOW);
         }
         if (!spots.list.isEmpty()) {
             VertexConsumer vc = source.getBuffer(Types.SPOTS);
@@ -181,7 +206,85 @@ public class GeodeLampRenderer implements BlockEntityRenderer<SimpleRenderedBloc
     }
 
     /** Rays out from the crystals: where each meets a block, a spot. */
+    /** How far the coloured glow reaches (blocks), and how strong it is right by the lamp. */
+    private static final int GLOW_REACH = 6;
+    private static final float GLOW_STRENGTH = 0.55F;
+
+    /**
+     * The glow: every face of a block round the lamp that faces it and that it can see, lit in the crystals' colour,
+     * fading with distance (worked out at each corner, so it fades smoothly across the faces). Rainbow crystals light
+     * each way round a different colour.
+     */
+    private static void glow(Level level, BlockPos pos, int crystal, Spots spots) {
+        spots.glow.clear();
+        Vec3 lamp = Vec3.atLowerCornerOf(pos).add(0.5, 0.6, 0.5);
+        BlockPos.MutableBlockPos at = new BlockPos.MutableBlockPos(), next = new BlockPos.MutableBlockPos();
+        for (int dx = -GLOW_REACH; dx <= GLOW_REACH; dx++) {
+            for (int dy = -GLOW_REACH; dy <= GLOW_REACH; dy++) {
+                for (int dz = -GLOW_REACH; dz <= GLOW_REACH; dz++) {
+                    if (dx * dx + dy * dy + dz * dz > (GLOW_REACH + 1) * (GLOW_REACH + 1) || dx == 0 && dy == 0 && dz == 0) {
+                        continue;
+                    }
+                    at.set(pos.getX() + dx, pos.getY() + dy, pos.getZ() + dz);
+                    net.minecraft.world.level.block.state.BlockState st = level.getBlockState(at);
+                    if (st.isAir() || !st.isSolidRender(level, at)) {
+                        continue;
+                    }
+                    for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+                        next.setWithOffset(at, d);
+                        if (level.getBlockState(next).isSolidRender(level, next)) {
+                            continue;
+                        }
+                        // (the face's middle, and whether it faces the lamp, and the lamp can see it)
+                        Vec3 mid = Vec3.atCenterOf(at).add(d.getStepX() * 0.5, d.getStepY() * 0.5, d.getStepZ() * 0.5);
+                        Vec3 to = lamp.subtract(mid);
+                        if (to.x * d.getStepX() + to.y * d.getStepY() + to.z * d.getStepZ() <= 0.05) {
+                            continue;
+                        }
+                        BlockHitResult hit = level.clip(new ClipContext(lamp, mid.add(d.getStepX() * 0.02, d.getStepY() * 0.02, d.getStepZ() * 0.02),
+                                ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, CollisionContext.empty()));
+                        if (hit.getType() == HitResult.Type.BLOCK && !hit.getBlockPos().equals(at) && !hit.getBlockPos().equals(pos)) {
+                            continue;
+                        }
+                        spots.glow.add(face(at, d, pos, lamp, crystal));
+                    }
+                }
+            }
+        }
+    }
+
+    private static float[] face(BlockPos at, net.minecraft.core.Direction d, BlockPos lamp, Vec3 centre, int crystal) {
+        // the face's four corners, just off it
+        float[][] corners = new float[4][];
+        float o = 0.003F;
+        float x0 = at.getX(), y0 = at.getY(), z0 = at.getZ();
+        switch (d) {
+            case UP -> corners = new float[][] {{x0, y0 + 1 + o, z0}, {x0 + 1, y0 + 1 + o, z0}, {x0 + 1, y0 + 1 + o, z0 + 1}, {x0, y0 + 1 + o, z0 + 1}};
+            case DOWN -> corners = new float[][] {{x0, y0 - o, z0}, {x0, y0 - o, z0 + 1}, {x0 + 1, y0 - o, z0 + 1}, {x0 + 1, y0 - o, z0}};
+            case NORTH -> corners = new float[][] {{x0, y0, z0 - o}, {x0, y0 + 1, z0 - o}, {x0 + 1, y0 + 1, z0 - o}, {x0 + 1, y0, z0 - o}};
+            case SOUTH -> corners = new float[][] {{x0, y0, z0 + 1 + o}, {x0 + 1, y0, z0 + 1 + o}, {x0 + 1, y0 + 1, z0 + 1 + o}, {x0, y0 + 1, z0 + 1 + o}};
+            case WEST -> corners = new float[][] {{x0 - o, y0, z0}, {x0 - o, y0, z0 + 1}, {x0 - o, y0 + 1, z0 + 1}, {x0 - o, y0 + 1, z0}};
+            case EAST -> corners = new float[][] {{x0 + 1 + o, y0, z0}, {x0 + 1 + o, y0 + 1, z0}, {x0 + 1 + o, y0 + 1, z0 + 1}, {x0 + 1 + o, y0, z0 + 1}};
+        }
+        float[] f = new float[16];
+        for (int c = 0; c < 4; c++) {
+            float cx = corners[c][0], cy = corners[c][1], cz = corners[c][2];
+            double dist = Math.sqrt((cx - centre.x) * (cx - centre.x) + (cy - centre.y) * (cy - centre.y) + (cz - centre.z) * (cz - centre.z));
+            float fade = (float) Math.max(0.0, 1.0 - dist / (GLOW_REACH + 0.5));
+            // (the light's colour: the crystals', or for rainbow, by which way round the lamp it is)
+            int i = crystal >= COLOURS.length ? (int) Math.floor((Math.atan2(cz - centre.z, cx - centre.x) / (Math.PI * 2) + 0.5) * 12) : 0;
+            int col = crystal >= COLOURS.length ? Mth.hsvToRgb((i / 12.0F + 0.02F) % 1.0F, 0.75F, 1.0F) & 0xFFFFFF : COLOURS[crystal][0];
+            int alpha = Mth.clamp((int) (fade * fade * GLOW_STRENGTH * 255), 0, 255);
+            f[c * 3] = cx - lamp.getX();
+            f[c * 3 + 1] = cy - lamp.getY();
+            f[c * 3 + 2] = cz - lamp.getZ();
+            f[12 + c] = Float.intBitsToFloat(alpha << 24 | col);
+        }
+        return f;
+    }
+
     private static void cast(Level level, BlockPos pos, int crystal, Spots spots) {
+        glow(level, pos, crystal, spots);
         spots.list.clear();
         Vec3 from = Vec3.atLowerCornerOf(pos).add(0.5, 0.6, 0.5);
         float golden = Mth.PI * (3 - Mth.sqrt(5));
