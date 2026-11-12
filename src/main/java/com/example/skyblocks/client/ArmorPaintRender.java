@@ -306,6 +306,23 @@ public final class ArmorPaintRender {
         return c;
     }
 
+    /**
+     * How far past its edges a face's paint reaches (in s, t), to meet its neighbours': each face's paint is lifted
+     * off the armour along its own normal, so at the armour's edges two faces' paint would leave a sliver between them
+     * where the armour itself shows (a line along every edge). [s, t]
+     */
+    static float[] overhang(PoseStack.Pose pose, float[][] c, float nx, float ny, float nz, float lift) {
+        Vector3f d = pose.pose().transformDirection(nx * lift, ny * lift, nz * lift, new Vector3f());
+        float out = d.length() * 1.6F;
+        float ls = (float) Math.sqrt(sq(c[1][0] - c[0][0]) + sq(c[1][1] - c[0][1]) + sq(c[1][2] - c[0][2]));
+        float lt = (float) Math.sqrt(sq(c[2][0] - c[0][0]) + sq(c[2][1] - c[0][1]) + sq(c[2][2] - c[0][2]));
+        return new float[] {ls > 1.0E-6F ? out / ls : 0.0F, lt > 1.0E-6F ? out / lt : 0.0F};
+    }
+
+    private static float sq(float x) {
+        return x * x;
+    }
+
     /** Where (s, t: 0 .. 1 across, down) is on a face (its corners, from corners()). */
     static void at(float[][] c, float s, float t, float[] out) {
         for (int i = 0; i < 3; i++) {
@@ -332,6 +349,7 @@ public final class ArmorPaintRender {
             if (k == null) {
                 return;
             }
+            float[] over = overhang(pose, k, nx, ny, nz, SKY_LIFT);
             int tw = rect[2] - rect[0], th = rect[3] - rect[1];
             for (int y = rect[1]; y < rect[3]; y++) {
                 int x = rect[0];
@@ -346,6 +364,11 @@ public final class ArmorPaintRender {
                         end++;
                     }
                     float s0 = (x - rect[0]) / (float) tw, s1 = (end - rect[0]) / (float) tw, t0 = (y - rect[1]) / (float) th, t1 = (y + 1 - rect[1]) / (float) th;
+                    // (at the face's edges: a little past them, over the armour's edge)
+                    if (x == rect[0]) s0 -= over[0];
+                    if (end == rect[2]) s1 += over[0];
+                    if (y == rect[1]) t0 -= over[1];
+                    if (y + 1 == rect[3]) t1 += over[1];
                     at(k, s0, t0, a);
                     at(k, s1, t0, b);
                     at(k, s1, t1, c);
@@ -380,14 +403,21 @@ public final class ArmorPaintRender {
         RenderType type = RenderType.armorCutoutNoCull(texture);
         VertexConsumer vc = buffers.getBuffer(type);
         Vector3f n = new Vector3f();
+        int[] rect = new int[4];
+        float[] at = new float[3];
         Faces faces = (pose, p, uv, nx, ny, nz) -> {
-            Matrix4f m = pose.pose();
-            Matrix3f nm = pose.normal();
-            nm.transform(nx, ny, nz, n);
-            Vector3f t = new Vector3f();
+            float[][] c = corners(pose, p, uv, nx, ny, nz, COLOUR_LIFT, 1024, 1024, rect);
+            if (c == null) {
+                return;
+            }
+            // (stretched a little past its edges, as the skies are, so no sliver of the armour shows there)
+            float[] over = overhang(pose, c, nx, ny, nz, COLOUR_LIFT);
+            pose.normal().transform(nx, ny, nz, n);
+            float um = (uv[0] + uv[2] + uv[4] + uv[6]) * 0.25F, vm = (uv[1] + uv[3] + uv[5] + uv[7]) * 0.25F;
             for (int k = 0; k < 4; k++) {
-                m.transformPosition(p[k * 3] + nx * COLOUR_LIFT, p[k * 3 + 1] + ny * COLOUR_LIFT, p[k * 3 + 2] + nz * COLOUR_LIFT, t);
-                vc.addVertex(t.x, t.y, t.z).setColor(-1).setUv(uv[k * 2], uv[k * 2 + 1]).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light)
+                float s = uv[k * 2] > um ? 1.0F + over[0] : -over[0], t = uv[k * 2 + 1] > vm ? 1.0F + over[1] : -over[1];
+                at(c, s, t, at);
+                vc.addVertex(at[0], at[1], at[2]).setColor(-1).setUv(uv[k * 2], uv[k * 2 + 1]).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light)
                         .setNormal(n.x, n.y, n.z);
             }
         };
