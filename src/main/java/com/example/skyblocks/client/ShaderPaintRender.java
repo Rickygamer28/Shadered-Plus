@@ -26,9 +26,10 @@ import com.example.skyblocks.ShaderPaintStyles;
 import org.joml.Matrix4f;
 
 /**
- * Skies painted onto items (ModComponents.ShaderPaint): over each painted pixel of the item's flat model, front and
- * back, a little quad drawn as Shadered draws its sky blocks - that pixel's sky (SkyblockType: Shadered's and ours),
- * through its pass (SkyblockPass: normal, inverted, posterised, blueprint, game boy...). Drawn wherever the item is
+ * Skies painted onto items (ModComponents.ShaderPaint): over each painted pixel of the item's flat model, front, back
+ * and edges, that pixel's sky (SkyblockType: Shadered's and ours) - its picture, as its sky blocks show it, but fixed to
+ * the item (shaders/core/sky_paint), so it's the sky you picked whatever's behind - through its look (SkyblockPass:
+ * normal, inverted, posterised, blueprint, game boy...). Drawn wherever the item is
  * (mixin/ItemRendererPaintMixin: after the item's own model) - in hand, in the inventory, dropped, on the altar.
  */
 public final class ShaderPaintRender {
@@ -51,14 +52,84 @@ public final class ShaderPaintRender {
         if (sky >= skies.length || pass >= passes.length) {
             return null;
         }
-        try {
-            // (its sky's picture brought up to date first, all of it, as sky liquids and paintings do: a sky nothing else
-            // shows isn't drawn every frame, and its picture could be out of date - or another sky's)
-            SkyUsage.ensureFresh(com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(skies[sky]));
-            return ModRenderTypes.getSkyblockRenderType(skies[sky], passes[pass]);
-        } catch (RuntimeException e) {
+        if (shader == null) {
             return null;
         }
+        try {
+            // (its sky's picture brought up to date first, all of it, as sky liquids and paintings do: a sky nothing else
+            // shows isn't drawn every frame, and its picture could be out of date)
+            SkyUsage.ensureFresh(com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(skies[sky]));
+        } catch (RuntimeException ignored) {
+            // (drawn as it is)
+        }
+        if (TYPES[sky] == null) {
+            ResourceLocation picture = ResourceLocation.fromNamespaceAndPath(com.example.skyblocks.SkyBlocksMod.MOD_ID, "sky_paint/" + sky);
+            net.minecraft.client.Minecraft.getInstance().getTextureManager().register(picture, new Picture(skies[sky]));
+            TYPES[sky] = Types.of(sky, picture);
+        }
+        return TYPES[sky];
+    }
+
+    // ---- the skies, fixed to the item: shaders/core/sky_paint over each sky's picture ----
+
+    static net.minecraft.client.renderer.ShaderInstance shader;
+    private static final RenderType[] TYPES = new RenderType[256];
+    private static java.lang.reflect.Method pictureOf;
+
+    @net.neoforged.fml.common.EventBusSubscriber(modid = com.example.skyblocks.SkyBlocksMod.MOD_ID, bus = net.neoforged.fml.common.EventBusSubscriber.Bus.MOD,
+            value = net.neoforged.api.distmarker.Dist.CLIENT)
+    public static final class Shaders {
+        private Shaders() {}
+
+        @net.neoforged.bus.api.SubscribeEvent
+        public static void registerSkyPaint(net.neoforged.neoforge.client.event.RegisterShadersEvent event) {
+            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(com.example.skyblocks.SkyBlocksMod.MOD_ID, "sky_paint"),
+                    com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX_COLOR, s -> shader = s);
+        }
+    }
+
+    abstract static class Types extends RenderType {
+        static RenderType of(int sky, ResourceLocation picture) {
+            return create("skyblocks_sky_paint_" + sky, com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX_COLOR,
+                    com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 2048, false, false, CompositeState.builder()
+                            .setShaderState(new ShaderStateShard(() -> shader))
+                            .setTextureState(new TextureStateShard(picture, false, false))
+                            .setCullState(NO_CULL)
+                            .setLayeringState(VIEW_OFFSET_Z_LAYERING)
+                            .createCompositeState(false));
+        }
+
+        private Types() {
+            super("", com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION, com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 0, false, false, () -> {}, () -> {});
+        }
+    }
+
+    /** A sky's picture as a texture: Shadered's (or ours) for that sky, as its sky blocks use it. */
+    private static final class Picture extends net.minecraft.client.renderer.texture.AbstractTexture {
+        private final SkyblockType sky;
+
+        Picture(SkyblockType sky) {
+            this.sky = sky;
+        }
+
+        @Override
+        public int getId() {
+            try {
+                if (pictureOf == null) {
+                    pictureOf = ModRenderTypes.class.getDeclaredMethod("getSkyboxTextureId", SkyblockType.class);
+                    pictureOf.setAccessible(true);
+                }
+                return (int) pictureOf.invoke(null, sky);
+            } catch (ReflectiveOperationException | RuntimeException e) {
+                return 0;
+            }
+        }
+
+        @Override
+        public void load(net.minecraft.server.packs.resources.ResourceManager manager) {}
+
+        @Override
+        public void releaseId() {}
     }
 
     /** A style's name: its sky (and its pass, unless it's the plain one). */
@@ -278,8 +349,8 @@ public final class ShaderPaintRender {
     }
 
     private static void vertex(VertexConsumer vc, Matrix4f m, float x, float y, float z, float u, float v, int style, int w) {
-        // (the skies' render types take an entity's vertex: the sky itself is worked out from where it is on screen)
-        vc.addVertex(m, x, y, z).setColor(-1).setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0x00F000F0).setNormal(0, 0, 1);
+        // (the look in red, the texture's width in green: shaders/core/sky_paint)
+        vc.addVertex(m, x, y, z).setUv(u, v).setColor(ShaderPaintStyles.pass(style), Math.min(255, w), 0, 255);
     }
 
     /** A flat square of one style (the editor's swatches and canvas): x, y .. x + size, y + size on screen. */
