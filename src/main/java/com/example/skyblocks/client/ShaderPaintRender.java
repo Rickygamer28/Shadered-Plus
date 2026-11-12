@@ -332,17 +332,21 @@ public final class ShaderPaintRender {
                     }
                     float x0 = x * pw - lift, x1 = (x + 1) * pw + lift, y0 = 1.0F - (y + 1) * ph - lift, y1 = 1.0F - y * ph + lift;
                     float u0 = x / (float) paint.w(), u1 = (x + 1) / (float) paint.w(), v0 = y / (float) paint.h(), v1 = (y + 1) / (float) paint.h();
+                    // (each side carries on the sky at the front's edge, across the item's thickness - as the game's
+                    // own item edges stretch their edge pixels: a whole pixel of sky squeezed into a sliver came out
+                    // as one blurred colour, a line)
+                    float in = 0.25F / paint.w(), inV = 0.25F / paint.h();
                     if (!solid.test(x - 1, y)) {
-                        side(vc, m, x0, y0, zb, x0, y0, zf, x0, y1, zf, x0, y1, zb, u0, v0, u1, v1, style, paint.w());
+                        side(vc, m, x0, y0, zb, x0, y0, zf, x0, y1, zf, x0, y1, zb, u0 + in, v0, u0 + in, v1, style, paint.w());
                     }
                     if (!solid.test(x + 1, y)) {
-                        side(vc, m, x1, y0, zb, x1, y0, zf, x1, y1, zf, x1, y1, zb, u0, v0, u1, v1, style, paint.w());
+                        side(vc, m, x1, y0, zb, x1, y0, zf, x1, y1, zf, x1, y1, zb, u1 - in, v0, u1 - in, v1, style, paint.w());
                     }
                     if (!solid.test(x, y + 1)) {
-                        side(vc, m, x0, y0, zb, x1, y0, zb, x1, y0, zf, x0, y0, zf, u0, v0, u1, v1, style, paint.w());
+                        side(vc, m, x0, y0, zb, x1, y0, zb, x1, y0, zf, x0, y0, zf, u0, v1 - inV, u1, v1 - inV, style, paint.w());
                     }
                     if (!solid.test(x, y - 1)) {
-                        side(vc, m, x0, y1, zb, x1, y1, zb, x1, y1, zf, x0, y1, zf, u0, v0, u1, v1, style, paint.w());
+                        side(vc, m, x0, y1, zb, x1, y1, zb, x1, y1, zf, x0, y1, zf, u0, v0 + inV, u1, v0 + inV, style, paint.w());
                     }
                 }
             }

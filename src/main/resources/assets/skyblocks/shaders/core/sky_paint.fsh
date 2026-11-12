@@ -19,8 +19,12 @@ vec2 place(vec2 q) {
     return vec2(0.5 + c.x / aspect, 0.5 - c.y);
 }
 
+// how blurred the picture's sampled: by how fast it changes across the face the least steep way (a face seen almost
+// edge on - an item's side, armour's edge - otherwise gets the picture's tiniest copy: one flat colour, a line)
+float lod = 0.0;
+
 vec3 sky(vec2 q) {
-    return texture(Sampler0, place(q)).rgb;
+    return textureLod(Sampler0, place(q), lod).rgb;
 }
 
 float luma(vec3 c) {
@@ -28,6 +32,10 @@ float luma(vec3 c) {
 }
 
 void main() {
+    vec2 size = vec2(textureSize(Sampler0, 0));
+    vec2 p = place(uv);
+    vec2 gx = dFdx(p) * size, gy = dFdy(p) * size;
+    lod = max(0.0, 0.5 * log2(max(min(dot(gx, gx), dot(gy, gy)), 1.0e-8)));
     vec3 c = sky(uv);
     if (look == 1) {
         c = 1.0 - c;
