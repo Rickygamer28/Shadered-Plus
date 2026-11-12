@@ -43,7 +43,7 @@ public final class CatToyItems {
                 YarnBallEntity ball = new YarnBallEntity(ModEntities.YARN_BALL.get(), level);
                 Vec3 look = player.getLookAngle();
                 ball.setPos(player.getX() + look.x * 0.4, player.getEyeY() - 0.2, player.getZ() + look.z * 0.4);
-                ball.setDeltaMovement(look.scale(0.65).add(player.getDeltaMovement().multiply(1, 0, 1)).add(0, 0.12, 0));
+                ball.setDeltaMovement(look.scale(0.55).add(player.getDeltaMovement().multiply(1, 0, 1)).add(0, 0.04, 0));
                 level.addFreshEntity(ball);
             }
             player.getCooldowns().addCooldown(this, 10);

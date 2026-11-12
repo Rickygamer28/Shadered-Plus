@@ -18,7 +18,15 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -31,9 +39,11 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A wall block with a little swinging door in it that only cats fit through: solid to everyone else, an OIIA cat
- * companion walks right through (and finds its way through it), the flap swinging as it goes.
+ * companion walks right through (and finds its way through it), the flap swinging as it goes. Right-click it with a
+ * block to build it of that block (so it matches the wall: client/CatFlapModel).
  */
-public class CatFlapBlock extends HorizontalDirectionalBlock {
+public class CatFlapBlock extends BaseEntityBlock {
+    public static final net.minecraft.world.level.block.state.properties.DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
     public static final MapCodec<CatFlapBlock> CODEC = simpleCodec(CatFlapBlock::new);
     public static final BooleanProperty OPEN = BlockStateProperties.OPEN;
 
@@ -43,8 +53,43 @@ public class CatFlapBlock extends HorizontalDirectionalBlock {
     }
 
     @Override
-    protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
+    protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
+    }
+
+    @Override
+    protected RenderShape getRenderShape(BlockState state) {
+        return RenderShape.MODEL;
+    }
+
+    @Nullable
+    @Override
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new CatFlapBlockEntity(pos, state);
+    }
+
+    /** A block that can be what the flap's built of: a plain full cube. */
+    static boolean material(BlockState state, BlockGetter level, BlockPos pos) {
+        return !(state.getBlock() instanceof net.minecraft.world.level.block.EntityBlock) && state.getRenderShape() == RenderShape.MODEL
+                && Block.isShapeFullBlock(state.getCollisionShape(level, pos));
+    }
+
+    @Override
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand,
+                                              BlockHitResult hit) {
+        if (stack.getItem() instanceof BlockItem bi && !(bi.getBlock() instanceof CatFlapBlock)
+                && level.getBlockEntity(pos) instanceof CatFlapBlockEntity flap) {
+            BlockState look = bi.getBlock().defaultBlockState();
+            if (!material(look, level, pos)) {
+                return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            }
+            if (!level.isClientSide && look != flap.material()) {
+                flap.setMaterial(look);
+                level.playSound(null, pos, look.getSoundType().getPlaceSound(), SoundSource.BLOCKS, 0.8F, 1.0F);
+            }
+            return ItemInteractionResult.sidedSuccess(level.isClientSide);
+        }
+        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
     @Override
@@ -89,5 +134,6 @@ public class CatFlapBlock extends HorizontalDirectionalBlock {
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.skyblocks.cat_flap").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("tooltip.skyblocks.cat_flap.material").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

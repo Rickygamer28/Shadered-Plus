@@ -52,14 +52,14 @@ public class YarnBallEntity extends Entity {
                     Math.abs(before.z) > 1.0E-3 && Math.abs(getZ() - zo) < Math.abs(before.z) * 0.5 ? -before.z * 0.5 : now.z);
         }
         if (verticalCollision && before.y < 0) {
-            double up = -before.y * 0.35;
-            now = new Vec3(now.x * 0.85, up > 0.08 ? up : 0, now.z * 0.85);
-            if (up > 0.08) {
+            double up = -before.y * 0.15;
+            now = new Vec3(now.x * 0.75, up > 0.12 ? up : 0, now.z * 0.75);
+            if (up > 0.12) {
                 playSound(SoundEvents.WOOL_STEP, 0.3F, 1.5F);
             }
         }
         if (onGround()) {
-            now = new Vec3(now.x * 0.9, now.y, now.z * 0.9);
+            now = new Vec3(now.x * 0.86, now.y, now.z * 0.86);
         }
         setDeltaMovement(now.scale(0.98));
         if (getY() < level().getMinBuildHeight() - 32) {

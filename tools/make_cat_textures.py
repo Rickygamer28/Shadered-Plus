@@ -98,25 +98,7 @@ save(tex(board(False)), "block/cardboard_box.png")
 save(tex(board(True)), "block/cardboard_box_inside.png")
 
 
-# ---------- cat flap: an oak-like panel with a framed little door at the bottom (open: a dark hole) ----------
-def flap_face(open_):
-    def fn(x, y):
-        plank = (y // 4) % 2
-        c = [b * (0.92 + 0.08 * plank + rnd.uniform(-0.04, 0.04)) for b in (162, 130, 78)]
-        if y % 4 == 3:
-            c = [ci * 0.8 for ci in c]
-        if 3 <= x <= 12 and 7 <= y <= 15:
-            if x in (3, 12) or y == 7:
-                return (70, 70, 76)  # (the flap's frame)
-            if open_:
-                return (24, 20, 16)
-            return [b * (1 + rnd.uniform(-0.03, 0.03)) for b in (196, 196, 200)] if y != 8 else (150, 150, 156)
-        return c
-    return fn
-
-
-save(tex(flap_face(False)), "block/cat_flap.png")
-save(tex(flap_face(True)), "block/cat_flap_open.png")
+# ---------- cat flap: its little door (the flap itself is built of whatever block it was given)
 save(tex(lambda x, y: [b * (1 + rnd.uniform(-0.03, 0.03)) for b in (196, 196, 200)] if y != 0 else (150, 150, 156)), "block/cat_flap_door.png")
 
 # ---------- yarn ball: wound strands on the ball itself; the laser's soft red dot ----------

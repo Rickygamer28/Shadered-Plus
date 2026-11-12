@@ -756,6 +756,7 @@ public class OiiaCatEntity extends TamableAnimal {
     final class ScratchGoal extends Goal {
         private BlockPos post, spot;
         private int scratched, length;
+        private float scratchYaw;
 
         ScratchGoal() {
             setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK, Flag.JUMP));
@@ -788,25 +789,31 @@ public class OiiaCatEntity extends TamableAnimal {
         @Override
         public void tick() {
             Vec3 c = centre(post);
-            getLookControl().setLookAt(c.x, c.y + 0.6, c.z);
+            if (mood() != SCRATCHING) {
+                getLookControl().setLookAt(c.x, c.y + 0.6, c.z);
+            }
             if (mood() != SCRATCHING) {
                 if (!near(centre(spot), 0.6)) {
                     walkTo(centre(spot), 1.0, 20);
                     return;
                 }
                 getNavigation().stop();
+                // (a step up close to the post, facing it - then it stays put)
+                Vec3 to = position().subtract(c).multiply(1, 0, 1);
+                if (to.lengthSqr() > 1.0E-4) {
+                    Vec3 at = c.add(to.normalize().scale(0.62));
+                    if (level().noCollision(OiiaCatEntity.this, getBoundingBox().move(at.x - getX(), 0, at.z - getZ()))) {
+                        hop(new Vec3(at.x, getY(), at.z));
+                    }
+                }
+                scratchYaw = (float) (Mth.atan2(c.z - getZ(), c.x - getX()) * Mth.RAD_TO_DEG) - 90.0F;
                 setMood(SCRATCHING);
             }
-            // (up close to the post, facing it)
-            Vec3 to = position().subtract(c).multiply(1, 0, 1);
-            if (to.lengthSqr() > 1.0E-4) {
-                Vec3 at = c.add(to.normalize().scale(0.62));
-                getMoveControl().setWantedPosition(at.x, getY(), at.z, 0.4);
-                float yaw = (float) (Mth.atan2(c.z - getZ(), c.x - getX()) * Mth.RAD_TO_DEG) - 90.0F;
-                setYRot(yaw);
-                yBodyRot = yaw;
-                yHeadRot = yaw;
-            }
+            getNavigation().stop();
+            setDeltaMovement(0, getDeltaMovement().y, 0);
+            setYRot(scratchYaw);
+            yBodyRot = scratchYaw;
+            yHeadRot = scratchYaw;
             scratched++;
             if (scratched % 8 == 0) {
                 playSound(SoundEvents.WOOL_HIT, 0.5F, 0.8F + random.nextFloat() * 0.4F);
@@ -1006,7 +1013,7 @@ public class OiiaCatEntity extends TamableAnimal {
                 Vec3 away = ball.position().subtract(position()).multiply(1, 0, 1);
                 away = away.lengthSqr() < 1.0E-4 ? new Vec3(random.nextDouble() - 0.5, 0, random.nextDouble() - 0.5) : away.normalize();
                 double side = (random.nextDouble() - 0.5) * 0.8, power = 0.22 + random.nextDouble() * 0.2;
-                ball.bat((away.x - away.z * side) * power, 0.08 + random.nextDouble() * 0.1, (away.z + away.x * side) * power);
+                ball.bat((away.x - away.z * side) * power, 0.02 + random.nextDouble() * 0.04, (away.z + away.x * side) * power);
                 batWait = 12 + random.nextInt(20);
                 if (random.nextInt(3) == 0) {
                     getJumpControl().jump();

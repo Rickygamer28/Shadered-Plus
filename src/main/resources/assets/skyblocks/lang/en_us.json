@@ -753,7 +753,7 @@
   "guide.skyblocks.cardboard_box": "Just a box. Your cat will love it more than anything you craft for it.",
   "block.skyblocks.cat_flap": "Cat Flap",
   "tooltip.skyblocks.cat_flap": "Build it into a wall: solid to everyone else, your cat walks right through it",
-  "guide.skyblocks.cat_flap": "A wall block with a little door only cats fit through, so your cat can come and go.",
+  "guide.skyblocks.cat_flap": "A wall block with a little door only cats fit through, so your cat can come and go. Right-click it with any full block (stone bricks, planks, glass...) to make it out of that block, so it matches your wall.",
   "item.skyblocks.yarn_ball": "Ball of Yarn",
   "tooltip.skyblocks.yarn_ball": "Right-click to throw it: a cat chases it and bats it about. Right-click it to pick it up",
   "guide.skyblocks.yarn_ball": "Throw it and watch your cat chase it about.",
@@ -825,5 +825,6 @@
   "screen.skyblocks.shader_paint.apply": "Infuse",
   "screen.skyblocks.shader_paint.shaders": "Shaders",
   "screen.skyblocks.shader_paint.cost": "Infusing costs an amethyst shard",
-  "message.skyblocks.oiia_cat.wander": "Wandering about here"
+  "message.skyblocks.oiia_cat.wander": "Wandering about here",
+  "tooltip.skyblocks.cat_flap.material": "Right-click it with a block to build it of that block, to match your wall"
 }

@@ -399,6 +399,31 @@ public final class ClientSetup {
         }
     }
 
+    /** The cat flap's model is built of the block it was given (client/CatFlapModel). */
+    @SubscribeEvent
+    public static void catFlapModel(net.neoforged.neoforge.client.event.ModelEvent.ModifyBakingResult event) {
+        var models = event.getModels();
+        for (net.minecraft.world.level.block.state.BlockState state : com.example.skyblocks.ModBlocks.CAT_FLAP.get().getStateDefinition().getPossibleStates()) {
+            var key = net.minecraft.client.renderer.block.BlockModelShaper.stateToModelLocation(state);
+            net.minecraft.client.resources.model.BakedModel m = models.get(key);
+            if (m != null) {
+                models.put(key, new CatFlapModel(m));
+            }
+        }
+    }
+
+    /** The cat flap's faces in its block's own tint (grass, leaves...). */
+    @SubscribeEvent
+    public static void catFlapColours(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Block event) {
+        event.register((state, level, pos, tint) -> {
+            if (tint < CatFlapModel.TINT || level == null || pos == null || !(level.getBlockEntity(pos) instanceof com.example.skyblocks.CatFlapBlockEntity flap)
+                    || flap.material() == null) {
+                return -1;
+            }
+            return event.getBlockColors().getColor(flap.material(), level, pos, tint - CatFlapModel.TINT);
+        }, com.example.skyblocks.ModBlocks.CAT_FLAP.get());
+    }
+
     /** The water caustics block's model also draws the block put under its water (client/WaterCausticsModel). */
     @SubscribeEvent
     public static void causticsModel(net.neoforged.neoforge.client.event.ModelEvent.ModifyBakingResult event) {
