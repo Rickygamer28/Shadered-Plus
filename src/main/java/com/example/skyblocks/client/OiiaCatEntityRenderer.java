@@ -153,19 +153,32 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
             t[EARS] = asleep ? 18.0F : 0.0F;
             t[BREATH] = asleep ? 1.6F : 0.6F;
             t[GAIT] = 0.0F;
-        } else if (cat.spinning() || cat.isInSittingPose() || mood == OiiaCatEntity.PERCHED) {
-            // sat down: rump down on the ground (its hips tipped down), front legs straight, back legs tucked, tail curled round
-            t[SIT] = -6.0F;
-            t[HIPS] = -40.0F;
-            t[LIFT] = -0.5F;
-            t[FL] = t[FR] = 6.0F;
-            t[BL] = t[BR] = -12.0F;
-            t[PAW_BL] = t[PAW_BR] = 40.0F;
-            t[HEAD_PITCH] += 6.0F;
-            t[TAIL_YAW] = 50.0F;
-            t[TAIL_CURL] = 35.0F;
-            t[TAIL_LIFT] = 30.0F;
+        } else if (mood == OiiaCatEntity.GREETING) {
+            // nose to nose with another cat: leaning in, neck stretched, ears forward, tail straight up (hello)
+            t[PITCH] = 5.0F;
+            t[HEAD_PITCH] = 2.0F;
+            t[FL] = t[FR] = -4.0F;
+            t[TAIL_LIFT] = -42.0F;
+            t[TAIL_CURL] = 22.0F;
+            t[EARS] = -8.0F;
             t[GAIT] = 0.0F;
+        } else if (mood == OiiaCatEntity.GROOMING) {
+            // sat by the other cat, leaning over to it, licking its head in long strokes
+            sit(t);
+            t[PITCH] = 7.0F;
+            t[HEAD_PITCH] = 22.0F + 10.0F * Mth.sin(age * 0.45F);
+            t[EARS] = 6.0F;
+            t[BREATH] = 0.5F;
+        } else if (mood == OiiaCatEntity.GROOMED) {
+            // sat, being groomed: chin up into it, ears back and relaxed, a slow purr
+            sit(t);
+            t[HEAD_PITCH] = -12.0F;
+            t[ROLL] = 3.0F;
+            t[EARS] = 20.0F;
+            t[BREATH] = 1.0F;
+        } else if (cat.spinning() || cat.isInSittingPose() || mood == OiiaCatEntity.PERCHED) {
+            sit(t);
+            t[HEAD_PITCH] += 6.0F;
         } else if (mood == OiiaCatEntity.PLAYING) {
             if (air) {
                 // a pounce: stretched out, front paws reaching, back legs pushing off
@@ -191,6 +204,20 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
             }
         }
         return t;
+    }
+
+    /** Sat down: rump down on the ground (its hips tipped down), front legs straight, back legs tucked, tail curled round. */
+    private static void sit(float[] t) {
+        t[SIT] = -6.0F;
+        t[HIPS] = -40.0F;
+        t[LIFT] = -0.5F;
+        t[FL] = t[FR] = 6.0F;
+        t[BL] = t[BR] = -12.0F;
+        t[PAW_BL] = t[PAW_BR] = 40.0F;
+        t[TAIL_YAW] = 50.0F;
+        t[TAIL_CURL] = 35.0F;
+        t[TAIL_LIFT] = 30.0F;
+        t[GAIT] = 0.0F;
     }
 
     /**

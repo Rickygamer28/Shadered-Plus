@@ -161,6 +161,7 @@ public final class ModItems {
     // ---- the cat companion's things ----
     public static final DeferredItem<BlockItem> INFUSION_ALTAR = ITEMS.registerSimpleBlockItem("infusion_altar", ModBlocks.INFUSION_ALTAR);
     public static final DeferredItem<BlockItem> GEODE_LAMP = ITEMS.registerSimpleBlockItem("geode_lamp", ModBlocks.GEODE_LAMP);
+    public static final DeferredItem<BlockItem> SKY_LANTERN = ITEMS.registerSimpleBlockItem("sky_lantern", ModBlocks.SKY_LANTERN);
     public static final DeferredItem<BlockItem> CAT_BED = ITEMS.registerSimpleBlockItem("cat_bed", ModBlocks.CAT_BED);
     public static final DeferredItem<BlockItem> SCRATCHING_POST = ITEMS.registerSimpleBlockItem("scratching_post", ModBlocks.SCRATCHING_POST);
     public static final DeferredItem<BlockItem> CAT_TREE = ITEMS.registerSimpleBlockItem("cat_tree", ModBlocks.CAT_TREE);

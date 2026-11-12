@@ -27,6 +27,16 @@ public final class RenderTest {
     static final boolean ON = System.getenv("SKYBLOCKS_RENDER_TEST") != null;
     private static final String TAG = System.getenv().getOrDefault("SKYBLOCKS_RENDER_TEST", "x");
     private static int stage = 0;
+    /** The first spot to shoot (SKYBLOCKS_RENDER_FROM: to shoot just the newest; the shots keep their numbers). */
+    private static final int FROM = Math.max(0, parseInt(System.getenv("SKYBLOCKS_RENDER_FROM")));
+
+    private static int parseInt(String s) {
+        try {
+            return s == null ? 0 : Integer.parseInt(s.trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
     private static int ticks = 0;
 
     private RenderTest() {}
@@ -166,6 +176,28 @@ public final class RenderTest {
             "setblock 410 -60 0 skyblocks:infusion_altar{item:{id:\"minecraft:diamond_sword\",count:1,components:{\"skyblocks:shader_paint\":{w:16,h:16,pixels:[B;0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,21b,21b,21b,21b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,21b,21b,21b,21b,21b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,21b,21b,21b,21b,21b,21b,0b,0b,0b,0b,0b,0b,0b,0b,0b,21b,21b,21b,21b,21b,21b,21b,0b,0b,0b,0b,0b,0b,0b,0b,21b,21b,21b,21b,21b,21b,21b,0b,0b,0b,0b,0b,0b,0b,0b,21b,21b,21b,21b,21b,21b,21b,0b,0b,0b,0b,0b,0b,0b,0b,21b,21b,21b,21b,21b,21b,21b,0b,0b,0b,0b,0b,0b,0b,0b,21b,21b,21b,21b,21b,21b,21b,0b,0b,0b,0b,0b,0b,0b,0b,21b,21b,21b,21b,21b,21b,21b,0b,0b,0b,0b,0b,0b,0b,0b,21b,21b,21b,21b,21b,21b,21b,0b,0b,0b,0b,0b,0b,0b,0b,42b,42b,42b,42b,42b,42b,42b,0b,0b,0b,0b,0b,0b,0b,0b,42b,42b,42b,42b,42b,42b,42b,0b,0b,0b,0b,0b,0b,0b,0b,42b,42b,42b,42b,42b,42b,42b,0b,0b,0b,0b,0b,0b,0b,0b,0b,42b,42b,42b,42b,42b,42b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,42b,42b,42b,42b,42b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,42b,42b,42b,42b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b]}}}}",
             "setblock 413 -60 0 skyblocks:infusion_altar{item:{id:\"minecraft:diamond_sword\",count:1,components:{\"skyblocks:shader_paint\":{w:16,h:16,pixels:[B;0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,41b,41b,41b,41b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,41b,41b,41b,41b,41b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,41b,41b,41b,41b,41b,41b,0b,0b,0b,0b,0b,0b,0b,0b,0b,41b,41b,41b,41b,41b,41b,41b,0b,0b,0b,0b,0b,0b,0b,0b,41b,41b,41b,41b,41b,41b,41b,0b,0b,0b,0b,0b,0b,0b,0b,41b,41b,41b,41b,41b,41b,41b,0b,0b,0b,0b,0b,0b,0b,0b,41b,41b,41b,41b,41b,41b,41b,0b,0b,0b,0b,0b,0b,0b,0b,41b,41b,41b,41b,41b,41b,41b,0b,0b,0b,0b,0b,0b,0b,0b,41b,41b,41b,41b,41b,41b,41b,0b,0b,0b,0b,0b,0b,0b,0b,41b,41b,41b,41b,41b,41b,41b,0b,0b,0b,0b,0b,0b,0b,0b,39b,39b,39b,39b,39b,39b,39b,0b,0b,0b,0b,0b,0b,0b,0b,39b,39b,39b,39b,39b,39b,39b,0b,0b,0b,0b,0b,0b,0b,0b,39b,39b,39b,39b,39b,39b,39b,0b,0b,0b,0b,0b,0b,0b,0b,0b,39b,39b,39b,39b,39b,39b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,39b,39b,39b,39b,39b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,39b,39b,39b,39b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b]}}}}",
             "summon item 405.5 -60 2 {Item:{id:\"minecraft:diamond_sword\",count:1,components:{\"skyblocks:shader_paint\":{w:16,h:16,pixels:[B;0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,1b,1b,1b,1b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,1b,1b,1b,1b,1b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,1b,1b,1b,1b,1b,1b,0b,0b,0b,0b,0b,0b,0b,0b,0b,1b,1b,1b,1b,1b,1b,1b,0b,0b,0b,0b,0b,0b,0b,0b,1b,1b,1b,1b,1b,1b,1b,0b,0b,0b,0b,0b,0b,0b,0b,1b,1b,1b,1b,1b,1b,1b,0b,0b,0b,0b,0b,0b,0b,0b,1b,1b,1b,1b,1b,1b,1b,0b,0b,0b,0b,0b,0b,0b,0b,1b,1b,1b,1b,1b,1b,1b,0b,0b,0b,0b,0b,0b,0b,0b,1b,1b,1b,1b,1b,1b,1b,0b,0b,0b,0b,0b,0b,0b,0b,1b,1b,1b,1b,1b,1b,1b,0b,0b,0b,0b,0b,0b,0b,0b,9b,9b,9b,9b,9b,9b,9b,0b,0b,0b,0b,0b,0b,0b,0b,9b,9b,9b,9b,9b,9b,9b,0b,0b,0b,0b,0b,0b,0b,0b,9b,9b,9b,9b,9b,9b,9b,0b,0b,0b,0b,0b,0b,0b,0b,0b,9b,9b,9b,9b,9b,9b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,9b,9b,9b,9b,9b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,9b,9b,9b,9b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b]}}},PickupDelay:32767s,Age:-32768s}",
+            // armour painted with skies, worn by armour stands; an altar with a chestplate (its editor opened as worn below)
+            armourStandA(), armourStandB(), armourAltar(),
+            // the cat things, remodelled: a bed, posts (new, worn, frayed), a tree, bowls (full, a little), a box, flaps
+            "setblock 425 -60 0 skyblocks:cat_bed[color=purple,facing=south]", "setblock 427 -60 0 skyblocks:scratching_post[wear=0]",
+            "setblock 428 -60 0 skyblocks:scratching_post[wear=1]", "setblock 429 -60 0 skyblocks:scratching_post[wear=2]",
+            "setblock 431 -60 0 skyblocks:cat_tree[facing=south,half=lower]", "setblock 431 -59 0 skyblocks:cat_tree[facing=south,half=upper]",
+            "setblock 433 -60 0 skyblocks:cat_bowl[food=4]", "setblock 434 -60 0 skyblocks:cat_bowl[food=1,color=lime]", "setblock 436 -60 0 skyblocks:cardboard_box",
+            "fill 438 -60 -1 440 -59 -1 minecraft:stone_bricks", "setblock 438 -60 -1 skyblocks:cat_flap[facing=south,open=true]{material:{Name:\"minecraft:stone_bricks\"}}",
+            "setblock 440 -60 -1 skyblocks:cat_flap[facing=south]",
+            // two cats together: one grooming the other, two touching noses, two asleep in one bed
+            "summon skyblocks:oiia_cat 443.1 -60 1.5 {NoAI:1b,Owner:[I;1,2,3,4],Mood:7b,CollarColor:3b,Rotation:[-90f,0f]}",
+            "summon skyblocks:oiia_cat 443.9 -60 1.5 {NoAI:1b,Owner:[I;1,2,3,4],Mood:8b,CollarColor:6b,Rotation:[90f,0f]}",
+            "summon skyblocks:oiia_cat 446.1 -60 1.5 {NoAI:1b,Owner:[I;1,2,3,4],Mood:9b,CollarColor:5b,Rotation:[-90f,0f]}",
+            "summon skyblocks:oiia_cat 446.85 -60 1.5 {NoAI:1b,Owner:[I;1,2,3,4],Mood:9b,CollarColor:14b,Rotation:[90f,0f]}",
+            "setblock 449 -60 1 skyblocks:cat_bed[color=pink,facing=south]",
+            "summon skyblocks:oiia_cat 449.31 -59.81 1.5 {NoAI:1b,Owner:[I;1,2,3,4],Mood:1b,CollarColor:11b,Rotation:[0f,0f]}",
+            "summon skyblocks:oiia_cat 449.69 -59.81 1.5 {NoAI:1b,Owner:[I;1,2,3,4],Mood:1b,CollarColor:1b,Rotation:[180f,0f]}",
+            // sky lanterns in a dark stone room: golden hour and underwater standing, a nebula hanging from the ceiling
+            "fill 452 -61 -4 460 -55 4 minecraft:smooth_stone hollow", "fill 456 -60 4 456 -59 4 minecraft:air",
+            "setblock 454 -60 -1 skyblocks:sky_lantern{sky:\"SKYBLOCKS_GOLDEN_HOUR\",pass:\"NORMAL\"}",
+            "setblock 458 -60 -1 skyblocks:sky_lantern{sky:\"SKYBLOCKS_UNDERWATER\",pass:\"NORMAL\"}",
+            "setblock 456 -56 1 skyblocks:sky_lantern[hanging=true]{sky:\"SKYBLOCKS_NEBULA\",pass:\"NORMAL\"}",
     };
     /** The newer things (SKYBLOCKS_RENDER_SET=new: only these), well away from the rest. */
     static final boolean NEW = "new".equals(System.getenv("SKYBLOCKS_RENDER_SET"));
@@ -370,7 +402,7 @@ public final class RenderTest {
             "catwalk 338.8 -59.6 1.4 0 18", "catwalk 340.6 -59.7 3.2 90 12", "holdphoto 333.5 -60 -3 0 8", "holdcamera 333.5 -60 -3 0 8", "356.5 -59.4 4.5 0 8", "night 356.5 -59.4 4.5 0 8", "334 -59.5 10.2 0 22", "331 -59.7 10.9 0 25", 
             "376 -58.3 8.8 180 22", "373.5 -59.35 5.4 180 12", "376.5 -59.35 5.4 180 15", "379.5 -59.1 4.4 180 32", "382.5 -57.6 5.6 180 12",
             "370.5 -59.2 4.6 180 30", "374.5 -59.45 7.0 180 4", "372 -59.6 6.2 200 18", "387.5 -59.2 4.2 180 8", "night 397.5 -58.5 3.3 180 25", "397 -58.2 3.3 160 10", "405.5 -58.6 3.4 180 18", "405.5 -59.2 3.6 180 28", "411.5 -58.6 3.4 180 18", 
-            "watch 7 open 270 -60 0 270.5 -58.6 -7 0 3", "watch 7 open 270 -60 0 270.5 -59.3 -1.1 0 52", "watch 7 open 270 -60 0 night 270.5 -58.6 -7 0 3"};
+            "watch 7 open 270 -60 0 270.5 -58.6 -7 0 3", "watch 7 open 270 -60 0 270.5 -59.3 -1.1 0 52", "watch 7 open 270 -60 0 night 270.5 -58.6 -7 0 3", "418 -59.1 3.9 180 10", "416.5 -58.7 2.2 180 14", "419.5 -58.7 2.2 180 14", "418 -59.1 -2.9 0 10", "worn open 422 -60 0 422.5 -60 -1.6 0 15", "wornflat open 422 -60 0 422.5 -60 -1.6 0 15", "open 422 -60 0 422.5 -60 -1.6 0 15", "426.5 -59 2.6 180 24", "431.5 -58.8 2.9 180 20", "437.5 -59 2.4 180 22", "444.8 -59.3 2.8 180 24", "449.5 -59 2.6 180 38", "456.5 -59.2 3.4 180 5", "night 456.5 -59.2 3.4 180 5"};
 
     private static boolean burst, moving, burstOn;
     private static int burstFrame;
@@ -493,7 +525,7 @@ public final class RenderTest {
                             for (String c : NEW ? NEW_SCENE : SCENE) {
                                 run(server, c);
                             }
-                            stage = 2;
+                            stage = 2 + FROM;
                             ticks = 0;
                         }
                     } else if (ticks > 2400) {

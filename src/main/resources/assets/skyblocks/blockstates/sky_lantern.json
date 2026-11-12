@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "hanging=false": {
+      "model": "skyblocks:block/sky_lantern"
+    },
+    "hanging=true": {
+      "model": "skyblocks:block/sky_lantern_hanging"
+    }
+  }
+}

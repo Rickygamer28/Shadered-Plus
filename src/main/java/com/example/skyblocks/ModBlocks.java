@@ -453,5 +453,10 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(3.0F, 6.0F).sound(SoundType.DEEPSLATE_TILES).noOcclusion().lightLevel(state -> 5)
                     .requiresCorrectToolForDrops().mapColor(net.minecraft.world.level.material.MapColor.DEEPSLATE));
 
+    /** A sky lantern: a sky in a lantern, lighting the room in its colours (SkyLanternBlock, client/SkyLanternRenderer). */
+    public static final DeferredBlock<SkyLanternBlock> SKY_LANTERN = BLOCKS.registerBlock("sky_lantern", SkyLanternBlock::new,
+            BlockBehaviour.Properties.of().strength(3.5F).sound(SoundType.LANTERN).noOcclusion().lightLevel(state -> 15)
+                    .requiresCorrectToolForDrops().pushReaction(PushReaction.DESTROY).mapColor(net.minecraft.world.level.material.MapColor.METAL));
+
     private ModBlocks() {}
 }

@@ -1,7 +1,5 @@
-"""Textures for the cat companion's things: the cat bed (knit fabric and cushion, greyscale - tinted by its dye), the
-scratching post's rope (new, worn, frayed) and carpet, the food bowl (greyscale glaze, tinted) and its food, the
-cardboard box, the cat flap, and the yarn ball / feather wand / laser pointer items, the yarn ball's ball texture and
-the laser's dot. Run from the repository root: python3 tools/make_cat_textures.py"""
+"""Textures for the cat companion's toys: the yarn ball / feather wand / laser pointer items, the yarn ball's ball
+texture and the laser's dot, and the cat tree's item (the blocks' own: tools/models/cat_blocks/build.py). Run from the repository root: python3 tools/make_cat_textures.py"""
 import math, os, random
 from PIL import Image
 
@@ -32,74 +30,8 @@ def grey(v):
     return (v, v, v)
 
 
-# ---------- cat bed: knit rim (rows of little v-stitches), soft cushion ----------
-def knit(x, y):
-    row = y // 2
-    col = (x + (row % 2)) % 4
-    v = 205 + (22 if col in (1, 2) else -18) + (12 if y % 2 == 0 else -6) + rnd.uniform(-6, 6)
-    return grey(v)
-
-
-save(tex(knit), "block/cat_bed_fabric.png")
-save(tex(lambda x, y: grey(232 + 10 * math.cos((x - 7.5) / 8 * math.pi) * math.cos((y - 7.5) / 8 * math.pi) + rnd.uniform(-5, 5))),
-     "block/cat_bed_cushion.png")
-
-
-# ---------- scratching post: wound sisal rope, wearing to fraying; carpet ----------
-def rope(wear):
-    def fn(x, y):
-        strand = (y + x * 0.25) % 2.0
-        v = 1.0 - 0.22 * abs(strand - 1.0)
-        base = (196, 164, 116)
-        n = rnd.uniform(-1, 1)
-        c = [base[i] * (v + n * 0.05) for i in range(3)]
-        if wear > 0 and rnd.random() < 0.10 * wear:
-            c = [ci * 0.72 for ci in c]  # (scratched-in gouges)
-        if wear > 1 and rnd.random() < 0.10:
-            c = [min(255, ci * 1.25) for ci in c]  # (loose fibres)
-        return c
-    return fn
-
-
-for wear, name in ((0, ""), (1, "_worn"), (2, "_frayed")):
-    save(tex(rope(wear)), "block/scratching_post_rope%s.png" % name)
-save(tex(lambda x, y: [b * (1 + rnd.uniform(-0.07, 0.07)) for b in (176, 150, 132)]), "block/scratching_post_carpet.png")
-
-# ---------- food bowl: glaze (greyscale, tinted), its plain inside, fish kibble ----------
-save(tex(lambda x, y: grey(214 + 30 * math.exp(-((x - 5) ** 2) / 5.0) * (1 if 4 < y < 13 else 0.3) + rnd.uniform(-4, 4))),
-     "block/cat_bowl.png")
-save(tex(lambda x, y: grey(240 + rnd.uniform(-5, 5))), "block/cat_bowl_inside.png")
-
-
-def kibble(x, y):
-    r = rnd.random()
-    if r < 0.25:
-        return (232, 150, 120)  # (salmon pink bits)
-    if r < 0.5:
-        return (150, 98, 60)
-    return [b * (1 + rnd.uniform(-0.12, 0.12)) for b in (180, 122, 74)]
-
-
-save(tex(kibble), "block/cat_bowl_food.png")
-
-
-# ---------- cardboard box: brown board with corrugation, a strip of tape; the inside a shade darker ----------
-def board(dark):
-    def fn(x, y):
-        f = 0.94 + 0.04 * (x % 3 == 0) + rnd.uniform(-0.03, 0.03)
-        c = [b * f * (0.85 if dark else 1.0) for b in (190, 146, 96)]
-        if not dark and y in (1, 2):
-            c = [b * (1 + rnd.uniform(-0.03, 0.03)) for b in (214, 190, 150)]  # (the tape)
-        return c
-    return fn
-
-
-save(tex(board(False)), "block/cardboard_box.png")
-save(tex(board(True)), "block/cardboard_box_inside.png")
-
-
-# ---------- cat flap: its little door (the flap itself is built of whatever block it was given)
-save(tex(lambda x, y: [b * (1 + rnd.uniform(-0.03, 0.03)) for b in (196, 196, 200)] if y != 0 else (150, 150, 156)), "block/cat_flap_door.png")
+# (the blocks' own textures - the bed, the post's rope and carpet, the bowl, the box, the flap - are made with their
+# models: tools/models/cat_blocks/build.py)
 
 # ---------- yarn ball: wound strands on the ball itself; the laser's soft red dot ----------
 yarn = Image.new("RGBA", (32, 32))

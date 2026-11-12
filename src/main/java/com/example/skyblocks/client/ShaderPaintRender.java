@@ -62,10 +62,17 @@ public final class ShaderPaintRender {
         } catch (RuntimeException ignored) {
             // (drawn as it is)
         }
-        return TYPES.computeIfAbsent(sky, k -> {
+        return TYPES.computeIfAbsent(sky, k -> Types.of(k, picture(k)));
+    }
+
+    private static final java.util.Map<Integer, ResourceLocation> PICTURES = new java.util.HashMap<>();
+
+    /** A sky's picture (by its index in skies()) as a texture (registered the first time). */
+    static ResourceLocation picture(int sky) {
+        return PICTURES.computeIfAbsent(sky, k -> {
             ResourceLocation picture = ResourceLocation.fromNamespaceAndPath(com.example.skyblocks.SkyBlocksMod.MOD_ID, "sky_paint/" + k);
-            net.minecraft.client.Minecraft.getInstance().getTextureManager().register(picture, new Picture(skies[k]));
-            return Types.of(k, picture);
+            net.minecraft.client.Minecraft.getInstance().getTextureManager().register(picture, new Picture(skies()[k]));
+            return picture;
         });
     }
 

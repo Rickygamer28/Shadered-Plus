@@ -5,6 +5,13 @@ on:
     branches-ignore: [ 'ci-shots*' ]
   pull_request:
   workflow_dispatch:
+    inputs:
+      from:
+        description: 'Render test: the first spot to shoot (0: all)'
+        default: '0'
+      runs:
+        description: 'Render test: which runs (plain sodium shaders)'
+        default: 'plain sodium shaders'
 
 jobs:
   build:
@@ -96,12 +103,12 @@ jobs:
           PACK=$(basename "$PACK_URL" | python3 -c "import sys,urllib.parse; print(urllib.parse.unquote(sys.stdin.read().strip()))")
           mkdir -p run/shaderpacks run/config && curl -sL "$PACK_URL" -o "run/shaderpacks/$PACK"
           echo "::notice::shader pack $PACK ($(stat -c %s "run/shaderpacks/$PACK" 2>/dev/null) bytes)"
-          for v in plain sodium shaders; do
+          for v in ${{ inputs.runs || 'plain sodium shaders' }}; do
             EXTRA=""; [ $v != plain ] && EXTRA="-PsodiumVersion=$SODIUM -PirisVersion=$IRIS"
             rm -f run/config/iris.properties
             [ $v = shaders ] && printf 'enableShaders=true\nshaderPack=%s\n' "$PACK" > run/config/iris.properties
             LIMIT=200; [ $v = shaders ] && LIMIT=500
-            (SKYBLOCKS_RENDER_TEST=$v xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient $EXTRA --no-daemon > client_$v.log 2>&1 &)
+            (SKYBLOCKS_RENDER_TEST=$v SKYBLOCKS_RENDER_FROM=${{ inputs.from || '0' }} xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient $EXTRA --no-daemon > client_$v.log 2>&1 &)
             for i in $(seq 1 $LIMIT); do
               sleep 5
               if grep -qE "render test done|Crash report saved|BUILD FAILED" client_$v.log; then sleep 5; break; fi

@@ -63,6 +63,8 @@ import org.jetbrains.annotations.Nullable;
  */
 public class OiiaCatEntity extends TamableAnimal {
     public static final byte AWAKE = 0, NAPPING = 1, PLAYING = 2, SCRATCHING = 3, EATING = 4, BOXED = 5, PERCHED = 6;
+    /** With another cat it knows: grooming it, being groomed (eyes half shut, leaning in), touching noses hello. */
+    public static final byte GROOMING = 7, GROOMED = 8, GREETING = 9;
     /** Its entity event for being petted: the spin. */
     public static final byte SPIN_EVENT = 71;
     /** How long the spin is (the OIIA animation's loop), in ticks. */
@@ -77,6 +79,17 @@ public class OiiaCatEntity extends TamableAnimal {
     public Object clientModel, clientSpinModel, clientParts;
     private int spinUntil, napCooldown = 200, playCooldown = 100;
     private int scratchCooldown = 600, boxCooldown = 800, perchCooldown = 900, yarnCooldown, petCooldown, giftCooldown = 6000;
+    /** Ticks till it seeks out another cat again (grooming, a chase). */
+    private int socialCooldown = 300;
+    /** The cat grooming it (and till when: the groomer keeps putting that off while it grooms). */
+    @Nullable
+    private OiiaCatEntity groomer;
+    private int groomedUntil;
+    /** A chase it's in with another cat (both have it). */
+    @Nullable
+    private Chase chase;
+    /** When a goal last held it in a pose with another cat (a pose nothing holds any more goes back to awake). */
+    private int socialTick;
     /** Ticks till it's hungry again. */
     private int hunger = 6000;
     /** How happy it is, 0 .. 100. */
@@ -135,6 +148,8 @@ public class OiiaCatEntity extends TamableAnimal {
     protected void registerGoals() {
         goalSelector.addGoal(1, new FloatGoal(this));
         goalSelector.addGoal(2, new SitWhenOrderedToGoal(this));
+        goalSelector.addGoal(2, new BeGroomedGoal());
+        goalSelector.addGoal(3, new ChaseGoal());
         goalSelector.addGoal(3, new LaserGoal());
         goalSelector.addGoal(3, new WandGoal());
         goalSelector.addGoal(4, new EatGoal());
@@ -144,6 +159,7 @@ public class OiiaCatEntity extends TamableAnimal {
         goalSelector.addGoal(5, new BoxGoal());
         goalSelector.addGoal(5, new PerchGoal());
         goalSelector.addGoal(5, new PlayGoal());
+        goalSelector.addGoal(5, new GroomGoal());
         goalSelector.addGoal(6, new FollowOwnerGoal(this, 1.0, 10.0F, 3.0F) {
             @Override
             public boolean canUse() {
@@ -182,6 +198,11 @@ public class OiiaCatEntity extends TamableAnimal {
         if (yarnCooldown > 0) yarnCooldown--;
         if (petCooldown > 0) petCooldown--;
         if (giftCooldown > 0) giftCooldown--;
+        if (socialCooldown > 0) socialCooldown--;
+        byte m = mood();
+        if ((m == GROOMING || m == GROOMED || m == GREETING) && tickCount - socialTick > 10 && !isNoAi()) {
+            setMood(AWAKE); // (left in a pose with another cat that nothing's holding it in)
+        }
         if (hunger > 0) hunger--;
         if (isTame() && tickCount % 1200 == 0) {
             happiness = Math.max(0, happiness - 1); // (it wants things to do)
@@ -480,6 +501,9 @@ public class OiiaCatEntity extends TamableAnimal {
         private BlockPos warmAt, spot;
         private int napped, length;
         private boolean inBed;
+        /** A cat it knows already asleep in the bed: it curls up beside it. */
+        @Nullable
+        private OiiaCatEntity beside;
 
         NapGoal() {
             setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK, Flag.JUMP));
@@ -491,7 +515,16 @@ public class OiiaCatEntity extends TamableAnimal {
                 return false;
             }
             warmAt = find(OiiaCatEntity::bed, 12);
+            beside = null;
             inBed = warmAt != null && free(warmAt);
+            if (!inBed && warmAt != null) {
+                // (a bed with a friend asleep in it: room for two)
+                java.util.List<OiiaCatEntity> in = level().getEntitiesOfClass(OiiaCatEntity.class, new AABB(warmAt).inflate(0.1, 1.5, 0.1), c -> c != OiiaCatEntity.this);
+                if (in.size() == 1 && friend(in.get(0)) && in.get(0).mood() == NAPPING) {
+                    beside = in.get(0);
+                    inBed = true;
+                }
+            }
             if (inBed) {
                 spot = warmAt;
                 return true;
@@ -524,6 +557,10 @@ public class OiiaCatEntity extends TamableAnimal {
                 if (closeTo(spot)) {
                     getNavigation().stop();
                     setMood(NAPPING);
+                    if (beside != null && beside.isAlive() && beside.mood() == NAPPING) {
+                        snuggle(warmAt, beside);
+                        return;
+                    }
                     Vec3 to = Vec3.atCenterOf(warmAt);
                     getLookControl().setLookAt(to.x, to.y, to.z);
                 } else if (getNavigation().isDone()) {
@@ -544,6 +581,287 @@ public class OiiaCatEntity extends TamableAnimal {
                     gift(warmAt);
                 }
             }
+        }
+    }
+
+    // ---- with other cats ----
+
+    /** A cat it knows: the same owner's (or, wild, another wild one). */
+    boolean friend(@Nullable OiiaCatEntity other) {
+        if (other == null || other == this || !other.isAlive() || isTame() != other.isTame()) {
+            return false;
+        }
+        return !isTame() || java.util.Objects.equals(getOwnerUUID(), other.getOwnerUUID());
+    }
+
+    /** Free for another cat: awake, up and about, not busy with anything (nor sat where it was told). */
+    private boolean idle() {
+        return mood() == AWAKE && !isOrderedToSit() && tickCount >= spinUntil && groomer == null && chase == null && isAlive();
+    }
+
+    @Nullable
+    private OiiaCatEntity nearestFriend(double range, java.util.function.Predicate<OiiaCatEntity> also) {
+        OiiaCatEntity best = null;
+        double bestD = range * range;
+        for (OiiaCatEntity c : level().getEntitiesOfClass(OiiaCatEntity.class, getBoundingBox().inflate(range), c -> friend(c) && also.test(c))) {
+            double d = c.distanceToSqr(this);
+            if (d < bestD) {
+                bestD = d;
+                best = c;
+            }
+        }
+        return best;
+    }
+
+    /** Two in a bed: side by side across it, curled up head to tail. */
+    private void snuggle(BlockPos bed, OiiaCatEntity other) {
+        Vec3 c = new Vec3(bed.getX() + 0.5, other.getY(), bed.getZ() + 0.5);
+        boolean alongX = random.nextBoolean();
+        Vec3 side = alongX ? new Vec3(0.19, 0, 0) : new Vec3(0, 0, 0.19);
+        other.teleportTo(c.x + side.x, other.getY(), c.z + side.z);
+        hop(new Vec3(c.x - side.x, other.getY(), c.z - side.z));
+        float yaw = alongX ? 0.0F : 90.0F; // (lying along the gap between them, facing opposite ways)
+        other.setYRot(yaw);
+        other.setYBodyRot(yaw);
+        other.setYHeadRot(yaw);
+        setYRot(yaw + 180.0F);
+        setYBodyRot(yaw + 180.0F);
+        setYHeadRot(yaw + 180.0F);
+        playSound(SoundEvents.CAT_PURR, 0.8F, 1.0F);
+    }
+
+    /** Off to a cat it knows: noses touched hello, then it grooms it a while (the other leaning in; or sleeping on). */
+    final class GroomGoal extends Goal {
+        private OiiaCatEntity other;
+        private int ticks, walked, length;
+
+        GroomGoal() {
+            setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK, Flag.JUMP));
+        }
+
+        @Override
+        public boolean canUse() {
+            if (socialCooldown > 0 || !idle() || random.nextInt(70) != 0 || !ownerNear(10)) {
+                return false;
+            }
+            other = nearestFriend(8.0, c -> (c.idle() || c.mood() == NAPPING) && c.groomer == null && c.chase == null);
+            return other != null;
+        }
+
+        @Override
+        public void start() {
+            ticks = walked = 0;
+            length = 90 + random.nextInt(110);
+            getNavigation().moveTo(other, 1.0);
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            byte m = other.mood();
+            return other.isAlive() && ticks < length && walked < 240 && !isOrderedToSit() && ownerNear(14) && other.distanceToSqr(OiiaCatEntity.this) < 100
+                    && (m == AWAKE || m == GROOMED || m == GREETING || m == NAPPING) && (other.groomer == null || other.groomer == OiiaCatEntity.this);
+        }
+
+        @Override
+        public void tick() {
+            getLookControl().setLookAt(other.getX(), other.getEyeY() - 0.1, other.getZ());
+            double d = distanceTo(other);
+            if (mood() == AWAKE) {
+                // (going over to it)
+                walked++;
+                if (d > 0.85) {
+                    if (getNavigation().isDone() || tickCount % 20 == 0) {
+                        getNavigation().moveTo(other, 1.0);
+                    }
+                    return;
+                }
+                getNavigation().stop();
+                setMood(other.mood() == NAPPING ? GROOMING : GREETING);
+                ticks = 0;
+            }
+            socialTick = tickCount;
+            other.groomer = OiiaCatEntity.this;
+            other.groomedUntil = tickCount + 15;
+            ticks++;
+            if (mood() == GREETING && ticks > 26) {
+                setMood(GROOMING);
+                playSound(SoundEvents.CAT_PURR, 0.7F, 1.0F);
+            }
+            if (mood() == GROOMING && ticks % 70 == 0) {
+                playSound(SoundEvents.CAT_PURR, 0.6F, 1.05F);
+            }
+            if (d > 1.3) {
+                setMood(AWAKE); // (it moved off: after it)
+                getNavigation().moveTo(other, 1.0);
+            }
+        }
+
+        @Override
+        public void stop() {
+            if (mood() == GROOMING || mood() == GREETING) {
+                setMood(AWAKE);
+            }
+            if (other != null && other.groomer == OiiaCatEntity.this) {
+                other.groomer = null;
+            }
+            socialCooldown = 1200 + random.nextInt(1600);
+            if (ticks > 60 && other != null) {
+                cheer(6);
+                other.cheer(8);
+                level().broadcastEntityEvent(OiiaCatEntity.this, (byte) 7);
+                level().broadcastEntityEvent(other, (byte) 7);
+            }
+            other = null;
+        }
+    }
+
+    /** Being groomed (or greeted): it stays put, facing the other, and leans into it. */
+    final class BeGroomedGoal extends Goal {
+        BeGroomedGoal() {
+            setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK, Flag.JUMP));
+        }
+
+        @Override
+        public boolean canUse() {
+            return groomer != null && tickCount < groomedUntil && mood() != NAPPING && !isOrderedToSit() && chase == null;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return groomer != null && groomer.isAlive() && tickCount < groomedUntil && mood() != NAPPING;
+        }
+
+        @Override
+        public void start() {
+            getNavigation().stop();
+        }
+
+        @Override
+        public void tick() {
+            getNavigation().stop();
+            getLookControl().setLookAt(groomer.getX(), groomer.getEyeY() - 0.1, groomer.getZ());
+            setMood(groomer.mood() == GREETING ? GREETING : GROOMED);
+            socialTick = tickCount;
+        }
+
+        @Override
+        public void stop() {
+            if (mood() == GROOMED || mood() == GREETING) {
+                setMood(AWAKE);
+            }
+            groomer = null;
+        }
+    }
+
+    /** A game of chase between two cats: one's "it" and runs the other down; caught, the other's "it". */
+    static final class Chase {
+        final OiiaCatEntity a, b;
+        OiiaCatEntity it;
+        int ticks, length, pause, swaps;
+        boolean over;
+
+        Chase(OiiaCatEntity a, OiiaCatEntity b, int length) {
+            this.a = a;
+            this.b = b;
+            this.it = a;
+            this.length = length;
+        }
+
+        OiiaCatEntity other(OiiaCatEntity c) {
+            return c == a ? b : a;
+        }
+    }
+
+    /** Chasing round with another cat (both of them run this): the one that's "it" chases, the other runs off. */
+    final class ChaseGoal extends Goal {
+        ChaseGoal() {
+            setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK, Flag.JUMP));
+        }
+
+        @Override
+        public boolean canUse() {
+            if (chase != null && chase.over) {
+                chase = null; // (a game it never joined in, over)
+            }
+            if (chase != null) {
+                return true; // (the other cat started it)
+            }
+            if (socialCooldown > 0 || !idle() || happiness < 35 || random.nextInt(110) != 0 || !ownerNear(10)) {
+                return false;
+            }
+            OiiaCatEntity other = nearestFriend(9.0, c -> c.idle() && c.socialCooldown < 200);
+            if (other == null) {
+                return false;
+            }
+            Chase c = new Chase(OiiaCatEntity.this, other, 220 + random.nextInt(220));
+            chase = c;
+            other.chase = c;
+            return true;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            if (chase == null || chase.over) {
+                return false;
+            }
+            OiiaCatEntity other = chase.other(OiiaCatEntity.this);
+            return chase.ticks < chase.length && other.isAlive() && other.chase == chase && other.distanceToSqr(OiiaCatEntity.this) < 18 * 18
+                    && !isOrderedToSit() && !other.isOrderedToSit() && ownerNear(18);
+        }
+
+        @Override
+        public void tick() {
+            Chase c = chase;
+            OiiaCatEntity other = c.other(OiiaCatEntity.this);
+            if (c.a == OiiaCatEntity.this) {
+                c.ticks++;
+                if (c.pause > 0) {
+                    c.pause--;
+                }
+            }
+            setMood(PLAYING);
+            getLookControl().setLookAt(other, 30.0F, 30.0F);
+            if (c.pause > 0) {
+                getNavigation().stop(); // (a breather after a catch: crouched, eyeing each other)
+                return;
+            }
+            double d = distanceTo(other);
+            if (c.it == OiiaCatEntity.this) {
+                if (getNavigation().isDone() || tickCount % 8 == 0) {
+                    getNavigation().moveTo(other, 1.35);
+                }
+                if (d < 1.0 && onGround()) {
+                    // caught: a pounce onto it, and now the other's it
+                    Vec3 to = other.position().subtract(position()).normalize();
+                    setDeltaMovement(to.x * 0.3, 0.32, to.z * 0.3);
+                    c.it = other;
+                    c.pause = 16;
+                    c.swaps++;
+                    playSound(SoundEvents.CAT_AMBIENT, 0.6F, 1.45F);
+                }
+            } else if (getNavigation().isDone() || tickCount % 20 == 0 && d < 3.5) {
+                Vec3 away = net.minecraft.world.entity.ai.util.DefaultRandomPos.getPosAway(OiiaCatEntity.this, 7, 3, other.position());
+                if (away != null) {
+                    getNavigation().moveTo(away.x, away.y, away.z, 1.3);
+                }
+            }
+        }
+
+        @Override
+        public void stop() {
+            Chase c = chase;
+            if (c != null) {
+                c.over = true;
+                if (c.swaps > 0) {
+                    cheer(5);
+                }
+            }
+            chase = null;
+            if (mood() == PLAYING) {
+                setMood(AWAKE);
+            }
+            getNavigation().stop();
+            socialCooldown = 1000 + random.nextInt(1400);
         }
     }
 

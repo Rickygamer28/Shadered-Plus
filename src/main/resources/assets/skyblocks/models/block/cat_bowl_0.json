@@ -2,6 +2,7 @@
   "parent": "block/block",
   "textures": {
     "bowl": "skyblocks:block/cat_bowl",
+    "rim": "skyblocks:block/cat_bowl_rim",
     "inside": "skyblocks:block/cat_bowl_inside",
     "food": "skyblocks:block/cat_bowl_food",
     "particle": "skyblocks:block/cat_bowl"
@@ -9,14 +10,14 @@
   "elements": [
     {
       "from": [
-        4,
+        5,
         0,
-        4
+        5
       ],
       "to": [
-        12,
-        1,
-        12
+        11,
+        0.5,
+        11
       ],
       "faces": {
         "north": {
@@ -35,20 +36,161 @@
           "texture": "#bowl",
           "tintindex": 0
         },
+        "up": {
+          "texture": "#inside",
+          "tintindex": 0
+        },
         "down": {
+          "texture": "#bowl",
+          "tintindex": 0
+        }
+      }
+    },
+    {
+      "from": [
+        4.5,
+        0.5,
+        4.5
+      ],
+      "to": [
+        11.5,
+        1,
+        11.5
+      ],
+      "faces": {
+        "up": {
+          "texture": "#inside"
+        },
+        "down": {
+          "texture": "#bowl",
+          "tintindex": 0
+        }
+      }
+    },
+    {
+      "from": [
+        4.5,
+        0.5,
+        4.5
+      ],
+      "to": [
+        11.5,
+        2,
+        5.25
+      ],
+      "faces": {
+        "north": {
+          "texture": "#bowl",
+          "tintindex": 0
+        },
+        "south": {
+          "texture": "#bowl",
+          "tintindex": 0
+        },
+        "east": {
+          "texture": "#bowl",
+          "tintindex": 0
+        },
+        "west": {
           "texture": "#bowl",
           "tintindex": 0
         },
         "up": {
-          "texture": "#inside",
-          "tintindex": 1
+          "texture": "#bowl",
+          "tintindex": 0
+        }
+      }
+    },
+    {
+      "from": [
+        4.5,
+        0.5,
+        10.75
+      ],
+      "to": [
+        11.5,
+        2,
+        11.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#bowl",
+          "tintindex": 0
+        },
+        "south": {
+          "texture": "#bowl",
+          "tintindex": 0
+        },
+        "east": {
+          "texture": "#bowl",
+          "tintindex": 0
+        },
+        "west": {
+          "texture": "#bowl",
+          "tintindex": 0
+        },
+        "up": {
+          "texture": "#bowl",
+          "tintindex": 0
+        }
+      }
+    },
+    {
+      "from": [
+        4.5,
+        0.5,
+        5.25
+      ],
+      "to": [
+        5.25,
+        2,
+        10.75
+      ],
+      "faces": {
+        "east": {
+          "texture": "#bowl",
+          "tintindex": 0
+        },
+        "west": {
+          "texture": "#bowl",
+          "tintindex": 0
+        },
+        "up": {
+          "texture": "#bowl",
+          "tintindex": 0
+        }
+      }
+    },
+    {
+      "from": [
+        10.75,
+        0.5,
+        5.25
+      ],
+      "to": [
+        11.5,
+        2,
+        10.75
+      ],
+      "faces": {
+        "east": {
+          "texture": "#bowl",
+          "tintindex": 0
+        },
+        "west": {
+          "texture": "#bowl",
+          "tintindex": 0
+        },
+        "up": {
+          "texture": "#bowl",
+          "tintindex": 0
         }
       }
     },
     {
       "from": [
         4,
-        1,
+        2,
         4
       ],
       "to": [
@@ -74,7 +216,7 @@
           "tintindex": 0
         },
         "up": {
-          "texture": "#bowl",
+          "texture": "#rim",
           "tintindex": 0
         }
       }
@@ -82,7 +224,7 @@
     {
       "from": [
         4,
-        1,
+        2,
         11
       ],
       "to": [
@@ -108,7 +250,7 @@
           "tintindex": 0
         },
         "up": {
-          "texture": "#bowl",
+          "texture": "#rim",
           "tintindex": 0
         }
       }
@@ -116,7 +258,7 @@
     {
       "from": [
         4,
-        1,
+        2,
         5
       ],
       "to": [
@@ -134,7 +276,7 @@
           "tintindex": 0
         },
         "up": {
-          "texture": "#bowl",
+          "texture": "#rim",
           "tintindex": 0
         }
       }
@@ -142,7 +284,7 @@
     {
       "from": [
         11,
-        1,
+        2,
         5
       ],
       "to": [
@@ -160,7 +302,7 @@
           "tintindex": 0
         },
         "up": {
-          "texture": "#bowl",
+          "texture": "#rim",
           "tintindex": 0
         }
       }

@@ -126,6 +126,8 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.HOT_SPRING.get(), p, st), ModBlocks.HOT_SPRING.get()).build(null));
     public static final Supplier<BlockEntityType<InfusionAltarBlockEntity>> INFUSION_ALTAR = TYPES.register("infusion_altar",
             () -> BlockEntityType.Builder.of(InfusionAltarBlockEntity::new, ModBlocks.INFUSION_ALTAR.get()).build(null));
+    public static final Supplier<BlockEntityType<SkyLanternBlockEntity>> SKY_LANTERN = TYPES.register("sky_lantern",
+            () -> BlockEntityType.Builder.of(SkyLanternBlockEntity::new, ModBlocks.SKY_LANTERN.get()).build(null));
     public static final Supplier<BlockEntityType<CatFlapBlockEntity>> CAT_FLAP = TYPES.register("cat_flap",
             () -> BlockEntityType.Builder.of(CatFlapBlockEntity::new, ModBlocks.CAT_FLAP.get()).build(null));
     public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> GEODE_LAMP = TYPES.register("geode_lamp",
