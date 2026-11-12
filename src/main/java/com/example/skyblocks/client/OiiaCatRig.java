@@ -1,25 +1,13 @@
 package com.example.skyblocks.client;
 
-import com.example.skyblocks.SkyBlocksMod;
-import com.noodlegamer76.shadered.client.assimp.AssimpModel;
-import com.noodlegamer76.shadered.client.assimp.McModel;
-import com.noodlegamer76.shadered.client.assimp.anim.Animator;
-import com.noodlegamer76.shadered.client.assimp.load.AssimpModels;
-import com.noodlegamer76.shadered.client.renderer.assimp.RenderableModel;
 import java.util.Map;
-import net.minecraft.resources.ResourceLocation;
-import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 
 /**
- * The OIIA cat with a skeleton (models/complex/oiia_cat_rigged.glb, made by tools/models/oiia_cat/rig.py): one mesh,
- * its fur tied to the bones with weights that blend across each joint, so it bends there rather than coming apart.
- * Posed from code (not from an animation): each bone turned about its joint, Shadered's renderer skinning it on the
- * graphics card.
+ * The OIIA cat's skeleton (models/complex/oiia_cat_rigged.glb, made by tools/models/oiia_cat/rig.py; skinned by
+ * OiiaCatMesh): its bones and where their joints are, and a cat's bones posed from code - each turned about its joint.
  */
 final class OiiaCatRig {
-    static final ResourceLocation MODEL = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "models/complex/oiia_cat_rigged.glb");
-
     /** The bones and their joints (model units): the same as rig.py's. */
     static final String BODY = "body", HIPS = "hips", HEAD = "head", EAR_L = "ear_l", EAR_R = "ear_r", TAIL = "tail", TAIL_MID = "tail_mid",
             TAIL_TIP = "tail_tip";
@@ -32,46 +20,24 @@ final class OiiaCatRig {
 
     private OiiaCatRig() {}
 
-    /** A fresh posable cat, or null while Shadered hasn't loaded the model (or it came without its skeleton). */
-    @Nullable
-    static RenderableModel create() {
-        McModel model = AssimpModels.getModel(MODEL);
-        if (model == null || model.getRig() == null || model.getRig().boneMap == null || model.getRig().boneMap.isEmpty()) {
-            return null;
-        }
-        RenderableModel r = new RenderableModel();
-        for (AssimpModel part : model.getModels()) {
-            r.add(part);
-        }
-        r.animator = new Posed(model);
-        return r;
-    }
-
-    /** Bones posed from code: each one's matrix (from its rest place to where it's turned) set straight. */
-    static final class Posed extends Animator {
+    /** The bones' matrices for one cat: each, model space at rest -> posed (by the mesh's bone order). */
+    static final class Posed {
         private final Map<String, Integer> bones;
         private final Matrix4f[] out;
 
-        Posed(McModel model) {
-            super(model);
-            bones = model.getRig().boneMap;
+        Posed(Map<String, Integer> bones) {
+            this.bones = bones;
             out = new Matrix4f[bones.size()];
             for (int i = 0; i < out.length; i++) {
                 out[i] = new Matrix4f();
             }
         }
 
-        @Override
-        public void update(float deltaSeconds) {
-            // (posed by set(), not played)
-        }
-
-        @Override
-        public Matrix4f[] getFinalMatrices() {
+        Matrix4f[] matrices() {
             return out;
         }
 
-        /** This bone's matrix: model space at rest to model space posed. */
+        /** This bone's matrix. */
         void set(String bone, Matrix4f m) {
             Integer i = bones.get(bone);
             if (i != null && i >= 0 && i < out.length) {

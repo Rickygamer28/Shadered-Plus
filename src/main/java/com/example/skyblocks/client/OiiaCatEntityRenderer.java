@@ -75,7 +75,7 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
                 // (in a box: turning its head about, now and then)
                 pose.mulPose(Axis.YP.rotationDegrees(Mth.sin(age * 0.021F) * 14.0F + Mth.sin(age * 0.057F) * 6.0F));
             }
-        } else if (parts(cat, pose, scale, age, partialTick)) {
+        } else if (parts(cat, pose, scale, age, partialTick, buffers, light)) {
             OiiaCatCollar.draw(cat, pose, buffers, light, false);
             return; // (drawn in pieces)
         } else {
@@ -199,15 +199,15 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
      * turns to what it looks at, its ears twitch, its tail sways in a wave. False while the model hasn't loaded (then
      * it's the whole model, still).
      */
-    private static boolean parts(OiiaCatEntity cat, PoseStack pose, float scale, float age, float partialTick) {
-        if (!(cat.clientParts instanceof RenderableModel)) {
-            cat.clientParts = OiiaCatRig.create();
-            if (cat.clientParts == null) {
-                return false;
-            }
+    private static boolean parts(OiiaCatEntity cat, PoseStack pose, float scale, float age, float partialTick, MultiBufferSource buffers, int light) {
+        OiiaCatMesh mesh = OiiaCatMesh.get();
+        if (mesh == null) {
+            return false;
         }
-        RenderableModel rig = (RenderableModel) cat.clientParts;
-        OiiaCatRig.Posed bones = (OiiaCatRig.Posed) rig.animator;
+        if (!(cat.clientParts instanceof OiiaCatRig.Posed)) {
+            cat.clientParts = new OiiaCatRig.Posed(mesh.bones);
+        }
+        OiiaCatRig.Posed bones = (OiiaCatRig.Posed) cat.clientParts;
         float walk = cat.walkAnimation.position(partialTick), speed = Math.min(1.0F, cat.walkAnimation.speed(partialTick) * 1.4F);
         if (testWalk) {
             walk = age * 0.35F;
@@ -250,8 +250,6 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
         pose.translate(0, 0, BACK_PAWS - FRONT_PAWS);
         pose.mulPose(Axis.XP.rotationDegrees(pitch));
         pose.translate(0, 0, -BACK_PAWS);
-        Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-        Matrix4f world = new Matrix4f().translation((float) camera.x, (float) camera.y, (float) camera.z).mul(new Matrix4f(pose.last().pose()));
         // the chest is where everything's measured from; the hips bend from it: the rump down to sit, the back flexing as
         // it gallops, a wiggle as it gets ready to pounce, breathing
         Matrix4f body = new Matrix4f();
@@ -300,8 +298,8 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
         float flickL = earFlick(age * 0.05F + seed), flickR = earFlick(age * 0.043F + seed + 0.37F);
         bones.set(OiiaCatRig.EAR_L, new Matrix4f(head).mul(OiiaCatRig.Posed.turn(OiiaCatRig.EAR_L_AT, -flickL * 25.0F, a[EARS] + flickL * 10.0F)));
         bones.set(OiiaCatRig.EAR_R, new Matrix4f(head).mul(OiiaCatRig.Posed.turn(OiiaCatRig.EAR_R_AT, flickR * 25.0F, a[EARS] + flickR * 10.0F)));
-        rig.modelMatrix = world;
-        AssimpRenderer.getInstance().addModel(rig);
+        int overlay = net.minecraft.client.renderer.texture.OverlayTexture.pack(0, net.minecraft.client.renderer.texture.OverlayTexture.v(cat.hurtTime > 0 || cat.deathTime > 0));
+        mesh.render(pose.last(), buffers, bones.matrices(), light, overlay);
         return true;
     }
 
