@@ -61,6 +61,8 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
     private record Beam(Vec3 dir, int colour, long at) {}
 
     private static final Map<BlockPos, Beam> BEAMS = new HashMap<>();
+    /** (the light's the sun's: thrown out to the side, as sunlight through a prism on a sill makes its rainbow on the floor) */
+    private static final int SUN = -2;
 
     /** A spotlight's beam has hit the prism at pos (its direction, its colour). */
     public static void shone(BlockPos pos, Vec3 dir, int colour, long gameTime) {
@@ -114,13 +116,14 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
         } else if (sunlit(level, pos, partialTick)) {
             dir = sunDirection(level, partialTick).scale(-1); // (from the sun, down towards the prism)
             strength = 0.55F * (1.0F - level.getRainLevel(partialTick));
+            tint = SUN;
         }
         if (dir == null || strength <= 0.02F) {
             return;
         }
         Fan fan = FANS.computeIfAbsent(be, k -> new Fan());
         if (now - fan.at > 10 || now < fan.at || fan.dir == null || fan.dir.distanceToSqr(dir) > 0.0004 || fan.tint != tint) {
-            cast(level, pos, dir, alongX, fan);
+            cast(level, pos, dir, alongX, tint == SUN, fan);
             fan.at = now;
             fan.dir = dir;
             fan.tint = tint;
@@ -130,11 +133,12 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
         VertexConsumer vc = source.getBuffer(Types.RAINBOW);
         Matrix4f m = poseStack.last().pose();
         float shimmer = 0.93F + 0.07F * Mth.sin((now + partialTick) * 0.13F);
+        int colour = tint == SUN ? -1 : tint;
         for (float[] q : fan.air) {
-            emit(vc, m, q, strength * 0.09F * shimmer, tint);
+            emit(vc, m, q, strength * 0.09F * shimmer, colour);
         }
         for (float[] q : fan.land) {
-            emit(vc, m, q, strength * shimmer, tint);
+            emit(vc, m, q, strength * shimmer, colour);
         }
         source.endBatch(Types.RAINBOW);
     }
@@ -204,7 +208,7 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
     }
 
     /** The fan's rays from the prism (bent and spread round its long edge), to where each lands; quads between them. */
-    private static void cast(Level level, BlockPos pos, Vec3 in, boolean alongX, Fan fan) {
+    private static void cast(Level level, BlockPos pos, Vec3 in, boolean alongX, boolean sun, Fan fan) {
         fan.air.clear();
         fan.land.clear();
         Vec3 axis = alongX ? new Vec3(1, 0, 0) : new Vec3(0, 0, 1);
@@ -220,9 +224,19 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
         Vec3[] hits = new Vec3[RAYS];
         Direction[] faces = new Direction[RAYS];
         Vec3[] dirs = new Vec3[RAYS];
+        // (the sun: out across the prism, away from the sun's side - or, at noon, its south side - dipping down to the floor,
+        // red the least, violet the most)
+        Vec3 perp = alongX ? new Vec3(0, 0, 1) : new Vec3(1, 0, 0);
+        double side = Math.abs(in.dot(perp)) < 0.12 ? 1.0 : Math.signum(in.dot(perp));
         for (int i = 0; i < RAYS; i++) {
             float t = i / (float) (RAYS - 1);
-            Vec3 d = rotate(in, axis, sign * (BEND + SPREAD * (t - 0.5F)));
+            Vec3 d;
+            if (sun) {
+                double dip = Math.toRadians(9.0 + 30.0 * t);
+                d = perp.scale(side * Math.cos(dip)).add(0, -Math.sin(dip), 0);
+            } else {
+                d = rotate(in, axis, sign * (BEND + SPREAD * (t - 0.5F)));
+            }
             dirs[i] = d;
             Vec3 from = centre.add(d.scale(0.3));
             BlockHitResult hit = level.clip(new ClipContext(from, from.add(d.scale(REACH)), ClipContext.Block.VISUAL, ClipContext.Fluid.NONE,

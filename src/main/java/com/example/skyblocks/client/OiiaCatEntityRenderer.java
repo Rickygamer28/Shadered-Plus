@@ -164,7 +164,7 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
             t[HIPS] = -4.0F;
             t[TAIL_YAW] = 14.0F * Mth.sin(age * 0.06F);
             t[TAIL_CURL] = 12.0F;
-            t[TAIL_LIFT] = 58.0F;
+            t[TAIL_LIFT] = -55.0F;
             t[EARS] = -4.0F;
             t[BREATH] = 0.6F;
             t[GAIT] = 0.0F;
@@ -190,7 +190,7 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
             t[PITCH] = 5.0F;
             t[HEAD_PITCH] = 2.0F;
             t[FL] = t[FR] = -4.0F;
-            t[TAIL_LIFT] = -42.0F;
+            t[TAIL_LIFT] = 62.0F;
             t[TAIL_CURL] = 22.0F;
             t[EARS] = -8.0F;
             t[GAIT] = 0.0F;

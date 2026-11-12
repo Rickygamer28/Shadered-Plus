@@ -204,7 +204,7 @@ public final class RenderTest {
             "fill 463 -60 -1 466 -58 -1 minecraft:glass", "setblock 464 -59 0 skyblocks:cat_window_perch[facing=south]",
             "summon skyblocks:oiia_cat 464.5 -58.725 0.344 {NoAI:1b,Mood:10b,CollarColor:4b,Rotation:[180f,0f]}",
             "fill 468 -61 0 469 -61 1 skyblocks:koi_pond", "summon skyblocks:oiia_cat 470.4 -60 0.9 {NoAI:1b,Mood:11b,CollarColor:9b,Rotation:[90f,0f]}",
-            "setblock 473 -60 0 skyblocks:ferrofluid", "setblock 473 -60 1 minecraft:redstone_block", "setblock 475 -60 0 skyblocks:ferrofluid",
+            "setblock 473 -60 0 skyblocks:ferrofluid", "setblock 473 -60 -1 minecraft:redstone_block", "setblock 475 -60 0 skyblocks:ferrofluid",
             "fill 477 -60 -1 479 -58 -1 minecraft:stone_bricks", "setblock 478 -59 0 skyblocks:sky_clock[facing=south]",
             "setblock 482 -60 0 skyblocks:prism[axis=x]",
     };
