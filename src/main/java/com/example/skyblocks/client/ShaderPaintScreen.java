@@ -47,7 +47,7 @@ public class ShaderPaintScreen extends Screen {
     private int w, h;
     /** The texture as it's being redrawn (ARGB), as it was, and the skies painted on it (styles: ShaderPaintStyles). */
     private int[] colours, original;
-    private byte[] skies;
+    private int[] skies;
     private final ArrayDeque<Object[]> undo = new ArrayDeque<>(), redo = new ArrayDeque<>();
     private Tool tool = Tool.PENCIL;
     /** Painting with a sky (else a colour), which, through which look; the colour. */
@@ -120,10 +120,10 @@ public class ShaderPaintScreen extends Screen {
                     }
                 }
             }
-            skies = new byte[w * h];
+            skies = new int[w * h];
             ModComponents.ShaderPaint had = item.get(ModComponents.SHADER_PAINT.get());
             if (had != null && had.w() == w && had.h() == h) {
-                skies = had.pixels().clone();
+                skies = had.styles();
             }
             refreshUsed();
             for (int c : used) {
@@ -161,9 +161,9 @@ public class ShaderPaintScreen extends Screen {
         y += 20;
         addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.shader_paint.grid"), b -> grid = !grid).bounds(left, y, toolW, 18).build());
         y += 20;
-        addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.shader_paint.all"), b -> skyAll((byte) style()))
+        addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.shader_paint.all"), b -> skyAll(style()))
                 .bounds(left, y, toolW / 2 - 1, 18).build());
-        addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.shader_paint.clear"), b -> skyAll((byte) 0))
+        addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.shader_paint.clear"), b -> skyAll(0))
                 .bounds(left + toolW / 2 + 1, y, toolW / 2 - 1, 18).build());
         y += 20;
         addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.shader_paint.original"), b -> {
@@ -248,7 +248,7 @@ public class ShaderPaintScreen extends Screen {
             if (rubOut) {
                 skies[i] = 0;
             } else if (opaque(x, y)) {
-                skies[i] = (byte) style();
+                skies[i] = style();
             }
         } else if (rubOut) {
             colours[i] = 0;
@@ -331,7 +331,7 @@ public class ShaderPaintScreen extends Screen {
         return ea || eb ? ea == eb : (a | 0xFF000000) == (b | 0xFF000000);
     }
 
-    private void skyAll(byte s) {
+    private void skyAll(int s) {
         if (skies == null) {
             return;
         }
@@ -358,7 +358,7 @@ public class ShaderPaintScreen extends Screen {
             redo.push(new Object[] {colours.clone(), skies.clone()});
             Object[] s = undo.pop();
             colours = (int[]) s[0];
-            skies = (byte[]) s[1];
+            skies = (int[]) s[1];
             refreshUsed();
         }
     }
@@ -368,7 +368,7 @@ public class ShaderPaintScreen extends Screen {
             undo.push(new Object[] {colours.clone(), skies.clone()});
             Object[] s = redo.pop();
             colours = (int[]) s[0];
-            skies = (byte[]) s[1];
+            skies = (int[]) s[1];
             refreshUsed();
         }
     }
@@ -417,8 +417,8 @@ public class ShaderPaintScreen extends Screen {
                     case PICKER -> {
                         int i = y * w + x;
                         if (skyBrush && skies[i] != 0) {
-                            sky = ShaderPaintStyles.sky(skies[i] & 255);
-                            pass = ShaderPaintStyles.pass(skies[i] & 255);
+                            sky = ShaderPaintStyles.sky(skies[i]);
+                            pass = ShaderPaintStyles.pass(skies[i]);
                             lookButton.setMessage(lookName());
                         } else if (!skyBrush && opaque(x, y)) {
                             colour = colours[i] | 0xFF000000;
@@ -566,7 +566,7 @@ public class ShaderPaintScreen extends Screen {
     private void apply() {
         if (problem == null && skies != null) {
             Optional<ModComponents.ItemTexture> tex = redrawn() ? Optional.of(ModComponents.ItemTexture.of(w, h, colours)) : Optional.empty();
-            PacketDistributor.sendToServer(new ShaderPaintPayload(pos, new ModComponents.ShaderPaint(w, h, skies.clone()), tex));
+            PacketDistributor.sendToServer(new ShaderPaintPayload(pos, ModComponents.ShaderPaint.of(w, h, skies), tex));
         }
         onClose();
     }
@@ -670,7 +670,7 @@ public class ShaderPaintScreen extends Screen {
         if (hover >= 0) {
             g.renderTooltip(font, ShaderPaintRender.name(ShaderPaintStyles.of(hover, pass)), mouseX, mouseY);
         } else if (onCanvas(hoverX, hoverY) && skies[hoverY * w + hoverX] != 0) {
-            g.renderTooltip(font, ShaderPaintRender.name(skies[hoverY * w + hoverX] & 255), mouseX, mouseY);
+            g.renderTooltip(font, ShaderPaintRender.name(skies[hoverY * w + hoverX]), mouseX, mouseY);
         }
     }
 
@@ -678,19 +678,21 @@ public class ShaderPaintScreen extends Screen {
         g.pose().pushPose();
         g.pose().translate(0, 0, 40); // (in front of the canvas: the skies' render types draw only nearer than what's there)
         var m = g.pose().last().pose();
-        boolean[] has = new boolean[256];
-        for (byte b : skies) {
-            has[b & 255] = true;
+        java.util.TreeSet<Integer> has = new java.util.TreeSet<>();
+        for (int b : skies) {
+            if (b != 0) {
+                has.add(b);
+            }
         }
-        for (int s = 1; s < 256; s++) {
-            RenderType type = has[s] ? ShaderPaintRender.type(s) : null;
+        for (int s : has) {
+            RenderType type = ShaderPaintRender.type(s);
             if (type == null) {
                 continue;
             }
             VertexConsumer vc = g.bufferSource().getBuffer(type);
             for (int y = 0; y < h; y++) {
                 for (int x = 0; x < w; x++) {
-                    if ((skies[y * w + x] & 255) == s) {
+                    if (skies[y * w + x] == s) {
                         ShaderPaintRender.square(vc, m, x0 + x * c, y0 + y * c, c, c, s, x / (float) w, y / (float) h, (x + 1) / (float) w, (y + 1) / (float) h, w);
                     }
                 }
@@ -722,11 +724,11 @@ public class ShaderPaintScreen extends Screen {
         Minecraft mc = Minecraft.getInstance();
         ItemStack preview = item.copy();
         boolean any = false;
-        for (byte b : skies) {
+        for (int b : skies) {
             any |= b != 0;
         }
         if (any) {
-            preview.set(ModComponents.SHADER_PAINT.get(), new ModComponents.ShaderPaint(w, h, skies.clone()));
+            preview.set(ModComponents.SHADER_PAINT.get(), ModComponents.ShaderPaint.of(w, h, skies));
         } else {
             preview.remove(ModComponents.SHADER_PAINT.get());
         }

@@ -45,7 +45,7 @@ public record ShaderPaintPayload(BlockPos pos, ModComponents.ShaderPaint paint, 
             ModComponents.ItemTexture texture = payload.texture().orElse(null);
             if (!(player.level() instanceof ServerLevel level) || !level.isLoaded(payload.pos()) || player.distanceToSqr(payload.pos().getCenter()) > 8 * 8
                     || !(level.getBlockEntity(payload.pos()) instanceof InfusionAltarBlockEntity altar) || altar.item().isEmpty()
-                    || !fits(paint.w(), paint.h(), paint.pixels().length, 1) || texture != null && !fits(texture.w(), texture.h(), texture.argb().length, 4)) {
+                    || !fits(paint.w(), paint.h(), paint.pixels().length, 2) || texture != null && !fits(texture.w(), texture.h(), texture.argb().length, 4)) {
                 return;
             }
             ItemStack item = altar.item().copy();

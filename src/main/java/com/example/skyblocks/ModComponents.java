@@ -51,8 +51,8 @@ public final class ModComponents {
             () -> DataComponentType.<Photo>builder().persistent(Photo.CODEC).networkSynchronized(Photo.STREAM_CODEC).build());
 
     /**
-     * Shaders painted onto an item's texture at the infusion altar: for each pixel of its sprite (w x h, row by row from
-     * the top), which ShaderPaint style (0: none).
+     * Skies painted onto an item's texture at the infusion altar: for each pixel of its sprite (w x h, row by row from
+     * the top), which (ShaderPaintStyles: two bytes, high first; 0: none).
      */
     public record ShaderPaint(int w, int h, byte[] pixels) {
         public static final com.mojang.serialization.Codec<ShaderPaint> CODEC = com.mojang.serialization.codecs.RecordCodecBuilder.create(i -> i.group(
@@ -67,11 +67,33 @@ public final class ModComponents {
                 net.minecraft.network.codec.StreamCodec.composite(
                         net.minecraft.network.codec.ByteBufCodecs.VAR_INT, ShaderPaint::w,
                         net.minecraft.network.codec.ByteBufCodecs.VAR_INT, ShaderPaint::h,
-                        net.minecraft.network.codec.ByteBufCodecs.byteArray(64 * 64), ShaderPaint::pixels, ShaderPaint::new);
+                        net.minecraft.network.codec.ByteBufCodecs.byteArray(64 * 64 * 2), ShaderPaint::pixels, ShaderPaint::new);
+
+        public static ShaderPaint of(int w, int h, int[] styles) {
+            byte[] b = new byte[w * h * 2];
+            for (int i = 0; i < w * h; i++) {
+                b[i * 2] = (byte) (styles[i] >> 8);
+                b[i * 2 + 1] = (byte) styles[i];
+            }
+            return new ShaderPaint(w, h, b);
+        }
 
         public int at(int x, int y) {
-            int i = y * w + x;
-            return i >= 0 && i < pixels.length ? pixels[i] & 255 : 0;
+            if (x < 0 || y < 0 || x >= w || y >= h) {
+                return 0;
+            }
+            int i = (y * w + x) * 2;
+            return i + 1 < pixels.length ? (pixels[i] & 255) << 8 | pixels[i + 1] & 255 : 0;
+        }
+
+        public int[] styles() {
+            int[] out = new int[w * h];
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    out[y * w + x] = at(x, y);
+                }
+            }
+            return out;
         }
 
         public boolean empty() {

@@ -49,7 +49,7 @@ public final class ShaderPaintRender {
         SkyblockType[] skies = skies();
         int sky = ShaderPaintStyles.sky(style), pass = ShaderPaintStyles.pass(style);
         SkyblockPass[] passes = SkyblockPass.values();
-        if (sky >= skies.length || pass >= passes.length) {
+        if (sky < 0 || sky >= skies.length || pass >= passes.length) {
             return null;
         }
         if (shader == null) {
@@ -62,18 +62,17 @@ public final class ShaderPaintRender {
         } catch (RuntimeException ignored) {
             // (drawn as it is)
         }
-        if (TYPES[sky] == null) {
-            ResourceLocation picture = ResourceLocation.fromNamespaceAndPath(com.example.skyblocks.SkyBlocksMod.MOD_ID, "sky_paint/" + sky);
-            net.minecraft.client.Minecraft.getInstance().getTextureManager().register(picture, new Picture(skies[sky]));
-            TYPES[sky] = Types.of(sky, picture);
-        }
-        return TYPES[sky];
+        return TYPES.computeIfAbsent(sky, k -> {
+            ResourceLocation picture = ResourceLocation.fromNamespaceAndPath(com.example.skyblocks.SkyBlocksMod.MOD_ID, "sky_paint/" + k);
+            net.minecraft.client.Minecraft.getInstance().getTextureManager().register(picture, new Picture(skies[k]));
+            return Types.of(k, picture);
+        });
     }
 
     // ---- the skies, fixed to the item: shaders/core/sky_paint over each sky's picture ----
 
     static net.minecraft.client.renderer.ShaderInstance shader;
-    private static final RenderType[] TYPES = new RenderType[256];
+    private static final java.util.Map<Integer, RenderType> TYPES = new java.util.HashMap<>();
     private static java.lang.reflect.Method pictureOf;
 
     @net.neoforged.fml.common.EventBusSubscriber(modid = com.example.skyblocks.SkyBlocksMod.MOD_ID, bus = net.neoforged.fml.common.EventBusSubscriber.Bus.MOD,
@@ -136,7 +135,7 @@ public final class ShaderPaintRender {
     static Component name(int style) {
         SkyblockType[] skies = skies();
         int sky = ShaderPaintStyles.sky(style), pass = ShaderPaintStyles.pass(style);
-        if (style <= 0 || sky >= skies.length || pass >= SkyblockPass.values().length) {
+        if (style <= 0 || sky < 0 || sky >= skies.length || pass >= SkyblockPass.values().length) {
             return Component.literal("?");
         }
         Component name = skies[sky].getDisplayName();
@@ -270,14 +269,15 @@ public final class ShaderPaintRender {
                      java.util.function.BiPredicate<Integer, Integer> solid) {
         float pw = 1.0F / paint.w(), ph = 1.0F / paint.h();
         float front = 8.5F / 16.0F + lift, back = 7.5F / 16.0F - lift;
-        boolean[] has = new boolean[256];
-        for (byte b : paint.pixels()) {
-            has[b & 255] = true;
-        }
-        for (int style = 1; style < 256; style++) {
-            if (!has[style]) {
-                continue;
+        java.util.TreeSet<Integer> has = new java.util.TreeSet<>();
+        for (int y = 0; y < paint.h(); y++) {
+            for (int x = 0; x < paint.w(); x++) {
+                if (paint.at(x, y) != 0) {
+                    has.add(paint.at(x, y));
+                }
             }
+        }
+        for (int style : has) {
             RenderType type = type(style);
             if (type == null) {
                 continue;
