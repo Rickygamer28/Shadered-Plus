@@ -144,13 +144,6 @@ public final class RenderTest {
             "fill 344 -60 10 349 -57 10 minecraft:stone_bricks", "#photo 345 -59 9 north false", "#photo 348 -60 8 north true",
             "fill 352 -60 12 362 -56 12 minecraft:stone_bricks", "#photo 354 -58 11 north false medium", "#photo 359 -58 11 north false large",
             "#photo 353 -60 8 north true medium", "#photo 357 -60 8 north true large",
-            "fill 400 -60 -20 420 -58 0 minecraft:grass_block", "fill 403 -57 -17 417 -55 -3 minecraft:grass_block",
-            "fill 406 -54 -14 414 -51 -6 minecraft:stone", "fill 408 -50 -12 412 -49 -8 minecraft:snow_block",
-            "fill 348 -61 8 377 -61 32 minecraft:sand", "fill 350 -62 10 375 -61 30 minecraft:water",
-            "fill 330 -61 -6 446 -61 -5 minecraft:dirt_path", "fill 360 -60 -30 366 -56 -24 minecraft:oak_planks hollow",
-            "fill 359 -55 -31 367 -55 -23 minecraft:red_terracotta", "place feature minecraft:oak 395 -60 20", "place feature minecraft:birch 400 -60 24",
-            "place feature minecraft:oak 380 -60 30", "place feature minecraft:spruce 425 -60 15", "place feature minecraft:oak 430 -60 -30",
-            "#maptable 384 -60 0", "#maptable 390 -60 3 391 -60 3 390 -60 4 391 -60 4",
     };
     /** The newer things (SKYBLOCKS_RENDER_SET=new: only these), well away from the rest. */
     static final boolean NEW = "new".equals(System.getenv("SKYBLOCKS_RENDER_SET"));
@@ -233,13 +226,6 @@ public final class RenderTest {
             "fill 344 -60 10 349 -57 10 minecraft:stone_bricks", "#photo 345 -59 9 north false", "#photo 348 -60 8 north true",
             "fill 352 -60 12 362 -56 12 minecraft:stone_bricks", "#photo 354 -58 11 north false medium", "#photo 359 -58 11 north false large",
             "#photo 353 -60 8 north true medium", "#photo 357 -60 8 north true large",
-            "fill 400 -60 -20 420 -58 0 minecraft:grass_block", "fill 403 -57 -17 417 -55 -3 minecraft:grass_block",
-            "fill 406 -54 -14 414 -51 -6 minecraft:stone", "fill 408 -50 -12 412 -49 -8 minecraft:snow_block",
-            "fill 348 -61 8 377 -61 32 minecraft:sand", "fill 350 -62 10 375 -61 30 minecraft:water",
-            "fill 330 -61 -6 446 -61 -5 minecraft:dirt_path", "fill 360 -60 -30 366 -56 -24 minecraft:oak_planks hollow",
-            "fill 359 -55 -31 367 -55 -23 minecraft:red_terracotta", "place feature minecraft:oak 395 -60 20", "place feature minecraft:birch 400 -60 24",
-            "place feature minecraft:oak 380 -60 30", "place feature minecraft:spruce 425 -60 15", "place feature minecraft:oak 430 -60 -30",
-            "#maptable 384 -60 0", "#maptable 390 -60 3 391 -60 3 390 -60 4 391 -60 4",
     };
     private static final String[] NEW_SPOTS = {"200.5 -59.2 -3 0 18", "open 200 -60 0 200.5 -60 -1.6 0 15", "283.5 -59.6 -2.4 0 32",
             "290.5 -59.6 -2.4 0 32", "286.5 -60 -1.2 0 30", "202.5 -58.5 2.6 0 22", "night 202.5 -58.5 2.6 0 22", "229 -56 13 130 35",
@@ -248,8 +234,8 @@ public final class RenderTest {
             "open 220 -60 10 219.5 -60 8 0 30", "playpick 7 open 270 -60 0 270.5 -60 -1.6 0 10", "play 7 open 270 -60 0 270.5 -60 -1.6 0 10",
             "play 3 open 270 -60 0 270.5 -60 -1.6 0 10", "playmoves 7 open 270 -60 0 270.5 -60 -1.6 0 10", "controls open 270 -60 0 270.5 -60 -1.6 0 10",
             "334 -58 -4 0 32", "333.5 -57.6 0.8 0 72", "335 -59.6 6.6 0 18", "331.5 -59.8 7.7 0 24", "334.5 -59.8 7.7 0 24", "343.5 -59.2 -2.2 0 38",
-            "night 343.5 -59.2 -2.2 0 38", "338.8 -59.6 1.4 0 18", "346.5 -59.5 6.4 0 10", "384.5 -59.6 -1.1 0 46", "night 384.5 -59.6 -1.1 0 46",
-            "391 -59.2 1.3 0 42", "412 -36 -60 0 28", "catwalk 338.8 -59.6 1.4 0 18", "catwalk 340.6 -59.7 3.2 90 12", "holdphoto 333.5 -60 -3 0 8", "holdcamera 333.5 -60 -3 0 8", "356.5 -59.4 4.5 0 8", "night 356.5 -59.4 4.5 0 8", "334 -59.5 10.2 0 22", "331 -59.7 10.9 0 25", 
+            "night 343.5 -59.2 -2.2 0 38", "338.8 -59.6 1.4 0 18", "346.5 -59.5 6.4 0 10",
+            "catwalk 338.8 -59.6 1.4 0 18", "catwalk 340.6 -59.7 3.2 90 12", "holdphoto 333.5 -60 -3 0 8", "holdcamera 333.5 -60 -3 0 8", "356.5 -59.4 4.5 0 8", "night 356.5 -59.4 4.5 0 8", "334 -59.5 10.2 0 22", "331 -59.7 10.9 0 25", 
             "watch 7 open 270 -60 0 270.5 -58.6 -7 0 3", "watch 7 open 270 -60 0 270.5 -59.3 -1.1 0 52", "watch 7 open 270 -60 0 night 270.5 -58.6 -7 0 3"};
     private static int playGame = -1;
     private static boolean pickOnly, controls, moveList, watch;
@@ -267,8 +253,8 @@ public final class RenderTest {
     private static long timedFrames, timedFrom;
     private static final String[] SPOTS = {"0.5 -60 -6.5 0 15", "itemswhole 0.5 -60 -6.5 0 15", "0.5 -60 1.6 0 20", "night 0.5 -60 1.6 0 20", "0.5 -59 5.6 0 40", "night 0.5 -59 5.6 0 40", "0.5 -59.5 8.5 0 8", "night 0.5 -59.5 8.5 0 8", "-2.5 -59.3 10.4 0 30", "-4 -58 18.3 0 55", "night -4 -58 18.3 0 55", "rain -4 -58 18.3 0 55", "4.5 -58 18.3 0 55", "night 4.5 -58 18.3 0 55", "night 0.5 -57 20.5 0 -8", "0.5 -59 27 0 10", "night 0.5 -59 27 0 10", "-4 -59.5 33.3 0 15", "3 -59.5 33.3 0 15", "-4.3 -59.4 34.7 0 22", "3.3 -59.4 34.7 0 22", "2.5 -59.6 12.3 0 23", "1 -59.3 2.9 0 45", "-3 -60 40 0 30", "1 -59.5 39.5 0 10", "night 1 -59.5 39.5 0 10", "-5.5 -60 45 0 5", "0.5 -59.5 52 0 12", "9 -55.5 45 0 6", "-30.5 -57 1 0 10", "-12.6 -58.9 10.1 0 10", "click -12 -60 10 -11.5 -60 8 0 25", "open 3 -60 -3 3.5 -60 -5.5 0 20", "open -12 -60 4 -11.5 -60 2 0 25", "-2 -60 -6.2 0 28", "-5 -59.5 -7.6 0 12", "1 -60 -10.5 180 5", "night 1 -60 -10.5 180 5", "1 -60 -10.5 180 5", "farportal 1 -60 -10.5 180 5", "farportal 3.6 -60 -11.8 160 5", "farportal -1.8 -60 -11.5 200 5", "20.5 -59 -15.5 180 8", "night 20.5 -59 -15.5 180 8", "22.4 -57.2 -20.2 160 22", "20.5 -60 -21.2 180 -12", "20.5 -59.5 -20.2 180 -18", "62.5 -59 -16 180 8", "62.5 -51 -20.5 180 72", "72.5 -45 -11 180 45", "fabulous 72.5 -45 -11 180 45", "81 -45 -14 136 45", "fabulous 81 -45 -14 136 45", "fabulous 72.5 -51 -21.5 180 80", "fabulous 72.5 -57 -17.9 180 -5", "72.5 -60 -17.8 180 -14", "75.5 -60 -17.8 205 -8", "72.5 -59 -20.3 180 35", "74 -59 -20.5 220 10", "62.5 -59 -30 0 8", "69 -59 -22.5 90 8", "56 -59 -22.5 -90 8", "67 -60 -18 135 2", "57.5 -57 -28 -45 20", "58.5 -59 -11.5 180 40", "open 58 -60 -14 58.5 -60 -11.5 180 30", "41.5 -59 -42.5 18 -42", "43.5 -59 -43 37 -30", "40.5 -59 -39.2 0 -88", "40.5 -59 -43.2 0 -18", "42.4 -59 -39.5 70 -40", "42.9 -59 -39.5 70 -40", "43.4 -59 -39.5 70 -40", "37.5 -59 -42.6 -35 -8", "nodepth 41.5 -59 -42.5 18 -42", "nodepth 43.5 -59 -43 37 -30", "38 -59 -33 175 -20", "night 11.5 -60 -8 0 5", "11.5 -59 3.5 -45 15", "11.5 -59 3.5 -45 -25", "10.5 -59.6 -7.8 0 8", "-12.5 -59.3 2.7 0 38", "-12.5 -59.0 5.6 0 15", "night -12.5 -59.0 5.6 0 15", "-17 -59 16 -10 0", "-17 -59 16 10 0", "burst 1 -56 -2 180 10", "burst 1 -53 8 180 12", "burst 1 -50 20 180 13", "burst move 1 -56 -2 180 10", "burst move 1 -53 8 180 12", "farportal burst 1 -53 8 180 12", "farportal burst move 1 -53 8 180 12", "-11 -59 -10 180 5", "burst -11 -56 -3 180 10", "burst move -11 -56 -3 180 10", "burst move -11 -59 -9 180 4", "nobridge -11 -59 -10 180 5", "nobridge burst move -11 -56 -3 180 10", "27 -60 18.5 0 5", "night 27 -60 18.5 0 5", "34 -60 18.5 0 5", "27 -56 13 0 40", "29.5 -59 28 0 12", "night 29.5 -59 28 0 12", "burst 27 -60 19.5 0 5",
             "334 -58 -4 0 32", "333.5 -57.6 0.8 0 72", "335 -59.6 6.6 0 18", "331.5 -59.8 7.7 0 24", "334.5 -59.8 7.7 0 24", "343.5 -59.2 -2.2 0 38",
-            "night 343.5 -59.2 -2.2 0 38", "338.8 -59.6 1.4 0 18", "346.5 -59.5 6.4 0 10", "384.5 -59.6 -1.1 0 46", "night 384.5 -59.6 -1.1 0 46",
-            "391 -59.2 1.3 0 42", "412 -36 -60 0 28", "catwalk 338.8 -59.6 1.4 0 18", "catwalk 340.6 -59.7 3.2 90 12", "holdphoto 333.5 -60 -3 0 8", "holdcamera 333.5 -60 -3 0 8", "356.5 -59.4 4.5 0 8", "night 356.5 -59.4 4.5 0 8", "334 -59.5 10.2 0 22", "331 -59.7 10.9 0 25", 
+            "night 343.5 -59.2 -2.2 0 38", "338.8 -59.6 1.4 0 18", "346.5 -59.5 6.4 0 10",
+            "catwalk 338.8 -59.6 1.4 0 18", "catwalk 340.6 -59.7 3.2 90 12", "holdphoto 333.5 -60 -3 0 8", "holdcamera 333.5 -60 -3 0 8", "356.5 -59.4 4.5 0 8", "night 356.5 -59.4 4.5 0 8", "334 -59.5 10.2 0 22", "331 -59.7 10.9 0 25", 
             "watch 7 open 270 -60 0 270.5 -58.6 -7 0 3", "watch 7 open 270 -60 0 270.5 -59.3 -1.1 0 52", "watch 7 open 270 -60 0 night 270.5 -58.6 -7 0 3"};
 
     private static boolean burst, moving, burstOn;
@@ -319,37 +305,11 @@ public final class RenderTest {
     }
 
     /**
-     * Scene steps no command can do. "#maptable x y z ...": a map of the land round the first table, drawn as if
-     * explored, put on each of those tables. "#photo x y z facing standing": a framed photo (a test picture).
+     * Scene steps no command can do. "#photo x y z facing standing": a framed photo (a test picture).
      */
     private static void special(MinecraftServer server, String[] a) {
         net.minecraft.server.level.ServerLevel lvl = server.overworld();
-        if (a[0].equals("#maptable")) {
-            int x = Integer.parseInt(a[1]), z = Integer.parseInt(a[3]);
-            net.minecraft.world.item.ItemStack map = net.minecraft.world.item.MapItem.create(lvl, x, z, (byte) 0, true, false);
-            net.minecraft.world.level.saveddata.maps.MapItemSavedData data = net.minecraft.world.item.MapItem.getSavedData(map, lvl);
-            if (data == null) {
-                return;
-            }
-            for (int pz = 0; pz < 128; pz++) {
-                for (int px = 0; px < 128; px++) {
-                    int bx = data.centerX + px - 64, bz = data.centerZ + pz - 64;
-                    net.minecraft.world.level.chunk.LevelChunk ch = lvl.getChunk(bx >> 4, bz >> 4);
-                    lvl.setChunkForced(bx >> 4, bz >> 4, true);
-                    int top = ch.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, bx & 15, bz & 15);
-                    net.minecraft.core.BlockPos at = new net.minecraft.core.BlockPos(bx, top, bz);
-                    net.minecraft.world.level.material.MapColor mc = ch.getBlockState(at).getMapColor(lvl, at);
-                    data.updateColor(px, pz, mc.getPackedId(net.minecraft.world.level.material.MapColor.Brightness.NORMAL));
-                }
-            }
-            for (int i = 1; i + 2 < a.length; i += 3) {
-                net.minecraft.core.BlockPos pos = new net.minecraft.core.BlockPos(Integer.parseInt(a[i]), Integer.parseInt(a[i + 1]), Integer.parseInt(a[i + 2]));
-                lvl.setBlock(pos, com.example.skyblocks.ModBlocks.MAP_TABLE.get().defaultBlockState(), 3);
-                if (lvl.getBlockEntity(pos) instanceof com.example.skyblocks.MapTableBlockEntity be) {
-                    be.setMap(map.copy());
-                }
-            }
-        } else if (a[0].equals("#photo")) {
+        if (a[0].equals("#photo")) {
             int w = com.example.skyblocks.PhotoStore.W, h = com.example.skyblocks.PhotoStore.H;
             int[] rgb = new int[w * h];
             for (int y = 0; y < h; y++) {

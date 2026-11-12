@@ -126,8 +126,6 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.HOT_SPRING.get(), p, st), ModBlocks.HOT_SPRING.get()).build(null));
     public static final Supplier<BlockEntityType<PhotoFrameBlockEntity>> PHOTO_FRAME = TYPES.register("photo_frame",
             () -> BlockEntityType.Builder.of(PhotoFrameBlockEntity::new, ModBlocks.PHOTO_FRAME.get()).build(null));
-    public static final Supplier<BlockEntityType<MapTableBlockEntity>> MAP_TABLE = TYPES.register("map_table",
-            () -> BlockEntityType.Builder.of(MapTableBlockEntity::new, ModBlocks.MAP_TABLE.get()).build(null));
 
     private ModBlockEntities() {}
 }

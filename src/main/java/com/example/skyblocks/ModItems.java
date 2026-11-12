@@ -152,7 +152,6 @@ public final class ModItems {
             () -> new net.neoforged.neoforge.common.DeferredSpawnEggItem(ModEntities.OIIA_CAT, 0x8C8C8C, 0xE8E2D8, new Item.Properties()));
     public static final DeferredItem<CameraItem> CAMERA = ITEMS.register("camera", () -> new CameraItem(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<PhotoItem> PHOTO = ITEMS.register("photo", () -> new PhotoItem(new Item.Properties().stacksTo(16)));
-    public static final DeferredItem<BlockItem> MAP_TABLE = ITEMS.registerSimpleBlockItem("map_table", ModBlocks.MAP_TABLE);
     public static final DeferredItem<PhotoFrameItem> SMALL_PHOTO_FRAME = ITEMS.register("small_photo_frame",
             () -> new PhotoFrameItem(PhotoFrameBlock.Size.SMALL, new Item.Properties()));
     public static final DeferredItem<PhotoFrameItem> MEDIUM_PHOTO_FRAME = ITEMS.register("medium_photo_frame",

@@ -422,10 +422,6 @@ public final class ModBlocks {
     public static final DeferredBlock<PhotoFrameBlock> PHOTO_FRAME = BLOCKS.registerBlock("photo_frame", PhotoFrameBlock::new,
             BlockBehaviour.Properties.of().strength(0.3F).sound(SoundType.WOOD).noOcclusion().noCollission().noLootTable()
                     .pushReaction(PushReaction.DESTROY));
-    /** A map table: the map's land in 3D (MapTableBlock, client/MapTableRenderer). */
-    public static final DeferredBlock<MapTableBlock> MAP_TABLE = BLOCKS.registerBlock("map_table", MapTableBlock::new,
-            BlockBehaviour.Properties.of().strength(2.0F).sound(SoundType.WOOD).noOcclusion().ignitedByLava()
-                    .mapColor(net.minecraft.world.level.material.MapColor.WOOD));
 
     private ModBlocks() {}
 }
