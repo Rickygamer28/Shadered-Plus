@@ -319,13 +319,13 @@ public class ShaderPaintScreen extends Screen {
                 dragging = false;
                 turning = false;
                 rebuildWidgets();
-            }).bounds(88, 4, 34, 16).build());
+            }).bounds(88, 2, 34, 14).build());
             addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.shader_paint.auto"), b -> {
                 remember();
                 wornAuto = true;
                 autoWorn();
                 refreshUsed();
-            }).tooltip(Tooltip.create(Component.translatable("screen.skyblocks.shader_paint.auto.tip"))).bounds(124, 4, 34, 16).build());
+            }).tooltip(Tooltip.create(Component.translatable("screen.skyblocks.shader_paint.auto.tip"))).bounds(124, 2, 34, 14).build());
             if (!flat) {
                 String[] views = {"front", "side", "back"};
                 float[] yaws = {0.0F, 90.0F, 180.0F};

@@ -838,7 +838,7 @@
   "screen.skyblocks.shader_paint.quick.bottom": "Bottom",
   "screen.skyblocks.shader_paint.quick.tip": "Paint the sky picked in this pattern (the rest cleared)",
   "screen.skyblocks.shader_paint.quick.full.short": "All",
-  "screen.skyblocks.shader_paint.quick.trim.short": "Edge",
+  "screen.skyblocks.shader_paint.quick.trim.short": "Rim",
   "screen.skyblocks.shader_paint.quick.stripes.short": "///",
   "screen.skyblocks.shader_paint.quick.checker.short": "#",
   "screen.skyblocks.shader_paint.quick.top.short": "Top",
