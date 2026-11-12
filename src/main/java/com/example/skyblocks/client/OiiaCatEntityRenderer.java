@@ -47,7 +47,8 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
         boolean spin = cat.spinning();
         byte mood = cat.mood();
         // (curled up: napping, in a box; the loaf is the spin model)
-        boolean loaf = spin || mood == OiiaCatEntity.NAPPING || mood == OiiaCatEntity.BOXED;
+        // (the loaf - the spin model - only spins now: lying down, napping or in a box, is a pose of the skeleton)
+        boolean loaf = spin;
         if (!((loaf ? cat.clientSpinModel : cat.clientModel) instanceof RenderableModel model)) {
             return; // (Shadered hasn't loaded the model yet)
         }
@@ -90,7 +91,8 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
 
     /** A pose's numbers (degrees; lift in model units): what the cat eases towards, and is at. */
     private static final int PITCH = 0, LIFT = 1, ROLL = 2, FL = 3, FR = 4, BL = 5, BR = 6, HEAD_YAW = 7, HEAD_PITCH = 8, TAIL_YAW = 9,
-            TAIL_LIFT = 10, GAIT = 11, SIT = 12, N = 13;
+            TAIL_LIFT = 10, GAIT = 11, SIT = 12, HIPS = 13, PAW_FL = 14, PAW_FR = 15, PAW_BL = 16, PAW_BR = 17, TAIL_CURL = 18, EARS = 19,
+            BREATH = 20, N = 21;
 
     /** Per cat (client): where its pose is now, and when it was last drawn. */
     private static final class Pose {
@@ -105,66 +107,97 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
     private static float[] target(OiiaCatEntity cat, float age, float partialTick, float speed, boolean air) {
         float[] t = new float[N];
         t[GAIT] = 1.0F;
-        // its head turned to what it's looking at (as far as a neck goes), its tail held up and swaying gently
+        t[BREATH] = 0.4F;
+        // its head turned to what it's looking at, its tail held up and swaying, its ears up
         float headYaw = Mth.wrapDegrees(Mth.rotLerp(partialTick, cat.yHeadRotO, cat.yHeadRot) - Mth.rotLerp(partialTick, cat.yBodyRotO, cat.yBodyRot));
-        t[HEAD_YAW] = Mth.clamp(headYaw * 0.8F, -30.0F, 30.0F);
-        t[HEAD_PITCH] = Mth.clamp(Mth.lerp(partialTick, cat.xRotO, cat.getXRot()) * 0.7F, -18.0F, 18.0F);
-        t[TAIL_LIFT] = -10.0F - 8.0F * speed;
+        t[HEAD_YAW] = Mth.clamp(headYaw, -40.0F, 40.0F);
+        t[HEAD_PITCH] = Mth.clamp(Mth.lerp(partialTick, cat.xRotO, cat.getXRot()), -25.0F, 25.0F);
+        t[TAIL_LIFT] = -12.0F - 8.0F * speed;
+        t[TAIL_CURL] = 8.0F;
         byte mood = cat.mood();
         if (mood == OiiaCatEntity.SCRATCHING) {
             // up on its back legs against the post, front paws on it, back legs braced, looking up at it
             t[PITCH] = -42.0F;
             t[FL] = t[FR] = -55.0F;
             t[BL] = t[BR] = 42.0F;
+            t[PAW_FL] = t[PAW_FR] = 15.0F;
             t[HEAD_YAW] = 0.0F;
-            t[HEAD_PITCH] = 10.0F;
+            t[HEAD_PITCH] = 22.0F;
             t[TAIL_LIFT] = 30.0F;
             t[GAIT] = 0.0F;
         } else if (mood == OiiaCatEntity.EATING) {
-            // leaning in over the bowl, head down
-            t[PITCH] = 14.0F;
-            t[LIFT] = -1.0F;
-            t[FL] = t[FR] = -14.0F;
-            t[BL] = t[BR] = -14.0F;
+            // leaning in over the bowl, head right down, ears relaxed
+            t[PITCH] = 8.0F;
+            t[FL] = t[FR] = -8.0F;
+            t[BL] = t[BR] = -8.0F;
             t[HEAD_YAW] = 0.0F;
-            t[HEAD_PITCH] = 12.0F;
-            t[TAIL_LIFT] = 4.0F;
+            t[HEAD_PITCH] = 30.0F;
+            t[TAIL_LIFT] = 8.0F;
+            t[EARS] = 12.0F;
+            t[GAIT] = 0.0F;
+        } else if (mood == OiiaCatEntity.NAPPING || mood == OiiaCatEntity.BOXED) {
+            // lying down: legs folded under, tail wrapped round, head down (napping) or up looking about (in a box)
+            boolean asleep = mood == OiiaCatEntity.NAPPING;
+            t[LIFT] = -5.5F;
+            t[FL] = t[FR] = -70.0F;
+            t[PAW_FL] = t[PAW_FR] = 70.0F;
+            t[BL] = t[BR] = -55.0F;
+            t[PAW_BL] = t[PAW_BR] = 80.0F;
+            t[HIPS] = -4.0F;
+            t[TAIL_YAW] = 55.0F;
+            t[TAIL_CURL] = 40.0F;
+            t[TAIL_LIFT] = 26.0F;
+            t[HEAD_YAW] = asleep ? 18.0F : t[HEAD_YAW];
+            t[HEAD_PITCH] = asleep ? 16.0F : t[HEAD_PITCH] * 0.6F;
+            t[EARS] = asleep ? 18.0F : 0.0F;
+            t[BREATH] = asleep ? 1.6F : 0.6F;
             t[GAIT] = 0.0F;
         } else if (cat.isInSittingPose() || mood == OiiaCatEntity.PERCHED) {
-            // sat down: its rump down on the ground (tipped back about its front paws, which stay put), front legs
-            // straight, back legs tucked under, tail down round it
-            t[SIT] = -20.0F;
-            t[LIFT] = 2.5F;
-            t[FL] = t[FR] = 20.0F;
-            t[BL] = t[BR] = -38.0F;
-            t[HEAD_PITCH] += 8.0F;
-            t[TAIL_LIFT] = 26.0F;
-            t[TAIL_YAW] = 25.0F;
+            // sat down: rump down on the ground (its hips tipped down), front legs straight, back legs tucked, tail curled round
+            t[SIT] = -6.0F;
+            t[HIPS] = -40.0F;
+            t[LIFT] = -0.5F;
+            t[FL] = t[FR] = 6.0F;
+            t[BL] = t[BR] = -12.0F;
+            t[PAW_BL] = t[PAW_BR] = 40.0F;
+            t[HEAD_PITCH] += 6.0F;
+            t[TAIL_YAW] = 50.0F;
+            t[TAIL_CURL] = 35.0F;
+            t[TAIL_LIFT] = 30.0F;
             t[GAIT] = 0.0F;
         } else if (mood == OiiaCatEntity.PLAYING) {
             if (air) {
                 // a pounce: stretched out, front paws reaching, back legs pushing off
                 t[PITCH] = -8.0F;
-                t[FL] = t[FR] = -50.0F;
-                t[BL] = t[BR] = 45.0F;
+                t[HIPS] = 8.0F;
+                t[FL] = t[FR] = -55.0F;
+                t[PAW_FL] = t[PAW_FR] = -20.0F;
+                t[BL] = t[BR] = 48.0F;
+                t[PAW_BL] = t[PAW_BR] = -20.0F;
                 t[TAIL_LIFT] = 10.0F;
+                t[EARS] = -10.0F;
                 t[GAIT] = 0.0F;
             } else if (speed < 0.25F) {
-                // stalking: low to the ground, tail twitching
-                t[LIFT] = -3.5F;
-                t[PITCH] = 4.0F;
-                t[FL] = t[FR] = -4.0F;
-                t[BL] = t[BR] = -4.0F;
+                // stalking: low to the ground, legs bent, ears forward, tail twitching
+                t[LIFT] = -3.0F;
+                t[PITCH] = 3.0F;
+                t[FL] = t[FR] = -14.0F;
+                t[PAW_FL] = t[PAW_FR] = 28.0F;
+                t[BL] = t[BR] = -14.0F;
+                t[PAW_BL] = t[PAW_BR] = 28.0F;
                 t[TAIL_LIFT] = 6.0F;
+                t[EARS] = -12.0F;
             }
         }
         return t;
     }
 
     /**
-     * The cat on its skeleton (OiiaCatRig: body, head, four legs, tail and its tip), posed for what it's doing - stood, walking (a trot), running
-     * (a bounding gallop), sat up, stalking, pouncing, eating, scratching - and easing from one pose to the next; its
-     * head turns to what it looks at, its tail sways. False while the model hasn't loaded (then it's the whole model, still).
+     * The cat on its skeleton (OiiaCatRig: chest and hips, head and ears, legs and paws, a tail in three), posed for what
+     * it's doing - stood, walking (a trot, paws lifting), running (a bounding gallop, its back flexing), sat down,
+     * lying down, stalking (with a wiggle), pouncing, eating, scratching - and easing from one pose to the next; its head
+     * turns to what it looks at, its ears twitch, its tail sways in a wave. False while the model hasn't loaded (then
+     * it's the whole model, still).
      */
     private static boolean parts(OiiaCatEntity cat, PoseStack pose, float scale, float age, float partialTick) {
         if (!(cat.clientParts instanceof RenderableModel)) {
@@ -187,7 +220,7 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
         long now = System.nanoTime();
         float dt = p.fresh ? 1.0F : Math.min(0.25F, (now - p.lastNanos) / 1.0E9F);
         p.lastNanos = now;
-        float k = p.fresh ? 1.0F : 1.0F - (float) Math.exp(-dt * (air ? 14.0F : 7.0F));
+        float k = p.fresh ? 1.0F : 1.0F - (float) Math.exp(-dt * (air ? 14.0F : 6.0F));
         for (int i = 0; i < N; i++) {
             p.at[i] += (target[i] - p.at[i]) * k;
         }
@@ -195,64 +228,87 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
         float[] a = p.at;
         byte mood = cat.mood();
         float gait = a[GAIT] * speed;
-        // running: a bounding gallop (front pair, then back pair); walking: a trot (diagonal pairs)
+        // running: a bounding gallop (front pair, then back pair), its back flexing; walking: a trot (diagonal pairs)
         boolean gallop = speed > 0.8F && !testWalk;
         float phase = walk * (gallop ? 0.75F : 0.9F);
         float bob = gallop ? Mth.sin(phase * 2.0F) * 1.6F : Math.abs(Mth.sin(phase)) * 1.2F;
         float rock = gallop ? Mth.sin(phase) * 5.0F : 0.0F;
-        // (stalking: a little wiggle of the back end, as before a pounce)
-        float wiggle = mood == OiiaCatEntity.PLAYING && a[LIFT] < -2.0F ? Mth.sin(age * 1.1F) * 2.5F : 0.0F;
+        float breath = Mth.sin(age * (a[BREATH] > 1.0F ? 0.075F : 0.12F)) * a[BREATH];
         pose.translate(0, Math.abs(bob) * 0.012F * gait, 0);
-        pose.mulPose(Axis.ZP.rotationDegrees((gallop ? 0.0F : Mth.sin(phase) * 2.5F * gait) + a[ROLL]));
+        pose.mulPose(Axis.ZP.rotationDegrees((gallop ? 0.0F : Mth.sin(phase) * 2.0F * gait) + a[ROLL]));
         pose.scale(scale, scale, scale);
-        pose.translate(0, OiiaCatModel.FEET + a[LIFT], 0);
-        // the whole cat tipped about its back paws (sat up, reared up, leaning in), and rocking as it gallops
+        pose.translate(0, OiiaCatModel.FEET + a[LIFT] + breath * 0.15F, 0);
+        // the whole cat tipped back about its front paws (sitting), then about its back paws (reared up, leaning in)
         float pitch = a[PITCH] + rock * gait;
         if (mood == OiiaCatEntity.SCRATCHING) {
             pitch += Mth.sin(age * 0.5F) * 3.0F;
         } else if (mood == OiiaCatEntity.EATING) {
-            pitch += Mth.sin(age * 0.6F) * 2.0F;
+            pitch += Mth.sin(age * 0.6F) * 1.5F;
         }
         pose.translate(0, 0, FRONT_PAWS);
         pose.mulPose(Axis.XP.rotationDegrees(a[SIT]));
         pose.translate(0, 0, BACK_PAWS - FRONT_PAWS);
         pose.mulPose(Axis.XP.rotationDegrees(pitch));
-        pose.mulPose(Axis.YP.rotationDegrees(wiggle));
         pose.translate(0, 0, -BACK_PAWS);
         Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         Matrix4f world = new Matrix4f().translation((float) camera.x, (float) camera.y, (float) camera.z).mul(new Matrix4f(pose.last().pose()));
-        float swing = (gallop ? 40.0F : 30.0F) * gait;
+        // the chest is where everything's measured from; the hips bend from it: the rump down to sit, the back flexing as
+        // it gallops, a wiggle as it gets ready to pounce, breathing
+        Matrix4f body = new Matrix4f();
+        bones.set(OiiaCatRig.BODY, body);
+        float wiggle = mood == OiiaCatEntity.PLAYING && a[LIFT] < -2.0F ? Mth.sin(age * 1.1F) * 7.0F : 0.0F;
+        float hipsPitch = a[HIPS] + (gallop ? Mth.sin(phase + 1.2F) * 9.0F * gait : Mth.sin(phase * 2.0F) * 1.5F * gait) + breath;
+        Matrix4f hips = OiiaCatRig.Posed.turn(OiiaCatRig.HIPS_AT, wiggle + Mth.sin(phase) * 3.0F * gait, hipsPitch);
+        bones.set(OiiaCatRig.HIPS, hips);
+        // the legs: swinging with the gait, the paw lifting (bending back) as the leg comes forward
+        float swing = (gallop ? 40.0F : 28.0F) * gait;
         float[] legPhase = gallop ? new float[] {0.0F, 0.35F, Mth.PI, Mth.PI + 0.35F} : new float[] {0.0F, Mth.PI, Mth.PI, 0.0F};
-        // the bones: each turned about its joint (the fur blending across it)
-        bones.set(OiiaCatRig.BODY, new Matrix4f());
         for (int i = 0; i < 4; i++) {
-            float angle = a[FL + i] + Mth.sin(phase + legPhase[i]) * swing;
+            float legAngle = a[FL + i] + Mth.sin(phase + legPhase[i]) * swing;
+            float pawAngle = a[PAW_FL + i] + Math.max(0.0F, Mth.cos(phase + legPhase[i])) * 45.0F * gait;
             if (mood == OiiaCatEntity.SCRATCHING && i <= 1) {
-                // (front paws scratching in turn: up, and a pull down the post)
+                // (front paws scratching in turn: up, and a pull down the post, claws curling)
                 float s = age * 0.9F + (i == 0 ? 0.0F : Mth.PI);
-                angle += Mth.sin(s) * 22.0F + Math.max(0.0F, Mth.sin(s)) * 8.0F;
+                legAngle += Mth.sin(s) * 22.0F + Math.max(0.0F, Mth.sin(s)) * 8.0F;
+                pawAngle += Math.max(0.0F, -Mth.sin(s)) * 35.0F;
             }
-            bones.set(OiiaCatRig.LEGS[i], OiiaCatRig.Posed.turn(OiiaCatRig.LEGS_AT[i], 0.0F, angle));
+            Matrix4f parent = i < 2 ? body : hips;
+            Matrix4f leg = new Matrix4f(parent).mul(OiiaCatRig.Posed.turn(OiiaCatRig.LEGS_AT[i], 0.0F, legAngle));
+            bones.set(OiiaCatRig.LEGS[i], leg);
+            bones.set(OiiaCatRig.PAWS[i], new Matrix4f(leg).mul(OiiaCatRig.Posed.turn(OiiaCatRig.PAWS_AT[i], 0.0F, pawAngle)));
         }
-        // the tail: a slow sway, more as it walks, a quick twitch when it's stalking; its tip following, curling more
-        float sway = a[TAIL_YAW] + Mth.sin(age * 0.07F) * 9.0F + Mth.sin(phase * 0.5F) * 14.0F * gait;
-        if (mood == OiiaCatEntity.PLAYING && a[LIFT] < -2.0F) {
-            sway += Mth.sin(age * 2.3F) * 6.0F;
-        }
+        // the tail: a wave running down it (slow, more as it walks), curled more at the tip; a quick twitch stalking
+        float sway = a[TAIL_YAW] + Mth.sin(age * 0.07F) * 10.0F + Mth.sin(phase * 0.5F) * 14.0F * gait;
+        float twitch = mood == OiiaCatEntity.PLAYING && a[LIFT] < -2.0F ? Mth.sin(age * 2.3F) * 10.0F : 0.0F;
         float lift = a[TAIL_LIFT] + Mth.sin(age * 0.05F) * 3.0F;
-        Matrix4f tail = OiiaCatRig.Posed.turn(OiiaCatRig.TAIL_AT, sway, lift);
+        Matrix4f tail = new Matrix4f(hips).mul(OiiaCatRig.Posed.turn(OiiaCatRig.TAIL_AT, sway, lift));
         bones.set(OiiaCatRig.TAIL, tail);
-        float tipSway = sway * 0.8F + Mth.sin(age * 0.07F - 0.8F) * 7.0F + a[TAIL_YAW] * 0.6F;
-        bones.set(OiiaCatRig.TAIL_TIP, new Matrix4f(tail).mul(OiiaCatRig.Posed.turn(OiiaCatRig.TAIL_TIP_AT, tipSway, lift * 0.5F)));
+        Matrix4f mid = new Matrix4f(tail).mul(OiiaCatRig.Posed.turn(OiiaCatRig.TAIL_MID_AT,
+                a[TAIL_CURL] * Math.signum(a[TAIL_YAW] + 0.001F) + Mth.sin(age * 0.07F - 0.9F) * 9.0F, lift * 0.25F));
+        bones.set(OiiaCatRig.TAIL_MID, mid);
+        bones.set(OiiaCatRig.TAIL_TIP, new Matrix4f(mid).mul(OiiaCatRig.Posed.turn(OiiaCatRig.TAIL_TIP_AT,
+                a[TAIL_CURL] * Math.signum(a[TAIL_YAW] + 0.001F) + Mth.sin(age * 0.07F - 1.8F) * 12.0F + twitch, lift * 0.2F)));
         // the head: turned to what it looks at; nodding with its steps; chewing at the bowl
-        float nod = Mth.sin(phase * 2.0F) * 2.5F * gait;
+        float nod = Mth.sin(phase * 2.0F) * 3.0F * gait;
         if (mood == OiiaCatEntity.EATING) {
-            nod += Mth.sin(age * 0.9F) * 5.0F;
+            nod += Mth.sin(age * 0.9F) * 6.0F;
         }
-        bones.set(OiiaCatRig.HEAD, OiiaCatRig.Posed.turn(OiiaCatRig.HEAD_AT, a[HEAD_YAW], a[HEAD_PITCH] + nod));
+        Matrix4f head = new Matrix4f(body).mul(OiiaCatRig.Posed.turn(OiiaCatRig.HEAD_AT, a[HEAD_YAW], a[HEAD_PITCH] + nod));
+        bones.set(OiiaCatRig.HEAD, head);
+        // the ears: up (or as the pose has them), and a quick flick now and then, one or the other
+        float seed = (cat.getId() * 0.618F) % 1.0F;
+        float flickL = earFlick(age * 0.05F + seed), flickR = earFlick(age * 0.043F + seed + 0.37F);
+        bones.set(OiiaCatRig.EAR_L, new Matrix4f(head).mul(OiiaCatRig.Posed.turn(OiiaCatRig.EAR_L_AT, -flickL * 25.0F, a[EARS] + flickL * 10.0F)));
+        bones.set(OiiaCatRig.EAR_R, new Matrix4f(head).mul(OiiaCatRig.Posed.turn(OiiaCatRig.EAR_R_AT, flickR * 25.0F, a[EARS] + flickR * 10.0F)));
         rig.modelMatrix = world;
         AssimpRenderer.getInstance().addModel(rig);
         return true;
+    }
+
+    /** An ear flick: mostly nothing, now and then a quick twitch out and back (0 .. 1). */
+    private static float earFlick(float t) {
+        float f = t - (float) Math.floor(t);
+        return f < 0.06F ? Mth.sin(f / 0.06F * Mth.PI) : 0.0F;
     }
 
     @Override

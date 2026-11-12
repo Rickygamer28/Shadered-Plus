@@ -21,11 +21,14 @@ final class OiiaCatRig {
     static final ResourceLocation MODEL = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "models/complex/oiia_cat_rigged.glb");
 
     /** The bones and their joints (model units): the same as rig.py's. */
-    static final String BODY = "body", HEAD = "head", LEG_FL = "leg_fl", LEG_FR = "leg_fr", LEG_BL = "leg_bl", LEG_BR = "leg_br", TAIL = "tail",
+    static final String BODY = "body", HIPS = "hips", HEAD = "head", EAR_L = "ear_l", EAR_R = "ear_r", TAIL = "tail", TAIL_MID = "tail_mid",
             TAIL_TIP = "tail_tip";
-    static final float[] HEAD_AT = {1.6F, 22.45F, 13.0F}, TAIL_AT = {0.0F, 22.12F, -22.5F}, TAIL_TIP_AT = {0.0F, 19.7F, -33.5F};
+    static final float[] HIPS_AT = {0.0F, 15.0F, -2.0F}, HEAD_AT = {1.6F, 22.45F, 13.0F}, EAR_L_AT = {4.8F, 33.0F, 19.5F},
+            EAR_R_AT = {-3.4F, 33.0F, 19.5F}, TAIL_AT = {0.0F, 22.12F, -22.5F}, TAIL_MID_AT = {0.0F, 20.6F, -29.5F}, TAIL_TIP_AT = {0.0F, 18.0F, -36.5F};
+    /** Front left, front right, back left, back right: the legs (at the hip) and their paws (at the knee). */
+    static final String[] LEGS = {"leg_fl", "leg_fr", "leg_bl", "leg_br"}, PAWS = {"paw_fl", "paw_fr", "paw_bl", "paw_br"};
     static final float[][] LEGS_AT = {{8.10F, 6.20F, 16.90F}, {-5.60F, 6.20F, 17.40F}, {6.00F, 7.60F, -13.60F}, {-7.20F, 7.60F, -15.30F}};
-    static final String[] LEGS = {LEG_FL, LEG_FR, LEG_BL, LEG_BR};
+    static final float[][] PAWS_AT = {{8.10F, 2.6F, 16.90F}, {-5.60F, 2.6F, 17.40F}, {6.00F, 3.0F, -13.60F}, {-7.20F, 3.0F, -15.30F}};
 
     private OiiaCatRig() {}
 

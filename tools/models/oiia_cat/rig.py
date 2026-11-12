@@ -1,8 +1,6 @@
 """Rigs the OIIA cat (models/complex/oiia_cat.glb) with a skeleton, for the companion's animations: one mesh, every
 vertex tied to its bones by weights that blend smoothly across each joint (so the fur bends there instead of the
-pieces parting). Bones (their joints, model units - client/OiiaCatRig has the same):
-  body (the root, at the origin), head (the neck: where the collar goes), leg_fl, leg_fr, leg_bl, leg_br (the hips),
-  tail (where it leaves the body), tail_tip (halfway along it).
+pieces parting). Bones and joints: BONES below (client/OiiaCatRig has the same).
 Writes models/complex/oiia_cat_rigged.glb. Run from the repository root: python3 tools/models/oiia_cat/rig.py [--preview out.png]"""
 import json, struct, sys
 import numpy as np
@@ -35,19 +33,30 @@ I = acc(prim["indices"]).astype(np.uint32)
 img_bv = gj["bufferViews"][gj["images"][0]["bufferView"]]
 PNG = BIN[img_bv.get("byteOffset", 0):img_bv.get("byteOffset", 0) + img_bv["byteLength"]]
 
-# the bones: name, parent, joint (model units)
+# the bones: name, parent, joint (model units). The body is the chest (the root); the hips carry the back legs and
+# the tail, so the back can arch and the rump sit down; each leg has its paw below the knee; the tail is three; the
+# ears turn on their own.
 BONES = [
     ("body", None, (0.0, 0.0, 0.0)),
+    ("hips", "body", (0.0, 15.0, -2.0)),
     ("head", "body", (1.6, 22.45, 13.0)),
+    ("ear_l", "head", (4.8, 33.0, 19.5)),
+    ("ear_r", "head", (-3.4, 33.0, 19.5)),
     ("leg_fl", "body", (8.10, 6.20, 16.90)),
     ("leg_fr", "body", (-5.60, 6.20, 17.40)),
-    ("leg_bl", "body", (6.00, 7.60, -13.60)),
-    ("leg_br", "body", (-7.20, 7.60, -15.30)),
-    ("tail", "body", (0.0, 22.12, -22.5)),
-    ("tail_tip", "tail", (0.0, 19.7, -33.5)),
+    ("leg_bl", "hips", (6.00, 7.60, -13.60)),
+    ("leg_br", "hips", (-7.20, 7.60, -15.30)),
+    ("paw_fl", "leg_fl", (8.10, 2.6, 16.90)),
+    ("paw_fr", "leg_fr", (-5.60, 2.6, 17.40)),
+    ("paw_bl", "leg_bl", (6.00, 3.0, -13.60)),
+    ("paw_br", "leg_br", (-7.20, 3.0, -15.30)),
+    ("tail", "hips", (0.0, 22.12, -22.5)),
+    ("tail_mid", "tail", (0.0, 20.6, -29.5)),
+    ("tail_tip", "tail_mid", (0.0, 18.0, -36.5)),
 ]
 NAMES = [b[0] for b in BONES]
 LEGS = {"leg_fl": (8.1, 16.9, 6.2), "leg_fr": (-5.6, 17.4, 6.2), "leg_bl": (6.0, -13.6, 7.6), "leg_br": (-7.2, -15.3, 7.6)}
+KNEES = {"leg_fl": 2.6, "leg_fr": 2.6, "leg_bl": 3.0, "leg_br": 3.0}
 RADIUS = 3.9
 NECK_C = np.array([13.0, 22.45])   # (z, y)
 NECK_N = np.array([0.609, 0.793])  # (z, y): forward and up
@@ -60,20 +69,36 @@ def smooth(e0, e1, x):
 
 x, y, z = P[:, 0], P[:, 1], P[:, 2]
 W = np.zeros((len(P), len(BONES)), dtype=np.float32)
-# the head: in front of the neck line, blending over 5 units across it
-W[:, NAMES.index("head")] = smooth(-2.5, 2.5, (np.stack([z, y], 1) - NECK_C) @ NECK_N)
-# each leg: below its hip, blending over the hip; only close round the leg
+col = lambda n: NAMES.index(n)
+# the head: in front of the neck line, blending over 5 units across it; its ears, up top
+head = smooth(-2.5, 2.5, (np.stack([z, y], 1) - NECK_C) @ NECK_N)
+ears = smooth(32.6, 34.6, y) * smooth(13.0, 15.5, z) * head
+W[:, col("ear_l")] = ears * smooth(0.6, 1.8, x)
+W[:, col("ear_r")] = ears * (1.0 - smooth(0.6, 1.8, x))
+W[:, col("head")] = head - ears
+# each leg: below its hip, blending over the hip, close round the leg; its paw below the knee
+legs_all = np.zeros(len(P), dtype=np.float32)
 for name, (cx, cz, top) in LEGS.items():
     r = np.sqrt((x - cx) ** 2 + (z - cz) ** 2)
-    W[:, NAMES.index(name)] = (1.0 - smooth(top - 2.5, top + 2.5, y)) * (1.0 - smooth(RADIUS * 0.9, RADIUS * 1.35, r))
-# the tail: back from where it leaves the body, its far half its own
+    leg = (1.0 - smooth(top - 2.5, top + 2.5, y)) * (1.0 - smooth(RADIUS * 0.9, RADIUS * 1.35, r))
+    paw = leg * (1.0 - smooth(KNEES[name] - 1.2, KNEES[name] + 1.2, y))
+    W[:, col("paw_" + name[4:])] = paw
+    W[:, col(name)] = leg - paw
+    legs_all += leg
+# the tail: back from where it leaves the body, in three
 tailish = smooth(9.0, 12.0, y)
 t_all = smooth(-19.5, -24.0, z) * tailish
-t_tip = smooth(-30.5, -36.5, z) * tailish
-W[:, NAMES.index("tail_tip")] = t_tip
-W[:, NAMES.index("tail")] = t_all - t_tip
-# the body: the rest
-W[:, NAMES.index("body")] = np.clip(1.0 - W.sum(1), 0.0, 1.0)
+t_mid = smooth(-27.5, -31.5, z) * tailish
+t_tip = smooth(-34.5, -38.5, z) * tailish
+W[:, col("tail_tip")] = t_tip
+W[:, col("tail_mid")] = t_mid - t_tip
+W[:, col("tail")] = t_all - t_mid
+# the hips: the back half of the body (not its legs or tail, which are their own), blending across the middle
+rest = np.clip(1.0 - W.sum(1), 0.0, 1.0)
+hips = smooth(3.0, -7.0, z) * (1.0 - head)
+W[:, col("hips")] = rest * hips
+# the body (the chest): the rest
+W[:, col("body")] = np.clip(1.0 - W.sum(1), 0.0, 1.0)
 # four at most a vertex, adding up to one
 J4 = np.zeros((len(P), 4), dtype=np.uint16)
 W4 = np.zeros((len(P), 4), dtype=np.float32)
@@ -145,7 +170,9 @@ for k, name in enumerate(NAMES):
 if "--preview" in sys.argv:
     # side view, each vertex coloured by its bones (a joint's blend shows as a fade), and the joints
     from PIL import Image, ImageDraw
-    cols = np.array([(150, 150, 150), (240, 200, 60), (220, 40, 40), (40, 160, 40), (40, 80, 230), (200, 40, 200), (230, 120, 40), (60, 200, 220)], float)
+    rnd = np.random.RandomState(3)
+    cols = rnd.randint(40, 240, size=(len(BONES), 3)).astype(float)
+    cols[0] = (150, 150, 150)
     C = W @ cols
     S, mn, mx = 8, P.min(0), P.max(0)
     im = Image.new("RGB", (int((mx[2] - mn[2]) * S) + 20, int((mx[1] - mn[1]) * S) + 20), "white")
