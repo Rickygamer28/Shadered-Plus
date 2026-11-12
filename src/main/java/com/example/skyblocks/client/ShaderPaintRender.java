@@ -22,6 +22,7 @@ import com.noodlegamer76.shadered.client.util.ModRenderTypes;
 import com.noodlegamer76.shadered.client.util.skyblock.SkyblockPass;
 import net.minecraft.network.chat.Component;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import com.example.skyblocks.ShaderPaintStyles;
 import org.joml.Matrix4f;
 
 /**
