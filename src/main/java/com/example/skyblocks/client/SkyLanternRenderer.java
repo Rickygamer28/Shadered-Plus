@@ -16,12 +16,10 @@ import java.util.Map;
 import java.util.WeakHashMap;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
@@ -32,31 +30,16 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import org.joml.Matrix4f;
 
 /**
  * The sky lantern's sky - its picture inside the glass, as the infusion altar's paint shows a sky (shaders/core/sky_paint)
- * - and its light on the room round it: every face it can see, washed in the sky's own colours (the average of its
- * picture, worked out on the graphics card as it's drawn: shaders/core/sky_glow), fading with distance.
+ * - and its light on the room round it: every face it can see, tinted the sky's colour, fading with distance. The colour
+ * is the sky's picture shrunk to a few pixels and averaged, every few ticks, and blended over a couple of seconds: the
+ * picture is the sky as seen the way you're looking, so it changes as you turn - blended, the light holds steady (and
+ * settles on the sky's colour all round).
  */
 public class SkyLanternRenderer implements BlockEntityRenderer<SkyLanternBlockEntity> {
-    static ShaderInstance glowShader;
-
-    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
-    public static final class Shaders {
-        private Shaders() {}
-
-        @SubscribeEvent
-        public static void registerSkyGlow(RegisterShadersEvent event) {
-            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "sky_glow"), DefaultVertexFormat.POSITION_COLOR,
-                    s -> glowShader = s);
-        }
-    }
-
     abstract static class Types extends RenderType {
         /**
          * A sky's light on the blocks round the lantern: their colours tinted towards it (multiplied: a lit white wall
@@ -71,24 +54,30 @@ public class SkyLanternRenderer implements BlockEntityRenderer<SkyLanternBlockEn
             com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
         });
 
-        static RenderType glow(int sky, ResourceLocation picture) {
-            return create("skyblocks_sky_glow_" + sky, DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 8192, false, true,
+        static final RenderType GLOW = create("skyblocks_sky_lantern_glow", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 8192, false, true,
                     CompositeState.builder()
-                            .setShaderState(new ShaderStateShard(() -> glowShader))
-                            .setTextureState(new TextureStateShard(picture, false, false))
+                            .setShaderState(POSITION_COLOR_SHADER)
                             .setTransparencyState(TINT)
                             .setCullState(NO_CULL)
                             .setWriteMaskState(COLOR_WRITE)
                             .setLayeringState(VIEW_OFFSET_Z_LAYERING)
                             .createCompositeState(false));
-        }
 
         private Types() {
             super("", DefaultVertexFormat.POSITION, VertexFormat.Mode.QUADS, 0, false, false, () -> {}, () -> {});
         }
     }
 
-    private static final Map<Integer, RenderType> GLOWS = new HashMap<>();
+    /** Each sky's colour, as a light (blended over time: see the top), and when it's next looked at. */
+    private static final class SkyColour {
+        float r = 1, g = 1, b = 1;
+        boolean known;
+        long next;
+    }
+
+    private static final Map<Integer, SkyColour> COLOURS = new HashMap<>();
+    private static int readFbo = -1, smallFbo = -1, smallTex = -1;
+    private static boolean sampleFailed;
     /** How far its light reaches (blocks), and how strong it is right by it. */
     private static final int REACH = 7;
     private static final float STRENGTH = 0.8F;
@@ -136,9 +125,6 @@ public class SkyLanternRenderer implements BlockEntityRenderer<SkyLanternBlockEn
         box(vc, m, a, y0, a, b, y1, b, style);
         source.endBatch(sky);
         // its light on the room
-        if (glowShader == null) {
-            return;
-        }
         Lit lit = LIT.computeIfAbsent(be, k -> new Lit());
         long now = level.getGameTime();
         if (now - lit.at > 40 || now < lit.at - 40 || lit.hanging != hanging) {
@@ -149,17 +135,120 @@ public class SkyLanternRenderer implements BlockEntityRenderer<SkyLanternBlockEn
         if (lit.faces.isEmpty()) {
             return;
         }
-        int skyIndex = ShaderPaintStyles.sky(style);
-        RenderType glow = GLOWS.computeIfAbsent(skyIndex, k -> Types.glow(k, ShaderPaintRender.picture(k)));
-        VertexConsumer g = source.getBuffer(glow);
+        SkyColour col = colour(ShaderPaintStyles.sky(style), now);
+        if (!col.known) {
+            return;
+        }
+        VertexConsumer g = source.getBuffer(Types.GLOW);
         PoseStack.Pose p = poseStack.last();
-        float flicker = 0.94F + 0.06F * Mth.sin((now + partialTick) * 0.11F + be.getBlockPos().hashCode());
+        float flicker = 0.96F + 0.04F * Mth.sin((now + partialTick) * 0.11F + be.getBlockPos().hashCode());
         for (float[] f : lit.faces) {
             for (int c = 0; c < 4; c++) {
-                g.addVertex(p, f[c * 3], f[c * 3 + 1], f[c * 3 + 2]).setColor(255, 255, 255, Mth.clamp((int) (f[12 + c] * flicker * 255), 0, 255));
+                // (white - no change - far off; the sky's colour close by: multiplied onto what's there)
+                float w = Mth.clamp(f[12 + c] * flicker, 0.0F, 1.0F);
+                g.addVertex(p, f[c * 3], f[c * 3 + 1], f[c * 3 + 2]).setColor(1.0F + (col.r - 1.0F) * w, 1.0F + (col.g - 1.0F) * w, 1.0F + (col.b - 1.0F) * w, 1.0F);
             }
         }
-        source.endBatch(glow);
+        source.endBatch(Types.GLOW);
+    }
+
+    /** A sky's colour as a light: looked at every few ticks, blended in. */
+    private static SkyColour colour(int sky, long now) {
+        SkyColour c = COLOURS.computeIfAbsent(sky, k -> new SkyColour());
+        if (now >= c.next || now < c.next - 100) {
+            c.next = now + 5;
+            float[] seen = sample(sky);
+            if (seen != null) {
+                // (a light's colour: the hue, its brightest part full; a grey sky barely tints, a colourful one strongly)
+                float peak = Math.max(seen[0], Math.max(seen[1], seen[2]));
+                float r = 1, g = 1, b = 1;
+                if (peak > 0.02F) {
+                    r = seen[0] / peak;
+                    g = seen[1] / peak;
+                    b = seen[2] / peak;
+                    float grey = (r + g + b) / 3.0F;
+                    r = Mth.clamp(grey + (r - grey) * 1.35F, 0.0F, 1.0F);
+                    g = Mth.clamp(grey + (g - grey) * 1.35F, 0.0F, 1.0F);
+                    b = Mth.clamp(grey + (b - grey) * 1.35F, 0.0F, 1.0F);
+                }
+                float k = c.known ? 0.12F : 1.0F;
+                c.r += (r - c.r) * k;
+                c.g += (g - c.g) * k;
+                c.b += (b - c.b) * k;
+                c.known = true;
+            }
+        }
+        return c;
+    }
+
+    /**
+     * A sky's picture, shrunk to 16 x 16 (the graphics card blits it down) and read back: its average colour (r g b, 0 .. 1),
+     * or null if it couldn't be.
+     */
+    private static float[] sample(int sky) {
+        if (sampleFailed) {
+            return null;
+        }
+        int prevRead = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING);
+        int prevDraw = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+        boolean scissor = org.lwjgl.opengl.GL11.glIsEnabled(org.lwjgl.opengl.GL11.GL_SCISSOR_TEST);
+        java.nio.ByteBuffer buf = null;
+        try {
+            int id = net.minecraft.client.Minecraft.getInstance().getTextureManager().getTexture(ShaderPaintRender.picture(sky)).getId();
+            if (id <= 0) {
+                return null;
+            }
+            com.mojang.blaze3d.platform.GlStateManager._bindTexture(id);
+            int w = org.lwjgl.opengl.GL11.glGetTexLevelParameteri(org.lwjgl.opengl.GL11.GL_TEXTURE_2D, 0, org.lwjgl.opengl.GL11.GL_TEXTURE_WIDTH);
+            int h = org.lwjgl.opengl.GL11.glGetTexLevelParameteri(org.lwjgl.opengl.GL11.GL_TEXTURE_2D, 0, org.lwjgl.opengl.GL11.GL_TEXTURE_HEIGHT);
+            if (w <= 0 || h <= 0) {
+                return null;
+            }
+            if (readFbo < 0) {
+                readFbo = org.lwjgl.opengl.GL30.glGenFramebuffers();
+                smallFbo = org.lwjgl.opengl.GL30.glGenFramebuffers();
+                smallTex = com.mojang.blaze3d.platform.GlStateManager._genTexture();
+                com.mojang.blaze3d.platform.GlStateManager._bindTexture(smallTex);
+                org.lwjgl.opengl.GL11.glTexImage2D(org.lwjgl.opengl.GL11.GL_TEXTURE_2D, 0, org.lwjgl.opengl.GL11.GL_RGBA8, 16, 16, 0, org.lwjgl.opengl.GL11.GL_RGBA,
+                        org.lwjgl.opengl.GL11.GL_UNSIGNED_BYTE, (java.nio.ByteBuffer) null);
+                org.lwjgl.opengl.GL11.glTexParameteri(org.lwjgl.opengl.GL11.GL_TEXTURE_2D, org.lwjgl.opengl.GL11.GL_TEXTURE_MIN_FILTER, org.lwjgl.opengl.GL11.GL_NEAREST);
+                org.lwjgl.opengl.GL11.glTexParameteri(org.lwjgl.opengl.GL11.GL_TEXTURE_2D, org.lwjgl.opengl.GL11.GL_TEXTURE_MAG_FILTER, org.lwjgl.opengl.GL11.GL_NEAREST);
+                org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, smallFbo);
+                org.lwjgl.opengl.GL30.glFramebufferTexture2D(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, org.lwjgl.opengl.GL30.GL_COLOR_ATTACHMENT0,
+                        org.lwjgl.opengl.GL11.GL_TEXTURE_2D, smallTex, 0);
+            }
+            if (scissor) {
+                org.lwjgl.opengl.GL11.glDisable(org.lwjgl.opengl.GL11.GL_SCISSOR_TEST);
+            }
+            org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, readFbo);
+            org.lwjgl.opengl.GL30.glFramebufferTexture2D(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, org.lwjgl.opengl.GL30.GL_COLOR_ATTACHMENT0,
+                    org.lwjgl.opengl.GL11.GL_TEXTURE_2D, id, 0);
+            org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, smallFbo);
+            org.lwjgl.opengl.GL30.glBlitFramebuffer(0, 0, w, h, 0, 0, 16, 16, org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT, org.lwjgl.opengl.GL11.GL_LINEAR);
+            org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, smallFbo);
+            buf = org.lwjgl.system.MemoryUtil.memAlloc(16 * 16 * 4);
+            org.lwjgl.opengl.GL11.glReadPixels(0, 0, 16, 16, org.lwjgl.opengl.GL11.GL_RGBA, org.lwjgl.opengl.GL11.GL_UNSIGNED_BYTE, buf);
+            float r = 0, g = 0, b = 0;
+            for (int i = 0; i < 256; i++) {
+                r += (buf.get(i * 4) & 255);
+                g += (buf.get(i * 4 + 1) & 255);
+                b += (buf.get(i * 4 + 2) & 255);
+            }
+            return new float[] {r / 256 / 255, g / 256 / 255, b / 256 / 255};
+        } catch (RuntimeException e) {
+            sampleFailed = true;
+            SkyBlocksMod.LOGGER.warn("Shadered+ sky lantern: couldn't read its sky's colour; its light stays white", e);
+            return null;
+        } finally {
+            if (buf != null) {
+                org.lwjgl.system.MemoryUtil.memFree(buf);
+            }
+            org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, prevRead);
+            org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, prevDraw);
+            if (scissor) {
+                org.lwjgl.opengl.GL11.glEnable(org.lwjgl.opengl.GL11.GL_SCISSOR_TEST);
+            }
+        }
     }
 
     /** A box of sky (all six sides, each the whole picture), seen from inside or out. */
@@ -241,6 +330,12 @@ public class SkyLanternRenderer implements BlockEntityRenderer<SkyLanternBlockEn
             f[12 + i] = fade * (0.35F + 0.65F * fade) * STRENGTH;
         }
         return f;
+    }
+
+    /** Drawn even when the lantern's own bit of the world is out of sight: its light on the walls you can see stays on. */
+    @Override
+    public boolean shouldRenderOffScreen(SkyLanternBlockEntity be) {
+        return true;
     }
 
     @Override
