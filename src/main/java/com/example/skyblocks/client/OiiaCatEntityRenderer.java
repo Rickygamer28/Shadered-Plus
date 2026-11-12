@@ -59,14 +59,12 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
             pose.scale(scale, scale, scale);
             pose.translate(0, OiiaCatModel.FEET, 0);
             OiiaCatModel.animate(pose, cat.spinSeconds(partialTick));
-            OiiaCatCollar.draw(cat, pose, buffers, light, true);
         } else if (loaf) {
             boolean napping = cat.mood() == OiiaCatEntity.NAPPING;
             float breathe = napping ? 1.0F + 0.03F * Mth.sin(age * 0.09F) : 1.0F;
             pose.scale(scale, scale * breathe * (napping ? 0.92F : 1.0F), scale);
             // (the loaf rests on the ground: the spin model floats SPIN_BOTTOM above its feet)
             pose.translate(0, OiiaCatModel.FEET - OiiaCatModel.SPIN_BOTTOM, 0);
-            OiiaCatCollar.draw(cat, pose, buffers, light, true);
         } else if (walkParts(cat, pose, scale, age, partialTick)) {
             OiiaCatCollar.draw(cat, pose, buffers, light, false);
             return; // (drawn in pieces, walking)

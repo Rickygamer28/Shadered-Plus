@@ -97,7 +97,7 @@ public class GeodeLampRenderer implements BlockEntityRenderer<SimpleRenderedBloc
     private record Spot(Vec3 at, Vector3f normal, float size, float strength, int colour, int seed) {}
 
     private static final class Spots {
-        long at = Long.MIN_VALUE;
+        long at = -1000;
         int crystal = -1;
         final List<Spot> list = new ArrayList<>();
     }
@@ -128,7 +128,7 @@ public class GeodeLampRenderer implements BlockEntityRenderer<SimpleRenderedBloc
         // the spots of light on the walls round it
         Spots spots = SPOTS.computeIfAbsent(be, b -> new Spots());
         long now = level.getGameTime();
-        if (now - spots.at > 40 || now < spots.at || spots.crystal != crystal) {
+        if (now - spots.at > 40 || now < spots.at - 40 || spots.crystal != crystal) {
             cast(level, pos, crystal, spots);
             spots.at = now + Math.floorMod(pos.hashCode(), 20); // (lamps take turns)
             spots.crystal = crystal;
