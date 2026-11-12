@@ -221,7 +221,7 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
                 t[PAW_FL] = t[PAW_FR] = 18.0F;
                 t[BL] = t[BR] = -50.0F;
                 t[PAW_BL] = t[PAW_BR] = 140.0F;
-                t[LIFT] = -5.0F;
+                t[LIFT] = -4.6F;
                 t[TAIL_YAW] = 10.0F * Mth.sin(age * 0.06F);
                 t[TAIL_CURL] = 14.0F;
                 t[TAIL_LIFT] = -58.0F;
