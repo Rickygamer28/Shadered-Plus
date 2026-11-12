@@ -216,12 +216,15 @@ public final class ShaderPaintRender {
                     }
                     float x0 = x * pw, x1 = end * pw, y0 = 1.0F - (y + 1) * ph, y1 = 1.0F - y * ph;
                     float u0 = x / (float) paint.w(), u1 = end / (float) paint.w(), v0 = y / (float) paint.h(), v1 = (y + 1) / (float) paint.h();
-                    for (float z : new float[] {front, back}) {
-                        vertex(vc, m, x0, y0, z, u0, v1, style, paint.w());
-                        vertex(vc, m, x1, y0, z, u1, v1, style, paint.w());
-                        vertex(vc, m, x1, y1, z, u1, v0, style, paint.w());
-                        vertex(vc, m, x0, y1, z, u0, v0, style, paint.w());
-                    }
+                    // (the front, and the back wound the other way: the skies' render types don't draw a face's back)
+                    vertex(vc, m, x0, y0, front, u0, v1, style, paint.w());
+                    vertex(vc, m, x1, y0, front, u1, v1, style, paint.w());
+                    vertex(vc, m, x1, y1, front, u1, v0, style, paint.w());
+                    vertex(vc, m, x0, y1, front, u0, v0, style, paint.w());
+                    vertex(vc, m, x0, y1, back, u0, v0, style, paint.w());
+                    vertex(vc, m, x1, y1, back, u1, v0, style, paint.w());
+                    vertex(vc, m, x1, y0, back, u1, v1, style, paint.w());
+                    vertex(vc, m, x0, y0, back, u0, v1, style, paint.w());
                     x = end;
                 }
             }
@@ -236,9 +239,14 @@ public final class ShaderPaintRender {
 
     /** A flat square of one style (the editor's swatches and canvas): x, y .. x + size, y + size on screen. */
     static void square(VertexConsumer vc, Matrix4f m, float x, float y, float w, float h, int style, float u0, float v0, float u1, float v1, int texels) {
+        // (both ways round: whichever way a screen's matrix turns it, one of them faces you)
         vertex(vc, m, x, y + h, 0, u0, v1, style, texels);
         vertex(vc, m, x + w, y + h, 0, u1, v1, style, texels);
         vertex(vc, m, x + w, y, 0, u1, v0, style, texels);
         vertex(vc, m, x, y, 0, u0, v0, style, texels);
+        vertex(vc, m, x, y, 0, u0, v0, style, texels);
+        vertex(vc, m, x + w, y, 0, u1, v0, style, texels);
+        vertex(vc, m, x + w, y + h, 0, u1, v1, style, texels);
+        vertex(vc, m, x, y + h, 0, u0, v1, style, texels);
     }
 }

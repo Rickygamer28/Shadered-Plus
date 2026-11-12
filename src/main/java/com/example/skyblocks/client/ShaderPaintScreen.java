@@ -676,7 +676,7 @@ public class ShaderPaintScreen extends Screen {
 
     private void drawSkies(GuiGraphics g, int x0, int y0, int c) {
         g.pose().pushPose();
-        g.pose().translate(0, 0, 10);
+        g.pose().translate(0, 0, 40); // (in front of the canvas: the skies' render types draw only nearer than what's there)
         var m = g.pose().last().pose();
         boolean[] has = new boolean[256];
         for (byte b : skies) {
@@ -701,6 +701,8 @@ public class ShaderPaintScreen extends Screen {
     }
 
     private void drawSwatches(GuiGraphics g) {
+        g.pose().pushPose();
+        g.pose().translate(0, 0, 40); // (in front of the screen's background)
         var m = g.pose().last().pose();
         for (int i = scroll * cols; i < Math.min(skyCount(), (scroll + rowsShown) * cols); i++) {
             int s = ShaderPaintStyles.of(i, pass);
@@ -713,6 +715,7 @@ public class ShaderPaintScreen extends Screen {
             ShaderPaintRender.square(vc, m, px0 + col * (swatch + 2), py0 + row * (swatch + 2), swatch, swatch, s, 0, 0, 1, 1, 8);
             g.bufferSource().endBatch(type);
         }
+        g.pose().popPose();
     }
 
     private void drawPreview(GuiGraphics g, int x, int y, float partialTick) {
