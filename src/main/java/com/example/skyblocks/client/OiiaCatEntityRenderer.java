@@ -215,6 +215,13 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
             t[BREATH] = asleep ? 1.7F : 0.6F;
             t[GAIT] = 0.0F;
             if (mood == OiiaCatEntity.WINDOW) {
+                // (a true loaf on the thin hammock: front paws tucked back under the chest, hind feet folded flat under
+                // the haunches - nothing poking down through the fleece)
+                t[FL] = t[FR] = 72.0F;
+                t[PAW_FL] = t[PAW_FR] = 18.0F;
+                t[BL] = t[BR] = -50.0F;
+                t[PAW_BL] = t[PAW_BR] = 140.0F;
+                t[LIFT] = -5.0F;
                 t[TAIL_YAW] = 10.0F * Mth.sin(age * 0.06F);
                 t[TAIL_CURL] = 14.0F;
                 t[TAIL_LIFT] = -58.0F;
