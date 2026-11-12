@@ -124,6 +124,8 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(BonsaiBlockEntity::new, ModBlocks.BONSAI.get()).build(null));
     public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> HOT_SPRING = TYPES.register("hot_spring",
             () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.HOT_SPRING.get(), p, st), ModBlocks.HOT_SPRING.get()).build(null));
+    public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> GEODE_LAMP = TYPES.register("geode_lamp",
+            () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.GEODE_LAMP.get(), p, st), ModBlocks.GEODE_LAMP.get()).build(null));
     public static final Supplier<BlockEntityType<PhotoFrameBlockEntity>> PHOTO_FRAME = TYPES.register("photo_frame",
             () -> BlockEntityType.Builder.of(PhotoFrameBlockEntity::new, ModBlocks.PHOTO_FRAME.get()).build(null));
 

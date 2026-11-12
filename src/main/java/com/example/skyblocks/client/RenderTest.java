@@ -157,6 +157,9 @@ public final class RenderTest {
             "summon skyblocks:oiia_cat 382.5 -58.12 2.5 {NoAI:1b,Owner:[I;1,2,3,4],Mood:6b,CollarColor:1b,Rotation:[0f,0f]}",
             "summon skyblocks:oiia_cat 374.5 -60 5.5 {NoAI:1b,Owner:[I;1,2,3,4],CollarColor:11b,CustomName:'\"Mochi\"',Rotation:[15f,0f]}",
             "summon skyblocks:yarn_ball 371.6 -60 4.6",
+            // crystal geode lamps in a stone room (rainbow, amethyst)
+            "fill 393 -61 -4 401 -55 4 minecraft:smooth_stone hollow", "fill 397 -60 4 397 -59 4 minecraft:air",
+            "setblock 395 -60 0 skyblocks:geode_lamp[crystal=4]", "setblock 399 -60 -1 skyblocks:geode_lamp[crystal=0]",
     };
     /** The newer things (SKYBLOCKS_RENDER_SET=new: only these), well away from the rest. */
     static final boolean NEW = "new".equals(System.getenv("SKYBLOCKS_RENDER_SET"));
@@ -252,6 +255,9 @@ public final class RenderTest {
             "summon skyblocks:oiia_cat 382.5 -58.12 2.5 {NoAI:1b,Owner:[I;1,2,3,4],Mood:6b,CollarColor:1b,Rotation:[0f,0f]}",
             "summon skyblocks:oiia_cat 374.5 -60 5.5 {NoAI:1b,Owner:[I;1,2,3,4],CollarColor:11b,CustomName:'\"Mochi\"',Rotation:[15f,0f]}",
             "summon skyblocks:yarn_ball 371.6 -60 4.6",
+            // crystal geode lamps in a stone room (rainbow, amethyst)
+            "fill 393 -61 -4 401 -55 4 minecraft:smooth_stone hollow", "fill 397 -60 4 397 -59 4 minecraft:air",
+            "setblock 395 -60 0 skyblocks:geode_lamp[crystal=4]", "setblock 399 -60 -1 skyblocks:geode_lamp[crystal=0]",
     };
     private static final String[] NEW_SPOTS = {"200.5 -59.2 -3 0 18", "open 200 -60 0 200.5 -60 -1.6 0 15", "283.5 -59.6 -2.4 0 32",
             "290.5 -59.6 -2.4 0 32", "286.5 -60 -1.2 0 30", "202.5 -58.5 2.6 0 22", "night 202.5 -58.5 2.6 0 22", "229 -56 13 130 35",
@@ -263,7 +269,7 @@ public final class RenderTest {
             "night 343.5 -59.2 -2.2 0 38", "338.8 -59.6 1.4 0 18", "346.5 -59.5 6.4 0 10",
             "catwalk 338.8 -59.6 1.4 0 18", "catwalk 340.6 -59.7 3.2 90 12", "holdphoto 333.5 -60 -3 0 8", "holdcamera 333.5 -60 -3 0 8", "356.5 -59.4 4.5 0 8", "night 356.5 -59.4 4.5 0 8", "334 -59.5 10.2 0 22", "331 -59.7 10.9 0 25", 
             "376 -58.3 8.8 180 22", "373.5 -59.35 5.4 180 12", "376.5 -59.35 5.4 180 15", "379.5 -59.1 4.4 180 32", "382.5 -57.6 5.6 180 12",
-            "370.5 -59.2 4.6 180 30", "374.5 -59.45 7.0 180 4", "372 -59.6 6.2 200 18", "387.5 -59.2 4.2 180 8", 
+            "370.5 -59.2 4.6 180 30", "374.5 -59.45 7.0 180 4", "372 -59.6 6.2 200 18", "387.5 -59.2 4.2 180 8", "night 397.5 -58.5 3.3 180 25", "397 -58.2 3.3 160 10", 
             "watch 7 open 270 -60 0 270.5 -58.6 -7 0 3", "watch 7 open 270 -60 0 270.5 -59.3 -1.1 0 52", "watch 7 open 270 -60 0 night 270.5 -58.6 -7 0 3"};
     private static int playGame = -1;
     private static boolean pickOnly, controls, moveList, watch;
@@ -284,7 +290,7 @@ public final class RenderTest {
             "night 343.5 -59.2 -2.2 0 38", "338.8 -59.6 1.4 0 18", "346.5 -59.5 6.4 0 10",
             "catwalk 338.8 -59.6 1.4 0 18", "catwalk 340.6 -59.7 3.2 90 12", "holdphoto 333.5 -60 -3 0 8", "holdcamera 333.5 -60 -3 0 8", "356.5 -59.4 4.5 0 8", "night 356.5 -59.4 4.5 0 8", "334 -59.5 10.2 0 22", "331 -59.7 10.9 0 25", 
             "376 -58.3 8.8 180 22", "373.5 -59.35 5.4 180 12", "376.5 -59.35 5.4 180 15", "379.5 -59.1 4.4 180 32", "382.5 -57.6 5.6 180 12",
-            "370.5 -59.2 4.6 180 30", "374.5 -59.45 7.0 180 4", "372 -59.6 6.2 200 18", "387.5 -59.2 4.2 180 8", 
+            "370.5 -59.2 4.6 180 30", "374.5 -59.45 7.0 180 4", "372 -59.6 6.2 200 18", "387.5 -59.2 4.2 180 8", "night 397.5 -58.5 3.3 180 25", "397 -58.2 3.3 160 10", 
             "watch 7 open 270 -60 0 270.5 -58.6 -7 0 3", "watch 7 open 270 -60 0 270.5 -59.3 -1.1 0 52", "watch 7 open 270 -60 0 night 270.5 -58.6 -7 0 3"};
 
     private static boolean burst, moving, burstOn;

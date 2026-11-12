@@ -770,5 +770,13 @@
   "message.skyblocks.oiia_cat.mood.happy": "happy",
   "message.skyblocks.oiia_cat.mood.very_happy": "very happy",
   "message.skyblocks.oiia_cat.mood.overjoyed": "overjoyed",
-  "message.skyblocks.oiia_cat.gift": "%s left you a gift"
+  "message.skyblocks.oiia_cat.gift": "%s left you a gift",
+  "block.skyblocks.geode_lamp": "Crystal Geode Lamp",
+  "tooltip.skyblocks.geode_lamp": "Glowing crystals that throw sparkling spots of coloured light over the walls round them. Right-click to change the crystals",
+  "guide.skyblocks.geode_lamp": "A cracked-open geode full of glowing crystals. The light through them falls in rippling, sparkling spots on the walls of the room.\n\nRight-click it to change its crystals: amethyst, aqua, rose, citrine or rainbow.",
+  "message.skyblocks.geode_lamp.0": "Amethyst",
+  "message.skyblocks.geode_lamp.1": "Aqua",
+  "message.skyblocks.geode_lamp.2": "Rose quartz",
+  "message.skyblocks.geode_lamp.3": "Citrine",
+  "message.skyblocks.geode_lamp.4": "Rainbow"
 }

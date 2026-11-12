@@ -443,5 +443,10 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(2.0F).sound(SoundType.WOOD).ignitedByLava().isSuffocating((s, l, p) -> false)
                     .isViewBlocking((s, l, p) -> false).mapColor(net.minecraft.world.level.material.MapColor.WOOD));
 
+    /** A crystal geode lamp (GeodeLampBlock, client/GeodeLampRenderer). */
+    public static final DeferredBlock<GeodeLampBlock> GEODE_LAMP = BLOCKS.registerBlock("geode_lamp", GeodeLampBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.AMETHYST).noOcclusion().lightLevel(state -> 12)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE));
+
     private ModBlocks() {}
 }
