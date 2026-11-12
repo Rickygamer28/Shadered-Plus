@@ -25,6 +25,8 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
     static boolean testWalk;
     /** Where its back paws are (model units, z): what it tips about, rearing up or bending down. */
     private static final float BACK_PAWS = -14.5F;
+    /** Where its front paws are (model units, z): what it tips back about, sitting down (its rump going down, its front paws staying put). */
+    private static final float FRONT_PAWS = 17.0F;
     /** A bit smaller than the block's cat. */
     private static final float SIZE = 0.75F;
 
@@ -88,7 +90,7 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
 
     /** A pose's numbers (degrees; lift in model units): what the cat eases towards, and is at. */
     private static final int PITCH = 0, LIFT = 1, ROLL = 2, FL = 3, FR = 4, BL = 5, BR = 6, HEAD_YAW = 7, HEAD_PITCH = 8, TAIL_YAW = 9,
-            TAIL_LIFT = 10, GAIT = 11, N = 12;
+            TAIL_LIFT = 10, GAIT = 11, SIT = 12, N = 13;
 
     /** Per cat (client): where its pose is now, and when it was last drawn. */
     private static final class Pose {
@@ -105,8 +107,8 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
         t[GAIT] = 1.0F;
         // its head turned to what it's looking at (as far as a neck goes), its tail held up and swaying gently
         float headYaw = Mth.wrapDegrees(Mth.rotLerp(partialTick, cat.yHeadRotO, cat.yHeadRot) - Mth.rotLerp(partialTick, cat.yBodyRotO, cat.yBodyRot));
-        t[HEAD_YAW] = Mth.clamp(headYaw, -38.0F, 38.0F);
-        t[HEAD_PITCH] = Mth.clamp(Mth.lerp(partialTick, cat.xRotO, cat.getXRot()), -22.0F, 25.0F);
+        t[HEAD_YAW] = Mth.clamp(headYaw, -24.0F, 24.0F);
+        t[HEAD_PITCH] = Mth.clamp(Mth.lerp(partialTick, cat.xRotO, cat.getXRot()) * 0.6F, -14.0F, 14.0F);
         t[TAIL_LIFT] = -10.0F - 8.0F * speed;
         byte mood = cat.mood();
         if (mood == OiiaCatEntity.SCRATCHING) {
@@ -129,13 +131,14 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
             t[TAIL_LIFT] = 4.0F;
             t[GAIT] = 0.0F;
         } else if (cat.isInSittingPose() || mood == OiiaCatEntity.PERCHED) {
-            // sat up: front legs straight, back legs tucked under, tail down round it
-            t[PITCH] = -30.0F;
-            t[LIFT] = -1.5F;
-            t[FL] = t[FR] = 30.0F;
-            t[BL] = t[BR] = -48.0F;
-            t[HEAD_PITCH] += 26.0F;
-            t[TAIL_LIFT] = 34.0F;
+            // sat down: its rump down on the ground (tipped back about its front paws, which stay put), front legs
+            // straight, back legs tucked under, tail down round it
+            t[SIT] = -20.0F;
+            t[LIFT] = 2.5F;
+            t[FL] = t[FR] = 20.0F;
+            t[BL] = t[BR] = -38.0F;
+            t[HEAD_PITCH] += 14.0F;
+            t[TAIL_LIFT] = 26.0F;
             t[TAIL_YAW] = 25.0F;
             t[GAIT] = 0.0F;
         } else if (mood == OiiaCatEntity.PLAYING) {
@@ -213,7 +216,9 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
         } else if (mood == OiiaCatEntity.EATING) {
             pitch += Mth.sin(age * 0.6F) * 2.0F;
         }
-        pose.translate(0, 0, BACK_PAWS);
+        pose.translate(0, 0, FRONT_PAWS);
+        pose.mulPose(Axis.XP.rotationDegrees(a[SIT]));
+        pose.translate(0, 0, BACK_PAWS - FRONT_PAWS);
         pose.mulPose(Axis.XP.rotationDegrees(pitch));
         pose.mulPose(Axis.YP.rotationDegrees(wiggle));
         pose.translate(0, 0, -BACK_PAWS);

@@ -27,7 +27,7 @@ final class OiiaCatCollar {
     private static final Ring LOAF = new Ring(0.14F, 24.75F, 14.25F, 0.810F, -0.587F, new float[] {8.9F, 8.4F, 7.8F, 7.3F, 8.4F, 12.2F, 13.5F,
             12.0F, 10.9F, 9.0F, 8.5F, 8.5F, 9.4F, 10.1F, 10.9F, 10.8F, 10.1F, 9.8F, 9.9F, 10.4F, 10.6F, 10.5F, 10.0F, 9.4F});
     /** How far out from the fur, and how wide (model units). */
-    private static final float OUT = 0.55F, HALF_WIDTH = 1.15F, THICK = 0.7F;
+    private static final float OUT = 0.15F, HALF_WIDTH = 1.0F, THICK = 0.6F, SNUG = 0.95F;
 
     private OiiaCatCollar() {}
 
@@ -48,7 +48,7 @@ final class OiiaCatCollar {
         }
         for (int i = 0; i < n; i++) {
             float a0 = -Mth.PI + i * Mth.TWO_PI / n, a1 = a0 + Mth.TWO_PI / n;
-            float r0 = ring.radii[i] + OUT, r1 = ring.radii[(i + 1) % n] + OUT;
+            float r0 = ring.radii[i] * SNUG + OUT, r1 = ring.radii[(i + 1) % n] * SNUG + OUT;
             Vector3f p0 = at(ring, a0, r0), p1 = at(ring, a1, r1), q0 = at(ring, a0, r0 - THICK), q1 = at(ring, a1, r1 - THICK);
             Vector3f out = new Vector3f(p0).add(p1).mul(0.5F).sub(ring.cx, ring.cy, ring.cz).normalize();
             int shade = shade(colour, 0.85F + 0.15F * Math.max(0, out.y));
@@ -62,7 +62,7 @@ final class OiiaCatCollar {
             // a little gold tag hanging at the front, under the chin
             float a = Mth.HALF_PI;
             int at = Math.round((a + Mth.PI) / (Mth.TWO_PI / n)) % n;
-            Vector3f top = at(ring, a, ring.radii[at] + OUT + 0.3F);
+            Vector3f top = at(ring, a, ring.radii[at] * SNUG + OUT + 0.3F);
             Vector3f fwd = new Vector3f(0, ring.dy, ring.dz).normalize(), down = new Vector3f(0, -1, 0);
             float s = 1.6F;
             Vector3f c = new Vector3f(top).add(new Vector3f(down).mul(s * 1.3F)).add(new Vector3f(fwd).mul(0.4F));

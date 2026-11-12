@@ -65,11 +65,16 @@ for t in I:
     tri_part.append(best)
 tri_part = np.array(tri_part)
 
-def write(name, tris):
+def write(name, tris, extra=None):
     used = np.unique(tris)
     remap = {int(k): i for i, k in enumerate(used)}
     idx = np.array([[remap[int(k)] for k in t] for t in tris], dtype=np.uint32)
     pos, nor, uv = P[used], N[used], T[used]
+    if extra is not None:
+        # (more triangles with vertices of their own: positions, normals, uvs, and their triangles indexing them)
+        ep, en, eu, et = extra
+        idx = np.concatenate([idx, (et + len(pos)).astype(np.uint32)])
+        pos, nor, uv = np.concatenate([pos, ep]).astype(np.float32), np.concatenate([nor, en]).astype(np.float32), np.concatenate([uv, eu]).astype(np.float32)
     blobs = [pos.tobytes(), nor.tobytes(), uv.tobytes(), idx.tobytes(), PNG]
     views, data, off = [], b"", 0
     for i, blob in enumerate(blobs):
@@ -106,9 +111,24 @@ def write(name, tris):
     open(OUT % name, "wb").write(out)
     return len(used), len(tris)
 
+def neck_plug():
+    """The head turns on its neck, so it takes a sleeve with it: the body's fur just behind the neck line (4 units),
+    a copy drawn a little smaller than the body's own so it stays hidden inside while the head looks straight ahead,
+    and fills the join when the head turns."""
+    zy = P[:, [2, 1]]
+    d = (zy - NECK_C) @ NECK_N
+    pick = [k for k, t in enumerate(I) if tri_part[k] == "body" and all(-4.0 < d[v] <= 0.5 for v in t)]
+    tris = I[pick]
+    used = np.unique(tris)
+    remap = {int(k): i for i, k in enumerate(used)}
+    et = np.array([[remap[int(k)] for k in t] for t in tris], dtype=np.int64)
+    centre = np.array([1.6, 22.45, 13.0])
+    ep = centre + (P[used] - centre) * 0.965
+    return ep, N[used], T[used], et
+
 for name in ["body", "tail", "head"] + list(LEGS):
     tris = I[tri_part == name]
-    nv, nt = write(name, tris)
+    nv, nt = write(name, tris, neck_plug() if name == "head" else None)
     sel = P[np.unique(tris)]
     print("%-7s %5d verts %5d tris  y %.1f..%.1f" % (name, nv, nt, sel[:, 1].min(), sel[:, 1].max()))
 for name, (cx, cz, top) in LEGS.items():
