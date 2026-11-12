@@ -1,0 +1,50 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "flap": "skyblocks:block/cat_flap",
+    "open": "skyblocks:block/cat_flap_open",
+    "door": "skyblocks:block/cat_flap_door",
+    "side": "minecraft:block/oak_planks",
+    "particle": "minecraft:block/oak_planks"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#flap",
+          "cullface": "north"
+        },
+        "south": {
+          "texture": "#flap",
+          "cullface": "south"
+        },
+        "east": {
+          "texture": "#side",
+          "cullface": "east"
+        },
+        "west": {
+          "texture": "#side",
+          "cullface": "west"
+        },
+        "up": {
+          "texture": "#side",
+          "cullface": "up"
+        },
+        "down": {
+          "texture": "#side",
+          "cullface": "down"
+        }
+      }
+    }
+  ]
+}

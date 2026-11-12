@@ -423,5 +423,25 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(0.3F).sound(SoundType.WOOD).noOcclusion().noCollission().noLootTable()
                     .pushReaction(PushReaction.DESTROY));
 
+    // ---- the cat companion's things ----
+    public static final DeferredBlock<CatBedBlock> CAT_BED = BLOCKS.registerBlock("cat_bed", CatBedBlock::new,
+            BlockBehaviour.Properties.of().strength(0.4F).sound(SoundType.WOOL).noOcclusion().ignitedByLava().pushReaction(PushReaction.DESTROY)
+                    .mapColor(net.minecraft.world.level.material.MapColor.WOOL));
+    public static final DeferredBlock<ScratchingPostBlock> SCRATCHING_POST = BLOCKS.registerBlock("scratching_post", ScratchingPostBlock::new,
+            BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.WOOL).noOcclusion().ignitedByLava()
+                    .mapColor(net.minecraft.world.level.material.MapColor.SAND));
+    public static final DeferredBlock<CatTreeBlock> CAT_TREE = BLOCKS.registerBlock("cat_tree", CatTreeBlock::new,
+            BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.WOOL).noOcclusion().ignitedByLava().pushReaction(PushReaction.DESTROY)
+                    .mapColor(net.minecraft.world.level.material.MapColor.SAND));
+    public static final DeferredBlock<CatBowlBlock> CAT_BOWL = BLOCKS.registerBlock("cat_bowl", CatBowlBlock::new,
+            BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.DECORATED_POT).noOcclusion().pushReaction(PushReaction.DESTROY)
+                    .mapColor(net.minecraft.world.level.material.MapColor.QUARTZ));
+    public static final DeferredBlock<CardboardBoxBlock> CARDBOARD_BOX = BLOCKS.registerBlock("cardboard_box", CardboardBoxBlock::new,
+            BlockBehaviour.Properties.of().strength(0.3F).sound(SoundType.SCAFFOLDING).noOcclusion().ignitedByLava().pushReaction(PushReaction.DESTROY)
+                    .mapColor(net.minecraft.world.level.material.MapColor.WOOD));
+    public static final DeferredBlock<CatFlapBlock> CAT_FLAP = BLOCKS.registerBlock("cat_flap", CatFlapBlock::new,
+            BlockBehaviour.Properties.of().strength(2.0F).sound(SoundType.WOOD).ignitedByLava().isSuffocating((s, l, p) -> false)
+                    .isViewBlocking((s, l, p) -> false).mapColor(net.minecraft.world.level.material.MapColor.WOOD));
+
     private ModBlocks() {}
 }

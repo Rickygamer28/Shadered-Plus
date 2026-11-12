@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "decorations",
+  "pattern": [
+    "C",
+    "S",
+    "S"
+  ],
+  "key": {
+    "C": {
+      "tag": "minecraft:wool_carpets"
+    },
+    "S": {
+      "item": "skyblocks:scratching_post"
+    }
+  },
+  "result": {
+    "id": "skyblocks:cat_tree",
+    "count": 1
+  }
+}

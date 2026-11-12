@@ -158,6 +158,18 @@ public final class ModItems {
             () -> new PhotoFrameItem(PhotoFrameBlock.Size.MEDIUM, new Item.Properties()));
     public static final DeferredItem<PhotoFrameItem> LARGE_PHOTO_FRAME = ITEMS.register("large_photo_frame",
             () -> new PhotoFrameItem(PhotoFrameBlock.Size.LARGE, new Item.Properties()));
+    // ---- the cat companion's things ----
+    public static final DeferredItem<BlockItem> CAT_BED = ITEMS.registerSimpleBlockItem("cat_bed", ModBlocks.CAT_BED);
+    public static final DeferredItem<BlockItem> SCRATCHING_POST = ITEMS.registerSimpleBlockItem("scratching_post", ModBlocks.SCRATCHING_POST);
+    public static final DeferredItem<BlockItem> CAT_TREE = ITEMS.registerSimpleBlockItem("cat_tree", ModBlocks.CAT_TREE);
+    public static final DeferredItem<BlockItem> CAT_BOWL = ITEMS.registerSimpleBlockItem("cat_bowl", ModBlocks.CAT_BOWL);
+    public static final DeferredItem<BlockItem> CARDBOARD_BOX = ITEMS.registerSimpleBlockItem("cardboard_box", ModBlocks.CARDBOARD_BOX);
+    public static final DeferredItem<BlockItem> CAT_FLAP = ITEMS.registerSimpleBlockItem("cat_flap", ModBlocks.CAT_FLAP);
+    public static final DeferredItem<CatToyItems.YarnBall> YARN_BALL = ITEMS.register("yarn_ball", () -> new CatToyItems.YarnBall(new Item.Properties().stacksTo(16)));
+    public static final DeferredItem<CatToyItems.FeatherWand> FEATHER_WAND = ITEMS.register("feather_wand",
+            () -> new CatToyItems.FeatherWand(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<CatToyItems.LaserPointer> LASER_POINTER = ITEMS.register("laser_pointer",
+            () -> new CatToyItems.LaserPointer(new Item.Properties().stacksTo(1)));
 
     private ModItems() {}
 }

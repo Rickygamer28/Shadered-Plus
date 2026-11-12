@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "food=0": {
+      "model": "skyblocks:block/cat_bowl_0"
+    },
+    "food=1": {
+      "model": "skyblocks:block/cat_bowl_1"
+    },
+    "food=2": {
+      "model": "skyblocks:block/cat_bowl_2"
+    },
+    "food=3": {
+      "model": "skyblocks:block/cat_bowl_3"
+    },
+    "food=4": {
+      "model": "skyblocks:block/cat_bowl_4"
+    }
+  }
+}

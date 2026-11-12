@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "wear=0": {
+      "model": "skyblocks:block/scratching_post"
+    },
+    "wear=1": {
+      "model": "skyblocks:block/scratching_post_worn"
+    },
+    "wear=2": {
+      "model": "skyblocks:block/scratching_post_frayed"
+    }
+  }
+}

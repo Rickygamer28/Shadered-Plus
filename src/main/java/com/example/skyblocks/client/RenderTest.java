@@ -144,6 +144,19 @@ public final class RenderTest {
             "fill 344 -60 10 349 -57 10 minecraft:stone_bricks", "#photo 345 -59 9 north false", "#photo 348 -60 8 north true",
             "fill 352 -60 12 362 -56 12 minecraft:stone_bricks", "#photo 354 -58 11 north false medium", "#photo 359 -58 11 north false large",
             "#photo 353 -60 8 north true medium", "#photo 357 -60 8 north true large",
+            // the cat's things, a cat at each: napping in its bed, scratching, eating, in a box, up its tree; a cat flap; yarn; a named cat
+            "setblock 370 -60 2 skyblocks:cat_bed[facing=south,color=light_blue]", "setblock 373 -60 2 skyblocks:scratching_post",
+            "setblock 376 -60 2 skyblocks:cat_bowl[food=3,color=pink]", "setblock 379 -60 2 skyblocks:cardboard_box",
+            "setblock 382 -60 2 skyblocks:cat_tree[facing=south,half=lower]", "setblock 382 -59 2 skyblocks:cat_tree[facing=south,half=upper]",
+            "fill 385 -60 1 389 -58 1 minecraft:stone_bricks", "setblock 387 -60 1 skyblocks:cat_flap[facing=south,open=true]",
+            "setblock 388 -60 4 skyblocks:cat_flap[facing=south]", "setblock 389 -60 4 skyblocks:cat_bowl", "setblock 390 -60 4 skyblocks:cat_bed",
+            "summon skyblocks:oiia_cat 370.5 -59.8 2.5 {NoAI:1b,Owner:[I;1,2,3,4],Mood:1b,Rotation:[20f,0f]}",
+            "summon skyblocks:oiia_cat 373.5 -60 3.15 {NoAI:1b,Owner:[I;1,2,3,4],Mood:3b,CollarColor:4b,Rotation:[180f,0f]}",
+            "summon skyblocks:oiia_cat 376.5 -60 3.2 {NoAI:1b,Owner:[I;1,2,3,4],Mood:4b,CollarColor:5b,Rotation:[180f,0f]}",
+            "summon skyblocks:oiia_cat 379.5 -59.94 2.5 {NoAI:1b,Owner:[I;1,2,3,4],Mood:5b,CollarColor:10b,Rotation:[10f,0f]}",
+            "summon skyblocks:oiia_cat 382.5 -58.12 2.5 {NoAI:1b,Owner:[I;1,2,3,4],Mood:6b,CollarColor:1b,Rotation:[0f,0f]}",
+            "summon skyblocks:oiia_cat 374.5 -60 5.5 {NoAI:1b,Owner:[I;1,2,3,4],CollarColor:11b,CustomName:'\"Mochi\"',Rotation:[15f,0f]}",
+            "summon skyblocks:yarn_ball 371.6 -60 4.6",
     };
     /** The newer things (SKYBLOCKS_RENDER_SET=new: only these), well away from the rest. */
     static final boolean NEW = "new".equals(System.getenv("SKYBLOCKS_RENDER_SET"));
@@ -226,6 +239,19 @@ public final class RenderTest {
             "fill 344 -60 10 349 -57 10 minecraft:stone_bricks", "#photo 345 -59 9 north false", "#photo 348 -60 8 north true",
             "fill 352 -60 12 362 -56 12 minecraft:stone_bricks", "#photo 354 -58 11 north false medium", "#photo 359 -58 11 north false large",
             "#photo 353 -60 8 north true medium", "#photo 357 -60 8 north true large",
+            // the cat's things, a cat at each: napping in its bed, scratching, eating, in a box, up its tree; a cat flap; yarn; a named cat
+            "setblock 370 -60 2 skyblocks:cat_bed[facing=south,color=light_blue]", "setblock 373 -60 2 skyblocks:scratching_post",
+            "setblock 376 -60 2 skyblocks:cat_bowl[food=3,color=pink]", "setblock 379 -60 2 skyblocks:cardboard_box",
+            "setblock 382 -60 2 skyblocks:cat_tree[facing=south,half=lower]", "setblock 382 -59 2 skyblocks:cat_tree[facing=south,half=upper]",
+            "fill 385 -60 1 389 -58 1 minecraft:stone_bricks", "setblock 387 -60 1 skyblocks:cat_flap[facing=south,open=true]",
+            "setblock 388 -60 4 skyblocks:cat_flap[facing=south]", "setblock 389 -60 4 skyblocks:cat_bowl", "setblock 390 -60 4 skyblocks:cat_bed",
+            "summon skyblocks:oiia_cat 370.5 -59.8 2.5 {NoAI:1b,Owner:[I;1,2,3,4],Mood:1b,Rotation:[20f,0f]}",
+            "summon skyblocks:oiia_cat 373.5 -60 3.15 {NoAI:1b,Owner:[I;1,2,3,4],Mood:3b,CollarColor:4b,Rotation:[180f,0f]}",
+            "summon skyblocks:oiia_cat 376.5 -60 3.2 {NoAI:1b,Owner:[I;1,2,3,4],Mood:4b,CollarColor:5b,Rotation:[180f,0f]}",
+            "summon skyblocks:oiia_cat 379.5 -59.94 2.5 {NoAI:1b,Owner:[I;1,2,3,4],Mood:5b,CollarColor:10b,Rotation:[10f,0f]}",
+            "summon skyblocks:oiia_cat 382.5 -58.12 2.5 {NoAI:1b,Owner:[I;1,2,3,4],Mood:6b,CollarColor:1b,Rotation:[0f,0f]}",
+            "summon skyblocks:oiia_cat 374.5 -60 5.5 {NoAI:1b,Owner:[I;1,2,3,4],CollarColor:11b,CustomName:'\"Mochi\"',Rotation:[15f,0f]}",
+            "summon skyblocks:yarn_ball 371.6 -60 4.6",
     };
     private static final String[] NEW_SPOTS = {"200.5 -59.2 -3 0 18", "open 200 -60 0 200.5 -60 -1.6 0 15", "283.5 -59.6 -2.4 0 32",
             "290.5 -59.6 -2.4 0 32", "286.5 -60 -1.2 0 30", "202.5 -58.5 2.6 0 22", "night 202.5 -58.5 2.6 0 22", "229 -56 13 130 35",
@@ -236,6 +262,8 @@ public final class RenderTest {
             "334 -58 -4 0 32", "333.5 -57.6 0.8 0 72", "335 -59.6 6.6 0 18", "331.5 -59.8 7.7 0 24", "334.5 -59.8 7.7 0 24", "343.5 -59.2 -2.2 0 38",
             "night 343.5 -59.2 -2.2 0 38", "338.8 -59.6 1.4 0 18", "346.5 -59.5 6.4 0 10",
             "catwalk 338.8 -59.6 1.4 0 18", "catwalk 340.6 -59.7 3.2 90 12", "holdphoto 333.5 -60 -3 0 8", "holdcamera 333.5 -60 -3 0 8", "356.5 -59.4 4.5 0 8", "night 356.5 -59.4 4.5 0 8", "334 -59.5 10.2 0 22", "331 -59.7 10.9 0 25", 
+            "376 -58.3 8.8 180 22", "373.5 -59.35 5.4 180 12", "376.5 -59.35 5.4 180 15", "379.5 -59.1 4.4 180 32", "382.5 -57.6 5.6 180 12",
+            "370.5 -59.2 4.6 180 30", "374.5 -59.45 7.0 180 4", "372 -59.6 6.2 200 18", "387.5 -59.2 4.2 180 8", 
             "watch 7 open 270 -60 0 270.5 -58.6 -7 0 3", "watch 7 open 270 -60 0 270.5 -59.3 -1.1 0 52", "watch 7 open 270 -60 0 night 270.5 -58.6 -7 0 3"};
     private static int playGame = -1;
     private static boolean pickOnly, controls, moveList, watch;
@@ -255,6 +283,8 @@ public final class RenderTest {
             "334 -58 -4 0 32", "333.5 -57.6 0.8 0 72", "335 -59.6 6.6 0 18", "331.5 -59.8 7.7 0 24", "334.5 -59.8 7.7 0 24", "343.5 -59.2 -2.2 0 38",
             "night 343.5 -59.2 -2.2 0 38", "338.8 -59.6 1.4 0 18", "346.5 -59.5 6.4 0 10",
             "catwalk 338.8 -59.6 1.4 0 18", "catwalk 340.6 -59.7 3.2 90 12", "holdphoto 333.5 -60 -3 0 8", "holdcamera 333.5 -60 -3 0 8", "356.5 -59.4 4.5 0 8", "night 356.5 -59.4 4.5 0 8", "334 -59.5 10.2 0 22", "331 -59.7 10.9 0 25", 
+            "376 -58.3 8.8 180 22", "373.5 -59.35 5.4 180 12", "376.5 -59.35 5.4 180 15", "379.5 -59.1 4.4 180 32", "382.5 -57.6 5.6 180 12",
+            "370.5 -59.2 4.6 180 30", "374.5 -59.45 7.0 180 4", "372 -59.6 6.2 200 18", "387.5 -59.2 4.2 180 8", 
             "watch 7 open 270 -60 0 270.5 -58.6 -7 0 3", "watch 7 open 270 -60 0 270.5 -59.3 -1.1 0 52", "watch 7 open 270 -60 0 night 270.5 -58.6 -7 0 3"};
 
     private static boolean burst, moving, burstOn;

@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "decorations",
+  "pattern": [
+    " C ",
+    "SLS",
+    " P "
+  ],
+  "key": {
+    "C": {
+      "tag": "minecraft:wool_carpets"
+    },
+    "S": {
+      "item": "minecraft:string"
+    },
+    "L": {
+      "tag": "minecraft:logs"
+    },
+    "P": {
+      "tag": "minecraft:wooden_slabs"
+    }
+  },
+  "result": {
+    "id": "skyblocks:scratching_post",
+    "count": 1
+  }
+}

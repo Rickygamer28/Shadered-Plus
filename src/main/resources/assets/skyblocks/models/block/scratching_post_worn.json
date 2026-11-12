@@ -1,0 +1,100 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "rope": "skyblocks:block/scratching_post_rope_worn",
+    "carpet": "skyblocks:block/scratching_post_carpet",
+    "particle": "skyblocks:block/scratching_post_carpet"
+  },
+  "elements": [
+    {
+      "from": [
+        3,
+        0,
+        3
+      ],
+      "to": [
+        13,
+        2,
+        13
+      ],
+      "faces": {
+        "north": {
+          "texture": "#carpet"
+        },
+        "south": {
+          "texture": "#carpet"
+        },
+        "east": {
+          "texture": "#carpet"
+        },
+        "west": {
+          "texture": "#carpet"
+        },
+        "up": {
+          "texture": "#carpet"
+        },
+        "down": {
+          "texture": "#carpet"
+        }
+      }
+    },
+    {
+      "from": [
+        5.5,
+        2,
+        5.5
+      ],
+      "to": [
+        10.5,
+        14,
+        10.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#rope"
+        },
+        "south": {
+          "texture": "#rope"
+        },
+        "east": {
+          "texture": "#rope"
+        },
+        "west": {
+          "texture": "#rope"
+        }
+      }
+    },
+    {
+      "from": [
+        3,
+        14,
+        3
+      ],
+      "to": [
+        13,
+        16,
+        13
+      ],
+      "faces": {
+        "north": {
+          "texture": "#carpet"
+        },
+        "south": {
+          "texture": "#carpet"
+        },
+        "east": {
+          "texture": "#carpet"
+        },
+        "west": {
+          "texture": "#carpet"
+        },
+        "up": {
+          "texture": "#carpet"
+        },
+        "down": {
+          "texture": "#carpet"
+        }
+      }
+    }
+  ]
+}

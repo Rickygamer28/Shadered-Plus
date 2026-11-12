@@ -92,6 +92,7 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.HOT_SPRING.get(), HotSpringRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.PHOTO_FRAME.get(), PhotoFrameRenderer::new);
         event.registerEntityRenderer(com.example.skyblocks.ModEntities.OIIA_CAT.get(), OiiaCatEntityRenderer::new);
+        event.registerEntityRenderer(com.example.skyblocks.ModEntities.YARN_BALL.get(), YarnBallRenderer::new);
         BlockEntityRendererProvider<OiiaCatBlockEntity> big = OiiaCatRenderer::new;
         event.registerBlockEntityRenderer(ModBlockEntities.BIG_OIIA_CAT.get(), big);
         event.registerBlockEntityRenderer(ModBlockEntities.SKY_ISLAND.get(), SkyIslandRenderer::new);
@@ -452,6 +453,34 @@ public final class ClientSetup {
             net.minecraft.world.level.block.state.BlockState block = tint < PondModel.FLOOR_TINT ? pond.rim() : pond.floor();
             return block == null ? -1 : event.getBlockColors().getColor(block, level, pos, tint % 100);
         }, com.example.skyblocks.ModBlocks.VANILLA_KOI_POND.get());
+    }
+
+    /** The cat bed and bowl in their dye colour (tint 0), the cushion / inside a paler shade of it (tint 1). */
+    @SubscribeEvent
+    public static void catColours(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Block event) {
+        event.register((state, level, pos, tint) -> catTint(state.getValue(com.example.skyblocks.CatBedBlock.COLOR), tint),
+                com.example.skyblocks.ModBlocks.CAT_BED.get(), com.example.skyblocks.ModBlocks.CAT_BOWL.get());
+    }
+
+    @SubscribeEvent
+    public static void catItemColours(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Item event) {
+        event.register((stack, tint) -> {
+            var props = stack.get(net.minecraft.core.component.DataComponents.BLOCK_STATE);
+            net.minecraft.world.item.DyeColor dye = props == null ? null : props.get(com.example.skyblocks.CatBedBlock.COLOR);
+            if (dye == null) {
+                dye = stack.is(com.example.skyblocks.ModItems.CAT_BOWL.get()) ? net.minecraft.world.item.DyeColor.LIGHT_BLUE : net.minecraft.world.item.DyeColor.RED;
+            }
+            return catTint(dye, tint);
+        }, com.example.skyblocks.ModItems.CAT_BED.get(), com.example.skyblocks.ModItems.CAT_BOWL.get());
+    }
+
+    private static int catTint(net.minecraft.world.item.DyeColor dye, int tint) {
+        int c = dye.getTextureDiffuseColor() & 0xFFFFFF;
+        if (tint == 1) {
+            int r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+            c = (r + (255 - r) * 3 / 5) << 16 | (g + (255 - g) * 3 / 5) << 8 | (b + (255 - b) * 3 / 5);
+        }
+        return 0xFF000000 | c;
     }
 
     @SubscribeEvent

@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1.0,
+      "bonus_rolls": 0.0,
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "skyblocks:cat_bowl",
+          "functions": [
+            {
+              "function": "minecraft:copy_state",
+              "block": "skyblocks:cat_bowl",
+              "properties": [
+                "color"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "random_sequence": "skyblocks:blocks/cat_bowl"
+}
