@@ -29,8 +29,8 @@ import org.jetbrains.annotations.Nullable;
  * sky in), lighting the room round it in that sky's colours (client/SkyLanternRenderer). Stands, or hangs from a chain.
  */
 public class SkyLanternBlock extends LanternBlock implements EntityBlock {
-    private static final VoxelShape STANDING = Shapes.or(box(4, 0, 4, 12, 11, 12), box(6, 11, 6, 10, 14.5, 10));
-    private static final VoxelShape HANGING = Shapes.or(box(4, 1, 4, 12, 12, 12), box(6.5, 12, 6.5, 9.5, 16, 9.5));
+    private static final VoxelShape STANDING_SHAPE = Shapes.or(box(4, 0, 4, 12, 11, 12), box(6, 11, 6, 10, 14.5, 10));
+    private static final VoxelShape HANGING_SHAPE = Shapes.or(box(4, 1, 4, 12, 12, 12), box(6.5, 12, 6.5, 9.5, 16, 9.5));
 
     public SkyLanternBlock(Properties properties) {
         super(properties);
@@ -38,7 +38,7 @@ public class SkyLanternBlock extends LanternBlock implements EntityBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return state.getValue(HANGING) ? HANGING : STANDING;
+        return state.getValue(HANGING) ? HANGING_SHAPE : STANDING_SHAPE;
     }
 
     @Nullable
