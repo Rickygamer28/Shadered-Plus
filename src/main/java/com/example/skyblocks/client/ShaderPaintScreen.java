@@ -188,8 +188,11 @@ public class ShaderPaintScreen extends Screen {
         // the colour being painted with, typed in
         hex = new EditBox(font, colX, 28 + 22, colW, 14, Component.translatable("screen.skyblocks.shader_paint.colour"));
         hex.setMaxLength(7);
-        hex.setValue(String.format("#%06X", colour & 0xFFFFFF));
+        showHex();
         hex.setResponder(s -> {
+            if (showingHex) {
+                return; // (it's us putting the colour in it: not typed)
+            }
             String t = s.startsWith("#") ? s.substring(1) : s;
             if (t.length() == 6) {
                 try {
@@ -429,7 +432,7 @@ public class ShaderPaintScreen extends Screen {
                 syncHsv();
                 remember(colour);
                 skyBrush = false;
-                hex.setValue(String.format("#%06X", colour & 0xFFFFFF));
+                showHex();
                 skyBrush = false;
                 if (tool == Tool.PICKER) {
                     tool = Tool.PENCIL;
@@ -449,7 +452,7 @@ public class ShaderPaintScreen extends Screen {
                             lookButton.setMessage(lookName());
                         } else if (!skyBrush && opaque(x, y)) {
                             colour = colours[i] | 0xFF000000;
-                            hex.setValue(String.format("#%06X", colour & 0xFFFFFF));
+                            showHex();
                             syncHsv();
                             remember(colour);
                             skyBrush = false;
@@ -606,6 +609,24 @@ public class ShaderPaintScreen extends Screen {
     // ---- the colour picker, the shade ramp, the recent colours ----
 
     /** The picker's hue, saturation and brightness, from the colour (after it's been set some other way). */
+    private boolean showingHex;
+
+    /** The colour, shown in the box (not as if typed there). */
+    private void showHex() {
+        if (hex == null) {
+            return;
+        }
+        String v = String.format("#%06X", colour & 0xFFFFFF);
+        if (!v.equalsIgnoreCase(hex.getValue())) {
+            showingHex = true;
+            try {
+                hex.setValue(v);
+            } finally {
+                showingHex = false;
+            }
+        }
+    }
+
     private void syncHsv() {
         float[] hsb = java.awt.Color.RGBtoHSB((colour >> 16) & 255, (colour >> 8) & 255, colour & 255, null);
         if (hsb[1] > 0.001F && hsb[2] > 0.001F) {
@@ -614,7 +635,7 @@ public class ShaderPaintScreen extends Screen {
         sat = hsb[1];
         val = hsb[2];
         if (hex != null && !hex.isFocused()) {
-            hex.setValue(String.format("#%06X", colour & 0xFFFFFF));
+            showHex();
         }
     }
 
@@ -622,7 +643,7 @@ public class ShaderPaintScreen extends Screen {
         colour = 0xFF000000 | Mth.hsvToRgb(hue, sat, val);
         skyBrush = false;
         if (hex != null) {
-            hex.setValue(String.format("#%06X", colour & 0xFFFFFF));
+            showHex();
         }
     }
 
