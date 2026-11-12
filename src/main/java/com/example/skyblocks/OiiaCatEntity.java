@@ -632,8 +632,12 @@ public class OiiaCatEntity extends TamableAnimal {
     static final class FlapWalker extends WalkNodeEvaluator {
         @Override
         public PathType getPathType(PathfindingContext context, int x, int y, int z) {
-            if (context.getBlockState(new BlockPos(x, y, z)).getBlock() instanceof CatFlapBlock) {
+            Block b = context.getBlockState(new BlockPos(x, y, z)).getBlock();
+            if (b instanceof CatFlapBlock) {
                 return PathType.OPEN;
+            }
+            if (b instanceof CatTreeBlock || b instanceof ScratchingPostBlock || b instanceof CardboardBoxBlock) {
+                return PathType.BLOCKED; // (round them, not over them: it hops up and in by itself)
             }
             return super.getPathType(context, x, y, z);
         }
@@ -664,6 +668,11 @@ public class OiiaCatEntity extends TamableAnimal {
         return distanceToSqr(p.x, getY(), p.z) < d * d && Math.abs(getY() - p.y) < 1.2;
     }
 
+    /** Near enough the block at pos (any side of it, on its level) to hop on, in or up. */
+    private boolean by(BlockPos pos, double d) {
+        return distanceToSqr(pos.getX() + 0.5, getY(), pos.getZ() + 0.5) < d * d && Math.abs(getY() - pos.getY()) < 1.2;
+    }
+
     private void walkTo(Vec3 p, double speed, int every) {
         if (getNavigation().isDone() || tickCount % every == 0) {
             getNavigation().moveTo(p.x, p.y, p.z, speed);
@@ -692,7 +701,8 @@ public class OiiaCatEntity extends TamableAnimal {
     /** Hungry or hurt: off to a bowl with food in it, and eats a serving. */
     final class EatGoal extends Goal {
         private BlockPos bowl, spot;
-        private int eaten;
+        private int eaten, walking;
+        private boolean gaveUp;
 
         EatGoal() {
             setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK, Flag.JUMP));
@@ -716,6 +726,8 @@ public class OiiaCatEntity extends TamableAnimal {
         @Override
         public void start() {
             eaten = 0;
+            walking = 0;
+            gaveUp = false;
             getNavigation().moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 1.1);
         }
 
@@ -727,7 +739,12 @@ public class OiiaCatEntity extends TamableAnimal {
         @Override
         public void tick() {
             getLookControl().setLookAt(bowl.getX() + 0.5, bowl.getY(), bowl.getZ() + 0.5);
-            if (!near(centre(spot), 0.6)) {
+            if (!near(centre(spot), 0.6) && !by(bowl, 1.1)) {
+                if (++walking > 240) {
+                    eaten = 70; // (can't get there: gives up)
+                    gaveUp = true;
+                    return;
+                }
                 walkTo(centre(spot), 1.1, 20);
                 return;
             }
@@ -738,7 +755,7 @@ public class OiiaCatEntity extends TamableAnimal {
                 playSound(SoundEvents.CAT_EAT, 0.7F, 1.0F + (random.nextFloat() - 0.5F) * 0.2F);
                 CatBowlBlock.crumbs(server, bowl);
             }
-            if (eaten == 70 && level() instanceof ServerLevel server) {
+            if (eaten == 70 && !gaveUp && level() instanceof ServerLevel server) {
                 CatBowlBlock.eaten(server, bowl);
                 heal(4.0F);
                 hunger = 6000 + random.nextInt(6000);
@@ -758,6 +775,7 @@ public class OiiaCatEntity extends TamableAnimal {
         private int scratched, length;
         private float scratchYaw;
         private boolean gaveUp;
+        private int walking;
 
         ScratchGoal() {
             setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK, Flag.JUMP));
@@ -777,6 +795,7 @@ public class OiiaCatEntity extends TamableAnimal {
         @Override
         public void start() {
             scratched = 0;
+            walking = 0;
             gaveUp = false;
             length = 60 + random.nextInt(60);
             getNavigation().moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 1.0);
@@ -795,7 +814,11 @@ public class OiiaCatEntity extends TamableAnimal {
                 getLookControl().setLookAt(c.x, c.y + 0.6, c.z);
             }
             if (mood() != SCRATCHING) {
-                if (!near(centre(spot), 0.6)) {
+                if (!near(centre(spot), 0.6) && !by(post, 1.5)) {
+                    if (++walking > 240) {
+                        gaveUp = true;
+                        return;
+                    }
                     walkTo(centre(spot), 1.0, 20);
                     return;
                 }
@@ -806,7 +829,7 @@ public class OiiaCatEntity extends TamableAnimal {
                 boolean close = false;
                 if (to.lengthSqr() > 1.0E-4) {
                     search:
-                    for (double d : new double[] {0.5, 0.56, 0.64, 0.72}) {
+                    for (double d : new double[] {0.46, 0.52, 0.6, 0.7}) {
                         for (double up : new double[] {0.0, 0.125, 0.1875}) {
                             Vec3 at = c.add(to.normalize().scale(d)).add(0, getY() - c.y + up, 0);
                             if (level().noCollision(OiiaCatEntity.this, getBoundingBox().move(at.x - getX(), at.y - getY(), at.z - getZ()))) {
@@ -849,7 +872,7 @@ public class OiiaCatEntity extends TamableAnimal {
     /** If it fits, it sits: into a cardboard box, a while, only its head showing. */
     final class BoxGoal extends Goal {
         private BlockPos box, spot;
-        private int sat, length;
+        private int sat, length, walking;
 
         BoxGoal() {
             setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK, Flag.JUMP));
@@ -871,6 +894,7 @@ public class OiiaCatEntity extends TamableAnimal {
         @Override
         public void start() {
             sat = 0;
+            walking = 0;
             length = 600 + random.nextInt(1200);
             getNavigation().moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 1.0);
         }
@@ -883,7 +907,11 @@ public class OiiaCatEntity extends TamableAnimal {
         @Override
         public void tick() {
             if (mood() != BOXED) {
-                if (!near(centre(spot), 0.7)) {
+                if (!near(centre(spot), 0.7) && !by(box, 1.6)) {
+                    if (++walking > 240) {
+                        sat = length; // (can't get there: gives up)
+                        return;
+                    }
                     walkTo(centre(spot), 1.0, 20);
                     return;
                 }
@@ -914,7 +942,7 @@ public class OiiaCatEntity extends TamableAnimal {
     /** Up a cat tree, to sit on top and keep an eye on you. */
     final class PerchGoal extends Goal {
         private BlockPos tree, spot;
-        private int sat, length;
+        private int sat, length, walking;
 
         PerchGoal() {
             setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK, Flag.JUMP));
@@ -937,6 +965,7 @@ public class OiiaCatEntity extends TamableAnimal {
         @Override
         public void start() {
             sat = 0;
+            walking = 0;
             length = 600 + random.nextInt(1000);
             getNavigation().moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 1.0);
         }
@@ -949,7 +978,11 @@ public class OiiaCatEntity extends TamableAnimal {
         @Override
         public void tick() {
             if (mood() != PERCHED) {
-                if (!near(centre(spot), 0.7)) {
+                if (!near(centre(spot), 0.7) && !by(tree, 1.8)) {
+                    if (++walking > 240) {
+                        sat = length; // (can't get there: gives up)
+                        return;
+                    }
                     walkTo(centre(spot), 1.0, 20);
                     return;
                 }
