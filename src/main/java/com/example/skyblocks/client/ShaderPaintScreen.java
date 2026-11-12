@@ -293,10 +293,11 @@ public class ShaderPaintScreen extends Screen {
         addRenderableWidget(Button.builder(Component.translatable("gui.cancel"), b -> onClose()).bounds(width / 2 + 4, height - 26, 100, 20).build());
         if (problem == null) {
             // quick styles: the sky picked, in a pattern
-            int bw = Math.max(30, Math.min(52, (ax1 - ax0) / QUICK.length - 2)), qx = (ax0 + ax1) / 2 - (bw + 2) * QUICK.length / 2;
+            int bw = Math.max(24, Math.min(52, (ax1 - ax0) / QUICK.length - 2)), qx = (ax0 + ax1) / 2 - (bw + 2) * QUICK.length / 2;
+            boolean narrow = bw < 46; // (short names where the full ones won't fit)
             for (int i = 0; i < QUICK.length; i++) {
                 int kind = i;
-                addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.shader_paint.quick." + QUICK[i]), b -> pattern(kind))
+                addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.shader_paint.quick." + QUICK[i] + (narrow ? ".short" : "")), b -> pattern(kind))
                         .tooltip(Tooltip.create(Component.translatable("screen.skyblocks.shader_paint.quick.tip")))
                         .bounds(qx + i * (bw + 2), height - 56, bw, 16).build());
             }
@@ -312,27 +313,29 @@ public class ShaderPaintScreen extends Screen {
             wornB.active = !worn && wornCanvas != null;
         }
         if (worn) {
+            // (3D / flat and Auto up by Icon / Worn; front, side, back over the 3D armour, as wide as there's room for)
             addRenderableWidget(Button.builder(Component.translatable(flat ? "screen.skyblocks.shader_paint.view.3d" : "screen.skyblocks.shader_paint.view.flat"), b -> {
                 flat = !flat;
                 dragging = false;
                 turning = false;
                 rebuildWidgets();
-            }).bounds(ax1 - 44, 28, 44, 14).build());
+            }).bounds(88, 4, 34, 16).build());
             addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.shader_paint.auto"), b -> {
                 remember();
                 wornAuto = true;
                 autoWorn();
                 refreshUsed();
-            }).tooltip(Tooltip.create(Component.translatable("screen.skyblocks.shader_paint.auto.tip"))).bounds(ax1 - 90, 28, 44, 14).build());
+            }).tooltip(Tooltip.create(Component.translatable("screen.skyblocks.shader_paint.auto.tip"))).bounds(124, 4, 34, 16).build());
             if (!flat) {
                 String[] views = {"front", "side", "back"};
                 float[] yaws = {0.0F, 90.0F, 180.0F};
+                int vw = Math.max(20, Math.min(40, (ax1 - ax0) / 3 - 2));
                 for (int i = 0; i < 3; i++) {
                     float to = yaws[i];
-                    addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.shader_paint.view." + views[i]), b -> {
+                    addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.shader_paint.view." + views[i] + (vw < 34 ? ".short" : "")), b -> {
                         yaw = to;
                         pitch = 10.0F;
-                    }).bounds(ax0 + i * 40, 28, 38, 14).build());
+                    }).bounds(ax0 + i * (vw + 2), 28, vw, 14).build());
                 }
             }
         }
@@ -677,10 +680,12 @@ public class ShaderPaintScreen extends Screen {
         g.pose().pushPose();
         g.pose().translate(0, 0, 300);
         if (wornAuto) {
-            g.drawString(font, Component.translatable("screen.skyblocks.shader_paint.auto.on"), ax0 + 4, ay1 - 12, 0xFFFFE080);
+            g.drawString(font, Component.translatable("screen.skyblocks.shader_paint.auto.on"), ax0 + 4, ay0 + 4, 0xFFFFE080);
         }
-        g.drawString(font, Component.translatable("screen.skyblocks.shader_paint.turn"), ax1 - 4 - font.width(Component.translatable("screen.skyblocks.shader_paint.turn")),
-                ay0 + 4, 0xA0C0B0E0);
+        Component turn = Component.translatable("screen.skyblocks.shader_paint.turn");
+        if (ax1 - ax0 > font.width(turn) + 16) {
+            g.drawString(font, turn, ax1 - 4 - font.width(turn), ay1 - 12, 0xA0C0B0E0);
+        }
         g.pose().popPose();
     }
 

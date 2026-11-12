@@ -58,13 +58,25 @@ public class SkyLanternRenderer implements BlockEntityRenderer<SkyLanternBlockEn
     }
 
     abstract static class Types extends RenderType {
-        /** A sky's light on the blocks round the lantern: added onto their colours. */
+        /**
+         * A sky's light on the blocks round the lantern: their colours tinted towards it (multiplied: a lit white wall
+         * turns the sky's colour, which light added on top of it couldn't do).
+         */
+        static final TransparencyStateShard TINT = new TransparencyStateShard("skyblocks_tint", () -> {
+            com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+            com.mojang.blaze3d.systems.RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.DST_COLOR,
+                    com.mojang.blaze3d.platform.GlStateManager.DestFactor.ZERO);
+        }, () -> {
+            com.mojang.blaze3d.systems.RenderSystem.disableBlend();
+            com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
+        });
+
         static RenderType glow(int sky, ResourceLocation picture) {
             return create("skyblocks_sky_glow_" + sky, DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 8192, false, true,
                     CompositeState.builder()
                             .setShaderState(new ShaderStateShard(() -> glowShader))
                             .setTextureState(new TextureStateShard(picture, false, false))
-                            .setTransparencyState(LIGHTNING_TRANSPARENCY)
+                            .setTransparencyState(TINT)
                             .setCullState(NO_CULL)
                             .setWriteMaskState(COLOR_WRITE)
                             .setLayeringState(VIEW_OFFSET_Z_LAYERING)
@@ -79,7 +91,7 @@ public class SkyLanternRenderer implements BlockEntityRenderer<SkyLanternBlockEn
     private static final Map<Integer, RenderType> GLOWS = new HashMap<>();
     /** How far its light reaches (blocks), and how strong it is right by it. */
     private static final int REACH = 7;
-    private static final float STRENGTH = 0.6F;
+    private static final float STRENGTH = 0.8F;
 
     private static final class Lit {
         long at = -1000;
@@ -226,7 +238,7 @@ public class SkyLanternRenderer implements BlockEntityRenderer<SkyLanternBlockEn
             f[i * 3] = cx - lantern.getX();
             f[i * 3 + 1] = cy - lantern.getY();
             f[i * 3 + 2] = cz - lantern.getZ();
-            f[12 + i] = fade * fade * STRENGTH;
+            f[12 + i] = fade * (0.35F + 0.65F * fade) * STRENGTH;
         }
         return f;
     }
