@@ -51,8 +51,9 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
         // (curled up: napping, in a box; the loaf is the spin model)
         // (everything's a pose of the skeleton now - the OIIA spin too, sat up and turning; the loaf model is only the
         // fallback while the rigged model isn't loaded)
-        boolean loaf = false;
-        if (!((spin && OiiaCatMesh.get() == null ? cat.clientSpinModel : cat.clientModel) instanceof RenderableModel model)) {
+        // (in the window perch: the loaf, sat neatly on the hammock looking out)
+        boolean loaf = mood == OiiaCatEntity.WINDOW && !spin;
+        if (!((spin && OiiaCatMesh.get() == null || loaf ? cat.clientSpinModel : cat.clientModel) instanceof RenderableModel model)) {
             return; // (Shadered hasn't loaded the model yet)
         }
         float age = cat.tickCount + partialTick;

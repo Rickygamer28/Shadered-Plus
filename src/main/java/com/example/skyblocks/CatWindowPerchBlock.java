@@ -70,7 +70,7 @@ public class CatWindowPerchBlock extends BaseEntityBlock {
 
     /** Where a cat lies on it (the middle of the hammock). */
     public static Vec3 perch(BlockPos pos, BlockState state) {
-        double[] p = turn(state.getValue(FACING), 8, 6.5);
+        double[] p = turn(state.getValue(FACING), 8, 5.5);
         return new Vec3(pos.getX() + p[0] / 16, pos.getY() + 4.4 / 16, pos.getZ() + p[1] / 16);
     }
 
