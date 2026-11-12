@@ -97,5 +97,57 @@ public final class ModComponents {
     public static final Supplier<DataComponentType<ShaderPaint>> SHADER_PAINT = COMPONENTS.register("shader_paint",
             () -> DataComponentType.<ShaderPaint>builder().persistent(ShaderPaint.CODEC).networkSynchronized(ShaderPaint.STREAM_CODEC).build());
 
+    /**
+     * An item's own texture, drawn at the infusion altar: its pixels (w x h, row by row from the top), 4 bytes each
+     * (alpha, red, green, blue; alpha 0: no pixel). Drawn instead of the item's own (client/ShaderPaintRender).
+     */
+    public record ItemTexture(int w, int h, byte[] argb) {
+        public static final com.mojang.serialization.Codec<ItemTexture> CODEC = com.mojang.serialization.codecs.RecordCodecBuilder.create(i -> i.group(
+                com.mojang.serialization.Codec.INT.fieldOf("w").forGetter(ItemTexture::w),
+                com.mojang.serialization.Codec.INT.fieldOf("h").forGetter(ItemTexture::h),
+                com.mojang.serialization.Codec.BYTE_BUFFER.xmap(b -> {
+                    byte[] a = new byte[b.remaining()];
+                    b.duplicate().get(a);
+                    return a;
+                }, java.nio.ByteBuffer::wrap).fieldOf("argb").forGetter(ItemTexture::argb)).apply(i, ItemTexture::new));
+        public static final net.minecraft.network.codec.StreamCodec<io.netty.buffer.ByteBuf, ItemTexture> STREAM_CODEC =
+                net.minecraft.network.codec.StreamCodec.composite(
+                        net.minecraft.network.codec.ByteBufCodecs.VAR_INT, ItemTexture::w,
+                        net.minecraft.network.codec.ByteBufCodecs.VAR_INT, ItemTexture::h,
+                        net.minecraft.network.codec.ByteBufCodecs.byteArray(64 * 64 * 4), ItemTexture::argb, ItemTexture::new);
+
+        public static ItemTexture of(int w, int h, int[] argb) {
+            byte[] b = new byte[w * h * 4];
+            for (int i = 0; i < w * h; i++) {
+                b[i * 4] = (byte) (argb[i] >>> 24);
+                b[i * 4 + 1] = (byte) (argb[i] >> 16);
+                b[i * 4 + 2] = (byte) (argb[i] >> 8);
+                b[i * 4 + 3] = (byte) argb[i];
+            }
+            return new ItemTexture(w, h, b);
+        }
+
+        public int at(int x, int y) {
+            int i = (y * w + x) * 4;
+            if (x < 0 || y < 0 || x >= w || y >= h || i + 3 >= argb.length) {
+                return 0;
+            }
+            return (argb[i] & 255) << 24 | (argb[i + 1] & 255) << 16 | (argb[i + 2] & 255) << 8 | argb[i + 3] & 255;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof ItemTexture t && t.w == w && t.h == h && java.util.Arrays.equals(t.argb, argb);
+        }
+
+        @Override
+        public int hashCode() {
+            return (w * 31 + h) * 31 + java.util.Arrays.hashCode(argb);
+        }
+    }
+
+    public static final Supplier<DataComponentType<ItemTexture>> ITEM_TEXTURE = COMPONENTS.register("item_texture",
+            () -> DataComponentType.<ItemTexture>builder().persistent(ItemTexture.CODEC).networkSynchronized(ItemTexture.STREAM_CODEC).build());
+
     private ModComponents() {}
 }

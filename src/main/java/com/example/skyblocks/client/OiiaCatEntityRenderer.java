@@ -16,7 +16,7 @@ import org.joml.Matrix4f;
 
 /**
  * The OIIA cat companion, drawn with the OIIA model by Shadered's model renderer (as OiiaCatRenderer draws the block),
- * in pieces (body, head, legs, tail: tools/models/oiia_cat/split_walk.py) posed for what it's doing - walking, running,
+ * on a skeleton (body, head, legs, tail: OiiaCatRig) posed for what it's doing - walking, running,
  * sitting up, stalking, pouncing, eating, scratching - easing between poses; napping or in a box it's the curled-up loaf
  * (breathing); petted, the loaf does the OIIA spin.
  */
@@ -107,8 +107,8 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
         t[GAIT] = 1.0F;
         // its head turned to what it's looking at (as far as a neck goes), its tail held up and swaying gently
         float headYaw = Mth.wrapDegrees(Mth.rotLerp(partialTick, cat.yHeadRotO, cat.yHeadRot) - Mth.rotLerp(partialTick, cat.yBodyRotO, cat.yBodyRot));
-        t[HEAD_YAW] = Mth.clamp(headYaw * 0.6F, -16.0F, 16.0F);
-        t[HEAD_PITCH] = Mth.clamp(Mth.lerp(partialTick, cat.xRotO, cat.getXRot()) * 0.5F, -10.0F, 10.0F);
+        t[HEAD_YAW] = Mth.clamp(headYaw * 0.8F, -30.0F, 30.0F);
+        t[HEAD_PITCH] = Mth.clamp(Mth.lerp(partialTick, cat.xRotO, cat.getXRot()) * 0.7F, -18.0F, 18.0F);
         t[TAIL_LIFT] = -10.0F - 8.0F * speed;
         byte mood = cat.mood();
         if (mood == OiiaCatEntity.SCRATCHING) {
@@ -162,22 +162,19 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
     }
 
     /**
-     * The cat in its pieces (body, head, four legs, tail), posed for what it's doing - stood, walking (a trot), running
+     * The cat on its skeleton (OiiaCatRig: body, head, four legs, tail and its tip), posed for what it's doing - stood, walking (a trot), running
      * (a bounding gallop), sat up, stalking, pouncing, eating, scratching - and easing from one pose to the next; its
-     * head turns to what it looks at, its tail sways. False while the pieces haven't loaded (then it's the whole model).
+     * head turns to what it looks at, its tail sways. False while the model hasn't loaded (then it's the whole model, still).
      */
     private static boolean parts(OiiaCatEntity cat, PoseStack pose, float scale, float age, float partialTick) {
-        int n = OiiaCatModel.PARTS.length;
-        Object[] parts = cat.clientParts instanceof Object[] had && had.length == n ? had : new Object[n];
-        cat.clientParts = parts;
-        for (int i = 0; i < n; i++) {
-            if (!(parts[i] instanceof RenderableModel)) {
-                parts[i] = OiiaCatModel.create(OiiaCatModel.part(i));
-                if (parts[i] == null) {
-                    return false;
-                }
+        if (!(cat.clientParts instanceof RenderableModel)) {
+            cat.clientParts = OiiaCatRig.create();
+            if (cat.clientParts == null) {
+                return false;
             }
         }
+        RenderableModel rig = (RenderableModel) cat.clientParts;
+        OiiaCatRig.Posed bones = (OiiaCatRig.Posed) rig.animator;
         float walk = cat.walkAnimation.position(partialTick), speed = Math.min(1.0F, cat.walkAnimation.speed(partialTick) * 1.4F);
         if (testWalk) {
             walk = age * 0.35F;
@@ -226,38 +223,35 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
         Matrix4f world = new Matrix4f().translation((float) camera.x, (float) camera.y, (float) camera.z).mul(new Matrix4f(pose.last().pose()));
         float swing = (gallop ? 40.0F : 30.0F) * gait;
         float[] legPhase = gallop ? new float[] {0.0F, 0.35F, Mth.PI, Mth.PI + 0.35F} : new float[] {0.0F, Mth.PI, Mth.PI, 0.0F};
-        for (int i = 0; i < n; i++) {
-            float[] pv = OiiaCatModel.PIVOTS[i];
-            Matrix4f m = new Matrix4f(world);
-            if (i >= 1 && i <= 4) {
-                float angle = a[FL + i - 1] + Mth.sin(phase + legPhase[i - 1]) * swing;
-                if (mood == OiiaCatEntity.SCRATCHING && i <= 2) {
-                    // (front paws scratching in turn: up, and a pull down the post)
-                    float s = age * 0.9F + (i == 1 ? 0.0F : Mth.PI);
-                    angle += Mth.sin(s) * 22.0F + Math.max(0.0F, Mth.sin(s)) * 8.0F;
-                }
-                m.translate(pv[0], pv[1], pv[2]).rotateX(angle * Mth.DEG_TO_RAD).translate(-pv[0], -pv[1], -pv[2]);
-            } else if (i == 5) {
-                // the tail: a slow sway, more as it walks, a quick twitch when it's stalking
-                float sway = a[TAIL_YAW] + Mth.sin(age * 0.07F) * 9.0F + Mth.sin(phase * 0.5F) * 14.0F * gait;
-                if (mood == OiiaCatEntity.PLAYING && a[LIFT] < -2.0F) {
-                    sway += Mth.sin(age * 2.3F) * 6.0F;
-                }
-                float lift = a[TAIL_LIFT] + Mth.sin(age * 0.05F) * 3.0F;
-                m.translate(pv[0], pv[1], pv[2]).rotateY(sway * Mth.DEG_TO_RAD).rotateX(lift * Mth.DEG_TO_RAD).translate(-pv[0], -pv[1], -pv[2]);
-            } else if (i == 6) {
-                // the head: turned to what it looks at; nodding with its steps; chewing at the bowl
-                float nod = Mth.sin(phase * 2.0F) * 2.5F * gait;
-                if (mood == OiiaCatEntity.EATING) {
-                    nod += Mth.sin(age * 0.9F) * 4.0F;
-                }
-                m.translate(pv[0], pv[1], pv[2]).rotateY(a[HEAD_YAW] * Mth.DEG_TO_RAD).rotateX((a[HEAD_PITCH] + nod) * Mth.DEG_TO_RAD)
-                        .translate(-pv[0], -pv[1], -pv[2]);
+        // the bones: each turned about its joint (the fur blending across it)
+        bones.set(OiiaCatRig.BODY, new Matrix4f());
+        for (int i = 0; i < 4; i++) {
+            float angle = a[FL + i] + Mth.sin(phase + legPhase[i]) * swing;
+            if (mood == OiiaCatEntity.SCRATCHING && i <= 1) {
+                // (front paws scratching in turn: up, and a pull down the post)
+                float s = age * 0.9F + (i == 0 ? 0.0F : Mth.PI);
+                angle += Mth.sin(s) * 22.0F + Math.max(0.0F, Mth.sin(s)) * 8.0F;
             }
-            RenderableModel part = (RenderableModel) parts[i];
-            part.modelMatrix = m;
-            AssimpRenderer.getInstance().addModel(part);
+            bones.set(OiiaCatRig.LEGS[i], OiiaCatRig.Posed.turn(OiiaCatRig.LEGS_AT[i], 0.0F, angle));
         }
+        // the tail: a slow sway, more as it walks, a quick twitch when it's stalking; its tip following, curling more
+        float sway = a[TAIL_YAW] + Mth.sin(age * 0.07F) * 9.0F + Mth.sin(phase * 0.5F) * 14.0F * gait;
+        if (mood == OiiaCatEntity.PLAYING && a[LIFT] < -2.0F) {
+            sway += Mth.sin(age * 2.3F) * 6.0F;
+        }
+        float lift = a[TAIL_LIFT] + Mth.sin(age * 0.05F) * 3.0F;
+        Matrix4f tail = OiiaCatRig.Posed.turn(OiiaCatRig.TAIL_AT, sway, lift);
+        bones.set(OiiaCatRig.TAIL, tail);
+        float tipSway = sway * 0.8F + Mth.sin(age * 0.07F - 0.8F) * 7.0F + a[TAIL_YAW] * 0.6F;
+        bones.set(OiiaCatRig.TAIL_TIP, new Matrix4f(tail).mul(OiiaCatRig.Posed.turn(OiiaCatRig.TAIL_TIP_AT, tipSway, lift * 0.5F)));
+        // the head: turned to what it looks at; nodding with its steps; chewing at the bowl
+        float nod = Mth.sin(phase * 2.0F) * 2.5F * gait;
+        if (mood == OiiaCatEntity.EATING) {
+            nod += Mth.sin(age * 0.9F) * 5.0F;
+        }
+        bones.set(OiiaCatRig.HEAD, OiiaCatRig.Posed.turn(OiiaCatRig.HEAD_AT, a[HEAD_YAW], a[HEAD_PITCH] + nod));
+        rig.modelMatrix = world;
+        AssimpRenderer.getInstance().addModel(rig);
         return true;
     }
 

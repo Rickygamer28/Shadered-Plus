@@ -261,7 +261,7 @@ public class EffectBlockRenderer implements BlockEntityRenderer<EffectBlockEntit
         drawItem(poseStack, buffers, EffectBlockEntity.Settings.DEFAULT);
     }
 
-    /** The block as an item, running these settings (an effect as a shader paint: ShaderCapture). */
+    /** The block as an item, running these settings. */
     static void drawItem(PoseStack poseStack, MultiBufferSource buffers, EffectBlockEntity.Settings settings) {
         if (shader == null) {
             return;

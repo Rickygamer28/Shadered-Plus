@@ -26,6 +26,8 @@ public abstract class ItemRendererPaintMixin {
     private static boolean skyblocks$pending;
     @Unique
     private static boolean skyblocks$gui;
+    @Unique
+    private static boolean skyblocks$textured;
 
     @Inject(method = "render(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;ZLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IILnet/minecraft/client/resources/model/BakedModel;)V",
             at = @At("HEAD"), require = 0)
@@ -34,6 +36,7 @@ public abstract class ItemRendererPaintMixin {
         skyblocks$buffers = buffers;
         skyblocks$pending = true;
         skyblocks$gui = context == ItemDisplayContext.GUI;
+        skyblocks$textured = false;
     }
 
     @Inject(method = "render(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;ZLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IILnet/minecraft/client/resources/model/BakedModel;)V",
@@ -42,6 +45,23 @@ public abstract class ItemRendererPaintMixin {
                                    int overlay, BakedModel model, CallbackInfo ci) {
         skyblocks$buffers = null;
         skyblocks$pending = false;
+    }
+
+    /** An item with a texture drawn for it at the altar: that, instead of its own model (and its painted skies on it). */
+    @Inject(method = "renderModelLists", at = @At("HEAD"), cancellable = true, require = 0)
+    private void skyblocks$ownTexture(BakedModel model, ItemStack stack, int light, int overlay, PoseStack pose, VertexConsumer buffer, CallbackInfo ci) {
+        if (skyblocks$textured) {
+            ci.cancel(); // (an item drawn in several passes: its texture's drawn already)
+            return;
+        }
+        if (skyblocks$buffers != null && ShaderPaintRender.drawTexture(stack, pose, skyblocks$buffers, light, overlay)) {
+            skyblocks$textured = true;
+            if (skyblocks$pending) {
+                skyblocks$pending = false;
+                ShaderPaintRender.afterModel(stack, model, pose, skyblocks$buffers, skyblocks$gui);
+            }
+            ci.cancel();
+        }
     }
 
     @Inject(method = "renderModelLists", at = @At("TAIL"), require = 0)
