@@ -1,5 +1,5 @@
 """Splits the OIIA cat (models/complex/oiia_cat.glb) into pieces that move on their own, for the companion's walk:
-the body (with the head), each leg (turning at its hip) and the tail (turning where it leaves the body).
+the body, the head, each leg (turning at its hip) and the tail (turning where it leaves the body).
 Writes oiia_cat_<part>.glb next to it and prints each part's pivot (model units) for client/OiiaCatModel.
 Run from the repository root: python3 tools/models/oiia_cat/split_walk.py [--preview out.png]"""
 import json, struct, sys
@@ -38,6 +38,11 @@ LEGS = {
 }
 RADIUS = 3.9
 
+# the head: in front of the neck - a plane leaning forward from the back of the neck (z 5, y 28.6) down to under the
+# chin (z 21, y 16.3), where the collar goes (client/OiiaCatCollar), so the collar covers the join
+NECK_C = np.array([13.0, 22.45])      # (z, y)
+NECK_N = np.array([0.609, 0.793])     # (z, y): forward and up
+
 def part_of(p):
     x, y, z = p
     for name, (cx, cz, top) in LEGS.items():
@@ -45,6 +50,8 @@ def part_of(p):
             return name
     if z < -22.5 and y > 8.0:
         return "tail"
+    if (np.array([z, y]) - NECK_C) @ NECK_N > 0:
+        return "head"
     return "body"
 
 vpart = np.array([part_of(p) for p in P])
@@ -99,7 +106,7 @@ def write(name, tris):
     open(OUT % name, "wb").write(out)
     return len(used), len(tris)
 
-for name in ["body", "tail"] + list(LEGS):
+for name in ["body", "tail", "head"] + list(LEGS):
     tris = I[tri_part == name]
     nv, nt = write(name, tris)
     sel = P[np.unique(tris)]
@@ -108,10 +115,11 @@ for name, (cx, cz, top) in LEGS.items():
     print("pivot %s: %.2f %.2f %.2f" % (name, cx, top, cz))
 tail = P[vpart == "tail"]
 print("pivot tail: 0 %.2f -22.5" % tail[tail[:, 2] > -24][:, 1].mean())
+print("pivot head (the neck's middle): 1.6 22.45 13.0")
 
 if "--preview" in sys.argv:
     from PIL import Image, ImageDraw
-    col = {"body": (160, 160, 160), "tail": (230, 120, 40), "leg_fl": (220, 40, 40), "leg_fr": (40, 160, 40), "leg_bl": (40, 80, 230), "leg_br": (200, 40, 200)}
+    col = {"head": (240, 200, 60), "body": (160, 160, 160), "tail": (230, 120, 40), "leg_fl": (220, 40, 40), "leg_fr": (40, 160, 40), "leg_bl": (40, 80, 230), "leg_br": (200, 40, 200)}
     S, mn, mx = 8, P.min(0), P.max(0)
     im = Image.new("RGB", (int((mx[2] - mn[2]) * S) * 2 + 60, int((mx[1] - mn[1]) * S) + 20), "white")
     d = ImageDraw.Draw(im)
