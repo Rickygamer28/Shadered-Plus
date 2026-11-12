@@ -25,6 +25,7 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -56,7 +57,16 @@ public class ShaderPaintScreen extends Screen {
     private boolean grid = true;
     // the canvas, the colours, the skies on screen
     private int cx, cy, cell;
-    private int colX, colY, colCols = 2, colRows;
+    private int colX, colY, colCols = 4, colRows;
+    /** The colour picker (a square of saturation and brightness, a hue bar beside it): open, where, and being dragged. */
+    private boolean picking;
+    private int pickX, pickY, pickDrag; // (pickDrag: 0 none, 1 the square, 2 the hue bar)
+    private float hue, sat = 0.0F, val = 1.0F;
+    private static final int PICK = 104, HUE_W = 12;
+    /** The colours used lately (kept between visits to the altar), newest first. */
+    private static final java.util.LinkedList<Integer> RECENT = new java.util.LinkedList<>();
+    /** Where the shade ramp and the recent colours are (y). */
+    private int shadeY, recentY;
     private int px0, py0, swatch = 18, cols = 5, rowsShown, scroll, colScroll;
     private final List<Integer> used = new ArrayList<>();
     private EditBox hex;
@@ -133,7 +143,9 @@ public class ShaderPaintScreen extends Screen {
         // layout: tools | colours | canvas | skies + preview
         int left = 8, toolW = 76, colW = colCols * 14 + 8, right = cols * (swatch + 2) + 16;
         colX = left + toolW + 8;
-        colY = 28 + 40;
+        shadeY = 28 + 40;
+        recentY = shadeY + 26;
+        colY = recentY + 40;
         colRows = Math.max(3, (height - colY - 40) / 14);
         int room = Math.min(height - 64, width - toolW - colW - right - 48);
         cell = Math.max(2, room / Math.max(1, Math.max(w, h)));
@@ -182,6 +194,7 @@ public class ShaderPaintScreen extends Screen {
             if (t.length() == 6) {
                 try {
                     colour = 0xFF000000 | Integer.parseInt(t, 16);
+                    syncHsv();
                     skyBrush = false;
                 } catch (NumberFormatException ignored) {
                     // (not a colour yet)
@@ -398,9 +411,23 @@ public class ShaderPaintScreen extends Screen {
                 }
                 return true;
             }
+            if (picking && pickAt(mx, my, true)) {
+                return true;
+            }
+            if (picking && !inPicker(mx, my) && !(mx >= colX && mx < colX + colCols * 14 && my >= 28 && my < 28 + 18)) {
+                picking = false; // (a click elsewhere puts it away)
+            }
+            if (mx >= colX && mx < colX + colCols * 14 && my >= 28 && my < 28 + 18) {
+                picking = !picking;
+                skyBrush = false;
+                syncHsv();
+                return true;
+            }
             int cc = colourAt(mx, my);
             if (cc != 0) {
                 colour = cc;
+                syncHsv();
+                remember(colour);
                 skyBrush = false;
                 hex.setValue(String.format("#%06X", colour & 0xFFFFFF));
                 skyBrush = false;
@@ -423,6 +450,8 @@ public class ShaderPaintScreen extends Screen {
                         } else if (!skyBrush && opaque(x, y)) {
                             colour = colours[i] | 0xFF000000;
                             hex.setValue(String.format("#%06X", colour & 0xFFFFFF));
+                            syncHsv();
+                            remember(colour);
                             skyBrush = false;
                         }
                         tool = Tool.PENCIL;
@@ -451,6 +480,10 @@ public class ShaderPaintScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        if (pickDrag != 0) {
+            pickAt(mx, my, false);
+            return true;
+        }
         if (dragging) {
             int x = pixelX(mx), y = pixelY(my);
             if ((tool == Tool.PENCIL || tool == Tool.ERASER) && onCanvas(x, y)) {
@@ -467,6 +500,11 @@ public class ShaderPaintScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mx, double my, int button) {
+        if (pickDrag != 0) {
+            pickDrag = 0;
+            remember(colour);
+            return true;
+        }
         if (dragging) {
             dragging = false;
             int x = Math.max(0, Math.min(w - 1, pixelX(mx))), y = Math.max(0, Math.min(h - 1, pixelY(my)));
@@ -476,6 +514,9 @@ public class ShaderPaintScreen extends Screen {
                 line(startX, startY, x, y, erasing);
             }
             refreshUsed();
+            if (!skyBrush && !erasing) {
+                remember(colour);
+            }
             return true;
         }
         return super.mouseReleased(mx, my, button);
@@ -545,12 +586,126 @@ public class ShaderPaintScreen extends Screen {
 
     /** The colour swatch under the mouse (its colour), or 0. */
     private int colourAt(double mx, double my) {
+        if (mx >= colX && mx < colX + colCols * 14 && my >= shadeY && my < shadeY + 12) {
+            int[] ramp = shades();
+            int i = (int) ((mx - colX) / (colCols * 14 / (float) ramp.length));
+            return i >= 0 && i < ramp.length ? ramp[i] : 0;
+        }
+        if (mx >= colX && mx < colX + colCols * 14 && my >= recentY && my < recentY + 28) {
+            int i = (int) ((my - recentY) / 14) * colCols + (int) ((mx - colX) / 14);
+            return i < RECENT.size() ? RECENT.get(i) : 0;
+        }
         if (mx < colX || my < colY || mx >= colX + colCols * 14) {
             return 0;
         }
         int col = (int) ((mx - colX) / 14), row = (int) ((my - colY) / 14);
         int i = (row + colScroll) * colCols + col;
         return row < colRows && i < used.size() ? used.get(i) : 0;
+    }
+
+    // ---- the colour picker, the shade ramp, the recent colours ----
+
+    /** The picker's hue, saturation and brightness, from the colour (after it's been set some other way). */
+    private void syncHsv() {
+        float[] hsb = java.awt.Color.RGBtoHSB((colour >> 16) & 255, (colour >> 8) & 255, colour & 255, null);
+        if (hsb[1] > 0.001F && hsb[2] > 0.001F) {
+            hue = hsb[0]; // (grey or black: keep the hue it had)
+        }
+        sat = hsb[1];
+        val = hsb[2];
+        if (hex != null && !hex.isFocused()) {
+            hex.setValue(String.format("#%06X", colour & 0xFFFFFF));
+        }
+    }
+
+    private void fromHsv() {
+        colour = 0xFF000000 | Mth.hsvToRgb(hue, sat, val);
+        skyBrush = false;
+        if (hex != null) {
+            hex.setValue(String.format("#%06X", colour & 0xFFFFFF));
+        }
+    }
+
+    private boolean inPicker(double mx, double my) {
+        return mx >= pickX - 4 && mx < pickX + PICK + 6 + HUE_W + 4 && my >= pickY - 4 && my < pickY + PICK + 4;
+    }
+
+    /** A click (or drag) in the picker: the square sets saturation and brightness, the bar the hue. */
+    private boolean pickAt(double mx, double my, boolean click) {
+        int part = click ? (mx >= pickX && mx < pickX + PICK && my >= pickY && my < pickY + PICK ? 1
+                : mx >= pickX + PICK + 6 && mx < pickX + PICK + 6 + HUE_W && my >= pickY && my < pickY + PICK ? 2 : 0) : pickDrag;
+        if (part == 0) {
+            return inPicker(mx, my);
+        }
+        pickDrag = part;
+        float fy = Mth.clamp((float) (my - pickY) / PICK, 0.0F, 1.0F);
+        if (part == 1) {
+            sat = Mth.clamp((float) (mx - pickX) / PICK, 0.0F, 1.0F);
+            val = 1.0F - fy;
+        } else {
+            hue = Math.min(fy, 0.999F);
+        }
+        fromHsv();
+        return true;
+    }
+
+    /** Darker and lighter shades of the colour, as a pixel artist shades: darkest .. the colour .. lightest. */
+    private int[] shades() {
+        float[] hsb = java.awt.Color.RGBtoHSB((colour >> 16) & 255, (colour >> 8) & 255, colour & 255, null);
+        float h = hsb[1] > 0.001F ? hsb[0] : hue, s = hsb[1], v = hsb[2];
+        return new int[] {
+                0xFF000000 | Mth.hsvToRgb((h + 0.02F) % 1.0F, Math.min(1.0F, s * 1.15F), v * 0.45F),
+                0xFF000000 | Mth.hsvToRgb((h + 0.01F) % 1.0F, Math.min(1.0F, s * 1.08F), v * 0.7F),
+                colour | 0xFF000000,
+                0xFF000000 | Mth.hsvToRgb((h + 0.99F) % 1.0F, s * 0.8F, Math.min(1.0F, v * 1.15F + 0.1F)),
+                0xFF000000 | Mth.hsvToRgb((h + 0.98F) % 1.0F, s * 0.55F, Math.min(1.0F, v * 1.25F + 0.25F))};
+    }
+
+    /** A colour used: to the front of the recent ones. */
+    private static void remember(int c) {
+        Integer v = c | 0xFF000000;
+        RECENT.remove(v);
+        RECENT.addFirst(v);
+        while (RECENT.size() > 8) {
+            RECENT.removeLast();
+        }
+    }
+
+    private void drawPicker(GuiGraphics g) {
+        if (!picking) {
+            return;
+        }
+        pickX = colX + colCols * 14 + 10;
+        pickY = 28;
+        g.pose().pushPose();
+        g.pose().translate(0, 0, 300);
+        g.fill(pickX - 5, pickY - 5, pickX + PICK + 6 + HUE_W + 5, pickY + PICK + 5, 0xF0181020);
+        g.renderOutline(pickX - 5, pickY - 5, PICK + 6 + HUE_W + 10, PICK + 10, 0xFF8866CC);
+        // the square: white to the hue across, darkening to black down
+        var m = g.pose().last().pose();
+        var vc = g.bufferSource().getBuffer(RenderType.gui());
+        int pure = 0xFF000000 | Mth.hsvToRgb(hue, 1.0F, 1.0F);
+        vc.addVertex(m, pickX, pickY, 0).setColor(0xFFFFFFFF);
+        vc.addVertex(m, pickX, pickY + PICK, 0).setColor(0xFFFFFFFF);
+        vc.addVertex(m, pickX + PICK, pickY + PICK, 0).setColor(pure);
+        vc.addVertex(m, pickX + PICK, pickY, 0).setColor(pure);
+        vc.addVertex(m, pickX, pickY, 0.1F).setColor(0x00000000);
+        vc.addVertex(m, pickX, pickY + PICK, 0.1F).setColor(0xFF000000);
+        vc.addVertex(m, pickX + PICK, pickY + PICK, 0.1F).setColor(0xFF000000);
+        vc.addVertex(m, pickX + PICK, pickY, 0.1F).setColor(0x00000000);
+        g.flush();
+        // the hue bar
+        for (int i = 0; i < 6; i++) {
+            int y0 = pickY + PICK * i / 6, y1 = pickY + PICK * (i + 1) / 6;
+            g.fillGradient(pickX + PICK + 6, y0, pickX + PICK + 6 + HUE_W, y1, 0xFF000000 | Mth.hsvToRgb(i / 6.0F, 1.0F, 1.0F),
+                    0xFF000000 | Mth.hsvToRgb(((i + 1) / 6.0F) % 1.0F, 1.0F, 1.0F));
+        }
+        // where it's at
+        int sx = pickX + Math.round(sat * PICK), sy = pickY + Math.round((1.0F - val) * PICK);
+        g.renderOutline(sx - 2, sy - 2, 5, 5, val > 0.5F ? 0xFF000000 : 0xFFFFFFFF);
+        int hy = pickY + Math.round(hue * PICK);
+        g.fill(pickX + PICK + 4, hy - 1, pickX + PICK + 8 + HUE_W, hy + 1, 0xFFFFFFFF);
+        g.pose().popPose();
     }
 
     /** Does the texture differ from the item's own? */
@@ -594,6 +749,22 @@ public class ShaderPaintScreen extends Screen {
         g.drawString(font, Component.translatable("screen.skyblocks.shader_paint.colours"), colX, 28 - 11, 0xFFD0C0F0);
         g.fill(colX, 28, colX + colCols * 14, 28 + 18, 0xFF000000 | colour);
         g.renderOutline(colX - 1, 27, colCols * 14 + 2, 20, !skyBrush ? 0xFFFFFFFF : 0xFF606060);
+        // its shades, darkest to lightest; the colours used lately
+        int[] ramp = shades();
+        float sw = colCols * 14 / (float) ramp.length;
+        for (int i = 0; i < ramp.length; i++) {
+            g.fill(colX + Math.round(i * sw), shadeY, colX + Math.round((i + 1) * sw) - 1, shadeY + 12, ramp[i]);
+        }
+        g.drawString(font, Component.translatable("screen.skyblocks.shader_paint.recent"), colX, recentY - 10 + 1, 0xFF9080B0);
+        for (int i = 0; i < 8; i++) {
+            int x = colX + (i % colCols) * 14, y = recentY + (i / colCols) * 14;
+            if (i < RECENT.size()) {
+                g.fill(x, y, x + 12, y + 12, RECENT.get(i));
+            } else {
+                g.renderOutline(x, y, 12, 12, 0x30FFFFFF);
+            }
+        }
+        g.drawString(font, Component.translatable("screen.skyblocks.shader_paint.used"), colX, colY - 10 + 1, 0xFF9080B0);
         for (int i = colScroll * colCols; i < Math.min(used.size(), (colScroll + colRows) * colCols); i++) {
             int col = i % colCols, row = i / colCols - colScroll;
             int x = colX + col * 14, y = colY + row * 14;
@@ -665,6 +836,10 @@ public class ShaderPaintScreen extends Screen {
         drawPreview(g, px0 + (cols * (swatch + 2)) / 2, below + 14 + 50, partialTick);
         if (!Minecraft.getInstance().player.getAbilities().instabuild) {
             g.drawCenteredString(font, Component.translatable("screen.skyblocks.shader_paint.cost"), width / 2, height - 38, 0xFFB0A0D0);
+        }
+        drawPicker(g);
+        if (picking && inPicker(mouseX, mouseY)) {
+            return; // (no tooltips over the picker)
         }
         int hover = skyAt(mouseX, mouseY);
         if (hover >= 0) {

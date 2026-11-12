@@ -783,7 +783,7 @@
   "tooltip.skyblocks.infusion_altar": "Lay any item on it, then right-click to redraw its texture and paint sky blocks' skies onto it, pixel by pixel. Sneak-right-click to take the item back",
   "tooltip.skyblocks.infusion_altar.cost": "Each change costs an amethyst shard (free in creative)",
   "guide.skyblocks.chapter.infusion": "Shader Infusion",
-  "guide.skyblocks.infusion_altar": "Redraw your tools, and paint skies into them. Lay an item on the altar (a sword, a pickaxe, anything from any mod) and right-click it: its texture opens big, like in a paint program.\n\nNext to the tools are the colours the item uses: pick one, or type any colour (#RRGGBB), and draw - recolour pixels, add new ones, rub them out (right mouse) - to make the item look however you like.\n\nOn the right are the sky blocks' skies (Shadered's and Shadered+'s): pick one, and the look to see it through (normal, inverted, posterised, blueprint, game boy...), and paint it onto the pixels you want - they become windows into that sky. Pencil, eraser, bucket fill (shift: that colour everywhere), picker, rectangle and line, brush size, undo and redo. The item turns on the right as it'll look.\n\nInfuse it (an amethyst shard) and the item keeps its new look wherever it is - in your hand, in your inventory, dropped. It changes only how it looks.",
+  "guide.skyblocks.infusion_altar": "Redraw your tools, and paint skies into them. Lay an item on the altar (a sword, a pickaxe, anything from any mod) and right-click it: its texture opens big, like in a paint program.\n\nNext to the tools is the colour you're painting with - click it for a colour picker (any colour at all), or type one (#RRGGBB) - with its shades from dark to light under it, the colours you've used lately, and the colours the item uses. Pick one and draw - recolour pixels, add new ones, rub them out (right mouse) - to make the item look however you like.\n\nOn the right are the sky blocks' skies (Shadered's and Shadered+'s): pick one, and the look to see it through (normal, inverted, posterised, blueprint, game boy...), and paint it onto the pixels you want - they become windows into that sky. Pencil, eraser, bucket fill (shift: that colour everywhere), picker, rectangle and line, brush size, undo and redo. The item turns on the right as it'll look.\n\nInfuse it (an amethyst shard) and the item keeps its new look wherever it is - in your hand, in your inventory, dropped. It changes only how it looks.",
   "message.skyblocks.infusion_altar.empty": "Lay an item on the altar first",
   "message.skyblocks.infusion_altar.shard": "You need an amethyst shard to infuse it",
   "screen.skyblocks.shader_paint": "Shader Infusion",
@@ -809,5 +809,7 @@
   "screen.skyblocks.shader_paint.look": "Look: %s",
   "screen.skyblocks.shader_paint.skies": "Sky blocks",
   "screen.skyblocks.shader_paint.colours": "Colours",
-  "screen.skyblocks.shader_paint.colour": "Colour"
+  "screen.skyblocks.shader_paint.colour": "Colour",
+  "screen.skyblocks.shader_paint.recent": "Recent",
+  "screen.skyblocks.shader_paint.used": "In the item"
 }
