@@ -111,24 +111,41 @@ def write(name, tris, extra=None):
     open(OUT % name, "wb").write(out)
     return len(used), len(tris)
 
-def neck_plug():
-    """The head turns on its neck, so it takes a sleeve with it: the body's fur just behind the neck line (4 units),
-    a copy drawn a little smaller than the body's own so it stays hidden inside while the head looks straight ahead,
-    and fills the join when the head turns."""
-    zy = P[:, [2, 1]]
-    d = (zy - NECK_C) @ NECK_N
-    pick = [k for k, t in enumerate(I) if tri_part[k] == "body" and all(-4.0 < d[v] <= 0.5 for v in t)]
+def sleeve(inside, centre, shrink=0.965):
+    """A piece that turns takes a sleeve with it: the body's fur just past its joint (where `inside` says), a copy
+    drawn a little smaller than the body's own so it stays hidden inside while the piece is at rest, and fills the
+    join when it turns."""
+    pick = [k for k, t in enumerate(I) if tri_part[k] == "body" and all(inside(P[v]) for v in t)]
     tris = I[pick]
     used = np.unique(tris)
     remap = {int(k): i for i, k in enumerate(used)}
-    et = np.array([[remap[int(k)] for k in t] for t in tris], dtype=np.int64)
-    centre = np.array([1.6, 22.45, 13.0])
-    ep = centre + (P[used] - centre) * 0.965
+    et = np.array([[remap[int(k)] for k in t] for t in tris], dtype=np.int64).reshape(-1, 3)
+    c = np.array(centre)
+    ep = c + (P[used] - c) * shrink
     return ep, N[used], T[used], et
+
+def neck_plug():
+    # (the body's fur up to 4 units behind the neck line)
+    return sleeve(lambda p: -4.0 < (np.array([p[2], p[1]]) - NECK_C) @ NECK_N <= 0.5, (1.6, 22.45, 13.0))
+
+def hip(name):
+    # (the body's fur round the top of the leg, a little wider than it and up to 4 units above it)
+    cx, cz, top = LEGS[name]
+    return sleeve(lambda p: top - 0.5 <= p[1] < top + 4.0 and (p[0] - cx) ** 2 + (p[2] - cz) ** 2 < (RADIUS * 1.25) ** 2, (cx, top, cz), 0.95)
+
+def tail_root():
+    # (the body's fur round where the tail leaves it)
+    return sleeve(lambda p: -22.5 <= p[2] < -18.5 and p[1] > 13.0, (0.0, 22.12, -22.5), 0.95)
+
+SLEEVES = {"head": neck_plug, "tail": tail_root, "leg_fl": lambda: hip("leg_fl"), "leg_fr": lambda: hip("leg_fr"),
+           "leg_bl": lambda: hip("leg_bl"), "leg_br": lambda: hip("leg_br")}
 
 for name in ["body", "tail", "head"] + list(LEGS):
     tris = I[tri_part == name]
-    nv, nt = write(name, tris, neck_plug() if name == "head" else None)
+    extra = SLEEVES[name]() if name in SLEEVES else None
+    if extra is not None and len(extra[3]) == 0:
+        extra = None
+    nv, nt = write(name, tris, extra)
     sel = P[np.unique(tris)]
     print("%-7s %5d verts %5d tris  y %.1f..%.1f" % (name, nv, nt, sel[:, 1].min(), sel[:, 1].max()))
 for name, (cx, cz, top) in LEGS.items():
