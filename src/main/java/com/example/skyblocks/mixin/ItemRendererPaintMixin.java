@@ -54,7 +54,7 @@ public abstract class ItemRendererPaintMixin {
             ci.cancel(); // (an item drawn in several passes: its texture's drawn already)
             return;
         }
-        if (skyblocks$buffers != null && ShaderPaintRender.drawTexture(stack, pose, skyblocks$buffers, light, overlay)) {
+        if (skyblocks$buffers != null && ShaderPaintRender.drawTexture(stack, model, pose, skyblocks$buffers, light, overlay)) {
             skyblocks$textured = true;
             if (skyblocks$pending) {
                 skyblocks$pending = false;

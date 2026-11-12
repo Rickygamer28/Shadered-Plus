@@ -200,30 +200,45 @@ public final class ShaderPaintRender {
      * (its front and back, and its sides where nothing's next to it), as Minecraft builds a flat item from its texture.
      * False: it hasn't (draw its own).
      */
-    public static boolean drawTexture(ItemStack stack, PoseStack pose, @Nullable MultiBufferSource buffers, int light, int overlay) {
+    public static boolean drawTexture(ItemStack stack, BakedModel model, PoseStack pose, @Nullable MultiBufferSource buffers, int light, int overlay) {
         if (buffers == null || stack.isEmpty()) {
             return false;
         }
         ModComponents.ItemTexture tex = stack.get(ModComponents.ITEM_TEXTURE.get());
-        if (tex == null) {
+        ModComponents.ShaderPaint paint = stack.get(ModComponents.SHADER_PAINT.get());
+        if (tex == null && paint == null) {
             return false;
         }
+        // (painted, not redrawn: its own texture, built the same way - so the painted pixels can be left out of it)
+        TextureAtlasSprite sprite = tex == null ? sprite(model) : null;
+        if (tex == null && (sprite == null || model.isCustomRenderer())) {
+            return false;
+        }
+        int w = tex != null ? tex.w() : sprite.contents().width(), h = tex != null ? tex.h() : sprite.contents().height();
         VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(WHITE));
         PoseStack.Pose p = pose.last();
-        float pw = 1.0F / tex.w(), ph = 1.0F / tex.h(), z0 = 7.5F / 16.0F, z1 = 8.5F / 16.0F;
-        for (int y = 0; y < tex.h(); y++) {
-            for (int x = 0; x < tex.w(); x++) {
-                int c = tex.at(x, y);
-                if ((c >>> 24) <= 16) {
-                    continue;
+        float pw = 1.0F / w, ph = 1.0F / h, z0 = 7.5F / 16.0F, z1 = 8.5F / 16.0F;
+        boolean fits = paint != null && paint.w() == w && paint.h() == h;
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                int c = tex != null ? tex.at(x, y) : argb(sprite, x, y);
+                if ((c >>> 24) <= 16 || fits && paint.at(x, y) != 0) {
+                    continue; // (nothing there; or a sky's painted there, its own faces cover it all)
                 }
                 c |= 0xFF000000;
                 float x0 = x * pw, x1 = (x + 1) * pw, y0 = 1.0F - (y + 1) * ph, y1 = 1.0F - y * ph;
-                box(vc, p, x0, y0, z0, x1, y1, z1, c, light, overlay, (tex.at(x - 1, y) >>> 24) <= 16, (tex.at(x + 1, y) >>> 24) <= 16,
-                        (tex.at(x, y + 1) >>> 24) <= 16, (tex.at(x, y - 1) >>> 24) <= 16);
+                box(vc, p, x0, y0, z0, x1, y1, z1, c, light, overlay, empty(tex, sprite, x - 1, y, w, h), empty(tex, sprite, x + 1, y, w, h),
+                        empty(tex, sprite, x, y + 1, w, h), empty(tex, sprite, x, y - 1, w, h));
             }
         }
         return true;
+    }
+
+    private static boolean empty(@Nullable ModComponents.ItemTexture tex, @Nullable TextureAtlasSprite sprite, int x, int y, int w, int h) {
+        if (x < 0 || y < 0 || x >= w || y >= h) {
+            return true;
+        }
+        return ((tex != null ? tex.at(x, y) : argb(sprite, x, y)) >>> 24) <= 16;
     }
 
     private static void box(VertexConsumer vc, PoseStack.Pose p, float x0, float y0, float z0, float x1, float y1, float z1, int c, int light, int overlay,
