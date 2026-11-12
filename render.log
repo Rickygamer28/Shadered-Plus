@@ -1,0 +1,915 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :createMinecraftArtifacts UP-TO-DATE
+> Task :compileJava UP-TO-DATE
+> Task :processResources UP-TO-DATE
+> Task :classes UP-TO-DATE
+> Task :downloadAssets UP-TO-DATE
+> Task :writeClientLegacyClasspath
+> Task :prepareClientRun
+
+> Task :runClient
+WARN StatusConsoleListener Advanced terminal features are not available in this environment
+[20:10:30] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: ModLauncher running: args [--launchTarget, forgeclientdev, --version, 21.1.256, --assetIndex, 17, --assetsDir, /home/runner/.gradle/caches/neoformruntime/assets, --gameDir, ., --fml.fmlVersion, 4.0.45, --fml.mcVersion, 1.21.1, --fml.neoForgeVersion, 21.1.256, --fml.neoFormVersion, 20240808.144430]
+[20:10:30] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: JVM identified as Eclipse Adoptium OpenJDK 64-Bit Server VM 21.0.13+9-LTS
+[20:10:30] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: ModLauncher 11.0.5+main.901c6ea8 starting: java version 21.0.13 by Eclipse Adoptium; OS Linux arch amd64 version 7.0.0-1019-azure
+[20:10:31] [main/INFO] [ne.ne.fm.lo.ImmediateWindowHandler/]: Loading ImmediateWindowProvider fmlearlywindow
+[20:10:31] [main/INFO] [EARLYDISPLAY/]: Trying GL version 4.6
+[20:10:31] [main/INFO] [EARLYDISPLAY/]: Trying GL version 4.5
+[20:10:34] [main/INFO] [EARLYDISPLAY/]: Requested GL version 4.5 got version 4.5
+[20:10:34] [main/INFO] [mixin/]: SpongePowered MIXIN Subsystem Version=0.8.7 Source=union:/home/runner/.gradle/caches/modules-2/files-2.1/net.fabricmc/sponge-mixin/0.16.4+mixin.0.8.7/26d01f0567ab46e9ca0d2ed89d0ecc11aadbd433/sponge-mixin-0.16.4+mixin.0.8.7.jar%23126!/ Service=ModLauncher Env=CLIENT
+[20:10:34] [pool-2-thread-1/INFO] [EARLYDISPLAY/]: GL info: llvmpipe (LLVM 21.1.8, 256 bits) GL version 4.5 (Core Profile) Mesa 26.0.8-1ubuntu0.3, Mesa
+[20:10:34] [main/INFO] [ne.ne.fm.lo.mo.lo.JarInJarDependencyLocator/]: Found 2 dependencies adding them to mods collection
+[20:10:34] [main/INFO] [ne.ne.fm.lo.mo.ModDiscoverer/]: 
+     Mod List:
+		Name Version (Mod Id)
+
+		GeckoLib 4 4.9.2 (geckolib)
+		Minecraft 1.21.1 (minecraft)
+		NeoForge 21.1.256 (neoforge)
+		Shadered 1.21.1-1.5.8 (shadered)
+		Shadered+ 1.0.3 (skyblocks)
+[20:10:35] [main/INFO] [mixin/]: Compatibility level set to JAVA_21
+[20:10:35] [main/INFO] [cp.mo.mo.LaunchServiceHandler/MODLAUNCHER]: Launching target 'forgeclientdev' with arguments [--version, 21.1.256, --gameDir, ., --assetsDir, /home/runner/.gradle/caches/neoformruntime/assets, --assetIndex, 17]
+[20:10:35] [main/WARN] [mixin/]: Reference map 'shadered.refmap.json' for shadered.mixins.json could not be read. If this is a development environment you can ignore this message
+[20:10:35] [main/WARN] [mixin/]: Reference map 'geckolib.refmap.json' for geckolib.mixins.json could not be read. If this is a development environment you can ignore this message
+[20:10:35] [main/WARN] [mixin/]: Error loading class: net/caffeinemc/mods/sodium/client/gl/shader/ShaderLoader (java.lang.ClassNotFoundException: net.caffeinemc.mods.sodium.client.gl.shader.ShaderLoader)
+[20:10:35] [main/WARN] [mixin/]: @Mixin target net.caffeinemc.mods.sodium.client.gl.shader.ShaderLoader was not found shadered.mixins.json:ShaderLoaderMixin from mod shadered
+[20:10:36] [main/WARN] [mixin/]: Error loading class: net/caffeinemc/mods/sodium/client/render/chunk/region/RenderRegion (java.lang.ClassNotFoundException: net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion)
+[20:10:36] [main/WARN] [mixin/]: @Mixin target net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion was not found skyblocks.sodium.mixins.json:SodiumMirrorBatchMixin from mod skyblocks
+[20:10:36] [main/WARN] [mixin/]: Error loading class: net/caffeinemc/mods/sodium/client/render/chunk/DefaultChunkRenderer (java.lang.ClassNotFoundException: net.caffeinemc.mods.sodium.client.render.chunk.DefaultChunkRenderer)
+[20:10:36] [main/WARN] [mixin/]: @Mixin target net.caffeinemc.mods.sodium.client.render.chunk.DefaultChunkRenderer was not found skyblocks.sodium.mixins.json:SodiumMirrorCullMixin from mod skyblocks
+[20:10:36] [main/WARN] [mixin/]: Error loading class: net/caffeinemc/mods/sodium/client/render/chunk/ShaderChunkRenderer (java.lang.ClassNotFoundException: net.caffeinemc.mods.sodium.client.render.chunk.ShaderChunkRenderer)
+[20:10:36] [main/WARN] [mixin/]: @Mixin target net.caffeinemc.mods.sodium.client.render.chunk.ShaderChunkRenderer was not found skyblocks.sodium.mixins.json:SodiumMirrorIrisMixin from mod skyblocks
+[20:10:36] [main/WARN] [mixin/]: Error loading class: net/caffeinemc/mods/sodium/client/render/chunk/RenderSectionManager (java.lang.ClassNotFoundException: net.caffeinemc.mods.sodium.client.render.chunk.RenderSectionManager)
+[20:10:36] [main/WARN] [mixin/]: @Mixin target net.caffeinemc.mods.sodium.client.render.chunk.RenderSectionManager was not found skyblocks.sodium.mixins.json:SodiumPortalOcclusionMixin from mod skyblocks
+[20:10:36] [main/WARN] [mixin/]: Error loading class: net/caffeinemc/mods/sodium/client/render/chunk/occlusion/OcclusionCuller (java.lang.ClassNotFoundException: net.caffeinemc.mods.sodium.client.render.chunk.occlusion.OcclusionCuller)
+[20:10:36] [main/WARN] [mixin/]: @Mixin target net.caffeinemc.mods.sodium.client.render.chunk.occlusion.OcclusionCuller was not found skyblocks.sodium.mixins.json:SodiumPortalSearchMixin from mod skyblocks
+[20:10:36] [main/WARN] [mixin/]: Error loading class: net/caffeinemc/mods/sodium/client/render/viewport/Viewport (java.lang.ClassNotFoundException: net.caffeinemc.mods.sodium.client.render.viewport.Viewport)
+[20:10:36] [main/WARN] [mixin/]: @Mixin target net.caffeinemc.mods.sodium.client.render.viewport.Viewport was not found skyblocks.sodium.mixins.json:SodiumViewportMixin from mod skyblocks
+[20:10:37] [Datafixer Bootstrap/INFO] [mojang/DataFixerBuilder]: 229 Datafixer optimizations took 443 milliseconds
+[20:10:37] [pool-7-thread-1/INFO] [MixinExtras|Service/]: Initializing MixinExtras via com.llamalad7.mixinextras.service.MixinExtrasServiceImpl(version=0.5.5).
+[20:10:43] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, location] and [teleport, destination] with inputs: [0.1 -0.5 .9, 0 0 0]
+[20:10:43] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, location] and [teleport, targets] with inputs: [0.1 -0.5 .9, 0 0 0]
+[20:10:43] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, destination] and [teleport, targets] with inputs: [Player, 0123, @e, dd12be42-52a9-4a91-a8a1-11c01849e498]
+[20:10:43] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, targets] and [teleport, destination] with inputs: [Player, 0123, dd12be42-52a9-4a91-a8a1-11c01849e498]
+[20:10:43] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, targets, location] and [teleport, targets, destination] with inputs: [0.1 -0.5 .9, 0 0 0]
+[20:10:43] [Render thread/WARN] [minecraft/VanillaPackResourcesBuilder]: Assets URL 'union:/home/runner/work/Shadered-Plus/Shadered-Plus/build/moddev/artifacts/neoforge-21.1.256.jar%23177!/assets/.mcassetsroot' uses unexpected schema
+[20:10:43] [Render thread/WARN] [minecraft/VanillaPackResourcesBuilder]: Assets URL 'union:/home/runner/work/Shadered-Plus/Shadered-Plus/build/moddev/artifacts/neoforge-21.1.256.jar%23177!/data/.mcassetsroot' uses unexpected schema
+[20:10:43] [Render thread/INFO] [mojang/YggdrasilAuthenticationService]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, name=PROD]
+[20:10:43] [Render thread/INFO] [minecraft/Minecraft]: Setting user: Dev
+[20:10:43] [Render thread/INFO] [minecraft/Minecraft]: Backend library: LWJGL version 3.3.3+5
+[20:10:44] [modloading-worker-0/INFO] [co.no.sh.ShaderedMod/]: Loaded native library: natives/linux/x86_64/libdraco.so
+[20:10:44] [modloading-worker-0/INFO] [ne.ne.ne.co.NeoForgeMod/NEOFORGE-MOD]: NeoForge mod loading, version 21.1.256, for MC 1.21.1
+[20:10:44] [modloading-worker-0/INFO] [co.no.sh.ShaderedMod/]: Loaded native library: natives/linux/x86_64/libassimp.so
+[20:10:46] [Render thread/INFO] [ne.ne.ne.ga.GameTestHooks/]: Enabled Gametest Namespaces: []
+[20:10:46] [Render thread/ERROR] [mojang/Narrator]: Error while loading the narrator
+com.mojang.text2speech.Narrator$InitializeException: Failed to load library flite
+	at MC-BOOTSTRAP/text2speech@1.17.9/com.mojang.text2speech.NarratorLinux$FliteLibrary.loadNative(NarratorLinux.java:69) ~[text2speech-1.17.9.jar%23110!/:?] {}
+	at MC-BOOTSTRAP/text2speech@1.17.9/com.mojang.text2speech.NarratorLinux.<init>(NarratorLinux.java:18) ~[text2speech-1.17.9.jar%23110!/:?] {}
+	at MC-BOOTSTRAP/text2speech@1.17.9/com.mojang.text2speech.Narrator.getNarrator(Narrator.java:41) ~[text2speech-1.17.9.jar%23110!/:?] {}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.GameNarrator.<init>(GameNarrator.java:21) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.Minecraft.<init>(Minecraft.java:609) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A,re:mixin,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.main.Main.main(Main.java:214) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A}
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[?:?] {}
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[?:?] {}
+	at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.runTarget(CommonLaunchHandler.java:136) ~[loader-4.0.45.jar%23134!/:4.0] {}
+	at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.clientService(CommonLaunchHandler.java:124) ~[loader-4.0.45.jar%23134!/:4.0] {}
+	at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.NeoForgeClientDevLaunchHandler.runService(NeoForgeClientDevLaunchHandler.java:23) ~[loader-4.0.45.jar%23134!/:4.0] {}
+	at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.lambda$launchService$4(CommonLaunchHandler.java:118) ~[loader-4.0.45.jar%23134!/:4.0] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandlerDecorator.launch(LaunchServiceHandlerDecorator.java:30) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:53) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:71) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.Launcher.run(Launcher.java:103) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.Launcher.main(Launcher.java:74) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:26) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:23) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at cpw.mods.bootstraplauncher@2.0.2/cpw.mods.bootstraplauncher.BootstrapLauncher.run(BootstrapLauncher.java:210) [bootstraplauncher-2.0.2.jar:?] {}
+	at cpw.mods.bootstraplauncher@2.0.2/cpw.mods.bootstraplauncher.BootstrapLauncher.main(BootstrapLauncher.java:69) [bootstraplauncher-2.0.2.jar:?] {}
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[?:?] {}
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[?:?] {}
+	at net.neoforged.devlaunch.Main.main(Main.java:55) [DevLaunch-1.0.1.jar:?] {}
+Caused by: java.lang.UnsatisfiedLinkError: Unable to load library 'flite':
+libflite.so: cannot open shared object file: No such file or directory
+libflite.so: cannot open shared object file: No such file or directory
+Native library (linux-x86-64/libflite.so) not found in resource path (/home/runner/work/Shadered-Plus/Shadered-Plus/build/classes/java/main:/home/runner/work/Shadered-Plus/Shadered-Plus/build/resources/main:/home/runner/work/Shadered-Plus/Shadered-Plus/build/moddev/artifacts/neoforge-21.1.256.jar:/home/runner/work/Shadered-Plus/Shadered-Plus/build/moddev/artifacts/neoforge-21.1.256-client-extra-aka-minecraft-resources.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged/DevLaunch/1.0.1/48617810523f426d42430867894faa7fe1b933dd/DevLaunch-1.0.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/maven.modrinth/shadered/1.21.1-1.5.8/f8e509709672be22fe142c79d74d0bd52df82e75/shadered-1.21.1-1.5.8.jar:/home/runner/.gradle/caches/modules-2/files-2.1/software.bernie.geckolib/geckolib-neoforge-1.21.1/4.9.2/14c64013cadee7d28f3685f94350f9a4d2ec6d86/geckolib-neoforge-1.21.1-4.9.2.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged.fancymodloader/earlydisplay/4.0.45/dc7a8b1370054dd0e2d70c1db4ddf4092793c115/earlydisplay-4.0.45.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged.fancymodloader/loader/4.0.45/4a0968c2ec6234d58e0a9ed97acafc08cc8f33b5/loader-4.0.45.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged.accesstransformers/at-modlauncher/10.0.1/5aba50202aceead086bc09fbc2751c9f05cb4890/at-modlauncher-10.0.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged/accesstransformers/10.0.1/fd83b5725f76eae9115e9355fa1c456a6a441400/accesstransformers-10.0.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged/bus/8.0.5/5b2d33285ab5d1554e9798ad98c40d6ea3868bd5/bus-8.0.5.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged/coremods/7.0.3/9147e6f638b4272b3bd5fc8f92ad37802512c6c/coremods-7.0.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/cpw.mods/modlauncher/11.0.5/b8f0d49294f733fdb6173931b263553e943dc950/modlauncher-11.0.5.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged/mergetool/2.0.0/52fe1949be64e3303aabaaa21e315f551db9c9f4/mergetool-2.0.0-api.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.electronwill.night-config/toml/3.8.3/90b2fd6efcb4a7d5b9810cf78f9d824994d717f2/toml-3.8.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.electronwill.night-config/core/3.8.3/b442a95f09e349927f5a945ecb594455870fcf4f/core-3.8.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged/JarJarSelector/0.4.1/fb3cc7a58af22ad2880adb98af6d518128c47dae/JarJarSelector-0.4.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged/JarJarMetadata/0.4.1/f8da03683dc81694556dc3e177c5e3bb77ae6fcb/JarJarMetadata-0.4.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.apache.maven/maven-artifact/3.8.5/4433f50c07debefaed0553bd0068f4f48d449313/maven-artifact-3.8.5.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.jodah/typetools/0.6.3/a01aaa6ddaea9ec07ec4f209487b7a46a526283a/typetools-0.6.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.minecrell/terminalconsoleappender/1.3.0/b562e9bb61235c9520e26282cdee71f8f802d1fc/terminalconsoleappender-1.3.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.fabricmc/sponge-mixin/0.16.4+mixin.0.8.7/26d01f0567ab46e9ca0d2ed89d0ecc11aadbd433/sponge-mixin-0.16.4+mixin.0.8.7.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.openjdk.nashorn/nashorn-core/15.4/f67f5ffaa5f5130cf6fb9b133da00c7df3b532a5/nashorn-core-15.4.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-lang3/3.14.0/1ed471194b02f2c6cb734a0cd6f6f107c673afae/commons-lang3-3.14.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/cpw.mods/bootstraplauncher/2.0.2/1a2d076cbc33b0520cbacd591224427b2a20047d/bootstraplauncher-2.0.2.jar:/home/runner/.gradle/caches/modules-2/files-2.1/cpw.mods/securejarhandler/3.0.8/c0ef95cecd8699a0449053ac7d9c160748d902cd/securejarhandler-3.0.8.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-commons/9.10.1/4229e4c55fd8e01c23f9fe9884075cc628aacc50/asm-commons-9.10.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-util/9.10.1/7bb9d450e8d4cbf9f9e04096c44bbfe7fba80b15/asm-util-9.10.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-analysis/9.10.1/8d49f14d51f632cb1d87c88d1ceaf50db0d8af1b/asm-analysis-9.10.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-tree/9.10.1/e244332a17564c1d1572449399a842de35881be2/asm-tree-9.10.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm/9.10.1/ada2141c0cc52ee8f5c48cd5fa4ce0e794f22236/asm-9.10.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged/JarJarFileSystems/0.4.1/78f59f89defcd032ed788b151ca6a0d40ace796a/JarJarFileSystems-0.4.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.sf.jopt-simple/jopt-simple/5.0.4/4fdac2fbe92dfad86aa6e9301736f6b4342a3f5c/jopt-simple-5.0.4.jar:/home/runner/.gradle/caches/modules-2/files-2.1/commons-io/commons-io/2.15.1/f11560da189ab563a5c8e351941415430e9304ea/commons-io-2.15.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.mojang/logging/1.2.7/24cb95ffb0e3433fd6e844c04e68009e504ca1c0/logging-1.2.7.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.apache.logging.log4j/log4j-slf4j2-impl/2.22.1/d7e6693c2606cb7e7335047d7bb96dec52db5665/log4j-slf4j2-impl-2.22.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.apache.logging.log4j/log4j-core/2.22.1/7183a25510a02ad00cc6a95d3b3d2a7d3c5a8dc4/log4j-core-2.22.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.apache.logging.log4j/log4j-api/2.22.1/bea6fede6328fabafd7e68363161a7ea6605abd1/log4j-api-2.22.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.google.guava/guava/32.1.2-jre/5e64ec7e056456bef3a4bc4c6fdaef71e8ab6318/guava-32.1.2-jre.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.google.code.gson/gson/2.10.1/b3add478d4382b78ea20b1671390a858002feb6c/gson-2.10.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-api/2.0.9/7cf2726fdcfbc8610f9a71fb3ed639871f315340/slf4j-api-2.0.9.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.antlr/antlr4-runtime/4.13.1/17125bae1d965624e265ef49552f6465a2bfa307/antlr4-runtime-4.13.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.minecraftforge/srgutils/0.4.15/ca408b131759478f164e010fae0d73997e125fb5/srgutils-0.4.15.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.codehaus.plexus/plexus-utils/3.3.0/cf43b5391de623b36fe066a21127baef82c64022/plexus-utils-3.3.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.jline/jline-reader/3.20.0/8f15415b022a25b473e8e16c28ae913186ffb9c4/jline-reader-3.20.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.machinezoo.noexception/noexception/1.7.1/b65330c98e38a1f915fa54a6e5eca496505e3f0a/noexception-1.7.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.github.oshi/oshi-core/6.4.10/b1d8ab82d11d92fd639b56d639f8f46f739dd5fa/oshi-core-6.4.10.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.google.guava/failureaccess/1.0.1/1dcf1de382a0bf95a3d8b0849546c88bac1292c9/failureaccess-1.0.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.ibm.icu/icu4j/73.2/61ad4ef7f9131fcf6d25c34b817f90d6da06c9e9/icu4j-73.2.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.mojang/authlib/6.0.54/de8bc95660e1b2fe8793fd427a7a10dcec5b3ea7/authlib-6.0.54.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.mojang/blocklist/1.0.10/5c685c5ffa94c4cd39496c7184c1d122e515ecef/blocklist-1.0.10.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.mojang/brigadier/1.3.10/d15b53a14cf20fdcaa98f731af5dda654452c010/brigadier-1.3.10.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.mojang/datafixerupper/8.0.16/67d4de6d7f95d89bcf5862995fb854ebaec02a34/datafixerupper-8.0.16.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.mojang/patchy/2.2.10/da05971b07cbb379d002cf7eaec6a2048211fefc/patchy-2.2.10.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.mojang/text2speech/1.17.9/3cad216e3a7f0c19b4b394388bc9ffc446f13b14/text2speech-1.17.9.jar:/home/runner/.gradle/caches/modules-2/files-2.1/commons-codec/commons-codec/1.16.0/4e3eb3d79888d76b54e28b350915b5dc3919c9de/commons-codec-1.16.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/commons-logging/commons-logging/1.2/4bfc12adfe4842bf07b657f0369c4cb522955686/commons-logging-1.2.jar:/home/runner/.gradle/caches/modules-2/files-2.1/io.netty/netty-buffer/4.1.97.Final/f8f3d8644afa5e6e1a40a3a6aeb9d9aa970ecb4f/netty-buffer-4.1.97.Final.jar:/home/runner/.gradle/caches/modules-2/files-2.1/io.netty/netty-codec/4.1.97.Final/384ba4d75670befbedb45c4d3b497a93639c206d/netty-codec-4.1.97.Final.jar:/home/runner/.gradle/caches/modules-2/files-2.1/io.netty/netty-common/4.1.97.Final/7cceacaf11df8dc63f23d0fb58e9d4640fc88404/netty-common-4.1.97.Final.jar:/home/runner/.gradle/caches/modules-2/files-2.1/io.netty/netty-handler/4.1.97.Final/abb86c6906bf512bf2b797a41cd7d2e8d3cd7c36/netty-handler-4.1.97.Final.jar:/home/runner/.gradle/caches/modules-2/files-2.1/io.netty/netty-resolver/4.1.97.Final/cec8348108dc76c47cf87c669d514be52c922144/netty-resolver-4.1.97.Final.jar:/home/runner/.gradle/caches/modules-2/files-2.1/io.netty/netty-transport-classes-epoll/4.1.97.Final/795da37ded759e862457a82d9d92c4d39ce8ecee/netty-transport-classes-epoll-4.1.97.Final.jar:/home/runner/.gradle/caches/modules-2/files-2.1/io.netty/netty-transport-native-unix-common/4.1.97.Final/d469d84265ab70095b01b40886cabdd433b6e664/netty-transport-native-unix-common-4.1.97.Final.jar:/home/runner/.gradle/caches/modules-2/files-2.1/io.netty/netty-transport/4.1.97.Final/f37380d23c9bb079bc702910833b2fd532c9abd0/netty-transport-4.1.97.Final.jar:/home/runner/.gradle/caches/modules-2/files-2.1/it.unimi.dsi/fastutil/8.5.12/c24946d46824bd528054bface3231d2ecb7e95e8/fastutil-8.5.12.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.java.dev.jna/jna-platform/5.14.0/28934d48aed814f11e4c584da55c49fa7032b31b/jna-platform-5.14.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.java.dev.jna/jna/5.14.0/67bf3eaea4f0718cb376a181a629e5f88fa1c9dd/jna-5.14.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-compress/1.26.0/659feffdd12280201c8aacb8f7be94f9a883c824/commons-compress-1.26.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.apache.httpcomponents/httpclient/4.5.13/e5f6cae5ca7ecaac1ec2827a9e2d65ae2869cada/httpclient-4.5.13.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.apache.httpcomponents/httpcore/4.4.16/51cf043c87253c9f58b539c9f7e44c8894223850/httpcore-4.4.16.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.jcraft/jorbis/0.0.17/8872d22b293e8f5d7d56ff92be966e6dc28ebdc6/jorbis-0.0.17.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.joml/joml/1.10.5/22566d58af70ad3d72308bab63b8339906deb649/joml-1.10.5.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-freetype/3.3.3/a0db6c84a8becc8ca05f9dbfa985edc348a824c7/lwjgl-freetype-3.3.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-freetype/3.3.3/149070a5480900347071b7074779531f25a6e3dc/lwjgl-freetype-3.3.3-natives-linux.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-glfw/3.3.3/efa1eb78c5ccd840e9f329717109b5e892d72f8e/lwjgl-glfw-3.3.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-glfw/3.3.3/a03684c5e4b1b1dbbe0d29dbbdc27b985b6840f2/lwjgl-glfw-3.3.3-natives-linux.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-jemalloc/3.3.3/b543467b7ff3c6920539a88ee602d34098628be5/lwjgl-jemalloc-3.3.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-jemalloc/3.3.3/4f86728bf449b1dd61251c4e0ac01df1389cb51e/lwjgl-jemalloc-3.3.3-natives-linux.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-openal/3.3.3/daada81ceb5fc0c291fbfdd4433cb8d9423577f2/lwjgl-openal-3.3.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-openal/3.3.3/3037360cc4595079bea240af250b6d1a527e0905/lwjgl-openal-3.3.3-natives-linux.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-opengl/3.3.3/2f6b0147078396a58979125a4c947664e98293a/lwjgl-opengl-3.3.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-opengl/3.3.3/62c70a4b00ca5391882b0f4b787c1588d24f1c86/lwjgl-opengl-3.3.3-natives-linux.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-stb/3.3.3/25dd6161988d7e65f71d5065c99902402ee32746/lwjgl-stb-3.3.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-stb/3.3.3/fd1271ccd9d85eff2fa31f3fd543e02ccfaf5041/lwjgl-stb-3.3.3-natives-linux.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-tinyfd/3.3.3/82d755ca94b102e9ca77283b9e2dc46d1b15fbe5/lwjgl-tinyfd-3.3.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-tinyfd/3.3.3/d8d58daa0c3e5fd906fee96f5fddbcbc07cc308b/lwjgl-tinyfd-3.3.3-natives-linux.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl/3.3.3/29589b5f87ed335a6c7e7ee6a5775f81f97ecb84/lwjgl-3.3.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl/3.3.3/1713758e3660ba66e1e954396fd18126038b33c0/lwjgl-3.3.3-natives-linux.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lz4/lz4-java/1.8.0/4b986a99445e49ea5fbf5d149c4b63f6ed6c6780/lz4-java-1.8.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.jline/jline-terminal/3.20.0/d0ddcc708ddf527a3454c941b7b9225cc83a15ff/jline-terminal-3.20.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/io.netty/netty-transport-native-epoll/4.1.97.Final/5514744c588190ffda076b35a9b8c9f24946a960/netty-transport-native-epoll-4.1.97.Final-linux-aarch_64.jar:/home/runner/.gradle/caches/modules-2/files-2.1/io.netty/netty-transport-native-epoll/4.1.97.Final/54188f271e388e7f313aea995e82f58ce2cdb809/netty-transport-native-epoll-4.1.97.Final-linux-x86_64.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.google.guava/listenablefuture/9999.0-empty-to-avoid-conflict-with-guava/b421526c5f297295adef1c886e5246c39d4ac629/listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.google.code.findbugs/jsr305/3.0.2/25ea2e8b0c338a877313bd4672d3fe056ea78f0d/jsr305-3.0.2.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.checkerframework/checker-qual/3.33.0/de2b60b62da487644fc11f734e73c8b0b431238f/checker-qual-3.33.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.google.errorprone/error_prone_annotations/2.18.0/89b684257096f548fa39a7df9fdaa409d4d4df91/error_prone_annotations-2.18.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.google.j2objc/j2objc-annotations/2.8/c85270e307e7b822f1086b93689124b89768e273/j2objc-annotations-2.8.jar)
+	at MC-BOOTSTRAP/com.sun.jna@5.14.0/com.sun.jna.NativeLibrary.loadLibrary(NativeLibrary.java:325) ~[jna-5.14.0.jar%23128!/:5.14.0 (b0)] {}
+	at MC-BOOTSTRAP/com.sun.jna@5.14.0/com.sun.jna.NativeLibrary.getInstance(NativeLibrary.java:481) ~[jna-5.14.0.jar%23128!/:5.14.0 (b0)] {}
+	at MC-BOOTSTRAP/com.sun.jna@5.14.0/com.sun.jna.NativeLibrary.getInstance(NativeLibrary.java:423) ~[jna-5.14.0.jar%23128!/:5.14.0 (b0)] {}
+	at MC-BOOTSTRAP/text2speech@1.17.9/com.mojang.text2speech.NarratorLinux$FliteLibrary.loadNative(NarratorLinux.java:67) ~[text2speech-1.17.9.jar%23110!/:?] {}
+	... 23 more
+	Suppressed: java.lang.UnsatisfiedLinkError: libflite.so: cannot open shared object file: No such file or directory
+		at MC-BOOTSTRAP/com.sun.jna@5.14.0/com.sun.jna.Native.open(Native Method) ~[jna-5.14.0.jar%23128!/:5.14.0 (b0)] {}
+		at MC-BOOTSTRAP/com.sun.jna@5.14.0/com.sun.jna.NativeLibrary.loadLibrary(NativeLibrary.java:213) ~[jna-5.14.0.jar%23128!/:5.14.0 (b0)] {}
+		at MC-BOOTSTRAP/com.sun.jna@5.14.0/com.sun.jna.NativeLibrary.getInstance(NativeLibrary.java:481) ~[jna-5.14.0.jar%23128!/:5.14.0 (b0)] {}
+		at MC-BOOTSTRAP/com.sun.jna@5.14.0/com.sun.jna.NativeLibrary.getInstance(NativeLibrary.java:423) ~[jna-5.14.0.jar%23128!/:5.14.0 (b0)] {}
+		at MC-BOOTSTRAP/text2speech@1.17.9/com.mojang.text2speech.NarratorLinux$FliteLibrary.loadNative(NarratorLinux.java:67) ~[text2speech-1.17.9.jar%23110!/:?] {}
+		at MC-BOOTSTRAP/text2speech@1.17.9/com.mojang.text2speech.NarratorLinux.<init>(NarratorLinux.java:18) ~[text2speech-1.17.9.jar%23110!/:?] {}
+		at MC-BOOTSTRAP/text2speech@1.17.9/com.mojang.text2speech.Narrator.getNarrator(Narrator.java:41) ~[text2speech-1.17.9.jar%23110!/:?] {}
+		at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.GameNarrator.<init>(GameNarrator.java:21) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A}
+		at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.Minecraft.<init>(Minecraft.java:609) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A,re:mixin,pl:runtimedistcleaner:A}
+		at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.main.Main.main(Main.java:214) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A}
+		at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[?:?] {}
+		at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[?:?] {}
+		at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.runTarget(CommonLaunchHandler.java:136) ~[loader-4.0.45.jar%23134!/:4.0] {}
+		at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.clientService(CommonLaunchHandler.java:124) ~[loader-4.0.45.jar%23134!/:4.0] {}
+		at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.NeoForgeClientDevLaunchHandler.runService(NeoForgeClientDevLaunchHandler.java:23) ~[loader-4.0.45.jar%23134!/:4.0] {}
+		at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.lambda$launchService$4(CommonLaunchHandler.java:118) ~[loader-4.0.45.jar%23134!/:4.0] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandlerDecorator.launch(LaunchServiceHandlerDecorator.java:30) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:53) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:71) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.Launcher.run(Launcher.java:103) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.Launcher.main(Launcher.java:74) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:26) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:23) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at cpw.mods.bootstraplauncher@2.0.2/cpw.mods.bootstraplauncher.BootstrapLauncher.run(BootstrapLauncher.java:210) [bootstraplauncher-2.0.2.jar:?] {}
+		at cpw.mods.bootstraplauncher@2.0.2/cpw.mods.bootstraplauncher.BootstrapLauncher.main(BootstrapLauncher.java:69) [bootstraplauncher-2.0.2.jar:?] {}
+		at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[?:?] {}
+		at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[?:?] {}
+		at net.neoforged.devlaunch.Main.main(Main.java:55) [DevLaunch-1.0.1.jar:?] {}
+	Suppressed: java.lang.UnsatisfiedLinkError: libflite.so: cannot open shared object file: No such file or directory
+		at MC-BOOTSTRAP/com.sun.jna@5.14.0/com.sun.jna.Native.open(Native Method) ~[jna-5.14.0.jar%23128!/:5.14.0 (b0)] {}
+		at MC-BOOTSTRAP/com.sun.jna@5.14.0/com.sun.jna.NativeLibrary.loadLibrary(NativeLibrary.java:226) ~[jna-5.14.0.jar%23128!/:5.14.0 (b0)] {}
+		at MC-BOOTSTRAP/com.sun.jna@5.14.0/com.sun.jna.NativeLibrary.getInstance(NativeLibrary.java:481) ~[jna-5.14.0.jar%23128!/:5.14.0 (b0)] {}
+		at MC-BOOTSTRAP/com.sun.jna@5.14.0/com.sun.jna.NativeLibrary.getInstance(NativeLibrary.java:423) ~[jna-5.14.0.jar%23128!/:5.14.0 (b0)] {}
+		at MC-BOOTSTRAP/text2speech@1.17.9/com.mojang.text2speech.NarratorLinux$FliteLibrary.loadNative(NarratorLinux.java:67) ~[text2speech-1.17.9.jar%23110!/:?] {}
+		at MC-BOOTSTRAP/text2speech@1.17.9/com.mojang.text2speech.NarratorLinux.<init>(NarratorLinux.java:18) ~[text2speech-1.17.9.jar%23110!/:?] {}
+		at MC-BOOTSTRAP/text2speech@1.17.9/com.mojang.text2speech.Narrator.getNarrator(Narrator.java:41) ~[text2speech-1.17.9.jar%23110!/:?] {}
+		at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.GameNarrator.<init>(GameNarrator.java:21) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A}
+		at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.Minecraft.<init>(Minecraft.java:609) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A,re:mixin,pl:runtimedistcleaner:A}
+		at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.main.Main.main(Main.java:214) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A}
+		at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[?:?] {}
+		at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[?:?] {}
+		at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.runTarget(CommonLaunchHandler.java:136) ~[loader-4.0.45.jar%23134!/:4.0] {}
+		at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.clientService(CommonLaunchHandler.java:124) ~[loader-4.0.45.jar%23134!/:4.0] {}
+		at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.NeoForgeClientDevLaunchHandler.runService(NeoForgeClientDevLaunchHandler.java:23) ~[loader-4.0.45.jar%23134!/:4.0] {}
+		at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.lambda$launchService$4(CommonLaunchHandler.java:118) ~[loader-4.0.45.jar%23134!/:4.0] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandlerDecorator.launch(LaunchServiceHandlerDecorator.java:30) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:53) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:71) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.Launcher.run(Launcher.java:103) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.Launcher.main(Launcher.java:74) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:26) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:23) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at cpw.mods.bootstraplauncher@2.0.2/cpw.mods.bootstraplauncher.BootstrapLauncher.run(BootstrapLauncher.java:210) [bootstraplauncher-2.0.2.jar:?] {}
+		at cpw.mods.bootstraplauncher@2.0.2/cpw.mods.bootstraplauncher.BootstrapLauncher.main(BootstrapLauncher.java:69) [bootstraplauncher-2.0.2.jar:?] {}
+		at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[?:?] {}
+		at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[?:?] {}
+		at net.neoforged.devlaunch.Main.main(Main.java:55) [DevLaunch-1.0.1.jar:?] {}
+	Suppressed: java.io.IOException: Native library (linux-x86-64/libflite.so) not found in resource path (/home/runner/work/Shadered-Plus/Shadered-Plus/build/classes/java/main:/home/runner/work/Shadered-Plus/Shadered-Plus/build/resources/main:/home/runner/work/Shadered-Plus/Shadered-Plus/build/moddev/artifacts/neoforge-21.1.256.jar:/home/runner/work/Shadered-Plus/Shadered-Plus/build/moddev/artifacts/neoforge-21.1.256-client-extra-aka-minecraft-resources.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged/DevLaunch/1.0.1/48617810523f426d42430867894faa7fe1b933dd/DevLaunch-1.0.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/maven.modrinth/shadered/1.21.1-1.5.8/f8e509709672be22fe142c79d74d0bd52df82e75/shadered-1.21.1-1.5.8.jar:/home/runner/.gradle/caches/modules-2/files-2.1/software.bernie.geckolib/geckolib-neoforge-1.21.1/4.9.2/14c64013cadee7d28f3685f94350f9a4d2ec6d86/geckolib-neoforge-1.21.1-4.9.2.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged.fancymodloader/earlydisplay/4.0.45/dc7a8b1370054dd0e2d70c1db4ddf4092793c115/earlydisplay-4.0.45.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged.fancymodloader/loader/4.0.45/4a0968c2ec6234d58e0a9ed97acafc08cc8f33b5/loader-4.0.45.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged.accesstransformers/at-modlauncher/10.0.1/5aba50202aceead086bc09fbc2751c9f05cb4890/at-modlauncher-10.0.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged/accesstransformers/10.0.1/fd83b5725f76eae9115e9355fa1c456a6a441400/accesstransformers-10.0.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged/bus/8.0.5/5b2d33285ab5d1554e9798ad98c40d6ea3868bd5/bus-8.0.5.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged/coremods/7.0.3/9147e6f638b4272b3bd5fc8f92ad37802512c6c/coremods-7.0.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/cpw.mods/modlauncher/11.0.5/b8f0d49294f733fdb6173931b263553e943dc950/modlauncher-11.0.5.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged/mergetool/2.0.0/52fe1949be64e3303aabaaa21e315f551db9c9f4/mergetool-2.0.0-api.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.electronwill.night-config/toml/3.8.3/90b2fd6efcb4a7d5b9810cf78f9d824994d717f2/toml-3.8.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.electronwill.night-config/core/3.8.3/b442a95f09e349927f5a945ecb594455870fcf4f/core-3.8.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged/JarJarSelector/0.4.1/fb3cc7a58af22ad2880adb98af6d518128c47dae/JarJarSelector-0.4.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged/JarJarMetadata/0.4.1/f8da03683dc81694556dc3e177c5e3bb77ae6fcb/JarJarMetadata-0.4.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.apache.maven/maven-artifact/3.8.5/4433f50c07debefaed0553bd0068f4f48d449313/maven-artifact-3.8.5.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.jodah/typetools/0.6.3/a01aaa6ddaea9ec07ec4f209487b7a46a526283a/typetools-0.6.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.minecrell/terminalconsoleappender/1.3.0/b562e9bb61235c9520e26282cdee71f8f802d1fc/terminalconsoleappender-1.3.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.fabricmc/sponge-mixin/0.16.4+mixin.0.8.7/26d01f0567ab46e9ca0d2ed89d0ecc11aadbd433/sponge-mixin-0.16.4+mixin.0.8.7.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.openjdk.nashorn/nashorn-core/15.4/f67f5ffaa5f5130cf6fb9b133da00c7df3b532a5/nashorn-core-15.4.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-lang3/3.14.0/1ed471194b02f2c6cb734a0cd6f6f107c673afae/commons-lang3-3.14.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/cpw.mods/bootstraplauncher/2.0.2/1a2d076cbc33b0520cbacd591224427b2a20047d/bootstraplauncher-2.0.2.jar:/home/runner/.gradle/caches/modules-2/files-2.1/cpw.mods/securejarhandler/3.0.8/c0ef95cecd8699a0449053ac7d9c160748d902cd/securejarhandler-3.0.8.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-commons/9.10.1/4229e4c55fd8e01c23f9fe9884075cc628aacc50/asm-commons-9.10.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-util/9.10.1/7bb9d450e8d4cbf9f9e04096c44bbfe7fba80b15/asm-util-9.10.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-analysis/9.10.1/8d49f14d51f632cb1d87c88d1ceaf50db0d8af1b/asm-analysis-9.10.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-tree/9.10.1/e244332a17564c1d1572449399a842de35881be2/asm-tree-9.10.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm/9.10.1/ada2141c0cc52ee8f5c48cd5fa4ce0e794f22236/asm-9.10.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.neoforged/JarJarFileSystems/0.4.1/78f59f89defcd032ed788b151ca6a0d40ace796a/JarJarFileSystems-0.4.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.sf.jopt-simple/jopt-simple/5.0.4/4fdac2fbe92dfad86aa6e9301736f6b4342a3f5c/jopt-simple-5.0.4.jar:/home/runner/.gradle/caches/modules-2/files-2.1/commons-io/commons-io/2.15.1/f11560da189ab563a5c8e351941415430e9304ea/commons-io-2.15.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.mojang/logging/1.2.7/24cb95ffb0e3433fd6e844c04e68009e504ca1c0/logging-1.2.7.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.apache.logging.log4j/log4j-slf4j2-impl/2.22.1/d7e6693c2606cb7e7335047d7bb96dec52db5665/log4j-slf4j2-impl-2.22.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.apache.logging.log4j/log4j-core/2.22.1/7183a25510a02ad00cc6a95d3b3d2a7d3c5a8dc4/log4j-core-2.22.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.apache.logging.log4j/log4j-api/2.22.1/bea6fede6328fabafd7e68363161a7ea6605abd1/log4j-api-2.22.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.google.guava/guava/32.1.2-jre/5e64ec7e056456bef3a4bc4c6fdaef71e8ab6318/guava-32.1.2-jre.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.google.code.gson/gson/2.10.1/b3add478d4382b78ea20b1671390a858002feb6c/gson-2.10.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-api/2.0.9/7cf2726fdcfbc8610f9a71fb3ed639871f315340/slf4j-api-2.0.9.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.antlr/antlr4-runtime/4.13.1/17125bae1d965624e265ef49552f6465a2bfa307/antlr4-runtime-4.13.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.minecraftforge/srgutils/0.4.15/ca408b131759478f164e010fae0d73997e125fb5/srgutils-0.4.15.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.codehaus.plexus/plexus-utils/3.3.0/cf43b5391de623b36fe066a21127baef82c64022/plexus-utils-3.3.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.jline/jline-reader/3.20.0/8f15415b022a25b473e8e16c28ae913186ffb9c4/jline-reader-3.20.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.machinezoo.noexception/noexception/1.7.1/b65330c98e38a1f915fa54a6e5eca496505e3f0a/noexception-1.7.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.github.oshi/oshi-core/6.4.10/b1d8ab82d11d92fd639b56d639f8f46f739dd5fa/oshi-core-6.4.10.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.google.guava/failureaccess/1.0.1/1dcf1de382a0bf95a3d8b0849546c88bac1292c9/failureaccess-1.0.1.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.ibm.icu/icu4j/73.2/61ad4ef7f9131fcf6d25c34b817f90d6da06c9e9/icu4j-73.2.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.mojang/authlib/6.0.54/de8bc95660e1b2fe8793fd427a7a10dcec5b3ea7/authlib-6.0.54.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.mojang/blocklist/1.0.10/5c685c5ffa94c4cd39496c7184c1d122e515ecef/blocklist-1.0.10.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.mojang/brigadier/1.3.10/d15b53a14cf20fdcaa98f731af5dda654452c010/brigadier-1.3.10.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.mojang/datafixerupper/8.0.16/67d4de6d7f95d89bcf5862995fb854ebaec02a34/datafixerupper-8.0.16.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.mojang/patchy/2.2.10/da05971b07cbb379d002cf7eaec6a2048211fefc/patchy-2.2.10.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.mojang/text2speech/1.17.9/3cad216e3a7f0c19b4b394388bc9ffc446f13b14/text2speech-1.17.9.jar:/home/runner/.gradle/caches/modules-2/files-2.1/commons-codec/commons-codec/1.16.0/4e3eb3d79888d76b54e28b350915b5dc3919c9de/commons-codec-1.16.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/commons-logging/commons-logging/1.2/4bfc12adfe4842bf07b657f0369c4cb522955686/commons-logging-1.2.jar:/home/runner/.gradle/caches/modules-2/files-2.1/io.netty/netty-buffer/4.1.97.Final/f8f3d8644afa5e6e1a40a3a6aeb9d9aa970ecb4f/netty-buffer-4.1.97.Final.jar:/home/runner/.gradle/caches/modules-2/files-2.1/io.netty/netty-codec/4.1.97.Final/384ba4d75670befbedb45c4d3b497a93639c206d/netty-codec-4.1.97.Final.jar:/home/runner/.gradle/caches/modules-2/files-2.1/io.netty/netty-common/4.1.97.Final/7cceacaf11df8dc63f23d0fb58e9d4640fc88404/netty-common-4.1.97.Final.jar:/home/runner/.gradle/caches/modules-2/files-2.1/io.netty/netty-handler/4.1.97.Final/abb86c6906bf512bf2b797a41cd7d2e8d3cd7c36/netty-handler-4.1.97.Final.jar:/home/runner/.gradle/caches/modules-2/files-2.1/io.netty/netty-resolver/4.1.97.Final/cec8348108dc76c47cf87c669d514be52c922144/netty-resolver-4.1.97.Final.jar:/home/runner/.gradle/caches/modules-2/files-2.1/io.netty/netty-transport-classes-epoll/4.1.97.Final/795da37ded759e862457a82d9d92c4d39ce8ecee/netty-transport-classes-epoll-4.1.97.Final.jar:/home/runner/.gradle/caches/modules-2/files-2.1/io.netty/netty-transport-native-unix-common/4.1.97.Final/d469d84265ab70095b01b40886cabdd433b6e664/netty-transport-native-unix-common-4.1.97.Final.jar:/home/runner/.gradle/caches/modules-2/files-2.1/io.netty/netty-transport/4.1.97.Final/f37380d23c9bb079bc702910833b2fd532c9abd0/netty-transport-4.1.97.Final.jar:/home/runner/.gradle/caches/modules-2/files-2.1/it.unimi.dsi/fastutil/8.5.12/c24946d46824bd528054bface3231d2ecb7e95e8/fastutil-8.5.12.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.java.dev.jna/jna-platform/5.14.0/28934d48aed814f11e4c584da55c49fa7032b31b/jna-platform-5.14.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/net.java.dev.jna/jna/5.14.0/67bf3eaea4f0718cb376a181a629e5f88fa1c9dd/jna-5.14.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-compress/1.26.0/659feffdd12280201c8aacb8f7be94f9a883c824/commons-compress-1.26.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.apache.httpcomponents/httpclient/4.5.13/e5f6cae5ca7ecaac1ec2827a9e2d65ae2869cada/httpclient-4.5.13.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.apache.httpcomponents/httpcore/4.4.16/51cf043c87253c9f58b539c9f7e44c8894223850/httpcore-4.4.16.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.jcraft/jorbis/0.0.17/8872d22b293e8f5d7d56ff92be966e6dc28ebdc6/jorbis-0.0.17.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.joml/joml/1.10.5/22566d58af70ad3d72308bab63b8339906deb649/joml-1.10.5.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-freetype/3.3.3/a0db6c84a8becc8ca05f9dbfa985edc348a824c7/lwjgl-freetype-3.3.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-freetype/3.3.3/149070a5480900347071b7074779531f25a6e3dc/lwjgl-freetype-3.3.3-natives-linux.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-glfw/3.3.3/efa1eb78c5ccd840e9f329717109b5e892d72f8e/lwjgl-glfw-3.3.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-glfw/3.3.3/a03684c5e4b1b1dbbe0d29dbbdc27b985b6840f2/lwjgl-glfw-3.3.3-natives-linux.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-jemalloc/3.3.3/b543467b7ff3c6920539a88ee602d34098628be5/lwjgl-jemalloc-3.3.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-jemalloc/3.3.3/4f86728bf449b1dd61251c4e0ac01df1389cb51e/lwjgl-jemalloc-3.3.3-natives-linux.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-openal/3.3.3/daada81ceb5fc0c291fbfdd4433cb8d9423577f2/lwjgl-openal-3.3.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-openal/3.3.3/3037360cc4595079bea240af250b6d1a527e0905/lwjgl-openal-3.3.3-natives-linux.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-opengl/3.3.3/2f6b0147078396a58979125a4c947664e98293a/lwjgl-opengl-3.3.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-opengl/3.3.3/62c70a4b00ca5391882b0f4b787c1588d24f1c86/lwjgl-opengl-3.3.3-natives-linux.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-stb/3.3.3/25dd6161988d7e65f71d5065c99902402ee32746/lwjgl-stb-3.3.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-stb/3.3.3/fd1271ccd9d85eff2fa31f3fd543e02ccfaf5041/lwjgl-stb-3.3.3-natives-linux.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-tinyfd/3.3.3/82d755ca94b102e9ca77283b9e2dc46d1b15fbe5/lwjgl-tinyfd-3.3.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-tinyfd/3.3.3/d8d58daa0c3e5fd906fee96f5fddbcbc07cc308b/lwjgl-tinyfd-3.3.3-natives-linux.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl/3.3.3/29589b5f87ed335a6c7e7ee6a5775f81f97ecb84/lwjgl-3.3.3.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl/3.3.3/1713758e3660ba66e1e954396fd18126038b33c0/lwjgl-3.3.3-natives-linux.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.lz4/lz4-java/1.8.0/4b986a99445e49ea5fbf5d149c4b63f6ed6c6780/lz4-java-1.8.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.jline/jline-terminal/3.20.0/d0ddcc708ddf527a3454c941b7b9225cc83a15ff/jline-terminal-3.20.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/io.netty/netty-transport-native-epoll/4.1.97.Final/5514744c588190ffda076b35a9b8c9f24946a960/netty-transport-native-epoll-4.1.97.Final-linux-aarch_64.jar:/home/runner/.gradle/caches/modules-2/files-2.1/io.netty/netty-transport-native-epoll/4.1.97.Final/54188f271e388e7f313aea995e82f58ce2cdb809/netty-transport-native-epoll-4.1.97.Final-linux-x86_64.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.google.guava/listenablefuture/9999.0-empty-to-avoid-conflict-with-guava/b421526c5f297295adef1c886e5246c39d4ac629/listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.google.code.findbugs/jsr305/3.0.2/25ea2e8b0c338a877313bd4672d3fe056ea78f0d/jsr305-3.0.2.jar:/home/runner/.gradle/caches/modules-2/files-2.1/org.checkerframework/checker-qual/3.33.0/de2b60b62da487644fc11f734e73c8b0b431238f/checker-qual-3.33.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.google.errorprone/error_prone_annotations/2.18.0/89b684257096f548fa39a7df9fdaa409d4d4df91/error_prone_annotations-2.18.0.jar:/home/runner/.gradle/caches/modules-2/files-2.1/com.google.j2objc/j2objc-annotations/2.8/c85270e307e7b822f1086b93689124b89768e273/j2objc-annotations-2.8.jar)
+		at MC-BOOTSTRAP/com.sun.jna@5.14.0/com.sun.jna.Native.extractFromResourcePath(Native.java:1141) ~[jna-5.14.0.jar%23128!/:5.14.0 (b0)] {}
+		at MC-BOOTSTRAP/com.sun.jna@5.14.0/com.sun.jna.NativeLibrary.loadLibrary(NativeLibrary.java:297) ~[jna-5.14.0.jar%23128!/:5.14.0 (b0)] {}
+		at MC-BOOTSTRAP/com.sun.jna@5.14.0/com.sun.jna.NativeLibrary.getInstance(NativeLibrary.java:481) ~[jna-5.14.0.jar%23128!/:5.14.0 (b0)] {}
+		at MC-BOOTSTRAP/com.sun.jna@5.14.0/com.sun.jna.NativeLibrary.getInstance(NativeLibrary.java:423) ~[jna-5.14.0.jar%23128!/:5.14.0 (b0)] {}
+		at MC-BOOTSTRAP/text2speech@1.17.9/com.mojang.text2speech.NarratorLinux$FliteLibrary.loadNative(NarratorLinux.java:67) ~[text2speech-1.17.9.jar%23110!/:?] {}
+		at MC-BOOTSTRAP/text2speech@1.17.9/com.mojang.text2speech.NarratorLinux.<init>(NarratorLinux.java:18) ~[text2speech-1.17.9.jar%23110!/:?] {}
+		at MC-BOOTSTRAP/text2speech@1.17.9/com.mojang.text2speech.Narrator.getNarrator(Narrator.java:41) ~[text2speech-1.17.9.jar%23110!/:?] {}
+		at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.GameNarrator.<init>(GameNarrator.java:21) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A}
+		at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.Minecraft.<init>(Minecraft.java:609) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A,re:mixin,pl:runtimedistcleaner:A}
+		at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.main.Main.main(Main.java:214) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A}
+		at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[?:?] {}
+		at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[?:?] {}
+		at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.runTarget(CommonLaunchHandler.java:136) ~[loader-4.0.45.jar%23134!/:4.0] {}
+		at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.clientService(CommonLaunchHandler.java:124) ~[loader-4.0.45.jar%23134!/:4.0] {}
+		at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.NeoForgeClientDevLaunchHandler.runService(NeoForgeClientDevLaunchHandler.java:23) ~[loader-4.0.45.jar%23134!/:4.0] {}
+		at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.lambda$launchService$4(CommonLaunchHandler.java:118) ~[loader-4.0.45.jar%23134!/:4.0] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandlerDecorator.launch(LaunchServiceHandlerDecorator.java:30) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:53) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:71) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.Launcher.run(Launcher.java:103) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.Launcher.main(Launcher.java:74) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:26) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:23) [modlauncher-11.0.5.jar%23114!/:?] {}
+		at cpw.mods.bootstraplauncher@2.0.2/cpw.mods.bootstraplauncher.BootstrapLauncher.run(BootstrapLauncher.java:210) [bootstraplauncher-2.0.2.jar:?] {}
+		at cpw.mods.bootstraplauncher@2.0.2/cpw.mods.bootstraplauncher.BootstrapLauncher.main(BootstrapLauncher.java:69) [bootstraplauncher-2.0.2.jar:?] {}
+		at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[?:?] {}
+		at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[?:?] {}
+		at net.neoforged.devlaunch.Main.main(Main.java:55) [DevLaunch-1.0.1.jar:?] {}
+[20:10:46] [Render thread/INFO] [minecraft/ReloadableResourceManager]: Reloading ResourceManager: vanilla, mod_resources, mod/shadered, mod/skyblocks, mod/geckolib, mod/neoforge
+[20:10:46] [Worker-Main-3/INFO] [minecraft/UnihexProvider]: Found unifont_all_no_pua-15.1.05.hex, loading
+[20:10:47] [Worker-Main-3/INFO] [minecraft/UnihexProvider]: Found unifont_jp_patch-15.1.05.hex, loading
+[20:10:47] [Worker-Main-1/WARN] [minecraft/SpriteLoader]: Texture skyblocks:block/arcade_grille with size 64x8 limits mip level from 4 to 3
+[20:10:47] [Worker-Main-1/WARN] [minecraft/SpriteLoader]: Texture skyblocks:block/island_painting_plaque_rim with size 4x4 limits mip level from 3 to 2
+[20:10:47] [Worker-Main-1/WARN] [minecraft/SpriteLoader]: Texture shadered:block/light_block with size 1x1 limits mip level from 2 to 0
+[20:10:48] [Worker-Main-3/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+: unused sky pictures are skipped (sky pass tracking active)
+[20:10:48] [Worker-Main-3/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+: unused sky pictures are skipped (sky pass tracking active)
+[20:10:48] [Worker-Main-3/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+: unused sky pictures are skipped (sky pass tracking active)
+[20:10:48] [Worker-Main-3/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+: unused sky pictures are skipped (sky pass tracking active)
+[20:10:48] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+: sky usage tracking: batches tracked, sky passes skipped while unused, 42 skies known, on-demand drawing on
+[20:10:48] [Worker-Main-2/WARN] [minecraft/BlockStateModelLoader]: Exception loading blockstate definition: 'shadered:blockstates/render_tester.json' missing model for variant: 'shadered:render_tester#'
+[20:10:48] [Worker-Main-2/WARN] [minecraft/BlockStateModelLoader]: Exception loading blockstate definition: 'shadered:blockstates/skyblock.json' missing model for variant: 'shadered:skyblock#'
+[20:10:48] [Worker-Main-2/WARN] [minecraft/BlockStateModelLoader]: Exception loading blockstate definition: 'shadered:blockstates/maxwell.json' missing model for variant: 'shadered:maxwell#facing=west'
+[20:10:48] [Worker-Main-2/WARN] [minecraft/BlockStateModelLoader]: Exception loading blockstate definition: 'shadered:blockstates/maxwell.json' missing model for variant: 'shadered:maxwell#facing=east'
+[20:10:48] [Worker-Main-2/WARN] [minecraft/BlockStateModelLoader]: Exception loading blockstate definition: 'shadered:blockstates/maxwell.json' missing model for variant: 'shadered:maxwell#facing=south'
+[20:10:48] [Worker-Main-2/WARN] [minecraft/BlockStateModelLoader]: Exception loading blockstate definition: 'shadered:blockstates/maxwell.json' missing model for variant: 'shadered:maxwell#facing=north'
+[20:10:48] [Worker-Main-2/WARN] [minecraft/BlockStateModelLoader]: Exception loading blockstate definition: 'shadered:blockstates/filter_block.json' missing model for variant: 'shadered:filter_block#'
+[20:10:48] [Worker-Main-2/WARN] [minecraft/BlockStateModelLoader]: Exception loading blockstate definition: 'shadered:blockstates/space_block.json' missing model for variant: 'shadered:space_block#'
+[20:10:48] [Worker-Main-2/WARN] [minecraft/BlockStateModelLoader]: Exception loading blockstate definition: 'shadered:blockstates/stormy_block.json' missing model for variant: 'shadered:stormy_block#'
+[20:10:48] [Worker-Main-2/WARN] [minecraft/BlockStateModelLoader]: Exception loading blockstate definition: 'shadered:blockstates/ocean_block.json' missing model for variant: 'shadered:ocean_block#'
+[20:10:48] [Worker-Main-2/WARN] [minecraft/BlockStateModelLoader]: Exception loading blockstate definition: 'shadered:blockstates/light_block.json' missing model for variant: 'shadered:light_block#'
+[20:10:48] [Worker-Main-2/WARN] [minecraft/BlockStateModelLoader]: Exception loading blockstate definition: 'shadered:blockstates/end_block.json' missing model for variant: 'shadered:end_block#'
+[20:10:48] [Worker-Main-2/WARN] [minecraft/BlockStateModelLoader]: Exception loading blockstate definition: 'shadered:blockstates/iridia_block.json' missing model for variant: 'shadered:iridia_block#'
+[20:10:48] [Worker-Main-2/WARN] [minecraft/BlockStateModelLoader]: Exception loading blockstate definition: 'shadered:blockstates/end_sky_block.json' missing model for variant: 'shadered:end_sky_block#'
+[20:10:48] [Worker-Main-2/WARN] [minecraft/BlockStateModelLoader]: Exception loading blockstate definition: 'shadered:blockstates/eclipse_block.json' missing model for variant: 'shadered:eclipse_block#'
+[20:10:48] [Worker-Main-2/WARN] [minecraft/BlockStateModelLoader]: Exception loading blockstate definition: 'shadered:blockstates/forest_block.json' missing model for variant: 'shadered:forest_block#'
+[20:10:48] [Worker-Main-2/WARN] [minecraft/BlockStateModelLoader]: Exception loading blockstate definition: 'shadered:blockstates/mimic_block.json' missing model for variant: 'shadered:mimic_block#'
+[20:10:48] [Render thread/INFO] [co.no.sh.ShaderedMod/]: Successfully loaded and uploaded model: skyblocks:models/complex/oiia_cat_spin.glb
+[20:10:48] [Render thread/INFO] [co.no.sh.ShaderedMod/]: Successfully loaded and uploaded model: shadered:models/complex/maxwell.glb
+[20:10:48] [Render thread/INFO] [co.no.sh.ShaderedMod/]: Successfully loaded and uploaded model: skyblocks:models/complex/oiia_cat_rigged.glb
+[20:10:48] [Render thread/INFO] [co.no.sh.ShaderedMod/]: Successfully loaded and uploaded model: skyblocks:models/complex/oiia_cat.glb
+[20:10:48] [Worker-Main-2/WARN] [minecraft/ModelBakery]: Unable to load model: 'shadered:item/test_item' referenced from: shadered:item/test_item: java.io.FileNotFoundException: shadered:models/item/test_item.json
+[20:10:48] [Worker-Main-2/WARN] [minecraft/ModelBakery]: Unable to load model: 'shadered:item/render_tester_block' referenced from: shadered:item/render_tester_block: java.io.FileNotFoundException: shadered:models/item/render_tester_block.json
+[20:10:49] [Worker-Main-2/WARN] [minecraft/ModelManager]: Missing textures in model shadered:illusorite#inventory:
+    minecraft:textures/atlas/blocks.png:shadered:block/illusorite
+[20:10:50] [Render thread/WARN] [minecraft/SoundEngine]: Missing sound for event: minecraft:item.goat_horn.play
+[20:10:50] [Render thread/WARN] [minecraft/SoundEngine]: Missing sound for event: minecraft:entity.goat.screaming.horn_break
+ALSA lib confmisc.c:855:(parse_card) [error.core] cannot find card '0'
+ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_card_inum returned error: No such file or directory
+ALSA lib confmisc.c:422:(snd_func_concat) [error.core] error evaluating strings
+ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1342:(snd_func_refer) [error.core] error evaluating name
+ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:5734:(snd_config_expand) [error.core] Evaluate error: No such file or directory
+ALSA lib pcm.c:2722:(snd_pcm_open_noupdate) [error.pcm] Unknown PCM default
+ALSA lib confmisc.c:855:(parse_card) [error.core] cannot find card '0'
+ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_card_inum returned error: No such file or directory
+ALSA lib confmisc.c:422:(snd_func_concat) [error.core] error evaluating strings
+ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1342:(snd_func_refer) [error.core] error evaluating name
+ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:5734:(snd_config_expand) [error.core] Evaluate error: No such file or directory
+ALSA lib pcm.c:2722:(snd_pcm_open_noupdate) [error.pcm] Unknown PCM default
+[20:10:50] [Render thread/ERROR] [minecraft/SoundEngine]: Error starting SoundSystem. Turning off sounds & music
+java.lang.IllegalStateException: Failed to open OpenAL device
+	at TRANSFORMER/minecraft@1.21.1/com.mojang.blaze3d.audio.Library.openDeviceOrFallback(Library.java:207) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/com.mojang.blaze3d.audio.Library.init(Library.java:74) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.sounds.SoundEngine.loadLibrary(SoundEngine.java:107) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:accesstransformer:B,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.sounds.SoundEngine.reload(SoundEngine.java:99) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:accesstransformer:B,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.sounds.SoundManager.apply(SoundManager.java:130) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.sounds.SoundManager.apply(SoundManager.java:44) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.packs.resources.SimplePreparableReloadListener.lambda$reload$1(SimplePreparableReloadListener.java:19) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading}
+	at java.base/java.util.concurrent.CompletableFuture$UniAccept.tryFire(CompletableFuture.java:718) ~[?:?] {}
+	at java.base/java.util.concurrent.CompletableFuture$Completion.run(CompletableFuture.java:482) ~[?:?] {}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.packs.resources.SimpleReloadInstance.lambda$new$3(SimpleReloadInstance.java:86) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.util.thread.BlockableEventLoop.doRunTask(BlockableEventLoop.java:148) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.util.thread.ReentrantBlockableEventLoop.doRunTask(ReentrantBlockableEventLoop.java:24) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.util.thread.BlockableEventLoop.pollTask(BlockableEventLoop.java:122) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.util.thread.BlockableEventLoop.runAllTasks(BlockableEventLoop.java:111) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.Minecraft.runTick(Minecraft.java:1155) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A,re:mixin,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.Minecraft.run(Minecraft.java:807) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A,re:mixin,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.main.Main.main(Main.java:230) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A}
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[?:?] {}
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[?:?] {}
+	at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.runTarget(CommonLaunchHandler.java:136) ~[loader-4.0.45.jar%23134!/:4.0] {}
+	at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.clientService(CommonLaunchHandler.java:124) ~[loader-4.0.45.jar%23134!/:4.0] {}
+	at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.NeoForgeClientDevLaunchHandler.runService(NeoForgeClientDevLaunchHandler.java:23) ~[loader-4.0.45.jar%23134!/:4.0] {}
+	at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.lambda$launchService$4(CommonLaunchHandler.java:118) ~[loader-4.0.45.jar%23134!/:4.0] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandlerDecorator.launch(LaunchServiceHandlerDecorator.java:30) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:53) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:71) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.Launcher.run(Launcher.java:103) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.Launcher.main(Launcher.java:74) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:26) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:23) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at cpw.mods.bootstraplauncher@2.0.2/cpw.mods.bootstraplauncher.BootstrapLauncher.run(BootstrapLauncher.java:210) [bootstraplauncher-2.0.2.jar:?] {}
+	at cpw.mods.bootstraplauncher@2.0.2/cpw.mods.bootstraplauncher.BootstrapLauncher.main(BootstrapLauncher.java:69) [bootstraplauncher-2.0.2.jar:?] {}
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[?:?] {}
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[?:?] {}
+	at net.neoforged.devlaunch.Main.main(Main.java:55) [DevLaunch-1.0.1.jar:?] {}
+[20:10:50] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 1024x1024x4 minecraft:textures/atlas/blocks.png-atlas
+[20:10:50] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 256x256x4 minecraft:textures/atlas/signs.png-atlas
+[20:10:50] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 512x512x4 minecraft:textures/atlas/banner_patterns.png-atlas
+[20:10:50] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 512x512x4 minecraft:textures/atlas/shield_patterns.png-atlas
+[20:10:50] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 1024x1024x4 minecraft:textures/atlas/armor_trims.png-atlas
+[20:10:50] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 128x64x4 minecraft:textures/atlas/decorated_pot.png-atlas
+[20:10:50] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 256x256x4 minecraft:textures/atlas/chest.png-atlas
+[20:10:50] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 512x256x4 minecraft:textures/atlas/shulker_boxes.png-atlas
+[20:10:50] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 512x256x4 minecraft:textures/atlas/beds.png-atlas
+[20:10:50] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 512x256x0 minecraft:textures/atlas/particles.png-atlas
+[20:10:50] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 512x256x0 minecraft:textures/atlas/paintings.png-atlas
+[20:10:50] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 256x128x0 minecraft:textures/atlas/mob_effects.png-atlas
+[20:10:50] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 64x64x0 minecraft:textures/atlas/map_decorations.png-atlas
+[20:10:50] [Render thread/INFO] [minecraft/TextureAtlas]: Created: 1024x512x0 minecraft:textures/atlas/gui.png-atlas
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader rendertype_entity_translucent_emissive could not find sampler named Sampler2 in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:compressor could not find uniform named ColorModulator in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:skyblock_screen could not find uniform named ColorModulator in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:glass could not find sampler named PortalDepth in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:glass could not find sampler named MainColor in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:glass could not find sampler named SceneDepth in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:pbr could not find sampler named emissive in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:pbr could not find sampler named pbr in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:pbr could not find sampler named normal in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:pbr could not find sampler named height in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:pbr could not find uniform named CameraPos in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:pbr could not find uniform named LightDirection in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:pbr could not find uniform named LightColor in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:pbr could not find uniform named FogStart in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:pbr could not find uniform named FogEnd in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:pbr could not find uniform named Exposure in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:pbr could not find uniform named AmbientStrength in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:pbr could not find uniform named FogColor in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:pbr could not find uniform named FogShape in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:filter_apply could not find sampler named DepthSampler in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:filter_apply could not find sampler named FilterSampler in the specified shader program.
+[20:10:50] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:filter_apply could not find sampler named FilterDepthSampler in the specified shader program.
+[20:10:51] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:raymarch_fog could not find sampler named BallTexture in the specified shader program.
+[20:10:51] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:raymarch_fog could not find sampler named SpaceTexture in the specified shader program.
+[20:10:51] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:raymarch_fog could not find uniform named CameraPosInteger in the specified shader program.
+[20:10:51] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:raymarch_fog could not find uniform named ScreenSize in the specified shader program.
+[20:10:51] [Render thread/WARN] [minecraft/ShaderInstance]: Shader shadered:raymarch_fog could not find uniform named SunDirection in the specified shader program.
+[20:11:12] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=1, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:119(25): warning: `gCentre' used uninitialized'
+[20:11:12] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=2, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:119(36): warning: `gS' used uninitialized'
+[20:11:12] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=3, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:139(21): warning: `gC' used uninitialized'
+[20:11:12] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=4, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:141(25): warning: `gR' used uninitialized'
+[20:11:12] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=5, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:142(9): warning: `gC' used uninitialized'
+[20:11:12] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=6, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:152(46): warning: `gR' used uninitialized'
+[20:11:12] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=7, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:160(73): warning: `gR' used uninitialized'
+[20:11:12] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=8, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:163(32): warning: `gC' used uninitialized'
+[20:11:12] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=9, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:163(49): warning: `gC' used uninitialized'
+[20:11:12] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=10, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:170(20): warning: `gR' used uninitialized'
+[20:11:12] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=11, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:174(9): warning: `gC' used uninitialized'
+[20:11:12] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=12, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:174(34): warning: `gR' used uninitialized'
+[20:11:12] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=13, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:178(21): warning: `gR' used uninitialized'
+[20:11:12] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=14, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:77(19): warning: `band' used uninitialized'
+[20:11:12] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=15, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:79(6): warning: `wPrev' used uninitialized'
+[20:11:12] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=16, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:80(23): warning: `band' used uninitialized'
+[20:11:12] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=17, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:80(49): warning: `wPrev' used uninitialized'
+[20:11:12] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=18, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:82(6): warning: `wNext' used uninitialized'
+[20:11:12] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=19, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:83(23): warning: `band' used uninitialized'
+[20:11:12] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=20, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:83(49): warning: `wNext' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=21, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:49(27): warning: `gW' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=22, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:50(23): warning: `gW' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=23, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:53(9): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=24, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:53(30): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=25, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:53(44): warning: `gH' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=26, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:53(55): warning: `gH' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=27, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:57(9): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=28, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:57(29): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=29, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:70(6): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=30, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:79(6): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=31, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:91(35): warning: `gH' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=32, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:94(36): warning: `gW' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=33, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:94(79): warning: `gH' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=34, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:99(6): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=35, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:100(6): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=36, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:108(6): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=37, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:109(6): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=38, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:110(14): warning: `gW' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=39, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:111(37): warning: `gH' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=40, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:112(37): warning: `gH' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=41, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:113(25): warning: `gH' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=42, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:115(17): warning: `gW' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=43, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:115(22): warning: `gH' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=44, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:120(6): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=45, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:121(6): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=46, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:122(14): warning: `gW' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=47, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:163(6): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=48, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:163(40): warning: `gW' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=49, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:166(6): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=50, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:170(57): warning: `gW' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=51, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:171(19): warning: `gW' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=52, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:172(12): warning: `gW' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=53, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:174(71): warning: `gH' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=54, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:185(6): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=55, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:229(9): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=56, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:229(27): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=57, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:229(53): warning: `gW' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=58, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:229(78): warning: `gW' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=59, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:235(6): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=60, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:236(6): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=61, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:239(71): warning: `gH' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=62, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:241(62): warning: `gW' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=63, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:242(64): warning: `gH' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=64, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:260(33): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=65, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:260(47): warning: `gW' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=66, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:260(87): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=67, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:260(101): warning: `gW' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=68, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:265(65): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=69, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:266(36): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=70, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:266(55): warning: `gW' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=71, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:304(6): warning: `gShape' used uninitialized'
+[20:11:13] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=72, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:315(19): warning: `gH' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=73, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:50(35): warning: `N' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=74, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:55(29): warning: `N' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=75, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:57(61): warning: `N' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=76, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:64(29): warning: `N' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=77, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:94(11): warning: `OCT' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=78, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:116(11): warning: `OCT' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=79, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:141(23): warning: `SZ' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=80, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:145(43): warning: `AA' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=81, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:149(11): warning: `N' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=82, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:154(6): warning: `N' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=83, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:189(23): warning: `SZ' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=84, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:212(31): warning: `N' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=85, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:295(33): warning: `SZ' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=86, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:304(31): warning: `SZ' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=87, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:306(62): warning: `SZ' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=88, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:325(32): warning: `SZ' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=89, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:327(51): warning: `SZ' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=90, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:333(58): warning: `N' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=91, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:337(27): warning: `N' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=92, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:346(21): warning: `SZ' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=93, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:359(53): warning: `N' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=94, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:376(85): warning: `SZ' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=95, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:398(49): warning: `SZ' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=96, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:418(41): warning: `SZ' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=97, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:429(61): warning: `SZ' used uninitialized'
+[20:11:17] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=98, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:463(15): warning: `SZ' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=99, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:95(18): warning: `cell0' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=100, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:99(10): warning: `pondRound' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=101, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:102(11): warning: `pondRects' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=102, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:103(33): warning: `pondRect' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=103, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:103(72): warning: `pondRect' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=104, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:110(18): warning: `cell0' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=105, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:111(30): warning: `pondStones' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=106, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:114(10): warning: `pondStones' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=107, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:121(18): warning: `pondLo' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=108, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:121(34): warning: `pondHi' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=109, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:121(79): warning: `pondLo' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=110, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:121(95): warning: `pondHi' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=111, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:127(18): warning: `pondLo' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=112, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:127(33): warning: `pondHi' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=113, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:127(85): warning: `pondLo' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=114, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:130(22): warning: `pondLo' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=115, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:130(65): warning: `pondBlocks' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=116, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:133(11): warning: `pondRects' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=117, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:162(11): warning: `pondFish' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=118, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:228(11): warning: `pondFish' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=119, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:323(15): warning: `gStart' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=120, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:323(32): warning: `gStart' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=121, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:474(18): warning: `pondLo' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=122, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:474(33): warning: `pondHi' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=123, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:474(67): warning: `pondLo' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=124, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:492(32): warning: `pondLo' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=125, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:492(41): warning: `pondHi' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=126, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:494(18): warning: `pondLo' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=127, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:494(34): warning: `pondHi' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=128, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:496(22): warning: `pondLo' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=129, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:496(38): warning: `pondHi' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=130, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:595(22): warning: `pondLo' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=131, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:595(38): warning: `pondHi' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=132, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:693(16): warning: `gStart' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=133, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:693(34): warning: `gStart' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=134, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:732(15): warning: `gStart' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=135, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:732(32): warning: `gStart' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=136, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:813(32): warning: `pondLo' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=137, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:813(47): warning: `pondHi' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=138, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:816(13): warning: `pondLo' used uninitialized'
+[20:11:19] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=139, source=SHADER COMPILER, type=OTHER, severity=HIGH, message='0:816(28): warning: `pondHi' used uninitialized'
+[20:11:20] [Render thread/INFO] [ne.ne.ne.cl.en.an.js.AnimationLoader/]: Loaded 0 entity animations
+[20:11:20] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ shaders after reload: {aquarium=ok, arcade_screen=ok, aurora_sky=ok, black_hole=ok, chaos_sky=ok, dance_floor=ok, effect_block=ok, ferrofluid=ok, galaxy_projector=ok, geode_crystal=ok, geode_spot=ok, half_composite=ok, hologram=ok, infinity_cube=ok, infinity_mirror=ok, iris_depth_copy=ok, iris_island_overlay=ok, iris_picture_depth=ok, jelly_tank=ok, kaleidoscope=ok, koi_pond=ok, laser_beam=ok, lava_lamp=ok, lava_pillar=ok, light_bridge=ok, magma_basin=ok, mirror_surface=ok, neon_sign=ok, plasma_ball=ok, portal_far=ok, portal_pack=ok, sky_clock=ok, sky_paint=ok, small_tank=ok, solar_system=ok, spotlight_beam=ok, synthwave_sky=ok, teleport_beam=ok, underwater_sky=ok, visualizer=ok, wall_fire=ok, wall_fire_blend=ok, waterfall=ok, weather_globe=ok, whirlpool=ok}
+[20:11:50] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: making a world
+[20:11:50] [Worker-Main-4/ERROR] [minecraft/LootDataType]: Couldn't parse element ResourceKey[minecraft:root / minecraft:loot_table]:shadered:blocks/space_compressor - Unknown registry key in ResourceKey[minecraft:root / minecraft:item]: shadered:space_compressor
+[20:11:50] [Worker-Main-4/ERROR] [minecraft/LootDataType]: Couldn't parse element ResourceKey[minecraft:root / minecraft:loot_table]:shadered:blocks/light_bulb - Unknown registry key in ResourceKey[minecraft:root / minecraft:item]: shadered:light_bulb
+[20:11:51] [Render thread/INFO] [minecraft/RecipeManager]: Loaded 1406 recipes
+[20:11:51] [Render thread/INFO] [minecraft/AdvancementTree]: Loaded 1401 advancements
+[20:11:51] [Server thread/INFO] [minecraft/IntegratedServer]: Starting integrated minecraft server version 1.21.1
+[20:11:51] [Server thread/INFO] [minecraft/MinecraftServer]: Generating keypair
+[20:11:52] [Server thread/INFO] [minecraft/MinecraftServer]: Preparing start region for dimension minecraft:overworld
+[20:11:52] [progressListener/INFO] [minecraft/LoggerChunkProgressListener]: Preparing spawn area: 2%
+[20:11:53] [Server thread/INFO] [ne.ne.ne.se.pe.PermissionAPI/]: Successfully initialized permission handler neoforge:default_handler
+[20:11:53] [Server thread/WARN] [ne.ne.ne.co.TagConventionLogWarning/]: 
+   Dev warning - Legacy Tags detected. Please migrate your 'forge' namespace tags to the 'c' namespace! See net.neoforged.neoforge.common.Tags.java for all tags.
+   NOTE: Many tags have been moved around or renamed. Some new ones were added so please review the new tags.
+    And make sure you follow tag conventions for new tags! The convention is `c` with nouns generally being plural and adjectives being singular.
+   You can disable this message in NeoForge's common config by setting `logLegacyTagWarnings` to "SILENCED" or see individual tags with "DEV_VERBOSE".
+
+[20:11:53] [Server thread/INFO] [minecraft/IntegratedServer]: Changing view distance to 12, from 10
+[20:11:53] [Server thread/INFO] [minecraft/IntegratedServer]: Changing simulation distance to 12, from 0
+[20:11:53] [progressListener/INFO] [minecraft/LoggerChunkProgressListener]: Time elapsed: 272 ms
+[20:11:54] [Server thread/INFO] [minecraft/PlayerList]: Dev[local:E:6fd579ea] logged in with entity id 1 at (-4.5, -60.0, 9.5)
+[20:11:54] [Server thread/INFO] [minecraft/MinecraftServer]: Dev joined the game
+[20:11:54] [Render thread/INFO] [minecraft/AdvancementTree]: Loaded 2 advancements
+[20:11:55] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=140, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_OPERATION in glBlitFramebuffer(depth attachment format mismatch)'
+[20:11:55] [Render thread/INFO] [mojang/GlDebug]: OpenGL debug message: id=140, source=API, type=ERROR, severity=HIGH, message='GL_INVALID_OPERATION in glBlitFramebuffer(depth attachment format mismatch)'
+[20:12:55] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: black holes drawn in Shadered's pass: 2
+[20:12:56] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ mirror skipped a frame (no mirrors found (scan)): east -5.0 (frame 1)
+[20:12:57] [Render thread/WARN] [minecraft/TextureManager]: Failed to load texture: shadered:textures/environment/height.png
+java.io.FileNotFoundException: shadered:textures/environment/height.png
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.packs.resources.ResourceProvider.lambda$getResourceOrThrow$1(ResourceProvider.java:18) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading}
+	at java.base/java.util.Optional.orElseThrow(Optional.java:403) ~[?:?] {}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.packs.resources.ResourceProvider.getResourceOrThrow(ResourceProvider.java:18) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading}
+	at TRANSFORMER/geckolib@4.9.2/software.bernie.geckolib.cache.texture.AnimatableTexture.load(AnimatableTexture.java:40) ~[geckolib-neoforge-1.21.1-4.9.2.jar%23182!/:4.9.2] {re:mixin,re:computing_frames,re:classloading}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.renderer.texture.TextureManager.loadTexture(TextureManager.java:92) ~[neoforge-21.1.256.jar%23177!/:?] {re:mixin,pl:runtimedistcleaner:A,re:classloading,pl:mixin:APP:geckolib.mixins.json:client.TextureManagerMixin from mod geckolib,pl:mixin:A,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.renderer.texture.TextureManager.register(TextureManager.java:63) ~[neoforge-21.1.256.jar%23177!/:?] {re:mixin,pl:runtimedistcleaner:A,re:classloading,pl:mixin:APP:geckolib.mixins.json:client.TextureManagerMixin from mod geckolib,pl:mixin:A,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.renderer.texture.TextureManager.wrapOperation$zbo000$geckolib$replaceAnimatableTexture(TextureManager.java:531) ~[neoforge-21.1.256.jar%23177!/:?] {re:mixin,pl:runtimedistcleaner:A,re:classloading,pl:mixin:APP:geckolib.mixins.json:client.TextureManagerMixin from mod geckolib,pl:mixin:A,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.renderer.texture.TextureManager.getTexture(TextureManager.java:112) ~[neoforge-21.1.256.jar%23177!/:?] {re:mixin,pl:runtimedistcleaner:A,re:classloading,pl:mixin:APP:geckolib.mixins.json:client.TextureManagerMixin from mod geckolib,pl:mixin:A,pl:runtimedistcleaner:A}
+	at TRANSFORMER/shadered@1.21.1-1.5.8/com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getTextureId(SkyblockRenderer.java:175) ~[shadered-1.21.1-1.5.8.jar%23181!/:?] {re:mixin,re:classloading,pl:mixin:APP:skyblocks.mixins.json:SkyblockRendererMixin from mod skyblocks,pl:mixin:A}
+	at TRANSFORMER/shadered@1.21.1-1.5.8/com.noodlegamer76.shadered.client.assimp.AssimpMaterial.bind(AssimpMaterial.java:126) ~[shadered-1.21.1-1.5.8.jar%23181!/:?] {re:classloading}
+	at TRANSFORMER/shadered@1.21.1-1.5.8/com.noodlegamer76.shadered.client.renderer.assimp.AssimpRenderer.renderOpaque(AssimpRenderer.java:141) ~[shadered-1.21.1-1.5.8.jar%23181!/:?] {re:mixin,re:classloading,pl:mixin:APP:skyblocks.mixins.json:AssimpRendererBonesMixin from mod skyblocks,pl:mixin:A}
+	at TRANSFORMER/shadered@1.21.1-1.5.8/com.noodlegamer76.shadered.client.renderer.assimp.AssimpRenderer.render(AssimpRenderer.java:128) ~[shadered-1.21.1-1.5.8.jar%23181!/:?] {re:mixin,re:classloading,pl:mixin:APP:skyblocks.mixins.json:AssimpRendererBonesMixin from mod skyblocks,pl:mixin:A}
+	at TRANSFORMER/shadered@1.21.1-1.5.8/com.noodlegamer76.shadered.client.renderer.complexpasses.AssimpRendererComplexPass.render(AssimpRendererComplexPass.java:18) ~[shadered-1.21.1-1.5.8.jar%23181!/:?] {re:classloading}
+	at TRANSFORMER/shadered@1.21.1-1.5.8/com.noodlegamer76.shadered.client.renderer.ComplexPassRenderer.render(ComplexPassRenderer.java:107) ~[shadered-1.21.1-1.5.8.jar%23181!/:?] {re:mixin,re:classloading,pl:mixin:APP:skyblocks.mixins.json:ComplexPassTimingMixin from mod skyblocks,pl:mixin:A}
+	at TRANSFORMER/shadered@1.21.1-1.5.8/com.noodlegamer76.shadered.event.RenderEventsForFbos.levelRenderEvent(RenderEventsForFbos.java:48) ~[shadered-1.21.1-1.5.8.jar%23181!/:?] {re:classloading}
+	at MC-BOOTSTRAP/net.neoforged.bus/net.neoforged.bus.EventBus.post(EventBus.java:360) ~[bus-8.0.5.jar%23138!/:?] {}
+	at MC-BOOTSTRAP/net.neoforged.bus/net.neoforged.bus.EventBus.post(EventBus.java:328) ~[bus-8.0.5.jar%23138!/:?] {}
+	at TRANSFORMER/neoforge@21.1.256/net.neoforged.neoforge.client.ClientHooks.dispatchRenderStage(ClientHooks.java:292) ~[neoforge-21.1.256.jar%23178!/:?] {re:mixin,re:classloading,pl:mixin:APP:skyblocks.mixins.json:MirrorStageEventsMixin from mod skyblocks,pl:mixin:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.renderer.LevelRenderer.renderLevel(LevelRenderer.java:1117) ~[neoforge-21.1.256.jar%23177!/:?] {re:mixin,pl:accesstransformer:B,pl:runtimedistcleaner:A,re:classloading,pl:accesstransformer:B,pl:mixin:APP:skyblocks.mixins.json:LevelRendererInvoker from mod skyblocks,pl:mixin:APP:skyblocks.mixins.json:LevelRendererTranslucentMixin from mod skyblocks,pl:mixin:APP:geckolib.mixins.json:client.LevelRendererMixin from mod geckolib,pl:mixin:A,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.renderer.GameRenderer.renderLevel(GameRenderer.java:1271) ~[neoforge-21.1.256.jar%23177!/:?] {re:mixin,pl:accesstransformer:B,pl:runtimedistcleaner:A,re:classloading,pl:accesstransformer:B,pl:mixin:APP:shadered.mixins.json:GameRendererAccessor from mod shadered,pl:mixin:APP:skyblocks.mixins.json:GameRendererIrisMixin from mod skyblocks,pl:mixin:A,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.renderer.GameRenderer.render(GameRenderer.java:1024) ~[neoforge-21.1.256.jar%23177!/:?] {re:mixin,pl:accesstransformer:B,pl:runtimedistcleaner:A,re:classloading,pl:accesstransformer:B,pl:mixin:APP:shadered.mixins.json:GameRendererAccessor from mod shadered,pl:mixin:APP:skyblocks.mixins.json:GameRendererIrisMixin from mod skyblocks,pl:mixin:A,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.Minecraft.runTick(Minecraft.java:1195) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A,re:mixin,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.Minecraft.run(Minecraft.java:807) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A,re:mixin,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.main.Main.main(Main.java:230) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A}
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[?:?] {}
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[?:?] {}
+	at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.runTarget(CommonLaunchHandler.java:136) ~[loader-4.0.45.jar%23134!/:4.0] {}
+	at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.clientService(CommonLaunchHandler.java:124) ~[loader-4.0.45.jar%23134!/:4.0] {}
+	at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.NeoForgeClientDevLaunchHandler.runService(NeoForgeClientDevLaunchHandler.java:23) ~[loader-4.0.45.jar%23134!/:4.0] {}
+	at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.lambda$launchService$4(CommonLaunchHandler.java:118) ~[loader-4.0.45.jar%23134!/:4.0] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandlerDecorator.launch(LaunchServiceHandlerDecorator.java:30) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:53) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:71) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.Launcher.run(Launcher.java:103) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.Launcher.main(Launcher.java:74) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:26) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:23) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at cpw.mods.bootstraplauncher@2.0.2/cpw.mods.bootstraplauncher.BootstrapLauncher.run(BootstrapLauncher.java:210) [bootstraplauncher-2.0.2.jar:?] {}
+	at cpw.mods.bootstraplauncher@2.0.2/cpw.mods.bootstraplauncher.BootstrapLauncher.main(BootstrapLauncher.java:69) [bootstraplauncher-2.0.2.jar:?] {}
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[?:?] {}
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[?:?] {}
+	at net.neoforged.devlaunch.Main.main(Main.java:55) [DevLaunch-1.0.1.jar:?] {}
+[20:12:57] [Render thread/WARN] [minecraft/TextureManager]: Failed to load texture: shadered:textures/environment/height.png
+java.io.FileNotFoundException: shadered:textures/environment/height.png
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.packs.resources.ResourceProvider.lambda$getResourceOrThrow$1(ResourceProvider.java:18) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading}
+	at java.base/java.util.Optional.orElseThrow(Optional.java:403) ~[?:?] {}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.server.packs.resources.ResourceProvider.getResourceOrThrow(ResourceProvider.java:18) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.renderer.texture.SimpleTexture$TextureImage.load(SimpleTexture.java:83) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.renderer.texture.SimpleTexture.getTextureImage(SimpleTexture.java:57) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A,re:mixin,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.renderer.texture.SimpleTexture.load(SimpleTexture.java:30) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A,re:mixin,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.renderer.texture.TextureManager.loadTexture(TextureManager.java:92) ~[neoforge-21.1.256.jar%23177!/:?] {re:mixin,pl:runtimedistcleaner:A,re:classloading,pl:mixin:APP:geckolib.mixins.json:client.TextureManagerMixin from mod geckolib,pl:mixin:A,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.renderer.texture.TextureManager.register(TextureManager.java:63) ~[neoforge-21.1.256.jar%23177!/:?] {re:mixin,pl:runtimedistcleaner:A,re:classloading,pl:mixin:APP:geckolib.mixins.json:client.TextureManagerMixin from mod geckolib,pl:mixin:A,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.renderer.texture.TextureManager.getTexture(TextureManager.java:113) ~[neoforge-21.1.256.jar%23177!/:?] {re:mixin,pl:runtimedistcleaner:A,re:classloading,pl:mixin:APP:geckolib.mixins.json:client.TextureManagerMixin from mod geckolib,pl:mixin:A,pl:runtimedistcleaner:A}
+	at TRANSFORMER/shadered@1.21.1-1.5.8/com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getTextureId(SkyblockRenderer.java:175) ~[shadered-1.21.1-1.5.8.jar%23181!/:?] {re:mixin,re:classloading,pl:mixin:APP:skyblocks.mixins.json:SkyblockRendererMixin from mod skyblocks,pl:mixin:A}
+	at TRANSFORMER/shadered@1.21.1-1.5.8/com.noodlegamer76.shadered.client.assimp.AssimpMaterial.bind(AssimpMaterial.java:126) ~[shadered-1.21.1-1.5.8.jar%23181!/:?] {re:classloading}
+	at TRANSFORMER/shadered@1.21.1-1.5.8/com.noodlegamer76.shadered.client.renderer.assimp.AssimpRenderer.renderOpaque(AssimpRenderer.java:141) ~[shadered-1.21.1-1.5.8.jar%23181!/:?] {re:mixin,re:classloading,pl:mixin:APP:skyblocks.mixins.json:AssimpRendererBonesMixin from mod skyblocks,pl:mixin:A}
+	at TRANSFORMER/shadered@1.21.1-1.5.8/com.noodlegamer76.shadered.client.renderer.assimp.AssimpRenderer.render(AssimpRenderer.java:128) ~[shadered-1.21.1-1.5.8.jar%23181!/:?] {re:mixin,re:classloading,pl:mixin:APP:skyblocks.mixins.json:AssimpRendererBonesMixin from mod skyblocks,pl:mixin:A}
+	at TRANSFORMER/shadered@1.21.1-1.5.8/com.noodlegamer76.shadered.client.renderer.complexpasses.AssimpRendererComplexPass.render(AssimpRendererComplexPass.java:18) ~[shadered-1.21.1-1.5.8.jar%23181!/:?] {re:classloading}
+	at TRANSFORMER/shadered@1.21.1-1.5.8/com.noodlegamer76.shadered.client.renderer.ComplexPassRenderer.render(ComplexPassRenderer.java:107) ~[shadered-1.21.1-1.5.8.jar%23181!/:?] {re:mixin,re:classloading,pl:mixin:APP:skyblocks.mixins.json:ComplexPassTimingMixin from mod skyblocks,pl:mixin:A}
+	at TRANSFORMER/shadered@1.21.1-1.5.8/com.noodlegamer76.shadered.event.RenderEventsForFbos.levelRenderEvent(RenderEventsForFbos.java:48) ~[shadered-1.21.1-1.5.8.jar%23181!/:?] {re:classloading}
+	at MC-BOOTSTRAP/net.neoforged.bus/net.neoforged.bus.EventBus.post(EventBus.java:360) ~[bus-8.0.5.jar%23138!/:?] {}
+	at MC-BOOTSTRAP/net.neoforged.bus/net.neoforged.bus.EventBus.post(EventBus.java:328) ~[bus-8.0.5.jar%23138!/:?] {}
+	at TRANSFORMER/neoforge@21.1.256/net.neoforged.neoforge.client.ClientHooks.dispatchRenderStage(ClientHooks.java:292) ~[neoforge-21.1.256.jar%23178!/:?] {re:mixin,re:classloading,pl:mixin:APP:skyblocks.mixins.json:MirrorStageEventsMixin from mod skyblocks,pl:mixin:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.renderer.LevelRenderer.renderLevel(LevelRenderer.java:1117) ~[neoforge-21.1.256.jar%23177!/:?] {re:mixin,pl:accesstransformer:B,pl:runtimedistcleaner:A,re:classloading,pl:accesstransformer:B,pl:mixin:APP:skyblocks.mixins.json:LevelRendererInvoker from mod skyblocks,pl:mixin:APP:skyblocks.mixins.json:LevelRendererTranslucentMixin from mod skyblocks,pl:mixin:APP:geckolib.mixins.json:client.LevelRendererMixin from mod geckolib,pl:mixin:A,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.renderer.GameRenderer.renderLevel(GameRenderer.java:1271) ~[neoforge-21.1.256.jar%23177!/:?] {re:mixin,pl:accesstransformer:B,pl:runtimedistcleaner:A,re:classloading,pl:accesstransformer:B,pl:mixin:APP:shadered.mixins.json:GameRendererAccessor from mod shadered,pl:mixin:APP:skyblocks.mixins.json:GameRendererIrisMixin from mod skyblocks,pl:mixin:A,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.renderer.GameRenderer.render(GameRenderer.java:1024) ~[neoforge-21.1.256.jar%23177!/:?] {re:mixin,pl:accesstransformer:B,pl:runtimedistcleaner:A,re:classloading,pl:accesstransformer:B,pl:mixin:APP:shadered.mixins.json:GameRendererAccessor from mod shadered,pl:mixin:APP:skyblocks.mixins.json:GameRendererIrisMixin from mod skyblocks,pl:mixin:A,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.Minecraft.runTick(Minecraft.java:1195) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A,re:mixin,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.Minecraft.run(Minecraft.java:807) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A,re:mixin,pl:runtimedistcleaner:A}
+	at TRANSFORMER/minecraft@1.21.1/net.minecraft.client.main.Main.main(Main.java:230) ~[neoforge-21.1.256.jar%23177!/:?] {re:classloading,pl:runtimedistcleaner:A}
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[?:?] {}
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[?:?] {}
+	at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.runTarget(CommonLaunchHandler.java:136) ~[loader-4.0.45.jar%23134!/:4.0] {}
+	at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.clientService(CommonLaunchHandler.java:124) ~[loader-4.0.45.jar%23134!/:4.0] {}
+	at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.NeoForgeClientDevLaunchHandler.runService(NeoForgeClientDevLaunchHandler.java:23) ~[loader-4.0.45.jar%23134!/:4.0] {}
+	at MC-BOOTSTRAP/fml_loader@4.0.45/net.neoforged.fml.loading.targets.CommonLaunchHandler.lambda$launchService$4(CommonLaunchHandler.java:118) ~[loader-4.0.45.jar%23134!/:4.0] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandlerDecorator.launch(LaunchServiceHandlerDecorator.java:30) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:53) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:71) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.Launcher.run(Launcher.java:103) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.Launcher.main(Launcher.java:74) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:26) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:23) [modlauncher-11.0.5.jar%23114!/:?] {}
+	at cpw.mods.bootstraplauncher@2.0.2/cpw.mods.bootstraplauncher.BootstrapLauncher.run(BootstrapLauncher.java:210) [bootstraplauncher-2.0.2.jar:?] {}
+	at cpw.mods.bootstraplauncher@2.0.2/cpw.mods.bootstraplauncher.BootstrapLauncher.main(BootstrapLauncher.java:69) [bootstraplauncher-2.0.2.jar:?] {}
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[?:?] {}
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[?:?] {}
+	at net.neoforged.devlaunch.Main.main(Main.java:55) [DevLaunch-1.0.1.jar:?] {}
+[20:13:22] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: timing spot 155 (464.5 -58.5 2.6 180 12): 8 frames, 239.9 ms a frame
+  Normal view: world GPU 83.3 ms, CPU 82.8 ms. By stage:
+    solid blocks (and Shadered's sky pictures): GPU 71.90, CPU 48.90
+    leaves, grass (cutout mipped blocks): GPU 0.19, CPU 0.74
+    cutout blocks: GPU 0.02, CPU 0.10
+    mobs (and mirrors, aquariums, infinity blocks): GPU 0.53, CPU 0.99
+    block entities: GPU 1.52, CPU 23.44
+    see-through blocks (and Shadered's sky blocks, models): GPU 5.22, CPU 5.33
+    tripwire: GPU 0.00, CPU 0.17
+    clouds, rain, snow: GPU 0.00, CPU 0.14
+  Parts of those (GPU, CPU ms):
+    koi ponds: 0.00, 0.09
+    sky block pictures (ours): 62.14, 0.04
+    mirrors (all): 0.00, 0.29
+    Shadered passes: sky pictures: 71.84, 47.09
+    Shadered passes: sky blocks, models: 5.21, 5.07
+    Shadered passes: end of frame: 3.87, 2.93
+  Sky pictures: 1.8 whole, 0.0 only in part (whole for: sky items drawn in the world 3)
+  Block entities (CPU):
+    SkyLanternBlockEntity x2: 18.23 ms
+    SimpleRenderedBlockEntity x1: 0.94 ms
+    KoiPondBlockEntity x2: 0.54 ms
+  Mobs (CPU):
+    OiiaCatEntity x1: 0.29 ms
+[20:13:22] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: took rendertest_plain_155.png
+[20:13:27] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: timing spot 156 (464.5 -58.6 -3.4 0 8): 8 frames, 235.8 ms a frame
+  Normal view: world GPU 214.4 ms, CPU 213.4 ms. By stage:
+    solid blocks (and Shadered's sky pictures): GPU 183.37, CPU 162.03
+    leaves, grass (cutout mipped blocks): GPU 0.12, CPU 3.19
+    cutout blocks: GPU 0.06, CPU 0.34
+    mobs (and mirrors, aquariums, infinity blocks): GPU 7.57, CPU 9.72
+    block entities: GPU 4.47, CPU 20.32
+    see-through blocks (and Shadered's sky blocks, models): GPU 10.49, CPU 10.64
+    tripwire: GPU 0.00, CPU 0.10
+    particles: GPU 0.00, CPU 0.08
+    clouds, rain, snow: GPU 0.00, CPU 0.35
+  Parts of those (GPU, CPU ms):
+    koi ponds: 0.54, 0.18
+    sky block pictures (ours): 159.31, 0.20
+    mirrors (all): 0.00, 0.16
+    Shadered passes: sky pictures: 183.28, 158.53
+    Shadered passes: sky blocks, models: 10.47, 10.22
+    Shadered passes: end of frame: 8.29, 6.52
+  Sky pictures: 2.9 whole, 0.0 only in part (whole for: sky items drawn in the world 3)
+  Block entities (CPU):
+    SkyLanternBlockEntity x3: 16.38 ms
+    SimpleRenderedBlockEntity x2: 0.65 ms
+    KoiPondBlockEntity x4: 0.20 ms
+  Mobs (CPU):
+    OiiaCatEntity x2: 8.38 ms
+[20:13:27] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: took rendertest_plain_156.png
+[20:13:32] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: timing spot 157 (470 -59 2.6 160 32): 8 frames, 230.7 ms a frame
+  Normal view: world GPU 220.2 ms, CPU 219.1 ms. By stage:
+    solid blocks (and Shadered's sky pictures): GPU 173.53, CPU 135.36
+    leaves, grass (cutout mipped blocks): GPU 0.29, CPU 5.73
+    cutout blocks: GPU 0.02, CPU 0.28
+    mobs (and mirrors, aquariums, infinity blocks): GPU 20.69, CPU 11.05
+    block entities: GPU 7.22, CPU 49.51
+    see-through blocks (and Shadered's sky blocks, models): GPU 10.13, CPU 10.03
+    tripwire: GPU 0.00, CPU 0.08
+    clouds, rain, snow: GPU 0.00, CPU 0.34
+  Parts of those (GPU, CPU ms):
+    koi ponds: 1.02, 0.20
+    sky block pictures (ours): 147.55, 0.20
+    mirrors (all): 0.00, 0.09
+    Shadered passes: sky pictures: 173.49, 130.82
+    Shadered passes: sky blocks, models: 10.09, 9.60
+    Shadered passes: end of frame: 8.34, 6.57
+  Sky pictures: 3.0 whole, 0.0 only in part (whole for: sky items drawn in the world 3)
+  Block entities (CPU):
+    SkyLanternBlockEntity x3: 41.95 ms
+    SimpleRenderedBlockEntity x2: 0.73 ms
+    KoiPondBlockEntity x4: 0.14 ms
+  Mobs (CPU):
+    OiiaCatEntity x2: 9.99 ms
+[20:13:32] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: took rendertest_plain_157.png
+[20:13:37] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: timing spot 158 (474 -59.2 1.7 180 38): 10 frames, 188.2 ms a frame
+  Normal view: world GPU 186.5 ms, CPU 185.1 ms. By stage:
+    solid blocks (and Shadered's sky pictures): GPU 160.19, CPU 129.34
+    leaves, grass (cutout mipped blocks): GPU 0.35, CPU 4.86
+    cutout blocks: GPU 0.00, CPU 0.24
+    mobs (and mirrors, aquariums, infinity blocks): GPU 3.80, CPU 1.81
+    block entities: GPU 4.08, CPU 32.74
+    see-through blocks (and Shadered's sky blocks, models): GPU 9.00, CPU 8.20
+    tripwire: GPU 0.00, CPU 0.06
+    clouds, rain, snow: GPU 0.00, CPU 0.31
+  Parts of those (GPU, CPU ms):
+    koi ponds: 0.19, 0.15
+    sky block pictures (ours): 134.37, 0.11
+    mirrors (all): 0.00, 0.10
+    Shadered passes: sky pictures: 160.08, 122.54
+    Shadered passes: sky blocks, models: 8.99, 7.82
+    Shadered passes: end of frame: 9.05, 7.44
+  Sky pictures: 3.0 whole, 0.0 only in part (whole for: sky items drawn in the world 3)
+  Block entities (CPU):
+    SkyLanternBlockEntity x3: 20.50 ms
+    SimpleRenderedBlockEntity x4: 5.17 ms
+    KoiPondBlockEntity x4: 0.11 ms
+  Mobs (CPU):
+    OiiaCatEntity x0: 0.97 ms
+[20:13:37] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: took rendertest_plain_158.png
+[20:13:42] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: timing spot 159 (478.5 -58.6 1.5 180 0): 9 frames, 216.1 ms a frame
+  Normal view: world GPU 202.5 ms, CPU 201.6 ms. By stage:
+    solid blocks (and Shadered's sky pictures): GPU 180.68, CPU 160.29
+    leaves, grass (cutout mipped blocks): GPU 0.13, CPU 9.43
+    cutout blocks: GPU 0.00, CPU 0.23
+    mobs (and mirrors, aquariums, infinity blocks): GPU 0.86, CPU 0.72
+    block entities: GPU 2.99, CPU 14.48
+    see-through blocks (and Shadered's sky blocks, models): GPU 9.06, CPU 8.98
+    tripwire: GPU 0.00, CPU 0.07
+    clouds, rain, snow: GPU 0.00, CPU 0.30
+  Parts of those (GPU, CPU ms):
+    sky block pictures (ours): 149.40, 0.10
+    mirrors (all): 0.00, 0.07
+    Shadered passes: sky pictures: 180.64, 153.64
+    Shadered passes: sky blocks, models: 9.06, 8.59
+    Shadered passes: end of frame: 8.77, 6.95
+  Sky pictures: 2.1 whole, 0.0 only in part (whole for: sky items drawn in the world 1)
+  Block entities (CPU):
+    SkyLanternBlockEntity x1: 8.78 ms
+    SimpleRenderedBlockEntity x3: 2.65 ms
+    KoiPondBlockEntity x0: 0.02 ms
+  Mobs (CPU):
+    OiiaCatEntity x0: 0.09 ms
+[20:13:42] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: took rendertest_plain_159.png
+[20:13:47] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: timing spot 160 (night 478.5 -58.6 1.5 180 0): 10 frames, 207.1 ms a frame
+  Normal view: world GPU 194.1 ms, CPU 192.3 ms. By stage:
+    solid blocks (and Shadered's sky pictures): GPU 176.25, CPU 150.78
+    leaves, grass (cutout mipped blocks): GPU 0.02, CPU 11.08
+    cutout blocks: GPU 0.00, CPU 0.21
+    mobs (and mirrors, aquariums, infinity blocks): GPU 0.55, CPU 0.32
+    block entities: GPU 1.04, CPU 13.49
+    see-through blocks (and Shadered's sky blocks, models): GPU 7.99, CPU 9.72
+    tripwire: GPU 0.00, CPU 0.07
+    clouds, rain, snow: GPU 0.00, CPU 0.45
+  Parts of those (GPU, CPU ms):
+    sky block pictures (ours): 149.22, 0.13
+    mirrors (all): 0.00, 0.06
+    Shadered passes: sky pictures: 176.22, 144.83
+    Shadered passes: sky blocks, models: 7.99, 9.33
+    Shadered passes: end of frame: 8.26, 6.07
+  Sky pictures: 1.1 whole, 0.0 only in part (whole for: sky items drawn in the world 1)
+  Block entities (CPU):
+    SkyLanternBlockEntity x1: 10.02 ms
+    SimpleRenderedBlockEntity x3: 0.52 ms
+    KoiPondBlockEntity x0: 0.00 ms
+  Mobs (CPU):
+    OiiaCatEntity x0: 0.01 ms
+[20:13:47] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: took rendertest_plain_160.png
+[20:13:52] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: timing spot 161 (482.5 -58.3 2.6 180 42): 10 frames, 180.6 ms a frame
+  Normal view: world GPU 188.9 ms, CPU 187.6 ms. By stage:
+    solid blocks (and Shadered's sky pictures): GPU 164.33, CPU 150.80
+    leaves, grass (cutout mipped blocks): GPU 0.18, CPU 3.43
+    cutout blocks: GPU 0.00, CPU 0.15
+    mobs (and mirrors, aquariums, infinity blocks): GPU 6.86, CPU 9.64
+    block entities: GPU 0.66, CPU 8.39
+    see-through blocks (and Shadered's sky blocks, models): GPU 8.46, CPU 8.21
+    tripwire: GPU 0.00, CPU 0.06
+    clouds, rain, snow: GPU 0.00, CPU 0.28
+  Parts of those (GPU, CPU ms):
+    sky block pictures (ours): 145.26, 0.12
+    mirrors (all): 0.00, 0.06
+    Shadered passes: sky pictures: 164.31, 147.30
+    Shadered passes: sky blocks, models: 8.46, 7.88
+    Shadered passes: end of frame: 8.39, 6.52
+  Sky pictures: 1.4 whole, 0.0 only in part (whole for: sky items drawn in the world 1)
+  Block entities (CPU):
+    SkyLanternBlockEntity x1: 5.72 ms
+    SimpleRenderedBlockEntity x2: 0.41 ms
+  Mobs (CPU):
+    OiiaCatEntity x2: 8.94 ms
+[20:13:52] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: took rendertest_plain_161.png
+[20:13:57] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: timing spot 162 (486.7 -59.4 2.7 180 6): 24 frames, 78.1 ms a frame
+  Normal view: world GPU 88.0 ms, CPU 85.6 ms. By stage:
+    solid blocks (and Shadered's sky pictures): GPU 53.41, CPU 37.49
+    leaves, grass (cutout mipped blocks): GPU 0.75, CPU 9.53
+    cutout blocks: GPU 0.00, CPU 0.19
+    mobs (and mirrors, aquariums, infinity blocks): GPU 18.67, CPU 21.79
+    block entities: GPU 0.03, CPU 0.70
+    see-through blocks (and Shadered's sky blocks, models): GPU 7.43, CPU 9.71
+    tripwire: GPU 0.00, CPU 0.07
+    clouds, rain, snow: GPU 0.00, CPU 0.31
+  Parts of those (GPU, CPU ms):
+    sky block pictures (ours): 26.22, 0.02
+    Shadered passes: sky pictures: 53.41, 32.19
+    Shadered passes: sky blocks, models: 7.43, 9.34
+    Shadered passes: end of frame: 7.68, 5.75
+  Sky pictures: 0.1 whole, 0.0 only in part
+  Block entities (CPU):
+    SimpleRenderedBlockEntity x1: 0.21 ms
+    SkyLanternBlockEntity x0: 0.15 ms
+  Mobs (CPU):
+    OiiaCatEntity x4: 21.27 ms
+[20:13:57] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: took rendertest_plain_162.png
+[20:14:02] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: timing spot 163 (489.5 -59.4 2.7 180 6): 24 frames, 78.9 ms a frame
+  Normal view: world GPU 72.2 ms, CPU 69.8 ms. By stage:
+    solid blocks (and Shadered's sky pictures): GPU 27.52, CPU 11.37
+    leaves, grass (cutout mipped blocks): GPU 0.61, CPU 9.93
+    cutout blocks: GPU 0.00, CPU 0.18
+    mobs (and mirrors, aquariums, infinity blocks): GPU 28.96, CPU 30.71
+    block entities: GPU 0.00, CPU 0.43
+    see-through blocks (and Shadered's sky blocks, models): GPU 7.28, CPU 10.97
+    tripwire: GPU 0.00, CPU 0.07
+    clouds, rain, snow: GPU 0.00, CPU 0.32
+  Parts of those (GPU, CPU ms):
+    Shadered passes: sky pictures: 27.52, 6.31
+    Shadered passes: sky blocks, models: 7.28, 10.64
+    Shadered passes: end of frame: 7.79, 5.71
+  Sky pictures: 0.0 whole, 0.0 only in part
+  Block entities (CPU):
+    SimpleRenderedBlockEntity x1: 0.19 ms
+  Mobs (CPU):
+    OiiaCatEntity x6: 30.06 ms
+[20:14:02] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: took rendertest_plain_163.png
+[20:14:07] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: timing spot 164 (492.3 -59.4 2.7 180 6): 25 frames, 78.5 ms a frame
+  Normal view: world GPU 72.7 ms, CPU 70.2 ms. By stage:
+    solid blocks (and Shadered's sky pictures): GPU 26.78, CPU 10.77
+    leaves, grass (cutout mipped blocks): GPU 0.61, CPU 9.85
+    cutout blocks: GPU 0.00, CPU 0.17
+    mobs (and mirrors, aquariums, infinity blocks): GPU 29.50, CPU 30.93
+    block entities: GPU 0.00, CPU 0.40
+    see-through blocks (and Shadered's sky blocks, models): GPU 7.60, CPU 11.39
+    tripwire: GPU 0.00, CPU 0.07
+    clouds, rain, snow: GPU 0.00, CPU 0.31
+  Parts of those (GPU, CPU ms):
+    mirrors (all): 0.00, 0.05
+    Shadered passes: sky pictures: 26.78, 5.79
+    Shadered passes: sky blocks, models: 7.60, 10.94
+    Shadered passes: end of frame: 8.18, 6.23
+  Sky pictures: 0.0 whole, 0.0 only in part
+  Block entities (CPU):
+    SimpleRenderedBlockEntity x1: 0.18 ms
+  Mobs (CPU):
+    OiiaCatEntity x6: 30.02 ms
+[20:14:07] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: took rendertest_plain_164.png
+[20:14:12] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: timing spot 165 (495.1 -59.4 2.7 180 6): 29 frames, 67.6 ms a frame
+  Normal view: world GPU 62.5 ms, CPU 60.0 ms. By stage:
+    solid blocks (and Shadered's sky pictures): GPU 27.15, CPU 11.50
+    leaves, grass (cutout mipped blocks): GPU 0.68, CPU 9.75
+    cutout blocks: GPU 0.00, CPU 0.18
+    mobs (and mirrors, aquariums, infinity blocks): GPU 18.91, CPU 21.42
+    block entities: GPU 0.00, CPU 0.40
+    see-through blocks (and Shadered's sky blocks, models): GPU 7.86, CPU 10.28
+    tripwire: GPU 0.00, CPU 0.06
+    clouds, rain, snow: GPU 0.00, CPU 0.31
+  Parts of those (GPU, CPU ms):
+    Shadered passes: sky pictures: 27.15, 6.61
+    Shadered passes: sky blocks, models: 7.86, 9.96
+    Shadered passes: end of frame: 7.88, 6.05
+  Sky pictures: 0.0 whole, 0.0 only in part
+  Block entities (CPU):
+    SimpleRenderedBlockEntity x1: 0.18 ms
+  Mobs (CPU):
+    OiiaCatEntity x4: 20.87 ms
+[20:14:12] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: took rendertest_plain_165.png
+[20:14:17] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: timing spot 166 (486.7 -59.3 6.7 180 6): 6 frames, 366.8 ms a frame
+  Normal view: world GPU 232.3 ms, CPU 230.9 ms. By stage:
+    solid blocks (and Shadered's sky pictures): GPU 161.51, CPU 145.19
+    leaves, grass (cutout mipped blocks): GPU 0.61, CPU 10.12
+    cutout blocks: GPU 0.00, CPU 0.20
+    mobs (and mirrors, aquariums, infinity blocks): GPU 46.57, CPU 48.99
+    block entities: GPU 7.33, CPU 10.63
+    see-through blocks (and Shadered's sky blocks, models): GPU 8.07, CPU 8.87
+    tripwire: GPU 0.00, CPU 0.05
+    clouds, rain, snow: GPU 0.00, CPU 0.27
+  Parts of those (GPU, CPU ms):
+    sky block pictures (ours): 140.34, 0.09
+    Shadered passes: sky pictures: 161.51, 139.75
+    Shadered passes: sky blocks, models: 8.07, 8.59
+    Shadered passes: end of frame: 8.19, 6.43
+  Sky pictures: 0.7 whole, 0.0 only in part (whole for: sky items drawn in the world 1)
+  Block entities (CPU):
+    SkyLanternBlockEntity x1: 8.59 ms
+    SimpleRenderedBlockEntity x3: 0.39 ms
+  Mobs (CPU):
+    OiiaCatEntity x10: 53.09 ms
+[20:14:17] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: took rendertest_plain_166.png
+[20:14:22] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: timing spot 167 (489.5 -59.3 6.7 180 6): 12 frames, 136.7 ms a frame
+  Normal view: world GPU 206.4 ms, CPU 205.4 ms. By stage:
+    solid blocks (and Shadered's sky pictures): GPU 124.35, CPU 107.94
+    leaves, grass (cutout mipped blocks): GPU 0.68, CPU 10.15
+    cutout blocks: GPU 0.00, CPU 0.19
+    mobs (and mirrors, aquariums, infinity blocks): GPU 64.39, CPU 65.70
+    block entities: GPU 0.84, CPU 2.01
+    see-through blocks (and Shadered's sky blocks, models): GPU 7.93, CPU 12.52
+    tripwire: GPU 0.00, CPU 0.05
+    clouds, rain, snow: GPU 0.00, CPU 0.27
+  Parts of those (GPU, CPU ms):
+    sky block pictures (ours): 97.27, 0.06
+    Shadered passes: sky pictures: 124.35, 102.43
+    Shadered passes: sky blocks, models: 7.93, 12.26
+    Shadered passes: end of frame: 8.25, 6.46
+  Sky pictures: 0.3 whole, 0.0 only in part
+  Block entities (CPU):
+    SkyLanternBlockEntity x0: 1.05 ms
+    SimpleRenderedBlockEntity x1: 0.24 ms
+  Mobs (CPU):
+    OiiaCatEntity x13: 65.37 ms
+[20:14:22] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: took rendertest_plain_167.png
+[20:14:27] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: timing spot 168 (491.6 -59.3 6.3 180 6): 17 frames, 114.4 ms a frame
+  Normal view: world GPU 107.6 ms, CPU 106.5 ms. By stage:
+    solid blocks (and Shadered's sky pictures): GPU 29.84, CPU 12.19
+    leaves, grass (cutout mipped blocks): GPU 0.65, CPU 10.27
+    cutout blocks: GPU 0.00, CPU 0.17
+    mobs (and mirrors, aquariums, infinity blocks): GPU 59.82, CPU 64.15
+    block entities: GPU 0.01, CPU 0.50
+    see-through blocks (and Shadered's sky blocks, models): GPU 8.61, CPU 12.13
+    tripwire: GPU 0.00, CPU 0.05
+    clouds, rain, snow: GPU 0.00, CPU 0.22
+  Parts of those (GPU, CPU ms):
+    sky block pictures (ours): 0.69, 0.00
+    Shadered passes: sky pictures: 29.84, 7.12
+    Shadered passes: sky blocks, models: 8.61, 11.86
+    Shadered passes: end of frame: 8.65, 6.71
+  Sky pictures: 0.0 whole, 0.0 only in part
+  Block entities (CPU):
+    SimpleRenderedBlockEntity x1: 0.21 ms
+    SkyLanternBlockEntity x0: 0.01 ms
+  Mobs (CPU):
+    OiiaCatEntity x11: 62.89 ms
+[20:14:27] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test: took rendertest_plain_168.png
+[20:14:30] [Render thread/INFO] [co.ex.sk.SkyBlocksMod/]: Shadered+ render test done
+[20:14:30] [Render thread/INFO] [minecraft/Minecraft]: Stopping!
+[20:14:30] [Server thread/INFO] [minecraft/ServerGamePacketListenerImpl]: Dev lost connection: Disconnected
+[20:14:30] [Server thread/INFO] [minecraft/MinecraftServer]: Dev left the game
+[20:14:30] [Server thread/INFO] [minecraft/ServerCommonPacketListenerImpl]: Stopping singleplayer server as player logged out
+[20:14:30] [Server thread/INFO] [minecraft/MinecraftServer]: Stopping server
+[20:14:30] [Server thread/INFO] [minecraft/MinecraftServer]: Saving players
+[20:14:30] [Server thread/INFO] [minecraft/MinecraftServer]: Saving worlds
+[20:14:31] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[Render test]'/minecraft:overworld
+[20:14:31] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[Render test]'/minecraft:the_end
+[20:14:31] [Server thread/INFO] [minecraft/MinecraftServer]: Saving chunks for level 'ServerLevel[Render test]'/minecraft:the_nether
+[20:14:31] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage (rendertest1794514310122): All chunks are saved
+[20:14:31] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[20:14:31] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[20:14:31] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage: All dimensions are saved
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_5-1794514225858.json
+
+BUILD SUCCESSFUL in 4m 10s
+7 actionable tasks: 3 executed, 4 up-to-date
