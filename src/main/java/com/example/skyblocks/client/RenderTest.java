@@ -270,6 +270,8 @@ public final class RenderTest {
             "setblock 410 -60 0 skyblocks:infusion_altar{item:{id:\"minecraft:diamond_sword\",count:1,components:{\"skyblocks:shader_paint\":{w:16,h:16,pixels:[B;0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,21b,21b,21b,21b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,21b,21b,21b,21b,21b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,21b,21b,21b,21b,21b,21b,0b,0b,0b,0b,0b,0b,0b,0b,0b,21b,21b,21b,21b,21b,21b,21b,0b,0b,0b,0b,0b,0b,0b,0b,21b,21b,21b,21b,21b,21b,21b,0b,0b,0b,0b,0b,0b,0b,0b,21b,21b,21b,21b,21b,21b,21b,0b,0b,0b,0b,0b,0b,0b,0b,21b,21b,21b,21b,21b,21b,21b,0b,0b,0b,0b,0b,0b,0b,0b,21b,21b,21b,21b,21b,21b,21b,0b,0b,0b,0b,0b,0b,0b,0b,21b,21b,21b,21b,21b,21b,21b,0b,0b,0b,0b,0b,0b,0b,0b,21b,21b,21b,21b,21b,21b,21b,0b,0b,0b,0b,0b,0b,0b,0b,42b,42b,42b,42b,42b,42b,42b,0b,0b,0b,0b,0b,0b,0b,0b,42b,42b,42b,42b,42b,42b,42b,0b,0b,0b,0b,0b,0b,0b,0b,42b,42b,42b,42b,42b,42b,42b,0b,0b,0b,0b,0b,0b,0b,0b,0b,42b,42b,42b,42b,42b,42b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,42b,42b,42b,42b,42b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,42b,42b,42b,42b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b]}}}}",
             "setblock 413 -60 0 skyblocks:infusion_altar{item:{id:\"minecraft:diamond_sword\",count:1,components:{\"skyblocks:shader_paint\":{w:16,h:16,pixels:[B;0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,41b,41b,41b,41b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,41b,41b,41b,41b,41b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,41b,41b,41b,41b,41b,41b,0b,0b,0b,0b,0b,0b,0b,0b,0b,41b,41b,41b,41b,41b,41b,41b,0b,0b,0b,0b,0b,0b,0b,0b,41b,41b,41b,41b,41b,41b,41b,0b,0b,0b,0b,0b,0b,0b,0b,41b,41b,41b,41b,41b,41b,41b,0b,0b,0b,0b,0b,0b,0b,0b,41b,41b,41b,41b,41b,41b,41b,0b,0b,0b,0b,0b,0b,0b,0b,41b,41b,41b,41b,41b,41b,41b,0b,0b,0b,0b,0b,0b,0b,0b,41b,41b,41b,41b,41b,41b,41b,0b,0b,0b,0b,0b,0b,0b,0b,41b,41b,41b,41b,41b,41b,41b,0b,0b,0b,0b,0b,0b,0b,0b,39b,39b,39b,39b,39b,39b,39b,0b,0b,0b,0b,0b,0b,0b,0b,39b,39b,39b,39b,39b,39b,39b,0b,0b,0b,0b,0b,0b,0b,0b,39b,39b,39b,39b,39b,39b,39b,0b,0b,0b,0b,0b,0b,0b,0b,0b,39b,39b,39b,39b,39b,39b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,39b,39b,39b,39b,39b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,39b,39b,39b,39b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b]}}}}",
             "summon item 405.5 -60 2 {Item:{id:\"minecraft:diamond_sword\",count:1,components:{\"skyblocks:shader_paint\":{w:16,h:16,pixels:[B;0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,1b,1b,1b,1b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,1b,1b,1b,1b,1b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,1b,1b,1b,1b,1b,1b,0b,0b,0b,0b,0b,0b,0b,0b,0b,1b,1b,1b,1b,1b,1b,1b,0b,0b,0b,0b,0b,0b,0b,0b,1b,1b,1b,1b,1b,1b,1b,0b,0b,0b,0b,0b,0b,0b,0b,1b,1b,1b,1b,1b,1b,1b,0b,0b,0b,0b,0b,0b,0b,0b,1b,1b,1b,1b,1b,1b,1b,0b,0b,0b,0b,0b,0b,0b,0b,1b,1b,1b,1b,1b,1b,1b,0b,0b,0b,0b,0b,0b,0b,0b,1b,1b,1b,1b,1b,1b,1b,0b,0b,0b,0b,0b,0b,0b,0b,1b,1b,1b,1b,1b,1b,1b,0b,0b,0b,0b,0b,0b,0b,0b,9b,9b,9b,9b,9b,9b,9b,0b,0b,0b,0b,0b,0b,0b,0b,9b,9b,9b,9b,9b,9b,9b,0b,0b,0b,0b,0b,0b,0b,0b,9b,9b,9b,9b,9b,9b,9b,0b,0b,0b,0b,0b,0b,0b,0b,0b,9b,9b,9b,9b,9b,9b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,9b,9b,9b,9b,9b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,9b,9b,9b,9b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b,0b]}}},PickupDelay:32767s,Age:-32768s}",
+            // armour painted with skies, worn by armour stands (painted as worn: stripes, redrawn pixels, checks; or left to their icons: all over, round the edges), and an altar with a chestplate
+            armourStandA(), armourStandB(), armourAltar(),
     };
     private static final String[] NEW_SPOTS = {"200.5 -59.2 -3 0 18", "open 200 -60 0 200.5 -60 -1.6 0 15", "283.5 -59.6 -2.4 0 32",
             "290.5 -59.6 -2.4 0 32", "286.5 -60 -1.2 0 30", "202.5 -58.5 2.6 0 22", "night 202.5 -58.5 2.6 0 22", "229 -56 13 130 35",
@@ -282,7 +284,72 @@ public final class RenderTest {
             "catwalk 338.8 -59.6 1.4 0 18", "catwalk 340.6 -59.7 3.2 90 12", "holdphoto 333.5 -60 -3 0 8", "holdcamera 333.5 -60 -3 0 8", "356.5 -59.4 4.5 0 8", "night 356.5 -59.4 4.5 0 8", "334 -59.5 10.2 0 22", "331 -59.7 10.9 0 25", 
             "376 -58.3 8.8 180 22", "373.5 -59.35 5.4 180 12", "376.5 -59.35 5.4 180 15", "379.5 -59.1 4.4 180 32", "382.5 -57.6 5.6 180 12",
             "370.5 -59.2 4.6 180 30", "374.5 -59.45 7.0 180 4", "372 -59.6 6.2 200 18", "387.5 -59.2 4.2 180 8", "night 397.5 -58.5 3.3 180 25", "397 -58.2 3.3 160 10", "405.5 -58.6 3.4 180 18", "405.5 -59.2 3.6 180 28", "411.5 -58.6 3.4 180 18", 
-            "watch 7 open 270 -60 0 270.5 -58.6 -7 0 3", "watch 7 open 270 -60 0 270.5 -59.3 -1.1 0 52", "watch 7 open 270 -60 0 night 270.5 -58.6 -7 0 3"};
+            "watch 7 open 270 -60 0 270.5 -58.6 -7 0 3", "watch 7 open 270 -60 0 270.5 -59.3 -1.1 0 52", "watch 7 open 270 -60 0 night 270.5 -58.6 -7 0 3",
+            "418 -59.1 3.9 180 10", "416.5 -58.7 2.2 180 14", "419.5 -58.7 2.2 180 14", "418 -59.1 -2.9 0 10", "night 418 -59.1 3.9 180 10",
+            "worn open 422 -60 0 422.5 -60 -1.6 0 15", "wornflat open 422 -60 0 422.5 -60 -1.6 0 15", "open 422 -60 0 422.5 -60 -1.6 0 15"};
+    // ---- (painted armour) ----
+
+    /** NBT of an ArmorPaint, w x h: style(x, y) on each pixel; colour(x, y) (0: as it was), or none. */
+    private static String armourPaint(int w, int h, java.util.function.IntBinaryOperator style, @org.jetbrains.annotations.Nullable java.util.function.IntBinaryOperator colour) {
+        StringBuilder b = new StringBuilder("{w:").append(w).append(",h:").append(h).append(",skies:[B;");
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                int s = style.applyAsInt(x, y);
+                b.append((byte) (s >> 8)).append("b,").append((byte) s).append("b,");
+            }
+        }
+        b.setLength(b.length() - 1);
+        b.append(']');
+        if (colour != null) {
+            b.append(",argb:[B;");
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    int c = colour.applyAsInt(x, y);
+                    b.append((byte) (c >>> 24)).append("b,").append((byte) (c >> 16)).append("b,").append((byte) (c >> 8)).append("b,").append((byte) c).append("b,");
+                }
+            }
+            b.setLength(b.length() - 1);
+            b.append(']');
+        }
+        return b.append('}').toString();
+    }
+
+    /** NBT of an icon's ShaderPaint (16 x 16): the first `count` pixels (row by row) painted with style. */
+    private static String iconPaint(int count, int style) {
+        StringBuilder b = new StringBuilder("{w:16,h:16,pixels:[B;");
+        for (int i = 0; i < 256; i++) {
+            int s = i < count ? style : 0;
+            b.append((byte) (s >> 8)).append("b,").append((byte) s).append("b,");
+        }
+        b.setLength(b.length() - 1);
+        return b.append("]}").toString();
+    }
+
+    private static String piece(String id, String components) {
+        return "{id:\"minecraft:" + id + "\",count:1,components:{" + components + "}}";
+    }
+
+    private static String armourStandA() {
+        return "summon armor_stand 416.5 -60 0.5 {NoGravity:1b,ShowArms:1b,NoBasePlate:1b,Rotation:[0f,0f],ArmorItems:["
+                + piece("diamond_boots", "\"skyblocks:armor_paint\":" + armourPaint(64, 32, (x, y) -> 0, (x, y) -> (x + y) % 3 == 0 ? 0xFFFFC030 : 0)) + ","
+                + piece("diamond_leggings", "\"skyblocks:armor_paint\":" + armourPaint(64, 32, (x, y) -> ((x + y) >> 1 & 1) == 0 ? 48 : 0, null)) + ","
+                + piece("diamond_chestplate", "\"skyblocks:shader_paint\":" + iconPaint(256, 96)) + ","
+                + piece("diamond_helmet", "\"skyblocks:shader_paint\":" + iconPaint(30, 64)) + "]}";
+    }
+
+    private static String armourStandB() {
+        return "summon armor_stand 419.5 -60 0.5 {NoGravity:1b,ShowArms:1b,NoBasePlate:1b,Rotation:[0f,0f],ArmorItems:["
+                + piece("golden_boots", "\"skyblocks:shader_paint\":" + iconPaint(256, 112)) + ",{},"
+                + piece("iron_chestplate", "\"skyblocks:armor_paint\":" + armourPaint(64, 32, (x, y) -> ((x >> 1) + (y >> 1) & 1) == 0 ? 32 : 0,
+                        (x, y) -> x % 4 == 0 ? 0xFF9040E0 : 0)) + ","
+                + piece("leather_helmet", "\"minecraft:dyed_color\":{rgb:3361970},\"skyblocks:armor_paint\":" + armourPaint(64, 32, (x, y) -> 145, null)) + "]}";
+    }
+
+    private static String armourAltar() {
+        return "setblock 422 -60 0 skyblocks:infusion_altar{item:" + piece("diamond_chestplate", "\"skyblocks:shader_paint\":" + iconPaint(60, 64)
+                + ",\"skyblocks:armor_paint\":" + armourPaint(64, 32, (x, y) -> ((x + y) >> 1 & 1) == 0 ? 96 : 0, null)) + "}";
+    }
+
     private static int playGame = -1;
     private static boolean pickOnly, controls, moveList, watch;
     /** (the picture a cabinet sends, given back to its own player too: there's nobody else here to see it) */
@@ -510,6 +577,14 @@ public final class RenderTest {
                             BlackHoleRenderer.noDepth = where.startsWith("nodepth "); // (as if the depth couldn't be copied)
                             if (BlackHoleRenderer.noDepth) {
                                 where = where.substring("nodepth ".length());
+                            }
+                            ShaderPaintScreen.testStart = 0; // (the altar's editor opened as worn armour: 1 in 3D, 2 flat)
+                            if (where.startsWith("worn ")) {
+                                ShaderPaintScreen.testStart = 1;
+                                where = where.substring("worn ".length());
+                            } else if (where.startsWith("wornflat ")) {
+                                ShaderPaintScreen.testStart = 2;
+                                where = where.substring("wornflat ".length());
                             }
                             boolean open = where.startsWith("open ");
                             if (open) { // (right-click a block with an empty hand: its menu, in the picture)

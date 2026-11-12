@@ -18,6 +18,7 @@
     "EntityTimingMixin",
     "EntityAccessor",
     "GameRendererIrisMixin",
+    "HumanoidArmorLayerPaintMixin",
     "ItemRendererPaintMixin",
     "LevelRendererInvoker",
     "LevelRendererTranslucentMixin",

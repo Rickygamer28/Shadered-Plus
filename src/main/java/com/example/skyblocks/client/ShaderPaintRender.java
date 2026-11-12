@@ -363,7 +363,7 @@ public final class ShaderPaintRender {
         vertex(vc, m, ax, ay, az, u0, v0, style, w);
     }
 
-    private static void vertex(VertexConsumer vc, Matrix4f m, float x, float y, float z, float u, float v, int style, int w) {
+    static void vertex(VertexConsumer vc, Matrix4f m, float x, float y, float z, float u, float v, int style, int w) {
         // (the look in red, the texture's width in green: shaders/core/sky_paint)
         vc.addVertex(m, x, y, z).setUv(u, v).setColor(ShaderPaintStyles.pass(style), Math.min(255, w), 0, 255);
     }

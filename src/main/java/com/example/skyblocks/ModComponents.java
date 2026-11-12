@@ -171,5 +171,97 @@ public final class ModComponents {
     public static final Supplier<DataComponentType<ItemTexture>> ITEM_TEXTURE = COMPONENTS.register("item_texture",
             () -> DataComponentType.<ItemTexture>builder().persistent(ItemTexture.CODEC).networkSynchronized(ItemTexture.STREAM_CODEC).build());
 
+    /**
+     * A piece of armour painted as it's worn, at the infusion altar: over its armour texture (the sheet the worn model
+     * uses, w x h, row by row from the top), the skies on each pixel (2 bytes each, as ShaderPaint) and the pixels
+     * redrawn (4 bytes each, ARGB, alpha 0: as it was; none at all: nothing redrawn). An armour piece without one wears
+     * its icon's skies, spread over it (client/ArmorPaintRender).
+     */
+    public record ArmorPaint(int w, int h, byte[] skies, byte[] argb) {
+        public static final int MAX = 256;
+        public static final com.mojang.serialization.Codec<ArmorPaint> CODEC = com.mojang.serialization.codecs.RecordCodecBuilder.create(i -> i.group(
+                com.mojang.serialization.Codec.INT.fieldOf("w").forGetter(ArmorPaint::w),
+                com.mojang.serialization.Codec.INT.fieldOf("h").forGetter(ArmorPaint::h),
+                com.mojang.serialization.Codec.BYTE_BUFFER.xmap(b -> {
+                    byte[] a = new byte[b.remaining()];
+                    b.duplicate().get(a);
+                    return a;
+                }, java.nio.ByteBuffer::wrap).fieldOf("skies").forGetter(ArmorPaint::skies),
+                com.mojang.serialization.Codec.BYTE_BUFFER.xmap(b -> {
+                    byte[] a = new byte[b.remaining()];
+                    b.duplicate().get(a);
+                    return a;
+                }, java.nio.ByteBuffer::wrap).optionalFieldOf("argb", new byte[0]).forGetter(ArmorPaint::argb)).apply(i, ArmorPaint::new));
+        public static final net.minecraft.network.codec.StreamCodec<io.netty.buffer.ByteBuf, ArmorPaint> STREAM_CODEC =
+                net.minecraft.network.codec.StreamCodec.composite(
+                        net.minecraft.network.codec.ByteBufCodecs.VAR_INT, ArmorPaint::w,
+                        net.minecraft.network.codec.ByteBufCodecs.VAR_INT, ArmorPaint::h,
+                        net.minecraft.network.codec.ByteBufCodecs.byteArray(MAX * MAX * 2), ArmorPaint::skies,
+                        net.minecraft.network.codec.ByteBufCodecs.byteArray(MAX * MAX * 4), ArmorPaint::argb, ArmorPaint::new);
+
+        /** styles: w x h (0: none); argb: w x h (alpha 0: as it was), or null (nothing redrawn). */
+        public static ArmorPaint of(int w, int h, int[] styles, @org.jetbrains.annotations.Nullable int[] argb) {
+            byte[] s = new byte[w * h * 2];
+            for (int i = 0; i < w * h; i++) {
+                s[i * 2] = (byte) (styles[i] >> 8);
+                s[i * 2 + 1] = (byte) styles[i];
+            }
+            byte[] c = new byte[argb == null ? 0 : w * h * 4];
+            if (argb != null) {
+                for (int i = 0; i < w * h; i++) {
+                    c[i * 4] = (byte) (argb[i] >>> 24);
+                    c[i * 4 + 1] = (byte) (argb[i] >> 16);
+                    c[i * 4 + 2] = (byte) (argb[i] >> 8);
+                    c[i * 4 + 3] = (byte) argb[i];
+                }
+            }
+            return new ArmorPaint(w, h, s, c);
+        }
+
+        /** Whether its sizes add up (w x h, both arrays the right length). */
+        public boolean valid() {
+            return w >= 1 && h >= 1 && w <= MAX && h <= MAX && skies.length == w * h * 2 && (argb.length == 0 || argb.length == w * h * 4);
+        }
+
+        public int sky(int x, int y) {
+            int i = (y * w + x) * 2;
+            if (x < 0 || y < 0 || x >= w || y >= h || i + 1 >= skies.length) {
+                return 0;
+            }
+            return (skies[i] & 255) << 8 | skies[i + 1] & 255;
+        }
+
+        /** The pixel redrawn there (ARGB), or 0 (as it was). */
+        public int colour(int x, int y) {
+            int i = (y * w + x) * 4;
+            if (x < 0 || y < 0 || x >= w || y >= h || i + 3 >= argb.length) {
+                return 0;
+            }
+            return (argb[i] & 255) << 24 | (argb[i + 1] & 255) << 16 | (argb[i + 2] & 255) << 8 | argb[i + 3] & 255;
+        }
+
+        public boolean hasColours() {
+            for (int i = 0; i + 3 < argb.length; i += 4) {
+                if ((argb[i] & 255) > 16) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof ArmorPaint p && p.w == w && p.h == h && java.util.Arrays.equals(p.skies, skies) && java.util.Arrays.equals(p.argb, argb);
+        }
+
+        @Override
+        public int hashCode() {
+            return ((w * 31 + h) * 31 + java.util.Arrays.hashCode(skies)) * 31 + java.util.Arrays.hashCode(argb);
+        }
+    }
+
+    public static final Supplier<DataComponentType<ArmorPaint>> ARMOR_PAINT = COMPONENTS.register("armor_paint",
+            () -> DataComponentType.<ArmorPaint>builder().persistent(ArmorPaint.CODEC).networkSynchronized(ArmorPaint.STREAM_CODEC).build());
+
     private ModComponents() {}
 }

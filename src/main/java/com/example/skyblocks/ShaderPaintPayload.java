@@ -18,15 +18,18 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
  * The infusion altar's editor -> server: the skies painted on the item on the altar, and its own texture if it was
- * redrawn (none: back to the item's own). An amethyst shard a change, but in creative.
+ * redrawn (none: back to the item's own), and - armour - how it's painted as it's worn (none: its icon's skies, spread
+ * over it). An amethyst shard a change, but in creative.
  */
-public record ShaderPaintPayload(BlockPos pos, ModComponents.ShaderPaint paint, Optional<ModComponents.ItemTexture> texture) implements CustomPacketPayload {
+public record ShaderPaintPayload(BlockPos pos, ModComponents.ShaderPaint paint, Optional<ModComponents.ItemTexture> texture,
+                                 Optional<ModComponents.ArmorPaint> armor) implements CustomPacketPayload {
     public static final Type<ShaderPaintPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "shader_paint"));
 
     public static final StreamCodec<ByteBuf, ShaderPaintPayload> STREAM_CODEC = StreamCodec.composite(
             BlockPos.STREAM_CODEC, ShaderPaintPayload::pos,
             ModComponents.ShaderPaint.STREAM_CODEC, ShaderPaintPayload::paint,
             ByteBufCodecs.optional(ModComponents.ItemTexture.STREAM_CODEC), ShaderPaintPayload::texture,
+            ByteBufCodecs.optional(ModComponents.ArmorPaint.STREAM_CODEC), ShaderPaintPayload::armor,
             ShaderPaintPayload::new);
 
     @Override
@@ -43,19 +46,21 @@ public record ShaderPaintPayload(BlockPos pos, ModComponents.ShaderPaint paint, 
             Player player = context.player();
             ModComponents.ShaderPaint paint = payload.paint();
             ModComponents.ItemTexture texture = payload.texture().orElse(null);
+            ModComponents.ArmorPaint armor = payload.armor().orElse(null);
             if (!(player.level() instanceof ServerLevel level) || !level.isLoaded(payload.pos()) || player.distanceToSqr(payload.pos().getCenter()) > 8 * 8
                     || !(level.getBlockEntity(payload.pos()) instanceof InfusionAltarBlockEntity altar) || altar.item().isEmpty()
-                    || !fits(paint.w(), paint.h(), paint.pixels().length, 2) || texture != null && !fits(texture.w(), texture.h(), texture.argb().length, 4)) {
+                    || !fits(paint.w(), paint.h(), paint.pixels().length, 2) || texture != null && !fits(texture.w(), texture.h(), texture.argb().length, 4) || armor != null && !armor.valid()) {
                 return;
             }
             ItemStack item = altar.item().copy();
             ModComponents.ShaderPaint hadPaint = item.get(ModComponents.SHADER_PAINT.get());
             ModComponents.ItemTexture hadTexture = item.get(ModComponents.ITEM_TEXTURE.get());
+            ModComponents.ArmorPaint hadArmor = item.get(ModComponents.ARMOR_PAINT.get());
             ModComponents.ShaderPaint newPaint = paint.empty() ? null : paint;
-            if (java.util.Objects.equals(newPaint, hadPaint) && java.util.Objects.equals(texture, hadTexture)) {
+            if (java.util.Objects.equals(newPaint, hadPaint) && java.util.Objects.equals(texture, hadTexture) && java.util.Objects.equals(armor, hadArmor)) {
                 return;
             }
-            boolean undoing = newPaint == null && texture == null;
+            boolean undoing = newPaint == null && texture == null && armor == null;
             if (!undoing && !player.getAbilities().instabuild) {
                 int slot = player.getInventory().findSlotMatchingItem(new ItemStack(Items.AMETHYST_SHARD));
                 if (slot < 0) {
@@ -73,6 +78,11 @@ public record ShaderPaintPayload(BlockPos pos, ModComponents.ShaderPaint paint, 
                 item.remove(ModComponents.ITEM_TEXTURE.get());
             } else {
                 item.set(ModComponents.ITEM_TEXTURE.get(), texture);
+            }
+            if (armor == null) {
+                item.remove(ModComponents.ARMOR_PAINT.get());
+            } else {
+                item.set(ModComponents.ARMOR_PAINT.get(), armor);
             }
             altar.setItem(item);
             level.playSound(null, payload.pos(), undoing ? SoundEvents.AMETHYST_BLOCK_BREAK : SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.0F, 1.0F);

@@ -18,6 +18,16 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Tooltip;
+import com.mojang.blaze3d.platform.NativeImage;
+import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.model.geom.ModelLayers;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import org.jetbrains.annotations.Nullable;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -37,7 +47,11 @@ import org.lwjgl.glfw.GLFW;
  * item's texture uses (pick one, or type any colour) to redraw the texture itself with - add pixels, recolour them, rub
  * them out - then the texture big in the middle to paint on, and on the right Shadered's sky blocks' skies to paint
  * onto it (each sky seen through the look chosen: normal, inverted, posterised, blueprint, game boy...) over the item
- * itself, turning, as it will look. Left mouse paints with the tool, right mouse rubs out.
+ * itself, turning, as it will look. Left mouse paints with the tool, right mouse rubs out. Quick styles under the
+ * canvas fill it with the sky picked in a pattern (all of it, its edges, stripes, a checkerboard, top, bottom).
+ * <p>Armour is painted as it's worn, too ("Worn"): its worn texture - the part its piece uses - on the armour itself in
+ * 3D, on a player, to turn round (drag) and paint on (click), or flat. Until that's painted, the worn armour takes its
+ * icon's skies, spread over it ("Auto": most of the icon painted, all over; less, round each piece's edges).
  */
 public class ShaderPaintScreen extends Screen {
     private enum Tool { PENCIL, ERASER, FILL, PICKER, RECT, LINE }
@@ -49,7 +63,7 @@ public class ShaderPaintScreen extends Screen {
     /** The texture as it's being redrawn (ARGB), as it was, and the skies painted on it (styles: ShaderPaintStyles). */
     private int[] colours, original;
     private int[] skies;
-    private final ArrayDeque<Object[]> undo = new ArrayDeque<>(), redo = new ArrayDeque<>();
+    private ArrayDeque<Object[]> undo = new ArrayDeque<>(), redo = new ArrayDeque<>();
     private Tool tool = Tool.PENCIL;
     /** Painting with a sky (else a colour), which, through which look; the colour. */
     private boolean skyBrush = true;
@@ -77,6 +91,44 @@ public class ShaderPaintScreen extends Screen {
     private final Button[] toolButtons = new Button[Tool.values().length];
     private Component problem;
 
+    // ---- armour, painted as it's worn ----
+
+    /** A picture being painted: the icon's texture, or (armour) the part of its worn texture its piece uses. */
+    private static final class Canvas {
+        int w, h;
+        int[] colours, original, skies;
+        boolean[] region;
+        ArrayDeque<Object[]> undo = new ArrayDeque<>(), redo = new ArrayDeque<>();
+    }
+
+    private Canvas iconCanvas, wornCanvas, active;
+    private boolean loaded;
+    /** Which pixels can be painted (worn: those the piece shows), or null (all of them). */
+    private boolean[] region;
+    @Nullable
+    private EquipmentSlot slot;
+    /** Painting it as worn; flat (else in 3D); the worn armour left to take its icon's skies. */
+    private boolean worn, flat, wornAuto;
+    /** The whole worn texture (w x h, as worn: tinted, ARGB), and where the worn canvas is in it. */
+    private int sheetW, sheetH, ox, oy;
+    private int[] sheet;
+    /** Each face's pixels (canvas places), and which face each worn canvas pixel is on (-1: none). */
+    private List<int[]> rects = List.of();
+    private int[] owner;
+    private HumanoidModel<LivingEntity> armourModel, bodyModel;
+    private ResourceLocation skin;
+    private DynamicTexture editTexture;
+    private static final ResourceLocation EDIT_TEXTURE = ResourceLocation.fromNamespaceAndPath(com.example.skyblocks.SkyBlocksMod.MOD_ID, "armor_edit");
+    private float yaw = -28.0F, pitch = 10.0F;
+    /** The armour's faces where they were last drawn on screen (ArmorPaintRender.faces). */
+    private List<float[]> shown = List.of();
+    private boolean turning, failed3D;
+    /** The 3D view (x0, y0, x1, y1). */
+    private int ax0, ay0, ax1, ay1;
+    private static final String[] QUICK = {"full", "trim", "stripes", "checker", "top", "bottom"};
+    /** (the render test: open as worn - 1: in 3D, 2: flat) */
+    static int testStart;
+
     public ShaderPaintScreen(BlockPos pos) {
         super(Component.translatable("screen.skyblocks.shader_paint"));
         this.pos = pos;
@@ -92,6 +144,15 @@ public class ShaderPaintScreen extends Screen {
 
     @Override
     protected void init() {
+        if (!loaded) {
+            loaded = true;
+            load();
+        }
+        layout();
+    }
+
+    /** What's being painted: the item on the altar, its texture, its skies (and, armour, as it's worn). */
+    private void load() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.level.getBlockEntity(pos) instanceof InfusionAltarBlockEntity altar) {
             item = altar.item().copy();
@@ -139,7 +200,18 @@ public class ShaderPaintScreen extends Screen {
             for (int c : used) {
                 colour = c; // (start with the brightest it uses)
             }
+            iconCanvas = new Canvas();
+            active = iconCanvas;
+            save();
+            loadWorn(mc);
+            if (testStart > 0 && wornCanvas != null) {
+                flat = testStart == 2;
+                switchTo(true, false);
+            }
         }
+    }
+
+    private void layout() {
         // layout: tools | colours | canvas | skies + preview
         int left = 8, toolW = 76, colW = colCols * 14 + 8, right = cols * (swatch + 2) + 16;
         colX = left + toolW + 8;
@@ -147,12 +219,17 @@ public class ShaderPaintScreen extends Screen {
         recentY = shadeY + 26;
         colY = recentY + 40;
         colRows = Math.max(3, (height - colY - 40) / 14);
-        int room = Math.min(height - 64, width - toolW - colW - right - 48);
-        cell = Math.max(2, room / Math.max(1, Math.max(w, h)));
-        cx = colX + colW + 8 + Math.max(0, (width - (colX + colW + 8) - right - 12 - cell * w) / 2);
-        cy = 28 + Math.max(0, (height - 64 - cell * h) / 2);
         px0 = width - right - 4;
         py0 = 28;
+        // the canvas (or the 3D armour) between the colours and the skies, the quick styles under it
+        int areaX0 = colX + colW + 8, areaX1 = px0 - 8, top = worn ? 46 : 28, bottom = height - 62;
+        cell = Math.max(2, Math.min((areaX1 - areaX0) / Math.max(1, w), (bottom - top) / Math.max(1, h)));
+        cx = areaX0 + Math.max(0, (areaX1 - areaX0 - cell * w) / 2);
+        cy = top + Math.max(0, (bottom - top - cell * h) / 2);
+        ax0 = areaX0;
+        ax1 = areaX1;
+        ay0 = 46;
+        ay1 = bottom;
         rowsShown = Math.max(3, Math.min((skyCount() + cols - 1) / cols, (height - py0 - 170) / (swatch + 2)));
         int y = 28;
         Tool[] tools = Tool.values();
@@ -214,7 +291,472 @@ public class ShaderPaintScreen extends Screen {
         addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.shader_paint.apply"), b -> apply())
                 .bounds(width / 2 - 104, height - 26, 100, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.cancel"), b -> onClose()).bounds(width / 2 + 4, height - 26, 100, 20).build());
+        if (problem == null) {
+            // quick styles: the sky picked, in a pattern
+            int bw = Math.max(30, Math.min(52, (ax1 - ax0) / QUICK.length - 2)), qx = (ax0 + ax1) / 2 - (bw + 2) * QUICK.length / 2;
+            for (int i = 0; i < QUICK.length; i++) {
+                int kind = i;
+                addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.shader_paint.quick." + QUICK[i]), b -> pattern(kind))
+                        .tooltip(Tooltip.create(Component.translatable("screen.skyblocks.shader_paint.quick.tip")))
+                        .bounds(qx + i * (bw + 2), height - 56, bw, 16).build());
+            }
+        }
+        if (problem == null && slot != null) {
+            // the icon, or as it's worn
+            Button iconB = addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.shader_paint.mode.icon"), b -> switchTo(false, true))
+                    .bounds(8, 4, 37, 16).build());
+            Button wornB = addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.shader_paint.mode.worn"), b -> switchTo(true, true))
+                    .tooltip(Tooltip.create(Component.translatable(wornCanvas != null ? "screen.skyblocks.shader_paint.mode.worn.tip"
+                            : "screen.skyblocks.shader_paint.mode.worn.cannot"))).bounds(47, 4, 37, 16).build());
+            iconB.active = worn;
+            wornB.active = !worn && wornCanvas != null;
+        }
+        if (worn) {
+            addRenderableWidget(Button.builder(Component.translatable(flat ? "screen.skyblocks.shader_paint.view.3d" : "screen.skyblocks.shader_paint.view.flat"), b -> {
+                flat = !flat;
+                dragging = false;
+                turning = false;
+                rebuildWidgets();
+            }).bounds(ax1 - 44, 28, 44, 14).build());
+            addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.shader_paint.auto"), b -> {
+                remember();
+                wornAuto = true;
+                autoWorn();
+                refreshUsed();
+            }).tooltip(Tooltip.create(Component.translatable("screen.skyblocks.shader_paint.auto.tip"))).bounds(ax1 - 90, 28, 44, 14).build());
+            if (!flat) {
+                String[] views = {"front", "side", "back"};
+                float[] yaws = {0.0F, 90.0F, 180.0F};
+                for (int i = 0; i < 3; i++) {
+                    float to = yaws[i];
+                    addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.shader_paint.view." + views[i]), b -> {
+                        yaw = to;
+                        pitch = 10.0F;
+                    }).bounds(ax0 + i * 40, 28, 38, 14).build());
+                }
+            }
+        }
         refreshTools();
+    }
+
+    // ---- armour, as it's worn ----
+
+    /** Whether the armour's being painted in 3D. */
+    private boolean view3D() {
+        return worn && !flat && armourModel != null && !failed3D;
+    }
+
+    private void save() {
+        if (active == null) {
+            return;
+        }
+        active.w = w;
+        active.h = h;
+        active.colours = colours;
+        active.original = original;
+        active.skies = skies;
+        active.region = region;
+        active.undo = undo;
+        active.redo = redo;
+    }
+
+    private void use(Canvas c) {
+        active = c;
+        w = c.w;
+        h = c.h;
+        colours = c.colours;
+        original = c.original;
+        skies = c.skies;
+        region = c.region;
+        undo = c.undo;
+        redo = c.redo;
+    }
+
+    /** To painting the icon, or as worn. */
+    private void switchTo(boolean toWorn, boolean rebuild) {
+        if (toWorn && wornCanvas == null || toWorn == worn || iconCanvas == null) {
+            return;
+        }
+        save();
+        worn = toWorn;
+        if (toWorn && wornAuto) {
+            autoWorn(); // (the icon's skies as they are now)
+        }
+        use(toWorn ? wornCanvas : iconCanvas);
+        dragging = false;
+        turning = false;
+        picking = false;
+        hoverX = hoverY = -1;
+        refreshUsed();
+        if (rebuild) {
+            rebuildWidgets();
+        }
+    }
+
+    /** The worn armour's texture, model, and how it's painted (if it can be). */
+    private void loadWorn(Minecraft mc) {
+        slot = ArmorPaintRender.slotOf(item);
+        if (slot == null) {
+            return;
+        }
+        try {
+            ArmorPaintRender.Sheet s = ArmorPaintRender.sheet(ArmorPaintRender.texture(mc.player, item, slot));
+            if (s == null || s.w() * s.h() > 64 * 64) {
+                return; // (none to paint; or too big to send)
+            }
+            armourModel = new HumanoidModel<>(mc.getEntityModels().bakeLayer(slot == EquipmentSlot.LEGS ? ModelLayers.PLAYER_INNER_ARMOR : ModelLayers.PLAYER_OUTER_ARMOR));
+            boolean slim = mc.player != null && mc.player.getSkin().model() == net.minecraft.client.resources.PlayerSkin.Model.SLIM;
+            bodyModel = new HumanoidModel<>(mc.getEntityModels().bakeLayer(slim ? ModelLayers.PLAYER_SLIM : ModelLayers.PLAYER));
+            skin = mc.player != null ? mc.player.getSkin().texture() : net.minecraft.client.resources.DefaultPlayerSkin.getDefaultTexture();
+            for (HumanoidModel<?> m : List.of(armourModel, bodyModel)) {
+                m.young = false;
+                m.rightArm.zRot = 0.1F; // (arms and legs a little apart: their insides can be seen, and painted)
+                m.leftArm.zRot = -0.1F;
+                m.rightLeg.zRot = 0.03F;
+                m.leftLeg.zRot = -0.03F;
+            }
+            ArmorPaintRender.showFor(armourModel, slot);
+            List<int[]> all = ArmorPaintRender.rects(armourModel, s.w(), s.h());
+            if (all.isEmpty()) {
+                armourModel = null;
+                return;
+            }
+            // (just the part of the texture this piece uses)
+            int x0 = s.w(), y0 = s.h(), x1 = 0, y1 = 0;
+            for (int[] r : all) {
+                x0 = Math.min(x0, Math.max(0, r[0]));
+                y0 = Math.min(y0, Math.max(0, r[1]));
+                x1 = Math.max(x1, Math.min(s.w(), r[2]));
+                y1 = Math.max(y1, Math.min(s.h(), r[3]));
+            }
+            if (x1 <= x0 || y1 <= y0) {
+                armourModel = null;
+                return;
+            }
+            sheetW = s.w();
+            sheetH = s.h();
+            ox = x0;
+            oy = y0;
+            int tint = ArmorPaintRender.tint(item);
+            sheet = new int[sheetW * sheetH];
+            for (int i = 0; i < sheet.length; i++) {
+                sheet[i] = ArmorPaintRender.multiply(s.argb()[i], tint);
+            }
+            Canvas c = new Canvas();
+            c.w = x1 - x0;
+            c.h = y1 - y0;
+            c.region = new boolean[c.w * c.h];
+            owner = new int[c.w * c.h];
+            java.util.Arrays.fill(owner, -1);
+            List<int[]> local = new ArrayList<>();
+            for (int r = 0; r < all.size(); r++) {
+                int[] q = all.get(r);
+                int[] l = {q[0] - ox, q[1] - oy, q[2] - ox, q[3] - oy};
+                local.add(l);
+                for (int y = Math.max(0, l[1]); y < Math.min(c.h, l[3]); y++) {
+                    for (int x = Math.max(0, l[0]); x < Math.min(c.w, l[2]); x++) {
+                        c.region[y * c.w + x] = true;
+                        if (owner[y * c.w + x] < 0) {
+                            owner[y * c.w + x] = r;
+                        }
+                    }
+                }
+            }
+            rects = local;
+            c.original = new int[c.w * c.h];
+            for (int y = 0; y < c.h; y++) {
+                for (int x = 0; x < c.w; x++) {
+                    c.original[y * c.w + x] = sheet[(y + oy) * sheetW + x + ox];
+                }
+            }
+            c.colours = c.original.clone();
+            c.skies = new int[c.w * c.h];
+            ModComponents.ArmorPaint had = item.get(ModComponents.ARMOR_PAINT.get());
+            if (had != null && had.w() == sheetW && had.h() == sheetH) {
+                for (int y = 0; y < c.h; y++) {
+                    for (int x = 0; x < c.w; x++) {
+                        int i = y * c.w + x;
+                        if (!c.region[i]) {
+                            continue;
+                        }
+                        c.skies[i] = had.sky(x + ox, y + oy);
+                        int col = had.colour(x + ox, y + oy);
+                        if ((col >>> 24) > 16) {
+                            c.colours[i] = col | 0xFF000000;
+                        }
+                    }
+                }
+                wornAuto = false;
+            } else {
+                wornAuto = true;
+            }
+            wornCanvas = c;
+        } catch (RuntimeException e) {
+            com.example.skyblocks.SkyBlocksMod.LOGGER.warn("Shadered+ infusion altar: couldn't set up painting {} as worn", item, e);
+            wornCanvas = null;
+            armourModel = null;
+        }
+    }
+
+    /** The worn armour, from the icon's skies as they are now: its sky all over (most of the icon painted), or round its edges. */
+    private void autoWorn() {
+        Canvas ic = iconCanvas, wc = wornCanvas;
+        if (ic == null || wc == null) {
+            return;
+        }
+        ArmorPaintRender.Auto a = ArmorPaintRender.auto(ic.skies, ic.w, ic.h, (x, y) -> (ic.colours[y * ic.w + x] >>> 24) > 16);
+        for (int y = 0; y < wc.h; y++) {
+            for (int x = 0; x < wc.w; x++) {
+                int i = y * wc.w + x;
+                wc.colours[i] = wc.original[i];
+                int r = owner[i];
+                boolean on = a != null && wc.region[i] && (wc.original[i] >>> 24) > 16
+                        && (a.full() || r >= 0 && r < rects.size() && ArmorPaintRender.border(x, y, rects.get(r)));
+                wc.skies[i] = on ? a.style() : 0;
+            }
+        }
+    }
+
+    /** The worn canvas as the armour's paint: the whole texture's size, the skies, the pixels redrawn (if any). */
+    private ModComponents.ArmorPaint armourPaint() {
+        Canvas c = wornCanvas;
+        int[] styles = new int[sheetW * sheetH];
+        int[] argb = null;
+        for (int y = 0; y < c.h; y++) {
+            for (int x = 0; x < c.w; x++) {
+                int i = y * c.w + x, j = (y + oy) * sheetW + x + ox;
+                if (!c.region[i]) {
+                    continue;
+                }
+                styles[j] = c.skies[i];
+                if ((c.colours[i] >>> 24) > 16 && (c.colours[i] | 0xFF000000) != (c.original[i] | 0xFF000000)) {
+                    if (argb == null) {
+                        argb = new int[sheetW * sheetH];
+                    }
+                    argb[j] = c.colours[i] | 0xFF000000;
+                }
+            }
+        }
+        return ModComponents.ArmorPaint.of(sheetW, sheetH, styles, argb);
+    }
+
+    /** The sky on a pixel of the whole worn texture (0: none). */
+    private int wornSky(int x, int y) {
+        Canvas c = wornCanvas;
+        int lx = x - ox, ly = y - oy;
+        if (c == null || lx < 0 || ly < 0 || lx >= c.w || ly >= c.h || !c.region[ly * c.w + lx]) {
+            return 0;
+        }
+        return c.skies[ly * c.w + lx];
+    }
+
+    /** The worn armour's texture as it's being redrawn, for the 3D armour. */
+    private void uploadEdit() {
+        Minecraft mc = Minecraft.getInstance();
+        if (editTexture == null) {
+            editTexture = new DynamicTexture(sheetW, sheetH, true);
+            mc.getTextureManager().register(EDIT_TEXTURE, editTexture);
+        }
+        NativeImage img = editTexture.getPixels();
+        if (img == null) {
+            return;
+        }
+        Canvas c = wornCanvas;
+        for (int y = 0; y < sheetH; y++) {
+            for (int x = 0; x < sheetW; x++) {
+                int a = sheet[y * sheetW + x], lx = x - ox, ly = y - oy;
+                if (lx >= 0 && ly >= 0 && lx < c.w && ly < c.h) {
+                    a = c.colours[ly * c.w + lx];
+                }
+                img.setPixelRGBA(x, y, (a >>> 24) > 16 ? (a & 0xFF000000) | (a & 0xFF) << 16 | (a & 0xFF00) | (a >> 16) & 0xFF : 0);
+            }
+        }
+        editTexture.upload();
+    }
+
+    @Override
+    public void removed() {
+        super.removed();
+        if (editTexture != null) {
+            Minecraft.getInstance().getTextureManager().release(EDIT_TEXTURE);
+            editTexture = null;
+        }
+    }
+
+    /** The pixel of the worn canvas the mouse is on in 3D (x, y), or null: the nearest face under it. */
+    @Nullable
+    private int[] pick(double mx, double my) {
+        float best = -Float.MAX_VALUE;
+        int[] hit = null;
+        for (float[] f : shown) {
+            float ex = f[3] - f[0], ey = f[4] - f[1], fx = f[6] - f[0], fy = f[7] - f[1];
+            float det = ex * fy - ey * fx;
+            if (Math.abs(det) < 0.01F) {
+                continue; // (edge on)
+            }
+            float dx = (float) mx - f[0], dy = (float) my - f[1];
+            float s = (dx * fy - dy * fx) / det, t = (ex * dy - ey * dx) / det;
+            if (s < 0.0F || s >= 1.0F || t < 0.0F || t >= 1.0F) {
+                continue;
+            }
+            float z = f[2] + s * (f[5] - f[2]) + t * (f[8] - f[2]);
+            if (z > best) {
+                int tx = Math.min((int) f[14] - 1, (int) (f[12] + s * (f[14] - f[12]))), ty = Math.min((int) f[15] - 1, (int) (f[13] + t * (f[15] - f[13])));
+                best = z;
+                hit = new int[] {tx - ox, ty - oy};
+            }
+        }
+        return hit != null && onCanvas(hit[0], hit[1]) ? hit : null;
+    }
+
+    /** Where the 3D view's centred (height on the model, blocks) and how near, for each piece. */
+    private float[] focus() {
+        return switch (slot == null ? EquipmentSlot.CHEST : slot) {
+            case HEAD -> new float[] {-0.25F, 2.3F};
+            case LEGS -> new float[] {0.95F, 1.35F};
+            case FEET -> new float[] {1.28F, 2.1F};
+            default -> new float[] {0.38F, 1.45F};
+        };
+    }
+
+    private void draw3D(GuiGraphics g, int mouseX, int mouseY) {
+        g.fill(ax0, ay0, ax1, ay1, 0x50000000);
+        g.renderOutline(ax0 - 1, ay0 - 1, ax1 - ax0 + 2, ay1 - ay0 + 2, 0xFF8866CC);
+        float[] focus = focus();
+        float scale = Math.min((ay1 - ay0) / 2.2F, (ax1 - ax0) / 1.3F) * focus[1];
+        PoseStack ps = g.pose();
+        g.enableScissor(ax0, ay0, ax1, ay1);
+        ps.pushPose();
+        try {
+            uploadEdit();
+            ps.translate((ax0 + ax1) / 2.0F, (ay0 + ay1) / 2.0F, 150.0F);
+            ps.mulPose(Axis.XP.rotationDegrees(-pitch));
+            ps.mulPose(Axis.YP.rotationDegrees(yaw));
+            ps.scale(scale, scale, -scale);
+            ps.translate(0.0F, -focus[0], 0.0F);
+            Lighting.setupForEntityInInventory();
+            MultiBufferSource.BufferSource buffers = g.bufferSource();
+            if (bodyModel != null && skin != null) {
+                bodyModel.renderToBuffer(ps, buffers.getBuffer(RenderType.entityTranslucent(skin)), 0xF000F0, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
+            }
+            ArmorPaintRender.showFor(armourModel, slot);
+            armourModel.renderToBuffer(ps, buffers.getBuffer(RenderType.armorCutoutNoCull(EDIT_TEXTURE)), 0xF000F0, OverlayTexture.NO_OVERLAY, -1);
+            buffers.endBatch();
+            ArmorPaintRender.drawSkies(ps, armourModel, sheetW, sheetH, (x, y, rect) -> wornSky(x, y), buffers);
+            shown = ArmorPaintRender.faces(ps, armourModel, sheetW, sheetH);
+        } catch (RuntimeException e) {
+            failed3D = true; // (flat from now on)
+            shown = List.of();
+            com.example.skyblocks.SkyBlocksMod.LOGGER.warn("Shadered+ infusion altar: couldn't draw the armour in 3D", e);
+        } finally {
+            ps.popPose();
+            Lighting.setupFor3DItems();
+        }
+        // the pixel the mouse is on
+        int[] at = pick(mouseX, mouseY);
+        if (at != null && mouseX >= ax0 && mouseX < ax1 && mouseY >= ay0 && mouseY < ay1) {
+            hoverX = at[0];
+            hoverY = at[1];
+            float[] f = face(at[0] + ox, at[1] + oy, mouseX, mouseY);
+            if (f != null) {
+                float rw = f[14] - f[12], rh = f[15] - f[13];
+                float s0 = (at[0] + ox - f[12]) / rw, s1 = s0 + 1.0F / rw, t0 = (at[1] + oy - f[13]) / rh, t1 = t0 + 1.0F / rh;
+                var m = g.pose().last().pose();
+                var vc = g.bufferSource().getBuffer(RenderType.gui());
+                int c = tool == Tool.ERASER ? 0x90FF6060 : 0x90FFFFFF;
+                float[][] q = {{s0, t0}, {s0, t1}, {s1, t1}, {s1, t0}};
+                for (float[] st : q) {
+                    vc.addVertex(m, f[0] + st[0] * (f[3] - f[0]) + st[1] * (f[6] - f[0]), f[1] + st[0] * (f[4] - f[1]) + st[1] * (f[7] - f[1]), 290.0F).setColor(c);
+                }
+                g.flush();
+            }
+        } else {
+            hoverX = hoverY = -1;
+        }
+        g.disableScissor();
+        g.pose().pushPose();
+        g.pose().translate(0, 0, 300);
+        if (wornAuto) {
+            g.drawString(font, Component.translatable("screen.skyblocks.shader_paint.auto.on"), ax0 + 4, ay1 - 12, 0xFFFFE080);
+        }
+        g.drawString(font, Component.translatable("screen.skyblocks.shader_paint.turn"), ax1 - 4 - font.width(Component.translatable("screen.skyblocks.shader_paint.turn")),
+                ay0 + 4, 0xA0C0B0E0);
+        g.pose().popPose();
+    }
+
+    /** The nearest face under the mouse showing that pixel (of the whole worn texture). */
+    @Nullable
+    private float[] face(int tx, int ty, double mx, double my) {
+        float best = -Float.MAX_VALUE;
+        float[] found = null;
+        for (float[] f : shown) {
+            if (tx < f[12] || tx >= f[14] || ty < f[13] || ty >= f[15]) {
+                continue;
+            }
+            float ex = f[3] - f[0], ey = f[4] - f[1], fx = f[6] - f[0], fy = f[7] - f[1];
+            float det = ex * fy - ey * fx;
+            if (Math.abs(det) < 0.01F) {
+                continue;
+            }
+            float dx = (float) mx - f[0], dy = (float) my - f[1];
+            float s = (dx * fy - dy * fx) / det, t = (ex * dy - ey * dx) / det;
+            if (s < -0.01F || s > 1.01F || t < -0.01F || t > 1.01F) {
+                continue;
+            }
+            float z = f[2] + s * (f[5] - f[2]) + t * (f[8] - f[2]);
+            if (z > best) {
+                best = z;
+                found = f;
+            }
+        }
+        return found;
+    }
+
+    /** A quick style: the sky picked, over the pixels in a pattern (worn: of each face), the rest cleared. */
+    private void pattern(int kind) {
+        if (skies == null) {
+            return;
+        }
+        remember();
+        int st = style();
+        skyBrush = true;
+        int bx0 = w, by0 = h, bx1 = 0, by1 = 0;
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                if (opaque(x, y)) {
+                    bx0 = Math.min(bx0, x);
+                    by0 = Math.min(by0, y);
+                    bx1 = Math.max(bx1, x + 1);
+                    by1 = Math.max(by1, y + 1);
+                }
+            }
+        }
+        int[] box = {bx0, by0, bx1, by1};
+        int sx = worn ? ox : 0, sy = worn ? oy : 0;
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                int i = y * w + x;
+                if (region != null && !region[i]) {
+                    continue;
+                }
+                if (!opaque(x, y)) {
+                    skies[i] = 0;
+                    continue;
+                }
+                int[] r = worn && owner != null && owner[i] >= 0 && owner[i] < rects.size() ? rects.get(owner[i]) : box;
+                boolean edge = worn ? ArmorPaintRender.border(x, y, r) : !opaque(x - 1, y) || !opaque(x + 1, y) || !opaque(x, y - 1) || !opaque(x, y + 1);
+                int ly = y - r[1], rh = Math.max(1, r[3] - r[1]);
+                boolean on = switch (kind) {
+                    case 0 -> true;
+                    case 1 -> edge;
+                    case 2 -> ((x + sx + y + sy) >> 1 & 1) == 0;
+                    case 3 -> (((x + sx) >> 1) + ((y + sy) >> 1) & 1) == 0;
+                    case 4 -> ly * 2 < rh;
+                    default -> ly * 2 >= rh;
+                };
+                skies[i] = on ? st : 0;
+            }
+        }
     }
 
     private Component lookName() {
@@ -260,11 +802,19 @@ public class ShaderPaintScreen extends Screen {
             return;
         }
         int i = y * w + x;
+        if (region != null && !region[i]) {
+            return; // (a pixel the worn piece doesn't show)
+        }
         if (skyBrush) {
             if (rubOut) {
                 skies[i] = 0;
             } else if (opaque(x, y)) {
                 skies[i] = style();
+            }
+        } else if (rubOut && worn) {
+            colours[i] = original[i]; // (worn armour's own pixels can't be taken away: back to them)
+            if ((original[i] >>> 24) <= 16) {
+                skies[i] = 0;
             }
         } else if (rubOut) {
             colours[i] = 0;
@@ -354,6 +904,9 @@ public class ShaderPaintScreen extends Screen {
         remember();
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
+                if (region != null && !region[y * w + x]) {
+                    continue;
+                }
                 if (s == 0 || opaque(x, y)) {
                     skies[y * w + x] = s;
                 }
@@ -362,6 +915,9 @@ public class ShaderPaintScreen extends Screen {
     }
 
     private void remember() {
+        if (worn) {
+            wornAuto = false; // (painted as worn now: its own)
+        }
         undo.push(new Object[] {colours.clone(), skies.clone()});
         if (undo.size() > 64) {
             undo.removeLast();
@@ -371,6 +927,9 @@ public class ShaderPaintScreen extends Screen {
 
     private void undo() {
         if (!undo.isEmpty()) {
+            if (worn) {
+                wornAuto = false;
+            }
             redo.push(new Object[] {colours.clone(), skies.clone()});
             Object[] s = undo.pop();
             colours = (int[]) s[0];
@@ -381,6 +940,9 @@ public class ShaderPaintScreen extends Screen {
 
     private void redo() {
         if (!redo.isEmpty()) {
+            if (worn) {
+                wornAuto = false;
+            }
             undo.push(new Object[] {colours.clone(), skies.clone()});
             Object[] s = redo.pop();
             colours = (int[]) s[0];
@@ -417,6 +979,12 @@ public class ShaderPaintScreen extends Screen {
             if (picking && pickAt(mx, my, true)) {
                 return true;
             }
+            for (var child : children()) {
+                if (child != hex && child.isMouseOver(mx, my)) {
+                    picking = false;
+                    return super.mouseClicked(mx, my, button); // (a button: its own)
+                }
+            }
             if (picking && !inPicker(mx, my) && !(mx >= colX && mx < colX + colCols * 14 && my >= 28 && my < 28 + 18)) {
                 picking = false; // (a click elsewhere puts it away)
             }
@@ -440,51 +1008,86 @@ public class ShaderPaintScreen extends Screen {
                 }
                 return true;
             }
+            if (view3D()) {
+                if (mx >= ax0 && mx < ax1 && my >= ay0 && my < ay1) {
+                    int[] at = button == 0 || button == 1 ? pick(mx, my) : null;
+                    if (at != null) {
+                        press(at[0], at[1], button);
+                    } else {
+                        turning = true; // (off the armour: turning it)
+                    }
+                    return true;
+                }
+                return super.mouseClicked(mx, my, button);
+            }
             int x = pixelX(mx), y = pixelY(my);
             if (onCanvas(x, y) && (button == 0 || button == 1)) {
-                erasing = button == 1 || tool == Tool.ERASER;
-                switch (tool) {
-                    case PICKER -> {
-                        int i = y * w + x;
-                        if (skyBrush && skies[i] != 0) {
-                            sky = ShaderPaintStyles.sky(skies[i]);
-                            pass = ShaderPaintStyles.pass(skies[i]);
-                            lookButton.setMessage(lookName());
-                        } else if (!skyBrush && opaque(x, y)) {
-                            colour = colours[i] | 0xFF000000;
-                            showHex();
-                            syncHsv();
-                            remember(colour);
-                            skyBrush = false;
-                        }
-                        tool = Tool.PENCIL;
-                        refreshTools();
-                    }
-                    case FILL -> {
-                        remember();
-                        fill(x, y, erasing, hasShiftDown());
-                        refreshUsed();
-                    }
-                    default -> {
-                        remember();
-                        startX = x;
-                        startY = y;
-                        dragging = true;
-                        if (tool == Tool.PENCIL || tool == Tool.ERASER) {
-                            dab(x, y, erasing);
-                        }
-                    }
-                }
+                press(x, y, button);
                 return true;
             }
         }
         return super.mouseClicked(mx, my, button);
     }
 
+    /** A click on a pixel of the canvas (flat, or on the 3D armour). */
+    private void press(int x, int y, int button) {
+        erasing = button == 1 || tool == Tool.ERASER;
+        switch (tool) {
+            case PICKER -> {
+                int i = y * w + x;
+                if (skyBrush && skies[i] != 0) {
+                    sky = ShaderPaintStyles.sky(skies[i]);
+                    pass = ShaderPaintStyles.pass(skies[i]);
+                    lookButton.setMessage(lookName());
+                } else if (!skyBrush && opaque(x, y)) {
+                    colour = colours[i] | 0xFF000000;
+                    showHex();
+                    syncHsv();
+                    remember(colour);
+                    skyBrush = false;
+                }
+                tool = Tool.PENCIL;
+                refreshTools();
+            }
+            case FILL -> {
+                remember();
+                fill(x, y, erasing, hasShiftDown());
+                refreshUsed();
+            }
+            default -> {
+                remember();
+                startX = x;
+                startY = y;
+                dragging = true;
+                if (tool == Tool.PENCIL || tool == Tool.ERASER || view3D()) {
+                    dab(x, y, erasing); // (in 3D, rectangles and lines paint as the pencil does)
+                }
+            }
+        }
+    }
+
     @Override
     public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
         if (pickDrag != 0) {
             pickAt(mx, my, false);
+            return true;
+        }
+        if (turning) {
+            yaw += (float) dx * 1.4F;
+            pitch = Mth.clamp(pitch + (float) dy * 1.2F, -70.0F, 70.0F);
+            return true;
+        }
+        if (dragging && view3D()) {
+            int[] at = pick(mx, my);
+            if (at != null) {
+                if (Math.abs(at[0] - startX) <= 3 && Math.abs(at[1] - startY) <= 3) {
+                    line(startX, startY, at[0], at[1], erasing);
+                } else {
+                    dab(at[0], at[1], erasing);
+                }
+                startX = at[0];
+                startY = at[1];
+            }
             return true;
         }
         if (dragging) {
@@ -506,6 +1109,18 @@ public class ShaderPaintScreen extends Screen {
         if (pickDrag != 0) {
             pickDrag = 0;
             remember(colour);
+            return true;
+        }
+        if (turning) {
+            turning = false;
+            return true;
+        }
+        if (dragging && view3D()) {
+            dragging = false;
+            refreshUsed();
+            if (!skyBrush && !erasing) {
+                remember(colour);
+            }
             return true;
         }
         if (dragging) {
@@ -731,6 +1346,10 @@ public class ShaderPaintScreen extends Screen {
 
     /** Does the texture differ from the item's own? */
     private boolean redrawn() {
+        return redrawn(colours, original);
+    }
+
+    private static boolean redrawn(int[] colours, int[] original) {
         for (int i = 0; i < colours.length; i++) {
             if (!same(colours[i], original[i]) || ((colours[i] >>> 24) > 16 && (colours[i] | 0xFF000000) != (original[i] | 0xFF000000))) {
                 return true;
@@ -740,9 +1359,13 @@ public class ShaderPaintScreen extends Screen {
     }
 
     private void apply() {
-        if (problem == null && skies != null) {
-            Optional<ModComponents.ItemTexture> tex = redrawn() ? Optional.of(ModComponents.ItemTexture.of(w, h, colours)) : Optional.empty();
-            PacketDistributor.sendToServer(new ShaderPaintPayload(pos, ModComponents.ShaderPaint.of(w, h, skies), tex));
+        if (problem == null && skies != null && iconCanvas != null) {
+            save();
+            Canvas ic = iconCanvas;
+            Optional<ModComponents.ItemTexture> tex = redrawn(ic.colours, ic.original) ? Optional.of(ModComponents.ItemTexture.of(ic.w, ic.h, ic.colours)) : Optional.empty();
+            // (worn: as painted; left to its icon's skies, none of its own)
+            Optional<ModComponents.ArmorPaint> armor = wornCanvas == null || wornAuto ? Optional.empty() : Optional.of(armourPaint());
+            PacketDistributor.sendToServer(new ShaderPaintPayload(pos, ModComponents.ShaderPaint.of(ic.w, ic.h, ic.skies), tex, armor));
         }
         onClose();
     }
@@ -762,6 +1385,7 @@ public class ShaderPaintScreen extends Screen {
             g.drawCenteredString(font, problem, width / 2, height / 2, 0xFFFF8080);
             return;
         }
+        save();
         hoverX = pixelX(mouseX);
         hoverY = pixelY(mouseY);
         int left = 8, toolW = 76;
@@ -798,10 +1422,24 @@ public class ShaderPaintScreen extends Screen {
                 g.renderOutline(x - 1, y - 1, 14, 14, 0xFFFFFFFF);
             }
         }
+        if (view3D()) {
+            draw3D(g, mouseX, mouseY);
+        } else {
+            drawCanvas(g);
+        }
+        // the skies to paint with
+        drawRight(g, mouseX, mouseY, partialTick);
+    }
+
+    private void drawCanvas(GuiGraphics g) {
         // the canvas: a checkerboard under the texture, the texture as it's being redrawn, the skies painted over it, the grid
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
                 int x0 = cx + x * cell, y0 = cy + y * cell;
+                if (region != null && !region[y * w + x]) {
+                    g.fill(x0, y0, x0 + cell, y0 + cell, 0xFF120E18); // (not on the worn piece)
+                    continue;
+                }
                 g.fill(x0, y0, x0 + cell, y0 + cell, ((x + y) & 1) == 0 ? 0xFF3A3A44 : 0xFF2C2C34);
                 int c = colours[y * w + x];
                 if ((c >>> 24) > 16) {
@@ -816,6 +1454,18 @@ public class ShaderPaintScreen extends Screen {
             }
             for (int y = 0; y <= h; y++) {
                 g.fill(cx, cy + y * cell, cx + w * cell, cy + y * cell + 1, 0x30FFFFFF);
+            }
+        }
+        if (worn) {
+            // (each face of the worn piece)
+            g.pose().pushPose();
+            g.pose().translate(0, 0, 45);
+            for (int[] r : rects) {
+                g.renderOutline(cx + r[0] * cell, cy + r[1] * cell, (r[2] - r[0]) * cell, (r[3] - r[1]) * cell, 0x70FFD080);
+            }
+            g.pose().popPose();
+            if (wornAuto) {
+                g.drawString(font, Component.translatable("screen.skyblocks.shader_paint.auto.on"), cx, cy + h * cell + 4, 0xFFFFE080);
             }
         }
         g.renderOutline(cx - 1, cy - 1, w * cell + 2, h * cell + 2, 0xFF8866CC);
@@ -838,7 +1488,9 @@ public class ShaderPaintScreen extends Screen {
             }
             g.pose().popPose();
         }
-        // the skies to paint with
+    }
+
+    private void drawRight(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         g.drawString(font, Component.translatable("screen.skyblocks.shader_paint.skies"), px0, py0 - 11, 0xFFD0C0F0);
         drawSwatches(g);
         g.pose().pushPose();
@@ -927,17 +1579,21 @@ public class ShaderPaintScreen extends Screen {
     private void drawPreview(GuiGraphics g, int x, int y, float partialTick) {
         Minecraft mc = Minecraft.getInstance();
         ItemStack preview = item.copy();
+        Canvas ic = iconCanvas;
+        if (ic == null) {
+            return;
+        }
         boolean any = false;
-        for (int b : skies) {
+        for (int b : ic.skies) {
             any |= b != 0;
         }
         if (any) {
-            preview.set(ModComponents.SHADER_PAINT.get(), ModComponents.ShaderPaint.of(w, h, skies));
+            preview.set(ModComponents.SHADER_PAINT.get(), ModComponents.ShaderPaint.of(ic.w, ic.h, ic.skies));
         } else {
             preview.remove(ModComponents.SHADER_PAINT.get());
         }
-        if (redrawn()) {
-            preview.set(ModComponents.ITEM_TEXTURE.get(), ModComponents.ItemTexture.of(w, h, colours));
+        if (redrawn(ic.colours, ic.original)) {
+            preview.set(ModComponents.ITEM_TEXTURE.get(), ModComponents.ItemTexture.of(ic.w, ic.h, ic.colours));
         } else {
             preview.remove(ModComponents.ITEM_TEXTURE.get());
         }
