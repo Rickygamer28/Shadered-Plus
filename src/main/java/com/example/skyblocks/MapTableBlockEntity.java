@@ -75,12 +75,18 @@ public class MapTableBlockEntity extends BlockEntity {
             heights.sample(there, id.id(), data, 0, 127, 0, 127);
         }
         MapHeights.Map128 m = heights.of(id.id());
-        int hash = Arrays.hashCode(data.colors) * 31 + Arrays.hashCode(m.top) * 17 + Arrays.hashCode(m.depth) + data.scale * 7 + data.centerX * 13 + data.centerZ;
+        int hash = Arrays.hashCode(data.colors) * 31 + Arrays.hashCode(m.top) * 17 + Arrays.hashCode(m.depth) * 5 + Arrays.hashCode(m.colour) * 3
+                + data.scale * 7 + data.centerX * 13 + data.centerZ;
         if (hash == shownHash && colors != null) {
             return false;
         }
         shownHash = hash;
         colors = data.colors.clone();
+        for (int i = 0; i < colors.length; i++) {
+            if (m.colour[i] != 0) {
+                colors[i] = m.colour[i]; // (the land as it is now, where it's been seen: the map's own colours may be old)
+            }
+        }
         top = MapHeights.topBytes(m.top);
         depth = m.depth.clone();
         scale = data.scale;

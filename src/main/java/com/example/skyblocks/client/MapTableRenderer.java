@@ -147,7 +147,7 @@ public class MapTableRenderer implements BlockEntityRenderer<MapTableBlockEntity
         Mesh mesh = new Mesh();
         mesh.version = be.version;
         mesh.side = side;
-        int res = side >= 3 ? 128 : side == 2 ? 64 : 32, k = 128 / res;
+        int res = side >= 2 ? 128 : 64, k = 128 / res;
         int n = res * res;
         int[] colour = new int[n];
         boolean[] seen = new boolean[n], water = new boolean[n];
@@ -171,12 +171,7 @@ public class MapTableRenderer implements BlockEntityRenderer<MapTableBlockEntity
                         if (id == MapColor.WATER.id) {
                             wet++;
                         }
-                        int t = (short) ((be.top[i * 2] & 255) << 8 | be.top[i * 2 + 1] & 255);
-                        if (t != MapHeights.UNKNOWN) {
-                            heights++;
-                            sum += t;
-                            dsum += be.depth[i] & 255;
-                        }
+
                     }
                 }
                 int c = cz * res + cx;
@@ -192,8 +187,23 @@ public class MapTableRenderer implements BlockEntityRenderer<MapTableBlockEntity
                 }
                 colour[c] = best;
                 water[c] = wet * 2 >= filled;
-                top[c] = heights > 0 ? sum / heights : Float.NaN;
-                depth[c] = heights > 0 ? dsum / heights : 0;
+                // (its height: the pixels of its own colour - a wall's top, not the wall averaged with the grass beside it)
+                for (int pz = cz * k; pz < cz * k + k; pz++) {
+                    for (int px = cx * k; px < cx * k + k; px++) {
+                        int i = pz * 128 + px;
+                        if (((be.colors[i] & 255) >> 2) != best) {
+                            continue;
+                        }
+                        int t = (short) ((be.top[i * 2] & 255) << 8 | be.top[i * 2 + 1] & 255);
+                        if (t != MapHeights.UNKNOWN) {
+                            heights++;
+                            sum += t;
+                            dsum += be.depth[i] & 255;
+                        }
+                    }
+                }
+                top[c] = heights > 0 ? Math.round(sum / heights) : Float.NaN; // (whole blocks: flat land stays flat)
+                depth[c] = heights > 0 ? Math.round(dsum / heights) : 0;
                 if (heights > 0) {
                     float floor = water[c] ? top[c] - Math.max(1, depth[c]) : top[c];
                     lo = Math.min(lo, floor);

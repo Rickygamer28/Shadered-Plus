@@ -34,6 +34,8 @@ public class MapHeights extends SavedData {
     public static final class Map128 {
         public final short[] top = new short[128 * 128];
         public final byte[] depth = new byte[128 * 128];
+        /** The colour there now, as a map would draw it (0: not seen) - a map's own colours are only as new as when it was last held. */
+        public final byte[] colour = new byte[128 * 128];
 
         Map128() {
             java.util.Arrays.fill(top, UNKNOWN);
@@ -63,6 +65,10 @@ public class MapHeights extends SavedData {
                 if (depth.length == 128 * 128) {
                     System.arraycopy(depth, 0, m.depth, 0, depth.length);
                 }
+                byte[] colour = c.getByteArray("colour");
+                if (colour.length == 128 * 128) {
+                    System.arraycopy(colour, 0, m.colour, 0, colour.length);
+                }
                 h.maps.put(Integer.parseInt(k), m);
             } catch (NumberFormatException ignored) {
                 // (not one of ours)
@@ -78,6 +84,7 @@ public class MapHeights extends SavedData {
             CompoundTag c = new CompoundTag();
             c.putByteArray("top", topBytes(m.top));
             c.putByteArray("depth", m.depth);
+            c.putByteArray("colour", m.colour);
             all.put(Integer.toString(id), c);
         });
         tag.put("maps", all);
@@ -114,16 +121,31 @@ public class MapHeights extends SavedData {
                 if (chunk == null) {
                     continue;
                 }
+                // (as a map sees it: down through anything it doesn't draw - glass, air - to the first thing it does)
                 int top = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, bx & 15, bz & 15);
                 BlockState st = chunk.getBlockState(at.set(bx, top, bz));
+                net.minecraft.world.level.material.MapColor mc = st.getMapColor(level, at);
+                for (int down = 0; mc == net.minecraft.world.level.material.MapColor.NONE && down < 64 && top > level.getMinBuildHeight(); down++) {
+                    top--;
+                    st = chunk.getBlockState(at.set(bx, top, bz));
+                    mc = st.getMapColor(level, at);
+                }
                 int depth = 0;
                 if (st.getFluidState().is(FluidTags.WATER)) {
-                    depth = Math.max(0, Math.min(255, top - chunk.getHeight(Heightmap.Types.OCEAN_FLOOR, bx & 15, bz & 15)));
+                    int floor = top;
+                    while (floor > level.getMinBuildHeight() && top - floor < 255 && chunk.getBlockState(at.set(bx, floor - 1, bz)).getFluidState().is(FluidTags.WATER)) {
+                        floor--;
+                    }
+                    depth = top - floor + 1;
+                    mc = net.minecraft.world.level.material.MapColor.WATER;
                 }
+                byte colour = mc == net.minecraft.world.level.material.MapColor.NONE ? 0
+                        : mc.getPackedId(net.minecraft.world.level.material.MapColor.Brightness.NORMAL);
                 int i = pz * 128 + px;
-                if (m.top[i] != top || (m.depth[i] & 255) != depth) {
+                if (m.top[i] != top || (m.depth[i] & 255) != depth || m.colour[i] != colour) {
                     m.top[i] = (short) top;
                     m.depth[i] = (byte) depth;
+                    m.colour[i] = colour;
                     changed = true;
                 }
             }
