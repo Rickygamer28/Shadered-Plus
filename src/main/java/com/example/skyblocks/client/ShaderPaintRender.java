@@ -180,14 +180,20 @@ public final class ShaderPaintRender {
         }
         drawing = true;
         try {
-            draw(DrawNow.now(buffers), pose.last().pose(), paint, gui ? 0.04F : 0.0012F);
+            // (what's solid, for the edges: its redrawn texture, or its own)
+            ModComponents.ItemTexture tex = stack.get(ModComponents.ITEM_TEXTURE.get());
+            TextureAtlasSprite sprite = tex == null ? sprite(model) : null;
+            java.util.function.BiPredicate<Integer, Integer> solid = tex != null ? (x, y) -> (tex.at(x, y) >>> 24) > 16
+                    : sprite != null ? (x, y) -> opaque(sprite, x, y) : (x, y) -> paint.at(x, y) != 0;
+            draw(DrawNow.now(buffers), pose.last().pose(), paint, gui ? 0.04F : 0.0012F, solid);
         } finally {
             drawing = false;
         }
     }
 
     /** The painted pixels over a flat item (its front at z 8.5 / 16, its back at 7.5 / 16), lifted off them by `lift`. */
-    static void draw(MultiBufferSource.BufferSource source, Matrix4f m, ModComponents.ShaderPaint paint, float lift) {
+    static void draw(MultiBufferSource.BufferSource source, Matrix4f m, ModComponents.ShaderPaint paint, float lift,
+                     java.util.function.BiPredicate<Integer, Integer> solid) {
         float pw = 1.0F / paint.w(), ph = 1.0F / paint.h();
         float front = 8.5F / 16.0F + lift, back = 7.5F / 16.0F - lift;
         boolean[] has = new boolean[256];
@@ -228,8 +234,44 @@ public final class ShaderPaintRender {
                     x = end;
                 }
             }
+            // the edges: each painted pixel's sides where the item ends (nothing solid next to it)
+            float zb = back, zf = front;
+            for (int y = 0; y < paint.h(); y++) {
+                for (int x = 0; x < paint.w(); x++) {
+                    if (paint.at(x, y) != style) {
+                        continue;
+                    }
+                    float x0 = x * pw - lift, x1 = (x + 1) * pw + lift, y0 = 1.0F - (y + 1) * ph - lift, y1 = 1.0F - y * ph + lift;
+                    float u0 = x / (float) paint.w(), u1 = (x + 1) / (float) paint.w(), v0 = y / (float) paint.h(), v1 = (y + 1) / (float) paint.h();
+                    if (!solid.test(x - 1, y)) {
+                        side(vc, m, x0, y0, zb, x0, y0, zf, x0, y1, zf, x0, y1, zb, u0, v0, u1, v1, style, paint.w());
+                    }
+                    if (!solid.test(x + 1, y)) {
+                        side(vc, m, x1, y0, zb, x1, y0, zf, x1, y1, zf, x1, y1, zb, u0, v0, u1, v1, style, paint.w());
+                    }
+                    if (!solid.test(x, y + 1)) {
+                        side(vc, m, x0, y0, zb, x1, y0, zb, x1, y0, zf, x0, y0, zf, u0, v0, u1, v1, style, paint.w());
+                    }
+                    if (!solid.test(x, y - 1)) {
+                        side(vc, m, x0, y1, zb, x1, y1, zb, x1, y1, zf, x0, y1, zf, u0, v0, u1, v1, style, paint.w());
+                    }
+                }
+            }
             source.endBatch(type);
         }
+    }
+
+    /** An edge face, both ways round (whichever side of it you see). */
+    private static void side(VertexConsumer vc, Matrix4f m, float ax, float ay, float az, float bx, float by, float bz, float cx, float cy, float cz,
+                             float dx, float dy, float dz, float u0, float v0, float u1, float v1, int style, int w) {
+        vertex(vc, m, ax, ay, az, u0, v0, style, w);
+        vertex(vc, m, bx, by, bz, u1, v0, style, w);
+        vertex(vc, m, cx, cy, cz, u1, v1, style, w);
+        vertex(vc, m, dx, dy, dz, u0, v1, style, w);
+        vertex(vc, m, dx, dy, dz, u0, v1, style, w);
+        vertex(vc, m, cx, cy, cz, u1, v1, style, w);
+        vertex(vc, m, bx, by, bz, u1, v0, style, w);
+        vertex(vc, m, ax, ay, az, u0, v0, style, w);
     }
 
     private static void vertex(VertexConsumer vc, Matrix4f m, float x, float y, float z, float u, float v, int style, int w) {
