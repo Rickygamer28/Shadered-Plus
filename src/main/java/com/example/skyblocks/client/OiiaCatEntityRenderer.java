@@ -79,6 +79,7 @@ public class OiiaCatEntityRenderer extends EntityRenderer<OiiaCatEntity> {
                 // (in a box: turning its head about, now and then)
                 pose.mulPose(Axis.YP.rotationDegrees(Mth.sin(age * 0.021F) * 14.0F + Mth.sin(age * 0.057F) * 6.0F));
             }
+            OiiaCatCollar.draw(cat, pose, buffers, light, true);
         } else if (parts(cat, pose, scale, age, partialTick, buffers, light)) {
             OiiaCatCollar.draw(cat, pose, buffers, light, false);
             return; // (drawn in pieces)
