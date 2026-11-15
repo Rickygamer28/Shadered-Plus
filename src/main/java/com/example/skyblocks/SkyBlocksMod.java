@@ -120,6 +120,9 @@ public class SkyBlocksMod {
                 (be, side) -> be.handler);
         event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK, ModBlockEntities.TANK_FRAME.get(),
                 (be, side) -> be.handler());
+        // (the spin pad's energy: cables and machines take it out)
+        event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK, ModBlockEntities.SPIN_PAD.get(),
+                (be, side) -> be.energy);
     }
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
@@ -146,6 +149,8 @@ public class SkyBlocksMod {
                 .playToServer(SolarSystemClickPayload.TYPE, SolarSystemClickPayload.STREAM_CODEC, SolarSystemClickPayload::handle)
                 .playToServer(PortalCrossPayload.TYPE, PortalCrossPayload.STREAM_CODEC, PortalCrossPayload::handle)
                 .playToServer(WhirlpoolPayload.TYPE, WhirlpoolPayload.STREAM_CODEC, WhirlpoolPayload::handle)
+                .playToServer(EraseTrailPayload.TYPE, EraseTrailPayload.STREAM_CODEC, EraseTrailPayload::handle)
+                .playToClient(MoonJar.Payload.TYPE, MoonJar.Payload.STREAM_CODEC, MoonJar.Payload::handle)
                 .playToServer(SingularityPayloads.Action.TYPE, SingularityPayloads.Action.STREAM_CODEC, SingularityPayloads.Action::handle)
                 .playToClient(SingularityPayloads.Contents.TYPE, SingularityPayloads.Contents.STREAM_CODEC, SingularityPayloads.Contents::handle)
                 .playToClient(TeleportPadPayloads.Menu.TYPE, TeleportPadPayloads.Menu.STREAM_CODEC, TeleportPadPayloads.Menu::handle)

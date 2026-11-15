@@ -15,10 +15,12 @@ uniform mat4 ProjMat;
 out vec2 uv;
 flat out int look;
 flat out float texels;
+out float opacity;
 
 void main() {
     gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
     uv = UV0;
     look = int(Color.r * 255.0 + 0.5);
     texels = max(Color.g * 255.0, 1.0);
+    opacity = Color.a; // (how much of the sky shows: see-through paint lets what's under it through)
 }

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "moon=false": {
+      "model": "skyblocks:block/moon_jar"
+    },
+    "moon=true": {
+      "model": "skyblocks:block/moon_jar"
+    }
+  }
+}

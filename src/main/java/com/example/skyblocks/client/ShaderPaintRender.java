@@ -100,6 +100,7 @@ public final class ShaderPaintRender {
                     com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 2048, false, false, CompositeState.builder()
                             .setShaderState(new ShaderStateShard(() -> shader))
                             .setTextureState(new TextureStateShard(picture, false, false))
+                            .setTransparencyState(TRANSLUCENT_TRANSPARENCY) // (see-through paint: over what's under it)
                             .setCullState(NO_CULL)
                             .setLayeringState(VIEW_OFFSET_Z_LAYERING)
                             .createCompositeState(false));
@@ -266,6 +267,10 @@ public final class ShaderPaintRender {
 
     /** Called after an item's model is drawn (pose: the model's own 0 .. 1 cube); gui: in a screen (flat, far from the eye). */
     public static void afterModel(ItemStack stack, BakedModel model, PoseStack pose, @Nullable MultiBufferSource buffers, boolean gui) {
+        afterModel(stack, model, pose, buffers, gui, net.minecraft.client.renderer.LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+    }
+
+    public static void afterModel(ItemStack stack, BakedModel model, PoseStack pose, @Nullable MultiBufferSource buffers, boolean gui, int light, int overlay) {
         if (drawing || buffers == null || stack.isEmpty()) {
             return;
         }
@@ -280,9 +285,46 @@ public final class ShaderPaintRender {
             TextureAtlasSprite sprite = tex == null ? sprite(model) : null;
             java.util.function.BiPredicate<Integer, Integer> solid = tex != null ? (x, y) -> (tex.at(x, y) >>> 24) > 16
                     : sprite != null ? (x, y) -> opaque(sprite, x, y) : (x, y) -> paint.at(x, y) != 0;
-            draw(DrawNow.now(buffers), pose.last().pose(), paint, gui ? 0.04F : 0.0012F, solid);
+            MultiBufferSource.BufferSource now = DrawNow.now(buffers);
+            float lift = gui ? 0.04F : 0.0012F;
+            if (tex != null || sprite != null) {
+                // (see-through paint: the item's own pixels under it drawn first, just in front of the item - whenever the
+                // item itself is drawn, the sky's blended over them)
+                bases(now, pose.last(), paint, lift * 0.5F, (x, y) -> tex != null ? tex.at(x, y) : argb(sprite, x, y), solid, light, overlay);
+            }
+            draw(now, pose.last().pose(), paint, lift, solid);
         } finally {
             drawing = false;
+        }
+    }
+
+    /** Under see-through painted pixels: the item's own pixel there (colour: ARGB), as a little block lifted by `lift`; drawn now. */
+    static void bases(MultiBufferSource.BufferSource source, PoseStack.Pose p, ModComponents.ShaderPaint paint, float lift,
+                      java.util.function.BiFunction<Integer, Integer, Integer> colour, java.util.function.BiPredicate<Integer, Integer> solid, int light, int overlay) {
+        RenderType type = null;
+        VertexConsumer vc = null;
+        float pw = 1.0F / paint.w(), ph = 1.0F / paint.h(), z0 = 7.5F / 16.0F - lift, z1 = 8.5F / 16.0F + lift;
+        for (int y = 0; y < paint.h(); y++) {
+            for (int x = 0; x < paint.w(); x++) {
+                int st = paint.at(x, y);
+                if (st == 0 || ShaderPaintStyles.clear(st) == 0) {
+                    continue;
+                }
+                int c = colour.apply(x, y);
+                if ((c >>> 24) <= 16) {
+                    continue;
+                }
+                if (vc == null) {
+                    type = RenderType.entityCutoutNoCull(WHITE);
+                    vc = source.getBuffer(type);
+                }
+                float x0 = x * pw, x1 = (x + 1) * pw, y0 = 1.0F - (y + 1) * ph, y1 = 1.0F - y * ph;
+                box(vc, p, x0, y0, z0, x1, y1, z1, c | 0xFF000000, light, overlay, !solid.test(x - 1, y), !solid.test(x + 1, y),
+                        !solid.test(x, y + 1), !solid.test(x, y - 1));
+            }
+        }
+        if (type != null) {
+            source.endBatch(type);
         }
     }
 
@@ -375,8 +417,8 @@ public final class ShaderPaintRender {
     }
 
     static void vertex(VertexConsumer vc, Matrix4f m, float x, float y, float z, float u, float v, int style, int w) {
-        // (the look in red, the texture's width in green: shaders/core/sky_paint)
-        vc.addVertex(m, x, y, z).setUv(u, v).setColor(ShaderPaintStyles.pass(style), Math.min(255, w), 0, 255);
+        // (the look in red, the texture's width in green, how much of the sky shows in alpha: shaders/core/sky_paint)
+        vc.addVertex(m, x, y, z).setUv(u, v).setColor(ShaderPaintStyles.pass(style), Math.min(255, w), 0, Math.round(ShaderPaintStyles.opacity(style) * 255));
     }
 
     /** A flat square of one style (the editor's swatches and canvas): x, y .. x + size, y + size on screen. */

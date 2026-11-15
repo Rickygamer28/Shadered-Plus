@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "pattern": [
+    "WWW",
+    "IRI"
+  ],
+  "key": {
+    "W": {
+      "item": "minecraft:white_carpet"
+    },
+    "I": {
+      "item": "minecraft:copper_ingot"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    }
+  },
+  "result": {
+    "id": "skyblocks:spin_pad",
+    "count": 1
+  }
+}

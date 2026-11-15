@@ -471,5 +471,25 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(0.6F).sound(SoundType.GLASS).noOcclusion().pushReaction(PushReaction.DESTROY)
                     .mapColor(net.minecraft.world.level.material.MapColor.NONE));
 
+    /** A bottomless pit: a solid block whose top looks like a hole going down for ever (client/BottomlessPitRenderer). */
+    public static final DeferredBlock<BottomlessPitBlock> BOTTOMLESS_PIT = BLOCKS.registerBlock("bottomless_pit", BottomlessPitBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.DEEPSLATE).requiresCorrectToolForDrops()
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+    /** A room window: a whole room behind its glass, that isn't there (client/RoomWindowRenderer). */
+    public static final DeferredBlock<RoomWindowBlock> ROOM_WINDOW = BLOCKS.registerBlock("room_window", RoomWindowBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.GLASS).mapColor(net.minecraft.world.level.material.MapColor.SNOW));
+    /** A moon jar: catch the moon in it (MoonJarBlock). */
+    public static final DeferredBlock<MoonJarBlock> MOON_JAR = BLOCKS.registerBlock("moon_jar", MoonJarBlock::new,
+            BlockBehaviour.Properties.of().strength(0.3F).sound(SoundType.GLASS).noOcclusion().pushReaction(PushReaction.DESTROY)
+                    .lightLevel(state -> state.getValue(MoonJarBlock.MOON) ? 13 : 0).mapColor(net.minecraft.world.level.material.MapColor.NONE));
+    /** A dark fountain: cut open with the rift knife (DarkFountainBlock). */
+    public static final DeferredBlock<DarkFountainBlock> DARK_FOUNTAIN = BLOCKS.registerBlock("dark_fountain", DarkFountainBlock::new,
+            BlockBehaviour.Properties.of().strength(-1.0F, 3600000.0F).noCollission().noOcclusion().noLootTable().pushReaction(PushReaction.BLOCK)
+                    .replaceable().mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+    /** A spin pad: an OIIA cat spins on it, making Forge Energy (SpinPadBlockEntity). */
+    public static final DeferredBlock<SpinPadBlock> SPIN_PAD = BLOCKS.registerBlock("spin_pad", SpinPadBlock::new,
+            BlockBehaviour.Properties.of().strength(2.0F).sound(SoundType.METAL).noOcclusion().requiresCorrectToolForDrops()
+                    .mapColor(net.minecraft.world.level.material.MapColor.METAL));
+
     private ModBlocks() {}
 }

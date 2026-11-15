@@ -1,0 +1,11 @@
+{
+  "parent": "skyblocks:block/moon_jar",
+  "overrides": [
+    {
+      "predicate": {
+        "skyblocks:moon": 1
+      },
+      "model": "skyblocks:item/moon_jar_full"
+    }
+  ]
+}

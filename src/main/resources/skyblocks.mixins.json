@@ -25,6 +25,7 @@
     "MirrorBlockChangeMixin",
     "MirrorStageEventsMixin",
     "ModRenderTypesMixin",
+    "MoonSkyMixin",
     "PortalParticlesMixin",
     "SkyblockBatchDataMixin",
     "SkyblockEntityRendererMixin",

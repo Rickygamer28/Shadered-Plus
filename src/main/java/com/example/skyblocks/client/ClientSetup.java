@@ -26,6 +26,10 @@ public final class ClientSetup {
     public static void clientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(ShaderedSkies::register);
         event.enqueueWork(SkyUsage::report);
+        // (a moon jar with the moon in it: its own model, the moon glowing inside)
+        event.enqueueWork(() -> net.minecraft.client.renderer.item.ItemProperties.register(com.example.skyblocks.ModItems.MOON_JAR.get(),
+                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.example.skyblocks.SkyBlocksMod.MOD_ID, "moon"),
+                (stack, level, entity, seed) -> com.example.skyblocks.MoonJarBlock.full(stack) ? 1.0F : 0.0F));
         // The Island Painting's window needs a stencil buffer (client/island/IslandWindow).
         event.enqueueWork(() -> net.minecraft.client.Minecraft.getInstance().getMainRenderTarget().enableStencil());
         // Sky Liquids' own surface is fully see-through and cut out (nothing drawn, nothing hidden): all you see is
@@ -100,6 +104,12 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.FERROFLUID.get(), FerrofluidRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SKY_CLOCK.get(), SkyClockRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.PRISM.get(), PrismRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.BOTTOMLESS_PIT.get(), BottomlessPitRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.ROOM_WINDOW.get(), RoomWindowRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.MOON_JAR.get(), MoonJarRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.DARK_FOUNTAIN.get(), DarkFountainRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.SPIN_PAD.get(), SpinPadRenderer::new);
+        event.registerEntityRenderer(com.example.skyblocks.ModEntities.SKY_TRAIL.get(), SkyTrailRenderer::new);
         BlockEntityRendererProvider<OiiaCatBlockEntity> big = OiiaCatRenderer::new;
         event.registerBlockEntityRenderer(ModBlockEntities.BIG_OIIA_CAT.get(), big);
         event.registerBlockEntityRenderer(ModBlockEntities.SKY_ISLAND.get(), SkyIslandRenderer::new);

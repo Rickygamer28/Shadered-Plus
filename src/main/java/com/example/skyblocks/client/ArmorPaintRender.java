@@ -695,6 +695,17 @@ public final class ArmorPaintRender {
         return rl;
     }
 
+    /** Whether any of the skies painted on it are see-through (ShaderPaintStyles.clear). */
+    private static boolean seeThrough(@Nullable ModComponents.ArmorPaint paint, @Nullable ModComponents.ShaderPaint icon) {
+        byte[] b = paint != null ? paint.skies() : icon != null ? icon.pixels() : new byte[0];
+        for (int i = 0; i < b.length; i += 2) {
+            if ((b[i] & 0xF0) != 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** After the armour layer has drawn an entity's armour: the skies (and redrawn pixels) painted on it, over it. */
     public static void renderWorn(HumanoidArmorLayer<?, ?, ?> layer, PoseStack ps, MultiBufferSource buffers, int light, LivingEntity entity) {
         if (failures > 8 || buffers == null || entity == null) {
@@ -733,8 +744,14 @@ public final class ArmorPaintRender {
         if (model.young) {
             return; // (a baby's parts are scaled as a whole: not worked out here)
         }
-        Sheet sheet = sheet(texture(entity, stack, slot));
+        ResourceLocation own = texture(entity, stack, slot);
+        Sheet sheet = sheet(own);
         MultiBufferSource.BufferSource now = DrawNow.now(buffers);
+        if (own != null && seeThrough(paint, icon)) {
+            // (see-through paint: the armour itself drawn first, just over the game's - so whenever that's drawn, the
+            // skies are blended over the armour)
+            drawTextured(ps, model, own, light, now);
+        }
         if (paint != null) {
             if (paint.hasColours()) {
                 drawTextured(ps, model, colours(paint), light, now);

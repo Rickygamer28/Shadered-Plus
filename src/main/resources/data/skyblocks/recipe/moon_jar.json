@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " W ",
+    "G G",
+    "GGG"
+  ],
+  "key": {
+    "W": {
+      "item": "minecraft:oak_slab"
+    },
+    "G": {
+      "item": "minecraft:glass"
+    }
+  },
+  "result": {
+    "id": "skyblocks:moon_jar",
+    "count": 1
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "wall": "skyblocks:block/room_window_wall",
+    "glass": "skyblocks:block/room_window_item",
+    "particle": "skyblocks:block/room_window_wall"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#glass"
+        },
+        "south": {
+          "texture": "#glass"
+        },
+        "east": {
+          "texture": "#wall"
+        },
+        "west": {
+          "texture": "#wall"
+        },
+        "up": {
+          "texture": "#wall"
+        },
+        "down": {
+          "texture": "#wall"
+        }
+      }
+    }
+  ]
+}

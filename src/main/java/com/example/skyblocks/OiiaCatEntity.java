@@ -141,11 +141,35 @@ public class OiiaCatEntity extends TamableAnimal {
 
     /** Client: spinning now (petted), and how far into it (seconds). */
     public float spinSeconds(float partialTick) {
-        return (tickCount - spinStart + partialTick) / 20.0F;
+        SpinPadBlockEntity pad = spinPad();
+        return pad != null ? pad.spinSeconds(partialTick) : (tickCount - spinStart + partialTick) / 20.0F;
     }
 
     public boolean spinning() {
-        return tickCount - spinStart < SPIN_TICKS;
+        return tickCount - spinStart < SPIN_TICKS || spinPad() != null;
+    }
+
+    /** Client: the spin pad it's spinning on, if it is (SpinPadBlockEntity). */
+    @org.jetbrains.annotations.Nullable
+    public SpinPadBlockEntity spinPad() {
+        SpinPadBlockEntity pad = SpinPadBlockEntity.at(level(), blockPosition());
+        return pad != null && pad.clientSpeed > 0.02F && pad.occupied() ? pad : null;
+    }
+
+    /** Until when it's on a spin pad (server): it doesn't go off after its owner. */
+    private int padUntil;
+
+    /** On a spin pad (server, each tick it's there): it stays put in the middle, awake, spinning. */
+    public void holdOnPad(net.minecraft.core.BlockPos pad) {
+        spinUntil = Math.max(spinUntil, tickCount + 5);
+        padUntil = tickCount + 5;
+        if (mood() != AWAKE) {
+            setMood(AWAKE);
+        }
+        double x = pad.getX() + 0.5, z = pad.getZ() + 0.5;
+        if ((getX() - x) * (getX() - x) + (getZ() - z) * (getZ() - z) > 0.01) {
+            moveTo(x, getY(), z, getYRot(), getXRot());
+        }
     }
 
     @Override
@@ -166,15 +190,16 @@ public class OiiaCatEntity extends TamableAnimal {
         goalSelector.addGoal(5, new GroomGoal());
         goalSelector.addGoal(5, new WindowGoal());
         goalSelector.addGoal(5, new FishGoal());
+        goalSelector.addGoal(5, new SpinPadGoal());
         goalSelector.addGoal(6, new FollowOwnerGoal(this, 1.0, 10.0F, 3.0F) {
             @Override
             public boolean canUse() {
-                return !wandering && super.canUse();
+                return !wandering && tickCount >= padUntil && super.canUse();
             }
 
             @Override
             public boolean canContinueToUse() {
-                return !wandering && super.canContinueToUse();
+                return !wandering && tickCount >= padUntil && super.canContinueToUse();
             }
         });
         goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 0.8) {
@@ -296,6 +321,13 @@ public class OiiaCatEntity extends TamableAnimal {
         if (mood() == NAPPING || mood() == BOXED || mood() == PERCHED) {
             playSound(SoundEvents.CAT_PURR, 1.0F, 1.0F); // (stays put, purring)
             level().broadcastEntityEvent(this, (byte) 7);
+            return;
+        }
+        SpinPadBlockEntity pad = SpinPadBlockEntity.at(level(), blockPosition());
+        if (pad != null && pad.occupied()) {
+            pad.boost(); // (on a spin pad: it spins faster)
+            level().broadcastEntityEvent(this, (byte) 7);
+            playSound(SoundEvents.CAT_PURREOW, 1.0F, 1.2F);
             return;
         }
         setMood(AWAKE);
@@ -1290,6 +1322,59 @@ public class OiiaCatEntity extends TamableAnimal {
     }
 
     /** Over to a scratching post (or a cat tree's post): up on its back legs, a good scratch. */
+    /**
+     * A spin pad near by, with nobody on it and no redstone stopping it: up it hops, to spin (SpinPadBlockEntity holds
+     * it there, spinning, until a redstone signal stops the pad).
+     */
+    final class SpinPadGoal extends Goal {
+        private BlockPos pad;
+        private int walking;
+
+        SpinPadGoal() {
+            setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK, Flag.JUMP));
+        }
+
+        @Override
+        public boolean canUse() {
+            if (!isTame() || isOrderedToSit() || tickCount < spinUntil || random.nextInt(80) != 0 || mood() != AWAKE) {
+                return false;
+            }
+            pad = find(st -> st.getBlock() instanceof SpinPadBlock, 10);
+            return pad != null && free(pad) && !level().hasNeighborSignal(pad);
+        }
+
+        private boolean free(BlockPos p) {
+            SpinPadBlockEntity be = SpinPadBlockEntity.at(level(), p);
+            return be != null && level().getEntitiesOfClass(OiiaCatEntity.class, be.top(), c -> c != OiiaCatEntity.this).isEmpty();
+        }
+
+        @Override
+        public void start() {
+            walking = 0;
+            getNavigation().moveTo(pad.getX() + 0.5, pad.getY() + 0.25, pad.getZ() + 0.5, 1.0);
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return pad != null && walking >= 0 && walking < 240 && !isOrderedToSit() && level().getBlockState(pad).getBlock() instanceof SpinPadBlock;
+        }
+
+        @Override
+        public void tick() {
+            Vec3 c = centre(pad).add(0, 0.25, 0);
+            getLookControl().setLookAt(c.x, c.y, c.z);
+            if (!by(pad, 1.6)) {
+                walking++;
+                walkTo(c, 1.0, 20);
+                return;
+            }
+            // (up onto the plate, in the middle: the pad does the rest)
+            hop(c);
+            playSound(SoundEvents.CAT_AMBIENT, 0.6F, 1.3F);
+            walking = -1;
+        }
+    }
+
     final class ScratchGoal extends Goal {
         private BlockPos post, spot;
         private int scratched, length;

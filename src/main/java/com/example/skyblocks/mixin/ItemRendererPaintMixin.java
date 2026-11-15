@@ -58,7 +58,7 @@ public abstract class ItemRendererPaintMixin {
             skyblocks$textured = true;
             if (skyblocks$pending) {
                 skyblocks$pending = false;
-                ShaderPaintRender.afterModel(stack, model, pose, skyblocks$buffers, skyblocks$gui);
+                ShaderPaintRender.afterModel(stack, model, pose, skyblocks$buffers, skyblocks$gui, light, overlay);
             }
             ci.cancel();
         }
@@ -68,7 +68,7 @@ public abstract class ItemRendererPaintMixin {
     private void skyblocks$afterModel(BakedModel model, ItemStack stack, int light, int overlay, PoseStack pose, VertexConsumer buffer, CallbackInfo ci) {
         if (skyblocks$pending) {
             skyblocks$pending = false;
-            ShaderPaintRender.afterModel(stack, model, pose, skyblocks$buffers, skyblocks$gui);
+            ShaderPaintRender.afterModel(stack, model, pose, skyblocks$buffers, skyblocks$gui, light, overlay);
         }
     }
 }

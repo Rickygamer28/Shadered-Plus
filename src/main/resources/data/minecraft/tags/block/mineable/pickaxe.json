@@ -39,6 +39,8 @@
     "skyblocks:geode_lamp",
     "skyblocks:infusion_altar",
     "skyblocks:sky_lantern",
-    "skyblocks:ferrofluid"
+    "skyblocks:ferrofluid",
+    "skyblocks:bottomless_pit",
+    "skyblocks:spin_pad"
   ]
 }

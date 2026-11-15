@@ -19,6 +19,11 @@ public final class ModEntities {
             () -> EntityType.Builder.<YarnBallEntity>of(YarnBallEntity::new, MobCategory.MISC).sized(0.25F, 0.25F).clientTrackingRange(8)
                     .updateInterval(1).build("yarn_ball"));
 
+    /** A line of sky drawn in the air with the sky wand. */
+    public static final Supplier<EntityType<SkyTrailEntity>> SKY_TRAIL = TYPES.register("sky_trail",
+            () -> EntityType.Builder.<SkyTrailEntity>of(SkyTrailEntity::new, MobCategory.MISC).sized(0.25F, 0.25F).clientTrackingRange(10)
+                    .updateInterval(2).fireImmune().build("sky_trail"));
+
     static void attributes(EntityAttributeCreationEvent event) {
         event.put(OIIA_CAT.get(), OiiaCatEntity.createAttributes().build());
     }

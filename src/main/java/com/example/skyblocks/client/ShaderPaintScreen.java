@@ -139,7 +139,38 @@ public class ShaderPaintScreen extends Screen {
     }
 
     private int style() {
-        return ShaderPaintStyles.of(sky, pass);
+        return ShaderPaintStyles.of(sky, pass, clear);
+    }
+
+    /** How see-through the skies painted now are (ShaderPaintStyles.clear: 0 solid). */
+    private int clear;
+    private ClearSlider clearSlider;
+
+    /** How see-through the skies painted now are, as a slider (100%: solid). */
+    private final class ClearSlider extends net.minecraft.client.gui.components.AbstractSliderButton {
+        ClearSlider(int x, int y, int w, int h) {
+            super(x, y, w, h, clearName(), 1.0 - clear / (double) ShaderPaintStyles.CLEAR_MAX);
+        }
+
+        void show() {
+            value = 1.0 - clear / (double) ShaderPaintStyles.CLEAR_MAX;
+            updateMessage();
+        }
+
+        @Override
+        protected void updateMessage() {
+            setMessage(clearName());
+        }
+
+        @Override
+        protected void applyValue() {
+            clear = Mth.clamp((int) Math.round((1.0 - value) * ShaderPaintStyles.CLEAR_MAX), 0, ShaderPaintStyles.CLEAR_MAX);
+            skyBrush = true;
+        }
+    }
+
+    private Component clearName() {
+        return Component.translatable("screen.skyblocks.shader_paint.opacity", Math.round(ShaderPaintStyles.opacity(ShaderPaintStyles.of(0, 0, clear)) * 100));
     }
 
     @Override
@@ -288,6 +319,9 @@ public class ShaderPaintScreen extends Screen {
             b.setMessage(lookName());
             skyBrush = true;
         }).bounds(px0, py0 + rowsShown * (swatch + 2) + 4, cols * (swatch + 2) - 2, 16).build());
+        // how see-through: solid, down to barely there (the item's own pixels showing through the sky)
+        clearSlider = addRenderableWidget(new ClearSlider(px0, py0 + rowsShown * (swatch + 2) + 22, cols * (swatch + 2) - 2, 14));
+        clearSlider.setTooltip(Tooltip.create(Component.translatable("screen.skyblocks.shader_paint.opacity.tip")));
         addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.shader_paint.apply"), b -> apply())
                 .bounds(width / 2 - 104, height - 26, 100, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.cancel"), b -> onClose()).bounds(width / 2 + 4, height - 26, 100, 20).build());
@@ -1043,7 +1077,11 @@ public class ShaderPaintScreen extends Screen {
                 if (skyBrush && skies[i] != 0) {
                     sky = ShaderPaintStyles.sky(skies[i]);
                     pass = ShaderPaintStyles.pass(skies[i]);
+                    clear = ShaderPaintStyles.clear(skies[i]);
                     lookButton.setMessage(lookName());
+                    if (clearSlider != null) {
+                        clearSlider.show();
+                    }
                 } else if (!skyBrush && opaque(x, y)) {
                     colour = colours[i] | 0xFF000000;
                     showHex();
@@ -1512,7 +1550,7 @@ public class ShaderPaintScreen extends Screen {
             g.fill(px0 + cols * (swatch + 2) + 2, knobY, px0 + cols * (swatch + 2) + 5, knobY + knob, 0xC0D0C0F0);
         }
         g.pose().popPose();
-        int below = py0 + rowsShown * (swatch + 2) + 24;
+        int below = py0 + rowsShown * (swatch + 2) + 40;
         g.drawString(font, skyBrush ? ShaderPaintRender.name(style()) : Component.literal(String.format("#%06X", colour & 0xFFFFFF)), px0, below, 0xFFFFFFFF);
         // the item as it'll look, turning
         drawPreview(g, px0 + (cols * (swatch + 2)) / 2, below + 14 + 50, partialTick);

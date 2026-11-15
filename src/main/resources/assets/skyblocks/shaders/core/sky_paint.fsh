@@ -6,6 +6,7 @@
 in vec2 uv;
 flat in int look;
 flat in float texels;
+in float opacity;
 
 uniform sampler2D Sampler0;
 
@@ -66,5 +67,5 @@ void main() {
     } else if (look == 8) {
         c *= 0.75;
     }
-    fragColor = vec4(c, 1.0);
+    fragColor = vec4(c, opacity);
 }

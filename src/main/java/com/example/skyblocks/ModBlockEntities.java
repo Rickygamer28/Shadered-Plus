@@ -136,6 +136,16 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.SKY_CLOCK.get(), p, st), ModBlocks.SKY_CLOCK.get()).build(null));
     public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> PRISM = TYPES.register("prism",
             () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.PRISM.get(), p, st), ModBlocks.PRISM.get()).build(null));
+    public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> BOTTOMLESS_PIT = TYPES.register("bottomless_pit",
+            () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.BOTTOMLESS_PIT.get(), p, st), ModBlocks.BOTTOMLESS_PIT.get()).build(null));
+    public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> ROOM_WINDOW = TYPES.register("room_window",
+            () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.ROOM_WINDOW.get(), p, st), ModBlocks.ROOM_WINDOW.get()).build(null));
+    public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> MOON_JAR = TYPES.register("moon_jar",
+            () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.MOON_JAR.get(), p, st), ModBlocks.MOON_JAR.get()).build(null));
+    public static final Supplier<BlockEntityType<DarkFountainBlockEntity>> DARK_FOUNTAIN = TYPES.register("dark_fountain",
+            () -> BlockEntityType.Builder.of(DarkFountainBlockEntity::new, ModBlocks.DARK_FOUNTAIN.get()).build(null));
+    public static final Supplier<BlockEntityType<SpinPadBlockEntity>> SPIN_PAD = TYPES.register("spin_pad",
+            () -> BlockEntityType.Builder.of(SpinPadBlockEntity::new, ModBlocks.SPIN_PAD.get()).build(null));
     public static final Supplier<BlockEntityType<CatFlapBlockEntity>> CAT_FLAP = TYPES.register("cat_flap",
             () -> BlockEntityType.Builder.of(CatFlapBlockEntity::new, ModBlocks.CAT_FLAP.get()).build(null));
     public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> GEODE_LAMP = TYPES.register("geode_lamp",

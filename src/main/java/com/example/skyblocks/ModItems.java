@@ -178,5 +178,14 @@ public final class ModItems {
     public static final DeferredItem<CatToyItems.LaserPointer> LASER_POINTER = ITEMS.register("laser_pointer",
             () -> new CatToyItems.LaserPointer(new Item.Properties().stacksTo(1)));
 
+    // ---- shaders and tricks ----
+    public static final DeferredItem<SkyWandItem> SKY_WAND = ITEMS.register("sky_wand", () -> new SkyWandItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<RiftKnifeItem> RIFT_KNIFE = ITEMS.register("rift_knife", () -> new RiftKnifeItem(new Item.Properties().durability(250)));
+    public static final DeferredItem<BlockItem> BOTTOMLESS_PIT = ITEMS.registerSimpleBlockItem("bottomless_pit", ModBlocks.BOTTOMLESS_PIT);
+    public static final DeferredItem<BlockItem> ROOM_WINDOW = ITEMS.registerSimpleBlockItem("room_window", ModBlocks.ROOM_WINDOW);
+    public static final DeferredItem<MoonJarBlock.Jar> MOON_JAR = ITEMS.register("moon_jar", () -> new MoonJarBlock.Jar(ModBlocks.MOON_JAR.get(),
+            new Item.Properties().stacksTo(16)));
+    public static final DeferredItem<BlockItem> SPIN_PAD = ITEMS.registerSimpleBlockItem("spin_pad", ModBlocks.SPIN_PAD);
+
     private ModItems() {}
 }
