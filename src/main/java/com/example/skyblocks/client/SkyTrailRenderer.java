@@ -22,7 +22,7 @@ import org.joml.Vector3f;
  */
 public class SkyTrailRenderer extends EntityRenderer<SkyTrailEntity> {
     /** Half the ribbon's width (blocks), and how far past it the glow reaches. */
-    private static final float HALF = 0.075F, GLOW = 0.07F;
+    private static final float HALF = 0.075F, GLOW = 0.05F;
     private final SkyWindow.Quads quads = new SkyWindow.Quads();
 
     public SkyTrailRenderer(EntityRendererProvider.Context context) {
@@ -83,7 +83,7 @@ public class SkyTrailRenderer extends EntityRenderer<SkyTrailEntity> {
         SkyWindow.draw(buffers, type, m, quads.data, quads.count);
         // the glow along its edges: bright at the sky, fading outwards
         VertexConsumer g = buffers.getBuffer(GlowTypes.GLOW);
-        float bright = 0.55F * fade;
+        float bright = 0.3F * fade;
         for (int side = -1; side <= 1; side += 2) {
             for (int i = 0; i + 1 < n; i++) {
                 int j = i + 1;

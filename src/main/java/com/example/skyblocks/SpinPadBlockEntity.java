@@ -37,7 +37,7 @@ public class SpinPadBlockEntity extends BlockEntity {
     public final Buffer energy = new Buffer();
     private float speed;
     private boolean occupied;
-    private String sky = "SKYBLOCKS_NEBULA", pass = "NORMAL";
+    private String sky = "SKYBLOCKS_SYNTHWAVE", pass = "NORMAL";
     private float sentSpeed = -1;
     private int lastFe;
 
