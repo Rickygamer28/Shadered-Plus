@@ -48,7 +48,8 @@ void main() {
     vec3 wall = wallAt(u, depth, lod);
     float side = xWall ? 0.78 : 0.62;
     // the light from above dying away down the shaft; a shadow right under the rim, and in the wall's corners
-    float fall = exp(-depth * 0.17) * smoothstep(-0.05, 0.5, depth) * 0.75 + exp(-depth * 0.17) * 0.25;
+    // (quickly: a few blocks down it's nearly black, and it never ends)
+    float fall = exp(-depth * 0.5) * (0.7 + 0.3 * smoothstep(0.0, 0.6, depth));
     vec2 inRect = vec2(min(h.x - rect.x, rect.z - h.x), min(h.z - rect.y, rect.w - h.z));
     float corner = smoothstep(0.0, 0.35, xWall ? inRect.y : inRect.x);
     vec3 c = wall * side * fall * mix(0.55, 1.0, corner) * (0.25 + 0.75 * bright);
@@ -68,7 +69,7 @@ void main() {
             vec2 spot = vec2(hash(cell + 3.1), hash(cell + 7.7)) * 0.6 + 0.2;
             float r = length(fract(q) - spot);
             float twinkle = 0.6 + 0.4 * sin(ticks * 0.05 + pick * 40.0);
-            c += vec3(0.85, 0.8, 0.7) * smoothstep(0.09, 0.0, r) * exp(-layer * 0.13) * 0.55 * twinkle * (0.3 + 0.7 * bright);
+            c += vec3(0.85, 0.8, 0.7) * smoothstep(0.09, 0.0, r) * exp(-layer * 0.12) * 0.9 * twinkle * (0.3 + 0.7 * bright);
         }
     }
     fragColor = vec4(c, 1.0);

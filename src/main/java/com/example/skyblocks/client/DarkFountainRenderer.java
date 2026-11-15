@@ -114,15 +114,6 @@ public class DarkFountainRenderer implements BlockEntityRenderer<DarkFountainBlo
                 rim(glow, m, ringX[k + 1][i], ringY[k + 1][i], ringZ[k + 1][i], cx, cy, cz, column);
             }
         }
-        VertexConsumer ink = buffers.getBuffer(GlowTypes.SHADE);
-        for (int i = 0; i < TEAR; i++) {
-            int j = (i + 1) % TEAR;
-            float s = 1.0F + 0.45F * open;
-            ink.addVertex(m, rx[i], 0.008F, rz[i]).setColor(0.02F, 0.0F, 0.05F, 0.95F * tear);
-            ink.addVertex(m, 0.5F + (rx[i] - 0.5F) * s, 0.008F, 0.5F + (rz[i] - 0.5F) * s).setColor(0.0F, 0.0F, 0.0F, 0.0F);
-            ink.addVertex(m, 0.5F + (rx[j] - 0.5F) * s, 0.008F, 0.5F + (rz[j] - 0.5F) * s).setColor(0.0F, 0.0F, 0.0F, 0.0F);
-            ink.addVertex(m, rx[j], 0.008F, rz[j]).setColor(0.02F, 0.0F, 0.05F, 0.95F * tear);
-        }
         // (the tear's edge glowing faintly)
         for (int i = 0; i < TEAR; i++) {
             int j = (i + 1) % TEAR;
@@ -131,6 +122,16 @@ public class DarkFountainRenderer implements BlockEntityRenderer<DarkFountainBlo
             glow.addVertex(m, 0.5F + (rx[i] - 0.5F) * in, 0.02F, 0.5F + (rz[i] - 0.5F) * in).setColor(0.75F, 0.65F, 1.0F, 0.0F);
             glow.addVertex(m, 0.5F + (rx[j] - 0.5F) * in, 0.02F, 0.5F + (rz[j] - 0.5F) * in).setColor(0.75F, 0.65F, 1.0F, 0.0F);
             glow.addVertex(m, rx[j], 0.02F, rz[j]).setColor(0.75F, 0.65F, 1.0F, 0.5F * tear);
+        }
+        // (one buffer at a time: asking for another ends the last)
+        VertexConsumer ink = buffers.getBuffer(GlowTypes.SHADE);
+        for (int i = 0; i < TEAR; i++) {
+            int j = (i + 1) % TEAR;
+            float s = 1.0F + 0.45F * open;
+            ink.addVertex(m, rx[i], 0.008F, rz[i]).setColor(0.02F, 0.0F, 0.05F, 0.95F * tear);
+            ink.addVertex(m, 0.5F + (rx[i] - 0.5F) * s, 0.008F, 0.5F + (rz[i] - 0.5F) * s).setColor(0.0F, 0.0F, 0.0F, 0.0F);
+            ink.addVertex(m, 0.5F + (rx[j] - 0.5F) * s, 0.008F, 0.5F + (rz[j] - 0.5F) * s).setColor(0.0F, 0.0F, 0.0F, 0.0F);
+            ink.addVertex(m, rx[j], 0.008F, rz[j]).setColor(0.02F, 0.0F, 0.05F, 0.95F * tear);
         }
     }
 
