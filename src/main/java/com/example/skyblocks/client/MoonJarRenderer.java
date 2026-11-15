@@ -33,13 +33,13 @@ public class MoonJarRenderer implements BlockEntityRenderer<SimpleRenderedBlockE
 
         @SubscribeEvent
         public static void register(RegisterShadersEvent event) {
-            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "moon_orb"), DefaultVertexFormat.POSITION_COLOR_TEX,
+            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "moon_orb"), DefaultVertexFormat.POSITION_TEX_COLOR,
                     s -> shader = s);
         }
     }
 
     abstract static class Types extends RenderType {
-        static final RenderType ORB = create("skyblocks_moon_orb", DefaultVertexFormat.POSITION_COLOR_TEX, VertexFormat.Mode.QUADS, 256, false, true,
+        static final RenderType ORB = create("skyblocks_moon_orb", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 256, false, true,
                 CompositeState.builder()
                         .setShaderState(new ShaderStateShard(() -> shader))
                         .setTransparencyState(TRANSLUCENT_TRANSPARENCY)

@@ -38,13 +38,13 @@ public class RoomWindowRenderer implements BlockEntityRenderer<SimpleRenderedBlo
 
         @SubscribeEvent
         public static void register(RegisterShadersEvent event) {
-            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "room_window"), DefaultVertexFormat.POSITION_COLOR_TEX,
+            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "room_window"), DefaultVertexFormat.POSITION_TEX_COLOR,
                     s -> shader = s);
         }
     }
 
     abstract static class Types extends RenderType {
-        static final RenderType GLASS = create("skyblocks_room_window", DefaultVertexFormat.POSITION_COLOR_TEX, VertexFormat.Mode.QUADS, 1024, false, false,
+        static final RenderType GLASS = create("skyblocks_room_window", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 1024, false, false,
                 CompositeState.builder()
                         .setShaderState(new ShaderStateShard(() -> shader))
                         .setCullState(NO_CULL)
