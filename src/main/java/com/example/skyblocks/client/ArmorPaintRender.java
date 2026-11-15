@@ -400,7 +400,13 @@ public final class ArmorPaintRender {
 
     /** The shown parts of a model with a texture (armour's way: lit, cut out), just outside where they are; drawn now. */
     static void drawTextured(PoseStack ps, HumanoidModel<?> model, ResourceLocation texture, int light, MultiBufferSource.BufferSource buffers) {
-        RenderType type = RenderType.armorCutoutNoCull(texture);
+        drawTextured(ps, model, texture, light, buffers, false);
+    }
+
+    /** The same, see-through where the texture is (translucent: blended over what's behind, not cut out). */
+    static void drawTextured(PoseStack ps, HumanoidModel<?> model, ResourceLocation texture, int light, MultiBufferSource.BufferSource buffers,
+                             boolean translucent) {
+        RenderType type = translucent ? RenderType.entityTranslucent(texture) : RenderType.armorCutoutNoCull(texture);
         VertexConsumer vc = buffers.getBuffer(type);
         Vector3f n = new Vector3f();
         int[] rect = new int[4];
@@ -679,7 +685,7 @@ public final class ArmorPaintRender {
         for (int y = 0; y < paint.h(); y++) {
             for (int x = 0; x < paint.w(); x++) {
                 int c = paint.colour(x, y);
-                int abgr = (c >>> 24) > 16 ? 0xFF000000 | (c & 0xFF) << 16 | (c & 0xFF00) | (c >> 16) & 0xFF : 0;
+                int abgr = (c >>> 24) > 16 ? (c & 0xFF000000) | (c & 0xFF) << 16 | (c & 0xFF00) | (c >> 16) & 0xFF : 0;
                 img.setPixelRGBA(x, y, abgr);
             }
         }
@@ -688,6 +694,73 @@ public final class ArmorPaintRender {
         TEXTURES.put(paint.argb(), rl);
         if (TEXTURES.size() > 48) {
             var it = TEXTURES.entrySet().iterator();
+            ResourceLocation old = it.next().getValue();
+            it.remove();
+            Minecraft.getInstance().getTextureManager().release(old);
+        }
+        return rl;
+    }
+
+    /** Whether any pixel redrawn on it is see-through (its alpha short of solid). */
+    static boolean glassy(@Nullable ModComponents.ArmorPaint paint) {
+        if (paint == null) {
+            return false;
+        }
+        byte[] c = paint.argb();
+        for (int i = 0; i + 3 < c.length; i += 4) {
+            int a = c[i] & 255;
+            if (a > 16 && a < 250) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Whether the game's own drawing of this worn piece is to be left out (mixin/HumanoidArmorLayerPaintMixin): it has
+     * see-through pixels, so it's drawn whole here instead (renderWorn) - its own texture with the redrawn pixels in it,
+     * see-through where they are (the game's would show behind them).
+     */
+    public static boolean hidesOwn(LivingEntity entity, EquipmentSlot slot) {
+        try {
+            ItemStack stack = entity.getItemBySlot(slot);
+            if (stack.isEmpty() || slotOf(stack) != slot) {
+                return false;
+            }
+            ModComponents.ArmorPaint paint = stack.get(ModComponents.ARMOR_PAINT.get());
+            if (!glassy(paint)) {
+                return false;
+            }
+            Sheet sheet = sheet(texture(entity, stack, slot));
+            return sheet != null && sheet.w() == paint.w() && sheet.h() == paint.h();
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    /** The piece's own texture with the redrawn pixels in it (their own see-through-ness kept), as a texture. */
+    private static final LinkedHashMap<byte[], ResourceLocation> MERGED = new LinkedHashMap<>(16, 0.75F, true);
+
+    private static ResourceLocation merged(ModComponents.ArmorPaint paint, Sheet sheet) {
+        ResourceLocation rl = MERGED.get(paint.argb());
+        if (rl != null) {
+            return rl;
+        }
+        NativeImage img = new NativeImage(paint.w(), paint.h(), true);
+        for (int y = 0; y < paint.h(); y++) {
+            for (int x = 0; x < paint.w(); x++) {
+                int c = paint.colour(x, y);
+                if ((c >>> 24) <= 16) {
+                    c = sheet.at(x, y);
+                }
+                img.setPixelRGBA(x, y, (c >>> 24) > 16 ? (c & 0xFF000000) | (c & 0xFF) << 16 | (c & 0xFF00) | (c >> 16) & 0xFF : 0);
+            }
+        }
+        rl = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "armor_glass/" + textureCount++);
+        Minecraft.getInstance().getTextureManager().register(rl, new DynamicTexture(img));
+        MERGED.put(paint.argb(), rl);
+        if (MERGED.size() > 32) {
+            var it = MERGED.entrySet().iterator();
             ResourceLocation old = it.next().getValue();
             it.remove();
             Minecraft.getInstance().getTextureManager().release(old);
@@ -747,14 +820,19 @@ public final class ArmorPaintRender {
         ResourceLocation own = texture(entity, stack, slot);
         Sheet sheet = sheet(own);
         MultiBufferSource.BufferSource now = DrawNow.now(buffers);
-        if (own != null && seeThrough(paint, icon)) {
+        boolean glass = paint != null && hidesOwn(entity, slot);
+        if (glass) {
+            // (see-through pixels: the whole piece drawn here, the game's own left out - its texture with the redrawn
+            // pixels in it, blended over what's behind)
+            drawTextured(ps, model, merged(paint, sheet), light, now, true);
+        } else if (own != null && seeThrough(paint, icon)) {
             // (see-through paint: the armour itself drawn first, just over the game's - so whenever that's drawn, the
             // skies are blended over the armour)
             drawTextured(ps, model, own, light, now);
         }
         if (paint != null) {
-            if (paint.hasColours()) {
-                drawTextured(ps, model, colours(paint), light, now);
+            if (paint.hasColours() && !glass) {
+                drawTextured(ps, model, colours(paint), light, now, glassy(paint));
             }
             boolean scaled = sheet != null && (sheet.w() != paint.w() || sheet.h() != paint.h());
             drawSkies(ps, model, paint.w(), paint.h(), (x, y, rect) -> {

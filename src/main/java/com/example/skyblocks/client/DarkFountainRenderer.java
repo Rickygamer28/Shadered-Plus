@@ -36,7 +36,10 @@ public class DarkFountainRenderer implements BlockEntityRenderer<DarkFountainBlo
         if (level == null) {
             return;
         }
-        RenderType type = SkyWindow.type(SKY, "NORMAL");
+        RenderType type = SkyWindow.type(be.sky(), be.pass());
+        if (type == null) {
+            type = SkyWindow.type(SKY, "NORMAL");
+        }
         if (type == null) {
             return;
         }

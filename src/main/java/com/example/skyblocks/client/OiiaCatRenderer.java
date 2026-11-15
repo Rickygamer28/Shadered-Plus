@@ -45,6 +45,11 @@ public class OiiaCatRenderer implements BlockEntityRenderer<OiiaCatBlockEntity> 
         }
         boolean powered = be.powered();
         double center = be.centerOffset();
+        // on a spin pad: down on its plate (the pad's a quarter of a block high), spinning as fast as the pad turns
+        com.example.skyblocks.SpinPadBlockEntity pad = be.getLevel() == null || IslandRendering.inIsland || be.size() != 1 ? null
+                : com.example.skyblocks.SpinPadBlockEntity.at(be.getLevel(), be.getBlockPos().below());
+        boolean padSpin = pad != null && pad.clientSpeed > 0.02F;
+        powered |= padSpin;
 
         // Without a signal: the standing cat. With a signal: the loaf pose, spinning (like the original animation).
         if (!(be.clientModel instanceof RenderableModel)) {
@@ -67,7 +72,7 @@ public class OiiaCatRenderer implements BlockEntityRenderer<OiiaCatBlockEntity> 
         PoseStack pose = new PoseStack();
         pose.last().pose().set(poseStack.last().pose());
         pose.last().normal().set(poseStack.last().normal());
-        pose.translate(center, 0, center);
+        pose.translate(center, pad != null ? -0.75F : 0.0F, center);
         pose.mulPose(Axis.YP.rotationDegrees(yaw(be.facing())));
         float scale = OiiaCatModel.SCALE * size;
         pose.scale(scale, scale, scale);
@@ -75,7 +80,9 @@ public class OiiaCatRenderer implements BlockEntityRenderer<OiiaCatBlockEntity> 
 
         // Spin only while powered by redstone, starting from the first frame each time the signal turns on.
         float seconds = 0;
-        if (powered && be.getLevel() != null) {
+        if (padSpin) {
+            seconds = pad.spinSeconds(partialTick);
+        } else if (powered && be.getLevel() != null) {
             long now = be.getLevel().getGameTime();
             if (be.animationStart < 0) {
                 be.animationStart = now;

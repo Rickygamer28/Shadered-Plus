@@ -21,8 +21,8 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A spin pad: a turntable for an OIIA cat. A cat on it spins - faster and faster the longer it's on (pet it for a
- * boost), a vortex of sky whirling up round it (client/SpinPadRenderer) - and the spinning makes Forge Energy (FE), more
+ * A spin pad: a turntable for an OIIA cat - the cat block set on it, or a tame cat that hops on. The cat spins - faster
+ * and faster the longer it's on (a live one: pet it for a boost), a vortex of sky whirling up round it (client/SpinPadRenderer) - and the spinning makes Forge Energy (FE), more
  * the faster it goes (with the square of its speed), passed on to whatever's next to it that takes energy (cables,
  * machines, batteries), or kept. A redstone signal stops it (and lets the cat go). The vortex's sky: right-click the pad
  * with a sky block.
@@ -39,6 +39,7 @@ public class SpinPadBlockEntity extends BlockEntity {
     private boolean occupied;
     private String sky = "SKYBLOCKS_SYNTHWAVE", pass = "NORMAL";
     private float sentSpeed = -1;
+    private boolean sentOccupied;
     private int lastFe;
 
     /** Client: how far the OIIA spin's got (seconds of its animation, which plays faster as it speeds up), and the plate's turn. */
@@ -119,8 +120,12 @@ public class SpinPadBlockEntity extends BlockEntity {
         boolean stopped = level.hasNeighborSignal(pos);
         List<OiiaCatEntity> cats = stopped ? List.of() : level.getEntitiesOfClass(OiiaCatEntity.class, be.top(), c -> c.isAlive() && !c.isBaby());
         OiiaCatEntity cat = cats.isEmpty() ? null : cats.get(0);
-        be.occupied = cat != null;
-        if (cat != null) {
+        // (an OIIA cat block set on it spins too - on the pad, not a block above it: client/OiiaCatRenderer)
+        boolean block = !stopped && level.getBlockState(pos.above()).is(ModBlocks.OIIA_CAT.get());
+        be.occupied = cat != null || block;
+        if (block) {
+            be.speed = Math.min(1.0F, be.speed + SPEED_UP);
+        } else if (cat != null) {
             cat.holdOnPad(pos);
             be.speed = Math.min(1.0F, be.speed + SPEED_UP * (cat.isTame() ? 1.0F : 0.5F));
         } else {
@@ -138,6 +143,10 @@ public class SpinPadBlockEntity extends BlockEntity {
                 int given = next.receiveEnergy(Math.min(PUSH, be.energy.getEnergyStored()), false);
                 be.energy.extractEnergy(given, false);
             }
+        }
+        if (be.occupied != be.sentOccupied) {
+            be.sentOccupied = be.occupied;
+            be.changed();
         }
         if (be.lastFe > 0 || cat != null) {
             be.setChanged();

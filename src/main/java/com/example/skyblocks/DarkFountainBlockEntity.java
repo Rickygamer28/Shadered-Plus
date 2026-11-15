@@ -37,9 +37,25 @@ public class DarkFountainBlockEntity extends BlockEntity {
 
     /** When it was cut open, and when it began to close (-1: it hasn't); game time. */
     private long opened = -1, closing = -1;
+    /** The sky pouring up out of it (Shadered's sky type and pass, by name): the knife's other hand's sky block, or Space. */
+    private String sky = "SPACE", pass = "NORMAL";
 
     public DarkFountainBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.DARK_FOUNTAIN.get(), pos, state);
+    }
+
+    public String sky() {
+        return sky;
+    }
+
+    public String pass() {
+        return pass;
+    }
+
+    public void setSky(String sky, String pass) {
+        this.sky = sky;
+        this.pass = pass;
+        changed();
     }
 
     public long opened() {
@@ -143,6 +159,8 @@ public class DarkFountainBlockEntity extends BlockEntity {
         super.saveAdditional(tag, registries);
         tag.putLong("opened", opened);
         tag.putLong("closing", closing);
+        tag.putString("sky", sky);
+        tag.putString("pass", pass);
     }
 
     @Override
@@ -150,6 +168,10 @@ public class DarkFountainBlockEntity extends BlockEntity {
         super.loadAdditional(tag, registries);
         opened = tag.contains("opened") ? tag.getLong("opened") : -1;
         closing = tag.contains("closing") ? tag.getLong("closing") : -1;
+        if (tag.contains("sky")) {
+            sky = tag.getString("sky");
+            pass = tag.getString("pass");
+        }
     }
 
     @Override

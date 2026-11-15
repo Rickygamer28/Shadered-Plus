@@ -223,20 +223,32 @@ public final class ShaderPaintRender {
             return false;
         }
         int w = tex != null ? tex.w() : sprite.contents().width(), h = tex != null ? tex.h() : sprite.contents().height();
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(WHITE));
         PoseStack.Pose p = pose.last();
         float pw = 1.0F / w, ph = 1.0F / h, z0 = 7.5F / 16.0F, z1 = 8.5F / 16.0F;
         boolean fits = paint != null && paint.w() == w && paint.h() == h;
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                int c = tex != null ? tex.at(x, y) : argb(sprite, x, y);
-                if ((c >>> 24) <= 16 || fits && paint.at(x, y) != 0) {
-                    continue; // (nothing there; or a sky's painted there, its own faces cover it all)
+        // the solid pixels, then the see-through ones (drawn so what's behind them shows through)
+        for (int pass = 0; pass < 2; pass++) {
+            VertexConsumer vc = null;
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    int c = tex != null ? tex.at(x, y) : argb(sprite, x, y);
+                    if ((c >>> 24) <= 16 || fits && paint.at(x, y) != 0) {
+                        continue; // (nothing there; or a sky's painted there, its own faces cover it all)
+                    }
+                    boolean glass = tex != null && (c >>> 24) < 250;
+                    if (glass != (pass == 1)) {
+                        continue;
+                    }
+                    if (!glass) {
+                        c |= 0xFF000000;
+                    }
+                    if (vc == null) {
+                        vc = buffers.getBuffer(glass ? RenderType.entityTranslucent(WHITE) : RenderType.entityCutoutNoCull(WHITE));
+                    }
+                    float x0 = x * pw, x1 = (x + 1) * pw, y0 = 1.0F - (y + 1) * ph, y1 = 1.0F - y * ph;
+                    box(vc, p, x0, y0, z0, x1, y1, z1, c, light, overlay, empty(tex, sprite, x - 1, y, w, h), empty(tex, sprite, x + 1, y, w, h),
+                            empty(tex, sprite, x, y + 1, w, h), empty(tex, sprite, x, y - 1, w, h));
                 }
-                c |= 0xFF000000;
-                float x0 = x * pw, x1 = (x + 1) * pw, y0 = 1.0F - (y + 1) * ph, y1 = 1.0F - y * ph;
-                box(vc, p, x0, y0, z0, x1, y1, z1, c, light, overlay, empty(tex, sprite, x - 1, y, w, h), empty(tex, sprite, x + 1, y, w, h),
-                        empty(tex, sprite, x, y + 1, w, h), empty(tex, sprite, x, y - 1, w, h));
             }
         }
         return true;

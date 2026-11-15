@@ -165,13 +165,50 @@ public class ShaderPaintScreen extends Screen {
         @Override
         protected void applyValue() {
             clear = Mth.clamp((int) Math.round((1.0 - value) * ShaderPaintStyles.CLEAR_MAX), 0, ShaderPaintStyles.CLEAR_MAX);
-            skyBrush = true;
         }
     }
 
     private Component clearName() {
-        return Component.translatable("screen.skyblocks.shader_paint.opacity", Math.round(ShaderPaintStyles.opacity(ShaderPaintStyles.of(0, 0, clear)) * 100));
+        return Component.translatable("screen.skyblocks.shader_paint.opacity", Math.round(opacity() * 100));
     }
+
+    /** How strongly the brush puts on what it paints (1: wholly; less: a sky see-through, a colour mixed with what's there). */
+    private float opacity() {
+        return ShaderPaintStyles.opacity(ShaderPaintStyles.of(0, 0, clear));
+    }
+
+    /** How see-through the colour brush makes the pixels it paints (0 solid .. 15), and that as their alpha. */
+    private int glass;
+    private GlassSlider glassSlider;
+
+    private int glassAlpha() {
+        return Math.round(255 - glass * (255 - 40) / 15.0F);
+    }
+
+    private Component glassName() {
+        return Component.translatable("screen.skyblocks.shader_paint.glass", Math.round(glass * 100 / 15.0F));
+    }
+
+    /** How see-through the colour brush makes pixels (0%: solid). */
+    private final class GlassSlider extends net.minecraft.client.gui.components.AbstractSliderButton {
+        GlassSlider(int x, int y, int w, int h) {
+            super(x, y, w, h, glassName(), glass / 15.0);
+        }
+
+        @Override
+        protected void updateMessage() {
+            setMessage(glassName());
+        }
+
+        @Override
+        protected void applyValue() {
+            glass = Mth.clamp((int) Math.round(value * 15), 0, 15);
+            skyBrush = false;
+        }
+    }
+
+    /** The pixels the current stroke has painted already (a see-through or mixed colour put on once a stroke, not built up). */
+    private boolean[] stroke;
 
     @Override
     protected void init() {
@@ -261,7 +298,7 @@ public class ShaderPaintScreen extends Screen {
         ax1 = areaX1;
         ay0 = 46;
         ay1 = bottom;
-        rowsShown = Math.max(3, Math.min((skyCount() + cols - 1) / cols, (height - py0 - 170) / (swatch + 2)));
+        rowsShown = Math.max(3, Math.min((skyCount() + cols - 1) / cols, (height - py0 - 186) / (swatch + 2)));
         int y = 28;
         Tool[] tools = Tool.values();
         for (int i = 0; i < tools.length; i++) {
@@ -322,6 +359,8 @@ public class ShaderPaintScreen extends Screen {
         // how see-through: solid, down to barely there (the item's own pixels showing through the sky)
         clearSlider = addRenderableWidget(new ClearSlider(px0, py0 + rowsShown * (swatch + 2) + 22, cols * (swatch + 2) - 2, 14));
         clearSlider.setTooltip(Tooltip.create(Component.translatable("screen.skyblocks.shader_paint.opacity.tip")));
+        glassSlider = addRenderableWidget(new GlassSlider(px0, py0 + rowsShown * (swatch + 2) + 38, cols * (swatch + 2) - 2, 14));
+        glassSlider.setTooltip(Tooltip.create(Component.translatable("screen.skyblocks.shader_paint.glass.tip")));
         addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.shader_paint.apply"), b -> apply())
                 .bounds(width / 2 - 104, height - 26, 100, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.cancel"), b -> onClose()).bounds(width / 2 + 4, height - 26, 100, 20).build());
@@ -566,11 +605,11 @@ public class ShaderPaintScreen extends Screen {
                     continue;
                 }
                 styles[j] = c.skies[i];
-                if ((c.colours[i] >>> 24) > 16 && (c.colours[i] | 0xFF000000) != (c.original[i] | 0xFF000000)) {
+                if ((c.colours[i] >>> 24) > 16 && c.colours[i] != (c.original[i] | 0xFF000000)) {
                     if (argb == null) {
                         argb = new int[sheetW * sheetH];
                     }
-                    argb[j] = c.colours[i] | 0xFF000000;
+                    argb[j] = c.colours[i]; // (its see-through-ness kept)
                 }
             }
         }
@@ -859,7 +898,22 @@ public class ShaderPaintScreen extends Screen {
             colours[i] = 0;
             skies[i] = 0;
         } else {
-            colours[i] = colour | 0xFF000000;
+            if (stroke != null && i < stroke.length) {
+                if (stroke[i]) {
+                    return; // (painted once this stroke already: not built up)
+                }
+                stroke[i] = true;
+            }
+            int old = colours[i], rgb = colour & 0xFFFFFF;
+            float op = opacity();
+            if ((old >>> 24) > 16 && op < 0.999F) {
+                // (mixed with what's there)
+                int r = Math.round(((old >> 16) & 255) * (1 - op) + ((rgb >> 16) & 255) * op);
+                int g = Math.round(((old >> 8) & 255) * (1 - op) + ((rgb >> 8) & 255) * op);
+                int b = Math.round((old & 255) * (1 - op) + (rgb & 255) * op);
+                rgb = r << 16 | g << 8 | b;
+            }
+            colours[i] = glassAlpha() << 24 | rgb;
         }
     }
 
@@ -1071,6 +1125,7 @@ public class ShaderPaintScreen extends Screen {
     /** A click on a pixel of the canvas (flat, or on the 3D armour). */
     private void press(int x, int y, int button) {
         erasing = button == 1 || tool == Tool.ERASER;
+        stroke = new boolean[w * h];
         switch (tool) {
             case PICKER -> {
                 int i = y * w + x;
@@ -1394,7 +1449,7 @@ public class ShaderPaintScreen extends Screen {
 
     private static boolean redrawn(int[] colours, int[] original) {
         for (int i = 0; i < colours.length; i++) {
-            if (!same(colours[i], original[i]) || ((colours[i] >>> 24) > 16 && (colours[i] | 0xFF000000) != (original[i] | 0xFF000000))) {
+            if (!same(colours[i], original[i]) || ((colours[i] >>> 24) > 16 && colours[i] != (original[i] | 0xFF000000))) {
                 return true;
             }
         }
@@ -1486,7 +1541,7 @@ public class ShaderPaintScreen extends Screen {
                 g.fill(x0, y0, x0 + cell, y0 + cell, ((x + y) & 1) == 0 ? 0xFF3A3A44 : 0xFF2C2C34);
                 int c = colours[y * w + x];
                 if ((c >>> 24) > 16) {
-                    g.fill(x0, y0, x0 + cell, y0 + cell, c | 0xFF000000);
+                    g.fill(x0, y0, x0 + cell, y0 + cell, c); // (see-through ones over the checks)
                 }
             }
         }
@@ -1550,7 +1605,7 @@ public class ShaderPaintScreen extends Screen {
             g.fill(px0 + cols * (swatch + 2) + 2, knobY, px0 + cols * (swatch + 2) + 5, knobY + knob, 0xC0D0C0F0);
         }
         g.pose().popPose();
-        int below = py0 + rowsShown * (swatch + 2) + 40;
+        int below = py0 + rowsShown * (swatch + 2) + 56;
         g.drawString(font, skyBrush ? ShaderPaintRender.name(style()) : Component.literal(String.format("#%06X", colour & 0xFFFFFF)), px0, below, 0xFFFFFFFF);
         // the item as it'll look, turning
         drawPreview(g, px0 + (cols * (swatch + 2)) / 2, below + 14 + 50, partialTick);

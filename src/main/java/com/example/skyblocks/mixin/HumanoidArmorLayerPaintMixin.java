@@ -19,4 +19,25 @@ public abstract class HumanoidArmorLayerPaintMixin {
                                          float partialTick, float ageInTicks, float netHeadYaw, float headPitch, CallbackInfo ci) {
         ArmorPaintRender.renderWorn((HumanoidArmorLayer<?, ?, ?>) (Object) this, pose, buffers, light, entity);
     }
+
+    /** A worn piece with see-through pixels: the game's own drawing of it left out (ArmorPaintRender draws it whole). */
+    @Inject(method = "renderArmorPiece(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/entity/EquipmentSlot;ILnet/minecraft/client/model/HumanoidModel;)V",
+            at = @At("HEAD"), cancellable = true, require = 0)
+    private void skyblocks$glassPiece(PoseStack pose, MultiBufferSource buffers, LivingEntity entity, net.minecraft.world.entity.EquipmentSlot slot, int light,
+                                      net.minecraft.client.model.HumanoidModel<?> model, CallbackInfo ci) {
+        if (ArmorPaintRender.hidesOwn(entity, slot)) {
+            ci.cancel();
+        }
+    }
+
+    /** (the same, as NeoForge has the method: the pose's numbers passed on too) */
+    @Inject(method = "renderArmorPiece(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/entity/EquipmentSlot;ILnet/minecraft/client/model/HumanoidModel;FFFFFF)V",
+            at = @At("HEAD"), cancellable = true, require = 0)
+    private void skyblocks$glassPieceNeo(PoseStack pose, MultiBufferSource buffers, LivingEntity entity, net.minecraft.world.entity.EquipmentSlot slot, int light,
+                                         net.minecraft.client.model.HumanoidModel<?> model, float limbSwing, float limbSwingAmount, float partialTick,
+                                         float ageInTicks, float netHeadYaw, float headPitch, CallbackInfo ci) {
+        if (ArmorPaintRender.hidesOwn(entity, slot)) {
+            ci.cancel();
+        }
+    }
 }

@@ -22,7 +22,8 @@ import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * The rift knife: right-click the top of a block with it to cut the ground open - a dark fountain pours up out of the
- * tear (DarkFountainBlock). Cut a fountain (or the ground under it) again to close it. A knife too.
+ * tear (DarkFountainBlock): the sky block in your other hand's sky, or the dark of space. Cut a fountain (or the ground
+ * under it) again to close it. A knife too.
  */
 public class RiftKnifeItem extends SwordItem {
     public RiftKnifeItem(Properties properties) {
@@ -64,6 +65,15 @@ public class RiftKnifeItem extends SwordItem {
         if (!level.isClientSide) {
             level.setBlock(at, ModBlocks.DARK_FOUNTAIN.get().defaultBlockState(), Block.UPDATE_ALL);
             if (level.getBlockEntity(at) instanceof DarkFountainBlockEntity be) {
+                // (the sky block in the other hand: the fountain pours that sky)
+                if (player != null) {
+                    net.minecraft.world.InteractionHand other = context.getHand() == net.minecraft.world.InteractionHand.MAIN_HAND
+                            ? net.minecraft.world.InteractionHand.OFF_HAND : net.minecraft.world.InteractionHand.MAIN_HAND;
+                    com.example.skyblocks.island.ShaderedSkyItems.Sky sky = com.example.skyblocks.island.ShaderedSkyItems.sky(player.getItemInHand(other));
+                    if (sky != null) {
+                        be.setSky(sky.type().name(), sky.pass().name());
+                    }
+                }
                 be.open();
             }
             level.playSound(null, at, SoundEvents.TRIDENT_RIPTIDE_1.value(), SoundSource.PLAYERS, 1.0F, 0.6F);
