@@ -19,7 +19,7 @@ import org.joml.Matrix4f;
 /**
  * A spin pad (SpinPadBlockEntity): its plate turning with the cat on it, and once it's going, a vortex of sky whirling
  * up round the cat - three ribbons of the pad's sky (SkyWindow) spiralling up and out, taller and wider the faster it
- * spins - with a glow at its heart and a ring of light round the plate.
+ * spins - with a ring of light round the plate.
  */
 public class SpinPadRenderer implements BlockEntityRenderer<SpinPadBlockEntity> {
     private static final ResourceLocation PLATE = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "textures/block/spin_pad_plate.png");
@@ -72,7 +72,7 @@ public class SpinPadRenderer implements BlockEntityRenderer<SpinPadBlockEntity> 
         if (sky != null) {
             SkyWindow.draw(buffers, sky, m, quads.data, quads.count);
         }
-        // a glow at the heart, and round the plate
+        // a ring of light round the plate
         VertexConsumer g = buffers.getBuffer(GlowTypes.GLOW);
         float a = 0.35F * s;
         for (int i = 0; i < 24; i++) {
@@ -83,15 +83,6 @@ public class SpinPadRenderer implements BlockEntityRenderer<SpinPadBlockEntity> 
             g.addVertex(m, 0.5F + Mth.cos(a0) * r1, y, 0.5F + Mth.sin(a0) * r1).setColor(0.7F, 0.85F, 1.0F, 0.0F);
             g.addVertex(m, 0.5F + Mth.cos(a1) * r1, y, 0.5F + Mth.sin(a1) * r1).setColor(0.7F, 0.85F, 1.0F, 0.0F);
             g.addVertex(m, 0.5F + Mth.cos(a1) * r0, y, 0.5F + Mth.sin(a1) * r0).setColor(0.7F, 0.85F, 1.0F, a);
-        }
-        // (the heart: a column of soft light up the middle of the vortex)
-        for (int i = 0; i < 8; i++) {
-            float a0 = i * Mth.TWO_PI / 8, a1 = (i + 1) * Mth.TWO_PI / 8, rr = 0.55F + 0.3F * s;
-            float top = 0.3F + height * 0.8F;
-            g.addVertex(m, 0.5F + Mth.cos(a0) * rr, 0.3F, 0.5F + Mth.sin(a0) * rr).setColor(0.8F, 0.85F, 1.0F, 0.12F * s);
-            g.addVertex(m, 0.5F + Mth.cos(a1) * rr, 0.3F, 0.5F + Mth.sin(a1) * rr).setColor(0.8F, 0.85F, 1.0F, 0.12F * s);
-            g.addVertex(m, 0.5F + Mth.cos(a1) * rr * 1.6F, top, 0.5F + Mth.sin(a1) * rr * 1.6F).setColor(0.8F, 0.85F, 1.0F, 0.0F);
-            g.addVertex(m, 0.5F + Mth.cos(a0) * rr * 1.6F, top, 0.5F + Mth.sin(a0) * rr * 1.6F).setColor(0.8F, 0.85F, 1.0F, 0.0F);
         }
     }
 

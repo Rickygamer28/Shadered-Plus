@@ -49,10 +49,10 @@ void main() {
     float side = xWall ? 0.78 : 0.62;
     // the light from above dying away down the shaft; a shadow right under the rim, and in the wall's corners
     // (quickly: a few blocks down it's nearly black, and it never ends)
-    float fall = exp(-depth * 0.5) * (0.7 + 0.3 * smoothstep(0.0, 0.6, depth));
+    float fall = exp(-depth * 1.05) * (0.75 + 0.25 * smoothstep(0.0, 0.5, depth));
     vec2 inRect = vec2(min(h.x - rect.x, rect.z - h.x), min(h.z - rect.y, rect.w - h.z));
     float corner = smoothstep(0.0, 0.35, xWall ? inRect.y : inRect.x);
-    vec3 c = wall * side * fall * mix(0.55, 1.0, corner) * (0.25 + 0.75 * bright);
+    vec3 c = wall * side * fall * mix(0.55, 1.0, corner) * max(bright, 0.04);
 
     // dust drifting down through the dark: a few layers of motes, slowly falling, lit less the deeper they are
     float ticks = GameTime * 24000.0;

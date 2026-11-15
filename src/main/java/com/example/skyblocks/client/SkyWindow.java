@@ -22,6 +22,7 @@ public final class SkyWindow {
     private SkyWindow() {}
 
     private static final Map<String, RenderType> TYPES = new HashMap<>();
+    private static final Map<RenderType, SkyblockType> SKIES = new HashMap<>();
 
     /** Shadered's render type for a sky and pass (by name); null if there's no such sky here. */
     @Nullable
@@ -38,7 +39,11 @@ public final class SkyWindow {
             } catch (IllegalArgumentException e) {
                 p = SkyblockPass.NORMAL;
             }
-            type = ModRenderTypes.getSkyblockRenderType(SkyblockType.valueOf(sky), p);
+            SkyblockType t = SkyblockType.valueOf(sky);
+            type = ModRenderTypes.getSkyblockRenderType(t, p);
+            if (type != null) {
+                SKIES.put(type, t);
+            }
         } catch (RuntimeException e) {
             type = null;
         }
@@ -50,6 +55,15 @@ public final class SkyWindow {
     public static void draw(MultiBufferSource buffers, RenderType type, Matrix4f pose, float[] quads, int count) {
         if (count <= 0) {
             return;
+        }
+        // (its sky's picture brought up to date first: a sky nothing else on screen shows isn't drawn every frame)
+        SkyblockType sky = SKIES.get(type);
+        if (sky != null) {
+            try {
+                SkyUsage.ensureFresh(com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(sky));
+            } catch (RuntimeException ignored) {
+                // (drawn as it is)
+            }
         }
         if (com.example.skyblocks.client.iris.IrisIslandTarget.deferSky()) {
             Matrix4f copy = new Matrix4f(pose);

@@ -151,9 +151,9 @@ public class DarkFountainRenderer implements BlockEntityRenderer<DarkFountainBlo
         float vx = cx + x - 0.5F, vy = cy + y, vz = cz + z - 0.5F, vl = Mth.sqrt(vx * vx + vy * vy + vz * vz) + 1.0E-5F;
         float facing = Math.abs((nx * vx + nz * vz) / (nl * vl));
         float edge = (1.0F - facing);
-        float a = edge * edge * edge * 0.65F * column;
+        float a = (edge * edge * 0.9F + 0.06F) * column;
         float r = 1.02F;
-        g.addVertex(m, 0.5F + (x - 0.5F) * r, y, 0.5F + (z - 0.5F) * r).setColor(0.72F, 0.68F, 1.0F, a);
+        g.addVertex(m, 0.5F + (x - 0.5F) * r, y, 0.5F + (z - 0.5F) * r).setColor(0.85F, 0.82F, 1.0F, Math.min(1.0F, a));
     }
 
     @Override
