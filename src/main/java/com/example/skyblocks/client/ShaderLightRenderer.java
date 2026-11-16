@@ -81,13 +81,22 @@ public class ShaderLightRenderer implements BlockEntityRenderer<ShaderLightBlock
 
     @Override
     public void render(ShaderLightBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
-        if (shader == null || MirrorRenderer.isRenderingReflection() || com.example.skyblocks.client.iris.IrisCompat.renderingShadowPass()) {
+        int reach = be.getBlockState().hasProperty(ShaderLightBlock.LEVEL) ? be.getBlockState().getValue(ShaderLightBlock.LEVEL) : 12;
+        add(pose, 0.5F, 0.5F, 0.5F, reach, be.colour());
+    }
+
+    /**
+     * A coloured light this frame (the shader lights; the moon and sun in their jars): at this spot of a block entity
+     * renderer's pose, reaching this far (blocks), this colour (RGB).
+     */
+    public static void add(PoseStack pose, float x, float y, float z, float reach, int colour) {
+        if (shader == null || MirrorRenderer.isRenderingReflection() || com.example.skyblocks.client.iris.IrisCompat.renderingShadowPass()
+                || com.example.skyblocks.client.island.IslandRendering.inIsland) {
             return;
         }
-        Vector3f at = pose.last().pose().transformPosition(0.5F, 0.5F, 0.5F, new Vector3f());
-        int reach = be.getBlockState().hasProperty(ShaderLightBlock.LEVEL) ? be.getBlockState().getValue(ShaderLightBlock.LEVEL) : 12;
+        Vector3f at = pose.last().pose().transformPosition(x, y, z, new Vector3f());
         if (LIGHTS.size() < 256) {
-            LIGHTS.add(new Light(at.x, at.y, at.z, reach, be.colour()));
+            LIGHTS.add(new Light(at.x, at.y, at.z, reach, colour));
         }
         if (!queued) {
             queued = LatePass.first(ShaderLightRenderer::drawAll);

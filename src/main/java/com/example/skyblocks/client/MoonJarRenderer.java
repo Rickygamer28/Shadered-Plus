@@ -61,6 +61,7 @@ public class MoonJarRenderer implements BlockEntityRenderer<SimpleRenderedBlockE
         if (level == null || shader == null || !state.hasProperty(MoonJarBlock.MOON) || !state.getValue(MoonJarBlock.MOON)) {
             return;
         }
+        ShaderLightRenderer.add(pose, 0.5F, 0.35F, 0.5F, 9.0F, 0xDCE6FF); // (its light: a cool, pale white)
         float t = level.getGameTime() + partialTick;
         pose.pushPose();
         pose.translate(0.5F, 0.31F + 0.015F * Mth.sin(t * 0.05F), 0.5F);

@@ -61,6 +61,7 @@ public class SunJarRenderer implements BlockEntityRenderer<SimpleRenderedBlockEn
         if (level == null || shader == null || !state.hasProperty(SunJarBlock.SUN) || !state.getValue(SunJarBlock.SUN)) {
             return;
         }
+        ShaderLightRenderer.add(pose, 0.5F, 0.35F, 0.5F, 13.0F, 0xFF9838); // (its light: a warm orange)
         float t = level.getGameTime() + partialTick;
         pose.pushPose();
         pose.translate(0.5F, 0.31F + 0.015F * Mth.sin(t * 0.05F), 0.5F);
