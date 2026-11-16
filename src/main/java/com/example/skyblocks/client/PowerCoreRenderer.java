@@ -56,6 +56,42 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
         }
     }
 
+    /**
+     * The boxes to draw this frame (x, y, z from the camera; u, v; colour) - drawn after the coloured lights have been laid
+     * over the picture (LatePass): laid over it, they'd tint what's in front by what's behind (a glowing star showing the
+     * frames behind it as a stripe of its own colour).
+     */
+    private static final java.util.List<float[]> VERTS = new java.util.ArrayList<>();
+    private static boolean queued;
+
+    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+    public static final class Frames {
+        private Frames() {}
+
+        @SubscribeEvent
+        public static void onStage(net.neoforged.neoforge.client.event.RenderLevelStageEvent event) {
+            if (event.getStage() == net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_SKY && !MirrorRenderer.isRenderingReflection()) {
+                VERTS.clear();
+                queued = false;
+            }
+        }
+    }
+
+    private static void drawAll(MultiBufferSource.BufferSource source) {
+        queued = false;
+        if (VERTS.isEmpty() || shader == null) {
+            VERTS.clear();
+            return;
+        }
+        VertexConsumer vc = source.getBuffer(Types.CORE);
+        Matrix4f identity = new Matrix4f();
+        for (float[] v : VERTS) {
+            vc.addVertex(identity, v[0], v[1], v[2]).setColor((int) v[5], (int) v[6], (int) v[7], 255).setUv(v[3], v[4]);
+        }
+        VERTS.clear();
+        source.endBatch(Types.CORE);
+    }
+
     public PowerCoreRenderer(BlockEntityRendererProvider.Context context) {}
 
     @Override
@@ -80,7 +116,10 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
         // (the eye, from the middle: the pose is the block's place from the camera)
         float ex = -centre.x, ey = -centre.y, ez = -centre.z;
         boolean inside = Math.abs(ex) < half && Math.abs(ey) < half && Math.abs(ez) < half;
-        VertexConsumer vc = buffers.getBuffer(Types.CORE);
+        boolean late = queued || LatePass.later(PowerCoreRenderer::drawAll);
+        queued = late;
+        VertexConsumer vc = late ? null : buffers.getBuffer(Types.CORE);
+        org.joml.Vector3f at = new org.joml.Vector3f();
         int r = skin & 255, g = Math.round(full * 255), b = chamber > 0 ? 255 : 0;
         // each face of the box turned towards the eye (from inside: all of them), its corners numbered x + 2y + 4z
         int[][] faces = {{0, 2, 6, 4}, {1, 5, 7, 3}, {0, 4, 5, 1}, {2, 3, 7, 6}, {0, 1, 3, 2}, {4, 6, 7, 5}};
@@ -91,7 +130,12 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
             }
             for (int c : faces[f]) {
                 float x = ((c & 1) * 2 - 1) * half, y = (((c >> 1) & 1) * 2 - 1) * half, z = (((c >> 2) & 1) * 2 - 1) * half;
-                vc.addVertex(m, 0.5F + x, 0.5F + y, 0.5F + z).setColor(r, g, b, 255).setUv(c, half);
+                if (vc != null) {
+                    vc.addVertex(m, 0.5F + x, 0.5F + y, 0.5F + z).setColor(r, g, b, 255).setUv(c, half);
+                } else if (VERTS.size() < 65536) {
+                    m.transformPosition(0.5F + x, 0.5F + y, 0.5F + z, at);
+                    VERTS.add(new float[] {at.x, at.y, at.z, c, half, r, g, b});
+                }
             }
         }
         // the storm's rain: drops falling out of its cloud

@@ -24,6 +24,9 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
  */
 @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class RenderTest {
+    /** (This spot: the power core's screen opened, once the player's been moved there.) */
+    private static boolean coreUi;
+
     static final boolean ON = System.getenv("SKYBLOCKS_RENDER_TEST") != null;
     private static final String TAG = System.getenv().getOrDefault("SKYBLOCKS_RENDER_TEST", "x");
     private static int stage = 0;
@@ -699,6 +702,9 @@ public final class RenderTest {
                             ticks = 0;
                             return;
                         }
+                        if (ticks == 20 && coreUi && !(mc.screen instanceof PowerCoreScreen)) {
+                            PowerCoreScreen.open(new net.minecraft.core.BlockPos(618, -57, 0));
+                        }
                         if (ticks == 1) {
                             String where = spots()[spot];
                             // (the moon in a jar: the sky drawn without it)
@@ -722,10 +728,10 @@ public final class RenderTest {
                             }
                             mc.options.hideGui = !(holdPhoto || holdCamera || holdWand);
                             // (the power core's screen open, over the 7 chamber's star)
-                            if (where.startsWith("coreui ")) {
+                            coreUi = where.startsWith("coreui ");
+                            if (coreUi) {
                                 where = where.substring(7);
-                                mc.options.hideGui = false;
-                                PowerCoreScreen.open(new net.minecraft.core.BlockPos(618, -57, 0));
+                                mc.options.hideGui = false; // (opened once the player's there: see coreUi)
                             } else if (mc.screen instanceof PowerCoreScreen) {
                                 mc.setScreen(null);
                             }
