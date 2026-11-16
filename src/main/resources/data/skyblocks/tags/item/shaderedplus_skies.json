@@ -32,6 +32,13 @@
     "skyblocks:vaporwave_sky_block",
     "skyblocks:aurora_sky_block",
     "skyblocks:underwater_sky_block",
+    "skyblocks:swirl_sky_block",
+    "skyblocks:light_cycle_sky_block",
+    "skyblocks:universe_within_sky_block",
+    "skyblocks:data_cube_sky_block",
+    "skyblocks:end_portal_sky_block",
+    "skyblocks:end_gateway_sky_block",
+    "skyblocks:classic_end_portal_sky_block",
     {
       "id": "skyblocks:jupiter_liquid_bucket",
       "required": false
@@ -158,6 +165,34 @@
     },
     {
       "id": "skyblocks:underwater_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:swirl_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:light_cycle_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:universe_within_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:data_cube_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:end_portal_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:end_gateway_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:classic_end_portal_liquid_bucket",
       "required": false
     }
   ]

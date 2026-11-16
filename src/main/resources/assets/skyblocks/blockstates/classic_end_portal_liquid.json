@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "skyblocks:block/sky_liquid"
+    }
+  }
+}

@@ -109,6 +109,7 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.MOON_JAR.get(), MoonJarRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.DARK_FOUNTAIN.get(), DarkFountainRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SPIN_PAD.get(), SpinPadRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.FILTER.get(), FilterRenderer::new);
         event.registerEntityRenderer(com.example.skyblocks.ModEntities.SKY_TRAIL.get(), SkyTrailRenderer::new);
         BlockEntityRendererProvider<OiiaCatBlockEntity> big = OiiaCatRenderer::new;
         event.registerBlockEntityRenderer(ModBlockEntities.BIG_OIIA_CAT.get(), big);

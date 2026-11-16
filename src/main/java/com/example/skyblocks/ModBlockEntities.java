@@ -144,6 +144,9 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.MOON_JAR.get(), p, st), ModBlocks.MOON_JAR.get()).build(null));
     public static final Supplier<BlockEntityType<DarkFountainBlockEntity>> DARK_FOUNTAIN = TYPES.register("dark_fountain",
             () -> BlockEntityType.Builder.of(DarkFountainBlockEntity::new, ModBlocks.DARK_FOUNTAIN.get()).build(null));
+    public static final Supplier<BlockEntityType<FilterBlockEntity>> FILTER = TYPES.register("filter",
+            () -> BlockEntityType.Builder.of(FilterBlockEntity::new, java.util.Arrays.stream(ModBlocks.FILTERS).map(b -> (net.minecraft.world.level.block.Block) b.get())
+                    .toArray(net.minecraft.world.level.block.Block[]::new)).build(null));
     public static final Supplier<BlockEntityType<SpinPadBlockEntity>> SPIN_PAD = TYPES.register("spin_pad",
             () -> BlockEntityType.Builder.of(SpinPadBlockEntity::new, ModBlocks.SPIN_PAD.get()).build(null));
     public static final Supplier<BlockEntityType<CatFlapBlockEntity>> CAT_FLAP = TYPES.register("cat_flap",

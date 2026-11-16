@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1.0,
+      "bonus_rolls": 0.0,
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "skyblocks:chromatic_aberration_filter"
+        }
+      ]
+    }
+  ],
+  "random_sequence": "skyblocks:blocks/chromatic_aberration_filter"
+}

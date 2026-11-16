@@ -50,6 +50,10 @@ public final class ShaderSky {
     private static ShaderInstance synthwave;
     private static ShaderInstance aurora;
     private static ShaderInstance underwater;
+    /** The Valley Mod's skies (SkyNames.TVM), by name. */
+    private static final java.util.Map<String, ShaderInstance> TVM = new java.util.HashMap<>();
+    static final ResourceLocation END_SKY = ResourceLocation.withDefaultNamespace("textures/environment/end_sky.png");
+    static final ResourceLocation END_PORTAL = ResourceLocation.withDefaultNamespace("textures/entity/end_portal.png");
 
     private ShaderSky() {}
 
@@ -60,6 +64,15 @@ public final class ShaderSky {
             case SkyNames.CHAOS -> new Pass(folder, batch, () -> chaos, NOISE, null);
             case SkyNames.AURORA -> new Pass(folder, batch, () -> aurora, null, null);
             case SkyNames.UNDERWATER -> new Pass(folder, batch, () -> underwater, null, null);
+            case "swirl", "light_cycle", "universe_within", "data_cube", "end_portal", "end_gateway", "classic_end_portal" ->
+                    new Pass(folder, batch, () -> TVM.get(name), END_SKY, shader -> {
+                        // (the camera's turn - the Data Cube sits ahead of you, the Universe's layers drift with it - and
+                        // the End Portal's stars)
+                        net.minecraft.client.Camera camera = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera();
+                        shader.safeGetUniform("CamYaw").set((float) Math.toRadians(camera.getYRot()));
+                        shader.safeGetUniform("CamPitch").set((float) Math.toRadians(camera.getXRot()));
+                        com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(1, END_PORTAL);
+                    });
             default -> SynthwavePalettes.has(name) // the synthwave skies: one scene, their own colours, reacting to music
                     ? new Pass(folder, batch, () -> synthwave, MusicReactor.HISTORY, shader -> {
                         MusicReactor.apply(shader);
@@ -79,6 +92,10 @@ public final class ShaderSky {
             com.example.skyblocks.client.ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "synthwave_sky"), DefaultVertexFormat.POSITION, s -> synthwave = s);
             com.example.skyblocks.client.ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "aurora_sky"), DefaultVertexFormat.POSITION, s -> aurora = s);
             com.example.skyblocks.client.ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "underwater_sky"), DefaultVertexFormat.POSITION, s -> underwater = s);
+            for (String name : SkyNames.TVM) {
+                com.example.skyblocks.client.ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "tvm_" + name + "_sky"),
+                        DefaultVertexFormat.POSITION, s -> TVM.put(name, s));
+            }
         }
     }
 
@@ -89,10 +106,40 @@ public final class ShaderSky {
         /** The credit, on the chaos sky's items (sky block, liquid bucket). */
         @SubscribeEvent
         public static void onTooltip(ItemTooltipEvent event) {
+            // (The Valley Mod's skies: its credit, and the Shadertoy author's where it's theirs)
+            String tvm = tvmSky(event.getItemStack());
+            if (tvm != null) {
+                event.getToolTip().add(Component.translatable("tooltip.skyblocks.tvm_credit").withStyle(ChatFormatting.DARK_AQUA, ChatFormatting.ITALIC));
+                String key = "tooltip.skyblocks.tvm_credit." + tvm;
+                if (net.minecraft.client.resources.language.I18n.exists(key)) {
+                    event.getToolTip().add(Component.translatable(key).withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
+                }
+            }
             if (isChaos(event.getItemStack())) {
                 event.getToolTip().add(Component.translatable("tooltip.skyblocks.draconic_credit")
                         .withStyle(ChatFormatting.DARK_PURPLE, ChatFormatting.ITALIC));
             }
+        }
+
+        @org.jetbrains.annotations.Nullable
+        private static String tvmSky(ItemStack stack) {
+            if (stack.isEmpty()) {
+                return null;
+            }
+            ShaderedSkyItems.Sky sky = ShaderedSkyItems.sky(stack);
+            for (String name : SkyNames.TVM) {
+                int index = java.util.Arrays.asList(SkyNames.NAMES).indexOf(name);
+                SkyblockType type = SkyTypes.type(index);
+                if (sky != null ? sky.type() == type : isBucket(stack, type)) {
+                    return name;
+                }
+            }
+            return null;
+        }
+
+        private static boolean isBucket(ItemStack stack, SkyblockType type) {
+            ModFluids.SkyLiquid liquid = ModFluids.of(type);
+            return liquid != null && liquid.bucket != null && stack.is(liquid.bucket.get());
         }
 
         private static boolean isChaos(ItemStack stack) {

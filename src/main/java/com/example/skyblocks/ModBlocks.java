@@ -491,5 +491,30 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(2.0F).sound(SoundType.METAL).noOcclusion().requiresCorrectToolForDrops()
                     .mapColor(net.minecraft.world.level.material.MapColor.METAL));
 
+    // ---- the filter blocks (from The Valley Mod by D0nkey100, used with permission) ----
+    public static final DeferredBlock<FilterBlock> INVERTED_FILTER = BLOCKS.registerBlock("inverted_filter", p -> new FilterBlock(1, false, p),
+            BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS));
+    public static final DeferredBlock<FilterBlock> POSTERIZE_FILTER = BLOCKS.registerBlock("posterize_filter", p -> new FilterBlock(2, false, p),
+            BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS));
+    public static final DeferredBlock<FilterBlock> GRAYSCALE_FILTER = BLOCKS.registerBlock("grayscale_filter", p -> new FilterBlock(3, false, p),
+            BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS));
+    public static final DeferredBlock<FilterBlock> CHROMATIC_ABERRATION_FILTER = BLOCKS.registerBlock("chromatic_aberration_filter", p -> new FilterBlock(4, false, p),
+            BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS));
+    public static final DeferredBlock<FilterBlock> BLUEPRINT_FILTER = BLOCKS.registerBlock("blueprint_filter", p -> new FilterBlock(5, true, p),
+            BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS));
+    public static final DeferredBlock<FilterBlock> GAME_BOY_FILTER = BLOCKS.registerBlock("game_boy_filter", p -> new FilterBlock(6, false, p),
+            BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS));
+    public static final DeferredBlock<FilterBlock> PIXEL_FILTER = BLOCKS.registerBlock("pixel_filter", p -> new FilterBlock(7, false, p),
+            BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS));
+    public static final DeferredBlock<FilterBlock> CROSS_STITCH_FILTER = BLOCKS.registerBlock("cross_stitch_filter", p -> new FilterBlock(8, false, p),
+            BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS));
+    public static final DeferredBlock<FilterBlock> RED_FILTER = BLOCKS.registerBlock("red_filter", p -> new FilterBlock(9, false, p),
+            BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS));
+    public static final DeferredBlock<FilterBlock> SCREEN_FILTER = BLOCKS.registerBlock("screen_filter", p -> new FilterBlock(14, false, p),
+            BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS));
+    public static final DeferredBlock<FilterBlock> TINT_FILTER = BLOCKS.registerBlock("tint_filter", p -> new FilterBlock(20, true, p),
+            BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS));
+    public static final DeferredBlock<?>[] FILTERS = {INVERTED_FILTER, POSTERIZE_FILTER, GRAYSCALE_FILTER, CHROMATIC_ABERRATION_FILTER, BLUEPRINT_FILTER, GAME_BOY_FILTER, PIXEL_FILTER, CROSS_STITCH_FILTER, RED_FILTER, SCREEN_FILTER, TINT_FILTER};
+
     private ModBlocks() {}
 }

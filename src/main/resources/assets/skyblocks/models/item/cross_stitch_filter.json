@@ -1,0 +1,6 @@
+{
+  "parent": "block/cube_all",
+  "textures": {
+    "all": "skyblocks:block/cross_stitch_filter_preview"
+  }
+}

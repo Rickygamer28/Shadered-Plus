@@ -187,5 +187,18 @@ public final class ModItems {
             new Item.Properties().stacksTo(16)));
     public static final DeferredItem<BlockItem> SPIN_PAD = ITEMS.registerSimpleBlockItem("spin_pad", ModBlocks.SPIN_PAD);
 
+    // ---- the filter blocks (from The Valley Mod by D0nkey100) ----
+    public static final DeferredItem<BlockItem> INVERTED_FILTER = ITEMS.registerSimpleBlockItem("inverted_filter", ModBlocks.INVERTED_FILTER);
+    public static final DeferredItem<BlockItem> POSTERIZE_FILTER = ITEMS.registerSimpleBlockItem("posterize_filter", ModBlocks.POSTERIZE_FILTER);
+    public static final DeferredItem<BlockItem> GRAYSCALE_FILTER = ITEMS.registerSimpleBlockItem("grayscale_filter", ModBlocks.GRAYSCALE_FILTER);
+    public static final DeferredItem<BlockItem> CHROMATIC_ABERRATION_FILTER = ITEMS.registerSimpleBlockItem("chromatic_aberration_filter", ModBlocks.CHROMATIC_ABERRATION_FILTER);
+    public static final DeferredItem<BlockItem> BLUEPRINT_FILTER = ITEMS.registerSimpleBlockItem("blueprint_filter", ModBlocks.BLUEPRINT_FILTER);
+    public static final DeferredItem<BlockItem> GAME_BOY_FILTER = ITEMS.registerSimpleBlockItem("game_boy_filter", ModBlocks.GAME_BOY_FILTER);
+    public static final DeferredItem<BlockItem> PIXEL_FILTER = ITEMS.registerSimpleBlockItem("pixel_filter", ModBlocks.PIXEL_FILTER);
+    public static final DeferredItem<BlockItem> CROSS_STITCH_FILTER = ITEMS.registerSimpleBlockItem("cross_stitch_filter", ModBlocks.CROSS_STITCH_FILTER);
+    public static final DeferredItem<BlockItem> RED_FILTER = ITEMS.registerSimpleBlockItem("red_filter", ModBlocks.RED_FILTER);
+    public static final DeferredItem<BlockItem> SCREEN_FILTER = ITEMS.registerSimpleBlockItem("screen_filter", ModBlocks.SCREEN_FILTER);
+    public static final DeferredItem<BlockItem> TINT_FILTER = ITEMS.registerSimpleBlockItem("tint_filter", ModBlocks.TINT_FILTER);
+
     private ModItems() {}
 }

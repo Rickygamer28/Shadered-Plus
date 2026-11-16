@@ -1,0 +1,6 @@
+{
+  "parent": "block/cube_all",
+  "textures": {
+    "all": "skyblocks:block/chromatic_aberration_filter_preview"
+  }
+}

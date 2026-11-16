@@ -1,0 +1,6 @@
+{
+  "parent": "block/cube_all",
+  "textures": {
+    "all": "skyblocks:block/game_boy_filter_preview"
+  }
+}
