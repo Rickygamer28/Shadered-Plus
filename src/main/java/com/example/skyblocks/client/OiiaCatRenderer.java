@@ -73,6 +73,9 @@ public class OiiaCatRenderer implements BlockEntityRenderer<OiiaCatBlockEntity> 
         pose.last().pose().set(poseStack.last().pose());
         pose.last().normal().set(poseStack.last().normal());
         pose.translate(center, pad != null ? -0.75F : 0.0F, center);
+        if (pad != null) {
+            pose.mulPose(Axis.YP.rotationDegrees(-pad.turn(partialTick))); // (turning with the plate, the same way)
+        }
         pose.mulPose(Axis.YP.rotationDegrees(yaw(be.facing())));
         float scale = OiiaCatModel.SCALE * size;
         pose.scale(scale, scale, scale);
@@ -81,7 +84,7 @@ public class OiiaCatRenderer implements BlockEntityRenderer<OiiaCatBlockEntity> 
         // Spin only while powered by redstone, starting from the first frame each time the signal turns on.
         float seconds = 0;
         if (padSpin) {
-            seconds = pad.spinSeconds(partialTick);
+            seconds = 0; // (sat still on the plate, the plate turning it: slowly at first, faster and faster)
         } else if (powered && be.getLevel() != null) {
             long now = be.getLevel().getGameTime();
             if (be.animationStart < 0) {

@@ -23,7 +23,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A spin pad: a turntable for an OIIA cat - the cat block set on it, or a tame cat that hops on. The cat spins - faster
  * and faster the longer it's on (a live one: pet it for a boost), a vortex of sky whirling up round it (client/SpinPadRenderer) - and the spinning makes Forge Energy (FE), more
- * the faster it goes (with the square of its speed), passed on to whatever's next to it that takes energy (cables,
+ * the faster it spins (as many FE as it turns), passed on to whatever's next to it that takes energy (cables,
  * machines, batteries), or kept. A redstone signal stops it (and lets the cat go). The vortex's sky: right-click the pad
  * with a sky block.
  */
@@ -131,8 +131,8 @@ public class SpinPadBlockEntity extends BlockEntity {
         } else {
             be.speed = Math.max(0.0F, be.speed - SLOW_DOWN);
         }
-        // its energy: made with the square of its speed; passed on to its neighbours
-        be.lastFe = Math.round(MAX_FE * be.speed * be.speed);
+        // its energy: as much as it's turning (MAX_FE at full spin); passed on to its neighbours
+        be.lastFe = be.occupied || be.speed > 0 ? Math.round(MAX_FE * turnRate(be.speed) / turnRate(1.0F)) : 0;
         be.energy.make(be.lastFe);
         for (Direction d : Direction.values()) {
             if (be.energy.getEnergyStored() <= 0) {
@@ -160,14 +160,27 @@ public class SpinPadBlockEntity extends BlockEntity {
         }
     }
 
+    /**
+     * How fast it turns at a speed (0 .. 1): degrees a tick - slowly at first, faster and faster (up to three turns a
+     * second at full speed). The cat on it turns with it; the energy it makes goes with it.
+     */
+    public static float turnRate(float speed) {
+        return speed <= 0.001F ? 0.0F : 2.0F + 52.0F * (float) Math.pow(speed, 1.4);
+    }
+
+    /** Its spin as turns a minute. */
+    public int rpm() {
+        return Math.round(turnRate(speed) * 20.0F * 60.0F / 360.0F);
+    }
+
     public static void clientTick(Level level, BlockPos pos, BlockState state, SpinPadBlockEntity be) {
-        be.clientSpeed += (be.speed - be.clientSpeed) * 0.15F;
+        be.clientSpeed += (be.speed - be.clientSpeed) * 0.1F;
         be.clientSpinO = be.clientSpin;
         be.clientTurnO = be.clientTurn;
         float s = be.clientSpeed;
-        // (the OIIA spin plays at its own pace at first, up to 6x as fast at full speed)
+        // (a live cat's OIIA spin plays at its own pace at first, up to 6x as fast at full speed)
         be.clientSpin += 0.05 * (s > 0.02F ? 0.8 + s * 5.2 : 0.0);
-        be.clientTurn += s * 40.0; // degrees a tick: the plate
+        be.clientTurn += turnRate(s); // degrees a tick: the plate, and the cat block on it
     }
 
     /** Client: the OIIA spin's time on this pad now (seconds of its animation). */

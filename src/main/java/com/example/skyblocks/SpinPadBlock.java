@@ -75,7 +75,7 @@ public class SpinPadBlock extends BaseEntityBlock {
         if (!level.isClientSide && level.getBlockEntity(pos) instanceof SpinPadBlockEntity pad) {
             String key = level.hasNeighborSignal(pos) ? "message.skyblocks.spin_pad.stopped"
                     : pad.occupied() ? "message.skyblocks.spin_pad.status" : "message.skyblocks.spin_pad.empty";
-            player.displayClientMessage(Component.translatable(key, Math.round(pad.speed() * 100), pad.lastFe(),
+            player.displayClientMessage(Component.translatable(key, pad.rpm(), pad.lastFe(),
                     String.format("%,d", pad.energy.getEnergyStored())), true);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
