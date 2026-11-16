@@ -74,6 +74,9 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> WHIRLPOOL = ITEMS.registerSimpleBlockItem("whirlpool", ModBlocks.WHIRLPOOL,
             new net.minecraft.world.item.Item.Properties().stacksTo(1).fireResistant());
     public static final DeferredItem<BlockItem> TANK_FRAME = ITEMS.registerSimpleBlockItem("tank_frame", ModBlocks.TANK_FRAME);
+    public static final DeferredItem<BlockItem> POWER_CORE = ITEMS.registerSimpleBlockItem("power_core", ModBlocks.POWER_CORE,
+            new net.minecraft.world.item.Item.Properties().stacksTo(1).fireResistant());
+    public static final DeferredItem<BlockItem> CORE_FRAME = ITEMS.registerSimpleBlockItem("core_frame", ModBlocks.CORE_FRAME);
     public static final DeferredItem<BlockItem> TANK_GLASS = ITEMS.registerSimpleBlockItem("tank_glass", ModBlocks.TANK_GLASS);
     public static final DeferredItem<BlockItem> PORT_FRAME = ITEMS.registerSimpleBlockItem("port_frame", ModBlocks.PORT_FRAME);
     public static final DeferredItem<BlockItem> DISPLAY_FRAME = ITEMS.registerSimpleBlockItem("display_frame", ModBlocks.DISPLAY_FRAME);

@@ -12,6 +12,8 @@
     "skyblocks:redstone_frame",
     "skyblocks:whirlpool",
     "skyblocks:tank_frame",
+    "skyblocks:power_core",
+    "skyblocks:core_frame",
     "skyblocks:tank_glass"
   ]
 }

@@ -61,7 +61,12 @@ public final class Structures {
                 cube(size, ModBlocks.TANK_FRAME.get(), ModBlocks.TANK_GLASS.get(), ModBlocks.WHIRLPOOL.get()));
     }
 
-    /** For JEI: the chamber and the tank, each in every size (5, 7 and 9 across). */
+    private static Structure coreChamber(int size) {
+        return new Structure("core_chamber", new ItemStack(ModItems.POWER_CORE.get()), size,
+                cube(size, ModBlocks.CORE_FRAME.get(), null, ModBlocks.POWER_CORE.get()));
+    }
+
+    /** For JEI: the chamber, the tank and the core chamber, each in every size (5, 7 and 9 across). */
     public static List<Structure> everySize() {
         List<Structure> out = new ArrayList<>();
         for (int size = 5; size <= 9; size += 2) {
@@ -69,6 +74,9 @@ public final class Structures {
         }
         for (int size = 5; size <= 9; size += 2) {
             out.add(tank(size));
+        }
+        for (int size = 5; size <= 9; size += 2) {
+            out.add(coreChamber(size));
         }
         return out;
     }
@@ -78,6 +86,7 @@ public final class Structures {
         List<Structure> out = new ArrayList<>();
         out.add(chamber(5));
         out.add(tank(5));
+        out.add(coreChamber(5));
         Map<BlockPos, BlockState> cats = new LinkedHashMap<>();
         for (int i = 0; i < 27; i++) {
             cats.put(new BlockPos(i % 3, i / 9, (i / 3) % 3), ModBlocks.OIIA_CAT.get().defaultBlockState());

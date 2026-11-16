@@ -296,6 +296,17 @@ public final class ModBlocks {
                     .lightLevel(state -> state.getValue(TankFrameBlock.FORMED) ? 9 : 2)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_CYAN));
 
+    /** The power core: energy storage you can watch fill (PowerCoreBlock). */
+    public static final DeferredBlock<PowerCoreBlock> POWER_CORE = BLOCKS.registerBlock("power_core", PowerCoreBlock::new,
+            BlockBehaviour.Properties.of().strength(5.0F, 1200.0F).sound(SoundType.NETHERITE_BLOCK).noOcclusion().lightLevel(state -> 12)
+                    .requiresCorrectToolForDrops().mapColor(net.minecraft.world.level.material.MapColor.GOLD));
+
+    /** A core frame: built round a power core, a core chamber (CoreFrameBlock). */
+    public static final DeferredBlock<CoreFrameBlock> CORE_FRAME = BLOCKS.registerBlock("core_frame", CoreFrameBlock::new,
+            BlockBehaviour.Properties.of().strength(5.0F, 1200.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops().noOcclusion()
+                    .lightLevel(state -> state.getValue(CoreFrameBlock.FORMED) ? 9 : 2)
+                    .mapColor(net.minecraft.world.level.material.MapColor.GOLD));
+
     /** Tank glass: clear glass without a border - a containment tank's sides of it read as one pane. */
     public static final DeferredBlock<net.minecraft.world.level.block.TransparentBlock> TANK_GLASS = BLOCKS.registerBlock("tank_glass",
             net.minecraft.world.level.block.TransparentBlock::new, BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS));

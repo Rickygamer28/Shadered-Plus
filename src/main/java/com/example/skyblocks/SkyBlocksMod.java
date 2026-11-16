@@ -123,6 +123,11 @@ public class SkyBlocksMod {
         // (the spin pad's energy: cables and machines take it out)
         event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK, ModBlockEntities.SPIN_PAD.get(),
                 (be, side) -> be.energy);
+        // (the power core's energy: on it, and on its chamber's frames)
+        event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK, ModBlockEntities.POWER_CORE.get(),
+                (be, side) -> be.handler);
+        event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK, ModBlockEntities.CORE_FRAME.get(),
+                (be, side) -> be.handler());
     }
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
