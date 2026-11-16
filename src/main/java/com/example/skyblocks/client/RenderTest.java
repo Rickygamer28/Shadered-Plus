@@ -1053,8 +1053,10 @@ public final class RenderTest {
                                     n, String.format(java.util.Locale.ROOT, "%.1f", ms), String.join("\n  ", lines));
                         }
                         if (elevCall >= 0 && (ticks == 39 || ticks == 99) && mc.player != null) {
-                            SkyBlocksMod.LOGGER.info("Shadered+ render test: elevator ride, tick {}: player y {}, riding {}", ticks,
-                                    String.format(java.util.Locale.ROOT, "%.2f", mc.player.getY()), mc.player.getVehicle());
+                            SkyBlocksMod.LOGGER.info("Shadered+ render test: elevator ride, tick {}: player y {}, riding {}, its floor drawn at {}", ticks,
+                                    String.format(java.util.Locale.ROOT, "%.3f", mc.player.getY()), mc.player.getVehicle(),
+                                    mc.player.getVehicle() instanceof com.example.skyblocks.ElevatorCabinEntity c
+                                            ? String.format(java.util.Locale.ROOT, "%.3f", c.shownLanding(1.0F)) : "-");
                         }
                         if (ticks == 100) { // (the chunks built, the shaders warmed up)
                             String name = "rendertest_" + TAG + "_" + spot + ".png";

@@ -185,7 +185,7 @@ public final class ElevatorButtons {
             if (!(mc.level.getBlockEntity(cabin.base()) instanceof ElevatorBaseBlockEntity be)) {
                 continue;
             }
-            double[] hit = look(player, be, cabin.landing(1.0F), 1.0F);
+            double[] hit = look(player, be, cabin.shownLanding(1.0F), 1.0F);
             int i = (int) hit[0];
             if (i < 0) {
                 continue;

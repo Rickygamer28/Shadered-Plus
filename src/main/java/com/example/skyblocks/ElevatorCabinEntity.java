@@ -102,6 +102,15 @@ public class ElevatorCabinEntity extends Entity {
         return from + (to - from) * ease(along(partialTick));
     }
 
+    /**
+     * (client) Its floor's top as it's drawn: between where it was last tick and where it is, as its riders are drawn (so
+     * they stand on it - worked out from the time instead, it was a tick ahead of them: sunk into it going up, floating
+     * over it going down).
+     */
+    public float shownLanding(float partialTick) {
+        return (float) Mth.lerp(partialTick, yo, getY()) + PLATE;
+    }
+
     /** How fast it's going (blocks a tick, up +), now. */
     public float velocity(float partialTick) {
         return landing(partialTick + 0.5F) - landing(partialTick - 0.5F);

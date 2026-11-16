@@ -152,15 +152,16 @@ public class ElevatorRenderer implements BlockEntityRenderer<ElevatorBaseBlockEn
         }
         ElevatorCabinEntity cabin = cabin(be);
         BlockPos b = be.getBlockPos();
-        float landing = (cabin != null ? cabin.landing(partialTick) : be.floors()[0]) - b.getY();
-        float vel = cabin != null ? cabin.velocity(partialTick) : 0.0F;
+        float shown = cabin != null ? cabin.shownLanding(partialTick) : be.floors()[0];
+        float landing = shown - b.getY();
+        float vel = cabin != null ? cabin.velocity(partialTick - 1.0F) : 0.0F;
         boolean moving = cabin != null && cabin.moving();
         int skin = be.skin();
         int top = be.top() - b.getY();
         Matrix4f m = new Matrix4f(pose.last().pose());
         ShaderLightRenderer.add(pose, 0.5F, landing + 1.2F, 0.5F, 6.0F, LIGHT[skin]);
         int[] walls = walls(skin) ? walls(be) : new int[0];
-        int floor = be.floorAt(cabin != null ? cabin.landing(partialTick) : be.floors()[0]) + 1;
+        int floor = be.floorAt(shown) + 1;
         int target = cabin != null ? be.floorAt(cabin.target()) + 1 : floor;
         Runnable draw = () -> {
             if (walls.length > 0) {
