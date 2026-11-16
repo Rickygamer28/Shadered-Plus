@@ -50,7 +50,7 @@ vec3 hue(float h) {
 // ---- 0: the pocket star ----
 vec4 star(float t) {
     float r = length(q);
-    float R = 0.16 + 0.32 * sqrt(full);
+    float R = 0.2 + 0.34 * sqrt(full);
     vec3 hot = mix(vec3(1.0, 0.42, 0.12), vec3(1.0, 0.97, 0.88), full);
     vec3 rim = mix(vec3(0.55, 0.05, 0.02), vec3(1.0, 0.38, 0.06), full);
     if (r >= R) {
@@ -67,8 +67,8 @@ vec4 star(float t) {
     float s = t * 0.05;
     vec3 p = vec3(n.x * cos(s) + n.z * sin(s), n.y, -n.x * sin(s) + n.z * cos(s));
     float granules = fbm(p * 7.0 + vec3(0.0, t * 0.3, 0.0));
-    float spots = smoothstep(0.72, 0.8, noise(p * 2.5 + vec3(t * 0.02))) * (1.0 - full * 0.6);
-    float heat = 0.75 + 0.35 * granules - 0.5 * spots;
+    float spots = smoothstep(0.8, 0.88, noise(p * 4.5 + vec3(t * 0.02))) * (1.0 - full * 0.7); // (a few small sunspots)
+    float heat = 0.78 + 0.35 * granules - 0.3 * spots;
     float limb = pow(n.z, 0.45);
     vec3 col = mix(rim, hot, limb) * heat * (0.75 + 0.45 * limb);
     return vec4(min(col, vec3(1.0)), 1.0);

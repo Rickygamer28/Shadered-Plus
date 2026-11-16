@@ -71,9 +71,9 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
         float full = Mth.clamp(be.shownFull, 0.0F, 1.0F);
         int chamber = be.chamber();
         // how big: a little under its frame alone; in a chamber, the room inside it
-        float half = chamber > 0 ? (chamber - 1) / 2.0F - 0.55F : 0.42F;
+        float half = chamber > 0 ? (chamber - 1) / 2.0F - 0.55F : 0.46F;
         int skin = be.skin();
-        ShaderLightRenderer.add(pose, 0.5F, 0.5F, 0.5F, chamber > 0 ? chamber + 3.0F + 4.0F * full : 4.0F + 5.0F * full,
+        ShaderLightRenderer.add(pose, 0.5F, 0.5F, 0.5F, chamber > 0 ? chamber + 1.0F + 3.0F * full : 3.0F + 4.0F * full,
                 LIGHT[Math.floorMod(skin, LIGHT.length)]);
         pose.pushPose();
         pose.translate(0.5F, 0.5F, 0.5F);
