@@ -141,7 +141,7 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
         // the storm's rain: drops falling out of its cloud
         if (skin == 1 && be.getLevel() != null && !Minecraft.getInstance().isPaused()) {
             net.minecraft.util.RandomSource random = be.getLevel().random;
-            float rate = (chamber > 0 ? chamber * 0.35F : 0.25F) * (0.3F + full);
+            float rate = (chamber > 0 ? chamber * 0.6F : 0.35F) * (0.3F + full);
             while (rate > 0) {
                 if (random.nextFloat() < rate) {
                     double px = be.getBlockPos().getX() + 0.5 + (random.nextFloat() * 2 - 1) * half * 0.75;

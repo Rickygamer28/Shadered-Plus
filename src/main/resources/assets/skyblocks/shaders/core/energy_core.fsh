@@ -111,65 +111,122 @@ vec4 star(vec3 ro, vec3 rd, float t0, float t1, float t) {
 }
 
 // ---- 1: the storm ----
+float fbm5(vec3 p) {
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 5; i++) {
+        v += a * noise(p);
+        p = p * 2.07 + vec3(3.1, 1.7, 5.3);
+        a *= 0.5;
+    }
+    return v;
+}
+
+// the thundercloud: billowing lobes heaped over a flat base, eaten away at the edges by churning noise
 float cloudDensity(vec3 p, float t) {
-    vec3 c = p - vec3(0.0, 0.42, 0.0);
-    float shape = 1.0 - length(c / vec3(0.88, 0.36, 0.88));
-    float churn = fbm(rotY(p, t * 0.03) * 3.0 + vec3(0.0, -t * 0.08, t * 0.05));
-    return clamp((shape + (churn - 0.5) * 0.9) * 2.4, 0.0, 1.0);
+    float shape = 0.0;
+    shape = max(shape, 1.0 - length((p - vec3(0.0, 0.42, 0.0)) / vec3(0.62, 0.36, 0.62)));
+    shape = max(shape, 1.0 - length(p - vec3(0.42, 0.40, 0.18)) / 0.36);
+    shape = max(shape, 1.0 - length(p - vec3(-0.38, 0.42, -0.22)) / 0.38);
+    shape = max(shape, 1.0 - length(p - vec3(0.12, 0.62, -0.30)) / 0.34);
+    shape = max(shape, 1.0 - length(p - vec3(-0.22, 0.64, 0.30)) / 0.32);
+    shape = max(shape, 1.0 - length(p - vec3(0.40, 0.52, -0.40)) / 0.28);
+    shape = max(shape, 1.0 - length(p - vec3(-0.45, 0.50, 0.40)) / 0.28);
+    shape *= smoothstep(0.1, 0.24, p.y); // (its flat, dark base)
+    vec3 q = rotY(p, t * 0.04) * 3.4 + vec3(0.0, -t * 0.06, t * 0.04);
+    float churn = fbm5(q);
+    return clamp(shape * 1.8 + (churn - 0.52) * 1.05, 0.0, 1.0);
 }
 
 vec3 boltPoint(float seed, int k) {
-    float y = 0.2 - float(k) * 0.2;
-    vec3 start = vec3((hash1(seed) - 0.5) * 1.1, 0.2, (hash1(seed + 5.0) - 0.5) * 1.1);
+    vec3 start = vec3((hash1(seed) - 0.5) * 0.9, 0.22, (hash1(seed + 5.0) - 0.5) * 0.9);
     if (k == 0) return start;
-    return vec3(start.x + (hash1(seed + float(k) * 3.3) - 0.5) * 0.35 * float(k) * 0.5, y,
-                start.z + (hash1(seed + float(k) * 7.7) - 0.5) * 0.35 * float(k) * 0.5);
+    float fk = float(k);
+    return vec3(start.x + (hash1(seed + fk * 3.3) - 0.5) * 0.22 * fk, 0.22 - fk * 0.2, start.z + (hash1(seed + fk * 7.7) - 0.5) * 0.22 * fk);
 }
 
 vec4 storm(vec3 ro, vec3 rd, float t0, float t1, float t) {
-    // lightning first: bolts of a few segments down out of the cloud, each flashing for a moment
-    float light = 0.0, flashAll = 0.0;
-    int bolts = 1 + int(full * 4.0 + 0.5);
-    float every = mix(3.0, 0.5, full);
+    // lightning: bolts forking down out of the cloud, each flashing (flickering) for a moment - more of them, more often,
+    // the fuller it is - and flickers inside the cloud between them
+    float light = 0.0;
     float boltT = 1e9;
+    vec3 flashAt[5];
+    float flashOf[5];
+    int bolts = 1 + int(full * 4.0 + 0.5);
+    float every = mix(3.2, 0.55, full);
     for (int i = 0; i < 5; i++) {
-        if (i >= bolts) break;
+        flashOf[i] = 0.0;
+        flashAt[i] = vec3(0.0, 0.45, 0.0);
+        if (i >= bolts) continue;
         float fi = float(i);
         float phase = t / every + hash1(fi * 7.1);
         float strike = floor(phase);
         float k = fract(phase);
-        float flash = k < 0.12 ? (1.0 - k / 0.12) * (0.6 + 0.4 * step(0.5, fract(k * 40.0))) : 0.0;
-        if (flash <= 0.0) continue;
-        flashAll = max(flashAll, flash);
         float seed = strike * 13.7 + fi * 3.1;
-        int segs = 4 + int(hash1(seed + 2.0) * 2.0);
-        for (int s = 0; s < 6; s++) {
-            if (s >= segs) break;
-            vec2 d = raySeg(ro, rd, t0, t1, boltPoint(seed, s), boltPoint(seed, s + 1));
-            light += (exp(-d.x * 140.0) + exp(-d.x * 20.0) * 0.3) * flash;
-            if (d.x < 0.02) boltT = min(boltT, d.y);
+        float flash = k < 0.14 ? (1.0 - k / 0.14) * (0.55 + 0.45 * step(0.45, fract(k * 37.0))) : 0.0;
+        flashAt[i] = boltPoint(seed, 0) + vec3(0.0, 0.18, 0.0);
+        if (hash1(seed + 4.0) < 0.35) {
+            // (this one stays in the cloud: a flicker lighting it from inside)
+            flashOf[i] = flash * 1.3;
+            continue;
         }
+        flashOf[i] = flash;
+        if (flash <= 0.0) continue;
+        int segs = 5 + int(hash1(seed + 2.0) * 2.0);
+        for (int sgi = 0; sgi < 7; sgi++) {
+            if (sgi >= segs) break;
+            vec2 d = raySeg(ro, rd, t0, t1, boltPoint(seed, sgi), boltPoint(seed, sgi + 1));
+            light += (exp(-d.x * 110.0) * 1.4 + exp(-d.x * 14.0) * 0.45) * flash;
+            if (d.x < 0.015) boltT = min(boltT, d.y);
+        }
+        // a branch off it
+        vec3 fork0 = boltPoint(seed, 2);
+        vec3 fork1 = fork0 + vec3((hash1(seed + 8.0) - 0.5) * 0.5, -0.32, (hash1(seed + 9.0) - 0.5) * 0.5);
+        vec2 fd = raySeg(ro, rd, t0, t1, fork0, fork1);
+        light += (exp(-fd.x * 150.0) + exp(-fd.x * 20.0) * 0.25) * flash * 0.8;
     }
-    // the cloud: marched through, front to back
+    // the cloud, marched front to back: lit from above (darker where more cloud lies over it), its base dark and heavy,
+    // its tops silvery; the lightning lights it from inside; under it, sheets of rain falling
     vec3 col = vec3(0.0);
     float a = 0.0;
-    const int STEPS = 40;
+    const int STEPS = 44;
     float dt = (t1 - t0) / float(STEPS);
+    float jitter = hash3(vec3(gl_FragCoord.xy, 0.0));
+    float gloom = 1.0 - 0.45 * full;
     for (int i = 0; i < STEPS; i++) {
-        float tt = t0 + (float(i) + hash3(vec3(gl_FragCoord.xy, float(i))) * 0.9) * dt;
+        float tt = t0 + (float(i) + jitter) * dt;
         if (tt > boltT) break;
         vec3 p = ro + rd * tt;
-        float dens = cloudDensity(p, t);
-        if (dens <= 0.001) continue;
-        float shade = 0.62 - 0.38 * full + 0.45 * clamp((p.y - 0.3) * 2.0, 0.0, 1.0);
-        vec3 c = vec3(shade * 0.8, shade * 0.82, shade * 0.95) + vec3(0.55, 0.5, 0.9) * flashAll * 0.5;
-        float da = 1.0 - exp(-dens * dt * 9.0);
+        vec3 c = vec3(0.0);
+        float dens = 0.0;
+        if (p.y > 0.08) {
+            dens = cloudDensity(p, t);
+            if (dens > 0.002) {
+                float over = cloudDensity(p + vec3(0.04, 0.14, 0.02), t);
+                float sun = exp(-over * 3.2);
+                vec3 base = vec3(0.16, 0.17, 0.23), top = vec3(0.86, 0.88, 0.96);
+                c = mix(base, top, sun) * gloom * (0.55 + 0.45 * smoothstep(0.15, 0.7, p.y));
+                for (int k = 0; k < 5; k++) {
+                    float f = flashOf[k];
+                    if (f > 0.0) {
+                        c += vec3(0.75, 0.72, 1.0) * f * exp(-length(p - flashAt[k]) * 4.0) * 1.6;
+                    }
+                }
+            }
+        } else if (p.y > -1.0) {
+            // the rain: streaks falling (thin in x and z, long in y), under the cloud's footprint, fading as it nears the floor
+            float under = smoothstep(0.85, 0.35, length(p.xz)) * smoothstep(-1.0, -0.55, p.y);
+            float n = noise(vec3(p.x * 34.0, p.y * 2.2 + t * 7.5, p.z * 34.0));
+            dens = smoothstep(0.74, 0.9, n) * under * (0.25 + 0.45 * full) * 0.6;
+            c = vec3(0.55, 0.62, 0.78) * (0.6 + 0.4 * gloom);
+        }
+        if (dens <= 0.002) continue;
+        float da = 1.0 - exp(-dens * dt * 10.0);
         col += (1.0 - a) * da * c;
         a += (1.0 - a) * da;
-        if (a > 0.98) break;
+        if (a > 0.985) break;
     }
-    vec3 bolt = vec3(0.92, 0.9, 1.0) * light;
-    return vec4(col + bolt * (1.0 - a * 0.7), clamp(max(a, light), 0.0, 1.0));
+    vec3 bolt = vec3(0.9, 0.88, 1.0) * light;
+    return vec4(col + bolt * (1.0 - a * 0.6), clamp(max(a, min(light, 1.0)), 0.0, 1.0));
 }
 
 // ---- 2: the plasma globe ----
