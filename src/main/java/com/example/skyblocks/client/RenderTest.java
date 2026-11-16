@@ -297,6 +297,15 @@ public final class RenderTest {
             "fill 586 -61 15 598 -61 20 minecraft:white_concrete", "fill 586 -60 20 598 -55 20 minecraft:white_concrete",
             "setblock 588 -60 18 skyblocks:shader_light[level=7]{colour:16711680}", "setblock 592 -60 18 skyblocks:shader_light[level=7]",
             "setblock 596 -60 18 skyblocks:shader_light[level=7]{colour:65280}",
+            // a sun jar, full, and stacked filters (a red pane seen through an inverted one)
+            "setblock 590 -60 -8 skyblocks:sun_jar[sun=true]",
+            // the sky wand and rift knife: held by an armour stand, in item frames on a wall, lying on the ground
+            "fill 594 -60 -9 597 -58 -9 minecraft:white_concrete",
+            "summon minecraft:item_frame 595 -59 -8 {Facing:3b,Fixed:1b,Item:{id:\"skyblocks:sky_wand\",count:1}}",
+            "summon minecraft:item_frame 596 -59 -8 {Facing:3b,Fixed:1b,Item:{id:\"skyblocks:rift_knife\",count:1}}",
+            "summon minecraft:armor_stand 594.5 -60 -7 {ShowArms:1b,NoGravity:1b,Rotation:[180f,0f],HandItems:[{id:\"skyblocks:sky_wand\",count:1},{id:\"skyblocks:rift_knife\",count:1}]}",
+            "summon minecraft:item 597.5 -60 -7 {NoGravity:1b,Age:-32768,PickupDelay:32767,Item:{id:\"skyblocks:rift_knife\",count:1}}",
+            "fill 584 -60 -10 585 -59 -10 skyblocks:inverted_filter", "fill 584 -60 -13 585 -59 -13 skyblocks:red_filter", "fill 583 -60 -16 586 -56 -16 minecraft:lime_wool",
     };
     /** The newer things (SKYBLOCKS_RENDER_SET=new: only these), well away from the rest. */
     static final boolean NEW = "new".equals(System.getenv("SKYBLOCKS_RENDER_SET"));
@@ -520,7 +529,7 @@ public final class RenderTest {
             "catwalk 338.8 -59.6 1.4 0 18", "catwalk 340.6 -59.7 3.2 90 12", "holdphoto 333.5 -60 -3 0 8", "holdcamera 333.5 -60 -3 0 8", "356.5 -59.4 4.5 0 8", "night 356.5 -59.4 4.5 0 8", "334 -59.5 10.2 0 22", "331 -59.7 10.9 0 25", 
             "376 -58.3 8.8 180 22", "373.5 -59.35 5.4 180 12", "376.5 -59.35 5.4 180 15", "379.5 -59.1 4.4 180 32", "382.5 -57.6 5.6 180 12",
             "370.5 -59.2 4.6 180 30", "374.5 -59.45 7.0 180 4", "372 -59.6 6.2 200 18", "387.5 -59.2 4.2 180 8", "night 397.5 -58.5 3.3 180 25", "397 -58.2 3.3 160 10", "405.5 -58.6 3.4 180 18", "405.5 -59.2 3.6 180 28", "411.5 -58.6 3.4 180 18", 
-            "watch 7 open 270 -60 0 270.5 -58.6 -7 0 3", "watch 7 open 270 -60 0 270.5 -59.3 -1.1 0 52", "watch 7 open 270 -60 0 night 270.5 -58.6 -7 0 3", "418 -59.1 3.9 180 10", "416.5 -58.7 2.2 180 14", "419.5 -58.7 2.2 180 14", "418 -59.1 -2.9 0 10", "worn open 422 -60 0 422.5 -60 -1.6 0 15", "wornflat open 422 -60 0 422.5 -60 -1.6 0 15", "open 422 -60 0 422.5 -60 -1.6 0 15", "426.5 -59 2.6 180 24", "431.5 -58.8 2.9 180 20", "437.5 -59 2.4 180 22", "444.8 -59.3 2.8 180 24", "449.5 -59 2.6 180 38", "456.5 -59.2 3.4 180 5", "night 456.5 -59.2 3.4 180 5", "456.5 -59.2 3.4 180 -32", "464.5 -58.5 2.6 180 12", "464.5 -58.6 -3.4 0 8", "470 -59 2.6 160 32", "474 -59.2 1.7 180 38", "478.5 -58.6 1.5 180 0", "night 478.5 -58.6 1.5 180 0", "482.5 -58.3 2.6 180 42", "486.7 -59.4 2.7 180 6", "489.5 -59.4 2.7 180 6", "492.3 -59.4 2.7 180 6", "495.1 -59.4 2.7 180 6", "486.7 -59.3 6.7 180 6", "489.5 -59.3 6.7 180 6", "491.6 -59.3 6.3 180 6", "501.5 -59 3.5 180 55", "501.5 -59.4 3.0 180 25", "507.5 -59.3 3.0 180 5", "night 507.5 -59.3 3.0 180 5", "night 504.5 -59.3 2.0 135 5", "513.5 -59.5 1.4 180 30", "night 513.5 -59.5 1.4 180 30", "518.5 -58 10 180 -12", "night 518.5 -58 10 180 -12", "518.5 -54 24 180 -10", "524.5 -58.6 3.2 180 22", "530.5 -58.8 4.5 180 5", "night 530.5 -58.8 4.5 180 5", "537.5 -59.0 2.2 180 35", "night 513.5 -59 1.4 180 -89", "nomoon night 513.5 -59 1.4 180 -89", "544.5 -59.2 3.0 180 12", "550.5 -58.6 3.2 180 22", "557 -59.2 2.6 180 5", "560 -59.2 2.6 180 5", "563 -59.2 2.6 180 5", "566 -59.2 2.6 180 5", "569 -59.2 2.6 180 5", "572 -59.2 2.6 180 5", "575 -59.2 2.6 180 5", "578 -59.2 2.6 180 5", "581 -59.2 2.6 180 5", "584 -59.2 2.6 180 5", "587 -59.2 2.6 180 5", "590 -59.2 2.6 180 5", "593 -59.2 2.6 180 5", "584 -59.2 1.4 180 5", "569.3 -59.2 0.4 160 5", "557 -59 15.2 180 5", "560 -59 15.2 180 5", "563 -59 15.2 180 5", "566 -59 15.2 180 5", "569 -59 15.2 180 5", "572 -59 15.2 180 5", "575 -59 15.2 180 5", "579 -59 15.2 180 5", "582 -59 15.2 180 5", "585 -59 15.2 180 5", "592 -58.3 13 0 18", "night 592 -58.3 13 0 18"};
+            "watch 7 open 270 -60 0 270.5 -58.6 -7 0 3", "watch 7 open 270 -60 0 270.5 -59.3 -1.1 0 52", "watch 7 open 270 -60 0 night 270.5 -58.6 -7 0 3", "418 -59.1 3.9 180 10", "416.5 -58.7 2.2 180 14", "419.5 -58.7 2.2 180 14", "418 -59.1 -2.9 0 10", "worn open 422 -60 0 422.5 -60 -1.6 0 15", "wornflat open 422 -60 0 422.5 -60 -1.6 0 15", "open 422 -60 0 422.5 -60 -1.6 0 15", "426.5 -59 2.6 180 24", "431.5 -58.8 2.9 180 20", "437.5 -59 2.4 180 22", "444.8 -59.3 2.8 180 24", "449.5 -59 2.6 180 38", "456.5 -59.2 3.4 180 5", "night 456.5 -59.2 3.4 180 5", "456.5 -59.2 3.4 180 -32", "464.5 -58.5 2.6 180 12", "464.5 -58.6 -3.4 0 8", "470 -59 2.6 160 32", "474 -59.2 1.7 180 38", "478.5 -58.6 1.5 180 0", "night 478.5 -58.6 1.5 180 0", "482.5 -58.3 2.6 180 42", "486.7 -59.4 2.7 180 6", "489.5 -59.4 2.7 180 6", "492.3 -59.4 2.7 180 6", "495.1 -59.4 2.7 180 6", "486.7 -59.3 6.7 180 6", "489.5 -59.3 6.7 180 6", "491.6 -59.3 6.3 180 6", "501.5 -59 3.5 180 55", "501.5 -59.4 3.0 180 25", "507.5 -59.3 3.0 180 5", "night 507.5 -59.3 3.0 180 5", "night 504.5 -59.3 2.0 135 5", "513.5 -59.5 1.4 180 30", "night 513.5 -59.5 1.4 180 30", "518.5 -58 10 180 -12", "night 518.5 -58 10 180 -12", "518.5 -54 24 180 -10", "524.5 -58.6 3.2 180 22", "530.5 -58.8 4.5 180 5", "night 530.5 -58.8 4.5 180 5", "537.5 -59.0 2.2 180 35", "night 513.5 -59 1.4 180 -89", "nomoon night 513.5 -59 1.4 180 -89", "544.5 -59.2 3.0 180 12", "550.5 -58.6 3.2 180 22", "557 -59.2 2.6 180 5", "560 -59.2 2.6 180 5", "563 -59.2 2.6 180 5", "566 -59.2 2.6 180 5", "569 -59.2 2.6 180 5", "572 -59.2 2.6 180 5", "575 -59.2 2.6 180 5", "578 -59.2 2.6 180 5", "581 -59.2 2.6 180 5", "584 -59.2 2.6 180 5", "587 -59.2 2.6 180 5", "590 -59.2 2.6 180 5", "593 -59.2 2.6 180 5", "584 -59.2 1.4 180 5", "569.3 -59.2 0.4 160 5", "557 -59 15.2 180 5", "560 -59 15.2 180 5", "563 -59 15.2 180 5", "566 -59 15.2 180 5", "569 -59 15.2 180 5", "572 -59 15.2 180 5", "575 -59 15.2 180 5", "579 -59 15.2 180 5", "582 -59 15.2 180 5", "585 -59 15.2 180 5", "592 -58.3 13 0 18", "night 592 -58.3 13 0 18", "590.5 -59.4 -6.2 180 12", "585 -59.2 -7.4 180 3", "nosun 590.5 -59 -8 180 -89", "590.5 -59 -8 180 -89", "595.5 -59.3 -4.6 180 12", "holdwand 595.5 -59.3 -4.6 180 12"};
 
     private static boolean burst, moving, burstOn;
     private static int burstFrame;
@@ -667,15 +676,29 @@ public final class RenderTest {
                             if (where.startsWith("nomoon ")) {
                                 where = where.substring(7);
                             }
+                            com.example.skyblocks.SunJar.clientCaught = where.startsWith("nosun ");
+                            if (where.startsWith("nosun ")) {
+                                where = where.substring(6);
+                            }
                             playGame = -1;
                             pickOnly = controls = moveList = watch = false;
                             // (holding a photo and the camera, the hand and HUD shown; or the cats walking on the spot)
                             boolean holdPhoto = where.startsWith("holdphoto "), holdCamera = where.startsWith("holdcamera ");
+                            // (holding the sky wand and the rift knife, the HUD shown: their 3D models in the hands and the hotbar)
+                            boolean holdWand = where.startsWith("holdwand ");
                             OiiaCatEntityRenderer.testWalk = where.startsWith("catwalk ");
-                            if (holdPhoto || holdCamera || OiiaCatEntityRenderer.testWalk) {
+                            if (holdPhoto || holdCamera || holdWand || OiiaCatEntityRenderer.testWalk) {
                                 where = where.substring(where.indexOf(' ') + 1);
                             }
-                            mc.options.hideGui = !(holdPhoto || holdCamera);
+                            mc.options.hideGui = !(holdPhoto || holdCamera || holdWand);
+                            if (holdWand) {
+                                run(mc.getSingleplayerServer(), "item replace entity @a weapon.mainhand with skyblocks:sky_wand");
+                                run(mc.getSingleplayerServer(), "item replace entity @a weapon.offhand with skyblocks:rift_knife");
+                                run(mc.getSingleplayerServer(), "item replace entity @a hotbar.1 with skyblocks:rift_knife");
+                                run(mc.getSingleplayerServer(), "item replace entity @a hotbar.2 with skyblocks:sun_jar[minecraft:block_state={sun:\"true\"}]");
+                                run(mc.getSingleplayerServer(), "item replace entity @a hotbar.3 with skyblocks:sun_jar");
+                                run(mc.getSingleplayerServer(), "item replace entity @a hotbar.4 with skyblocks:game_boy_filter");
+                            }
                             if (holdPhoto || holdCamera) {
                                 String photo = "skyblocks:photo[skyblocks:photo={id:1,by:\"Test\",day:1}]";
                                 run(mc.getSingleplayerServer(), "item replace entity @a weapon.mainhand with " + (holdPhoto ? photo : "skyblocks:camera"));

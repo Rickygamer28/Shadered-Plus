@@ -88,6 +88,46 @@
             "values": [
                 0.0
             ]
+        },
+        {
+            "name": "Music",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
+            ]
+        },
+        {
+            "name": "Bass",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
+            ]
+        },
+        {
+            "name": "Mid",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
+            ]
+        },
+        {
+            "name": "High",
+            "type": "float",
+            "count": 1,
+            "values": [
+                0.0
+            ]
+        },
+        {
+            "name": "Flight",
+            "type": "float",
+            "count": 1,
+            "values": [
+                -1.0
+            ]
         }
     ]
 }

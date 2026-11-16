@@ -167,7 +167,7 @@ public class FilterRenderer implements BlockEntityRenderer<FilterBlockEntity> {
             }
         }
         if (!queued) {
-            queued = LatePass.later(FilterRenderer::drawAll);
+            queued = LatePass.last(FilterRenderer::drawAll);
             if (!queued) {
                 drawAll(buffers instanceof MultiBufferSource.BufferSource source ? source : Minecraft.getInstance().renderBuffers().bufferSource());
             }
@@ -182,28 +182,34 @@ public class FilterRenderer implements BlockEntityRenderer<FilterBlockEntity> {
             return;
         }
         source.endBatch();
-        VertexConsumer vc = source.getBuffer(Types.FILTER);
-        Matrix4f identity = new Matrix4f();
+        // One filter (and dye) at a time, the farthest first, each over a fresh copy of the picture: a filter seen through
+        // another shows through it with both applied (drawn all at once, the farther one's faces painted over the nearer).
+        java.util.Map<Integer, List<Face>> groups = new java.util.HashMap<>();
+        java.util.Map<Integer, Float> nearest = new java.util.HashMap<>();
         for (Face f : FACES) {
-            float[] c = f.corners(), uv = f.uvs();
-            int a = f.colour() >>> 24, r = (f.colour() >> 16) & 255, g = (f.colour() >> 8) & 255, b = f.colour() & 255;
+            groups.computeIfAbsent(f.colour(), k -> new ArrayList<>()).add(f);
+            float[] c = f.corners();
+            float near = Float.MAX_VALUE;
             for (int k = 0; k < 4; k++) {
-                vc.addVertex(identity, c[k * 3], c[k * 3 + 1], c[k * 3 + 2]).setUv(uv[k * 2], uv[k * 2 + 1]).setColor(r, g, b, a);
+                near = Math.min(near, c[k * 3] * c[k * 3] + c[k * 3 + 1] * c[k * 3 + 1] + c[k * 3 + 2] * c[k * 3 + 2]);
             }
+            nearest.merge(f.colour(), near, Math::min);
         }
         FACES.clear();
-        source.endBatch(Types.FILTER);
-    }
-
-    private static final float INSET = 0.002F;
-
-    /** The two axes along a face across this one (u, v). */
-    private static Direction.Axis[] alongFace(Direction.Axis normal) {
-        return switch (normal) {
-            case X -> new Direction.Axis[] {Direction.Axis.Z, Direction.Axis.Y};
-            case Y -> new Direction.Axis[] {Direction.Axis.X, Direction.Axis.Z};
-            case Z -> new Direction.Axis[] {Direction.Axis.X, Direction.Axis.Y};
-        };
+        List<Integer> order = new ArrayList<>(groups.keySet());
+        order.sort((a, b) -> Float.compare(nearest.get(b), nearest.get(a)));
+        Matrix4f identity = new Matrix4f();
+        for (int key : order) {
+            VertexConsumer vc = source.getBuffer(Types.FILTER);
+            for (Face f : groups.get(key)) {
+                float[] c = f.corners(), uv = f.uvs();
+                int a = f.colour() >>> 24, r = (f.colour() >> 16) & 255, g = (f.colour() >> 8) & 255, b = f.colour() & 255;
+                for (int k = 0; k < 4; k++) {
+                    vc.addVertex(identity, c[k * 3], c[k * 3 + 1], c[k * 3 + 2]).setUv(uv[k * 2], uv[k * 2 + 1]).setColor(r, g, b, a);
+                }
+            }
+            source.endBatch(Types.FILTER); // (its copy made as it's drawn: the texturing state)
+        }
     }
 
     /** A block face's corners (block coordinates), facing out. */

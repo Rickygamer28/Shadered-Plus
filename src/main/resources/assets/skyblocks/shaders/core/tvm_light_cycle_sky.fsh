@@ -7,6 +7,11 @@ uniform float Time;     // ticks
 uniform vec2 ScreenSize;
 uniform float CamYaw;   // the camera's turn (radians)
 uniform float CamPitch;
+uniform float Music;    // the music here (client/MusicReactor): how loud, its bass, mids, highs
+uniform float Bass;
+uniform float Mid;
+uniform float High;
+uniform float Flight;   // how far it's flown (seconds at the normal speed; faster with the bass)
 uniform sampler2D Sampler0; // the End's sky (the End Portal skies)
 uniform sampler2D Sampler1; // the End Portal's stars
 
@@ -21,5 +26,10 @@ out vec4 fragColor;
 
 void main() {
     tvmSetup(dir, Time, ScreenSize, CamYaw, CamPitch);
+    LcMusic = Music;
+    LcBass = Bass;
+    LcMid = Mid;
+    LcHigh = High;
+    LcFlight = Flight;
     fragColor = vec4(lightCycleSkybox(), 1.0);
 }

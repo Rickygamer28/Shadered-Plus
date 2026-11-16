@@ -113,6 +113,13 @@ vec3 swirlSkybox() {
 
 const vec3 COL_BG     = vec3(0.004, 0.007, 0.014);
 const vec3 COL_CYAN   = vec3(0.0, 0.85, 1.0);
+// (Shadered+: the music - client/MusicReactor - set by the light cycle sky's shader: how loud, its bass, mids and highs;
+// and how far down the tunnel it's flown, faster with the bass. LcFlight < 0: no music side, the plain clock.)
+float LcMusic = 0.0;
+float LcBass = 0.0;
+float LcMid = 0.0;
+float LcHigh = 0.0;
+float LcFlight = -1.0;
 const vec3 COL_ORANGE = vec3(1.0, 0.28, 0.0);
 const vec3 COL_BLUE   = vec3(0.04, 0.18, 0.75);
 
@@ -246,7 +253,12 @@ vec3 lightCycleSkybox() {
     float speed = 8.0;
     // (Shadered+: the flight starts over every ten minutes - far down the tunnel the numbers lose their precision, and
     // after a long game the tunnel broke up into noise)
-    float camZ = mod(SkyTime, 600.0) * speed;
+    float camZ = (LcFlight >= 0.0 ? LcFlight : mod(SkyTime, 600.0)) * speed;
+    // the music: the bass makes the cyan lines flare, the mids the orange packets, the highs turn the neon pink
+    float kick = LcBass * LcBass;
+    vec3 cyan = mix(COL_CYAN, vec3(1.0, 0.3, 0.9), clamp(LcHigh * 0.9, 0.0, 0.8));
+    float cyanBoost = 1.0 + 2.2 * kick;
+    float orangeBoost = 1.0 + 1.8 * LcMid;
     vec3 ro = vec3(getPath(camZ), camZ);
 
     float targetZ = camZ + 5.0;
@@ -283,10 +295,10 @@ vec3 lightCycleSkybox() {
 
         float stepDist = max(d * 0.65, 0.002);
 
-        glowAccum += COL_CYAN * (stepDist * 0.022 / (0.015 + dCyan * dCyan * 3.5));
+        glowAccum += cyan * cyanBoost * (stepDist * 0.022 / (0.015 + dCyan * dCyan * 3.5));
 
         float packet = pow(sin(p.z * 0.25 + SkyTime * 10.0) * 0.5 + 0.5, 2.5);
-        vec3 orangeEmit = mix(COL_ORANGE * 0.45, COL_ORANGE * 2.2, packet);
+        vec3 orangeEmit = mix(COL_ORANGE * 0.45, COL_ORANGE * 2.2, packet) * orangeBoost;
         glowAccum += orangeEmit * (stepDist * 0.035 / (0.012 + dOrange * dOrange * 3.5));
 
         glowAccum += COL_BLUE * (stepDist * 0.0035 / (0.2 + d * d));
@@ -310,17 +322,17 @@ vec3 lightCycleSkybox() {
 
         float grid = getAntiAliasedGrid(p, n, rd, t, pixelSpread);
         vec3 baseColor = vec3(0.008, 0.012, 0.022);
-        vec3 rimColor  = mix(COL_BLUE, COL_CYAN, 0.55) * fresnel * 0.9;
-        vec3 gridColor = COL_CYAN * grid * 1.5;
+        vec3 rimColor  = mix(COL_BLUE, cyan, 0.55) * fresnel * 0.9 * (1.0 + kick);
+        vec3 gridColor = cyan * grid * 1.5 * cyanBoost;
         col = baseColor + rimColor + gridColor;
 
         float cyanCoverage = 1.0 - smoothstep(-0.5, 1.2, minCyanCone);
-        vec3 cyanSurf = COL_CYAN * 2.4 + vec3(0.75);
+        vec3 cyanSurf = cyan * 2.4 * (1.0 + 0.5 * kick) + vec3(0.75);
         col = mix(col, cyanSurf, cyanCoverage);
 
         float orangeCoverage = 1.0 - smoothstep(-0.5, 1.2, minOrangeCone);
         float packet = pow(sin(hitZ * 0.25 + SkyTime * 10.0) * 0.5 + 0.5, 2.5);
-        vec3 orangeSurf = mix(COL_ORANGE * 1.0, COL_ORANGE * 2.8 + vec3(0.95, 0.65, 0.25), packet);
+        vec3 orangeSurf = mix(COL_ORANGE * 1.0, COL_ORANGE * 2.8 + vec3(0.95, 0.65, 0.25), packet) * orangeBoost;
         col = mix(col, orangeSurf, orangeCoverage);
 
         float fog = 1.0 - exp(-0.00075 * t * t);

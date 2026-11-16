@@ -967,5 +967,17 @@
   "block.skyblocks.shader_light": "Shader Light",
   "tooltip.skyblocks.shader_light": "Colours everything within its reach. Dye it; right-click to change its reach",
   "message.skyblocks.shader_light.reach": "Reach: %s blocks",
-  "guide.skyblocks.shader_light": "A lamp whose light has a colour (from The Valley Mod by D0nkey100). Everything within its reach takes on its colour - most near the lamp, none at the edge - and several lamps blend their colours where they meet. Right-click it with a dye to colour it; right-click with an empty hand to widen its reach (sneak to narrow it), from 1 to 15 blocks. The coloured light isn't stopped by walls, and it's left out while a shader pack is on (the lamp still gives its ordinary light)."
+  "guide.skyblocks.shader_light": "A lamp whose light has a colour (from The Valley Mod by D0nkey100). Everything within its reach takes on its colour - most near the lamp, none at the edge - and several lamps blend their colours where they meet. Right-click it with a dye to colour it; right-click with an empty hand to widen its reach (sneak to narrow it), from 1 to 15 blocks. The coloured light isn't stopped by walls, and it's left out while a shader pack is on (the lamp still gives its ordinary light).",
+  "block.skyblocks.sun_jar": "Sun Jar",
+  "item.skyblocks.sun_jar.full": "Sun in a Jar",
+  "tooltip.skyblocks.sun_jar": "By day, look straight at the sun and right-click to catch it.",
+  "tooltip.skyblocks.sun_jar.full": "The sun is in here. Place it and right-click it to let the sun go.",
+  "message.skyblocks.sun_jar.caught": "You caught the sun!",
+  "message.skyblocks.sun_jar.released": "The sun goes back up into the sky",
+  "message.skyblocks.sun_jar.taken": "The sun is already in a jar somewhere",
+  "message.skyblocks.sun_jar.down": "The sun isn't up",
+  "message.skyblocks.sun_jar.look": "Look straight at the sun",
+  "message.skyblocks.sun_jar.roof": "You need to be out under the sky",
+  "message.skyblocks.sun_jar.no_sky": "There's no sun here",
+  "guide.skyblocks.sun_jar": "The moon jar's other half: catch the sun. By day, out under the sky, look straight at the sun with an empty sun jar and right-click: the sun is gone from the sky (for everyone), blazing in your jar instead. Place the jar and it lights everything round it as brightly as anything can, and slowly melts the snow and ice near it. There's only one sun: right-click the placed jar to let it go back up. (If the jar is burnt or lost, the sun finds its own way home.)"
 }

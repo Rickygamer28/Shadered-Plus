@@ -24,6 +24,8 @@ public final class LatePass {
     private record Job(Matrix4f modelView, Matrix4f projection, Consumer<MultiBufferSource.BufferSource> draw) {}
 
     private static final List<Job> JOBS = new ArrayList<>();
+    /** Drawn after all the others (the filter blocks: they show what the rest drew, through them). */
+    private static final List<Job> LAST = new ArrayList<>();
 
     private LatePass() {}
 
@@ -45,13 +47,24 @@ public final class LatePass {
         return true;
     }
 
+    /** As later, but after everything else waiting (the filter blocks: what the others draw is seen through them). */
+    public static boolean last(Consumer<MultiBufferSource.BufferSource> draw) {
+        if (com.example.skyblocks.client.iris.IrisCompat.shaderPackInUse() || MirrorRenderer.isRenderingReflection() || LAST.size() >= 64) {
+            return false;
+        }
+        LAST.add(new Job(new Matrix4f(RenderSystem.getModelViewMatrix()), new Matrix4f(RenderSystem.getProjectionMatrix()), draw));
+        return true;
+    }
+
     /** Draws what's waiting, into whatever picture is being drawn now. */
     public static void drawPending() {
-        if (JOBS.isEmpty()) {
+        if (JOBS.isEmpty() && LAST.isEmpty()) {
             return;
         }
         List<Job> jobs = new ArrayList<>(JOBS);
+        jobs.addAll(LAST);
         JOBS.clear();
+        LAST.clear();
         MultiBufferSource.BufferSource main = Minecraft.getInstance().renderBuffers().bufferSource();
         main.endBatch();
         Matrix4f savedProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
@@ -81,6 +94,7 @@ public final class LatePass {
     public static void onStage(RenderLevelStageEvent event) {
         if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_SKY) {
             JOBS.clear(); // (anything a frame left behind)
+            LAST.clear();
         } else if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_WEATHER && !MirrorRenderer.isRenderingReflection()) {
             drawPending();
         }

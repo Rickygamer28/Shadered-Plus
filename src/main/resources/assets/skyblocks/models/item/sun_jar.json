@@ -1,0 +1,11 @@
+{
+  "parent": "skyblocks:block/sun_jar",
+  "overrides": [
+    {
+      "predicate": {
+        "skyblocks:sun": 1
+      },
+      "model": "skyblocks:item/sun_jar_full"
+    }
+  ]
+}

@@ -151,6 +151,7 @@ public class SkyBlocksMod {
                 .playToServer(WhirlpoolPayload.TYPE, WhirlpoolPayload.STREAM_CODEC, WhirlpoolPayload::handle)
                 .playToServer(EraseTrailPayload.TYPE, EraseTrailPayload.STREAM_CODEC, EraseTrailPayload::handle)
                 .playToClient(MoonJar.Payload.TYPE, MoonJar.Payload.STREAM_CODEC, MoonJar.Payload::handle)
+                .playToClient(SunJar.Payload.TYPE, SunJar.Payload.STREAM_CODEC, SunJar.Payload::handle)
                 .playToServer(SingularityPayloads.Action.TYPE, SingularityPayloads.Action.STREAM_CODEC, SingularityPayloads.Action::handle)
                 .playToClient(SingularityPayloads.Contents.TYPE, SingularityPayloads.Contents.STREAM_CODEC, SingularityPayloads.Contents::handle)
                 .playToClient(TeleportPadPayloads.Menu.TYPE, TeleportPadPayloads.Menu.STREAM_CODEC, TeleportPadPayloads.Menu::handle)

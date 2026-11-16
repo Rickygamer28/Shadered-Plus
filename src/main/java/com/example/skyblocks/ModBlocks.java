@@ -482,6 +482,10 @@ public final class ModBlocks {
     public static final DeferredBlock<MoonJarBlock> MOON_JAR = BLOCKS.registerBlock("moon_jar", MoonJarBlock::new,
             BlockBehaviour.Properties.of().strength(0.3F).sound(SoundType.GLASS).noOcclusion().pushReaction(PushReaction.DESTROY)
                     .lightLevel(state -> state.getValue(MoonJarBlock.MOON) ? 13 : 0).mapColor(net.minecraft.world.level.material.MapColor.NONE));
+    /** A sun jar: catch the sun in it (SunJarBlock). */
+    public static final DeferredBlock<SunJarBlock> SUN_JAR = BLOCKS.registerBlock("sun_jar", SunJarBlock::new,
+            BlockBehaviour.Properties.of().strength(0.3F).sound(SoundType.GLASS).noOcclusion().pushReaction(PushReaction.DESTROY)
+                    .lightLevel(state -> state.getValue(SunJarBlock.SUN) ? 15 : 0).mapColor(net.minecraft.world.level.material.MapColor.NONE));
     /** A dark fountain: cut open with the rift knife (DarkFountainBlock). */
     public static final DeferredBlock<DarkFountainBlock> DARK_FOUNTAIN = BLOCKS.registerBlock("dark_fountain", DarkFountainBlock::new,
             BlockBehaviour.Properties.of().strength(-1.0F, 3600000.0F).noCollission().noOcclusion().noLootTable().pushReaction(PushReaction.BLOCK)

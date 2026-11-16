@@ -53,6 +53,13 @@ moon = tex((236, 238, 246), 0.9 + 0.1 * rnd.uniform(0, 1, (16, 16)))
 moon[(X - 5) ** 2 + (Y - 6) ** 2 < 5] *= 0.8
 moon[(X - 10) ** 2 + (Y - 10) ** 2 < 3] *= 0.82
 save("block", "moon_jar_moon", moon)
+# the sun jar: a gold lid; the sun in it (the full jar's item): white-hot middle, orange rim (its own random numbers:
+# the textures after it stay as they were)
+srnd = np.random.RandomState(77)
+save("block", "sun_jar_lid", tex((236, 184, 64), 0.8 + 0.25 * srnd.uniform(0, 1, (16, 16)) + 0.15 * (Y % 4 == 0)))
+dsun = np.sqrt((X - 7.5) ** 2 + (Y - 7.5) ** 2)
+sun = np.stack([np.full_like(X, 255.0), 250 - dsun * 14 + 10 * srnd.uniform(0, 1, (16, 16)), 200 - dsun * 30], -1)
+save("block", "sun_jar_sun", sun)
 
 # the spin pad: a dark base with a glowing band, its top a ring; the plate that turns (round, a swirl on it)
 base = tex((70, 74, 86), 0.9 + 0.12 * rnd.uniform(0, 1, (16, 16)))
@@ -158,6 +165,17 @@ item("moon_jar", {"parent": "skyblocks:block/moon_jar", "overrides": [{"predicat
 item("moon_jar_full", {"parent": "skyblocks:block/moon_jar_full"})
 state("moon_jar", {"variants": {"moon=false": {"model": "skyblocks:block/moon_jar"}, "moon=true": {"model": "skyblocks:block/moon_jar"}}})
 
+# the sun jar: the same glass, a gold lid; full (as an item): the sun inside
+sjar = [cube((4.5, 0, 4.5), (11.5, 10, 11.5), "glass"), cube((5.5, 10, 5.5), (10.5, 11, 10.5), "glass"), cube((5, 11, 5), (11, 12.5, 11), "lid")]
+model("sun_jar", {"glass": "skyblocks:block/moon_jar_glass", "lid": "skyblocks:block/sun_jar_lid", "particle": "skyblocks:block/moon_jar_glass"},
+      sjar, {"render_type": "minecraft:translucent"})
+model("sun_jar_full", {"glass": "skyblocks:block/moon_jar_glass", "lid": "skyblocks:block/sun_jar_lid", "sun": "skyblocks:block/sun_jar_sun",
+                       "particle": "skyblocks:block/moon_jar_glass"},
+      [cube((5.5, 2, 5.5), (10.5, 7, 10.5), "sun")] + sjar, {"render_type": "minecraft:translucent"})
+item("sun_jar", {"parent": "skyblocks:block/sun_jar", "overrides": [{"predicate": {"skyblocks:sun": 1}, "model": "skyblocks:item/sun_jar_full"}]})
+item("sun_jar_full", {"parent": "skyblocks:block/sun_jar_full"})
+state("sun_jar", {"variants": {"sun=false": {"model": "skyblocks:block/sun_jar"}, "sun=true": {"model": "skyblocks:block/sun_jar"}}})
+
 # the spin pad: a low base (its plate turns on top, drawn in code)
 model("spin_pad", {"side": "skyblocks:block/spin_pad_side", "top": "skyblocks:block/spin_pad_top", "particle": "skyblocks:block/spin_pad_side"},
       [{"from": [0, 0, 0], "to": [16, 4, 16], "faces": {f: dict(face("top" if f in ("up", "down") else "side"), **({"uv": [0, 6, 16, 10]} if f not in ("up", "down") else {}))
@@ -169,6 +187,100 @@ state("spin_pad", {"variants": {"": {"model": "skyblocks:block/spin_pad"}}})
 json.dump({"textures": {"particle": "minecraft:block/black_concrete"}}, open(os.path.join(ROOT, "models/block/dark_fountain.json"), "w"), indent=2)
 state("dark_fountain", {"variants": {"": {"model": "skyblocks:block/dark_fountain"}}})
 
-# the items drawn flat
-item("sky_wand", {"parent": "minecraft:item/handheld", "textures": {"layer0": "skyblocks:item/sky_wand"}})
-item("rift_knife", {"parent": "minecraft:item/handheld", "textures": {"layer0": "skyblocks:item/rift_knife"}})
+# ---- the sky wand and the rift knife in 3D (their flat textures stay for anything that wants a sprite) ----
+# Each model's texture is a palette of 4 x 4 patches (P(col, row)); the parts pick theirs. Both are made standing up
+# along y; their display turns them diagonal, as a flat handheld item is.
+prnd = np.random.RandomState(53)
+
+
+def palette(name, patches):
+    img = np.zeros((16, 16, 3), np.float32)
+    for (c, r), (top, bottom) in patches.items():
+        for y in range(4):
+            img[r * 4 + y, c * 4:c * 4 + 4] = np.array(top, np.float32) * (1 - y / 3) + np.array(bottom, np.float32) * (y / 3)
+        img[r * 4:r * 4 + 4, c * 4:c * 4 + 4] *= (0.92 + 0.12 * prnd.uniform(0, 1, (4, 4)))[..., None]
+    save("item", name, img)
+
+
+def P(c, r):
+    return [c * 4, r * 4, c * 4 + 4, r * 4 + 4]
+
+
+def part(a, b, uv, rot=None, glow=False, ends=None):
+    faces = {f: {"texture": "#all", "uv": (ends if ends and f in ("up", "down") else uv)} for f in ALL}
+    e = {"from": list(a), "to": list(b), "faces": faces}
+    if rot:
+        e["rotation"] = rot
+    if glow:  # (NeoForge's per-face light: lit as if full bright, whatever the light where it's held)
+        for f in faces.values():
+            f["neoforge_data"] = {"block_light": 15, "sky_light": 15}
+    return e
+
+
+def held(gui_tilt=-45):
+    # (as minecraft:item/handheld turns a flat item, less the 45 degrees the flat item's drawn at)
+    return {
+        "thirdperson_righthand": {"rotation": [0, -90, 10], "translation": [0, 4, 0.5], "scale": [0.85, 0.85, 0.85]},
+        "thirdperson_lefthand": {"rotation": [0, 90, -10], "translation": [0, 4, 0.5], "scale": [0.85, 0.85, 0.85]},
+        "firstperson_righthand": {"rotation": [0, -90, -20], "translation": [1.13, 3.2, 1.13], "scale": [0.68, 0.68, 0.68]},
+        "firstperson_lefthand": {"rotation": [0, 90, 20], "translation": [1.13, 3.2, 1.13], "scale": [0.68, 0.68, 0.68]},
+        "ground": {"rotation": [0, 0, 0], "translation": [0, 2, 0], "scale": [0.5, 0.5, 0.5]},
+        "gui": {"rotation": [10, 25, gui_tilt], "translation": [0, 0, 0], "scale": [1, 1, 1]},
+        "fixed": {"rotation": [0, 180, -45], "translation": [0, 0, 0], "scale": [1, 1, 1]},
+        "head": {"rotation": [0, 0, 0], "translation": [0, 8, 0], "scale": [1, 1, 1]},
+    }
+
+
+palette("sky_wand_3d", {
+    (0, 0): ((70, 54, 96), (40, 30, 58)),      # the rod: dark violet wood
+    (1, 0): ((255, 222, 120), (196, 140, 50)),  # gold bands
+    (2, 0): ((96, 58, 44), (58, 34, 28)),       # the grip
+    (3, 0): ((140, 110, 220), (84, 60, 160)),   # the pommel's gem
+    (0, 1): ((255, 255, 255), (190, 225, 255)), # the star's heart
+    (1, 1): ((200, 240, 255), (110, 180, 255)), # its upright points
+    (2, 1): ((255, 190, 240), (230, 110, 200)), # its side points
+    (3, 1): ((200, 170, 255), (130, 100, 230)), # its slanted points
+})
+st = {"origin": [8, 14, 8]}
+wand = [
+    part((6.75, 0, 6.75), (9.25, 1.25, 9.25), P(3, 0)),                     # pommel
+    part((7.25, 1.25, 7.25), (8.75, 12, 8.75), P(0, 0)),                    # rod
+    part((7, 1.75, 7), (9, 4.75, 9), P(2, 0)),                              # grip
+    part((6.9, 4.75, 6.9), (9.1, 5.35, 9.1), P(1, 0)),                      # band
+    part((6.9, 9.5, 6.9), (9.1, 10.1, 9.1), P(1, 0)),                       # band
+    part((6.6, 11.4, 6.6), (9.4, 12.4, 9.4), P(1, 0)),                      # the star's collar
+    part((7.5, 10.5, 7.5), (8.5, 17.5, 8.5), P(1, 1), glow=True),           # upright points
+    part((4.5, 13.5, 7.5), (11.5, 14.5, 8.5), P(2, 1), glow=True),          # side points
+    part((7.5, 13.5, 4.5), (8.5, 14.5, 11.5), P(2, 1), glow=True),          # front / back points
+    part((5.5, 13.6, 7.6), (10.5, 14.4, 8.4), P(3, 1), dict(st, axis="z", angle=45), glow=True),
+    part((5.5, 13.6, 7.6), (10.5, 14.4, 8.4), P(3, 1), dict(st, axis="z", angle=-45), glow=True),
+    part((7, 13, 7), (9, 15, 9), P(0, 1), glow=True),                       # the heart
+]
+json.dump({"textures": {"all": "skyblocks:item/sky_wand_3d", "particle": "skyblocks:item/sky_wand"},
+           "elements": wand, "display": held()}, open(os.path.join(ROOT, "models/item", "sky_wand.json"), "w"), indent=2)
+
+palette("rift_knife_3d", {
+    (0, 0): ((44, 36, 62), (22, 18, 32)),       # the blade: near black, a violet sheen
+    (1, 0): ((230, 222, 255), (170, 160, 210)), # its edge
+    (2, 0): ((200, 90, 255), (120, 40, 220)),   # the rift line glowing down it
+    (3, 0): ((170, 130, 230), (110, 80, 180)),  # the guard
+    (0, 1): ((96, 56, 44), (60, 34, 28)),       # the grip's wrap
+    (1, 1): ((60, 40, 34), (40, 26, 22)),       # between the wraps
+    (2, 1): ((230, 120, 255), (160, 60, 240)),  # the pommel's gem
+})
+tip = {"origin": [8, 14.5, 8.75]}
+knife = [
+    part((7.25, 0, 7.25), (8.75, 0.75, 8.75), P(2, 1), glow=True),          # pommel gem
+    part((7.4, 0.75, 7.4), (8.6, 4.25, 8.6), P(1, 1)),                      # grip core
+    part((7.25, 1.0, 7.25), (8.75, 1.75, 8.75), P(0, 1)),                   # wraps
+    part((7.25, 2.25, 7.25), (8.75, 3.0, 8.75), P(0, 1)),
+    part((7.25, 3.5, 7.25), (8.75, 4.25, 8.75), P(0, 1)),
+    part((7, 4.25, 5.5), (9, 5.25, 10.5), P(3, 0)),                         # guard
+    part((7.6, 5.25, 7.0), (8.4, 14.5, 9.25), P(0, 0)),                     # blade
+    part((7.7, 5.25, 9.25), (8.3, 14.5, 9.75), P(1, 0)),                    # its edge
+    part((7.6, 13.0, 7.4), (8.4, 15.5, 9.4), P(0, 0), dict(tip, axis="x", angle=22.5)),   # the point, swept
+    part((7.7, 13.2, 9.2), (8.3, 15.6, 9.6), P(1, 0), dict(tip, axis="x", angle=22.5)),
+    part((7.5, 6.0, 7.9), (8.5, 13.5, 8.2), P(2, 0), glow=True),            # the rift line, both sides
+]
+json.dump({"textures": {"all": "skyblocks:item/rift_knife_3d", "particle": "skyblocks:item/rift_knife"},
+           "elements": knife, "display": held()}, open(os.path.join(ROOT, "models/item", "rift_knife.json"), "w"), indent=2)

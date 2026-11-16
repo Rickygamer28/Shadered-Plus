@@ -30,6 +30,9 @@ public final class ClientSetup {
         event.enqueueWork(() -> net.minecraft.client.renderer.item.ItemProperties.register(com.example.skyblocks.ModItems.MOON_JAR.get(),
                 net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.example.skyblocks.SkyBlocksMod.MOD_ID, "moon"),
                 (stack, level, entity, seed) -> com.example.skyblocks.MoonJarBlock.full(stack) ? 1.0F : 0.0F));
+        event.enqueueWork(() -> net.minecraft.client.renderer.item.ItemProperties.register(com.example.skyblocks.ModItems.SUN_JAR.get(),
+                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.example.skyblocks.SkyBlocksMod.MOD_ID, "sun"),
+                (stack, level, entity, seed) -> com.example.skyblocks.SunJarBlock.full(stack) ? 1.0F : 0.0F));
         // The Island Painting's window needs a stencil buffer (client/island/IslandWindow).
         event.enqueueWork(() -> net.minecraft.client.Minecraft.getInstance().getMainRenderTarget().enableStencil());
         // Sky Liquids' own surface is fully see-through and cut out (nothing drawn, nothing hidden): all you see is
@@ -107,6 +110,7 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.BOTTOMLESS_PIT.get(), BottomlessPitRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.ROOM_WINDOW.get(), RoomWindowRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.MOON_JAR.get(), MoonJarRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.SUN_JAR.get(), SunJarRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.DARK_FOUNTAIN.get(), DarkFountainRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SPIN_PAD.get(), SpinPadRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.FILTER.get(), FilterRenderer::new);

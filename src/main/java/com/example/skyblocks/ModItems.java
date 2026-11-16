@@ -185,6 +185,8 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> ROOM_WINDOW = ITEMS.registerSimpleBlockItem("room_window", ModBlocks.ROOM_WINDOW);
     public static final DeferredItem<MoonJarBlock.Jar> MOON_JAR = ITEMS.register("moon_jar", () -> new MoonJarBlock.Jar(ModBlocks.MOON_JAR.get(),
             new Item.Properties().stacksTo(16)));
+    public static final DeferredItem<SunJarBlock.Jar> SUN_JAR = ITEMS.register("sun_jar", () -> new SunJarBlock.Jar(ModBlocks.SUN_JAR.get(),
+            new Item.Properties().stacksTo(16)));
     public static final DeferredItem<BlockItem> SPIN_PAD = ITEMS.registerSimpleBlockItem("spin_pad", ModBlocks.SPIN_PAD);
 
     // ---- the filter blocks (from The Valley Mod by D0nkey100) ----

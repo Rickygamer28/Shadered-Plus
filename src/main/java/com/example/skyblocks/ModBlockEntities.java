@@ -142,6 +142,8 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.ROOM_WINDOW.get(), p, st), ModBlocks.ROOM_WINDOW.get()).build(null));
     public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> MOON_JAR = TYPES.register("moon_jar",
             () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.MOON_JAR.get(), p, st), ModBlocks.MOON_JAR.get()).build(null));
+    public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> SUN_JAR = TYPES.register("sun_jar",
+            () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.SUN_JAR.get(), p, st), ModBlocks.SUN_JAR.get()).build(null));
     public static final Supplier<BlockEntityType<DarkFountainBlockEntity>> DARK_FOUNTAIN = TYPES.register("dark_fountain",
             () -> BlockEntityType.Builder.of(DarkFountainBlockEntity::new, ModBlocks.DARK_FOUNTAIN.get()).build(null));
     public static final Supplier<BlockEntityType<FilterBlockEntity>> FILTER = TYPES.register("filter",

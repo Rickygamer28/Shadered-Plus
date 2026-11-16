@@ -72,6 +72,9 @@ public final class ShaderSky {
                         shader.safeGetUniform("CamYaw").set((float) Math.toRadians(camera.getYRot()));
                         shader.safeGetUniform("CamPitch").set((float) Math.toRadians(camera.getXRot()));
                         com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(1, END_PORTAL);
+                        if (name.equals("light_cycle")) {
+                            LightCycleMusic.apply(shader);
+                        }
                     });
             default -> SynthwavePalettes.has(name) // the synthwave skies: one scene, their own colours, reacting to music
                     ? new Pass(folder, batch, () -> synthwave, MusicReactor.HISTORY, shader -> {
@@ -274,6 +277,26 @@ public final class ShaderSky {
             b.addVertex(x1, y1, z1);
             b.addVertex(x2, y2, z2);
             b.addVertex(x3, y3, z3);
+        }
+    }
+
+    /** The Light Cycle sky's music (client/MusicReactor): the bands, and its flight - faster down the tunnel with the bass. */
+    static final class LightCycleMusic {
+        private static double flight;
+        private static long last;
+
+        private LightCycleMusic() {}
+
+        static void apply(ShaderInstance shader) {
+            MusicReactor.apply(shader); // (Music, Bass, Mid, High)
+            long now = System.nanoTime();
+            float dt = last == 0 ? 0.0F : Math.min(0.25F, (now - last) / 1.0e9F);
+            last = now;
+            if (!net.minecraft.client.Minecraft.getInstance().isPaused()) {
+                float bass = MusicReactor.bass() * Math.min(1.0F, MusicReactor.music());
+                flight = (flight + dt * (1.0F + 2.5F * bass * bass)) % 600.0; // (starting over every ten minutes, as without music)
+            }
+            shader.safeGetUniform("Flight").set((float) flight);
         }
     }
 }

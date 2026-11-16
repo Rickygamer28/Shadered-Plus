@@ -1,0 +1,140 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "glass": "skyblocks:block/moon_jar_glass",
+    "lid": "skyblocks:block/sun_jar_lid",
+    "sun": "skyblocks:block/sun_jar_sun",
+    "particle": "skyblocks:block/moon_jar_glass"
+  },
+  "elements": [
+    {
+      "from": [
+        5.5,
+        2,
+        5.5
+      ],
+      "to": [
+        10.5,
+        7,
+        10.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#sun"
+        },
+        "south": {
+          "texture": "#sun"
+        },
+        "east": {
+          "texture": "#sun"
+        },
+        "west": {
+          "texture": "#sun"
+        },
+        "up": {
+          "texture": "#sun"
+        },
+        "down": {
+          "texture": "#sun"
+        }
+      }
+    },
+    {
+      "from": [
+        4.5,
+        0,
+        4.5
+      ],
+      "to": [
+        11.5,
+        10,
+        11.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#glass"
+        },
+        "south": {
+          "texture": "#glass"
+        },
+        "east": {
+          "texture": "#glass"
+        },
+        "west": {
+          "texture": "#glass"
+        },
+        "up": {
+          "texture": "#glass"
+        },
+        "down": {
+          "texture": "#glass"
+        }
+      }
+    },
+    {
+      "from": [
+        5.5,
+        10,
+        5.5
+      ],
+      "to": [
+        10.5,
+        11,
+        10.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#glass"
+        },
+        "south": {
+          "texture": "#glass"
+        },
+        "east": {
+          "texture": "#glass"
+        },
+        "west": {
+          "texture": "#glass"
+        },
+        "up": {
+          "texture": "#glass"
+        },
+        "down": {
+          "texture": "#glass"
+        }
+      }
+    },
+    {
+      "from": [
+        5,
+        11,
+        5
+      ],
+      "to": [
+        11,
+        12.5,
+        11
+      ],
+      "faces": {
+        "north": {
+          "texture": "#lid"
+        },
+        "south": {
+          "texture": "#lid"
+        },
+        "east": {
+          "texture": "#lid"
+        },
+        "west": {
+          "texture": "#lid"
+        },
+        "up": {
+          "texture": "#lid"
+        },
+        "down": {
+          "texture": "#lid"
+        }
+      }
+    }
+  ],
+  "render_type": "minecraft:translucent"
+}

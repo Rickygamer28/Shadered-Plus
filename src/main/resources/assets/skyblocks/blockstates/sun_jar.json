@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "sun=false": {
+      "model": "skyblocks:block/sun_jar"
+    },
+    "sun=true": {
+      "model": "skyblocks:block/sun_jar"
+    }
+  }
+}
