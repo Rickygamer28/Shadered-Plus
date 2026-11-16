@@ -28,8 +28,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * An elevator's call panel: put beside its shaft (2 to 4 blocks from the shaft's middle) on a floor - standing on the
- * floor, or on a wall at eye height - it makes that a floor. Right-click: the cabin's called there; if it's there
- * already, the floors to go to (client/ElevatorScreen).
+ * floor, or on a wall at eye height - it makes that a floor. Right-click: the cabin's called there (the floor's chosen
+ * inside it, on its buttons); sneak + right-click: the elevator's look and speed (client/ElevatorScreen).
  */
 public class ElevatorPanelBlock extends HorizontalDirectionalBlock {
     public static final MapCodec<ElevatorPanelBlock> CODEC = simpleCodec(ElevatorPanelBlock::new);
@@ -117,27 +117,24 @@ public class ElevatorPanelBlock extends HorizontalDirectionalBlock {
             }
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
-        int landing = landing(level, pos);
-        int floor = be.floorAt(landing);
-        // here already, standing still: the floors to go to; otherwise, called here
-        ElevatorCabinEntity cabin = level.isClientSide ? cabinNear(level, be) : be.cabin();
-        boolean here = cabin != null && !cabin.moving() && Math.abs(cabin.landing() - landing) < 0.5F;
-        if (level.isClientSide) {
-            if (here) {
+        if (player.isShiftKeyDown()) {
+            if (level.isClientSide) {
                 com.example.skyblocks.client.ElevatorScreen.open(be.getBlockPos());
             }
-        } else if (!here) {
-            be.call(floor);
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
+        int landing = landing(level, pos);
+        int floor = be.floorAt(landing);
+        if (!level.isClientSide) {
+            ElevatorCabinEntity cabin = be.cabin();
+            boolean here = cabin != null && !cabin.moving() && Math.abs(cabin.landing() - landing) < 0.5F;
+            if (!here) {
+                be.call(floor);
+                player.displayClientMessage(Component.translatable("message.skyblocks.elevator.called", floor + 1).withStyle(ChatFormatting.AQUA), true);
+            }
             level.playSound(null, pos, SoundEvents.STONE_BUTTON_CLICK_ON, SoundSource.BLOCKS, 0.5F, 1.4F);
-            player.displayClientMessage(Component.translatable("message.skyblocks.elevator.called", floor + 1).withStyle(ChatFormatting.AQUA), true);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
-    }
-
-    @Nullable
-    private static ElevatorCabinEntity cabinNear(Level level, ElevatorBaseBlockEntity be) {
-        List<ElevatorCabinEntity> l = level.getEntitiesOfClass(ElevatorCabinEntity.class, be.shaft(), c -> c.base().equals(be.getBlockPos()));
-        return l.isEmpty() ? null : l.get(0);
     }
 
     @Override

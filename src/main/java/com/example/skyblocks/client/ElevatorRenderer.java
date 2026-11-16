@@ -32,7 +32,8 @@ import org.joml.Vector3f;
 /**
  * An elevator (ElevatorBaseBlockEntity), drawn by its base: its cabin, wherever it is up the shaft, in its look - traced
  * through a box round it by shaders/core/elevator_cabin (a glass capsule, a hard-light platform, a bubble pod, a warp
- * cabin, a crystal cabin, a cloud) - with its floor's number over it (an arrow while it moves); and the shaft itself, by
+ * cabin, a crystal cabin, a cloud) - with its floor buttons inside (ElevatorButtons) and its floor's number over it (an
+ * arrow while it moves); and the shaft itself, by
  * shaders/core/elevator_shaft: for the bubble pod, the warp cabin and the cloud, its walls (the solid blocks round it)
  * turned to glowing water, deep space (stars streaking past as it moves), or open sky; the glass capsule's rings of
  * energy up the shaft; the crystal cabin's rail. Each part drawn right away, in order (as the time crystal's), after the
@@ -40,7 +41,7 @@ import org.joml.Vector3f;
  * and with a shader pack goes over the pack's image as the base does (iris/IrisDefer).
  */
 public class ElevatorRenderer implements BlockEntityRenderer<ElevatorBaseBlockEntity> {
-    static ShaderInstance cabinShader, shaftShader;
+    static ShaderInstance cabinShader, shaftShader, buttonShader;
     /** The box round the cabin: from its floor's top, its middle; and its half-size. */
     private static final float MID = 0.8F, HX = 1.5F, HY = 2.0F;
     private static final int[] LIGHT = {0x7CCBFF, 0x7CFFCF, 0xE7A0FF, 0xB09CFF, 0xC88CFF, 0xFFF0C8};
@@ -59,6 +60,8 @@ public class ElevatorRenderer implements BlockEntityRenderer<ElevatorBaseBlockEn
                     s -> cabinShader = s);
             ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "elevator_shaft"), DefaultVertexFormat.POSITION_TEX_COLOR,
                     s -> shaftShader = s);
+            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "elevator_button"), DefaultVertexFormat.POSITION_COLOR,
+                    s -> buttonShader = s);
         }
     }
 
@@ -81,6 +84,14 @@ public class ElevatorRenderer implements BlockEntityRenderer<ElevatorBaseBlockEn
                         .setTransparencyState(ADDITIVE_TRANSPARENCY)
                         .setCullState(NO_CULL)
                         .setWriteMaskState(COLOR_WRITE)
+                        .createCompositeState(false));
+
+        /** The floor buttons inside the cabin (ElevatorButtons): flat colour. */
+        static final RenderType BUTTONS = create("skyblocks_elevator_buttons", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 4096, false, false,
+                CompositeState.builder()
+                        .setShaderState(new ShaderStateShard(() -> buttonShader))
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .setCullState(NO_CULL)
                         .createCompositeState(false));
 
         private Types() {
@@ -136,7 +147,7 @@ public class ElevatorRenderer implements BlockEntityRenderer<ElevatorBaseBlockEn
 
     @Override
     public void render(ElevatorBaseBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
-        if (cabinShader == null || shaftShader == null) {
+        if (cabinShader == null || shaftShader == null || buttonShader == null) {
             return;
         }
         ElevatorCabinEntity cabin = cabin(be);
@@ -160,6 +171,9 @@ public class ElevatorRenderer implements BlockEntityRenderer<ElevatorBaseBlockEn
             } else if (skin == 4) {
                 drawNow(Types.GLOW, vc -> rail(vc, m, top, vel));
             }
+            // (the buttons before the cabin: its glass laid over them, seen from outside)
+            ElevatorButtons.draw(m, be, landing, landing + b.getY(), floor - 1, target - 1, moving, com.example.skyblocks.client.ElevatorScreen.ACCENT[skin] & 0xFFFFFF,
+                    partialTick);
             drawNow(Types.CABIN, vc -> cabinBox(vc, m, landing, skin, vel));
             label(m, landing, moving ? (vel > 0 ? "▲ " : "▼ ") + target : String.valueOf(floor), skin);
         };
@@ -168,7 +182,7 @@ public class ElevatorRenderer implements BlockEntityRenderer<ElevatorBaseBlockEn
         }
     }
 
-    private static void drawNow(RenderType type, java.util.function.Consumer<VertexConsumer> emit) {
+    static void drawNow(RenderType type, java.util.function.Consumer<VertexConsumer> emit) {
         com.mojang.blaze3d.vertex.BufferBuilder builder = com.mojang.blaze3d.vertex.Tesselator.getInstance().begin(type.mode(), type.format());
         emit.accept(builder);
         com.mojang.blaze3d.vertex.MeshData mesh = builder.build();

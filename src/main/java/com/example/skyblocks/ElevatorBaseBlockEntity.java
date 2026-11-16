@@ -45,6 +45,9 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
     /** (client) The shaft's walls, as last found (each: x, z of the wall's cell from the middle, side, y). */
     public int[] clientWalls = new int[0];
     public long clientWallsAt = -1000;
+    /** (client) The side its floor buttons are on, as last worked out (client/ElevatorButtons). */
+    public int clientPanelSide;
+    public long clientPanelAt = -1000;
 
     public ElevatorBaseBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ELEVATOR_BASE.get(), pos, state);

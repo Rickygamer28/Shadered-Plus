@@ -13,19 +13,17 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * An elevator's screen (from inside its cabin, its base, or a call panel where the cabin is): its floors - a button for
- * each, the one it's at pressed in - where it is and where it's going, and its look and speed.
+ * An elevator's settings (right-click its base; sneak + right-click its cabin or a call panel): where it is and where
+ * it's going, its look and its speed. (Its floors are chosen on the buttons inside its cabin: ElevatorButtons.)
  */
 public class ElevatorScreen extends Screen {
-    private static final int W = 276, PER_ROW = 8, BUTTON = 30;
+    private static final int W = 276;
     /** Each look's colour. */
     public static final int[] ACCENT = {0xFF6CC8FF, 0xFF7CFFCC, 0xFFE59CFF, 0xFFB09CFF, 0xFFC68CFF, 0xFFFFE08C};
     private final BlockPos base;
     private int left, top, h;
-    private Button[] floorButtons = new Button[0];
     private final Button[] skinButtons = new Button[ElevatorBaseBlockEntity.SKINS.length];
     private final Button[] speedButtons = new Button[ElevatorBaseBlockEntity.SPEEDS.length];
-    private int shownFloors = -1;
 
     public ElevatorScreen(BlockPos base) {
         super(Component.translatable("screen.skyblocks.elevator"));
@@ -49,26 +47,10 @@ public class ElevatorScreen extends Screen {
 
     @Override
     protected void init() {
-        ElevatorBaseBlockEntity be = be();
-        int n = be != null ? be.floors().length : 1;
-        shownFloors = n;
-        int rows = (n + PER_ROW - 1) / PER_ROW;
-        h = 64 + rows * (BUTTON + 4) + 74;
+        h = 128;
         left = (width - W) / 2;
         top = (height - h) / 2;
-        floorButtons = new Button[n];
-        int gridW = Math.min(n, PER_ROW) * (BUTTON + 4) - 4;
-        // floors bottom-up: floor 1 at the bottom row's left
-        for (int i = 0; i < n; i++) {
-            final int floor = i;
-            int row = rows - 1 - i / PER_ROW, col = i % PER_ROW;
-            floorButtons[i] = addRenderableWidget(Button.builder(Component.literal(String.valueOf(i + 1)),
-                    b -> {
-                        PacketDistributor.sendToServer(new ElevatorPayload(base, ElevatorPayload.GO, floor));
-                        onClose();
-                    }).bounds(left + (W - gridW) / 2 + col * (BUTTON + 4), top + 48 + row * (BUTTON + 4), BUTTON, BUTTON).build());
-        }
-        int y = top + 48 + rows * (BUTTON + 4) + 18;
+        int y = top + 54;
         int sw = (W - 16 - 5 * 3) / 6;
         for (int i = 0; i < skinButtons.length; i++) {
             final int k = i;
@@ -89,16 +71,6 @@ public class ElevatorScreen extends Screen {
         if (be == null || minecraft == null || minecraft.player == null || !be.shaft().inflate(8.0).contains(minecraft.player.position())) {
             onClose();
             return;
-        }
-        if (be.floors().length != shownFloors) {
-            rebuildWidgets();
-            return;
-        }
-        ElevatorCabinEntity c = cabin(be);
-        int at = c != null ? be.floorAt(c.landing()) : 0;
-        boolean moving = c != null && c.moving();
-        for (int i = 0; i < floorButtons.length; i++) {
-            floorButtons[i].active = moving || i != at;
         }
         for (int i = 0; i < skinButtons.length; i++) {
             skinButtons[i].active = be.skin() != i;
@@ -142,8 +114,7 @@ public class ElevatorScreen extends Screen {
             status = Component.translatable("screen.skyblocks.elevator.at", be.floorAt(c.landing()) + 1, be.floors().length);
         }
         g.drawString(font, status, left + 8, top + 20, accent, false);
-        g.drawString(font, Component.translatable("screen.skyblocks.elevator.choose"), left + 8, top + 34, 0xFFB8B0C8, false);
-        int y = floorButtons.length > 0 ? floorButtons[0].getY() + BUTTON + 6 : top + 80;
+        int y = top + 40;
         g.drawString(font, Component.translatable("screen.skyblocks.elevator.look"), left + 8, y, 0xFFB8B0C8, false);
         g.drawString(font, Component.translatable("screen.skyblocks.elevator.speed"), left + 8, y + 34, 0xFFB8B0C8, false);
     }

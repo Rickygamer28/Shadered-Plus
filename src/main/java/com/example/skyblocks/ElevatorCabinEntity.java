@@ -29,7 +29,8 @@ import net.neoforged.neoforge.event.entity.EntityMountEvent;
  * Sent off, everything standing on it rides it - held where they stood on it, standing, not let off on the way - and
  * set down on the floor it stops at. Its trip (from, to, when it set off, how long it takes) is known to the server and
  * to every client alike, each working out where it is from the time - so it moves smoothly, with what it carries.
- * Right-click its floor: the floors to go to (client/ElevatorScreen). It draws nothing of its own: its base draws it.
+ * Its floor buttons are inside it (client/ElevatorButtons); sneak + right-click it: its look and speed
+ * (client/ElevatorScreen). It draws nothing of its own: its base draws it.
  */
 @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
 public class ElevatorCabinEntity extends Entity {
@@ -208,6 +209,9 @@ public class ElevatorCabinEntity extends Entity {
 
     @Override
     public InteractionResult interact(Player player, InteractionHand hand) {
+        if (!player.isShiftKeyDown()) {
+            return InteractionResult.PASS;
+        }
         if (level().isClientSide) {
             com.example.skyblocks.client.ElevatorScreen.open(base());
         }
