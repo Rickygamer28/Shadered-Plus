@@ -259,44 +259,33 @@ wand = [
 json.dump({"textures": {"all": "skyblocks:item/sky_wand_3d", "particle": "skyblocks:item/sky_wand"},
            "elements": wand, "display": held()}, open(os.path.join(ROOT, "models/item", "sky_wand.json"), "w"), indent=2)
 
-palette("rift_knife_3d", {
-    (0, 0): ((58, 52, 78), (40, 36, 56)),       # the blade: dark steel, a violet sheen
-    (1, 0): ((236, 230, 255), (200, 192, 236)), # its cutting edge
-    (2, 0): ((235, 120, 255), (200, 70, 255)),  # the rift line glowing down it
-    (3, 0): ((196, 190, 220), (150, 142, 184)), # the guard: pale silver
-    (0, 1): ((74, 40, 46), (54, 28, 34)),       # the grip
-    (1, 1): ((176, 150, 220), (140, 112, 196)), # its silver wraps
-    (2, 1): ((255, 140, 255), (210, 80, 255)),  # the pommel's gem
-    (3, 1): ((30, 26, 42), (22, 18, 32)),       # the blade's spine
-})
-# A slim double-edged dagger: a dark blade with pale bevelled edges running straight up, then in to a sharp point (two
-# bevels turned 22.5 degrees, a diamond at the tip); a thin glowing rift line down its middle; a narrow silver guard with
-# its tips swept up; a slender wrapped grip; a little gem for a pommel. Each part one flat colour (a texel of its patch).
+# The rift knife: no blade - where the blade would be, shards of glowing crystal float one above another, each a flat
+# sliver tipped a little (its pale core showing), small gaps between them and a last spark at the tip, as if the
+# blade were the rift itself. A silver guard with its tips swept up, a dark grip with silver wraps, a glowing gem.
+# Each part one flat colour: a palette of 4 x 4 patches, T(i) the middle texel of patch i.
+kcol = [(255, 170, 255), (190, 80, 255), (120, 40, 200), (200, 196, 225), (40, 34, 56), (60, 30, 40), (150, 120, 210), (255, 235, 255)]
+kimg = np.zeros((16, 16, 3), np.float32)
+for i, c in enumerate(kcol):
+    kimg[(i // 4) * 4:(i // 4) * 4 + 4, (i % 4) * 4:(i % 4) * 4 + 4] = c
+save("item", "rift_knife_3d", kimg)
 
 
-def T(c, r):
-    return [c * 4 + 1.5, r * 4 + 1.5, c * 4 + 2.5, r * 4 + 2.5]
+def T(i):
+    return [(i % 4) * 4 + 1.5, (i // 4) * 4 + 1.5, (i % 4) * 4 + 2.5, (i // 4) * 4 + 2.5]
 
 
-knife = [
-    part((7.5, -0.25, 7.5), (8.5, 0.75, 8.5), T(2, 1), {"origin": [8, 0.25, 8], "axis": "y", "angle": 45}, glow=True),  # gem
-    part((7.65, 0.6, 7.65), (8.35, 4.0, 8.35), T(0, 1)),                    # grip
-    part((7.55, 1.2, 7.55), (8.45, 1.55, 8.45), T(1, 1)),                   # wraps
-    part((7.55, 2.15, 7.55), (8.45, 2.5, 8.45), T(1, 1)),
-    part((7.55, 3.1, 7.55), (8.45, 3.45, 8.45), T(1, 1)),
-    part((7.6, 4.0, 6.6), (8.4, 4.5, 9.4), T(3, 0)),                        # guard
-    part((7.65, 4.1, 5.9), (8.35, 4.45, 6.8), T(3, 0), {"origin": [8, 4.3, 6.6], "axis": "x", "angle": 22.5}),
-    part((7.65, 4.1, 9.2), (8.35, 4.45, 10.1), T(3, 0), {"origin": [8, 4.3, 9.4], "axis": "x", "angle": -22.5}),
-    part((7.75, 4.5, 7.45), (8.25, 12.5, 8.55), T(0, 0)),                   # the blade
-    part((7.8, 4.5, 7.25), (8.2, 12.5, 7.45), T(1, 0)),                     # its edges
-    part((7.8, 4.5, 8.55), (8.2, 12.5, 8.75), T(1, 0)),
-    # the point: each edge bevelled in 22.5 degrees, the blade narrowing between them, a diamond at the tip
-    part((7.74, 12.4, 7.25), (8.26, 13.6, 7.6), T(1, 0), {"origin": [8, 12.4, 7.25], "axis": "x", "angle": 22.5}),
-    part((7.74, 12.4, 8.4), (8.26, 13.6, 8.75), T(1, 0), {"origin": [8, 12.4, 8.75], "axis": "x", "angle": -22.5}),
-    part((7.76, 12.4, 7.55), (8.24, 12.9, 8.45), T(0, 0)),
-    part((7.76, 12.9, 7.75), (8.24, 13.3, 8.25), T(0, 0)),
-    part((7.78, 13.2, 7.76), (8.22, 13.7, 8.24), T(1, 0), {"origin": [8, 13.45, 8.0], "axis": "x", "angle": 45}),
-    part((7.7, 5.1, 7.88), (8.3, 12.0, 8.12), T(2, 0), glow=True),          # the rift line
-]
+knife = [part((7.4, 4.2, 6.6), (8.6, 4.8, 9.4), T(3)),                                                   # guard
+         part((7.55, 4.0, 6.2), (8.45, 4.6, 6.8), T(3), {"origin": [8, 4.3, 6.6], "axis": "x", "angle": 22.5}),
+         part((7.55, 4.0, 9.2), (8.45, 4.6, 9.8), T(3), {"origin": [8, 4.3, 9.4], "axis": "x", "angle": -22.5}),
+         part((7.6, 0.9, 7.6), (8.4, 4.2, 8.4), T(5)),                                                   # grip
+         part((7.55, 1.6, 7.55), (8.45, 1.9, 8.45), T(6)), part((7.55, 2.8, 7.55), (8.45, 3.1, 8.45), T(6)),
+         part((7.5, 0.0, 7.5), (8.5, 0.9, 8.5), T(1), {"origin": [8, 0.45, 8], "axis": "y", "angle": 45}, glow=True)]  # gem
+ky = 5.25
+for h, w, ang in ((2.6, 1.6, 0), (2.1, 1.35, 22.5), (1.8, 1.1, -22.5), (1.5, 0.8, 0)):
+    rot = {"origin": [8, ky + h / 2, 8], "axis": "x", "angle": ang} if ang else None
+    knife.append(part((7.75, ky, 8 - w / 2), (8.25, ky + h, 8 + w / 2), T(1), rot, glow=True))          # the shard
+    knife.append(part((7.7, ky + 0.3, 8 - w / 5), (8.3, ky + h - 0.3, 8 + w / 5), T(7), rot, glow=True))  # its core
+    ky += h + 0.45
+knife.append(part((7.8, ky - 0.1, 7.8), (8.2, ky + 0.5, 8.2), T(0), {"origin": [8, ky + 0.2, 8], "axis": "x", "angle": 45}, glow=True))  # spark
 json.dump({"textures": {"all": "skyblocks:item/rift_knife_3d", "particle": "skyblocks:item/rift_knife"},
            "elements": knife, "display": held(scale=0.6)}, open(os.path.join(ROOT, "models/item", "rift_knife.json"), "w"), indent=2)
