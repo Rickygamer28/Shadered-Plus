@@ -72,5 +72,8 @@ void main() {
     if (max(col.r, max(col.g, col.b)) < 0.004) {
         discard;
     }
-    fragColor = vec4(col, 1.0);
+    // (added as light, so its alpha is how bright it is and its colour divided by that: added, the same colour; laid over a
+    // shader pack's image - iris/IrisDefer - its dark parts don't cover the world)
+    float a = clamp(max(col.r, max(col.g, col.b)), 0.0, 1.0);
+    fragColor = vec4(col / max(a, 0.001), a);
 }
