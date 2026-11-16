@@ -212,6 +212,17 @@ public class FilterRenderer implements BlockEntityRenderer<FilterBlockEntity> {
         }
     }
 
+    private static final float INSET = 0.002F;
+
+    /** The two axes along a face across this one (u, v). */
+    private static Direction.Axis[] alongFace(Direction.Axis normal) {
+        return switch (normal) {
+            case X -> new Direction.Axis[] {Direction.Axis.Z, Direction.Axis.Y};
+            case Y -> new Direction.Axis[] {Direction.Axis.X, Direction.Axis.Z};
+            case Z -> new Direction.Axis[] {Direction.Axis.X, Direction.Axis.Y};
+        };
+    }
+
     /** A block face's corners (block coordinates), facing out. */
     private static float[][] corners(Direction d) {
         return switch (d) {
