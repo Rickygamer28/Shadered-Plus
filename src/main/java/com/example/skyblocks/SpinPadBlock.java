@@ -29,7 +29,10 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
-/** A spin pad (SpinPadBlockEntity): a low turntable an OIIA cat spins on, making Forge Energy. */
+/**
+ * A spin pad (SpinPadBlockEntity): a low turntable OIIA cats spin on, making Forge Energy. Right-click: its screen (put
+ * cats in; see how it's going). Laid as a square (2, 3 or 4 a side), spin pads make a big spin pad.
+ */
 public class SpinPadBlock extends BaseEntityBlock {
     public static final MapCodec<SpinPadBlock> CODEC = simpleCodec(SpinPadBlock::new);
     private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 4, 16);
@@ -69,16 +72,24 @@ public class SpinPadBlock extends BaseEntityBlock {
         return ItemInteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    /** How it's going: its speed, the FE it's making, what it's holding. */
+    /** Its screen (SpinPadMenu): its cats, how it's going. (One of a big pad's: its master's.) */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        if (!level.isClientSide && level.getBlockEntity(pos) instanceof SpinPadBlockEntity pad) {
-            String key = level.hasNeighborSignal(pos) ? "message.skyblocks.spin_pad.stopped"
-                    : pad.occupied() ? "message.skyblocks.spin_pad.status" : "message.skyblocks.spin_pad.empty";
-            player.displayClientMessage(Component.translatable(key, pad.rpm(), pad.lastFe(),
-                    String.format("%,d", pad.energy.getEnergyStored())), true);
+        if (!level.isClientSide && level.getBlockEntity(pos) instanceof SpinPadBlockEntity pad
+                && player instanceof net.minecraft.server.level.ServerPlayer sp) {
+            BlockPos at = pad.worker().getBlockPos();
+            sp.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inv, p) -> new SpinPadMenu(id, inv, at),
+                    Component.translatable("block.skyblocks.spin_pad")), buf -> buf.writeBlockPos(at));
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState now, boolean moving) {
+        if (!now.is(this) && level.getBlockEntity(pos) instanceof SpinPadBlockEntity pad) {
+            pad.dropCats();
+        }
+        super.onRemove(state, level, pos, now, moving);
     }
 
     @Nullable

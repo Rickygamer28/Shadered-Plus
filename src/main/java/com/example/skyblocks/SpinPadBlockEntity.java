@@ -19,15 +19,22 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A spin pad: a turntable for an OIIA cat - the cat block set on it, or a tame cat that hops on. The cat spins - faster
- * and faster the longer it's on (a live one: pet it for a boost), a vortex of sky whirling up round it (client/SpinPadRenderer) - and the spinning makes Forge Energy (FE), more
- * the faster it spins (as many FE as it turns), passed on to whatever's next to it that takes energy (cables,
- * machines, batteries), or kept. A redstone signal stops it (and lets the cat go). The aura's sky: right-click the pad
- * with a sky block.
+ * A spin pad: a turntable for OIIA cats - put in its screen (SpinPadMenu: right-click), or the cat block set on it, or a
+ * tame cat that hops on. The cat spins - faster and faster the longer it's on (a live one: pet it for a boost), an aura
+ * round it (client/SpinPadRenderer) - and the spinning makes Forge Energy (FE), more the faster it spins and the more
+ * cats spin, passed on to whatever's next to it that takes energy (cables, machines, batteries), or kept. A redstone
+ * signal stops it (and lets a live cat go). The aura's sky: right-click the pad with a sky block.
+ *
+ * The big spin pad: spin pads laid as a square, 2, 3 or 4 a side, join into one big pad - its north-west corner the one
+ * that works it (the master; the others pass to it: their screens, their energy). It takes as many cats as its side
+ * cubed (8, 27, 64), spins them as one big cat (the cube root of how many it holds, across), and makes as much energy
+ * as one pad does per cat.
  */
 public class SpinPadBlockEntity extends BlockEntity {
     /** FE made each tick at full speed; how much it keeps; how much it passes on each tick, at most. */
     public static final int MAX_FE = 320, CAPACITY = 250_000, PUSH = 4096;
+    /** The big pad's largest side. */
+    public static final int MAX_SIDE = 4;
     /** How quickly it speeds up with a cat on (to full: 60 s), slows down without, and what a pet adds. */
     private static final float SPEED_UP = 1.0F / 1200.0F, SLOW_DOWN = 1.0F / 160.0F, PET = 0.06F;
 
@@ -39,6 +46,32 @@ public class SpinPadBlockEntity extends BlockEntity {
     private float sentSpeed = -1;
     private boolean sentOccupied;
     private int lastFe;
+    /** Its cats (OIIA cat blocks, as items): one alone, side cubed as a big pad's master. */
+    public final net.neoforged.neoforge.items.ItemStackHandler cats = new net.neoforged.neoforge.items.ItemStackHandler(1) {
+        @Override
+        public int getSlotLimit(int slot) {
+            return maxCats();
+        }
+
+        @Override
+        public boolean isItemValid(int slot, net.minecraft.world.item.ItemStack stack) {
+            return stack.is(ModItems.OIIA_CAT.get()) && master == null;
+        }
+
+        @Override
+        protected void onContentsChanged(int slot) {
+            changed();
+        }
+    };
+    /** A big pad's master: how many a side (0: not one). A big pad's other pads: where its master is. */
+    private int side;
+    @Nullable
+    private BlockPos master;
+    private int syncIn;
+    /** (Client: its cats, as the server last said.) */
+    public int clientCats;
+    /** (Client: Shadered's model of the cat drawn on it.) */
+    public Object clientCatModel;
 
     /** Client: how far the OIIA spin's got (seconds of its animation, which plays faster as it speeds up), and the plate's turn. */
     public double clientSpin, clientSpinO, clientTurn, clientTurnO;
@@ -60,6 +93,12 @@ public class SpinPadBlockEntity extends BlockEntity {
         void set(int fe) {
             this.energy = Math.max(0, Math.min(this.capacity, fe));
         }
+
+        void resize(int capacity, int push) {
+            this.capacity = capacity;
+            this.maxExtract = push;
+            this.energy = Math.min(this.energy, capacity);
+        }
     }
 
     /** The spin pad at pos, if there's one. */
@@ -70,6 +109,44 @@ public class SpinPadBlockEntity extends BlockEntity {
 
     public float speed() {
         return speed;
+    }
+
+    /** How many a side, as a big pad's master; 1 alone (0: one of a big pad's other pads). */
+    public int side() {
+        return master != null ? 0 : Math.max(1, side);
+    }
+
+    @Nullable
+    public BlockPos master() {
+        return master;
+    }
+
+    /** The pad that works it: its big pad's master, or itself. */
+    public SpinPadBlockEntity worker() {
+        if (master != null && level != null && level.getBlockEntity(master) instanceof SpinPadBlockEntity m && m.side >= 2) {
+            return m;
+        }
+        return this;
+    }
+
+    public int maxCats() {
+        int n = Math.max(1, side);
+        return n * n * n;
+    }
+
+    /** How many cats it's spinning (in its screen; or one on it, set or live). */
+    public int catCount() {
+        return level != null && level.isClientSide ? clientCats : cats.getStackInSlot(0).getCount();
+    }
+
+    /** The cat it shows: the cube root of how many it holds, across (1 alone). */
+    public int catSize() {
+        int c = catCount();
+        int k = 1;
+        while ((k + 1) * (k + 1) * (k + 1) <= c) {
+            k++;
+        }
+        return Math.min(Math.max(1, side), k);
     }
 
     public boolean occupied() {
@@ -114,14 +191,117 @@ public class SpinPadBlockEntity extends BlockEntity {
                 worldPosition.getY() + 1.2, worldPosition.getZ() + 0.85);
     }
 
+    /** Whether a big pad's square starts here (its north-west corner): how many a side, or 0. */
+    private static int squareAt(Level level, BlockPos pos) {
+        if (isPad(level, pos.west()) || isPad(level, pos.north())) {
+            return 0;
+        }
+        int w = 1, d = 1;
+        while (w <= MAX_SIDE && isPad(level, pos.east(w))) {
+            w++;
+        }
+        while (d <= MAX_SIDE && isPad(level, pos.south(d))) {
+            d++;
+        }
+        if (w != d || w < 2 || w > MAX_SIDE) {
+            return 0;
+        }
+        for (int x = 0; x < w; x++) {
+            for (int z = 0; z < w; z++) {
+                if (!isPad(level, pos.offset(x, 0, z))) {
+                    return 0;
+                }
+            }
+        }
+        return w;
+    }
+
+    private static boolean isPad(Level level, BlockPos pos) {
+        return level.isLoaded(pos) && level.getBlockState(pos).getBlock() instanceof SpinPadBlock;
+    }
+
+    /** (Server, now and then: a big pad formed here, or broken up; a big pad's other pad still in its square.) */
+    private void checkSquare() {
+        if (master != null) {
+            if (!(level.getBlockEntity(master) instanceof SpinPadBlockEntity m) || m.side < 2
+                    || worldPosition.getX() - master.getX() >= m.side || worldPosition.getZ() - master.getZ() >= m.side
+                    || worldPosition.getX() < master.getX() || worldPosition.getZ() < master.getZ() || worldPosition.getY() != master.getY()) {
+                master = null;
+                changed();
+            }
+            return;
+        }
+        int n = squareAt(level, worldPosition);
+        if (n != side && !(n < 2 && side < 2)) {
+            side = n >= 2 ? n : 0;
+            for (int x = 0; x < Math.max(n, 1); x++) {
+                for (int z = 0; z < Math.max(n, 1); z++) {
+                    if ((x != 0 || z != 0) && level.getBlockEntity(worldPosition.offset(x, 0, z)) instanceof SpinPadBlockEntity p) {
+                        // (its cats into the master's screen; it works for the master now)
+                        net.minecraft.world.item.ItemStack theirs = p.cats.extractItem(0, 64, false);
+                        if (!theirs.isEmpty()) {
+                            net.minecraft.world.item.ItemStack left = cats.insertItem(0, theirs, false);
+                            if (!left.isEmpty()) {
+                                net.minecraft.world.Containers.dropItemStack(level, p.worldPosition.getX() + 0.5, p.worldPosition.getY() + 0.5,
+                                        p.worldPosition.getZ() + 0.5, left);
+                            }
+                        }
+                        p.master = side >= 2 ? worldPosition : null;
+                        p.changed();
+                    }
+                }
+            }
+            dropExtraCats();
+            changed();
+        }
+    }
+
+    /** More cats than it can hold now (a big pad broken up): the rest dropped. */
+    private void dropExtraCats() {
+        net.minecraft.world.item.ItemStack in = cats.getStackInSlot(0);
+        if (in.getCount() > maxCats()) {
+            net.minecraft.world.item.ItemStack extra = in.copyWithCount(in.getCount() - maxCats());
+            cats.setStackInSlot(0, in.copyWithCount(maxCats()));
+            net.minecraft.world.Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, extra);
+        }
+    }
+
+    /** Its cats dropped (it's broken). */
+    public void dropCats() {
+        net.minecraft.world.item.ItemStack in = cats.getStackInSlot(0);
+        if (!in.isEmpty() && level != null) {
+            net.minecraft.world.Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, in.copy());
+            cats.setStackInSlot(0, net.minecraft.world.item.ItemStack.EMPTY);
+        }
+    }
+
+    /** Its energy for cables: its big pad's (the master's), or its own. */
+    public IEnergyStorage energyHere() {
+        return worker().energy;
+    }
+
     public static void serverTick(Level level, BlockPos pos, BlockState state, SpinPadBlockEntity be) {
+        if ((level.getGameTime() + pos.hashCode()) % 20 == 0) {
+            be.checkSquare();
+        }
+        if (be.master != null) {
+            // (one of a big pad's other pads: its master does the work)
+            be.speed = 0.0F;
+            be.occupied = false;
+            be.lastFe = 0;
+            return;
+        }
         boolean stopped = level.hasNeighborSignal(pos);
         List<OiiaCatEntity> cats = stopped ? List.of() : level.getEntitiesOfClass(OiiaCatEntity.class, be.top(), c -> c.isAlive() && !c.isBaby());
         OiiaCatEntity cat = cats.isEmpty() ? null : cats.get(0);
         // (an OIIA cat block set on it spins too - on the pad, not a block above it: client/OiiaCatRenderer)
-        boolean block = !stopped && level.getBlockState(pos.above()).is(ModBlocks.OIIA_CAT.get());
-        be.occupied = cat != null || block;
-        if (block) {
+        boolean block = !stopped && be.side < 2 && level.getBlockState(pos.above()).is(ModBlocks.OIIA_CAT.get());
+        int inside = stopped ? 0 : be.cats.getStackInSlot(0).getCount();
+        if (be.side >= 2) {
+            cat = null; // (a big pad: its cats are in its screen)
+        }
+        be.occupied = cat != null || block || inside > 0;
+        if (block || inside > 0) {
             be.speed = Math.min(1.0F, be.speed + SPEED_UP);
         } else if (cat != null) {
             cat.holdOnPad(pos);
@@ -130,16 +310,30 @@ public class SpinPadBlockEntity extends BlockEntity {
             be.speed = Math.max(0.0F, be.speed - SLOW_DOWN);
         }
         // its energy: as much as it's turning (MAX_FE at full spin); passed on to its neighbours
-        be.lastFe = be.occupied || be.speed > 0 ? Math.round(MAX_FE * turnRate(be.speed) / turnRate(1.0F)) : 0;
+        // (each cat spinning makes a pad's worth: one on it, or as many as are in its screen)
+        int spinning = Math.max(inside, (block || cat != null) ? 1 : 0);
+        be.lastFe = be.occupied || be.speed > 0 ? Math.round(MAX_FE * Math.max(1, spinning) * turnRate(be.speed) / turnRate(1.0F)) : 0;
+        int n = Math.max(1, be.side);
+        be.energy.resize(CAPACITY * n * n * n, PUSH * n * n * n);
         be.energy.make(be.lastFe);
-        for (Direction d : Direction.values()) {
-            if (be.energy.getEnergyStored() <= 0) {
-                break;
-            }
-            IEnergyStorage next = level.getCapability(Capabilities.EnergyStorage.BLOCK, pos.relative(d), d.getOpposite());
-            if (next != null && next.canReceive()) {
-                int given = next.receiveEnergy(Math.min(PUSH, be.energy.getEnergyStored()), false);
-                be.energy.extractEnergy(given, false);
+        // passed on from every pad of it (a big pad: round its whole square, and under it)
+        for (int x = 0; x < n && be.energy.getEnergyStored() > 0; x++) {
+            for (int z = 0; z < n && be.energy.getEnergyStored() > 0; z++) {
+                BlockPos p = pos.offset(x, 0, z);
+                for (Direction d : Direction.values()) {
+                    if (be.energy.getEnergyStored() <= 0) {
+                        break;
+                    }
+                    BlockPos q = p.relative(d);
+                    if (n > 1 && q.getY() == pos.getY() && q.getX() >= pos.getX() && q.getX() < pos.getX() + n && q.getZ() >= pos.getZ() && q.getZ() < pos.getZ() + n) {
+                        continue; // (its own pads)
+                    }
+                    IEnergyStorage next = level.getCapability(Capabilities.EnergyStorage.BLOCK, q, d.getOpposite());
+                    if (next != null && next.canReceive()) {
+                        int given = next.receiveEnergy(Math.min(PUSH * n * n * n, be.energy.getEnergyStored()), false);
+                        be.energy.extractEnergy(given, false);
+                    }
+                }
             }
         }
         if (be.occupied != be.sentOccupied) {
@@ -149,8 +343,10 @@ public class SpinPadBlockEntity extends BlockEntity {
         if (be.lastFe > 0 || cat != null) {
             be.setChanged();
         }
-        // (the client told of its speed when it's changed enough to see)
-        if (Math.abs(be.speed - be.sentSpeed) > 0.02F || (be.speed == 0) != (be.sentSpeed == 0)) {
+        // (the client told of its speed when it's changed enough to see; and twice a second while it's making energy, for
+        // its screen)
+        if (Math.abs(be.speed - be.sentSpeed) > 0.02F || (be.speed == 0) != (be.sentSpeed == 0) || (be.lastFe > 0 && ++be.syncIn >= 10)) {
+            be.syncIn = 0;
             be.changed();
         }
     }
@@ -195,6 +391,13 @@ public class SpinPadBlockEntity extends BlockEntity {
         tag.putString("sky", sky);
         tag.putString("pass", pass);
         tag.putBoolean("occupied", occupied);
+        tag.put("cats", cats.serializeNBT(registries));
+        tag.putInt("side", side);
+        if (master != null) {
+            tag.putLong("master", master.asLong());
+        }
+        tag.putInt("cat_count", cats.getStackInSlot(0).getCount());
+        tag.putInt("last_fe", lastFe);
     }
 
     @Override
@@ -207,6 +410,18 @@ public class SpinPadBlockEntity extends BlockEntity {
             pass = tag.getString("pass");
         }
         occupied = tag.getBoolean("occupied");
+        if (tag.contains("cats")) {
+            cats.deserializeNBT(registries, tag.getCompound("cats"));
+        }
+        side = tag.getInt("side");
+        master = tag.contains("master") ? BlockPos.of(tag.getLong("master")) : null;
+        clientCats = tag.getInt("cat_count");
+        lastFe = tag.getInt("last_fe");
+        int n = Math.max(1, side);
+        energy.resize(CAPACITY * n * n * n, PUSH * n * n * n);
+        if (tag.contains("energy")) {
+            energy.set(tag.getInt("energy"));
+        }
     }
 
     @Override

@@ -38,6 +38,7 @@ public class SkyBlocksMod {
         ModFluids.TYPES.register(modEventBus);
         ModFluids.FLUIDS.register(modEventBus);
         ModFluids.RECIPES.register(modEventBus);
+        java.util.Objects.requireNonNull(SpinPadMenu.TYPE); // (its menu type put on the list before the list is registered)
         SingularityMenu.MENUS.register(modEventBus);
         TABS.register(modEventBus);
         modEventBus.addListener(SkyBlocksMod::addToShaderedTab);
@@ -122,7 +123,7 @@ public class SkyBlocksMod {
                 (be, side) -> be.handler());
         // (the spin pad's energy: cables and machines take it out)
         event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK, ModBlockEntities.SPIN_PAD.get(),
-                (be, side) -> be.energy);
+                (be, side) -> be.energyHere());
         // (the power core's energy: on it, and on its chamber's frames)
         event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK, ModBlockEntities.POWER_CORE.get(),
                 (be, side) -> be.handler);

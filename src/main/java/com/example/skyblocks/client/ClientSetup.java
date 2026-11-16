@@ -50,6 +50,7 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void registerScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
         event.register(com.example.skyblocks.SingularityMenu.TYPE.get(), SingularityScreen::new);
+        event.register(com.example.skyblocks.SpinPadMenu.TYPE.get(), SpinPadScreen::new);
     }
 
     @SubscribeEvent
