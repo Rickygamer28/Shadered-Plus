@@ -1,0 +1,8 @@
+{
+  "parent": "block/cube_bottom_top",
+  "textures": {
+    "top": "skyblocks:block/elevator_base_top",
+    "bottom": "skyblocks:block/elevator_base_side",
+    "side": "skyblocks:block/elevator_base_side"
+  }
+}

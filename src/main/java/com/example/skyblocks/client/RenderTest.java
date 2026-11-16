@@ -29,6 +29,9 @@ public final class RenderTest {
     /** (This spot: the big spin pad's screen opened, by right-clicking it.) */
     private static boolean padUi;
     private static boolean timeUi;
+    /** (the elevators: which to send up to floor 3 at tick 40 - -1 all, -2 none; and its screen opened) */
+    private static int elevCall = -2;
+    private static boolean elevUi;
 
     static final boolean ON = System.getenv("SKYBLOCKS_RENDER_TEST") != null;
     private static final String TAG = System.getenv().getOrDefault("SKYBLOCKS_RENDER_TEST", "x");
@@ -356,6 +359,69 @@ public final class RenderTest {
             // (and wheat in the dark - shut in tinted glass, no light gets in: grown all the same)
             "fill 683 -61 -5 687 -58 -1 minecraft:tinted_glass hollow", "fill 684 -61 -4 686 -61 -2 minecraft:farmland",
             "fill 684 -60 -4 686 -60 -2 minecraft:wheat[age=0]",
+            // elevators: one in each look, three floors (floor 2 and 3 platforms, 3x3 holes; walls on two sides; a call panel
+            // on each floor)
+            "forceload add 695 -20 760 20",
+            "fill 696 -55 -4 704 -55 4 minecraft:smooth_stone",
+            "fill 696 -49 -4 704 -49 4 minecraft:smooth_stone",
+            "fill 699 -55 -1 701 -55 1 minecraft:air",
+            "fill 699 -49 -1 701 -49 1 minecraft:air",
+            "fill 699 -60 -2 701 -45 -2 minecraft:white_concrete",
+            "fill 698 -60 -1 698 -45 1 minecraft:white_concrete",
+            "setblock 700 -61 0 skyblocks:elevator_base{skin:0,speed:0}",
+            "setblock 702 -60 1 skyblocks:elevator_panel[facing=west]",
+            "setblock 702 -54 1 skyblocks:elevator_panel[facing=west]",
+            "setblock 702 -48 1 skyblocks:elevator_panel[facing=west]",
+            "fill 706 -55 -4 714 -55 4 minecraft:smooth_stone",
+            "fill 706 -49 -4 714 -49 4 minecraft:smooth_stone",
+            "fill 709 -55 -1 711 -55 1 minecraft:air",
+            "fill 709 -49 -1 711 -49 1 minecraft:air",
+            "fill 709 -60 -2 711 -45 -2 minecraft:white_concrete",
+            "fill 708 -60 -1 708 -45 1 minecraft:white_concrete",
+            "setblock 710 -61 0 skyblocks:elevator_base{skin:1,speed:0}",
+            "setblock 712 -60 1 skyblocks:elevator_panel[facing=west]",
+            "setblock 712 -54 1 skyblocks:elevator_panel[facing=west]",
+            "setblock 712 -48 1 skyblocks:elevator_panel[facing=west]",
+            "fill 716 -55 -4 724 -55 4 minecraft:smooth_stone",
+            "fill 716 -49 -4 724 -49 4 minecraft:smooth_stone",
+            "fill 719 -55 -1 721 -55 1 minecraft:air",
+            "fill 719 -49 -1 721 -49 1 minecraft:air",
+            "fill 719 -60 -2 721 -45 -2 minecraft:white_concrete",
+            "fill 718 -60 -1 718 -45 1 minecraft:white_concrete",
+            "setblock 720 -61 0 skyblocks:elevator_base{skin:2,speed:0}",
+            "setblock 722 -60 1 skyblocks:elevator_panel[facing=west]",
+            "setblock 722 -54 1 skyblocks:elevator_panel[facing=west]",
+            "setblock 722 -48 1 skyblocks:elevator_panel[facing=west]",
+            "fill 726 -55 -4 734 -55 4 minecraft:smooth_stone",
+            "fill 726 -49 -4 734 -49 4 minecraft:smooth_stone",
+            "fill 729 -55 -1 731 -55 1 minecraft:air",
+            "fill 729 -49 -1 731 -49 1 minecraft:air",
+            "fill 729 -60 -2 731 -45 -2 minecraft:white_concrete",
+            "fill 728 -60 -1 728 -45 1 minecraft:white_concrete",
+            "setblock 730 -61 0 skyblocks:elevator_base{skin:3,speed:0}",
+            "setblock 732 -60 1 skyblocks:elevator_panel[facing=west]",
+            "setblock 732 -54 1 skyblocks:elevator_panel[facing=west]",
+            "setblock 732 -48 1 skyblocks:elevator_panel[facing=west]",
+            "fill 736 -55 -4 744 -55 4 minecraft:smooth_stone",
+            "fill 736 -49 -4 744 -49 4 minecraft:smooth_stone",
+            "fill 739 -55 -1 741 -55 1 minecraft:air",
+            "fill 739 -49 -1 741 -49 1 minecraft:air",
+            "fill 739 -60 -2 741 -45 -2 minecraft:white_concrete",
+            "fill 738 -60 -1 738 -45 1 minecraft:white_concrete",
+            "setblock 740 -61 0 skyblocks:elevator_base{skin:4,speed:0}",
+            "setblock 742 -60 1 skyblocks:elevator_panel[facing=west]",
+            "setblock 742 -54 1 skyblocks:elevator_panel[facing=west]",
+            "setblock 742 -48 1 skyblocks:elevator_panel[facing=west]",
+            "fill 746 -55 -4 754 -55 4 minecraft:smooth_stone",
+            "fill 746 -49 -4 754 -49 4 minecraft:smooth_stone",
+            "fill 749 -55 -1 751 -55 1 minecraft:air",
+            "fill 749 -49 -1 751 -49 1 minecraft:air",
+            "fill 749 -60 -2 751 -45 -2 minecraft:white_concrete",
+            "fill 748 -60 -1 748 -45 1 minecraft:white_concrete",
+            "setblock 750 -61 0 skyblocks:elevator_base{skin:5,speed:0}",
+            "setblock 752 -60 1 skyblocks:elevator_panel[facing=west]",
+            "setblock 752 -54 1 skyblocks:elevator_panel[facing=west]",
+            "setblock 752 -48 1 skyblocks:elevator_panel[facing=west]",
     };
     /** The newer things (SKYBLOCKS_RENDER_SET=new: only these), well away from the rest. */
     static final boolean NEW = "new".equals(System.getenv("SKYBLOCKS_RENDER_SET"));
@@ -579,7 +645,7 @@ public final class RenderTest {
             "catwalk 338.8 -59.6 1.4 0 18", "catwalk 340.6 -59.7 3.2 90 12", "holdphoto 333.5 -60 -3 0 8", "holdcamera 333.5 -60 -3 0 8", "356.5 -59.4 4.5 0 8", "night 356.5 -59.4 4.5 0 8", "334 -59.5 10.2 0 22", "331 -59.7 10.9 0 25", 
             "376 -58.3 8.8 180 22", "373.5 -59.35 5.4 180 12", "376.5 -59.35 5.4 180 15", "379.5 -59.1 4.4 180 32", "382.5 -57.6 5.6 180 12",
             "370.5 -59.2 4.6 180 30", "374.5 -59.45 7.0 180 4", "372 -59.6 6.2 200 18", "387.5 -59.2 4.2 180 8", "night 397.5 -58.5 3.3 180 25", "397 -58.2 3.3 160 10", "405.5 -58.6 3.4 180 18", "405.5 -59.2 3.6 180 28", "411.5 -58.6 3.4 180 18", 
-            "watch 7 open 270 -60 0 270.5 -58.6 -7 0 3", "watch 7 open 270 -60 0 270.5 -59.3 -1.1 0 52", "watch 7 open 270 -60 0 night 270.5 -58.6 -7 0 3", "418 -59.1 3.9 180 10", "416.5 -58.7 2.2 180 14", "419.5 -58.7 2.2 180 14", "418 -59.1 -2.9 0 10", "worn open 422 -60 0 422.5 -60 -1.6 0 15", "wornflat open 422 -60 0 422.5 -60 -1.6 0 15", "open 422 -60 0 422.5 -60 -1.6 0 15", "426.5 -59 2.6 180 24", "431.5 -58.8 2.9 180 20", "437.5 -59 2.4 180 22", "444.8 -59.3 2.8 180 24", "449.5 -59 2.6 180 38", "456.5 -59.2 3.4 180 5", "night 456.5 -59.2 3.4 180 5", "456.5 -59.2 3.4 180 -32", "464.5 -58.5 2.6 180 12", "464.5 -58.6 -3.4 0 8", "470 -59 2.6 160 32", "474 -59.2 1.7 180 38", "478.5 -58.6 1.5 180 0", "night 478.5 -58.6 1.5 180 0", "482.5 -58.3 2.6 180 42", "486.7 -59.4 2.7 180 6", "489.5 -59.4 2.7 180 6", "492.3 -59.4 2.7 180 6", "495.1 -59.4 2.7 180 6", "486.7 -59.3 6.7 180 6", "489.5 -59.3 6.7 180 6", "491.6 -59.3 6.3 180 6", "501.5 -59 3.5 180 55", "501.5 -59.4 3.0 180 25", "507.5 -59.3 3.0 180 5", "night 507.5 -59.3 3.0 180 5", "night 504.5 -59.3 2.0 135 5", "513.5 -59.5 1.4 180 30", "night 513.5 -59.5 1.4 180 30", "518.5 -58 10 180 -12", "night 518.5 -58 10 180 -12", "518.5 -54 24 180 -10", "524.5 -58.6 3.2 180 22", "530.5 -58.8 4.5 180 5", "night 530.5 -58.8 4.5 180 5", "537.5 -59.0 2.2 180 35", "night 513.5 -59 1.4 180 -89", "nomoon night 513.5 -59 1.4 180 -89", "544.5 -59.2 3.0 180 12", "550.5 -58.6 3.2 180 22", "557 -59.2 2.6 180 5", "560 -59.2 2.6 180 5", "563 -59.2 2.6 180 5", "566 -59.2 2.6 180 5", "569 -59.2 2.6 180 5", "572 -59.2 2.6 180 5", "575 -59.2 2.6 180 5", "578 -59.2 2.6 180 5", "581 -59.2 2.6 180 5", "584 -59.2 2.6 180 5", "587 -59.2 2.6 180 5", "590 -59.2 2.6 180 5", "593 -59.2 2.6 180 5", "584 -59.2 1.4 180 5", "569.3 -59.2 0.4 160 5", "557 -59 15.2 180 5", "560 -59 15.2 180 5", "563 -59 15.2 180 5", "566 -59 15.2 180 5", "569 -59 15.2 180 5", "572 -59 15.2 180 5", "575 -59 15.2 180 5", "579 -59 15.2 180 5", "582 -59 15.2 180 5", "585 -59 15.2 180 5", "592 -58.3 13 0 18", "night 592 -58.3 13 0 18", "590.5 -59.4 -6.2 180 12", "585 -59.2 -7.4 180 3", "nosun 590.5 -59 -8 180 -89", "590.5 -59 -8 180 -89", "595.5 -59.3 -4.6 180 12", "holdwand 595.5 -59.3 -4.6 180 12", "night 590.5 -58.8 -5.2 180 30", "605 -59.4 2.3 180 8", "609 -59.4 2.3 180 8", "night 607 -59.2 3.2 180 10", "618.5 -56.5 8.5 180 8", "night 618.5 -56.5 8.5 180 8", "630.5 -57.5 6.5 180 8", "night 630.5 -57.5 6.5 180 8", "638.5 -57.5 6.5 180 8", "coreui 618.5 -56.5 8.5 180 8", "616.5 -57.2 -1.5 315 5", "605.2 -59.3 1.3 200 15", "609.2 -59.3 1.3 200 15", "603 -57.5 -5 180 25", "padui 605.5 -58.4 -9.6 180 40", "655.5 -58.3 8.5 180 15", "655.5 -59.1 2.6 180 25", "668.5 -59.1 2.4 180 15", "680.5 -55 16 180 18", "night 680.5 -55 16 180 18", "680.5 -59.3 4.5 180 -55", "timeui 655.5 -58.3 8.5 180 15", "685.5 -57.2 2.5 180 40"};
+            "watch 7 open 270 -60 0 270.5 -58.6 -7 0 3", "watch 7 open 270 -60 0 270.5 -59.3 -1.1 0 52", "watch 7 open 270 -60 0 night 270.5 -58.6 -7 0 3", "418 -59.1 3.9 180 10", "416.5 -58.7 2.2 180 14", "419.5 -58.7 2.2 180 14", "418 -59.1 -2.9 0 10", "worn open 422 -60 0 422.5 -60 -1.6 0 15", "wornflat open 422 -60 0 422.5 -60 -1.6 0 15", "open 422 -60 0 422.5 -60 -1.6 0 15", "426.5 -59 2.6 180 24", "431.5 -58.8 2.9 180 20", "437.5 -59 2.4 180 22", "444.8 -59.3 2.8 180 24", "449.5 -59 2.6 180 38", "456.5 -59.2 3.4 180 5", "night 456.5 -59.2 3.4 180 5", "456.5 -59.2 3.4 180 -32", "464.5 -58.5 2.6 180 12", "464.5 -58.6 -3.4 0 8", "470 -59 2.6 160 32", "474 -59.2 1.7 180 38", "478.5 -58.6 1.5 180 0", "night 478.5 -58.6 1.5 180 0", "482.5 -58.3 2.6 180 42", "486.7 -59.4 2.7 180 6", "489.5 -59.4 2.7 180 6", "492.3 -59.4 2.7 180 6", "495.1 -59.4 2.7 180 6", "486.7 -59.3 6.7 180 6", "489.5 -59.3 6.7 180 6", "491.6 -59.3 6.3 180 6", "501.5 -59 3.5 180 55", "501.5 -59.4 3.0 180 25", "507.5 -59.3 3.0 180 5", "night 507.5 -59.3 3.0 180 5", "night 504.5 -59.3 2.0 135 5", "513.5 -59.5 1.4 180 30", "night 513.5 -59.5 1.4 180 30", "518.5 -58 10 180 -12", "night 518.5 -58 10 180 -12", "518.5 -54 24 180 -10", "524.5 -58.6 3.2 180 22", "530.5 -58.8 4.5 180 5", "night 530.5 -58.8 4.5 180 5", "537.5 -59.0 2.2 180 35", "night 513.5 -59 1.4 180 -89", "nomoon night 513.5 -59 1.4 180 -89", "544.5 -59.2 3.0 180 12", "550.5 -58.6 3.2 180 22", "557 -59.2 2.6 180 5", "560 -59.2 2.6 180 5", "563 -59.2 2.6 180 5", "566 -59.2 2.6 180 5", "569 -59.2 2.6 180 5", "572 -59.2 2.6 180 5", "575 -59.2 2.6 180 5", "578 -59.2 2.6 180 5", "581 -59.2 2.6 180 5", "584 -59.2 2.6 180 5", "587 -59.2 2.6 180 5", "590 -59.2 2.6 180 5", "593 -59.2 2.6 180 5", "584 -59.2 1.4 180 5", "569.3 -59.2 0.4 160 5", "557 -59 15.2 180 5", "560 -59 15.2 180 5", "563 -59 15.2 180 5", "566 -59 15.2 180 5", "569 -59 15.2 180 5", "572 -59 15.2 180 5", "575 -59 15.2 180 5", "579 -59 15.2 180 5", "582 -59 15.2 180 5", "585 -59 15.2 180 5", "592 -58.3 13 0 18", "night 592 -58.3 13 0 18", "590.5 -59.4 -6.2 180 12", "585 -59.2 -7.4 180 3", "nosun 590.5 -59 -8 180 -89", "590.5 -59 -8 180 -89", "595.5 -59.3 -4.6 180 12", "holdwand 595.5 -59.3 -4.6 180 12", "night 590.5 -58.8 -5.2 180 30", "605 -59.4 2.3 180 8", "609 -59.4 2.3 180 8", "night 607 -59.2 3.2 180 10", "618.5 -56.5 8.5 180 8", "night 618.5 -56.5 8.5 180 8", "630.5 -57.5 6.5 180 8", "night 630.5 -57.5 6.5 180 8", "638.5 -57.5 6.5 180 8", "coreui 618.5 -56.5 8.5 180 8", "616.5 -57.2 -1.5 315 5", "605.2 -59.3 1.3 200 15", "609.2 -59.3 1.3 200 15", "603 -57.5 -5 180 25", "padui 605.5 -58.4 -9.6 180 40", "655.5 -58.3 8.5 180 15", "655.5 -59.1 2.6 180 25", "668.5 -59.1 2.4 180 15", "680.5 -55 16 180 18", "night 680.5 -55 16 180 18", "680.5 -59.3 4.5 180 -55", "timeui 655.5 -58.3 8.5 180 15", "685.5 -57.2 2.5 180 40", "706.5 -57.5 6.5 135 12", "716.5 -57.5 6.5 135 12", "726.5 -57.5 6.5 135 12", "736.5 -57.5 6.5 135 12", "746.5 -57.5 6.5 135 12", "756.5 -57.5 6.5 135 12", "elevride 3 730.5 -60 0.5 180 -10", "elevcall 721 -51 9 150 8", "elevui 706.5 -59 3.5 135 10"};
 
     private static boolean burst, moving, burstOn;
     private static int burstFrame;
@@ -724,6 +790,20 @@ public final class RenderTest {
                             mc.gameMode.useItemOn(mc.player, net.minecraft.world.InteractionHand.MAIN_HAND, new net.minecraft.world.phys.BlockHitResult(
                                     new net.minecraft.world.phys.Vec3(605.5, -59.75, -12.5), net.minecraft.core.Direction.UP, new net.minecraft.core.BlockPos(605, -60, -13), false));
                         }
+                        if (ticks == 40 && elevCall != -2 && mc.getSingleplayerServer() != null) {
+                            final int which = elevCall;
+                            mc.getSingleplayerServer().execute(() -> {
+                                for (int i = 0; i < 6; i++) {
+                                    if ((which == -1 || which == i) && mc.getSingleplayerServer().overworld().getBlockEntity(
+                                            new net.minecraft.core.BlockPos(700 + 10 * i, -61, 0)) instanceof com.example.skyblocks.ElevatorBaseBlockEntity e) {
+                                        e.call(2);
+                                    }
+                                }
+                            });
+                        }
+                        if (ticks == 20 && elevUi && !(mc.screen instanceof ElevatorScreen)) {
+                            ElevatorScreen.open(new net.minecraft.core.BlockPos(700, -61, 0));
+                        }
                         if (ticks == 20 && timeUi && !(mc.screen instanceof TimeCrystalScreen)) {
                             TimeCrystalScreen.open(new net.minecraft.core.BlockPos(655, -60, 0));
                         }
@@ -757,6 +837,22 @@ public final class RenderTest {
                             if (padUi) {
                                 where = where.substring(6);
                                 mc.options.hideGui = false;
+                            }
+                            elevCall = -2;
+                            if (where.startsWith("elevcall ")) {
+                                elevCall = -1;
+                                where = where.substring(9);
+                            } else if (where.startsWith("elevride ")) {
+                                String[] w = where.split(" ", 3);
+                                elevCall = Integer.parseInt(w[1]);
+                                where = w[2];
+                            }
+                            elevUi = where.startsWith("elevui ");
+                            if (elevUi) {
+                                where = where.substring(7);
+                                mc.options.hideGui = false;
+                            } else if (mc.screen instanceof ElevatorScreen) {
+                                mc.setScreen(null);
                             }
                             timeUi = where.startsWith("timeui ");
                             if (timeUi) {

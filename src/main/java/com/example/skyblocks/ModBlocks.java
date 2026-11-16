@@ -511,6 +511,14 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(4.0F, 1200.0F).sound(SoundType.AMETHYST).noOcclusion().lightLevel(state -> 11)
                     .requiresCorrectToolForDrops().mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE));
 
+    /** An elevator: its base, at the bottom of its shaft, and a call panel on each floor (ElevatorBaseBlock, ElevatorPanelBlock). */
+    public static final DeferredBlock<ElevatorBaseBlock> ELEVATOR_BASE = BLOCKS.registerBlock("elevator_base", ElevatorBaseBlock::new,
+            BlockBehaviour.Properties.of().strength(3.5F, 6.0F).sound(SoundType.METAL).lightLevel(state -> 7).requiresCorrectToolForDrops()
+                    .mapColor(net.minecraft.world.level.material.MapColor.METAL));
+    public static final DeferredBlock<ElevatorPanelBlock> ELEVATOR_PANEL = BLOCKS.registerBlock("elevator_panel", ElevatorPanelBlock::new,
+            BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.METAL).noCollission().noOcclusion().lightLevel(state -> 5)
+                    .mapColor(net.minecraft.world.level.material.MapColor.METAL));
+
     // ---- the filter blocks (from The Valley Mod by D0nkey100, used with permission) ----
     public static final DeferredBlock<FilterBlock> INVERTED_FILTER = BLOCKS.registerBlock("inverted_filter", p -> new FilterBlock(1, false, p),
             BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS));

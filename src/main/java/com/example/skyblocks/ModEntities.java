@@ -24,6 +24,11 @@ public final class ModEntities {
             () -> EntityType.Builder.<SkyTrailEntity>of(SkyTrailEntity::new, MobCategory.MISC).sized(0.25F, 0.25F).clientTrackingRange(10)
                     .updateInterval(2).fireImmune().build("sky_trail"));
 
+    /** An elevator's cabin: a floor riding up and down its shaft. */
+    public static final Supplier<EntityType<ElevatorCabinEntity>> ELEVATOR_CABIN = TYPES.register("elevator_cabin",
+            () -> EntityType.Builder.<ElevatorCabinEntity>of(ElevatorCabinEntity::new, MobCategory.MISC).sized(2.9F, ElevatorCabinEntity.PLATE)
+                    .clientTrackingRange(16).updateInterval(10).fireImmune().build("elevator_cabin"));
+
     static void attributes(EntityAttributeCreationEvent event) {
         event.put(OIIA_CAT.get(), OiiaCatEntity.createAttributes().build());
     }

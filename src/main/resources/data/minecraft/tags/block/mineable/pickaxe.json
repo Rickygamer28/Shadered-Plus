@@ -44,6 +44,8 @@
     "skyblocks:ferrofluid",
     "skyblocks:bottomless_pit",
     "skyblocks:spin_pad",
-    "skyblocks:time_crystal"
+    "skyblocks:time_crystal",
+    "skyblocks:elevator_base",
+    "skyblocks:elevator_panel"
   ]
 }

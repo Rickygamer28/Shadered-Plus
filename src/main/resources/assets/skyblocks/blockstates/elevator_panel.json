@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "skyblocks:block/elevator_panel"
+    },
+    "facing=east": {
+      "model": "skyblocks:block/elevator_panel",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "skyblocks:block/elevator_panel",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "skyblocks:block/elevator_panel",
+      "y": 270
+    }
+  }
+}
