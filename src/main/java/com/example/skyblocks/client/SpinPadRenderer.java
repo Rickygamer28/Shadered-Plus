@@ -91,22 +91,16 @@ public class SpinPadRenderer implements BlockEntityRenderer<SpinPadBlockEntity> 
         float turn = be.turn(partialTick);
         float s = be.clientSpeed;
         float c = n / 2.0F; // (its middle: a big pad's, over its whole square)
-        // the plate, turning
-        pose.pushPose();
-        pose.translate(c, 4.02F / 16.0F, c);
-        pose.mulPose(Axis.YP.rotationDegrees(-turn));
-        VertexConsumer plate = buffers.getBuffer(RenderType.entityCutout(PLATE));
-        float r = n * 0.5F - 1.0F / 16.0F;
-        plateVertex(plate, pose, -r, -r, 0, 0, light);
-        plateVertex(plate, pose, -r, r, 0, 1, light);
-        plateVertex(plate, pose, r, r, 1, 1, light);
-        plateVertex(plate, pose, r, -r, 1, 0, light);
-        pose.popPose();
-        // the cats in its screen: one cat, as big as the cube root of how many, sat on the plate turning with it
-        if (be.catCount() > 0) {
-            drawCat(be, pose, c, be.catSize(), turn);
+        // with a shader pack: the plate and cat now, in the pack's picture; the aura (a shader of its own: the pack would
+        // hide it) drawn over the pack's image afterwards (iris/IrisDefer - this called again, drawing() then: the aura only)
+        boolean auraOnly = com.example.skyblocks.client.iris.IrisDefer.drawing();
+        if (!auraOnly && com.example.skyblocks.client.iris.IrisCompat.shaderPackInUse() && s >= 0.03F) {
+            com.example.skyblocks.client.iris.IrisDefer.deferPart(be, partialTick, pose);
         }
-        if (s < 0.03F) {
+        if (!auraOnly) {
+            drawPlateAndCat(be, pose, buffers, light, n, c, turn);
+        }
+        if (s < 0.03F || (!auraOnly && com.example.skyblocks.client.iris.IrisCompat.shaderPackInUse())) {
             return;
         }
         // the aura (shaders/core/spin_aura): the spiral on the floor and the streaks round the cat - wider, taller and
@@ -138,6 +132,24 @@ public class SpinPadRenderer implements BlockEntityRenderer<SpinPadBlockEntity> 
             ring(vc, m, a0, radius, top, u0, 1, sp, gTurn, alpha);
         }
         pose.popPose();
+    }
+
+    private static void drawPlateAndCat(SpinPadBlockEntity be, PoseStack pose, MultiBufferSource buffers, int light, int n, float c, float turn) {
+        // the plate, turning
+        pose.pushPose();
+        pose.translate(c, 4.02F / 16.0F, c);
+        pose.mulPose(Axis.YP.rotationDegrees(-turn));
+        VertexConsumer plate = buffers.getBuffer(RenderType.entityCutout(PLATE));
+        float r = n * 0.5F - 1.0F / 16.0F;
+        plateVertex(plate, pose, -r, -r, 0, 0, light);
+        plateVertex(plate, pose, -r, r, 0, 1, light);
+        plateVertex(plate, pose, r, r, 1, 1, light);
+        plateVertex(plate, pose, r, -r, 1, 0, light);
+        pose.popPose();
+        // the cats in its screen: one cat, as big as the cube root of how many, sat on the plate turning with it
+        if (be.catCount() > 0) {
+            drawCat(be, pose, c, be.catSize(), turn);
+        }
     }
 
     /** The cat in its screen, as a loaf on the plate (size k: k blocks across), turned with it (Shadered's model renderer). */

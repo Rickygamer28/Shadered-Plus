@@ -78,7 +78,26 @@ public final class IrisDefer {
                 || be instanceof com.example.skyblocks.SingularityBlockEntity
                 || be instanceof com.example.skyblocks.HologramBlockEntity
                 || be instanceof com.example.skyblocks.KoiPondBlockEntity
-                || be instanceof com.example.skyblocks.NeonSignBlockEntity;
+                || be instanceof com.example.skyblocks.NeonSignBlockEntity
+                || be instanceof com.example.skyblocks.PowerCoreBlockEntity
+                || be instanceof com.example.skyblocks.DarkFountainBlockEntity
+                || be instanceof com.example.skyblocks.FilterBlockEntity
+                || be.getBlockState().getBlock() instanceof com.example.skyblocks.BottomlessPitBlock
+                || be.getBlockState().getBlock() instanceof com.example.skyblocks.RoomWindowBlock
+                || be.getBlockState().getBlock() instanceof com.example.skyblocks.MoonJarBlock
+                || be.getBlockState().getBlock() instanceof com.example.skyblocks.SunJarBlock;
+    }
+
+    /**
+     * A part of a block entity drawn later, over the pack's image (its renderer drew the rest now, into the pack's
+     * buffers; when it's called again, drawing() is true: then only that part) - the spin pad's aura, say.
+     */
+    public static void deferPart(BlockEntity be, float partialTick, PoseStack pose) {
+        if (drawing || !IrisCompat.shaderPackInUse() || IrisCompat.renderingShadowPass() || be.getLevel() == null || JOBS.size() >= 4096) {
+            return;
+        }
+        JOBS.add(new Job(be, partialTick, new Matrix4f(pose.last().pose()), new Matrix3f(pose.last().normal()),
+                LevelRenderer.getLightColor(be.getLevel(), be.getBlockPos())));
     }
 
     /** Whether the noted-down ones are being drawn now (in the cats' target). */
