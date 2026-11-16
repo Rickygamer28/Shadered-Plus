@@ -1008,5 +1008,9 @@
   "screen.skyblocks.power_core.look": "Look:",
   "screen.skyblocks.power_core.push_on": "Push mode: ON - pushing into everything next to it",
   "screen.skyblocks.power_core.push_off": "Push mode: OFF",
-  "screen.skyblocks.power_core.hint": "Sneak + right-click the core or its frames: push mode on / off"
+  "screen.skyblocks.power_core.hint": "Sneak + right-click it: push mode on / off",
+  "screen.skyblocks.power_core.skin.star": "Star",
+  "screen.skyblocks.power_core.skin.storm": "Storm",
+  "screen.skyblocks.power_core.skin.plasma": "Plasma",
+  "screen.skyblocks.power_core.skin.atom": "Atom"
 }

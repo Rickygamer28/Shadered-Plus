@@ -44,7 +44,7 @@ public class PowerCoreScreen extends Screen {
         int bw = (W - 16 - 3 * 4) / 4;
         for (int i = 0; i < skinButtons.length; i++) {
             final int skin = i;
-            skinButtons[i] = addRenderableWidget(Button.builder(Component.translatable("power_core.skyblocks.skin." + PowerCoreBlockEntity.SKINS[i]),
+            skinButtons[i] = addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.power_core.skin." + PowerCoreBlockEntity.SKINS[i]),
                     b -> PacketDistributor.sendToServer(new PowerCorePayload(pos, PowerCorePayload.SKIN, skin))).bounds(left + 8 + i * (bw + 4), top + 132, bw, 18).build());
         }
         pushButton = addRenderableWidget(Button.builder(Component.empty(), b -> PacketDistributor.sendToServer(new PowerCorePayload(pos, PowerCorePayload.PUSH, 0)))
