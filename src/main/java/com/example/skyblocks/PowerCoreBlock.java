@@ -34,9 +34,9 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The power core: energy storage you can watch fill (PowerCoreBlockEntity). Right-click: how much it holds, and its next
- * look (a star, a storm, a plasma globe, an atom); sneak + right-click: push mode on / off. A comparator reads how full
- * it is. Broken, its energy goes with the item.
+ * The power core: energy storage you can watch fill (PowerCoreBlockEntity). Right-click: its screen (how much it holds,
+ * energy in and out, its look - a star, a storm, a plasma globe, an atom - and push mode); sneak + right-click: push
+ * mode on / off. A comparator reads how full it is. Broken, its energy goes with the item.
  */
 public class PowerCoreBlock extends BaseEntityBlock {
     public static final MapCodec<PowerCoreBlock> CODEC = simpleCodec(PowerCoreBlock::new);
@@ -77,24 +77,20 @@ public class PowerCoreBlock extends BaseEntityBlock {
         return use(level, pos, player);
     }
 
-    /** Right-click (here or on its chamber's frames): its next look and how much it holds; sneaking, push mode on / off. */
+    /** Right-click (here or on its chamber's frames): its screen; sneaking, push mode on / off. */
     public static InteractionResult use(Level level, BlockPos pos, Player player) {
         if (!(level.getBlockEntity(pos) instanceof PowerCoreBlockEntity be)) {
             return InteractionResult.PASS;
         }
-        if (!level.isClientSide) {
-            if (player.isShiftKeyDown()) {
+        if (player.isShiftKeyDown()) {
+            if (!level.isClientSide) {
                 be.togglePush();
                 level.playSound(null, pos, be.push() ? SoundEvents.BEACON_POWER_SELECT : SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 0.7F, 1.4F);
                 player.displayClientMessage(Component.translatable(be.push() ? "message.skyblocks.power_core.push_on" : "message.skyblocks.power_core.push_off")
                         .withStyle(ChatFormatting.GOLD), true);
-            } else {
-                be.nextSkin();
-                level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.0F, 0.8F + be.skin() * 0.2F);
-                player.displayClientMessage(Component.translatable("message.skyblocks.power_core.status",
-                        Component.translatable("power_core.skyblocks.skin." + PowerCoreBlockEntity.SKINS[be.skin()]),
-                        PowerCoreBlockEntity.fe(be.energy()), PowerCoreBlockEntity.fe(be.capacity())).withStyle(ChatFormatting.YELLOW), true);
             }
+        } else if (level.isClientSide) {
+            com.example.skyblocks.client.PowerCoreScreen.open(pos);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }

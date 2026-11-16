@@ -154,6 +154,7 @@ public class SkyBlocksMod {
                 .playToServer(SolarSystemClickPayload.TYPE, SolarSystemClickPayload.STREAM_CODEC, SolarSystemClickPayload::handle)
                 .playToServer(PortalCrossPayload.TYPE, PortalCrossPayload.STREAM_CODEC, PortalCrossPayload::handle)
                 .playToServer(WhirlpoolPayload.TYPE, WhirlpoolPayload.STREAM_CODEC, WhirlpoolPayload::handle)
+                .playToServer(PowerCorePayload.TYPE, PowerCorePayload.STREAM_CODEC, PowerCorePayload::handle)
                 .playToServer(EraseTrailPayload.TYPE, EraseTrailPayload.STREAM_CODEC, EraseTrailPayload::handle)
                 .playToClient(MoonJar.Payload.TYPE, MoonJar.Payload.STREAM_CODEC, MoonJar.Payload::handle)
                 .playToClient(SunJar.Payload.TYPE, SunJar.Payload.STREAM_CODEC, SunJar.Payload::handle)

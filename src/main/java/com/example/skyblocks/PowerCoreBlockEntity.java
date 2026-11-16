@@ -42,6 +42,9 @@ public class PowerCoreBlockEntity extends BlockEntity {
     private final List<BlockPos> outlets = new ArrayList<>();
     private final List<Direction> outletSides = new ArrayList<>();
     private boolean outletsKnown;
+    /** Energy in and out: counted over a second, then shown as FE per tick (its screen). */
+    private long inCount, outCount;
+    private long rateIn, rateOut;
     /** (Client: how full it looks, easing towards what it is.) */
     public float shownFull = -1.0F;
 
@@ -78,8 +81,20 @@ public class PowerCoreBlockEntity extends BlockEntity {
         return energy <= 0 ? 0 : Math.max(1, (int) Math.floor(fullness() * 15.0));
     }
 
+    public long rateIn() {
+        return rateIn;
+    }
+
+    public long rateOut() {
+        return rateOut;
+    }
+
     public void nextSkin() {
-        skin = (skin + 1) % SKINS.length;
+        setSkin(skin + 1);
+    }
+
+    public void setSkin(int skin) {
+        this.skin = Math.floorMod(skin, SKINS.length);
         changed(true);
     }
 
@@ -98,6 +113,7 @@ public class PowerCoreBlockEntity extends BlockEntity {
         long n = Math.max(0, Math.min(amount, capacity() - energy)); // (above its limit, out of a chamber: takes no more)
         if (n > 0 && !simulate) {
             energy += n;
+            inCount += n;
             changed(false);
         }
         return n;
@@ -107,6 +123,7 @@ public class PowerCoreBlockEntity extends BlockEntity {
         long n = Math.max(0, Math.min(amount, energy));
         if (n > 0 && !simulate) {
             energy -= n;
+            outCount += n;
             changed(false);
         }
         return n;
@@ -323,6 +340,7 @@ public class PowerCoreBlockEntity extends BlockEntity {
             int took = other.receiveEnergy(offer, false);
             if (took > 0) {
                 energy -= took;
+                outCount += took;
                 changed(false);
             }
         }
@@ -336,6 +354,14 @@ public class PowerCoreBlockEntity extends BlockEntity {
         long time = level.getGameTime() + pos.hashCode();
         if (time % 20 == 0) {
             be.checkChamber();
+            long in = be.inCount / 20, out = be.outCount / 20;
+            if (in != be.rateIn || out != be.rateOut) {
+                be.rateIn = in;
+                be.rateOut = out;
+                be.syncPending = true;
+            }
+            be.inCount = 0;
+            be.outCount = 0;
         }
         if (be.push && be.energy > 0) {
             be.pushOut();
@@ -364,6 +390,8 @@ public class PowerCoreBlockEntity extends BlockEntity {
         skin = Math.floorMod(tag.getInt("skin"), SKINS.length);
         push = tag.getBoolean("push");
         chamber = tag.getInt("chamber");
+        rateIn = tag.getLong("rate_in");
+        rateOut = tag.getLong("rate_out");
         outletsKnown = false;
     }
 
@@ -371,6 +399,8 @@ public class PowerCoreBlockEntity extends BlockEntity {
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
         save(tag);
+        tag.putLong("rate_in", rateIn);
+        tag.putLong("rate_out", rateOut);
         return tag;
     }
 
