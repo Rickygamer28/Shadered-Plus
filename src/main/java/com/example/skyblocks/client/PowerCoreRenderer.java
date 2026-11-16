@@ -23,7 +23,7 @@ import org.joml.Matrix4f;
 
 /**
  * A power core (PowerCoreBlockEntity): what it holds, in its skin, in 3D - a box (just inside its frame alone; filling its
- * core chamber in one) traced through by shaders/core/energy_core - easing to how full it is; the storm's rain; and
+ * core chamber in one) traced through by shaders/core/energy_core - easing to how full it is; and
  * its light, coloured (ShaderLightRenderer: the star's warm, the storm's pale violet, the plasma's purple, the atom's blue).
  */
 public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEntity> {
@@ -136,20 +136,6 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
                     m.transformPosition(0.5F + x, 0.5F + y, 0.5F + z, at);
                     VERTS.add(new float[] {at.x, at.y, at.z, c, half, r, g, b});
                 }
-            }
-        }
-        // the storm's rain: drops falling out of its cloud
-        if (skin == 1 && be.getLevel() != null && !Minecraft.getInstance().isPaused()) {
-            net.minecraft.util.RandomSource random = be.getLevel().random;
-            float rate = (chamber > 0 ? chamber * 0.6F : 0.35F) * (0.3F + full);
-            while (rate > 0) {
-                if (random.nextFloat() < rate) {
-                    double px = be.getBlockPos().getX() + 0.5 + (random.nextFloat() * 2 - 1) * half * 0.75;
-                    double pz = be.getBlockPos().getZ() + 0.5 + (random.nextFloat() * 2 - 1) * half * 0.75;
-                    double py = be.getBlockPos().getY() + 0.5 + half * 0.2;
-                    be.getLevel().addParticle(net.minecraft.core.particles.ParticleTypes.FALLING_WATER, px, py, pz, 0, 0, 0);
-                }
-                rate -= 1.0F;
             }
         }
     }

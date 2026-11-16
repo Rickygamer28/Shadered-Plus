@@ -4,8 +4,8 @@
 // showing how full it is:
 //  0 star:   a ball of fire - an ember when empty, swelling orange, yellow, then white-hot, boiling, turning slowly,
 //            with a corona and flares round it;
-//  1 storm:  a thundercloud, lumpy and churning, darker as it fills, lightning bolts forking down out of it (in 3D)
-//            more and more often (the rain: client/PowerCoreRenderer's drops);
+//  1 storm:  a thundercloud, lumpy and churning, darker as it fills, lightning bolts forking down out of it (in 3D),
+//            more and more often, sheets of rain falling under it;
 //  2 plasma: a glass ball, tendrils of light (3D curves) reaching from its middle to the glass - more, brighter and
 //            bluer as it fills;
 //  3 atom:   a nucleus of little balls, with electrons racing round it on tilted rings - a new ring for each quarter.
