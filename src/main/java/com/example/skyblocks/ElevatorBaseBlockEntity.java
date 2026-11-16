@@ -33,6 +33,8 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
     public static final int REACH = 256, GAP = 3;
 
     private int skin, speed = 1;
+    /** The side its floor buttons and crystal rail are on: -1 worked out (the side with the most wall), 0 north, 1 south, 2 west, 3 east. */
+    private int side = -1;
     /** Its floors: where you stand on each (y), from the bottom; the first on top of the base. */
     private int[] floors = new int[0];
     @Nullable
@@ -81,6 +83,24 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
             }
         }
         return best;
+    }
+
+    public int side() {
+        return side;
+    }
+
+    /** The next side (auto, north, east, south, west). */
+    public void nextSide() {
+        int[] order = {-1, 0, 3, 1, 2};
+        int at = 0;
+        for (int i = 0; i < order.length; i++) {
+            if (order[i] == side) {
+                at = i;
+            }
+        }
+        side = order[(at + 1) % order.length];
+        clientPanelAt = -1000;
+        changed();
     }
 
     public void setSkin(int s) {
@@ -238,6 +258,7 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
         tag.putInt("skin", skin);
         tag.putInt("speed", speed);
         tag.putIntArray("floors", floors);
+        tag.putInt("side", side);
     }
 
     @Override
@@ -246,6 +267,8 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
         skin = Math.floorMod(tag.getInt("skin"), SKINS.length);
         speed = tag.contains("speed") ? Math.floorMod(tag.getInt("speed"), SPEEDS.length) : 1;
         floors = tag.getIntArray("floors");
+        side = tag.contains("side") ? Math.max(-1, Math.min(3, tag.getInt("side"))) : -1;
+        clientPanelAt = -1000;
         cabinId = tag.hasUUID("cabin") ? tag.getUUID("cabin") : null;
         clientWallsAt = -1000;
     }

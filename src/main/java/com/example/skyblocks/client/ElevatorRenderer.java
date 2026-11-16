@@ -169,7 +169,8 @@ public class ElevatorRenderer implements BlockEntityRenderer<ElevatorBaseBlockEn
             if (skin == 0) {
                 drawNow(Types.GLOW, vc -> rings(vc, m, top, landing, vel));
             } else if (skin == 4) {
-                drawNow(Types.GLOW, vc -> rail(vc, m, top, vel));
+                int side = ElevatorButtons.side(be);
+                drawNow(Types.GLOW, vc -> rail(vc, m, top, vel, side));
             }
             // (the buttons before the cabin: its glass laid over them, seen from outside)
             ElevatorButtons.draw(m, be, landing, landing + b.getY(), floor - 1, target - 1, moving, com.example.skyblocks.client.ElevatorScreen.ACCENT[skin] & 0xFFFFFF,
@@ -256,14 +257,17 @@ public class ElevatorRenderer implements BlockEntityRenderer<ElevatorBaseBlockEn
         }
     }
 
-    /** The crystal cabin's rail: a strip of crystal up the shaft's north side. */
-    private static void rail(VertexConsumer vc, Matrix4f m, int top, float vel) {
+    /** The crystal cabin's rail: a strip of crystal up the middle of one side of the shaft (its buttons' side). */
+    private static void rail(VertexConsumer vc, Matrix4f m, int top, float vel, int side) {
         int vb = velByte(vel);
-        float z = 0.5F - 1.5F + 0.02F, w = 0.2F;
-        vc.addVertex(m, 0.5F - w, 0.0F, z).setColor(4, 2, vb, 255).setUv(-1, 0);
-        vc.addVertex(m, 0.5F + w, 0.0F, z).setColor(4, 2, vb, 255).setUv(1, 0);
-        vc.addVertex(m, 0.5F + w, top + 1, z).setColor(4, 2, vb, 255).setUv(1, top + 1);
-        vc.addVertex(m, 0.5F - w, top + 1, z).setColor(4, 2, vb, 255).setUv(-1, top + 1);
+        net.minecraft.world.phys.Vec3 n = ElevatorButtons.normal(side), r = ElevatorButtons.right(side);
+        float out = 1.5F - 0.02F, w = 0.2F;
+        float cx = 0.5F - (float) n.x * out, cz = 0.5F - (float) n.z * out;
+        float x0 = cx - (float) r.x * w, z0 = cz - (float) r.z * w, x1 = cx + (float) r.x * w, z1 = cz + (float) r.z * w;
+        vc.addVertex(m, x0, 0.0F, z0).setColor(4, 2, vb, 255).setUv(-1, 0);
+        vc.addVertex(m, x1, 0.0F, z1).setColor(4, 2, vb, 255).setUv(1, 0);
+        vc.addVertex(m, x1, top + 1, z1).setColor(4, 2, vb, 255).setUv(1, top + 1);
+        vc.addVertex(m, x0, top + 1, z0).setColor(4, 2, vb, 255).setUv(-1, top + 1);
     }
 
     /** The floor it's at (or going to, with an arrow) over the cabin, turned to face you. */

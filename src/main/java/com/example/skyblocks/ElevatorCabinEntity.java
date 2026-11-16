@@ -135,7 +135,19 @@ public class ElevatorCabinEntity extends Entity {
         BlockPos b = base();
         setPos(b.getX() + 0.5, landing() - PLATE, b.getZ() + 0.5);
         if (level().isClientSide) {
+            if (moving()) {
+                com.example.skyblocks.client.ElevatorButtons.keepOn(this);
+            }
             return;
+        }
+        if (moving()) {
+            // (anything that lands on it - or that it comes up under - on the way: it rides too, rather than fall through)
+            float landing = landing(), reach = 0.6F + Math.abs(velocity(0.0F)) * 2.0F;
+            for (Entity e : level().getEntities(this, getBoundingBox().inflate(0.0, 2.5, 0.0),
+                    e -> e instanceof LivingEntity && !e.isPassenger() && !e.isSpectator() && Math.abs(e.getX() - getX()) < 1.45
+                            && Math.abs(e.getZ() - getZ()) < 1.45 && e.getY() > landing - reach && e.getY() < landing + 0.35)) {
+                e.startRiding(this, true);
+            }
         }
         if (tickCount % 20 == 0 && !(level().getBlockEntity(b) instanceof ElevatorBaseBlockEntity)) {
             release();

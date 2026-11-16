@@ -26,8 +26,8 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import org.joml.Matrix4f;
 
 /**
- * The floor buttons inside an elevator's cabin: a panel of glowing buttons on one side of it (the side with a wall
- * behind it on floor 1, if there's one) - a button for each floor, numbered from the bottom, floor 1 at the bottom left.
+ * The floor buttons inside an elevator's cabin: a panel of glowing buttons on one side of it (as set on its screen, or
+ * the side with the most wall) - a button for each floor, numbered from the bottom, floor 1 at the bottom left.
  * Look at one and click (either button): the cabin goes there. The floor it's at is lit, the one it's going to blinks,
  * the one you're looking at shows it. Drawn with the cabin (ElevatorRenderer); clicks worked out here, by where you look.
  */
@@ -58,8 +58,14 @@ public final class ElevatorButtons {
         return new Layout(side(be), cols, rows, size, Math.min(0.06F, size * 0.3F));
     }
 
-    /** The panel's side (0 north, 1 south, 2 west, 3 east): one with a wall behind it on floor 1, north if none. */
+    /**
+     * The side its buttons (and the crystal cabin's rail) are on (0 north, 1 south, 2 west, 3 east): as set on its screen,
+     * or worked out - the side with the most wall up the shaft (its middle block), north if none has any.
+     */
     static int side(ElevatorBaseBlockEntity be) {
+        if (be.side() >= 0) {
+            return be.side();
+        }
         Level level = be.getLevel();
         if (level == null) {
             return 0;
@@ -70,16 +76,43 @@ public final class ElevatorButtons {
         be.clientPanelAt = level.getGameTime();
         BlockPos b = be.getBlockPos();
         int[][] out = {{0, -2}, {0, 2}, {-2, 0}, {2, 0}};
+        int[] count = new int[4];
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int y = be.floors()[0]; y <= be.top(); y++) {
+            for (int s = 0; s < 4; s++) {
+                p.set(b.getX() + out[s][0], y, b.getZ() + out[s][1]);
+                if (level.getBlockState(p).isSolidRender(level, p)) {
+                    count[s]++;
+                }
+            }
+        }
         int side = 0;
-        for (int s = 0; s < 4; s++) {
-            BlockPos p = new BlockPos(b.getX() + out[s][0], be.floors()[0] + 1, b.getZ() + out[s][1]);
-            if (level.getBlockState(p).isSolidRender(level, p)) {
+        for (int s = 1; s < 4; s++) {
+            if (count[s] > count[side]) {
                 side = s;
-                break;
             }
         }
         be.clientPanelSide = side;
         return side;
+    }
+
+    /**
+     * (client) A moving cabin, and you not riding it: if you're on it - jumped on, or it's come up under you - you're held
+     * on its floor until the server has you riding it (not left to fall through it as it rises).
+     */
+    public static void keepOn(ElevatorCabinEntity cabin) {
+        Player p = Minecraft.getInstance().player;
+        if (p == null || p.isPassenger() || p.isSpectator() || p.getAbilities().flying) {
+            return;
+        }
+        float landing = cabin.landing(), vel = cabin.velocity(0.0F);
+        if (Math.abs(p.getX() - cabin.getX()) < 1.45 && Math.abs(p.getZ() - cabin.getZ()) < 1.45
+                && p.getY() > landing - 0.6F - Math.abs(vel) * 2.0F && p.getY() < landing + 0.05F && p.getDeltaMovement().y <= vel + 0.05) {
+            p.setPos(p.getX(), landing, p.getZ());
+            p.setDeltaMovement(p.getDeltaMovement().x, Math.max(vel, 0.0F), p.getDeltaMovement().z);
+            p.setOnGround(true);
+            p.fallDistance = 0.0F;
+        }
     }
 
     /** Facing the panel from inside: its normal (into the cabin), and the way to your right. */

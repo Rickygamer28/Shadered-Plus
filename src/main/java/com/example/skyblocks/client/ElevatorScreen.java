@@ -14,7 +14,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * An elevator's settings (right-click its base; sneak + right-click its cabin or a call panel): where it is and where
- * it's going, its look and its speed. (Its floors are chosen on the buttons inside its cabin: ElevatorButtons.)
+ * it's going, its look, its speed, and the side its floor buttons (and the crystal cabin's rail) are on. (Its floors are chosen on the buttons inside its cabin: ElevatorButtons.)
  */
 public class ElevatorScreen extends Screen {
     private static final int W = 276;
@@ -24,6 +24,7 @@ public class ElevatorScreen extends Screen {
     private int left, top, h;
     private final Button[] skinButtons = new Button[ElevatorBaseBlockEntity.SKINS.length];
     private final Button[] speedButtons = new Button[ElevatorBaseBlockEntity.SPEEDS.length];
+    private Button sideButton;
 
     public ElevatorScreen(BlockPos base) {
         super(Component.translatable("screen.skyblocks.elevator"));
@@ -47,7 +48,7 @@ public class ElevatorScreen extends Screen {
 
     @Override
     protected void init() {
-        h = 128;
+        h = 162;
         left = (width - W) / 2;
         top = (height - h) / 2;
         int y = top + 54;
@@ -63,6 +64,8 @@ public class ElevatorScreen extends Screen {
             speedButtons[i] = addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.elevator.speed." + i),
                     b -> PacketDistributor.sendToServer(new ElevatorPayload(base, ElevatorPayload.SPEED, k))).bounds(left + 8 + i * (pw + 4), y + 34, pw, 18).build());
         }
+        sideButton = addRenderableWidget(Button.builder(Component.empty(), b -> PacketDistributor.sendToServer(new ElevatorPayload(base, ElevatorPayload.SIDE, 0)))
+                .bounds(left + 8, y + 68, W - 16, 18).build());
     }
 
     @Override
@@ -78,6 +81,9 @@ public class ElevatorScreen extends Screen {
         for (int i = 0; i < speedButtons.length; i++) {
             speedButtons[i].active = be.speedIndex() != i;
         }
+        String[] sides = {"north", "south", "west", "east"};
+        sideButton.setMessage(Component.translatable("screen.skyblocks.elevator.side",
+                Component.translatable(be.side() < 0 ? "screen.skyblocks.elevator.side.auto" : "screen.skyblocks.elevator.side." + sides[be.side()])));
     }
 
     @Override
