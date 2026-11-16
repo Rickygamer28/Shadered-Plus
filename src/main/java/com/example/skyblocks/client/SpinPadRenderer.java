@@ -112,7 +112,7 @@ public class SpinPadRenderer implements BlockEntityRenderer<SpinPadBlockEntity> 
         int sp = Math.round(Mth.clamp(s, 0.0F, 1.0F) * 255), gTurn = Math.round((turns - (float) Math.floor(turns)) * 255) & 255;
         int alpha = Math.round(Mth.clamp(s * 2.5F, 0.0F, 1.0F) * 255);
         VertexConsumer vc = buffers.getBuffer(aura);
-        float disc = 0.5F + 2.2F * s, y = 4.06F / 16.0F;
+        float disc = 0.5F + 2.2F * s, y = 0.02F; // (on the ground round the pad)
         vc.addVertex(m, 0.5F - disc, y, 0.5F - disc).setUv(0, 0).setColor(sp, gTurn, 0, alpha);
         vc.addVertex(m, 0.5F - disc, y, 0.5F + disc).setUv(0, 1).setColor(sp, gTurn, 0, alpha);
         vc.addVertex(m, 0.5F + disc, y, 0.5F + disc).setUv(1, 1).setColor(sp, gTurn, 0, alpha);

@@ -43,9 +43,11 @@ void main() {
         vec3 sky = texture(Sampler0, vec2(fract(round_ - turn), 0.35 + 0.3 * r)).rgb;
         vec3 tint = hue(round_ + r * 0.6 - seconds * 0.08);
         vec3 c = mix(sky * 1.6 + 0.05, tint, 0.45);
-        // a bright ring hugging the plate, and the spiral fading out towards the rim
-        float plate = smoothstep(0.06, 0.0, abs(r - 0.2)) * (0.6 + 0.4 * speed);
-        float fade = pow(1.0 - r, 1.4) * smoothstep(0.12, 0.2, r);
+        // a bright ring hugging the pad's sides (the disc's as wide as client/SpinPadRenderer makes it: 0.5 + 2.2 x speed
+        // blocks out), and the spiral fading out towards the rim
+        float pad = 0.56 / (0.5 + 2.2 * speed);
+        float plate = smoothstep(0.05 * pad + 0.02, 0.0, abs(r - pad)) * (0.6 + 0.4 * speed);
+        float fade = pow(1.0 - r, 1.4) * smoothstep(pad * 0.9, pad, r);
         col = c * arm * fade * (0.55 + 0.45 * speed) + vec3(0.75, 0.9, 1.0) * plate;
     } else {
         // round the cat: lanes of comet streaks, each racing round at its own pace
