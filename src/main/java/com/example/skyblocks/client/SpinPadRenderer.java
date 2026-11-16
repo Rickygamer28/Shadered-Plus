@@ -159,7 +159,8 @@ public class SpinPadRenderer implements BlockEntityRenderer<SpinPadBlockEntity> 
         float scale = OiiaCatModel.SCALE * k;
         pose.scale(scale, scale, scale);
         pose.translate(0, OiiaCatModel.FEET, 0);
-        OiiaCatModel.animate(pose, 0);
+        float offsetY = OiiaCatModel.animate(pose, 0);
+        pose.translate(0, -(OiiaCatModel.SPIN_BOTTOM + offsetY), 0); // (the loaf's underside down on the plate, not floating)
         net.minecraft.world.phys.Vec3 camera = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         model.modelMatrix = new Matrix4f().translation((float) camera.x, (float) camera.y, (float) camera.z).mul(new Matrix4f(pose.last().pose()));
         if (com.example.skyblocks.client.island.IslandRendering.inWindow || com.example.skyblocks.client.island.IslandRendering.collectCats) {
