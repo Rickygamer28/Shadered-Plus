@@ -1024,5 +1024,5 @@
   "screen.skyblocks.spin_pad.speed": "Speed %s%% · %s RPM",
   "screen.skyblocks.spin_pad.making": "Making %s FE/t",
   "screen.skyblocks.spin_pad.stored": "Stored %s / %s FE",
-  "screen.skyblocks.spin_pad.max": "Up to %s FE/t at full speed"
+  "screen.skyblocks.spin_pad.max": "Full speed: %s FE/t"
 }
