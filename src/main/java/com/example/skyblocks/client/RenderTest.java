@@ -320,7 +320,7 @@ public final class RenderTest {
             "setblock 618 -57 0 skyblocks:power_core{energy:400000000000L,skin:0}",
             // spin pads with cats in their screens: one alone, and a 3x3 big spin pad with 27 (a 3x3x3 cat)
             "setblock 600 -60 -12 skyblocks:spin_pad{speed:0.8f,cats:{Size:1,Items:[{Slot:0,id:\"skyblocks:oiia_cat\",count:1}]}}",
-            "fill 604 -60 -14 606 -60 -12 skyblocks:spin_pad", "setblock 604 -60 -14 skyblocks:spin_pad{speed:0.8f,cats:{Size:1,Items:[{Slot:0,id:\"skyblocks:oiia_cat\",count:27}]}}",
+            "setblock 604 -60 -14 skyblocks:spin_pad{speed:0.8f,cats:{Size:1,Items:[{Slot:0,id:\"skyblocks:oiia_cat\",count:27}]}}", "fill 604 -60 -14 606 -60 -12 skyblocks:spin_pad keep",
             "fill 628 -60 -2 632 -56 2 skyblocks:core_frame hollow",
             "fill 628 -59 -1 628 -57 1 air",
             "fill 632 -59 -1 632 -57 1 air",
