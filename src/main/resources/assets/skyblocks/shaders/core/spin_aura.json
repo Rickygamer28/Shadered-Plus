@@ -1,6 +1,6 @@
 {
-    "vertex": "skyblocks:spin_vortex",
-    "fragment": "skyblocks:spin_vortex",
+    "vertex": "skyblocks:spin_aura",
+    "fragment": "skyblocks:spin_aura",
     "samplers": [
         {
             "name": "Sampler0"

@@ -12,6 +12,8 @@ uniform vec2 ScreenSize;
 uniform vec3 CamPos;        // the camera's place in the world (kept under 1024 blocks: only its grid matters)
 
 in vec3 point;
+in vec2 onFace;
+flat in int frame;
 flat in int mode;
 flat in vec3 dye;
 
@@ -172,6 +174,18 @@ void main() {
         result = mix(color, led * texture(DiffuseSampler, coord).rgb, strength);
     } else if (mode == 20) {
         result = tintLens(color, dye);
+    }
+    // the frame round the pane's edges (not filtered): dark, a lighter line inside it, two sixteenths of a block
+    vec2 f = fract(onFace / 4.0) * 4.0; // (where on the face, without the flags)
+    float edge = 9.0;
+    if ((frame & 1) != 0) edge = min(edge, f.x);
+    if ((frame & 2) != 0) edge = min(edge, 1.0 - f.x);
+    if ((frame & 4) != 0) edge = min(edge, f.y);
+    if ((frame & 8) != 0) edge = min(edge, 1.0 - f.y);
+    if (edge < 1.0 / 16.0) {
+        result = vec3(0.20, 0.22, 0.25);
+    } else if (edge < 2.0 / 16.0) {
+        result = vec3(0.38, 0.41, 0.46);
     }
     fragColor = vec4(result, 1.0);
 }

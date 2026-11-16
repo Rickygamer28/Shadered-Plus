@@ -8,8 +8,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -24,7 +22,7 @@ import org.jetbrains.annotations.Nullable;
  * A spin pad: a turntable for an OIIA cat - the cat block set on it, or a tame cat that hops on. The cat spins - faster
  * and faster the longer it's on (a live one: pet it for a boost), a vortex of sky whirling up round it (client/SpinPadRenderer) - and the spinning makes Forge Energy (FE), more
  * the faster it spins (as many FE as it turns), passed on to whatever's next to it that takes energy (cables,
- * machines, batteries), or kept. A redstone signal stops it (and lets the cat go). The vortex's sky: right-click the pad
+ * machines, batteries), or kept. A redstone signal stops it (and lets the cat go). The aura's sky: right-click the pad
  * with a sky block.
  */
 public class SpinPadBlockEntity extends BlockEntity {
@@ -154,9 +152,6 @@ public class SpinPadBlockEntity extends BlockEntity {
         // (the client told of its speed when it's changed enough to see)
         if (Math.abs(be.speed - be.sentSpeed) > 0.02F || (be.speed == 0) != (be.sentSpeed == 0)) {
             be.changed();
-        }
-        if (be.speed > 0.35F && level.getGameTime() % Math.max(6, Math.round(40 - be.speed * 30)) == 0) {
-            level.playSound(null, pos, SoundEvents.ELYTRA_FLYING, SoundSource.BLOCKS, 0.15F + be.speed * 0.2F, 0.6F + be.speed * 1.2F);
         }
     }
 

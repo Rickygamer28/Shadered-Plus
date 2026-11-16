@@ -28,7 +28,7 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A filter block (from The Valley Mod by D0nkey100, used with permission): see-through, the world behind it seen through
+ * A filter block (its frame and its faces both drawn by client/FilterRenderer; from The Valley Mod by D0nkey100, used with permission): see-through, the world behind it seen through
  * its filter - inverted, posterized, in grey, split into colours, as a blueprint, on a Game Boy, in big pixels, in cross
  * stitch, through a red lens or a tinted one, or on a screen of little lights (client/FilterRenderer,
  * shaders/core/filter_glass). Blocks of one filter side by side make one pane; stand inside one and it's all you see.

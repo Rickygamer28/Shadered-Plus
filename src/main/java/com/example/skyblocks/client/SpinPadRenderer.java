@@ -17,14 +17,14 @@ import net.minecraft.world.phys.AABB;
 import org.joml.Matrix4f;
 
 /**
- * A spin pad (SpinPadBlockEntity): its plate turning with the cat on it, and once it's going, a vortex of sky whirling
- * up round the cat - arms of the pad's sky spiralling up a funnel (shaders/core/spin_vortex), taller and wider the faster it
- * spins - with a ring of light round the plate.
+ * A spin pad (SpinPadBlockEntity): its plate turning with the cat on it, and once it's going, an aura (shaders/core/spin_aura,
+ * adding light): a hypnotic spiral of the pad's sky wheeling round on the floor, wider the faster it spins, and round the
+ * cat, comet streaks of colour whipping round with it and rings of light rising off the plate.
  */
 public class SpinPadRenderer implements BlockEntityRenderer<SpinPadBlockEntity> {
     private static final ResourceLocation PLATE = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "textures/block/spin_pad_plate.png");
-    /** The funnel's mesh: rings up it, steps round it. */
-    private static final int RINGS = 16, AROUND = 40;
+    /** The ring round the cat's mesh: steps round it. */
+    private static final int AROUND = 48;
 
     static net.minecraft.client.renderer.ShaderInstance shader;
 
@@ -35,7 +35,7 @@ public class SpinPadRenderer implements BlockEntityRenderer<SpinPadBlockEntity> 
 
         @net.neoforged.bus.api.SubscribeEvent
         public static void register(net.neoforged.neoforge.client.event.RegisterShadersEvent event) {
-            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "spin_vortex"),
+            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "spin_aura"),
                     com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX_COLOR, sh -> shader = sh);
         }
     }
@@ -61,11 +61,11 @@ public class SpinPadRenderer implements BlockEntityRenderer<SpinPadBlockEntity> 
 
     abstract static class VortexTypes extends RenderType {
         static RenderType of(int sky, ResourceLocation picture) {
-            return create("skyblocks_spin_vortex_" + sky, com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX_COLOR,
+            return create("skyblocks_spin_aura_" + sky, com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX_COLOR,
                     com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 8192, false, true, CompositeState.builder()
                             .setShaderState(new ShaderStateShard(() -> shader))
                             .setTextureState(new TextureStateShard(picture, false, false))
-                            .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                            .setTransparencyState(LIGHTNING_TRANSPARENCY) // (adding light)
                             .setCullState(NO_CULL)
                             .setWriteMaskState(COLOR_WRITE)
                             .createCompositeState(false));
@@ -76,8 +76,8 @@ public class SpinPadRenderer implements BlockEntityRenderer<SpinPadBlockEntity> 
         }
     }
 
-    private static void funnel(VertexConsumer vc, Matrix4f m, float a, float r, float y, float u, float v, int speed, int turn, int alpha) {
-        vc.addVertex(m, 0.5F + Mth.cos(a) * r, y, 0.5F + Mth.sin(a) * r).setUv(u, v).setColor(speed, turn, 0, alpha);
+    private static void ring(VertexConsumer vc, Matrix4f m, float a, float r, float y, float u, float v, int speed, int turn, int alpha) {
+        vc.addVertex(m, 0.5F + Mth.cos(a) * r, y, 0.5F + Mth.sin(a) * r).setUv(u, v).setColor(speed, turn, 255, alpha);
     }
 
     public SpinPadRenderer(BlockEntityRendererProvider.Context context) {}
@@ -101,41 +101,30 @@ public class SpinPadRenderer implements BlockEntityRenderer<SpinPadBlockEntity> 
         if (s < 0.03F) {
             return;
         }
-        // the vortex (shaders/core/spin_vortex): a funnel round the cat, arms of the pad's sky spiralling up it -
-        // taller and wider, and stronger, the faster it spins
-        RenderType vortex = vortexType(be.sky());
+        // the aura (shaders/core/spin_aura): the spiral on the floor and the streaks round the cat - wider, taller and
+        // brighter the faster it spins
+        RenderType aura = vortexType(be.sky());
         Matrix4f m = pose.last().pose();
-        if (vortex != null && shader != null) {
-            float height = 0.5F + 5.5F * s * s + 0.6F * s, spread = 0.25F + 2.2F * s * s;
-            float turns = turn / 360.0F;
-            int sp = Math.round(Mth.clamp(s, 0.0F, 1.0F) * 255), gTurn = Math.round((turns - (float) Math.floor(turns)) * 255) & 255;
-            int alpha = Math.round(Mth.clamp(s * 3.0F, 0.0F, 1.0F) * 255);
-            VertexConsumer vc = buffers.getBuffer(vortex);
-            for (int j = 0; j < RINGS; j++) {
-                float f0 = j / (float) RINGS, f1 = (j + 1) / (float) RINGS;
-                float y0 = 0.28F + f0 * height, y1 = 0.28F + f1 * height;
-                float r0 = 0.42F + spread * (float) Math.pow(f0, 1.5), r1 = 0.42F + spread * (float) Math.pow(f1, 1.5);
-                for (int i = 0; i < AROUND; i++) {
-                    float a0 = i * Mth.TWO_PI / AROUND, a1 = (i + 1) * Mth.TWO_PI / AROUND;
-                    float u0 = i / (float) AROUND, u1 = (i + 1) / (float) AROUND;
-                    funnel(vc, m, a0, r0, y0, u0, f0, sp, gTurn, alpha);
-                    funnel(vc, m, a1, r0, y0, u1, f0, sp, gTurn, alpha);
-                    funnel(vc, m, a1, r1, y1, u1, f1, sp, gTurn, alpha);
-                    funnel(vc, m, a0, r1, y1, u0, f1, sp, gTurn, alpha);
-                }
-            }
+        if (aura == null || shader == null) {
+            return;
         }
-        // a ring of light round the plate
-        VertexConsumer g = buffers.getBuffer(GlowTypes.GLOW);
-        float a = 0.35F * s;
-        for (int i = 0; i < 24; i++) {
-            float a0 = i * Mth.TWO_PI / 24, a1 = (i + 1) * Mth.TWO_PI / 24;
-            float r0 = 0.47F, r1 = 0.47F + 0.25F * s;
-            float y = 4.05F / 16.0F;
-            g.addVertex(m, 0.5F + Mth.cos(a0) * r0, y, 0.5F + Mth.sin(a0) * r0).setColor(0.7F, 0.85F, 1.0F, a);
-            g.addVertex(m, 0.5F + Mth.cos(a0) * r1, y, 0.5F + Mth.sin(a0) * r1).setColor(0.7F, 0.85F, 1.0F, 0.0F);
-            g.addVertex(m, 0.5F + Mth.cos(a1) * r1, y, 0.5F + Mth.sin(a1) * r1).setColor(0.7F, 0.85F, 1.0F, 0.0F);
-            g.addVertex(m, 0.5F + Mth.cos(a1) * r0, y, 0.5F + Mth.sin(a1) * r0).setColor(0.7F, 0.85F, 1.0F, a);
+        float turns = turn / 360.0F;
+        int sp = Math.round(Mth.clamp(s, 0.0F, 1.0F) * 255), gTurn = Math.round((turns - (float) Math.floor(turns)) * 255) & 255;
+        int alpha = Math.round(Mth.clamp(s * 2.5F, 0.0F, 1.0F) * 255);
+        VertexConsumer vc = buffers.getBuffer(aura);
+        float disc = 0.5F + 2.2F * s, y = 4.06F / 16.0F;
+        vc.addVertex(m, 0.5F - disc, y, 0.5F - disc).setUv(0, 0).setColor(sp, gTurn, 0, alpha);
+        vc.addVertex(m, 0.5F - disc, y, 0.5F + disc).setUv(0, 1).setColor(sp, gTurn, 0, alpha);
+        vc.addVertex(m, 0.5F + disc, y, 0.5F + disc).setUv(1, 1).setColor(sp, gTurn, 0, alpha);
+        vc.addVertex(m, 0.5F + disc, y, 0.5F - disc).setUv(1, 0).setColor(sp, gTurn, 0, alpha);
+        float radius = 0.55F + 0.2F * s, bottom = 0.3F, top = bottom + 0.9F + 0.6F * s;
+        for (int i = 0; i < AROUND; i++) {
+            float a0 = i * Mth.TWO_PI / AROUND, a1 = (i + 1) * Mth.TWO_PI / AROUND;
+            float u0 = i / (float) AROUND, u1 = (i + 1) / (float) AROUND;
+            ring(vc, m, a0, radius, bottom, u0, 0, sp, gTurn, alpha);
+            ring(vc, m, a1, radius, bottom, u1, 0, sp, gTurn, alpha);
+            ring(vc, m, a1, radius, top, u1, 1, sp, gTurn, alpha);
+            ring(vc, m, a0, radius, top, u0, 1, sp, gTurn, alpha);
         }
     }
 
@@ -151,6 +140,6 @@ public class SpinPadRenderer implements BlockEntityRenderer<SpinPadBlockEntity> 
     @Override
     public AABB getRenderBoundingBox(SpinPadBlockEntity be) {
         BlockPos p = be.getBlockPos();
-        return new AABB(p.getX() - 2, p.getY(), p.getZ() - 2, p.getX() + 3, p.getY() + 7, p.getZ() + 3);
+        return new AABB(p.getX() - 2.5, p.getY(), p.getZ() - 2.5, p.getX() + 3.5, p.getY() + 2, p.getZ() + 3.5);
     }
 }

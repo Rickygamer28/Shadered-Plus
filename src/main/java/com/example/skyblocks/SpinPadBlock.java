@@ -53,7 +53,7 @@ public class SpinPadBlock extends BaseEntityBlock {
         return SHAPE;
     }
 
-    /** A sky block: the vortex's sky. */
+    /** A sky block: the aura's sky. */
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand,
                                               BlockHitResult hit) {

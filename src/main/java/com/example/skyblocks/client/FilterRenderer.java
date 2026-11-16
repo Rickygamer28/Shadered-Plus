@@ -49,13 +49,13 @@ public class FilterRenderer implements BlockEntityRenderer<FilterBlockEntity> {
 
         @SubscribeEvent
         public static void register(RegisterShadersEvent event) {
-            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "filter_glass"), DefaultVertexFormat.POSITION_COLOR,
+            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "filter_glass"), DefaultVertexFormat.POSITION_TEX_COLOR,
                     s -> shader = s);
         }
     }
 
     abstract static class Types extends RenderType {
-        static final RenderType FILTER = create("skyblocks_filter", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 65536, false, false,
+        static final RenderType FILTER = create("skyblocks_filter", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 65536, false, false,
                 CompositeState.builder()
                         .setShaderState(new ShaderStateShard(() -> shader))
                         .setTexturingState(new TexturingStateShard("skyblocks_filter_copy", () -> {
@@ -77,8 +77,11 @@ public class FilterRenderer implements BlockEntityRenderer<FilterBlockEntity> {
         }
     }
 
-    /** A face waiting to be drawn: its corners (from the camera, the world's way round) and its colour (dye, filter). */
-    private record Face(float[] corners, int colour) {}
+    /**
+     * A face waiting to be drawn: its corners (from the camera, the world's way round), their places on the face (u, v,
+     * plus 4 x which of its edges get a frame: shaders/core/filter_glass) and its colour (dye, filter).
+     */
+    private record Face(float[] corners, float[] uvs, int colour) {}
 
     private static final List<Face> FACES = new ArrayList<>();
     private static boolean queued;
@@ -123,19 +126,33 @@ public class FilterRenderer implements BlockEntityRenderer<FilterBlockEntity> {
         Matrix4f m = pose.last().pose();
         Vector3f v = new Vector3f();
         for (Direction d : Direction.values()) {
-            if (level.getBlockState(pos.relative(d)).is(state.getBlock())) {
-                continue; // (one pane with its neighbour)
+            // (not against another of the same filter - one pane - nor against a solid block: nothing to see there)
+            if (!net.minecraft.world.level.block.Block.shouldRenderFace(state, level, pos, d, pos.relative(d))) {
+                continue;
             }
+            // the face's two directions along it: u, v (block coordinates); a frame on each edge with no more of the pane past it
+            Direction.Axis[] along = alongFace(d.getAxis());
+            int frame = 0;
+            if (!level.getBlockState(pos.relative(Direction.fromAxisAndDirection(along[0], Direction.AxisDirection.NEGATIVE))).is(state.getBlock())) frame |= 1;
+            if (!level.getBlockState(pos.relative(Direction.fromAxisAndDirection(along[0], Direction.AxisDirection.POSITIVE))).is(state.getBlock())) frame |= 2;
+            if (!level.getBlockState(pos.relative(Direction.fromAxisAndDirection(along[1], Direction.AxisDirection.NEGATIVE))).is(state.getBlock())) frame |= 4;
+            if (!level.getBlockState(pos.relative(Direction.fromAxisAndDirection(along[1], Direction.AxisDirection.POSITIVE))).is(state.getBlock())) frame |= 8;
             float[] c = new float[12];
+            float[] uv = new float[8];
             float[][] corners = corners(d);
             for (int k = 0; k < 4; k++) {
-                m.transformPosition(corners[k][0], corners[k][1], corners[k][2], v);
+                float[] p = corners[k];
+                // (a hair inside the block: a neighbour's face in the same place, glass say, drawn over it rather than flickering)
+                float x = p[0] - d.getStepX() * INSET, y = p[1] - d.getStepY() * INSET, z = p[2] - d.getStepZ() * INSET;
+                m.transformPosition(x, y, z, v);
                 c[k * 3] = v.x;
                 c[k * 3 + 1] = v.y;
                 c[k * 3 + 2] = v.z;
+                uv[k * 2] = p[along[0].ordinal()] + 4.0F * (frame & 3);
+                uv[k * 2 + 1] = p[along[1].ordinal()] + 4.0F * (frame >> 2);
             }
             if (FACES.size() < 65536) {
-                FACES.add(new Face(c, colour));
+                FACES.add(new Face(c, uv, colour));
             }
         }
         if (!queued) {
@@ -157,14 +174,25 @@ public class FilterRenderer implements BlockEntityRenderer<FilterBlockEntity> {
         VertexConsumer vc = source.getBuffer(Types.FILTER);
         Matrix4f identity = new Matrix4f();
         for (Face f : FACES) {
-            float[] c = f.corners();
+            float[] c = f.corners(), uv = f.uvs();
             int a = f.colour() >>> 24, r = (f.colour() >> 16) & 255, g = (f.colour() >> 8) & 255, b = f.colour() & 255;
             for (int k = 0; k < 4; k++) {
-                vc.addVertex(identity, c[k * 3], c[k * 3 + 1], c[k * 3 + 2]).setColor(r, g, b, a);
+                vc.addVertex(identity, c[k * 3], c[k * 3 + 1], c[k * 3 + 2]).setUv(uv[k * 2], uv[k * 2 + 1]).setColor(r, g, b, a);
             }
         }
         FACES.clear();
         source.endBatch(Types.FILTER);
+    }
+
+    private static final float INSET = 0.002F;
+
+    /** The two axes along a face across this one (u, v). */
+    private static Direction.Axis[] alongFace(Direction.Axis normal) {
+        return switch (normal) {
+            case X -> new Direction.Axis[] {Direction.Axis.Z, Direction.Axis.Y};
+            case Y -> new Direction.Axis[] {Direction.Axis.X, Direction.Axis.Z};
+            case Z -> new Direction.Axis[] {Direction.Axis.X, Direction.Axis.Y};
+        };
     }
 
     /** A block face's corners (block coordinates), facing out. */
