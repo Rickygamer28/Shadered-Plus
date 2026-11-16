@@ -217,15 +217,15 @@ def part(a, b, uv, rot=None, glow=False, ends=None):
     return e
 
 
-def held(gui_tilt=-45):
+def held(gui_tilt=-45, scale=0.68):
     # (as minecraft:item/handheld turns a flat item, less the 45 degrees the flat item's drawn at)
     return {
         "thirdperson_righthand": {"rotation": [0, -90, 10], "translation": [0, 4, 0.5], "scale": [0.85, 0.85, 0.85]},
         "thirdperson_lefthand": {"rotation": [0, 90, -10], "translation": [0, 4, 0.5], "scale": [0.85, 0.85, 0.85]},
-        "firstperson_righthand": {"rotation": [0, -90, -20], "translation": [1.13, 3.2, 1.13], "scale": [0.68, 0.68, 0.68]},
-        "firstperson_lefthand": {"rotation": [0, 90, 20], "translation": [1.13, 3.2, 1.13], "scale": [0.68, 0.68, 0.68]},
+        "firstperson_righthand": {"rotation": [0, -90, -20], "translation": [1.13, 3.2, 1.13], "scale": [scale, scale, scale]},
+        "firstperson_lefthand": {"rotation": [0, 90, 20], "translation": [1.13, 3.2, 1.13], "scale": [scale, scale, scale]},
         "ground": {"rotation": [0, 0, 0], "translation": [0, 2, 0], "scale": [0.5, 0.5, 0.5]},
-        "gui": {"rotation": [10, 25, gui_tilt], "translation": [0, 0, 0], "scale": [1, 1, 1]},
+        "gui": {"rotation": [10, 25, gui_tilt], "translation": [0, 0, 0], "scale": [1.1, 1.1, 1.1]},
         "fixed": {"rotation": [0, 180, -45], "translation": [0, 0, 0], "scale": [1, 1, 1]},
         "head": {"rotation": [0, 0, 0], "translation": [0, 8, 0], "scale": [1, 1, 1]},
     }
@@ -260,27 +260,39 @@ json.dump({"textures": {"all": "skyblocks:item/sky_wand_3d", "particle": "skyblo
            "elements": wand, "display": held()}, open(os.path.join(ROOT, "models/item", "sky_wand.json"), "w"), indent=2)
 
 palette("rift_knife_3d", {
-    (0, 0): ((44, 36, 62), (22, 18, 32)),       # the blade: near black, a violet sheen
-    (1, 0): ((230, 222, 255), (170, 160, 210)), # its edge
-    (2, 0): ((200, 90, 255), (120, 40, 220)),   # the rift line glowing down it
-    (3, 0): ((170, 130, 230), (110, 80, 180)),  # the guard
-    (0, 1): ((96, 56, 44), (60, 34, 28)),       # the grip's wrap
-    (1, 1): ((60, 40, 34), (40, 26, 22)),       # between the wraps
-    (2, 1): ((230, 120, 255), (160, 60, 240)),  # the pommel's gem
+    (0, 0): ((58, 52, 78), (40, 36, 56)),       # the blade: dark steel, a violet sheen
+    (1, 0): ((236, 230, 255), (200, 192, 236)), # its cutting edge
+    (2, 0): ((235, 120, 255), (200, 70, 255)),  # the rift line glowing down it
+    (3, 0): ((196, 190, 220), (150, 142, 184)), # the guard: pale silver
+    (0, 1): ((74, 40, 46), (54, 28, 34)),       # the grip
+    (1, 1): ((176, 150, 220), (140, 112, 196)), # its silver wraps
+    (2, 1): ((255, 140, 255), (210, 80, 255)),  # the pommel's gem
+    (3, 1): ((30, 26, 42), (22, 18, 32)),       # the blade's spine
 })
-tip = {"origin": [8, 14.5, 8.75]}
+# A slim single-edged dagger: a straight spine (on -z), the edge (on +z) narrowing in six steps to the point, the point
+# cut on a slant; a thin glowing line down the blade's flat; a narrow crossguard with its tips swept up; a slender grip
+# with silver wraps; a little gem for a pommel.
 knife = [
-    part((7.25, 0, 7.25), (8.75, 0.75, 8.75), P(2, 1), glow=True),          # pommel gem
-    part((7.4, 0.75, 7.4), (8.6, 4.25, 8.6), P(1, 1)),                      # grip core
-    part((7.25, 1.0, 7.25), (8.75, 1.75, 8.75), P(0, 1)),                   # wraps
-    part((7.25, 2.25, 7.25), (8.75, 3.0, 8.75), P(0, 1)),
-    part((7.25, 3.5, 7.25), (8.75, 4.25, 8.75), P(0, 1)),
-    part((7, 4.25, 5.5), (9, 5.25, 10.5), P(3, 0)),                         # guard
-    part((7.6, 5.25, 7.0), (8.4, 14.5, 9.25), P(0, 0)),                     # blade
-    part((7.7, 5.25, 9.25), (8.3, 14.5, 9.75), P(1, 0)),                    # its edge
-    part((7.6, 13.0, 7.4), (8.4, 15.5, 9.4), P(0, 0), dict(tip, axis="x", angle=22.5)),   # the point, swept
-    part((7.7, 13.2, 9.2), (8.3, 15.6, 9.6), P(1, 0), dict(tip, axis="x", angle=22.5)),
-    part((7.5, 6.0, 7.9), (8.5, 13.5, 8.2), P(2, 0), glow=True),            # the rift line, both sides
+    part((7.5, -0.25, 7.5), (8.5, 0.75, 8.5), P(2, 1), {"origin": [8, 0.25, 8], "axis": "y", "angle": 45}, glow=True),  # gem
+    part((7.65, 0.6, 7.65), (8.35, 4.0, 8.35), P(0, 1)),                    # grip
+    part((7.55, 1.2, 7.55), (8.45, 1.55, 8.45), P(1, 1)),                   # wraps
+    part((7.55, 2.15, 7.55), (8.45, 2.5, 8.45), P(1, 1)),
+    part((7.55, 3.1, 7.55), (8.45, 3.45, 8.45), P(1, 1)),
+    part((7.6, 4.0, 6.4), (8.4, 4.5, 9.6), P(3, 0)),                        # guard
+    part((7.65, 4.1, 5.6), (8.35, 4.45, 6.6), P(3, 0), {"origin": [8, 4.3, 6.4], "axis": "x", "angle": 22.5}),
+    part((7.65, 4.1, 9.4), (8.35, 4.45, 10.4), P(3, 0), {"origin": [8, 4.3, 9.6], "axis": "x", "angle": -22.5}),
 ]
+# (each step: where the edge is, and how tall the step: wide and nearly straight, then curving in to the spine)
+steps = [(9.0, 1.6), (8.95, 1.5), (8.85, 1.5), (8.7, 1.4), (8.45, 1.2), (8.15, 0.8), (7.85, 0.6), (7.55, 0.5)]
+y = 4.5
+for ez, h in steps:
+    top = y + h
+    if ez - 0.25 > 7.3:
+        knife.append(part((7.75, y, 7.3), (8.25, top, ez - 0.25), P(0, 0)))   # the flat
+    knife.append(part((7.8, y, max(7.3, ez - 0.25)), (8.2, top, ez), P(1, 0)))  # the edge
+    y = top
+knife.append(part((7.7, 4.5, 7.05), (8.3, y, 7.3), P(3, 1)))                  # the spine, all the way up
+knife.append(part((7.75, 5.2, 7.75), (8.25, 11.2, 8.0), P(2, 0), glow=True))  # the rift line, down the flat
+knife.append(part((7.7, 5.2, 7.7), (8.3, 11.2, 7.75), P(2, 0), glow=True))
 json.dump({"textures": {"all": "skyblocks:item/rift_knife_3d", "particle": "skyblocks:item/rift_knife"},
-           "elements": knife, "display": held()}, open(os.path.join(ROOT, "models/item", "rift_knife.json"), "w"), indent=2)
+           "elements": knife, "display": held(scale=0.6)}, open(os.path.join(ROOT, "models/item", "rift_knife.json"), "w"), indent=2)
