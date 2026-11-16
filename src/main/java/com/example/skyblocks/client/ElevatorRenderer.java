@@ -258,7 +258,7 @@ public class ElevatorRenderer implements BlockEntityRenderer<ElevatorBaseBlockEn
         Font font = mc.font;
         PoseStack ps = new PoseStack();
         ps.last().pose().set(m);
-        ps.translate(0.5F, landing + 2.45F, 0.5F);
+        ps.translate(0.5F, landing + 3.05F, 0.5F);
         ps.mulPose(mc.getEntityRenderDispatcher().cameraOrientation());
         ps.scale(0.035F, -0.035F, 0.035F);
         MultiBufferSource.BufferSource src = DrawNow.now(null);
