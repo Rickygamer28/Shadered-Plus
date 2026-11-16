@@ -115,17 +115,18 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
         org.joml.Vector3f centre = m.transformPosition(0.5F, 0.5F, 0.5F, new org.joml.Vector3f());
         // (the eye, from the middle: the pose is the block's place from the camera)
         float ex = -centre.x, ey = -centre.y, ez = -centre.z;
-        boolean inside = Math.abs(ex) < half && Math.abs(ey) < half && Math.abs(ez) < half;
         boolean late = queued || LatePass.later(PowerCoreRenderer::drawAll);
         queued = late;
         VertexConsumer vc = late ? null : buffers.getBuffer(Types.CORE);
         org.joml.Vector3f at = new org.joml.Vector3f();
         int r = skin & 255, g = Math.round(full * 255), b = chamber > 0 ? 255 : 0;
-        // each face of the box turned towards the eye (from inside: all of them), its corners numbered x + 2y + 4z
+        // each face of the box turned away from the eye - its far side (from inside: all of them): the near side would be
+        // cut off by the screen's near plane as you came close (and the ray's traced from the eye in any case) - its
+        // corners numbered x + 2y + 4z
         int[][] faces = {{0, 2, 6, 4}, {1, 5, 7, 3}, {0, 4, 5, 1}, {2, 3, 7, 6}, {0, 1, 3, 2}, {4, 6, 7, 5}};
         float[] towards = {-ex - half, ex - half, -ey - half, ey - half, -ez - half, ez - half};
         for (int f = 0; f < 6; f++) {
-            if (!inside && towards[f] <= 0) {
+            if (towards[f] > 0) {
                 continue;
             }
             for (int c : faces[f]) {

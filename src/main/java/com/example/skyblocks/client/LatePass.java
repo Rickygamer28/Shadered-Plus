@@ -92,8 +92,10 @@ public final class LatePass {
 
     @SubscribeEvent
     public static void onStage(RenderLevelStageEvent event) {
-        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_SKY) {
-            JOBS.clear(); // (anything a frame left behind)
+        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_SKY && !MirrorRenderer.isRenderingReflection()) {
+            // (anything a frame left behind - but not at a mirror's or portal's picture, drawn in the middle of a frame:
+            // that wiped what this frame had waiting, and it flickered out)
+            JOBS.clear();
             LAST.clear();
         } else if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_WEATHER && !MirrorRenderer.isRenderingReflection()) {
             drawPending();
