@@ -129,9 +129,6 @@ public class SkyBlocksMod {
                 (be, side) -> be.handler);
         event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK, ModBlockEntities.CORE_FRAME.get(),
                 (be, side) -> be.handler());
-        // (the time crystal's: energy goes in)
-        event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK, ModBlockEntities.TIME_CRYSTAL.get(),
-                (be, side) -> be.handler);
     }
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {

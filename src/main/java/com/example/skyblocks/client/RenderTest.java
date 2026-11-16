@@ -346,13 +346,11 @@ public final class RenderTest {
             "summon minecraft:item 597.5 -60 -7 {NoGravity:1b,Age:-32768,PickupDelay:32767,Item:{id:\"skyblocks:rift_knife\",count:1}}",
             "fill 584 -60 -10 585 -59 -10 skyblocks:inverted_filter", "fill 584 -60 -13 585 -59 -13 skyblocks:red_filter", "fill 583 -60 -16 586 -56 -16 minecraft:lime_wool",
             // time crystals: one at x4 over a wheat field (4 blocks round); one switched off; one at x16, 8 blocks round, with a
-            // lit furnace - each fed by a power core under it, pushing
+            // lit furnace and saplings
             "forceload add 645 -20 700 20",
             "fill 651 -61 -4 659 -61 4 minecraft:farmland", "fill 651 -60 -4 659 -60 4 minecraft:wheat[age=2]",
-            "setblock 655 -61 0 skyblocks:power_core{energy:900000000L,push:1b}",
             "setblock 655 -60 0 skyblocks:time_crystal{speed:1,radius:0}",
             "setblock 668 -60 0 skyblocks:time_crystal{speed:1,radius:0,off:1b}",
-            "setblock 680 -61 0 skyblocks:power_core{energy:900000000L,push:1b}",
             "setblock 680 -60 0 skyblocks:time_crystal{speed:3,radius:1}",
             "setblock 683 -60 2 minecraft:furnace[lit=true,facing=south]", "fill 676 -60 3 678 -60 4 minecraft:oak_sapling",
     };

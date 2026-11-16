@@ -23,9 +23,9 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The time crystal: fed energy, it hurries time on round it - in a circle (its radius: 4, 8 or 12 blocks), from two
+ * The time crystal: switched on, it hurries time on round it - in a circle (its radius: 4, 8 or 12 blocks), from two
  * below it to six above: crops, saplings and everything else that grows (more random ticks), furnaces, brewing stands
- * and other machines (their ticks run again), all x2, x4, x8 or x16 - costing 40 FE a tick x speed squared x radius / 4.
+ * and other machines (their ticks run again), all x2, x4, x8 or x16. It needs nothing to run.
  * Not sped up: other time crystals, spin pads and power cores, anything giving energy out (no free energy), and the
  * blocks tagged skyblocks:time_crystal_immune.
  * Its looks (client/TimeCrystalRenderer): rune rings spinning round the crystal, a clock face turning on the ground, and
@@ -34,8 +34,6 @@ import org.jetbrains.annotations.Nullable;
 public class TimeCrystalBlockEntity extends BlockEntity {
     public static final int[] SPEEDS = {2, 4, 8, 16};
     public static final int[] RADII = {4, 8, 12};
-    public static final long CAPACITY = 4_000_000L;
-    private static final int MOST_IN = 1_000_000;
     /** Below and above it, how far it reaches. */
     public static final int DOWN = 2, UP = 6;
     /** Most extra block-entity ticks in one tick (a busy base: the server keeps up). */
@@ -43,15 +41,12 @@ public class TimeCrystalBlockEntity extends BlockEntity {
     public static final TagKey<Block> IMMUNE = TagKey.create(Registries.BLOCK,
             ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "time_crystal_immune"));
 
-    private long energy;
     private int speed = 1, radius = 1;
     private boolean on = true, dome = true;
-    /** Whether it's hurrying time right now (had the energy for it). */
+    /** Whether it's hurrying time right now (as the client sees it: switched on). */
     private boolean running;
     private float randomOwed;
     private final List<BlockPos> machines = new ArrayList<>();
-    private boolean syncPending;
-    private long shownEnergy = -1;
 
     /** (client) Its rings' turn, eased up to speed and down when it stops. */
     public float spin, spinSpeed, shownOn;
@@ -59,43 +54,6 @@ public class TimeCrystalBlockEntity extends BlockEntity {
     public TimeCrystalBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.TIME_CRYSTAL.get(), pos, state);
     }
-
-    public final IEnergyStorage handler = new IEnergyStorage() {
-        @Override
-        public int receiveEnergy(int toReceive, boolean simulate) {
-            int took = (int) Math.max(0, Math.min(Math.min(toReceive, MOST_IN), CAPACITY - energy));
-            if (!simulate && took > 0) {
-                energy += took;
-                setChanged();
-            }
-            return took;
-        }
-
-        @Override
-        public int extractEnergy(int toExtract, boolean simulate) {
-            return 0;
-        }
-
-        @Override
-        public int getEnergyStored() {
-            return (int) energy;
-        }
-
-        @Override
-        public int getMaxEnergyStored() {
-            return (int) CAPACITY;
-        }
-
-        @Override
-        public boolean canExtract() {
-            return false;
-        }
-
-        @Override
-        public boolean canReceive() {
-            return true;
-        }
-    };
 
     public int speed() {
         return SPEEDS[speed];
@@ -123,19 +81,6 @@ public class TimeCrystalBlockEntity extends BlockEntity {
 
     public boolean running() {
         return running;
-    }
-
-    public long energy() {
-        return energy;
-    }
-
-    /** What it costs a tick, as it's set. */
-    public long cost() {
-        return cost(speed(), radius());
-    }
-
-    public static long cost(int speed, int radius) {
-        return 40L * speed * speed * radius / 4;
     }
 
     public void setSpeed(int i) {
@@ -167,24 +112,12 @@ public class TimeCrystalBlockEntity extends BlockEntity {
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, TimeCrystalBlockEntity be) {
-        long cost = be.cost();
-        boolean run = be.on && be.energy >= cost;
-        if (run) {
-            be.energy -= cost;
-            be.setChanged();
-            be.hurry((ServerLevel) level);
-        }
-        if (run != be.running) {
-            be.running = run;
-            be.syncPending = true;
-        }
-        if (level.getGameTime() % 10 == 0 && be.energy != be.shownEnergy) {
-            be.syncPending = true;
-        }
-        if (be.syncPending && level.getGameTime() % 5 == 0) {
-            be.syncPending = false;
-            be.shownEnergy = be.energy;
+        if (be.on != be.running) {
+            be.running = be.on;
             level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
+        }
+        if (be.on) {
+            be.hurry((ServerLevel) level);
         }
     }
 
@@ -268,7 +201,7 @@ public class TimeCrystalBlockEntity extends BlockEntity {
                 || be instanceof CoreFrameBlockEntity || be.getBlockState().is(IMMUNE)) {
             return false;
         }
-        // (anything that gives energy out and takes none in - a generator: sped up, it'd pay for the crystal and more)
+        // (anything that gives energy out - a generator: sped up, it'd make energy out of nothing)
         IEnergyStorage e = level.getCapability(Capabilities.EnergyStorage.BLOCK, be.getBlockPos(), null);
         if (e != null && e.canExtract()) {
             return false;
@@ -308,7 +241,6 @@ public class TimeCrystalBlockEntity extends BlockEntity {
     }
 
     private void save(CompoundTag tag) {
-        tag.putLong("energy", energy);
         tag.putInt("speed", speed);
         tag.putInt("radius", radius);
         tag.putBoolean("off", !on);
@@ -318,7 +250,6 @@ public class TimeCrystalBlockEntity extends BlockEntity {
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        energy = Math.max(0, Math.min(CAPACITY, tag.getLong("energy")));
         speed = tag.contains("speed") ? Math.floorMod(tag.getInt("speed"), SPEEDS.length) : 1;
         radius = tag.contains("radius") ? Math.floorMod(tag.getInt("radius"), RADII.length) : 1;
         on = !tag.getBoolean("off");

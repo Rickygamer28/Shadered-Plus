@@ -28,7 +28,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The time crystal (TimeCrystalBlockEntity): a crystal floating over a clockwork base. Right-click: its screen (speed,
+ * The time crystal (TimeCrystalBlockEntity): a crystal floating over a clockwork base, speeding up time round it. Right-click: its screen (speed,
  * radius, on / off, its dome); sneak + right-click: on / off.
  */
 public class TimeCrystalBlock extends BaseEntityBlock {
