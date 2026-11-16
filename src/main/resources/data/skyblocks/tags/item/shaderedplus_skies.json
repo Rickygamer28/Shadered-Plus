@@ -39,6 +39,9 @@
     "skyblocks:end_portal_sky_block",
     "skyblocks:end_gateway_sky_block",
     "skyblocks:classic_end_portal_sky_block",
+    "skyblocks:ink_swirl_sky_block",
+    "skyblocks:lava_blobs_sky_block",
+    "skyblocks:marble_sky_block",
     {
       "id": "skyblocks:jupiter_liquid_bucket",
       "required": false
@@ -193,6 +196,18 @@
     },
     {
       "id": "skyblocks:classic_end_portal_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:ink_swirl_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:lava_blobs_liquid_bucket",
+      "required": false
+    },
+    {
+      "id": "skyblocks:marble_liquid_bucket",
       "required": false
     }
   ]

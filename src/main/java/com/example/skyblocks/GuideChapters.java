@@ -38,7 +38,7 @@ public final class GuideChapters {
                 ModItems.INFUSION_ALTAR, ModItems.SKY_LANTERN, ModItems.CAT_WINDOW_PERCH, ModItems.FERROFLUID, ModItems.SKY_CLOCK, ModItems.PRISM,
                 ModItems.SKY_WAND, ModItems.RIFT_KNIFE, ModItems.BOTTOMLESS_PIT, ModItems.ROOM_WINDOW, ModItems.MOON_JAR, ModItems.SPIN_PAD,
                 ModItems.INVERTED_FILTER, ModItems.POSTERIZE_FILTER, ModItems.GRAYSCALE_FILTER, ModItems.CHROMATIC_ABERRATION_FILTER, ModItems.BLUEPRINT_FILTER,
-                ModItems.GAME_BOY_FILTER, ModItems.PIXEL_FILTER, ModItems.CROSS_STITCH_FILTER, ModItems.RED_FILTER, ModItems.SCREEN_FILTER, ModItems.TINT_FILTER}) {
+                ModItems.GAME_BOY_FILTER, ModItems.PIXEL_FILTER, ModItems.CROSS_STITCH_FILTER, ModItems.RED_FILTER, ModItems.SCREEN_FILTER, ModItems.TINT_FILTER, ModItems.SHADER_LIGHT}) {
             list.add(new ItemStack(i.get()));
         }
         return list;
@@ -78,7 +78,7 @@ public final class GuideChapters {
         out.add(of("infusion", ModItems.INFUSION_ALTAR));
         out.add(of("illusions", ModItems.SKY_WAND, ModItems.RIFT_KNIFE, ModItems.BOTTOMLESS_PIT, ModItems.ROOM_WINDOW, ModItems.MOON_JAR, ModItems.SPIN_PAD));
         out.add(of("filters", ModItems.INVERTED_FILTER, ModItems.POSTERIZE_FILTER, ModItems.GRAYSCALE_FILTER, ModItems.CHROMATIC_ABERRATION_FILTER, ModItems.BLUEPRINT_FILTER,
-                ModItems.GAME_BOY_FILTER, ModItems.PIXEL_FILTER, ModItems.CROSS_STITCH_FILTER, ModItems.RED_FILTER, ModItems.SCREEN_FILTER, ModItems.TINT_FILTER));
+                ModItems.GAME_BOY_FILTER, ModItems.PIXEL_FILTER, ModItems.CROSS_STITCH_FILTER, ModItems.RED_FILTER, ModItems.SCREEN_FILTER, ModItems.TINT_FILTER, ModItems.SHADER_LIGHT));
         out.add(of("cat", ModItems.OIIA_CAT_SPAWN_EGG, ModItems.OIIA_CAT, ModItems.CAT_BED, ModItems.CAT_BOWL, ModItems.SCRATCHING_POST, ModItems.CAT_TREE,
                 ModItems.CARDBOARD_BOX, ModItems.CAT_FLAP, ModItems.CAT_WINDOW_PERCH, ModItems.YARN_BALL, ModItems.FEATHER_WAND, ModItems.LASER_POINTER));
         out.add(of("islands", ModItems.ISLAND_SCANNER, ModItems.ISLAND_PAINTING));

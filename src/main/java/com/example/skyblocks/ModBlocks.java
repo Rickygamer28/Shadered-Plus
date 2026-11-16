@@ -516,5 +516,9 @@ public final class ModBlocks {
             BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS));
     public static final DeferredBlock<?>[] FILTERS = {INVERTED_FILTER, POSTERIZE_FILTER, GRAYSCALE_FILTER, CHROMATIC_ABERRATION_FILTER, BLUEPRINT_FILTER, GAME_BOY_FILTER, PIXEL_FILTER, CROSS_STITCH_FILTER, RED_FILTER, SCREEN_FILTER, TINT_FILTER};
 
+    public static final DeferredBlock<ShaderLightBlock> SHADER_LIGHT = BLOCKS.registerBlock("shader_light", ShaderLightBlock::new,
+            BlockBehaviour.Properties.of().strength(0.3F).sound(SoundType.GLASS).lightLevel(s -> s.getValue(ShaderLightBlock.LEVEL))
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_LIGHT_BLUE));
+
     private ModBlocks() {}
 }

@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "GAG",
+    "DLD",
+    "GAG"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:glass"
+    },
+    "A": {
+      "item": "minecraft:amethyst_shard"
+    },
+    "D": {
+      "tag": "c:dyes"
+    },
+    "L": {
+      "item": "minecraft:glowstone"
+    }
+  },
+  "result": {
+    "id": "skyblocks:shader_light",
+    "count": 2
+  }
+}

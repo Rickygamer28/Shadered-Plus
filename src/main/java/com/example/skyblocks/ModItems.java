@@ -199,6 +199,7 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> RED_FILTER = ITEMS.registerSimpleBlockItem("red_filter", ModBlocks.RED_FILTER);
     public static final DeferredItem<BlockItem> SCREEN_FILTER = ITEMS.registerSimpleBlockItem("screen_filter", ModBlocks.SCREEN_FILTER);
     public static final DeferredItem<BlockItem> TINT_FILTER = ITEMS.registerSimpleBlockItem("tint_filter", ModBlocks.TINT_FILTER);
+    public static final DeferredItem<BlockItem> SHADER_LIGHT = ITEMS.registerSimpleBlockItem("shader_light", ModBlocks.SHADER_LIGHT);
 
     private ModItems() {}
 }

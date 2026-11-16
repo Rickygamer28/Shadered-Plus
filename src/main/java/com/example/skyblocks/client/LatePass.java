@@ -36,6 +36,15 @@ public final class LatePass {
         return true;
     }
 
+    /** As later, but before everything else waiting (the shader lights: the filters then see the world as they light it). */
+    public static boolean first(Consumer<MultiBufferSource.BufferSource> draw) {
+        if (com.example.skyblocks.client.iris.IrisCompat.shaderPackInUse() || MirrorRenderer.isRenderingReflection() || JOBS.size() >= 1024) {
+            return false;
+        }
+        JOBS.add(0, new Job(new Matrix4f(RenderSystem.getModelViewMatrix()), new Matrix4f(RenderSystem.getProjectionMatrix()), draw));
+        return true;
+    }
+
     /** Draws what's waiting, into whatever picture is being drawn now. */
     public static void drawPending() {
         if (JOBS.isEmpty()) {

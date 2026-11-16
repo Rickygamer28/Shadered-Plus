@@ -946,7 +946,7 @@
   "block.skyblocks.tint_filter": "Tint Filter",
   "tooltip.skyblocks.filter": "See-through: the world behind it, through its filter. Blocks of one filter side by side make one pane.",
   "tooltip.skyblocks.filter.dye": "Right-click with a dye to colour it",
-  "guide.skyblocks.chapter.filters": "Filters",
+  "guide.skyblocks.chapter.filters": "Filters and Lights",
   "guide.skyblocks.inverted_filter": "Filter blocks come from The Valley Mod by D0nkey100 (used with permission). Each is see-through, but the world behind it is seen through its filter. Blocks of the same filter side by side make one pane, and standing inside one filters everything you see. The Inverted Filter shows everything in its opposite colours.",
   "guide.skyblocks.posterize_filter": "Cuts the world behind it down to a few flat shades of each colour, like a poster.",
   "guide.skyblocks.grayscale_filter": "Shows the world behind it in black and white.",
@@ -957,5 +957,15 @@
   "guide.skyblocks.cross_stitch_filter": "Shows the world behind it as cross stitch: little X stitches of coloured thread on cream cloth.",
   "guide.skyblocks.red_filter": "Shows the world behind it as through a red lens: shades of red, from dark to pale.",
   "guide.skyblocks.screen_filter": "A screen: up close the world behind it shows as a wall of little red, green and blue lights; further away it's a plain window. (The Screen effect is from the Shadered mod by noodlegamer76.)",
-  "guide.skyblocks.tint_filter": "A coloured lens: the world behind it in shades of a colour. Right-click it with a dye to choose the colour (white to begin with)."
+  "guide.skyblocks.tint_filter": "A coloured lens: the world behind it in shades of a colour. Right-click it with a dye to choose the colour (white to begin with).",
+  "item.skyblocks.ink_swirl_sky_block": "Ink Swirl Sky Block",
+  "skyblock_type.skyblocks.ink_swirl": "Ink Swirl",
+  "item.skyblocks.lava_blobs_sky_block": "Lava Blobs Sky Block",
+  "skyblock_type.skyblocks.lava_blobs": "Lava Blobs",
+  "item.skyblocks.marble_sky_block": "Marble Sky Block",
+  "skyblock_type.skyblocks.marble": "Marble",
+  "block.skyblocks.shader_light": "Shader Light",
+  "tooltip.skyblocks.shader_light": "Colours everything within its reach. Dye it; right-click to change its reach",
+  "message.skyblocks.shader_light.reach": "Reach: %s blocks",
+  "guide.skyblocks.shader_light": "A lamp whose light has a colour (from The Valley Mod by D0nkey100). Everything within its reach takes on its colour - most near the lamp, none at the edge - and several lamps blend their colours where they meet. Right-click it with a dye to colour it; right-click with an empty hand to widen its reach (sneak to narrow it), from 1 to 15 blocks. The coloured light isn't stopped by walls, and it's left out while a shader pack is on (the lamp still gives its ordinary light)."
 }

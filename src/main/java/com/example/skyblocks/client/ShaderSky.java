@@ -64,7 +64,7 @@ public final class ShaderSky {
             case SkyNames.CHAOS -> new Pass(folder, batch, () -> chaos, NOISE, null);
             case SkyNames.AURORA -> new Pass(folder, batch, () -> aurora, null, null);
             case SkyNames.UNDERWATER -> new Pass(folder, batch, () -> underwater, null, null);
-            case "swirl", "light_cycle", "universe_within", "data_cube", "end_portal", "end_gateway", "classic_end_portal" ->
+            case "swirl", "light_cycle", "universe_within", "data_cube", "end_portal", "end_gateway", "classic_end_portal", "ink_swirl", "lava_blobs", "marble" ->
                     new Pass(folder, batch, () -> TVM.get(name), END_SKY, shader -> {
                         // (the camera's turn - the Data Cube sits ahead of you, the Universe's layers drift with it - and
                         // the End Portal's stars)

@@ -147,6 +147,8 @@ public final class ModBlockEntities {
     public static final Supplier<BlockEntityType<FilterBlockEntity>> FILTER = TYPES.register("filter",
             () -> BlockEntityType.Builder.of(FilterBlockEntity::new, java.util.Arrays.stream(ModBlocks.FILTERS).map(b -> (net.minecraft.world.level.block.Block) b.get())
                     .toArray(net.minecraft.world.level.block.Block[]::new)).build(null));
+    public static final Supplier<BlockEntityType<ShaderLightBlockEntity>> SHADER_LIGHT = TYPES.register("shader_light",
+            () -> BlockEntityType.Builder.of(ShaderLightBlockEntity::new, ModBlocks.SHADER_LIGHT.get()).build(null));
     public static final Supplier<BlockEntityType<SpinPadBlockEntity>> SPIN_PAD = TYPES.register("spin_pad",
             () -> BlockEntityType.Builder.of(SpinPadBlockEntity::new, ModBlocks.SPIN_PAD.get()).build(null));
     public static final Supplier<BlockEntityType<CatFlapBlockEntity>> CAT_FLAP = TYPES.register("cat_flap",
