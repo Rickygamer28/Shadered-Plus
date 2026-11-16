@@ -802,18 +802,9 @@ public final class RenderTest {
                             });
                         }
                         if (ticks == 30 && elevPress && mc.player != null && mc.level != null) {
-                            // (pressing the button looked at, as a click would)
-                            for (com.example.skyblocks.ElevatorCabinEntity c : mc.level.getEntitiesOfClass(com.example.skyblocks.ElevatorCabinEntity.class,
-                                    mc.player.getBoundingBox().inflate(3.0))) {
-                                if (mc.level.getBlockEntity(c.base()) instanceof com.example.skyblocks.ElevatorBaseBlockEntity e) {
-                                    int i = ElevatorButtons.looking(mc.player, e, c.landing(1.0F), 1.0F);
-                                    SkyBlocksMod.LOGGER.info("Shadered+ render test: elevator button looked at: {}", i);
-                                    if (i >= 0) {
-                                        net.neoforged.neoforge.network.PacketDistributor.sendToServer(
-                                                new com.example.skyblocks.ElevatorPayload(e.getBlockPos(), com.example.skyblocks.ElevatorPayload.GO, i));
-                                    }
-                                }
-                            }
+                            // (pressing the button looked at, as a click does - the block behind it in the crosshair)
+                            SkyBlocksMod.LOGGER.info("Shadered+ render test: elevator button pressed: {} (crosshair on {})",
+                                    ElevatorButtons.press(mc.player), mc.hitResult == null ? null : mc.hitResult.getType());
                         }
                         if (elevPress && ticks == 99 && mc.player != null) {
                             SkyBlocksMod.LOGGER.info("Shadered+ render test: elevator button ride: player y {}", String.format(java.util.Locale.ROOT, "%.2f", mc.player.getY()));

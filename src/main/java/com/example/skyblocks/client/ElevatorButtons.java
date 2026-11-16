@@ -103,6 +103,11 @@ public final class ElevatorButtons {
 
     /** Which button a player's looking at (-1 none), in a cabin whose floor's top is at landing. */
     static int looking(Player player, ElevatorBaseBlockEntity be, float landing, float partialTick) {
+        return (int) look(player, be, landing, partialTick)[0];
+    }
+
+    /** Which button a player's looking at (-1 none), and how far from their eyes it is. */
+    static double[] look(Player player, ElevatorBaseBlockEntity be, float landing, float partialTick) {
         Layout l = layout(be);
         BlockPos b = be.getBlockPos();
         Vec3 n = normal(l.side()), r = right(l.side());
@@ -111,57 +116,58 @@ public final class ElevatorButtons {
         Vec3 eye = player.getEyePosition(partialTick), look = player.getViewVector(partialTick);
         double dn = look.dot(n);
         if (dn > -1e-4) {
-            return -1;
+            return new double[] {-1, 0};
         }
         double t = p0.subtract(eye).dot(n) / dn;
         if (t < 0.0 || t > 4.5) {
-            return -1;
+            return new double[] {-1, 0};
         }
         Vec3 hit = eye.add(look.scale(t));
         double u = hit.subtract(p0).dot(r), v = hit.y - landing;
         for (int i = 0; i < be.floors().length; i++) {
             if (Math.abs(u - l.u(i)) <= l.size() / 2 + 0.01 && Math.abs(v - l.v(i)) <= l.size() / 2 + 0.01) {
-                return i;
+                return new double[] {i, t};
             }
         }
-        return -1;
+        return new double[] {-1, 0};
     }
 
     /** A click: on a floor button (yours, in the cabin you're in or by), the cabin goes there. */
     @SubscribeEvent
     public static void onClick(InputEvent.InteractionKeyMappingTriggered event) {
-        if (!(event.isUseItem() || event.isAttack())) {
-            return;
+        if ((event.isUseItem() || event.isAttack()) && press(Minecraft.getInstance().player)) {
+            event.setCanceled(true);
+            event.setSwingHand(true);
         }
+    }
+
+    /** Presses the floor button the player's looking at, if they are: whether they were. */
+    public static boolean press(Player player) {
         Minecraft mc = Minecraft.getInstance();
-        Player player = mc.player;
         if (player == null || mc.level == null) {
-            return;
+            return false;
         }
         List<ElevatorCabinEntity> cabins = mc.level.getEntitiesOfClass(ElevatorCabinEntity.class, player.getBoundingBox().inflate(3.0));
         for (ElevatorCabinEntity cabin : cabins) {
             if (!(mc.level.getBlockEntity(cabin.base()) instanceof ElevatorBaseBlockEntity be)) {
                 continue;
             }
-            int i = looking(player, be, cabin.landing(1.0F), 1.0F);
+            double[] hit = look(player, be, cabin.landing(1.0F), 1.0F);
+            int i = (int) hit[0];
             if (i < 0) {
                 continue;
             }
-            // (something nearer in the way - a block, a mob - is clicked instead)
-            HitResult hit = mc.hitResult;
-            if (hit != null && hit.getType() != HitResult.Type.MISS && !(hit instanceof net.minecraft.world.phys.EntityHitResult e && e.getEntity() == cabin)) {
-                Layout l = layout(be);
-                Vec3 at = new Vec3(be.getBlockPos().getX() + 0.5, cabin.landing(1.0F), be.getBlockPos().getZ() + 0.5).subtract(normal(l.side()).scale(OUT));
-                if (hit.getLocation().distanceTo(player.getEyePosition()) + 0.05 < at.distanceTo(player.getEyePosition()) - 0.3) {
-                    continue;
-                }
+            // (something in front of the button - a mob, a block - is clicked instead; the wall behind it isn't)
+            HitResult in = mc.hitResult;
+            if (in != null && in.getType() != HitResult.Type.MISS && !(in instanceof net.minecraft.world.phys.EntityHitResult e && e.getEntity() == cabin)
+                    && in.getLocation().distanceTo(player.getEyePosition()) + 0.02 < hit[1]) {
+                continue;
             }
             PacketDistributor.sendToServer(new ElevatorPayload(be.getBlockPos(), ElevatorPayload.GO, i));
             player.playSound(SoundEvents.STONE_BUTTON_CLICK_ON, 0.5F, 1.6F);
-            event.setCanceled(true);
-            event.setSwingHand(true);
-            return;
+            return true;
         }
+        return false;
     }
 
     /** The panel, drawn: its buttons (lit, blinking, looked at), and their numbers. */
