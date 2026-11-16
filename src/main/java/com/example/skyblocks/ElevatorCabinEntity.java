@@ -245,11 +245,11 @@ public class ElevatorCabinEntity extends Entity {
         tag.putFloat("at", Math.round(target())); // (saved mid-trip: back where it was going)
     }
 
-    /** Not let off on the way (sneaking, say): only where it stops. */
+    /** Not got off on the way by sneaking: only where it stops (teleporting away, or anything else, still takes you off). */
     @SubscribeEvent
     public static void onMount(EntityMountEvent event) {
         if (event.isDismounting() && event.getEntityBeingMounted() instanceof ElevatorCabinEntity c && !c.letting && c.moving()
-                && event.getEntityMounting().isAlive() && !event.getEntityMounting().isRemoved()) {
+                && event.getEntityMounting().isShiftKeyDown() && event.getEntityMounting().isAlive() && !event.getEntityMounting().isRemoved()) {
             event.setCanceled(true);
         }
     }
