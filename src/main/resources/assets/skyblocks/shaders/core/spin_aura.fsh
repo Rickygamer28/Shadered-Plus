@@ -72,8 +72,8 @@ void main() {
     if (max(col.r, max(col.g, col.b)) < 0.004) {
         discard;
     }
-    // (added as light, so its alpha is how bright it is and its colour divided by that: added, the same colour; laid over a
-    // shader pack's image - iris/IrisDefer - its dark parts don't cover the world)
-    float a = clamp(max(col.r, max(col.g, col.b)), 0.0, 1.0);
-    fragColor = vec4(col / max(a, 0.001), a);
+    // (added as light, blended ONE, ONE. Its alpha, added up too, is next to nothing: drawn in iris/IrisIslandTarget's
+    // target over a shader pack's image (premultiplied, laid on with ONE, ONE_MINUS_SRC_ALPHA) it is still just added -
+    // an alpha of 0 there would make it solid, a real alpha would darken the world behind it)
+    fragColor = vec4(col, 1.0 / 255.0);
 }

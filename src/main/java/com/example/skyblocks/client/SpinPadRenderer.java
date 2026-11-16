@@ -65,7 +65,7 @@ public class SpinPadRenderer implements BlockEntityRenderer<SpinPadBlockEntity> 
                     com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 8192, false, true, CompositeState.builder()
                             .setShaderState(new ShaderStateShard(() -> shader))
                             .setTextureState(new TextureStateShard(picture, false, false))
-                            .setTransparencyState(LIGHTNING_TRANSPARENCY) // (adding light)
+                            .setTransparencyState(ADDITIVE_TRANSPARENCY) // (adding light: its colour as it is, alpha too - see spin_aura.fsh)
                             .setCullState(NO_CULL)
                             .setWriteMaskState(COLOR_WRITE)
                             .createCompositeState(false));
