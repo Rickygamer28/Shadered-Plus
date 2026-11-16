@@ -129,6 +129,9 @@ public class SkyBlocksMod {
                 (be, side) -> be.handler);
         event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK, ModBlockEntities.CORE_FRAME.get(),
                 (be, side) -> be.handler());
+        // (the time crystal's: energy goes in)
+        event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK, ModBlockEntities.TIME_CRYSTAL.get(),
+                (be, side) -> be.handler);
     }
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
@@ -156,6 +159,7 @@ public class SkyBlocksMod {
                 .playToServer(PortalCrossPayload.TYPE, PortalCrossPayload.STREAM_CODEC, PortalCrossPayload::handle)
                 .playToServer(WhirlpoolPayload.TYPE, WhirlpoolPayload.STREAM_CODEC, WhirlpoolPayload::handle)
                 .playToServer(PowerCorePayload.TYPE, PowerCorePayload.STREAM_CODEC, PowerCorePayload::handle)
+                .playToServer(TimeCrystalPayload.TYPE, TimeCrystalPayload.STREAM_CODEC, TimeCrystalPayload::handle)
                 .playToServer(EraseTrailPayload.TYPE, EraseTrailPayload.STREAM_CODEC, EraseTrailPayload::handle)
                 .playToClient(MoonJar.Payload.TYPE, MoonJar.Payload.STREAM_CODEC, MoonJar.Payload::handle)
                 .playToClient(SunJar.Payload.TYPE, SunJar.Payload.STREAM_CODEC, SunJar.Payload::handle)

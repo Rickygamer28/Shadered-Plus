@@ -506,6 +506,11 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(2.0F).sound(SoundType.METAL).noOcclusion().requiresCorrectToolForDrops()
                     .mapColor(net.minecraft.world.level.material.MapColor.METAL));
 
+    /** The time crystal: fed energy, hurries time on round it (TimeCrystalBlock). */
+    public static final DeferredBlock<TimeCrystalBlock> TIME_CRYSTAL = BLOCKS.registerBlock("time_crystal", TimeCrystalBlock::new,
+            BlockBehaviour.Properties.of().strength(4.0F, 1200.0F).sound(SoundType.AMETHYST).noOcclusion().lightLevel(state -> 11)
+                    .requiresCorrectToolForDrops().mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE));
+
     // ---- the filter blocks (from The Valley Mod by D0nkey100, used with permission) ----
     public static final DeferredBlock<FilterBlock> INVERTED_FILTER = BLOCKS.registerBlock("inverted_filter", p -> new FilterBlock(1, false, p),
             BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS));

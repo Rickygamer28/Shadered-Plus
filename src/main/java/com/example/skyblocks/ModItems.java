@@ -191,6 +191,8 @@ public final class ModItems {
     public static final DeferredItem<SunJarBlock.Jar> SUN_JAR = ITEMS.register("sun_jar", () -> new SunJarBlock.Jar(ModBlocks.SUN_JAR.get(),
             new Item.Properties().stacksTo(16)));
     public static final DeferredItem<BlockItem> SPIN_PAD = ITEMS.registerSimpleBlockItem("spin_pad", ModBlocks.SPIN_PAD);
+    public static final DeferredItem<BlockItem> TIME_CRYSTAL = ITEMS.registerSimpleBlockItem("time_crystal", ModBlocks.TIME_CRYSTAL,
+            new net.minecraft.world.item.Item.Properties().fireResistant());
 
     // ---- the filter blocks (from The Valley Mod by D0nkey100) ----
     public static final DeferredItem<BlockItem> INVERTED_FILTER = ITEMS.registerSimpleBlockItem("inverted_filter", ModBlocks.INVERTED_FILTER);

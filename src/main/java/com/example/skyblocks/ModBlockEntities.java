@@ -157,6 +157,8 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(ShaderLightBlockEntity::new, ModBlocks.SHADER_LIGHT.get()).build(null));
     public static final Supplier<BlockEntityType<SpinPadBlockEntity>> SPIN_PAD = TYPES.register("spin_pad",
             () -> BlockEntityType.Builder.of(SpinPadBlockEntity::new, ModBlocks.SPIN_PAD.get()).build(null));
+    public static final Supplier<BlockEntityType<TimeCrystalBlockEntity>> TIME_CRYSTAL = TYPES.register("time_crystal",
+            () -> BlockEntityType.Builder.of(TimeCrystalBlockEntity::new, ModBlocks.TIME_CRYSTAL.get()).build(null));
     public static final Supplier<BlockEntityType<CatFlapBlockEntity>> CAT_FLAP = TYPES.register("cat_flap",
             () -> BlockEntityType.Builder.of(CatFlapBlockEntity::new, ModBlocks.CAT_FLAP.get()).build(null));
     public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> GEODE_LAMP = TYPES.register("geode_lamp",
