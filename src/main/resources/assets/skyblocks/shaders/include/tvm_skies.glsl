@@ -244,7 +244,9 @@ vec3 lightCycleSkybox() {
     float pixelSpread = 1.0 / minRes;
 
     float speed = 8.0;
-    float camZ = SkyTime * speed;
+    // (Shadered+: the flight starts over every ten minutes - far down the tunnel the numbers lose their precision, and
+    // after a long game the tunnel broke up into noise)
+    float camZ = mod(SkyTime, 600.0) * speed;
     vec3 ro = vec3(getPath(camZ), camZ);
 
     float targetZ = camZ + 5.0;
@@ -748,7 +750,7 @@ vec3 bxNorm(vec3 p, float t, out float mid)
 
 // TVM: a window onto the cube. It sits ahead of you whichever way you look, seen from the side you look at it from (turn
 // to look around it), and slowly turns on its own (the shader's own idle turn, 45 + 10 degrees a second). The number grid
-// behind it is on the screen, as in the original.
+// behind it lies on the sky round you (Shadered+: in the original it was on the screen).
 vec3 dataCubeSkybox() {
     vec3 dir = viewDirection();
     vec3 fwd = viewForward();
@@ -759,7 +761,10 @@ vec3 dataCubeSkybox() {
     rd.xz *= turn;
 
     vec3 col = vec3(0.);
-    float dd = bxBg((SkyCoord * InSize - 0.5 * InSize) / InSize.y, SkyTime);
+    // (Shadered+: the number grid on the sky round you, not stuck to the screen - through a sky block it slid along
+    // with the camera)
+    vec2 grid = dir.xy / (1.0 + abs(dir.z)) * 1.6;
+    float dd = bxBg(grid, SkyTime);
     col = mix(col, vec3(0.15), BX_S(dd));
 
     vec2 tb = bxBoxIntersection(ro, rd);
@@ -839,7 +844,8 @@ vec3 endPortalSkybox(int layers) {
         uv = (SkyCoord - 0.5) / VZoom + 0.5 + vec2(-VCentre, VTurn) / 6.2831853;
     } else {
         vec3 dir = viewDirection();
-        uv = dir.xy / (1.0 + abs(dir.z)) * 0.5 + 0.5;
+        // (Shadered+: as close as the End Portal's own stars are on the screen - smaller, they broke up into dark specks)
+        uv = dir.xy / (1.0 + abs(dir.z)) * 1.6 + 0.5;
     }
     vec4 proj = vec4(uv, 0.0, 1.0);
     vec3 color = textureProj(EndSkySampler, proj).rgb * EP_COLORS[0];
@@ -882,7 +888,7 @@ vec3 classicEndPortalSkybox() {
     for (int i = 0; i < 16; i++) {
         float depth = i == 0 ? 65.0 : float(16 - i);
         float scale = i == 0 ? 0.125 : (i == 1 ? 0.5 : 0.0625);
-        vec2 uv = p * (4.0 + depth * 0.5);
+        vec2 uv = p * (2.0 + depth * 0.25); // (Shadered+: half as fine - the stars were specks)
         float angle = radians(float(i * i * 4321 + i * 9) * 2.0);
         uv = (mat2(cos(angle), -sin(angle), sin(angle), cos(angle)) * (uv - 0.5) + 0.5) * scale;
         uv.y += drift;

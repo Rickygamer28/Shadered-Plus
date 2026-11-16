@@ -178,10 +178,12 @@ void main() {
     // the frame round the pane's edges (not filtered): dark, a lighter line inside it, two sixteenths of a block
     vec2 f = fract(onFace / 4.0) * 4.0; // (where on the face, without the flags)
     float edge = 9.0;
-    if ((frame & 1) != 0) edge = min(edge, f.x);
-    if ((frame & 2) != 0) edge = min(edge, 1.0 - f.x);
-    if ((frame & 4) != 0) edge = min(edge, f.y);
-    if ((frame & 8) != 0) edge = min(edge, 1.0 - f.y);
+    if (gl_FrontFacing) { // (from inside the pane: no frames)
+        if ((frame & 1) != 0) edge = min(edge, f.x);
+        if ((frame & 2) != 0) edge = min(edge, 1.0 - f.x);
+        if ((frame & 4) != 0) edge = min(edge, f.y);
+        if ((frame & 8) != 0) edge = min(edge, 1.0 - f.y);
+    }
     if (edge < 1.0 / 16.0) {
         result = vec3(0.20, 0.22, 0.25);
     } else if (edge < 2.0 / 16.0) {

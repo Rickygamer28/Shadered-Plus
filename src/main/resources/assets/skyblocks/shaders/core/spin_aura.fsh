@@ -37,7 +37,7 @@ void main() {
         }
         float round_ = atan(p.y, p.x) / TAU;
         float arms = 6.0;
-        float twist = (2.5 + 3.5 * speed) * log(r + 0.08);
+        float twist = (0.9 + 1.4 * speed) * log(r + 0.08);
         float s = fract(round_ * arms + twist + turn * arms);
         float arm = smoothstep(0.5, 0.15, abs(s - 0.5));
         vec3 sky = texture(Sampler0, vec2(fract(round_ - turn), 0.35 + 0.3 * r)).rgb;
@@ -55,14 +55,14 @@ void main() {
         float inLane = fract(up * lanes);
         float pace = 1.0 + floor(hash(vec2(lane, 2.0)) * 3.0);
         float head = fract(round_ - turn * pace + hash(vec2(lane, 9.0)));
-        float tail = pow(head, 6.0 - 4.0 * speed);                     // (the streak trailing behind its head)
+        float tail = pow(head, 14.0 - 8.0 * speed) * smoothstep(1.0, 0.97, head); // (a bright head, its streak trailing behind)
         float thin = smoothstep(0.5, 0.15, abs(inLane - 0.5));
         float lit = step(0.35 - 0.3 * speed, hash(vec2(lane, 5.0)));   // (more lanes lit up the faster it spins)
         vec3 c = hue(hash(vec2(lane, 4.0)) + seconds * 0.1) * 0.6 + texture(Sampler0, vec2(fract(round_ + turn), 0.5)).rgb * 0.6;
         float streak = tail * thin * lit;
         // rings rising off the plate, closer together the faster it goes
         float rise = fract(up * (2.0 + 2.0 * speed) - seconds * (0.4 + 1.6 * speed));
-        float ring = smoothstep(0.08, 0.0, abs(rise - 0.5)) * 0.5;
+        float ring = smoothstep(0.05, 0.0, abs(rise - 0.5)) * 0.45;
         float fade = smoothstep(0.0, 0.12, up) * (1.0 - smoothstep(0.6, 1.0, up));
         col = (c * streak * 1.3 + vec3(0.8, 0.9, 1.0) * ring * speed) * fade;
     }

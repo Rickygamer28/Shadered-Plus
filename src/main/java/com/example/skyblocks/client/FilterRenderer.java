@@ -125,9 +125,20 @@ public class FilterRenderer implements BlockEntityRenderer<FilterBlockEntity> {
         BlockPos pos = be.getBlockPos();
         Matrix4f m = pose.last().pose();
         Vector3f v = new Vector3f();
+        // Only the faces turned towards the camera: anything seen through the pane is seen through one of those (its far
+        // faces drawn too, their frames would show through it). Standing inside a pane of this filter, the faces round you
+        // are all turned away: then those, frameless (shaders/core/filter_glass: gl_FrontFacing).
+        Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        boolean inside = level.getBlockState(BlockPos.containing(cam)).is(state.getBlock());
         for (Direction d : Direction.values()) {
             // (not against another of the same filter - one pane - nor against a solid block: nothing to see there)
             if (!net.minecraft.world.level.block.Block.shouldRenderFace(state, level, pos, d, pos.relative(d))) {
+                continue;
+            }
+            double toCamera = (cam.x - (pos.getX() + 0.5 + d.getStepX() * 0.5)) * d.getStepX()
+                    + (cam.y - (pos.getY() + 0.5 + d.getStepY() * 0.5)) * d.getStepY()
+                    + (cam.z - (pos.getZ() + 0.5 + d.getStepZ() * 0.5)) * d.getStepZ();
+            if (toCamera <= 0 && !inside) {
                 continue;
             }
             // the face's two directions along it: u, v (block coordinates); a frame on each edge with no more of the pane past it
