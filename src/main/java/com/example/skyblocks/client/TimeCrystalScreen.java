@@ -11,7 +11,7 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * The time crystal's screen: whether it's running, its speed (x2 .. x16) and radius (4, 8, 12 blocks), on / off and its
+ * The time crystal's screen: whether it's running, its speed (x4 .. x256) and radius (4, 8, 12 blocks), on / off and its
  * dome shown or not.
  */
 public class TimeCrystalScreen extends Screen {
@@ -100,7 +100,7 @@ public class TimeCrystalScreen extends Screen {
         // a little clock in the corner, its hand going round as fast as it's set
         int cx = left + W - 18, cy = top + 14;
         long ms = System.currentTimeMillis();
-        double a = be.running() ? (ms / 1000.0) * be.speed() * 0.5 : 0.0;
+        double a = be.running() ? (ms / 1000.0) * (1 + be.speedIndex()) * 1.5 : 0.0;
         for (int i = 0; i < 12; i++) {
             double t = i / 12.0 * Math.PI * 2;
             g.fill(cx + (int) Math.round(Math.sin(t) * 9), cy - (int) Math.round(Math.cos(t) * 9),

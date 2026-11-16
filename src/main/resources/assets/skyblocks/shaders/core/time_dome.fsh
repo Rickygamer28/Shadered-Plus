@@ -1,7 +1,7 @@
 #version 150
 
 // The time crystal's dome. Inside (its far side, from outside; all of it, from in it): a sky running through day and
-// night as fast as the crystal is set (a day every 2 minutes at x2 ... every 15 seconds at x16) - the sun and the moon
+// night as fast as the crystal is set (a day every 2 minutes at x4 ... every 15 seconds at x256) - the sun and the moon
 // leaving bright trails along their path, the stars drawing circles round the pole at night, the light going from blue
 // to sunset orange to deep night - with faint hour lines (twelve, like a clock's) up it. Outside (its near side): only a
 // glassy rim, brighter at its edges. Its day goes with the clock face on the ground (shaders/core/clock_face).

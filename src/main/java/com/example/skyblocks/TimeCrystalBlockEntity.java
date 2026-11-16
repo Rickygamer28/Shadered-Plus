@@ -25,14 +25,15 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The time crystal: switched on, it hurries time on round it - in a circle (its radius: 4, 8 or 12 blocks), from two
  * below it to six above: crops, saplings and everything else that grows (more random ticks), furnaces, brewing stands
- * and other machines (their ticks run again), all x2, x4, x8 or x16. It needs nothing to run.
+ * and other machines (their ticks run again), all x4, x16, x64 or x256. It needs nothing to run, and it's light enough
+ * for what grows: crops and saplings grow round it in the dark too.
  * Not sped up: other time crystals, spin pads and power cores, anything giving energy out (no free energy), and the
  * blocks tagged skyblocks:time_crystal_immune.
  * Its looks (client/TimeCrystalRenderer): rune rings spinning round the crystal, a clock face turning on the ground, and
  * a dome over what it hurries, its sky running through day and night as fast as it's set.
  */
 public class TimeCrystalBlockEntity extends BlockEntity {
-    public static final int[] SPEEDS = {2, 4, 8, 16};
+    public static final int[] SPEEDS = {4, 16, 64, 256};
     public static final int[] RADII = {4, 8, 12};
     /** Below and above it, how far it reaches. */
     public static final int DOWN = 2, UP = 6;
@@ -122,7 +123,7 @@ public class TimeCrystalBlockEntity extends BlockEntity {
     }
 
     public static void clientTick(Level level, BlockPos pos, BlockState state, TimeCrystalBlockEntity be) {
-        float want = be.running ? 0.05F + 0.035F * be.speed() : 0.0F;
+        float want = be.running ? 0.06F + 0.05F * be.speed : 0.0F;
         be.spinSpeed += (want - be.spinSpeed) * 0.05F;
         be.spin += be.spinSpeed;
         be.shownOn += ((be.running ? 1.0F : 0.0F) - be.shownOn) * 0.06F;
@@ -148,7 +149,19 @@ public class TimeCrystalBlockEntity extends BlockEntity {
                 continue;
             }
             BlockState s = level.getBlockState(p);
-            if (s.isRandomlyTicking() && !s.is(IMMUNE)) {
+            if (s.is(IMMUNE)) {
+                continue;
+            }
+            // (crops and saplings: grown in the dark too - the crystal's light is enough; in the light, as they would)
+            if (s.getBlock() instanceof net.minecraft.world.level.block.CropBlock crop && level.getRawBrightness(p, 0) < 9) {
+                if (!crop.isMaxAge(s) && level.random.nextInt(8) == 0) {
+                    level.setBlock(p, crop.getStateForAge(crop.getAge(s) + 1), Block.UPDATE_CLIENTS);
+                }
+            } else if (s.getBlock() instanceof net.minecraft.world.level.block.SaplingBlock sapling && level.getMaxLocalRawBrightness(p.above()) < 9) {
+                if (level.random.nextInt(7) == 0) {
+                    sapling.advanceTree(level, p.immutable(), s, level.random);
+                }
+            } else if (s.isRandomlyTicking()) {
                 s.randomTick(level, p.immutable(), level.random);
             }
             net.minecraft.world.level.material.FluidState f = s.getFluidState();
