@@ -3,7 +3,8 @@
 // Shadered+'s time crystal (client/TimeCrystalRenderer): a box round the crystal and its rune rings, traced through in
 // the fragment shader in 3D (as the power core's, shaders/core/energy_core). UV0.x: which corner (0 .. 7); UV0.y: the
 // box's half-size (blocks). Color: red and alpha how far its rings have turned (a turn: 65536, red the high byte), green
-// how strongly it's running, blue its speed (0 .. 3).
+// how strongly it's running, blue its speed (0 .. 3) + 4 x which part (0 the
+// crystal and its rings' glow, 1 the crystal alone, 2 the glow alone).
 
 in vec3 Position;
 in vec4 Color;
@@ -19,6 +20,7 @@ flat out float half_;
 flat out float turn;
 flat out float running;
 flat out float speed;
+flat out int part;
 
 void main() {
     gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
@@ -31,5 +33,7 @@ void main() {
     eye = eyeCam - centre;
     turn = (floor(Color.r * 255.0 + 0.5) * 256.0 + floor(Color.a * 255.0 + 0.5)) / 65536.0;
     running = Color.g;
-    speed = Color.b * 255.0;
+    int b = int(Color.b * 255.0 + 0.5);
+    speed = float(b & 3);
+    part = b >> 2;
 }

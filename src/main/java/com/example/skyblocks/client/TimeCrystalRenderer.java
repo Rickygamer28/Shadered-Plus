@@ -25,13 +25,13 @@ import org.joml.Vector3f;
  * A time crystal (TimeCrystalBlockEntity): the crystal and its rune rings, in 3D (a box traced through by
  * shaders/core/time_crystal, as the power core's); while it runs, a clock face on the ground round it
  * (shaders/core/clock_face) and the dome over what it hurries (shaders/core/time_dome: its sky inside, a glassy rim
- * outside) and the air inside it bent (shaders/core/time_warp, without a shader pack), fading in and out; and its violet
- * light (ShaderLightRenderer). Drawn after the coloured lights (LatePass), in this order: the dome's far side, the warp,
- * the crystal, the clock face, the dome's near side.
+ * outside), fading in and out; and its violet light (ShaderLightRenderer). Drawn after the coloured lights (LatePass),
+ * each part drawn right away in this order (not left to a buffer source: Iris's, installed even with no shader pack on,
+ * draws everything later in an order of its own - the crystal before the dome, the dome missing round the crystal):
+ * the dome's far side, the crystal, the clock face, the rings' glow, the dome's near side.
  */
 public class TimeCrystalRenderer implements BlockEntityRenderer<TimeCrystalBlockEntity> {
-    static ShaderInstance crystalShader, domeShader, faceShader, warpShader;
-    private static com.mojang.blaze3d.pipeline.TextureTarget copy;
+    static ShaderInstance crystalShader, domeShader, faceShader;
     /** The box round the crystal: its middle (above the block's base) and half-size. */
     private static final float CY = 1.25F, HALF = 1.45F;
     private static final int AROUND = 64, UP = 16;
@@ -48,8 +48,6 @@ public class TimeCrystalRenderer implements BlockEntityRenderer<TimeCrystalBlock
                     s -> domeShader = s);
             ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "clock_face"), DefaultVertexFormat.POSITION_TEX_COLOR,
                     s -> faceShader = s);
-            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "time_warp"), DefaultVertexFormat.POSITION_TEX_COLOR,
-                    s -> warpShader = s);
         }
     }
 
@@ -59,6 +57,14 @@ public class TimeCrystalRenderer implements BlockEntityRenderer<TimeCrystalBlock
                         .setShaderState(new ShaderStateShard(() -> crystalShader))
                         .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                         .setCullState(NO_CULL)
+                        .createCompositeState(false));
+        /** The rings' glow, drawn without writing depth (a haze written into the depth hid the dome behind it). */
+        static final RenderType GLOW = create("skyblocks_time_crystal_glow", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 256, false, false,
+                CompositeState.builder()
+                        .setShaderState(new ShaderStateShard(() -> crystalShader))
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .setCullState(NO_CULL)
+                        .setWriteMaskState(COLOR_WRITE)
                         .createCompositeState(false));
         static final RenderType DOME_IN = create("skyblocks_time_dome_in", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 65536, false, false,
                 CompositeState.builder()
@@ -77,17 +83,6 @@ public class TimeCrystalRenderer implements BlockEntityRenderer<TimeCrystalBlock
                 CompositeState.builder()
                         .setShaderState(new ShaderStateShard(() -> faceShader))
                         .setTransparencyState(ADDITIVE_TRANSPARENCY)
-                        .setCullState(NO_CULL)
-                        .createCompositeState(false));
-
-        /** The warp: over a copy of the picture (and its depth), made as it's drawn; not depth tested (the shader works out what's inside). */
-        static final RenderType WARP = create("skyblocks_time_warp", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 65536, false, false,
-                CompositeState.builder()
-                        .setShaderState(new ShaderStateShard(() -> warpShader))
-                        .setTexturingState(new TexturingStateShard("skyblocks_time_warp_copy", TimeCrystalRenderer::copyScreen, () -> {}))
-                        .setTransparencyState(NO_TRANSPARENCY)
-                        .setWriteMaskState(COLOR_WRITE)
-                        .setDepthTestState(NO_DEPTH_TEST)
                         .setCullState(NO_CULL)
                         .createCompositeState(false));
 
@@ -112,46 +107,48 @@ public class TimeCrystalRenderer implements BlockEntityRenderer<TimeCrystalBlock
         int speed = be.speedIndex();
         float radius = be.radius() + 0.5F;
         boolean dome = be.dome() && on > 0.01F;
-        java.util.function.Consumer<MultiBufferSource> draw = src -> {
+        // (with a shader pack - drawn into Shadered+'s own target, laid over the pack's image where it wrote depth: the
+        // crystal and its glow drawn together, writing depth; without, the crystal itself and then its glow, which doesn't)
+        boolean pack = com.example.skyblocks.client.iris.IrisDefer.drawing();
+        Runnable draw = () -> {
             if (dome) {
-                dome(src.getBuffer(Types.DOME_IN), m, radius, speed, 0, on);
+                drawNow(Types.DOME_IN, vc -> dome(vc, m, radius, speed, 0, on));
             }
-            if (dome && warpShader != null && !com.example.skyblocks.client.iris.IrisCompat.shaderPackInUse() && !MirrorRenderer.isRenderingReflection()) {
-                warp(src.getBuffer(Types.WARP), m, radius, speed, on);
-            }
-            crystal(src.getBuffer(Types.CRYSTAL), m, spin, on, speed);
+            drawNow(Types.CRYSTAL, vc -> crystal(vc, m, spin, on, speed, pack ? 0 : 1));
             if (on > 0.01F) {
-                face(src.getBuffer(Types.FACE), m, radius, speed, on);
+                drawNow(Types.FACE, vc -> face(vc, m, radius, speed, on));
+            }
+            if (!pack) {
+                drawNow(Types.GLOW, vc -> crystal(vc, m, spin, on, speed, 2));
             }
             if (dome) {
-                dome(src.getBuffer(Types.DOME_OUT), m, radius, speed, 255, on);
+                drawNow(Types.DOME_OUT, vc -> dome(vc, m, radius, speed, 255, on));
             }
         };
-        if (!LatePass.later(src -> {
-            draw.accept(src);
-            endInOrder(src);
-        })) {
-            draw.accept(buffers);
-            if (buffers instanceof MultiBufferSource.BufferSource src) {
-                endInOrder(src);
-            }
+        if (!LatePass.later(src -> draw.run())) {
+            draw.run();
         }
     }
 
-    private static void endInOrder(MultiBufferSource.BufferSource src) {
-        src.endBatch(Types.DOME_IN);
-        src.endBatch(Types.WARP);
-        src.endBatch(Types.CRYSTAL);
-        src.endBatch(Types.FACE);
-        src.endBatch(Types.DOME_OUT);
+    /** One part, drawn right now. */
+    private static void drawNow(RenderType type, java.util.function.Consumer<VertexConsumer> emit) {
+        com.mojang.blaze3d.vertex.BufferBuilder builder = com.mojang.blaze3d.vertex.Tesselator.getInstance().begin(type.mode(), type.format());
+        emit.accept(builder);
+        com.mojang.blaze3d.vertex.MeshData mesh = builder.build();
+        if (mesh != null) {
+            type.draw(mesh);
+        }
     }
 
-    /** The crystal's box: its faces turned away from the eye (from inside it: all), as the power core's. */
-    private static void crystal(VertexConsumer vc, Matrix4f m, float spin, float on, int speed) {
+    /**
+     * The crystal's box: its faces turned away from the eye (from inside it: all), as the power core's. part: 0 the
+     * crystal and its rings' glow, 1 the crystal alone, 2 the glow alone.
+     */
+    private static void crystal(VertexConsumer vc, Matrix4f m, float spin, float on, int speed, int part) {
         Vector3f centre = m.transformPosition(0.5F, CY, 0.5F, new Vector3f());
         float ex = -centre.x, ey = -centre.y, ez = -centre.z;
         int turn = (int) (Mth.frac(spin) * 65536.0F) & 0xFFFF;
-        int r = turn >> 8, a = turn & 255, g = Math.round(on * 255), b = speed;
+        int r = turn >> 8, a = turn & 255, g = Math.round(on * 255), b = speed + 4 * part;
         int[][] faces = {{0, 2, 6, 4}, {1, 5, 7, 3}, {0, 4, 5, 1}, {2, 3, 7, 6}, {0, 1, 3, 2}, {4, 6, 7, 5}};
         float[] towards = {-ex - HALF, ex - HALF, -ey - HALF, ey - HALF, -ez - HALF, ez - HALF};
         for (int f = 0; f < 6; f++) {
@@ -189,60 +186,6 @@ public class TimeCrystalRenderer implements BlockEntityRenderer<TimeCrystalBlock
                 point(vc, m, radius, az0, el1, speed, side, a);
             }
         }
-    }
-
-    /** The warp's shape: the dome closed off (its half ball, its floor - a disc). */
-    private static void warp(VertexConsumer vc, Matrix4f m, float radius, int speed, float on) {
-        int g = Math.min(255, Math.round(radius * 10.0F)), a = Math.round(on * 255);
-        float rr = g / 10.0F; // (as the shader reads it)
-        for (int i = 0; i < AROUND; i++) {
-            float az0 = i * Mth.TWO_PI / AROUND, az1 = (i + 1) * Mth.TWO_PI / AROUND;
-            for (int j = 0; j < UP; j++) {
-                float el0 = j * Mth.HALF_PI / UP, el1 = (j + 1) * Mth.HALF_PI / UP;
-                warpPoint(vc, m, rr, az0, el0, speed, g, a);
-                warpPoint(vc, m, rr, az1, el0, speed, g, a);
-                warpPoint(vc, m, rr, az1, el1, speed, g, a);
-                warpPoint(vc, m, rr, az0, el1, speed, g, a);
-            }
-            vc.addVertex(m, 0.5F, 0.0F, 0.5F).setColor(speed, g, 255, a).setUv(0.0F, 0.0F);
-            vc.addVertex(m, 0.5F, 0.0F, 0.5F).setColor(speed, g, 255, a).setUv(0.0F, 0.0F);
-            vc.addVertex(m, 0.5F + rr * Mth.cos(az1), 0.0F, 0.5F + rr * Mth.sin(az1)).setColor(speed, g, 255, a).setUv(Mth.cos(az1), Mth.sin(az1));
-            vc.addVertex(m, 0.5F + rr * Mth.cos(az0), 0.0F, 0.5F + rr * Mth.sin(az0)).setColor(speed, g, 255, a).setUv(Mth.cos(az0), Mth.sin(az0));
-        }
-    }
-
-    private static void warpPoint(VertexConsumer vc, Matrix4f m, float radius, float az, float el, int speed, int g, int a) {
-        float c = Mth.cos(el);
-        vc.addVertex(m, 0.5F + radius * c * Mth.cos(az), radius * Mth.sin(el), 0.5F + radius * c * Mth.sin(az))
-                .setColor(speed, g, 0, a).setUv(c * Mth.cos(az), c * Mth.sin(az));
-    }
-
-    /** Copies the picture drawn so far and its depth, for the warp (Sampler0, Sampler1). */
-    private static void copyScreen() {
-        int[] vp = new int[4];
-        org.lwjgl.opengl.GL11.glGetIntegerv(org.lwjgl.opengl.GL11.GL_VIEWPORT, vp);
-        int w = Math.max(vp[2], 1), h = Math.max(vp[3], 1);
-        int draw = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
-        int read = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING);
-        com.mojang.blaze3d.pipeline.RenderTarget main = net.minecraft.client.Minecraft.getInstance().getMainRenderTarget();
-        if (copy == null) {
-            copy = new com.mojang.blaze3d.pipeline.TextureTarget(w, h, true, net.minecraft.client.Minecraft.ON_OSX);
-            copy.setFilterMode(org.lwjgl.opengl.GL11.GL_LINEAR);
-        } else if (copy.width != w || copy.height != h) {
-            copy.resize(w, h, net.minecraft.client.Minecraft.ON_OSX);
-            copy.setFilterMode(org.lwjgl.opengl.GL11.GL_LINEAR);
-        }
-        if (main.isStencilEnabled() && !copy.isStencilEnabled()) {
-            copy.enableStencil(); // (the same depth format as the picture's, or its depth can't be copied)
-        }
-        org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, draw);
-        org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, copy.frameBufferId);
-        org.lwjgl.opengl.GL30.glBlitFramebuffer(vp[0], vp[1], vp[0] + w, vp[1] + h, 0, 0, w, h,
-                org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT | org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT, org.lwjgl.opengl.GL11.GL_NEAREST);
-        org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, read);
-        org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, draw);
-        com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(0, copy.getColorTextureId());
-        com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(1, copy.getDepthTextureId());
     }
 
     private static void point(VertexConsumer vc, Matrix4f m, float radius, float az, float el, int speed, int side, int a) {

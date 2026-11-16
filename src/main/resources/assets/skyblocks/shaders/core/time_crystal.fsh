@@ -16,6 +16,7 @@ flat in float half_;
 flat in float turn;
 flat in float running;
 flat in float speed;
+flat in int part;
 
 out vec4 fragColor;
 
@@ -151,8 +152,10 @@ void main() {
         col += vec3(0.7, 0.9, 1.0) * pow(1.0 - facing, 3.0) * 0.8;
         vec3 h = normalize(light - rd);
         col += vec3(1.0) * pow(max(dot(n, h), 0.0), 60.0) * 0.9;
-        c = vec4(c.rgb + col * (1.0 - c.a * 0.5), 1.0);
+        c = part == 1 ? vec4(col, 1.0) : part == 2 ? c : vec4(c.rgb + col * (1.0 - c.a * 0.5), 1.0);
         depthT = hitT;
+    } else if (part == 1) {
+        discard;
     }
     if (c.a < 0.01 || depthT < 0.0) {
         discard;
