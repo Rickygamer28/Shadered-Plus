@@ -60,6 +60,11 @@ public final class SkyLiquidRenderer {
         changes++;
     }
 
+    /** How many client block changes so far (for others who work faces out from blocks: AquariumWaterRenderer). */
+    public static long changes() {
+        return changes;
+    }
+
     @SubscribeEvent
     public static void onStage(RenderLevelStageEvent event) {
         // after the solid world (so it is hidden behind blocks) and before see-through things like water and glass
