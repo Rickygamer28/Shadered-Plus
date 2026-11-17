@@ -104,7 +104,8 @@ public final class SkyLiquidRenderer {
         java.util.Set<ModFluids.SkyLiquid> inView = new java.util.HashSet<>();
         for (ModFluids.SkyLiquid liquid : GEOMETRY.keySet()) {
             com.noodlegamer76.shadered.client.util.skyblock.SkyblockBatchData data = com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(liquid.sky);
-            int[] rect = defer ? null : SkyUsage.OFF;
+            // (with a shader pack too: off the screen, its sky's picture isn't drawn - on it, the whole picture, as before)
+            int[] rect = SkyUsage.OFF;
             List<float[]> cells = BOXES.get(liquid);
             if (cells == null) {
                 rect = null;

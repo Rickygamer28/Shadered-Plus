@@ -105,6 +105,14 @@ public class SpinPadRenderer implements BlockEntityRenderer<SpinPadBlockEntity> 
         }
         // the aura (shaders/core/spin_aura): the spiral on the floor and the streaks round the cat - wider, taller and
         // brighter the faster it spins (a big pad's: all of it as big as the pad)
+        // (off the screen - it's drawn even then, it reaches past its pad - nothing: nor its sky's picture brought up to date)
+        net.minecraft.world.phys.Vec3 cam = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        BlockPos bp = be.getBlockPos();
+        float reach = (0.5F + 2.2F * s) * n, height = (1.3F + 0.6F * s + 0.3F) * n;
+        float mx = (float) (bp.getX() + c - cam.x), mz = (float) (bp.getZ() + c - cam.z), my = (float) (bp.getY() - cam.y);
+        if (SkyUsage.rectOfBox(mx - reach, my, mz - reach, mx + reach, my + height, mz + reach) == SkyUsage.OFF) {
+            return;
+        }
         RenderType aura = vortexType(be.sky());
         if (aura == null || shader == null) {
             return;

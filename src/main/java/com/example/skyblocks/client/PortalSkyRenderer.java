@@ -151,7 +151,8 @@ public final class PortalSkyRenderer {
                 }
             }
             com.noodlegamer76.shadered.client.util.skyblock.SkyblockBatchData data = com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(entry.getKey());
-            int[] rect = defer ? null : SkyUsage.rectOfBox(b[0], b[1], b[2], b[3], b[4], b[5]);
+            // (with a shader pack too: none on the screen, nothing drawn - some, the whole picture, as before)
+            int[] rect = SkyUsage.rectOfBox(b[0], b[1], b[2], b[3], b[4], b[5]);
             if (rect == SkyUsage.OFF && !MirrorRenderer.isRenderingReflection()) {
                 continue;
             }
