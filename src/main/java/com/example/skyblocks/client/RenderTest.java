@@ -400,7 +400,7 @@ public final class RenderTest {
             "fill 729 -49 -1 731 -49 1 minecraft:air",
             "fill 729 -60 -2 731 -45 -2 minecraft:white_concrete",
             "fill 728 -60 -1 728 -45 1 minecraft:white_concrete",
-            "setblock 730 -61 0 skyblocks:elevator_base{skin:3,speed:0}",
+            "setblock 730 -61 0 skyblocks:elevator_base{skin:3,speed:2}",
             "setblock 732 -60 1 skyblocks:elevator_panel[facing=west]",
             "setblock 732 -54 1 skyblocks:elevator_panel[facing=west]",
             "setblock 732 -48 1 skyblocks:elevator_panel[facing=west]",

@@ -259,9 +259,14 @@ public class ElevatorCabinEntity extends Entity {
         return false;
     }
 
+    /**
+     * Solid to stand on - when it's still. Moving, not: its riders are held on it (players by their own client, mobs
+     * riding it), and the server, a little ahead of a player's client, found them in its floor and put them back where
+     * they'd come from - a drop as it rose.
+     */
     @Override
     public boolean canBeCollidedWith() {
-        return true;
+        return !moving();
     }
 
     @Override
