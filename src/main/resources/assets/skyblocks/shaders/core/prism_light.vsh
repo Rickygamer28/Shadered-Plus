@@ -1,9 +1,9 @@
 #version 150
 
-// Shadered+'s prism (client/PrismRenderer): the light out of the crystal - the little rainbows it throws onto what's
-// round it, and the faint rays to them. UV0: where in the shape (a rainbow: x -1 red .. 1 violet, y across it; a ray:
-// x 2 .. 3 along it, y -1 .. 1 across it, red to violet). Color: the light's colour (white: a plain rainbow), alpha
-// how bright.
+// Shadered+'s prism (client/PrismRenderer): the light through the crystal - the white beam in, the fan of colours out
+// (a sheet through the air, a soft glow round each band) and the rainbow where it lands. UV0.x: the colour (0 red ..
+// 1 violet; below 0, the white of the light coming in), UV0.y: across a soft strip (-1 .. 1; 0, the sheet itself).
+// Color: the light's colour (white: a plain rainbow), alpha how bright.
 
 in vec3 Position;
 in vec4 Color;

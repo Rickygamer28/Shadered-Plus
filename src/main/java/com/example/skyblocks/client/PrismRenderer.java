@@ -39,18 +39,19 @@ import org.joml.Vector3f;
 
 /**
  * The prism: a clear crystal floating over its stand, turning slowly (shaders/core/prism_crystal: light off its faces
- * and bent through it, split into its colours), and what light does going through it - thrown out in all directions
- * as little rainbows, red at one end, violet at the other, scattered over the floor and walls round it and drifting
- * as it turns (shaders/core/prism_light), faint rays of colour through the air to them. The light: a spotlight's beam
- * shone on it (SpotlightRenderer tells it), a lamp near it (anything giving off light, in sight of it), or the sun -
- * by day, not in rain, where the sun can reach it (through glass too); whichever's strongest.
+ * and bent through it, split into its colours), and what light does going through it, as a prism splits it: a white
+ * beam in, and out the far side a fan of colours, red to violet, spreading as it goes - a sheet of colours through the
+ * air and a rainbow where it lands on the floor or a wall (shaders/core/prism_light). Which way it goes follows where
+ * the light comes from: a spotlight or beam light shone on it (SpotlightRenderer tells it), a lamp near it (anything
+ * giving off light, in sight of it), or the sun - by day, not in rain, where it can reach it (through glass too);
+ * whichever's strongest. As the crystal turns, the fan goes slowly round the light's way.
  */
 public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEntity> {
     static ShaderInstance crystalShader, lightShader;
     /** The crystal's middle (from the block's corner) and the box round it (half sizes). */
     private static final float CY = 0.55F, HX = 0.22F, HY = 0.29F;
-    /** How many rainbows, how far they reach (blocks); one turn takes this long (ticks). */
-    private static final int SPOTS = 56, REACH = 12, TURN_TICKS = 1600;
+    /** How far its light reaches (blocks); one turn takes this long (ticks). */
+    private static final int REACH = 14, TURN_TICKS = 2400;
 
     @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
@@ -151,16 +152,24 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
             findLamp(level, pos, middle, s);
             s.lookedAt = now;
         }
+        // (where the light comes from, for its beam in: a spotlight draws its own)
+        Vec3 source = null;
         if (s.lamp != null && s.lampStrength > strength) {
             in = middle.subtract(s.lamp).normalize();
             strength = s.lampStrength;
             tint = 0xFFFFFF;
+            source = s.lamp;
         }
         float sun = sunlit(level, pos, partialTick) ? 0.8F * (1.0F - level.getRainLevel(partialTick)) : 0.0F;
         if (sun > strength) {
             in = sunDirection(level, partialTick).scale(-1);
             strength = sun;
             tint = 0xFFFFFF;
+            // (the sunbeam in: from as far up towards the sun as there's open air, at most 6 blocks)
+            Vec3 up = middle.subtract(in.scale(6));
+            BlockHitResult roof = level.clip(new ClipContext(middle.subtract(in.scale(0.4)), up, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE,
+                    CollisionContext.empty()));
+            source = roof.getType() == HitResult.Type.BLOCK ? roof.getLocation() : up;
         }
         if (strength <= 0.02F) {
             in = null;
@@ -177,7 +186,7 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
         // the light thrown out, worked out now (where each rainbow lands)
         List<float[]> verts = new ArrayList<>();
         if (in != null && Minecraft.getInstance().gameRenderer.getMainCamera().getPosition().distanceToSqr(middle) < 64 * 64) {
-            cast(level, pos, middle, in, turn, strength, tint, seed, time, verts);
+            cast(level, pos, middle, in, source, turn, strength, tint, time, verts);
         }
         Runnable draw = () -> {
             ElevatorRenderer.drawNow(Types.CRYSTAL, vc -> box(vc, m, fb, fl, fs, fbright, fturn));
@@ -214,60 +223,99 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
         }
     }
 
+    /** How far the light's turned going through (radians), how wide the colours fan out, how thick the fan is. */
+    private static final float BEND = 0.42F, FAN = 0.30F, THICK = 0.035F;
+    private static final int BANDS = 16;
+
     /**
-     * Light through the crystal, out every way: each ray turned from the light's own way by its own angle (some only a
-     * little, some right back out the side it came in), round the way the crystal's turned - so they drift as it turns.
-     * Each a little rainbow where it lands, longer the further it went; a faint ray of colour to it.
+     * Light through the crystal as a prism splits it: a white beam in (from a lamp or the sun - a spotlight draws its
+     * own), and out the far side one fan of colours, turned from the light's way (red the least, violet the most) and
+     * spreading as it goes: a sheet of colours in the air, a soft glow round each band, and a rainbow where it lands.
+     * Which way it's turned goes round the light's way as the crystal turns. Each band's own way followed to where it
+     * lands, so the rainbow lies on whatever it reaches - the floor, a wall, round a corner, part on each.
      */
-    private static void cast(Level level, BlockPos pos, Vec3 middle, Vec3 in, float turn, float strength, int tint, long seed, float time, List<float[]> out) {
+    private static void cast(Level level, BlockPos pos, Vec3 middle, Vec3 in, Vec3 source, float turn, float strength, int tint, float time,
+                             List<float[]> out) {
         Vec3 e1 = Math.abs(in.y) < 0.9 ? in.cross(new Vec3(0, 1, 0)).normalize() : in.cross(new Vec3(1, 0, 0)).normalize();
         Vec3 e2 = in.cross(e1).normalize();
+        // (the axis it's turned round: across the light's way, going round as the crystal turns)
+        Vec3 axis = e1.scale(Math.cos(turn)).add(e2.scale(Math.sin(turn)));
         Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-        java.util.Random rnd = new java.util.Random(seed);
         int cr = tint >> 16 & 255, cg = tint >> 8 & 255, cb = tint & 255;
-        for (int k = 0; k < SPOTS; k++) {
-            float az = rnd.nextFloat() * Mth.TWO_PI, bend = 0.12F + rnd.nextFloat() * rnd.nextFloat() * 2.4F, power = 0.45F + rnd.nextFloat() * 0.55F;
-            float phase = rnd.nextFloat() * 100.0F;
-            Vec3 axis = e1.scale(Math.cos(az + turn)).add(e2.scale(Math.sin(az + turn)));
-            Vec3 d = rotate(in, axis, bend);
-            // (the way the colours spread: the way bending more takes it)
-            Vec3 spread = rotate(in, axis, bend + 0.05F).subtract(d);
-            Vec3 from = middle.add(d.scale(0.25));
-            BlockHitResult hit = level.clip(new ClipContext(from, from.add(d.scale(REACH)), ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, CollisionContext.empty()));
-            if (hit.getType() != HitResult.Type.BLOCK || hit.getBlockPos().equals(pos)) {
-                continue;
+        float shimmer = 0.94F + 0.06F * Mth.sin(time * 0.15F);
+
+        // the white beam in, to the crystal's near side
+        Vec3 into = middle.subtract(in.scale(0.16));
+        if (source != null) {
+            Vec3 side = in.cross(cam.subtract(into));
+            if (side.lengthSqr() > 1e-8) {
+                side = side.normalize();
+                float a = strength * 0.55F;
+                put(out, pos, source.subtract(side.scale(0.045)), -1, -1, cr, cg, cb, a * 0.3F);
+                put(out, pos, source.add(side.scale(0.045)), -1, 1, cr, cg, cb, a * 0.3F);
+                put(out, pos, into.add(side.scale(0.035)), -1, 1, cr, cg, cb, a);
+                put(out, pos, into.subtract(side.scale(0.035)), -1, -1, cr, cg, cb, a);
             }
-            Vec3 at = hit.getLocation();
-            float dist = (float) at.distanceTo(middle);
-            Vec3 n = Vec3.atLowerCornerOf(hit.getDirection().getNormal());
-            Vec3 u = spread.subtract(n.scale(spread.dot(n)));
-            if (u.lengthSqr() < 1e-8) {
-                u = Math.abs(n.y) > 0.5 ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
+        }
+
+        // each band's edges: their ways, where they land (or how far they go)
+        Vec3 exit = middle.add(rotate(in, axis, BEND).scale(0.16));
+        Vec3[] way = new Vec3[BANDS + 1], end = new Vec3[BANDS + 1];
+        BlockHitResult[] hits = new BlockHitResult[BANDS + 1];
+        for (int k = 0; k <= BANDS; k++) {
+            way[k] = rotate(in, axis, BEND + ((float) k / BANDS - 0.5F) * FAN);
+            Vec3 from = exit.add(way[k].scale(0.05));
+            BlockHitResult hit = level.clip(new ClipContext(from, from.add(way[k].scale(REACH)), ClipContext.Block.VISUAL, ClipContext.Fluid.NONE,
+                    CollisionContext.empty()));
+            boolean landed = hit.getType() == HitResult.Type.BLOCK && !hit.getBlockPos().equals(pos);
+            hits[k] = landed ? hit : null;
+            end[k] = landed ? hit.getLocation() : from.add(way[k].scale(REACH));
+        }
+        // (the beam's width as it leaves: the colours start out together)
+        float start = 0.05F;
+        for (int k = 0; k < BANDS; k++) {
+            float h0 = (float) k / BANDS, h1 = (float) (k + 1) / BANDS, hm = (h0 + h1) * 0.5F;
+            // (the reds and violets at the very ends fade out)
+            float edge = Mth.clamp(Math.min(hm, 1.0F - hm) * BANDS * 0.7F, 0.0F, 1.0F);
+            float bright = strength * shimmer * edge;
+            Vec3 a0 = exit.add(rotate(in, axis, BEND).cross(axis).scale((h0 - 0.5F) * start)), a1 = exit.add(rotate(in, axis, BEND).cross(axis).scale((h1 - 0.5F) * start));
+            float d0 = (float) end[k].distanceTo(exit), d1 = (float) end[k + 1].distanceTo(exit);
+            // the sheet of colours through the air: bright out of the crystal, fading as it goes
+            float far = bright * 0.12F / (1.0F + (d0 + d1) * 0.05F);
+            put(out, pos, a0, h0, 0, cr, cg, cb, bright * 0.75F);
+            put(out, pos, a1, h1, 0, cr, cg, cb, bright * 0.75F);
+            put(out, pos, end[k + 1], h1, 0, cr, cg, cb, far);
+            put(out, pos, end[k], h0, 0, cr, cg, cb, far);
+            // a soft glow round the band, facing the eye (so the fan shows from any side)
+            Vec3 mid = end[k].add(end[k + 1]).scale(0.5);
+            Vec3 dir = mid.subtract(exit);
+            Vec3 side = dir.cross(cam.subtract(exit));
+            if (side.lengthSqr() > 1e-8) {
+                side = side.normalize();
+                float w = (float) Math.max(end[k].distanceTo(end[k + 1]) * 0.8, 0.03) + (d0 + d1) * 0.5F * THICK;
+                float glow = bright * 0.16F;
+                put(out, pos, exit.subtract(side.scale(0.02)), hm, -1, cr, cg, cb, glow * 2.0F);
+                put(out, pos, exit.add(side.scale(0.02)), hm, 1, cr, cg, cb, glow * 2.0F);
+                put(out, pos, mid.add(side.scale(w)), hm, 1, cr, cg, cb, glow * 0.25F);
+                put(out, pos, mid.subtract(side.scale(w)), hm, -1, cr, cg, cb, glow * 0.25F);
             }
-            u = u.normalize();
-            Vec3 v = n.cross(u).normalize();
-            float len = 0.11F + dist * 0.05F, wid = 0.06F + dist * 0.018F;
-            // (fainter the further it went and the more it's spread; twinkling a little)
-            float twinkle = 0.85F + 0.15F * Mth.sin(time * 0.21F + phase);
-            float bright = Mth.clamp(strength * power * twinkle * 1.6F / (1.0F + dist * 0.08F), 0.0F, 1.0F);
-            Vec3 p = at.add(n.scale(0.012));
-            Vec3 a0 = p.subtract(u.scale(len)).subtract(v.scale(wid)), a1 = p.add(u.scale(len)).subtract(v.scale(wid)),
-                    a2 = p.add(u.scale(len)).add(v.scale(wid)), a3 = p.subtract(u.scale(len)).add(v.scale(wid));
-            put(out, pos, a0, -1, -1, cr, cg, cb, bright);
-            put(out, pos, a1, 1, -1, cr, cg, cb, bright);
-            put(out, pos, a2, 1, 1, cr, cg, cb, bright);
-            put(out, pos, a3, -1, 1, cr, cg, cb, bright);
-            // the ray to it, faint, facing the eye: red on one side, violet the other
-            float rayBright = bright * 0.09F;
-            if (rayBright > 0.004F) {
-                Vec3 side = d.cross(cam.subtract(from));
-                if (side.lengthSqr() > 1e-8) {
-                    side = side.normalize();
-                    float s0 = 0.012F, s1 = Math.max(wid, 0.03F);
-                    put(out, pos, from.subtract(side.scale(s0)), 2, -1, cr, cg, cb, rayBright);
-                    put(out, pos, from.add(side.scale(s0)), 2, 1, cr, cg, cb, rayBright);
-                    put(out, pos, p.add(side.scale(s1)), 3, 1, cr, cg, cb, rayBright);
-                    put(out, pos, p.subtract(side.scale(s1)), 3, -1, cr, cg, cb, rayBright);
+            // where it lands: the band's stretch of the rainbow on what it reached (both edges on the same flat face)
+            if (hits[k] != null && hits[k + 1] != null && hits[k].getDirection() == hits[k + 1].getDirection()
+                    && end[k].distanceTo(end[k + 1]) < 2.0) {
+                Vec3 n = Vec3.atLowerCornerOf(hits[k].getDirection().getNormal());
+                Vec3 v = axis.subtract(n.scale(axis.dot(n)));
+                if (v.lengthSqr() < 1e-6) {
+                    v = n.cross(end[k + 1].subtract(end[k]));
+                }
+                if (v.lengthSqr() > 1e-8) {
+                    v = v.normalize();
+                    float t0 = 0.05F + d0 * THICK, t1 = 0.05F + d1 * THICK;
+                    float land = Mth.clamp(bright * 1.4F / (1.0F + (d0 + d1) * 0.04F), 0.0F, 1.0F);
+                    Vec3 p0 = end[k].add(n.scale(0.012)), p1 = end[k + 1].add(n.scale(0.012));
+                    put(out, pos, p0.subtract(v.scale(t0)), h0, -1, cr, cg, cb, land);
+                    put(out, pos, p1.subtract(v.scale(t1)), h1, -1, cr, cg, cb, land);
+                    put(out, pos, p1.add(v.scale(t1)), h1, 1, cr, cg, cb, land);
+                    put(out, pos, p0.add(v.scale(t0)), h0, 1, cr, cg, cb, land);
                 }
             }
         }
