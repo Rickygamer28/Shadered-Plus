@@ -36,7 +36,7 @@ public final class GuideChapters {
                 ModItems.LARGE_PHOTO_FRAME, ModItems.CAT_BED, ModItems.CAT_BOWL, ModItems.SCRATCHING_POST, ModItems.CAT_TREE,
                 ModItems.CARDBOARD_BOX, ModItems.CAT_FLAP, ModItems.YARN_BALL, ModItems.FEATHER_WAND, ModItems.LASER_POINTER, ModItems.GEODE_LAMP,
                 ModItems.INFUSION_ALTAR, ModItems.SKY_LANTERN, ModItems.CAT_WINDOW_PERCH, ModItems.FERROFLUID, ModItems.SKY_CLOCK, ModItems.PRISM,
-                ModItems.SKY_WAND, ModItems.RIFT_KNIFE, ModItems.BOTTOMLESS_PIT, ModItems.ROOM_WINDOW, ModItems.MOON_JAR, ModItems.SUN_JAR, ModItems.SPIN_PAD, ModItems.TIME_CRYSTAL, ModItems.ELEVATOR_BASE, ModItems.ELEVATOR_PANEL, ModItems.HOURGLASS, ModItems.MAGIC_CHALK,
+                ModItems.SKY_WAND, ModItems.RIFT_KNIFE, ModItems.BOTTOMLESS_PIT, ModItems.ROOM_WINDOW, ModItems.MOON_JAR, ModItems.SUN_JAR, ModItems.SPIN_PAD, ModItems.TIME_CRYSTAL, ModItems.ELEVATOR_BASE, ModItems.ELEVATOR_PANEL, ModItems.HOURGLASS, ModItems.MAGIC_CHALK, ModFluids.AQUARIUM_WATER_BUCKET,
                 ModItems.INVERTED_FILTER, ModItems.POSTERIZE_FILTER, ModItems.GRAYSCALE_FILTER, ModItems.CHROMATIC_ABERRATION_FILTER, ModItems.BLUEPRINT_FILTER,
                 ModItems.GAME_BOY_FILTER, ModItems.PIXEL_FILTER, ModItems.CROSS_STITCH_FILTER, ModItems.RED_FILTER, ModItems.SCREEN_FILTER, ModItems.TINT_FILTER, ModItems.SHADER_LIGHT,
                 ModItems.POWER_CORE, ModItems.CORE_FRAME}) {
@@ -60,7 +60,7 @@ public final class GuideChapters {
                 ModItems.RAIN_GLASS, ModItems.WATERFALL));
         out.add(of("aquariums", ModItems.AQUARIUM, ModItems.OCEAN_AQUARIUM, ModItems.DEEP_SEA_AQUARIUM, ModItems.REEF_AQUARIUM,
                 ModItems.JUNGLE_AQUARIUM, ModItems.VANILLA_AQUARIUM, ModItems.VANILLA_OCEAN_AQUARIUM, ModItems.AQUARIUM_STAND,
-                ModItems.AQUARIUM_LID, ModItems.FISHBOWL, ModItems.TALL_TANK, ModItems.SLIM_TANK, ModItems.JELLYFISH_TANK, ModItems.TERRARIUM));
+                ModItems.AQUARIUM_LID, ModItems.FISHBOWL, ModItems.TALL_TANK, ModItems.SLIM_TANK, ModItems.JELLYFISH_TANK, ModItems.TERRARIUM, ModFluids.AQUARIUM_WATER_BUCKET));
         out.add(of("ponds", ModItems.KOI_POND, ModItems.VANILLA_KOI_POND, ModItems.POND_STEPPING_STONE, ModItems.POND_BRIDGE,
                 ModItems.BAMBOO_SPOUT));
         out.add(of("space", ModItems.ORRERY, ModItems.PLANETARIUM, ModItems.BLACK_HOLE, ModItems.BIG_BLACK_HOLE, ModItems.SINGULARITY,
