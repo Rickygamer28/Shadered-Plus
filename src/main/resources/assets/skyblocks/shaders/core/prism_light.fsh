@@ -1,7 +1,7 @@
 #version 150
 
 // The prism's light (prism_light.vsh): a rainbow - red at one end to violet at the other, soft at its edges, brightest
-// in its middle colours - or a faint ray of the colours through the air. Added onto what's there.
+// in its middle colours - or a faint ray of the colours through the air. Added onto what's there (blended ONE, ONE).
 
 in vec2 uv;
 in vec4 tint;
@@ -31,5 +31,6 @@ void main() {
     c = mix(c, c * tint.rgb * 1.6, 1.0 - step(2.95, tint.r + tint.g + tint.b));
     float a = clamp(shape * tint.a, 0.0, 1.0);
     if (a < 0.003) discard;
-    fragColor = vec4(c, a);
+    // (added as light, blended ONE, ONE, its alpha next to nothing - as spin_aura.fsh)
+    fragColor = vec4(c * a, 1.0 / 255.0);
 }

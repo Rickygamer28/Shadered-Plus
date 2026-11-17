@@ -19,5 +19,7 @@ void main() {
         a = exp(-v * v * 2.2) * 0.5 * (1.0 - uv.x * 0.55) * smoothstep(0.0, 0.04, uv.x);
         a += exp(-v * v * 30.0) * 0.12 * (1.0 - uv.x); // (a brighter middle)
     }
-    fragColor = vec4(col.rgb * a * col.a, 1.0);
+    // (added as light, blended ONE, ONE; its alpha next to nothing - see spin_aura.fsh: with a shader pack it's drawn in
+    // iris/IrisIslandTarget's picture, where a real alpha would darken the world behind it)
+    fragColor = vec4(col.rgb * a * col.a, 1.0 / 255.0);
 }

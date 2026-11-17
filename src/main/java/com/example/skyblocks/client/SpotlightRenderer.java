@@ -62,7 +62,7 @@ public class SpotlightRenderer implements BlockEntityRenderer<SpotlightBlockEnti
         static final RenderType CONE = create("skyblocks_spotlight", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 1024,
                 false, true, CompositeState.builder()
                         .setShaderState(new ShaderStateShard(() -> shader))
-                        .setTransparencyState(LIGHTNING_TRANSPARENCY)
+                        .setTransparencyState(ADDITIVE_TRANSPARENCY) // (adding light - see spotlight_beam.fsh)
                         .setWriteMaskState(COLOR_WRITE)
                         .setCullState(NO_CULL)
                         .createCompositeState(false));

@@ -76,7 +76,7 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
         static final RenderType LIGHT = create("skyblocks_prism_light", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 8192, false, true,
                 CompositeState.builder()
                         .setShaderState(new ShaderStateShard(() -> lightShader))
-                        .setTransparencyState(LIGHTNING_TRANSPARENCY)
+                        .setTransparencyState(ADDITIVE_TRANSPARENCY) // (adding light - see prism_light.fsh)
                         .setCullState(NO_CULL)
                         .setWriteMaskState(COLOR_WRITE)
                         .setLayeringState(VIEW_OFFSET_Z_LAYERING)
