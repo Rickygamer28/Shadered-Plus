@@ -142,6 +142,14 @@ public class ElevatorCabinEntity extends Entity {
         return elapsed(0.0F) < entityData.get(TIME);
     }
 
+    /** How long after it stops it's still taken as moving, for what's on it (the server is a little ahead of the players'). */
+    private static final int SETTLE = 12;
+
+    /** Whether it has stopped, and a little while since: solid again, its riders let off. */
+    public boolean settled() {
+        return elapsed(0.0F) >= entityData.get(TIME) + SETTLE;
+    }
+
     /** Off to a floor: everything standing on it rides it. */
     public void go(int to, float speed) {
         float from = landing();
@@ -167,12 +175,12 @@ public class ElevatorCabinEntity extends Entity {
         BlockPos b = base();
         setPos(b.getX() + 0.5, landing() - PLATE, b.getZ() + 0.5);
         if (level().isClientSide) {
-            if (moving()) {
+            if (!settled()) {
                 com.example.skyblocks.client.ElevatorButtons.keepOn(this);
             }
             return;
         }
-        if (moving()) {
+        if (!settled()) {
             // (anything that lands on it - or that it comes up under - on the way: it rides too, rather than fall through)
             float landing = landing(), reach = 0.6F + Math.abs(velocity(0.0F)) * 2.0F;
             for (Entity e : level().getEntities(this, getBoundingBox().inflate(0.0, 2.5, 0.0),
@@ -194,11 +202,11 @@ public class ElevatorCabinEntity extends Entity {
             discard();
             return;
         }
-        if (!moving() && isVehicle()) {
+        if (settled() && isVehicle()) {
             release();
             level().playSound(null, getX(), getY() + 1.0, getZ(), SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.BLOCKS, 0.8F, 1.5F);
         }
-        if (!isVehicle() && !riders.isEmpty() && !moving()) {
+        if (!isVehicle() && !riders.isEmpty() && settled()) {
             riders.clear();
         }
     }
@@ -266,7 +274,8 @@ public class ElevatorCabinEntity extends Entity {
      */
     @Override
     public boolean canBeCollidedWith() {
-        return !moving();
+        // (the server: only once it's settled - a player's client, a little behind, still has them riding it up)
+        return level().isClientSide ? !moving() : settled();
     }
 
     @Override
