@@ -814,6 +814,10 @@ public final class RenderTest {
                                 SkyBlocksMod.LOGGER.info("Shadered+ render test: elevator jump: cabin at {}", c.landing());
                             }
                         }
+                        if (elevCall >= 0 && !elevJump && ticks >= 60 && ticks < 90 && mc.player != null) {
+                            // (walking about in the cabin as it rises)
+                            mc.player.setDeltaMovement(mc.player.getDeltaMovement().add(ticks < 75 ? 0.06 : -0.06, 0.0, 0.0));
+                        }
                         if (elevJump && ticks == 99 && mc.player != null) {
                             SkyBlocksMod.LOGGER.info("Shadered+ render test: elevator jump: player y {}, riding {}",
                                     String.format(java.util.Locale.ROOT, "%.2f", mc.player.getY()), mc.player.getVehicle());

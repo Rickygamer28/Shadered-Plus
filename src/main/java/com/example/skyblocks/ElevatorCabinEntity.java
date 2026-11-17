@@ -26,8 +26,9 @@ import net.neoforged.neoforge.event.entity.EntityMountEvent;
 
 /**
  * An elevator's cabin (ElevatorBaseBlockEntity): a floor 3 x 3 you can stand on, that rides up and down its shaft.
- * Sent off, everything standing on it rides it - held where they stood on it, standing, not let off on the way - and
- * set down on the floor it stops at. Its trip (from, to, when it set off, how long it takes) is known to the server and
+ * Players on it as it moves stand on it and walk about on it (held on its floor by their own client:
+ * client/ElevatorButtons.keepOn; the server not taking them for flying); mobs ride it - held where they stood on it,
+ * standing - and are set down on the floor it stops at. Its trip (from, to, when it set off, how long it takes) is known to the server and
  * to every client alike, each working out where it is from the time - so it moves smoothly, with what it carries.
  * Its floor buttons are inside it (client/ElevatorButtons); sneak + right-click it: its look and speed
  * (client/ElevatorScreen). It draws nothing of its own: its base draws it.
@@ -127,7 +128,8 @@ public class ElevatorCabinEntity extends Entity {
         letting = false;
         BlockPos b = base();
         List<Entity> on = level().getEntities(this, getBoundingBox().inflate(0.0, 2.0, 0.0),
-                e -> e instanceof LivingEntity && !e.isPassenger() && !e.isSpectator() && ElevatorBaseBlockEntity.standingIn(e, getX(), getZ(), from));
+                e -> e instanceof LivingEntity && !(e instanceof Player) && !e.isPassenger() && !e.isSpectator()
+                        && ElevatorBaseBlockEntity.standingIn(e, getX(), getZ(), from));
         for (Entity e : on) {
             e.startRiding(this, true);
         }
@@ -153,9 +155,17 @@ public class ElevatorCabinEntity extends Entity {
             // (anything that lands on it - or that it comes up under - on the way: it rides too, rather than fall through)
             float landing = landing(), reach = 0.6F + Math.abs(velocity(0.0F)) * 2.0F;
             for (Entity e : level().getEntities(this, getBoundingBox().inflate(0.0, 2.5, 0.0),
-                    e -> e instanceof LivingEntity && !e.isPassenger() && !e.isSpectator() && Math.abs(e.getX() - getX()) < 1.45
+                    e -> e instanceof LivingEntity && !(e instanceof Player) && !e.isPassenger() && !e.isSpectator() && Math.abs(e.getX() - getX()) < 1.45
                             && Math.abs(e.getZ() - getZ()) < 1.45 && e.getY() > landing - reach && e.getY() < landing + 0.35)) {
                 e.startRiding(this, true);
+            }
+            // players on it: not falling, not flying (standing on a cabin, not a block, the server would think they were)
+            for (Player p : level().getEntitiesOfClass(Player.class, getBoundingBox().inflate(0.0, 3.0, 0.0),
+                    p -> Math.abs(p.getX() - getX()) < 1.6 && Math.abs(p.getZ() - getZ()) < 1.6 && p.getY() > landing - 1.5 && p.getY() < landing + 2.0)) {
+                p.fallDistance = 0.0F;
+                if (p instanceof net.minecraft.server.level.ServerPlayer sp) {
+                    notFlying(sp);
+                }
             }
         }
         if (tickCount % 20 == 0 && !(level().getBlockEntity(b) instanceof ElevatorBaseBlockEntity)) {
@@ -169,6 +179,26 @@ public class ElevatorCabinEntity extends Entity {
         }
         if (!isVehicle() && !riders.isEmpty() && !moving()) {
             riders.clear();
+        }
+    }
+
+    private static java.lang.reflect.Field aboveGround;
+    private static boolean noField;
+
+    /** A player standing on a moving cabin isn't kicked for flying (their time off the ground counted again from 0). */
+    private static void notFlying(net.minecraft.server.level.ServerPlayer sp) {
+        if (noField) {
+            return;
+        }
+        try {
+            if (aboveGround == null) {
+                aboveGround = net.neoforged.fml.util.ObfuscationReflectionHelper.findField(
+                        net.minecraft.server.network.ServerGamePacketListenerImpl.class, "aboveGroundTickCount");
+            }
+            aboveGround.setInt(sp.connection, 0);
+        } catch (RuntimeException | IllegalAccessException e) {
+            noField = true;
+            SkyBlocksMod.LOGGER.warn("Shadered+: couldn't keep elevator riders from counting as flying", e);
         }
     }
 

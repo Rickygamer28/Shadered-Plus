@@ -97,8 +97,9 @@ public final class ElevatorButtons {
     }
 
     /**
-     * (client) A moving cabin, and you not riding it: if you're on it - jumped on, or it's come up under you - you're held
-     * on its floor until the server has you riding it (not left to fall through it as it rises).
+     * (client) A moving cabin: if you're on it - standing in it, walked or jumped on, or it's come up under you - your
+     * feet are kept on its floor as it goes (you walk about on it as you like; jump, and you're let go until you land on it
+     * again).
      */
     public static void keepOn(ElevatorCabinEntity cabin) {
         Player p = Minecraft.getInstance().player;
@@ -106,10 +107,13 @@ public final class ElevatorButtons {
             return;
         }
         float landing = cabin.landing(), vel = cabin.velocity(0.0F);
-        if (Math.abs(p.getX() - cabin.getX()) < 1.45 && Math.abs(p.getZ() - cabin.getZ()) < 1.45
-                && p.getY() > landing - 0.6F - Math.abs(vel) * 2.0F && p.getY() < landing + 0.05F && p.getDeltaMovement().y <= vel + 0.05) {
+        double dy = p.getDeltaMovement().y;
+        boolean over = Math.abs(p.getX() - cabin.getX()) < 1.45 && Math.abs(p.getZ() - cabin.getZ()) < 1.45;
+        boolean near = p.getY() > landing - 0.6F - Math.abs(vel) * 2.0F && p.getY() < landing + Math.max(-vel, 0.0F) + 0.15F;
+        boolean jumping = dy > Math.max(vel, 0.0F) + 0.12;
+        if (over && near && !jumping) {
             p.setPos(p.getX(), landing, p.getZ());
-            p.setDeltaMovement(p.getDeltaMovement().x, Math.max(vel, 0.0F), p.getDeltaMovement().z);
+            p.setDeltaMovement(p.getDeltaMovement().x, vel, p.getDeltaMovement().z);
             p.setOnGround(true);
             p.fallDistance = 0.0F;
         }
