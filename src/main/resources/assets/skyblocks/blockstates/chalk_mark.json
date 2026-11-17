@@ -1,0 +1,21 @@
+{
+  "variants": {
+    "": [
+      {
+        "model": "skyblocks:block/chalk_mark"
+      },
+      {
+        "model": "skyblocks:block/chalk_mark",
+        "y": 90
+      },
+      {
+        "model": "skyblocks:block/chalk_mark",
+        "y": 180
+      },
+      {
+        "model": "skyblocks:block/chalk_mark",
+        "y": 270
+      }
+    ]
+  }
+}

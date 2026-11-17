@@ -1,0 +1,40 @@
+{
+  "variants": {
+    "active=false,rune=1": {
+      "model": "skyblocks:block/chalk_rune_1"
+    },
+    "active=true,rune=1": {
+      "model": "skyblocks:block/chalk_rune_1"
+    },
+    "active=false,rune=2": {
+      "model": "skyblocks:block/chalk_rune_2"
+    },
+    "active=true,rune=2": {
+      "model": "skyblocks:block/chalk_rune_2"
+    },
+    "active=false,rune=3": {
+      "model": "skyblocks:block/chalk_rune_3"
+    },
+    "active=true,rune=3": {
+      "model": "skyblocks:block/chalk_rune_3"
+    },
+    "active=false,rune=4": {
+      "model": "skyblocks:block/chalk_rune_4"
+    },
+    "active=true,rune=4": {
+      "model": "skyblocks:block/chalk_rune_4"
+    },
+    "active=false,rune=5": {
+      "model": "skyblocks:block/chalk_rune_5"
+    },
+    "active=true,rune=5": {
+      "model": "skyblocks:block/chalk_rune_5"
+    },
+    "active=false,rune=6": {
+      "model": "skyblocks:block/chalk_rune_6"
+    },
+    "active=true,rune=6": {
+      "model": "skyblocks:block/chalk_rune_6"
+    }
+  }
+}

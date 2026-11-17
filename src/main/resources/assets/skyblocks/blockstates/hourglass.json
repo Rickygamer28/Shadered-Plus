@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "triggered=false": {
+      "model": "skyblocks:block/hourglass"
+    },
+    "triggered=true": {
+      "model": "skyblocks:block/hourglass"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "powered=false": {
+      "model": "skyblocks:block/glitch_block"
+    },
+    "powered=true": {
+      "model": "skyblocks:block/glitch_block"
+    }
+  }
+}

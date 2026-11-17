@@ -519,6 +519,23 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.METAL).noCollission().noOcclusion().lightLevel(state -> 5)
                     .mapColor(net.minecraft.world.level.material.MapColor.METAL));
 
+    /** An hourglass timer (HourglassBlock). */
+    public static final DeferredBlock<HourglassBlock> HOURGLASS = BLOCKS.registerBlock("hourglass", HourglassBlock::new,
+            BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.WOOD).noOcclusion().lightLevel(state -> 5)
+                    .mapColor(net.minecraft.world.level.material.MapColor.WOOD));
+    /** A glitch block (GlitchBlock). */
+    public static final DeferredBlock<GlitchBlock> GLITCH_BLOCK = BLOCKS.registerBlock("glitch_block", GlitchBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.AMETHYST).noOcclusion().lightLevel(state -> 6)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_MAGENTA));
+    /** Chalk on the ground (MagicChalkItem): a mark, and a rune - the middle of a magic circle (ChalkMarkBlock, ChalkRuneBlock). */
+    public static final DeferredBlock<ChalkMarkBlock> CHALK_MARK = BLOCKS.registerBlock("chalk_mark", ChalkMarkBlock::new,
+            BlockBehaviour.Properties.of().noCollission().instabreak().sound(SoundType.CALCITE).noOcclusion().replaceable()
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY).mapColor(net.minecraft.world.level.material.MapColor.SNOW));
+    public static final DeferredBlock<ChalkRuneBlock> CHALK_RUNE = BLOCKS.registerBlock("chalk_rune", ChalkRuneBlock::new,
+            BlockBehaviour.Properties.of().noCollission().instabreak().sound(SoundType.CALCITE).noOcclusion()
+                    .lightLevel(state -> state.getValue(ChalkRuneBlock.ACTIVE) ? 10 : 0)
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY).mapColor(net.minecraft.world.level.material.MapColor.SNOW));
+
     // ---- the filter blocks (from The Valley Mod by D0nkey100, used with permission) ----
     public static final DeferredBlock<FilterBlock> INVERTED_FILTER = BLOCKS.registerBlock("inverted_filter", p -> new FilterBlock(1, false, p),
             BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS));

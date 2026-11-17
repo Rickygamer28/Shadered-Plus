@@ -195,6 +195,9 @@ public final class ModItems {
             new net.minecraft.world.item.Item.Properties().fireResistant());
     public static final DeferredItem<BlockItem> ELEVATOR_BASE = ITEMS.registerSimpleBlockItem("elevator_base", ModBlocks.ELEVATOR_BASE);
     public static final DeferredItem<BlockItem> ELEVATOR_PANEL = ITEMS.registerSimpleBlockItem("elevator_panel", ModBlocks.ELEVATOR_PANEL);
+    public static final DeferredItem<BlockItem> HOURGLASS = ITEMS.registerSimpleBlockItem("hourglass", ModBlocks.HOURGLASS);
+    public static final DeferredItem<BlockItem> GLITCH_BLOCK = ITEMS.registerSimpleBlockItem("glitch_block", ModBlocks.GLITCH_BLOCK);
+    public static final DeferredItem<MagicChalkItem> MAGIC_CHALK = ITEMS.register("magic_chalk", () -> new MagicChalkItem(new Item.Properties().durability(160)));
 
     // ---- the filter blocks (from The Valley Mod by D0nkey100) ----
     public static final DeferredItem<BlockItem> INVERTED_FILTER = ITEMS.registerSimpleBlockItem("inverted_filter", ModBlocks.INVERTED_FILTER);
