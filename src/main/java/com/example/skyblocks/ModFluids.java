@@ -104,44 +104,6 @@ public final class ModFluids {
         ALL = Collections.unmodifiableList(all);
     }
 
-    // ---- Aquarium Water: the aquariums' clear teal water as a liquid of its own (flows, swims, buckets, like water) ----
-    public static final DeferredHolder<FluidType, FluidType> AQUARIUM_WATER_TYPE = TYPES.register("aquarium_water",
-            () -> new FluidType(FluidType.Properties.create()
-                    .descriptionId("block.skyblocks.aquarium_water")
-                    .canSwim(true)
-                    .canDrown(true)
-                    .canPushEntity(true)
-                    .supportsBoating(true)
-                    .canExtinguish(true)
-                    .canHydrate(true)
-                    .canConvertToSource(true)
-                    .fallDistanceModifier(0.0F)
-                    .motionScale(0.014D)
-                    .pathType(PathType.WATER)
-                    .adjacentPathType(PathType.WATER_BORDER)
-                    .sound(SoundActions.BUCKET_FILL, SoundEvents.BUCKET_FILL)
-                    .sound(SoundActions.BUCKET_EMPTY, SoundEvents.BUCKET_EMPTY)
-                    .sound(SoundActions.FLUID_VAPORIZE, SoundEvents.FIRE_EXTINGUISH)));
-    public static final DeferredHolder<Fluid, BaseFlowingFluid.Source> AQUARIUM_WATER =
-            FLUIDS.register("aquarium_water", () -> new BaseFlowingFluid.Source(aquariumWater()));
-    public static final DeferredHolder<Fluid, BaseFlowingFluid.Flowing> FLOWING_AQUARIUM_WATER =
-            FLUIDS.register("flowing_aquarium_water", () -> new BaseFlowingFluid.Flowing(aquariumWater()));
-    public static final DeferredBlock<LiquidBlock> AQUARIUM_WATER_BLOCK = ModBlocks.BLOCKS.register("aquarium_water",
-            () -> new LiquidBlock(AQUARIUM_WATER.get(), BlockBehaviour.Properties.ofFullCopy(Blocks.WATER).mapColor(MapColor.WATER)));
-    public static final DeferredItem<BucketItem> AQUARIUM_WATER_BUCKET = ModItems.ITEMS.register("aquarium_water_bucket",
-            () -> new BucketItem(AQUARIUM_WATER.get(), new Item.Properties().craftRemainder(Items.BUCKET).stacksTo(1)));
-
-    /** Like water: spreads 7 blocks (4 to find a slope), one step every 5 ticks. */
-    private static BaseFlowingFluid.Properties aquariumWater() {
-        return new BaseFlowingFluid.Properties(AQUARIUM_WATER_TYPE, AQUARIUM_WATER, FLOWING_AQUARIUM_WATER)
-                .block(AQUARIUM_WATER_BLOCK)
-                .bucket(AQUARIUM_WATER_BUCKET)
-                .slopeFindDistance(4)
-                .levelDecreasePerBlock(1)
-                .tickRate(5)
-                .explosionResistance(100.0F);
-    }
-
     /** The liquid of a sky, or null. */
     public static SkyLiquid of(SkyblockType sky) {
         return sky == null ? null : BY_SKY.get(sky);

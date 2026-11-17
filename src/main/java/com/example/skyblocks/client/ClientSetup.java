@@ -44,11 +44,6 @@ public final class ClientSetup {
                 net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(liquid.flowing.get(),
                         net.minecraft.client.renderer.RenderType.cutout());
             }
-            // Aquarium Water: the same (its own faces nothing; client/AquariumWaterRenderer draws it as the tanks' water)
-            net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(com.example.skyblocks.ModFluids.AQUARIUM_WATER.get(),
-                    net.minecraft.client.renderer.RenderType.cutout());
-            net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(com.example.skyblocks.ModFluids.FLOWING_AQUARIUM_WATER.get(),
-                    net.minecraft.client.renderer.RenderType.cutout());
         });
     }
 
@@ -191,47 +186,6 @@ public final class ClientSetup {
                 com.mojang.blaze3d.systems.RenderSystem.setShaderFogEnd(24.0F);
             }
         };
-        // Aquarium Water: its own faces see-through (drawn by client/AquariumWaterRenderer); under it, the tank's water colour
-        event.registerFluidType(new net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions() {
-            private final net.minecraft.resources.ResourceLocation still =
-                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "block/aquarium_water_still");
-            private final net.minecraft.resources.ResourceLocation flowing =
-                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "block/aquarium_water_flow");
-            private final net.minecraft.resources.ResourceLocation overlay =
-                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "block/aquarium_water_still");
-
-            @Override
-            public net.minecraft.resources.ResourceLocation getStillTexture() {
-                return still;
-            }
-
-            @Override
-            public net.minecraft.resources.ResourceLocation getFlowingTexture() {
-                return flowing;
-            }
-
-            @Override
-            public net.minecraft.resources.ResourceLocation getOverlayTexture() {
-                return overlay;
-            }
-
-            @Override
-            public org.joml.Vector3f modifyFogColor(net.minecraft.client.Camera camera, float partialTick,
-                                                     net.minecraft.client.multiplayer.ClientLevel level, int renderDistance,
-                                                     float darkenWorldAmount, org.joml.Vector3f fluidFogColor) {
-                float day = Math.max(0.0F, Math.min(1.0F, (level.getSkyDarken(partialTick) - 0.2F) / 0.8F));
-                return new org.joml.Vector3f(0.02F * day, 0.02F + 0.18F * day, 0.1F + 0.22F * day);
-            }
-
-            @Override
-            public void modifyFogRender(net.minecraft.client.Camera camera, net.minecraft.client.renderer.FogRenderer.FogMode mode,
-                                        float renderDistance, float partialTick, float nearDistance, float farDistance,
-                                        com.mojang.blaze3d.shaders.FogShape shape) {
-                // (about as thick as the tanks' water: a third of the colour 3 blocks off, most of it by 10)
-                com.mojang.blaze3d.systems.RenderSystem.setShaderFogStart(-3.0F);
-                com.mojang.blaze3d.systems.RenderSystem.setShaderFogEnd(Math.min(renderDistance, 14.0F));
-            }
-        }, com.example.skyblocks.ModFluids.AQUARIUM_WATER_TYPE.get());
         for (com.example.skyblocks.ModFluids.SkyLiquid liquid : com.example.skyblocks.ModFluids.ALL) {
             event.registerFluidType(liquidLook, liquid.type.get());
             final com.noodlegamer76.shadered.client.util.SkyblockType sky = liquid.sky;
