@@ -21,7 +21,7 @@ flat in float turn;
 out vec4 fragColor;
 
 // the crystal (blocks, from its middle): the column's inner radius, its half-height, its points
-const float R = 0.13, H = 0.085, T = 0.25, TILT = 0.24;
+const float R = 0.105, H = 0.13, T = 0.275, TILT = 0.2;
 const int NP = 18;
 vec3 N[NP];
 float D[NP];
@@ -60,7 +60,7 @@ float leave(vec3 p, vec3 d, out vec3 n) {
 // what's round it: the room's light (lighter overhead), and the light that shines on it, bright and small
 vec3 env(vec3 d, vec3 L) {
     float up = d.y * 0.5 + 0.5;
-    vec3 room = mix(vec3(0.16, 0.15, 0.17), vec3(0.62, 0.68, 0.78), smoothstep(0.15, 0.95, up)) * (0.25 + 0.75 * bright);
+    vec3 room = mix(vec3(0.42, 0.44, 0.48), vec3(0.88, 0.93, 1.0), smoothstep(0.1, 0.9, up)) * (0.3 + 0.7 * bright);
     float c = max(dot(d, L), 0.0);
     vec3 light = vec3(1.0) * strength * (pow(c, 220.0) * 9.0 + pow(c, 28.0) * 1.2 + pow(c, 5.0) * 0.12);
     return room + light;
@@ -134,6 +134,10 @@ void main() {
     }
     // (clear, the faintest cool tint)
     col += through * (1.0 - F) * vec3(0.96, 0.98, 1.0);
+    // its fire: each face throwing back its own colours, changing as it turns - stronger with light on it
+    float facet = dot(nin, vec3(3.1, 2.7, 1.9)) + dot(refract(rd, nin, 1.0 / 1.535), vec3(1.7, 2.3, 2.9)) + turn * 0.5;
+    vec3 fire = clamp(abs(fract(facet + vec3(0.0, 0.333, 0.667)) * 6.0 - 3.0) - 1.0, 0.0, 1.0);
+    col += fire * (0.06 + 0.22 * strength) * (0.4 + 0.6 * bright);
 
     // its edges catch the light: near where two faces meet
     float edge = 1e3;
@@ -141,14 +145,15 @@ void main() {
         float g = abs(dot(N[i], P) - D[i]);
         if (g > 1e-4) edge = min(edge, g);
     }
-    col += vec3(0.85, 0.92, 1.0) * smoothstep(0.006, 0.0, edge) * (0.12 + 0.5 * strength + 0.15 * bright);
+    col += vec3(0.85, 0.92, 1.0) * smoothstep(0.004, 0.0, edge) * (0.05 + 0.2 * strength + 0.06 * bright);
 
     // glints: where the light's reflected straight at the eye, a bright point that sparkles as it turns
     float g = max(dot(reflect(rd, nin), L), 0.0);
     float tw = 0.7 + 0.3 * sin(GameTime * 24000.0 * 0.35 + turn * 40.0);
     col += vec3(1.0) * pow(g, 600.0) * 6.0 * strength * tw;
 
-    float alpha = clamp(0.82 + F * 0.18, 0.0, 1.0);
+    // (see-through: the world behind shows through it, more of its own light at a slant)
+    float alpha = clamp(0.5 + F * 0.5 + max(max(col.r, col.g), col.b) * 0.15, 0.0, 1.0);
     vec3 hitW = centre + eye + rdW * tin;
     vec4 clip = ProjMat * ModelViewMat * vec4(hitW, 1.0);
     gl_FragDepth = clamp(clip.z / clip.w * 0.5 + 0.5, 0.0, 1.0);

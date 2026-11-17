@@ -1,8 +1,8 @@
 {
   "parent": "block/block",
   "textures": {
-    "brass": "skyblocks:block/gadget_brass",
-    "walnut": "skyblocks:block/gadget_walnut",
+    "base": "minecraft:block/polished_blackstone",
+    "gold": "minecraft:block/gold_block",
     "particle": "skyblocks:block/prism_glass"
   },
   "elements": [
@@ -19,22 +19,22 @@
       ],
       "faces": {
         "north": {
-          "texture": "#walnut"
+          "texture": "#base"
         },
         "south": {
-          "texture": "#walnut"
+          "texture": "#base"
         },
         "east": {
-          "texture": "#walnut"
+          "texture": "#base"
         },
         "west": {
-          "texture": "#walnut"
+          "texture": "#base"
         },
         "up": {
-          "texture": "#walnut"
+          "texture": "#base"
         },
         "down": {
-          "texture": "#walnut"
+          "texture": "#base"
         }
       }
     },
@@ -51,22 +51,22 @@
       ],
       "faces": {
         "north": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "south": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "east": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "west": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "up": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "down": {
-          "texture": "#brass"
+          "texture": "#gold"
         }
       }
     },
@@ -83,22 +83,22 @@
       ],
       "faces": {
         "north": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "south": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "east": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "west": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "up": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "down": {
-          "texture": "#brass"
+          "texture": "#gold"
         }
       }
     },
@@ -115,22 +115,22 @@
       ],
       "faces": {
         "north": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "south": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "east": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "west": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "up": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "down": {
-          "texture": "#brass"
+          "texture": "#gold"
         }
       }
     },
@@ -147,22 +147,22 @@
       ],
       "faces": {
         "north": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "south": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "east": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "west": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "up": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "down": {
-          "texture": "#brass"
+          "texture": "#gold"
         }
       }
     },
@@ -179,22 +179,22 @@
       ],
       "faces": {
         "north": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "south": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "east": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "west": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "up": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "down": {
-          "texture": "#brass"
+          "texture": "#gold"
         }
       }
     },
@@ -211,22 +211,22 @@
       ],
       "faces": {
         "north": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "south": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "east": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "west": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "up": {
-          "texture": "#brass"
+          "texture": "#gold"
         },
         "down": {
-          "texture": "#brass"
+          "texture": "#gold"
         }
       }
     }

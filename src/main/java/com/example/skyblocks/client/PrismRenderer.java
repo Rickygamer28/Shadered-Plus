@@ -50,7 +50,7 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
     /** The crystal's middle (from the block's corner) and the box round it (half sizes). */
     private static final float CY = 0.55F, HX = 0.22F, HY = 0.29F;
     /** How many rainbows, how far they reach (blocks); one turn takes this long (ticks). */
-    private static final int SPOTS = 34, REACH = 12, TURN_TICKS = 1600;
+    private static final int SPOTS = 56, REACH = 12, TURN_TICKS = 1600;
 
     @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
@@ -246,10 +246,10 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
             }
             u = u.normalize();
             Vec3 v = n.cross(u).normalize();
-            float len = 0.06F + dist * 0.032F, wid = 0.035F + dist * 0.009F;
+            float len = 0.11F + dist * 0.05F, wid = 0.06F + dist * 0.018F;
             // (fainter the further it went and the more it's spread; twinkling a little)
             float twinkle = 0.85F + 0.15F * Mth.sin(time * 0.21F + phase);
-            float bright = Mth.clamp(strength * power * twinkle * 1.15F / (1.0F + dist * 0.12F), 0.0F, 1.0F);
+            float bright = Mth.clamp(strength * power * twinkle * 1.6F / (1.0F + dist * 0.08F), 0.0F, 1.0F);
             Vec3 p = at.add(n.scale(0.012));
             Vec3 a0 = p.subtract(u.scale(len)).subtract(v.scale(wid)), a1 = p.add(u.scale(len)).subtract(v.scale(wid)),
                     a2 = p.add(u.scale(len)).add(v.scale(wid)), a3 = p.subtract(u.scale(len)).add(v.scale(wid));
