@@ -1,0 +1,30 @@
+{
+  "variants": {
+    "facing=up": {
+      "model": "skyblocks:block/beam_light"
+    },
+    "facing=down": {
+      "model": "skyblocks:block/beam_light",
+      "x": 180
+    },
+    "facing=north": {
+      "model": "skyblocks:block/beam_light",
+      "x": 90
+    },
+    "facing=south": {
+      "model": "skyblocks:block/beam_light",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west": {
+      "model": "skyblocks:block/beam_light",
+      "x": 90,
+      "y": 270
+    },
+    "facing=east": {
+      "model": "skyblocks:block/beam_light",
+      "x": 90,
+      "y": 90
+    }
+  }
+}

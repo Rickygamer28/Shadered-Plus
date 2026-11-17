@@ -20,6 +20,9 @@ public class SpotlightBlockEntity extends BlockEntity {
 
     public SpotlightBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.SPOTLIGHT.get(), pos, state);
+        if (state.getBlock() instanceof BeamLightBlock) {
+            colour = 0xFFFFFF; // (a beam light: pure white)
+        }
     }
 
     public int colour() {
@@ -87,7 +90,7 @@ public class SpotlightBlockEntity extends BlockEntity {
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        colour = tag.contains("colour") ? tag.getInt("colour") : 0xFFF4D8;
+        colour = tag.contains("colour") ? tag.getInt("colour") : getBlockState().getBlock() instanceof BeamLightBlock ? 0xFFFFFF : 0xFFF4D8;
         on = !tag.getBoolean("off");
         aimed = tag.contains("aim_yaw");
         aimYaw = tag.getFloat("aim_yaw");

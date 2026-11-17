@@ -44,6 +44,9 @@ public class SpotlightRenderer implements BlockEntityRenderer<SpotlightBlockEnti
     static ShaderInstance shader;
     private static final double REACH = 24.0;
     private static final BlockState HOUSING = Blocks.BLACK_CONCRETE.defaultBlockState(), LENS = Blocks.SEA_LANTERN.defaultBlockState();
+    /** A beam light's: a white body, a light grey rim, a plain white lens. */
+    private static final BlockState SMALL_BODY = Blocks.WHITE_CONCRETE.defaultBlockState(), SMALL_RIM = Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState(),
+            SMALL_LENS = Blocks.WHITE_CONCRETE.defaultBlockState();
 
     @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
@@ -79,8 +82,10 @@ public class SpotlightRenderer implements BlockEntityRenderer<SpotlightBlockEnti
         BlockPos pos = be.getBlockPos();
         net.minecraft.core.Direction mount = be.getBlockState().hasProperty(com.example.skyblocks.SpotlightBlock.FACING)
                 ? be.getBlockState().getValue(com.example.skyblocks.SpotlightBlock.FACING) : net.minecraft.core.Direction.UP;
-        // (the lamp's pivot: 3 pixels out from the middle, the way its stand points)
-        float ox = 0.5F + mount.getStepX() * 3.0F / 16, oy = 0.5F + mount.getStepY() * 3.0F / 16, oz = 0.5F + mount.getStepZ() * 3.0F / 16;
+        // (the lamp's pivot: 3 pixels out from the middle, the way its stand points - a beam light's, 4.5 pixels out from what it's on)
+        boolean small = be.getBlockState().getBlock() instanceof com.example.skyblocks.BeamLightBlock;
+        float out = small ? -3.5F / 16 : 3.0F / 16;
+        float ox = 0.5F + mount.getStepX() * out, oy = 0.5F + mount.getStepY() * out, oz = 0.5F + mount.getStepZ() * out;
         Vec3 lamp = new Vec3(pos.getX() + ox, pos.getY() + oy, pos.getZ() + oz);
         float t = (level.getGameTime() + partialTick) / 20.0F;
         float wantYaw, wantPitch, speed = 1.0F;
@@ -92,6 +97,10 @@ public class SpotlightRenderer implements BlockEntityRenderer<SpotlightBlockEnti
         } else if (be.aimed()) {
             wantYaw = be.aimYaw();
             wantPitch = be.aimPitch();
+        } else if (small) {
+            // (a beam light never aimed: straight out from what it's on, or level)
+            wantYaw = mount.getAxis().isHorizontal() ? (float) Mth.atan2(mount.getStepX(), mount.getStepZ()) : 0.0F;
+            wantPitch = mount == net.minecraft.core.Direction.UP ? 0.0F : mount == net.minecraft.core.Direction.DOWN ? -0.6F : 0.0F;
         } else {
             // what it follows: the nearest player in reach - else a slow sweep
             Player target = null;
@@ -126,10 +135,18 @@ public class SpotlightRenderer implements BlockEntityRenderer<SpotlightBlockEnti
         poseStack.mulPose(Axis.YP.rotation(be.yaw));
         poseStack.mulPose(Axis.XP.rotation(-be.pitch));
         poseStack.translate(-0.5F, -11.0F / 16, -0.5F);
-        BlockSkin.box(HOUSING, level, pos, poseStack, buffers, light, overlay, 5.5F, 8.5F, 5.0F, 10.5F, 13.5F, 11.5F);
-        BlockSkin.box(HOUSING, level, pos, poseStack, buffers, light, overlay, 5.0F, 8.0F, 11.5F, 11.0F, 14.0F, 12.5F);
-        BlockSkin.box(be.on() ? LENS : HOUSING, level, pos, poseStack, buffers, be.on() ? LightTexture.FULL_BRIGHT : light, overlay,
-                6.0F, 9.0F, 12.4F, 10.0F, 13.0F, 12.8F);
+        if (small) {
+            // a small white torch-like lamp: its body, a rim round its front, the lens
+            BlockSkin.box(SMALL_BODY, level, pos, poseStack, buffers, light, overlay, 7.0F, 10.0F, 6.0F, 9.0F, 12.0F, 10.6F);
+            BlockSkin.box(SMALL_RIM, level, pos, poseStack, buffers, light, overlay, 6.6F, 9.6F, 10.6F, 9.4F, 12.4F, 11.4F);
+            BlockSkin.box(be.on() ? SMALL_LENS : SMALL_RIM, level, pos, poseStack, buffers, be.on() ? LightTexture.FULL_BRIGHT : light, overlay,
+                    7.2F, 10.2F, 11.3F, 8.8F, 11.8F, 11.55F);
+        } else {
+            BlockSkin.box(HOUSING, level, pos, poseStack, buffers, light, overlay, 5.5F, 8.5F, 5.0F, 10.5F, 13.5F, 11.5F);
+            BlockSkin.box(HOUSING, level, pos, poseStack, buffers, light, overlay, 5.0F, 8.0F, 11.5F, 11.0F, 14.0F, 12.5F);
+            BlockSkin.box(be.on() ? LENS : HOUSING, level, pos, poseStack, buffers, be.on() ? LightTexture.FULL_BRIGHT : light, overlay,
+                    6.0F, 9.0F, 12.4F, 10.0F, 13.0F, 12.8F);
+        }
         poseStack.popPose();
         if (!be.on()) {
             return;
@@ -137,7 +154,7 @@ public class SpotlightRenderer implements BlockEntityRenderer<SpotlightBlockEnti
 
         // the cone and the pool of light, after Shadered's sky blocks and models (as the lasers)
         Vec3 dir = new Vec3(Math.sin(be.yaw) * Math.cos(be.pitch), Math.sin(be.pitch), Math.cos(be.yaw) * Math.cos(be.pitch));
-        Vec3 from = lamp.add(dir.scale(0.8));
+        Vec3 from = lamp.add(dir.scale(small ? 0.3 : 0.8));
         BlockHitResult hit = level.clip(new ClipContext(from, from.add(dir.scale(REACH)), ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, CollisionContext.empty()));
         Vec3 to = hit.getType() == HitResult.Type.BLOCK ? hit.getLocation() : from.add(dir.scale(REACH));
         if (hit.getType() == HitResult.Type.BLOCK && level.getBlockState(hit.getBlockPos()).getBlock() instanceof com.example.skyblocks.PrismBlock) {
@@ -147,11 +164,12 @@ public class SpotlightRenderer implements BlockEntityRenderer<SpotlightBlockEnti
         int c = be.colour();
         boolean fog = com.example.skyblocks.FogMachineBlockEntity.fogNear(pos, 24.0);
         MusicReactor.tick();
-        float strength = (fog ? 0.75F : 0.28F) * (0.85F + MusicReactor.bass() * 0.3F);
+        float strength = small ? (fog ? 0.9F : 0.5F) : (fog ? 0.75F : 0.28F) * (0.85F + MusicReactor.bass() * 0.3F);
         float len = (float) to.distanceTo(from);
-        float endR = 0.25F + len * 0.09F;
+        // (a beam light's: thin, hardly spreading)
+        float endR = small ? 0.05F + len * 0.012F : 0.25F + len * 0.09F;
         List<float[]> verts = new ArrayList<>();
-        ribbon(verts, pos, from, to, cam, 0.12F, endR, c, strength);
+        ribbon(verts, pos, from, to, cam, small ? 0.03F : 0.12F, endR, c, strength);
         if (hit.getType() == HitResult.Type.BLOCK) {
             spot(verts, pos, to.add(Vec3.atLowerCornerOf(hit.getDirection().getNormal()).scale(0.02)), hit.getDirection(), endR, c, Math.min(1.0F, strength * 1.6F));
         }
@@ -173,8 +191,8 @@ public class SpotlightRenderer implements BlockEntityRenderer<SpotlightBlockEnti
         net.minecraft.core.Direction mount = be.getBlockState().hasProperty(com.example.skyblocks.SpotlightBlock.FACING)
                 ? be.getBlockState().getValue(com.example.skyblocks.SpotlightBlock.FACING) : net.minecraft.core.Direction.UP;
         BlockPos pos = be.getBlockPos();
-        return new Vec3(pos.getX() + 0.5 + mount.getStepX() * 3.0 / 16, pos.getY() + 0.5 + mount.getStepY() * 3.0 / 16,
-                pos.getZ() + 0.5 + mount.getStepZ() * 3.0 / 16);
+        double out = be.getBlockState().getBlock() instanceof com.example.skyblocks.BeamLightBlock ? -3.5 / 16 : 3.0 / 16;
+        return new Vec3(pos.getX() + 0.5 + mount.getStepX() * out, pos.getY() + 0.5 + mount.getStepY() * out, pos.getZ() + 0.5 + mount.getStepZ() * out);
     }
 
     /** A strip from a to b facing the camera, widening from r0 to r1. */

@@ -132,6 +132,7 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> WATERFALL = ITEMS.registerSimpleBlockItem("waterfall", ModBlocks.WATERFALL);
     public static final DeferredItem<BlockItem> STAGE = ITEMS.registerSimpleBlockItem("stage", ModBlocks.STAGE);
     public static final DeferredItem<BlockItem> SPOTLIGHT = ITEMS.registerSimpleBlockItem("spotlight", ModBlocks.SPOTLIGHT);
+    public static final DeferredItem<BlockItem> BEAM_LIGHT = ITEMS.registerSimpleBlockItem("beam_light", ModBlocks.BEAM_LIGHT);
     public static final DeferredItem<BlockItem> TERRARIUM = ITEMS.registerSimpleBlockItem("terrarium", ModBlocks.TERRARIUM);
     public static final java.util.List<DeferredItem<BlockItem>> PLUSHIES = new ArrayList<>();
 

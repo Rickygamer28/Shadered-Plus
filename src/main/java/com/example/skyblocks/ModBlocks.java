@@ -232,6 +232,10 @@ public final class ModBlocks {
     public static final DeferredBlock<SpotlightBlock> SPOTLIGHT = BLOCKS.registerBlock("spotlight", SpotlightBlock::new,
             BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 7)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+    /** A beam light (BeamLightBlock): a small white lamp pointed where you like. */
+    public static final DeferredBlock<BeamLightBlock> BEAM_LIGHT = BLOCKS.registerBlock("beam_light", BeamLightBlock::new,
+            BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 5)
+                    .mapColor(net.minecraft.world.level.material.MapColor.SNOW));
     /** A pet terrarium (TerrariumBlock). */
     public static final DeferredBlock<TerrariumBlock> TERRARIUM = BLOCKS.registerBlock("terrarium", TerrariumBlock::new,
             BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GLASS).noOcclusion().lightLevel(state -> 6)

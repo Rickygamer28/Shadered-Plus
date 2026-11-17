@@ -75,7 +75,7 @@ public final class SpotlightAim {
         }
         event.setCanceled(true);
         event.setSwingHand(true);
-        if (player.isShiftKeyDown() && mc.hitResult instanceof BlockHitResult hit && hit.getType() == HitResult.Type.BLOCK && hit.getBlockPos().equals(pos)) {
+        if (!(be.getBlockState().getBlock() instanceof com.example.skyblocks.BeamLightBlock) && player.isShiftKeyDown() && mc.hitResult instanceof BlockHitResult hit && hit.getType() == HitResult.Type.BLOCK && hit.getBlockPos().equals(pos)) {
             PacketDistributor.sendToServer(new SpotlightPayload(pos, true, 0.0F, 0.0F));
             player.displayClientMessage(Component.translatable("message.skyblocks.spotlight_follow"), true);
             return;

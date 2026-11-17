@@ -111,7 +111,7 @@ public final class ModBlockEntities {
     public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> STAGE = TYPES.register("stage",
             () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.STAGE.get(), p, st), ModBlocks.STAGE.get()).build(null));
     public static final Supplier<BlockEntityType<SpotlightBlockEntity>> SPOTLIGHT = TYPES.register("spotlight",
-            () -> BlockEntityType.Builder.of(SpotlightBlockEntity::new, ModBlocks.SPOTLIGHT.get()).build(null));
+            () -> BlockEntityType.Builder.of(SpotlightBlockEntity::new, ModBlocks.SPOTLIGHT.get(), ModBlocks.BEAM_LIGHT.get()).build(null));
     public static final Supplier<BlockEntityType<TerrariumBlockEntity>> TERRARIUM = TYPES.register("terrarium",
             () -> BlockEntityType.Builder.of(TerrariumBlockEntity::new, ModBlocks.TERRARIUM.get()).build(null));
     public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> BIG_SCREEN = TYPES.register("big_screen",
