@@ -103,7 +103,7 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
 
     /** Per prism: the lamp it last found near it (looked for once a second), how it was turned when it stopped turning. */
     private static final class State {
-        long lookedAt = Long.MIN_VALUE;
+        long lookedAt = -1000L; // (not looked yet; not Long.MIN_VALUE - now minus that overflows)
         Vec3 lamp;
         float lampStrength;
         boolean wasTurning = true;
@@ -154,6 +154,7 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
         }
         // (where the light comes from, for its beam in: a spotlight draws its own)
         Vec3 source = null;
+        boolean sunIn = false;
         if (s.lamp != null && s.lampStrength > strength) {
             in = middle.subtract(s.lamp).normalize();
             strength = s.lampStrength;
@@ -170,6 +171,7 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
             BlockHitResult roof = level.clip(new ClipContext(middle.subtract(in.scale(0.4)), up, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE,
                     CollisionContext.empty()));
             source = roof.getType() == HitResult.Type.BLOCK ? roof.getLocation() : up;
+            sunIn = true; // (a sunbeam: faint)
         }
         if (strength <= 0.02F) {
             in = null;
@@ -186,7 +188,7 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
         // the light thrown out, worked out now (where each rainbow lands)
         List<float[]> verts = new ArrayList<>();
         if (in != null && Minecraft.getInstance().gameRenderer.getMainCamera().getPosition().distanceToSqr(middle) < 64 * 64) {
-            cast(level, pos, middle, in, source, turn, strength, tint, time, verts);
+            cast(level, pos, middle, in, source, sunIn ? 0.3F : 1.0F, turn, strength, tint, time, verts);
         }
         Runnable draw = () -> {
             ElevatorRenderer.drawNow(Types.CRYSTAL, vc -> box(vc, m, fb, fl, fs, fbright, fturn));
@@ -224,7 +226,7 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
     }
 
     /** How far the light's turned going through (radians), how wide the colours fan out, how thick the fan is. */
-    private static final float BEND = 0.42F, FAN = 0.30F, THICK = 0.035F;
+    private static final float BEND = 0.6F, FAN = 0.30F, THICK = 0.035F;
     private static final int BANDS = 16;
 
     /**
@@ -234,8 +236,8 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
      * Which way it's turned goes round the light's way as the crystal turns. Each band's own way followed to where it
      * lands, so the rainbow lies on whatever it reaches - the floor, a wall, round a corner, part on each.
      */
-    private static void cast(Level level, BlockPos pos, Vec3 middle, Vec3 in, Vec3 source, float turn, float strength, int tint, float time,
-                             List<float[]> out) {
+    private static void cast(Level level, BlockPos pos, Vec3 middle, Vec3 in, Vec3 source, float beamIn, float turn, float strength, int tint,
+                             float time, List<float[]> out) {
         Vec3 e1 = Math.abs(in.y) < 0.9 ? in.cross(new Vec3(0, 1, 0)).normalize() : in.cross(new Vec3(1, 0, 0)).normalize();
         Vec3 e2 = in.cross(e1).normalize();
         // (the axis it's turned round: across the light's way, going round as the crystal turns)
@@ -250,7 +252,7 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
             Vec3 side = in.cross(cam.subtract(into));
             if (side.lengthSqr() > 1e-8) {
                 side = side.normalize();
-                float a = strength * 0.55F;
+                float a = strength * 0.55F * beamIn;
                 put(out, pos, source.subtract(side.scale(0.045)), -1, -1, cr, cg, cb, a * 0.3F);
                 put(out, pos, source.add(side.scale(0.045)), -1, 1, cr, cg, cb, a * 0.3F);
                 put(out, pos, into.add(side.scale(0.035)), -1, 1, cr, cg, cb, a);
@@ -267,6 +269,12 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
             Vec3 from = exit.add(way[k].scale(0.05));
             BlockHitResult hit = level.clip(new ClipContext(from, from.add(way[k].scale(REACH)), ClipContext.Block.VISUAL, ClipContext.Fluid.NONE,
                     CollisionContext.empty()));
+            if (hit.getType() == HitResult.Type.BLOCK && hit.getBlockPos().equals(pos)) {
+                // (its own stand in the way: on past it)
+                Vec3 past = hit.getLocation().add(way[k].scale(0.02));
+                hit = level.clip(new ClipContext(past, from.add(way[k].scale(REACH)), ClipContext.Block.VISUAL, ClipContext.Fluid.NONE,
+                        CollisionContext.empty()));
+            }
             boolean landed = hit.getType() == HitResult.Type.BLOCK && !hit.getBlockPos().equals(pos);
             hits[k] = landed ? hit : null;
             end[k] = landed ? hit.getLocation() : from.add(way[k].scale(REACH));
