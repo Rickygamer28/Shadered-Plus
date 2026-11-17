@@ -109,7 +109,7 @@ public final class ElevatorButtons {
         float landing = cabin.landing(), vel = cabin.velocity(0.0F);
         double dy = p.getDeltaMovement().y;
         boolean over = Math.abs(p.getX() - cabin.getX()) < 1.45 && Math.abs(p.getZ() - cabin.getZ()) < 1.45;
-        boolean near = p.getY() > landing - 0.6F - Math.abs(vel) * 2.0F && p.getY() < landing + Math.max(-vel, 0.0F) + 0.15F;
+        boolean near = p.getY() > landing - 0.6F - Math.abs(vel) * 2.0F && p.getY() < landing + Math.abs(vel) + 0.25F;
         boolean jumping = dy > Math.max(vel, 0.0F) + 0.12;
         if (over && near && !jumping) {
             p.setPos(p.getX(), landing, p.getZ());

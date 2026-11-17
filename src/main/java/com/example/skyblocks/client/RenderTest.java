@@ -32,6 +32,8 @@ public final class RenderTest {
     /** (the elevators: which to send up to floor 3 at tick 40 - -1 all, -2 none; and its screen opened) */
     private static int elevCall = -2;
     private static boolean elevUi, elevPress, elevJump;
+    private static double elevLastY;
+    private static int elevDrops;
 
     static final boolean ON = System.getenv("SKYBLOCKS_RENDER_TEST") != null;
     private static final String TAG = System.getenv().getOrDefault("SKYBLOCKS_RENDER_TEST", "x");
@@ -814,9 +816,22 @@ public final class RenderTest {
                                 SkyBlocksMod.LOGGER.info("Shadered+ render test: elevator jump: cabin at {}", c.landing());
                             }
                         }
-                        if (elevCall >= 0 && !elevJump && ticks >= 60 && ticks < 90 && mc.player != null) {
+                        if (elevCall >= 0 && !elevJump && ticks >= 60 && ticks < 80 && mc.player != null) {
                             // (walking about in the cabin as it rises)
-                            mc.player.setDeltaMovement(mc.player.getDeltaMovement().add(ticks < 75 ? 0.06 : -0.06, 0.0, 0.0));
+                            mc.player.setDeltaMovement(mc.player.getDeltaMovement().add(ticks < 70 ? 0.03 : -0.03, 0.0, 0.0));
+                        }
+                        if (elevCall >= 0 && ticks > 45 && ticks < 100 && mc.player != null) {
+                            // (each tick: never a step down while it rises)
+                            if (mc.player.getY() < elevLastY - 0.005) {
+                                elevDrops++;
+                            }
+                            elevLastY = mc.player.getY();
+                        } else if (elevCall >= 0 && ticks == 45 && mc.player != null) {
+                            elevLastY = mc.player.getY();
+                            elevDrops = 0;
+                        }
+                        if (elevCall >= 0 && ticks == 99) {
+                            SkyBlocksMod.LOGGER.info("Shadered+ render test: elevator steps down while rising: {}", elevDrops);
                         }
                         if (elevJump && ticks == 99 && mc.player != null) {
                             SkyBlocksMod.LOGGER.info("Shadered+ render test: elevator jump: player y {}, riding {}",

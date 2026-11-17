@@ -82,9 +82,30 @@ public class ElevatorCabinEntity extends Entity {
         return entityData.get(TO);
     }
 
+    /** (client) The trip it last saw start, and its own tick count then less how long it had been going. */
+    private long seenStart = Long.MIN_VALUE;
+    private int tripFrom;
+
+    /**
+     * How long it's been on its trip (ticks). On a client, counted by its own ticks from when it saw the trip start: the
+     * game's time there is put right by the server now and then - a tick back, sometimes - and the cabin went back with
+     * it (a jolt down as it rose, its riders dropping onto it).
+     */
+    private float elapsed(float partialTick) {
+        long start = entityData.get(START);
+        if (!level().isClientSide) {
+            return level().getGameTime() - start + partialTick;
+        }
+        if (start != seenStart) {
+            seenStart = start;
+            tripFrom = tickCount - (int) Mth.clamp(level().getGameTime() - start, 0L, 1_000_000L);
+        }
+        return tickCount - tripFrom + partialTick;
+    }
+
     /** How far along its trip it is (0 .. 1). */
     private float along(float partialTick) {
-        float t = (level().getGameTime() - entityData.get(START) + partialTick) / Math.max(1, entityData.get(TIME));
+        float t = elapsed(partialTick) / Math.max(1, entityData.get(TIME));
         return Mth.clamp(t, 0.0F, 1.0F);
     }
 
@@ -118,7 +139,7 @@ public class ElevatorCabinEntity extends Entity {
     }
 
     public boolean moving() {
-        return level().getGameTime() - entityData.get(START) < entityData.get(TIME);
+        return elapsed(0.0F) < entityData.get(TIME);
     }
 
     /** Off to a floor: everything standing on it rides it. */
