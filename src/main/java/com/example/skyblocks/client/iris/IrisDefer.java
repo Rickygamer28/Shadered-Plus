@@ -89,6 +89,7 @@ public final class IrisDefer {
                 || be instanceof com.example.skyblocks.TimeCrystalBlockEntity
                 || be instanceof com.example.skyblocks.ElevatorBaseBlockEntity
                 || be instanceof com.example.skyblocks.HourglassBlockEntity
+                || be.getBlockState().getBlock() instanceof com.example.skyblocks.PrismBlock
                 || be instanceof com.example.skyblocks.ChalkRuneBlockEntity;
     }
 

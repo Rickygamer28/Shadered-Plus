@@ -9,10 +9,12 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
-/** A spotlight: its colour and on / off; on the client, where its lamp points now (turning smoothly). */
+/** A spotlight: its colour, on / off, and aimed one way (aimYaw, aimPitch) or following players; on the client, where its lamp points now (turning smoothly). */
 public class SpotlightBlockEntity extends BlockEntity {
     private int colour = 0xFFF4D8;
     private boolean on = true;
+    private boolean aimed;
+    private float aimYaw, aimPitch;
     public float yaw, pitch = -0.6F;
     public long turnedAt;
 
@@ -38,6 +40,32 @@ public class SpotlightBlockEntity extends BlockEntity {
         changed();
     }
 
+    public boolean aimed() {
+        return aimed;
+    }
+
+    public float aimYaw() {
+        return aimYaw;
+    }
+
+    public float aimPitch() {
+        return aimPitch;
+    }
+
+    /** Points it that way and keeps it there (yaw round from south, pitch up; radians). */
+    public void aim(float yaw, float pitch) {
+        aimed = true;
+        aimYaw = yaw;
+        aimPitch = Math.max(-1.5707F, Math.min(1.5707F, pitch));
+        changed();
+    }
+
+    /** Back to following the nearest player. */
+    public void follow() {
+        aimed = false;
+        changed();
+    }
+
     private void changed() {
         setChanged();
         if (level != null) {
@@ -50,6 +78,10 @@ public class SpotlightBlockEntity extends BlockEntity {
         super.saveAdditional(tag, registries);
         tag.putInt("colour", colour);
         tag.putBoolean("off", !on);
+        if (aimed) {
+            tag.putFloat("aim_yaw", aimYaw);
+            tag.putFloat("aim_pitch", aimPitch);
+        }
     }
 
     @Override
@@ -57,6 +89,9 @@ public class SpotlightBlockEntity extends BlockEntity {
         super.loadAdditional(tag, registries);
         colour = tag.contains("colour") ? tag.getInt("colour") : 0xFFF4D8;
         on = !tag.getBoolean("off");
+        aimed = tag.contains("aim_yaw");
+        aimYaw = tag.getFloat("aim_yaw");
+        aimPitch = tag.getFloat("aim_pitch");
     }
 
     @Override

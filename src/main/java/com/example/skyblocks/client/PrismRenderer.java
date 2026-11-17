@@ -12,13 +12,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.ClipContext;
@@ -29,23 +30,52 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 /**
- * The prism: its glass (a triangle-ended bar, apex up, on the stand of its model), and what light does going through
- * it - comes out the far side bent down towards its base and spread into a fan, red bent least and violet most, striped
- * across whatever it lands on. The light: a spotlight's beam shone on it (SpotlightRenderer tells it), else the sun -
- * by day, not in rain, if the sun can reach it (through glass too).
+ * The prism: a clear crystal floating over its stand, turning slowly (shaders/core/prism_crystal: light off its faces
+ * and bent through it, split into its colours), and what light does going through it - thrown out in all directions
+ * as little rainbows, red at one end, violet at the other, scattered over the floor and walls round it and drifting
+ * as it turns (shaders/core/prism_light), faint rays of colour through the air to them. The light: a spotlight's beam
+ * shone on it (SpotlightRenderer tells it), a lamp near it (anything giving off light, in sight of it), or the sun -
+ * by day, not in rain, where the sun can reach it (through glass too); whichever's strongest.
  */
 public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEntity> {
-    private static final ResourceLocation GLASS = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "textures/block/prism_glass.png");
+    static ShaderInstance crystalShader, lightShader;
+    /** The crystal's middle (from the block's corner) and the box round it (half sizes). */
+    private static final float CY = 0.55F, HX = 0.22F, HY = 0.29F;
+    /** How many rainbows, how far they reach (blocks); one turn takes this long (ticks). */
+    private static final int SPOTS = 34, REACH = 12, TURN_TICKS = 1600;
+
+    @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    public static final class Shaders {
+        private Shaders() {}
+
+        @SubscribeEvent
+        public static void registerPrismShaders(RegisterShadersEvent event) {
+            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "prism_crystal"), DefaultVertexFormat.POSITION_TEX_COLOR,
+                    s -> crystalShader = s);
+            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "prism_light"), DefaultVertexFormat.POSITION_TEX_COLOR,
+                    s -> lightShader = s);
+        }
+    }
 
     abstract static class Types extends RenderType {
-        /** The rainbow: light added onto what it falls on (and, faintly, the air it goes through). */
-        static final RenderType RAINBOW = create("skyblocks_prism_rainbow", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 16384, false, true,
+        static final RenderType CRYSTAL = create("skyblocks_prism_crystal", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 256, false, false,
                 CompositeState.builder()
-                        .setShaderState(POSITION_COLOR_SHADER)
+                        .setShaderState(new ShaderStateShard(() -> crystalShader))
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .setCullState(NO_CULL)
+                        .createCompositeState(false));
+        /** The light it throws: added onto what it falls on (and, faintly, the air). */
+        static final RenderType LIGHT = create("skyblocks_prism_light", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 8192, false, true,
+                CompositeState.builder()
+                        .setShaderState(new ShaderStateShard(() -> lightShader))
                         .setTransparencyState(LIGHTNING_TRANSPARENCY)
                         .setCullState(NO_CULL)
                         .setWriteMaskState(COLOR_WRITE)
@@ -57,38 +87,29 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
         }
     }
 
-    /** Spotlight beams shone on prisms lately: where it came from (its direction) and its colour, and when. */
+    /** Spotlight beams shone on prisms lately: which way it was going, its colour, and when. */
     private record Beam(Vec3 dir, int colour, long at) {}
 
     private static final Map<BlockPos, Beam> BEAMS = new HashMap<>();
-    /** (the light's the sun's: thrown out to the side, as sunlight through a prism on a sill makes its rainbow on the floor) */
-    private static final int SUN = -2;
 
     /** A spotlight's beam has hit the prism at pos (its direction, its colour). */
     public static void shone(BlockPos pos, Vec3 dir, int colour, long gameTime) {
-        int c = colour & 0xFFFFFF;
-        if ((c >> 16 & 255) > 200 && (c >> 8 & 255) > 200 && (c & 255) > 200) {
-            c = -1; // (white light: a plain rainbow)
-        }
-        BEAMS.put(pos.immutable(), new Beam(dir.normalize(), c, gameTime));
+        BEAMS.put(pos.immutable(), new Beam(dir.normalize(), colour & 0xFFFFFF, gameTime));
         if (BEAMS.size() > 64) {
             BEAMS.entrySet().removeIf(e -> gameTime - e.getValue().at() > 40);
         }
     }
 
-    /** The rainbow's lines worked out (cached a moment: they only change as the light does). */
-    private static final class Fan {
-        long at = -1000;
-        Vec3 dir;
-        float strength;
-        int tint = -1;
-        final List<float[]> air = new ArrayList<>(), land = new ArrayList<>();
+    /** Per prism: the lamp it last found near it (looked for once a second), how it was turned when it stopped turning. */
+    private static final class State {
+        long lookedAt = Long.MIN_VALUE;
+        Vec3 lamp;
+        float lampStrength;
+        boolean wasTurning = true;
+        float stoppedAt = Float.NaN;
     }
 
-    private static final Map<SimpleRenderedBlockEntity, Fan> FANS = new WeakHashMap<>();
-    private static final int RAYS = 28, REACH = 14;
-    /** How far the light's bent (radians), the fan's spread, and how wide its stripe is (blocks). */
-    private static final float BEND = 0.5F, SPREAD = 0.32F, WIDTH = 0.42F;
+    private static final Map<SimpleRenderedBlockEntity, State> STATES = new WeakHashMap<>();
 
     public PrismRenderer(BlockEntityRendererProvider.Context context) {}
 
@@ -96,79 +117,200 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
     public void render(SimpleRenderedBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
         Level level = be.getLevel();
         BlockState state = be.getBlockState();
-        if (level == null || !state.hasProperty(PrismBlock.AXIS)) {
+        if (level == null || crystalShader == null || !(state.getBlock() instanceof PrismBlock)) {
             return;
         }
-        boolean alongX = state.getValue(PrismBlock.AXIS) == Direction.Axis.X;
-        glass(poseStack, buffers, light, overlay, alongX);
-
-        // the light going in
         BlockPos pos = be.getBlockPos();
+        State s = STATES.computeIfAbsent(be, k -> new State());
         long now = level.getGameTime();
-        Vec3 dir = null;
-        float strength = 0;
-        int tint = -1;
+        float time = now + partialTick;
+        long seed = pos.asLong() * 0x9E3779B97F4A7C15L;
+
+        // how it's turned: slowly round, or held where it was when it was stopped
+        boolean turning = !state.hasProperty(PrismBlock.TURNING) || state.getValue(PrismBlock.TURNING);
+        float running = (float) ((time % TURN_TICKS) / TURN_TICKS * Math.PI * 2.0) + (seed >>> 40 & 1023) / 163.0F;
+        if (!turning && s.wasTurning) {
+            s.stoppedAt = running;
+        }
+        s.wasTurning = turning;
+        float turn = turning ? running : Float.isNaN(s.stoppedAt) ? (seed >>> 40 & 1023) / 163.0F : s.stoppedAt;
+        float bob = 0.012F * Mth.sin(time * 0.06F);
+        Vec3 middle = new Vec3(pos.getX() + 0.5, pos.getY() + CY + bob, pos.getZ() + 0.5);
+
+        // the light going in (which way it's travelling), its strength and colour
+        Vec3 in = null;
+        float strength = 0.0F;
+        int tint = 0xFFFFFF;
         Beam beam = BEAMS.get(pos);
         if (beam != null && now - beam.at() <= 3) {
-            dir = beam.dir();
-            strength = 0.75F;
+            in = beam.dir();
+            strength = 1.0F;
             tint = beam.colour();
-        } else if (sunlit(level, pos, partialTick)) {
-            dir = sunDirection(level, partialTick).scale(-1); // (from the sun, down towards the prism)
-            strength = 0.55F * (1.0F - level.getRainLevel(partialTick));
-            tint = SUN;
         }
-        if (dir == null || strength <= 0.02F) {
-            return;
+        if (now - s.lookedAt >= 20 || now < s.lookedAt) {
+            findLamp(level, pos, middle, s);
+            s.lookedAt = now;
         }
-        Fan fan = FANS.computeIfAbsent(be, k -> new Fan());
-        if (now - fan.at > 10 || now < fan.at || fan.dir == null || fan.dir.distanceToSqr(dir) > 0.0004 || fan.tint != tint) {
-            cast(level, pos, dir, alongX, tint == SUN, fan);
-            fan.at = now;
-            fan.dir = dir;
-            fan.tint = tint;
+        if (s.lamp != null && s.lampStrength > strength) {
+            in = middle.subtract(s.lamp).normalize();
+            strength = s.lampStrength;
+            tint = 0xFFFFFF;
         }
-        fan.strength = strength;
-        MultiBufferSource.BufferSource source = DrawNow.now(buffers);
-        VertexConsumer vc = source.getBuffer(Types.RAINBOW);
-        Matrix4f m = poseStack.last().pose();
-        float shimmer = 0.93F + 0.07F * Mth.sin((now + partialTick) * 0.13F);
-        int colour = tint == SUN ? -1 : tint;
-        for (float[] q : fan.air) {
-            emit(vc, m, q, strength * 0.09F * shimmer, colour);
+        float sun = sunlit(level, pos, partialTick) ? 0.8F * (1.0F - level.getRainLevel(partialTick)) : 0.0F;
+        if (sun > strength) {
+            in = sunDirection(level, partialTick).scale(-1);
+            strength = sun;
+            tint = 0xFFFFFF;
         }
-        for (float[] q : fan.land) {
-            emit(vc, m, q, strength * shimmer, colour);
+        if (strength <= 0.02F) {
+            in = null;
+            strength = 0.0F;
         }
-        source.endBatch(Types.RAINBOW);
-    }
 
-    /** A quad: 4 corners (x y z, from the block), their hues (0 red .. 1 violet), how strong at each corner. */
-    private static void emit(VertexConsumer vc, Matrix4f m, float[] q, float strength, int tint) {
-        for (int i = 0; i < 4; i++) {
-            int rgb = hue(q[12 + i]);
-            float r = (rgb >> 16 & 255) / 255.0F, g = (rgb >> 8 & 255) / 255.0F, b = (rgb & 255) / 255.0F;
-            if (tint != -1) {
-                // (a coloured beam: its rainbow leans to its colour)
-                r = r * 0.55F + ((tint >> 16) & 255) / 255.0F * 0.45F;
-                g = g * 0.55F + ((tint >> 8) & 255) / 255.0F * 0.45F;
-                b = b * 0.55F + (tint & 255) / 255.0F * 0.45F;
+        // the crystal
+        int packed = LevelRendererLight.at(level, pos);
+        float bright = Math.max(LightTexture.block(packed), LightTexture.sky(packed) * Math.max(0.0F, ((level instanceof net.minecraft.client.multiplayer.ClientLevel cl ? cl.getSkyDarken(partialTick) : 1.0F) - 0.2F) / 0.8F)) / 15.0F;
+        Vec3 toLight = in == null ? new Vec3(0.3, 0.9, 0.3).normalize() : in.scale(-1);
+        Matrix4f m = new Matrix4f(poseStack.last().pose());
+        float fb = bob, fs = strength, fbright = bright, fturn = turn;
+        Vec3 fl = toLight;
+        // the light thrown out, worked out now (where each rainbow lands)
+        List<float[]> verts = new ArrayList<>();
+        if (in != null && Minecraft.getInstance().gameRenderer.getMainCamera().getPosition().distanceToSqr(middle) < 64 * 64) {
+            cast(level, pos, middle, in, turn, strength, tint, seed, time, verts);
+        }
+        Runnable draw = () -> {
+            ElevatorRenderer.drawNow(Types.CRYSTAL, vc -> box(vc, m, fb, fl, fs, fbright, fturn));
+            if (!verts.isEmpty() && lightShader != null) {
+                ElevatorRenderer.drawNow(Types.LIGHT, vc -> {
+                    for (float[] p : verts) {
+                        vc.addVertex(m, p[0], p[1], p[2]).setUv(p[3], p[4]).setColor((int) p[5], (int) p[6], (int) p[7], (int) p[8]);
+                    }
+                });
             }
-            float a = Mth.clamp(strength * q[16 + i], 0.0F, 1.0F);
-            vc.addVertex(m, q[i * 3], q[i * 3 + 1], q[i * 3 + 2]).setColor(r, g, b, a);
+        };
+        if (!LatePass.later(src -> draw.run())) {
+            draw.run();
         }
     }
 
-    /** Red (0) .. orange, yellow, green, blue .. violet (1). */
-    private static int hue(float t) {
-        float[][] stops = {{1.0F, 0.18F, 0.15F}, {1.0F, 0.55F, 0.1F}, {1.0F, 0.95F, 0.2F}, {0.25F, 0.95F, 0.3F}, {0.2F, 0.55F, 1.0F}, {0.45F, 0.25F, 1.0F},
-                {0.72F, 0.25F, 0.95F}};
-        float f = Mth.clamp(t, 0.0F, 1.0F) * (stops.length - 1);
-        int i = Math.min((int) f, stops.length - 2);
-        float k = f - i;
-        int r = (int) (Mth.lerp(k, stops[i][0], stops[i + 1][0]) * 255), g = (int) (Mth.lerp(k, stops[i][1], stops[i + 1][1]) * 255),
-                b = (int) (Mth.lerp(k, stops[i][2], stops[i + 1][2]) * 255);
-        return r << 16 | g << 8 | b;
+    /** The box round the crystal (only its faces towards the eye), each corner carrying what the shader needs. */
+    private static void box(VertexConsumer vc, Matrix4f m, float bob, Vec3 toLight, float strength, float bright, float turn) {
+        Vector3f centre = m.transformPosition(0.5F, CY + bob, 0.5F, new Vector3f());
+        float ex = -centre.x, ey = -centre.y, ez = -centre.z;
+        int r = Mth.clamp(Math.round((float) (toLight.x * 0.5 + 0.5) * 255), 0, 255), g = Mth.clamp(Math.round((float) (toLight.y * 0.5 + 0.5) * 255), 0, 255),
+                b = Mth.clamp(Math.round((float) (toLight.z * 0.5 + 0.5) * 255), 0, 255), a = Mth.clamp(Math.round(strength * 255), 0, 255);
+        int[][] faces = {{0, 2, 6, 4}, {1, 5, 7, 3}, {0, 4, 5, 1}, {2, 3, 7, 6}, {0, 1, 3, 2}, {4, 6, 7, 5}};
+        float[] towards = {-ex - HX, ex - HX, -ey - HY, ey - HY, -ez - HX, ez - HX};
+        float frac = Mth.clamp(bright, 0.0F, 1.0F) * 0.9F;
+        for (int f = 0; f < 6; f++) {
+            if (towards[f] > 0) {
+                continue;
+            }
+            for (int c : faces[f]) {
+                float x = ((c & 1) * 2 - 1) * HX, y = (((c >> 1) & 1) * 2 - 1) * HY, z = (((c >> 2) & 1) * 2 - 1) * HX;
+                vc.addVertex(m, 0.5F + x, CY + bob + y, 0.5F + z).setColor(r, g, b, a).setUv(c + frac, turn);
+            }
+        }
+    }
+
+    /**
+     * Light through the crystal, out every way: each ray turned from the light's own way by its own angle (some only a
+     * little, some right back out the side it came in), round the way the crystal's turned - so they drift as it turns.
+     * Each a little rainbow where it lands, longer the further it went; a faint ray of colour to it.
+     */
+    private static void cast(Level level, BlockPos pos, Vec3 middle, Vec3 in, float turn, float strength, int tint, long seed, float time, List<float[]> out) {
+        Vec3 e1 = Math.abs(in.y) < 0.9 ? in.cross(new Vec3(0, 1, 0)).normalize() : in.cross(new Vec3(1, 0, 0)).normalize();
+        Vec3 e2 = in.cross(e1).normalize();
+        Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        java.util.Random rnd = new java.util.Random(seed);
+        int cr = tint >> 16 & 255, cg = tint >> 8 & 255, cb = tint & 255;
+        for (int k = 0; k < SPOTS; k++) {
+            float az = rnd.nextFloat() * Mth.TWO_PI, bend = 0.12F + rnd.nextFloat() * rnd.nextFloat() * 2.4F, power = 0.45F + rnd.nextFloat() * 0.55F;
+            float phase = rnd.nextFloat() * 100.0F;
+            Vec3 axis = e1.scale(Math.cos(az + turn)).add(e2.scale(Math.sin(az + turn)));
+            Vec3 d = rotate(in, axis, bend);
+            // (the way the colours spread: the way bending more takes it)
+            Vec3 spread = rotate(in, axis, bend + 0.05F).subtract(d);
+            Vec3 from = middle.add(d.scale(0.25));
+            BlockHitResult hit = level.clip(new ClipContext(from, from.add(d.scale(REACH)), ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, CollisionContext.empty()));
+            if (hit.getType() != HitResult.Type.BLOCK || hit.getBlockPos().equals(pos)) {
+                continue;
+            }
+            Vec3 at = hit.getLocation();
+            float dist = (float) at.distanceTo(middle);
+            Vec3 n = Vec3.atLowerCornerOf(hit.getDirection().getNormal());
+            Vec3 u = spread.subtract(n.scale(spread.dot(n)));
+            if (u.lengthSqr() < 1e-8) {
+                u = Math.abs(n.y) > 0.5 ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
+            }
+            u = u.normalize();
+            Vec3 v = n.cross(u).normalize();
+            float len = 0.06F + dist * 0.032F, wid = 0.035F + dist * 0.009F;
+            // (fainter the further it went and the more it's spread; twinkling a little)
+            float twinkle = 0.85F + 0.15F * Mth.sin(time * 0.21F + phase);
+            float bright = Mth.clamp(strength * power * twinkle * 1.15F / (1.0F + dist * 0.12F), 0.0F, 1.0F);
+            Vec3 p = at.add(n.scale(0.012));
+            Vec3 a0 = p.subtract(u.scale(len)).subtract(v.scale(wid)), a1 = p.add(u.scale(len)).subtract(v.scale(wid)),
+                    a2 = p.add(u.scale(len)).add(v.scale(wid)), a3 = p.subtract(u.scale(len)).add(v.scale(wid));
+            put(out, pos, a0, -1, -1, cr, cg, cb, bright);
+            put(out, pos, a1, 1, -1, cr, cg, cb, bright);
+            put(out, pos, a2, 1, 1, cr, cg, cb, bright);
+            put(out, pos, a3, -1, 1, cr, cg, cb, bright);
+            // the ray to it, faint, facing the eye: red on one side, violet the other
+            float rayBright = bright * 0.09F;
+            if (rayBright > 0.004F) {
+                Vec3 side = d.cross(cam.subtract(from));
+                if (side.lengthSqr() > 1e-8) {
+                    side = side.normalize();
+                    float s0 = 0.012F, s1 = Math.max(wid, 0.03F);
+                    put(out, pos, from.subtract(side.scale(s0)), 2, -1, cr, cg, cb, rayBright);
+                    put(out, pos, from.add(side.scale(s0)), 2, 1, cr, cg, cb, rayBright);
+                    put(out, pos, p.add(side.scale(s1)), 3, 1, cr, cg, cb, rayBright);
+                    put(out, pos, p.subtract(side.scale(s1)), 3, -1, cr, cg, cb, rayBright);
+                }
+            }
+        }
+    }
+
+    private static void put(List<float[]> out, BlockPos pos, Vec3 p, float u, float v, int r, int g, int b, float a) {
+        out.add(new float[] {(float) (p.x - pos.getX()), (float) (p.y - pos.getY()), (float) (p.z - pos.getZ()), u, v, r, g, b,
+                Mth.clamp(a, 0.0F, 1.0F) * 255});
+    }
+
+    /** The brightest lamp in sight within 7 blocks (anything giving off light 8 or more), and how strong it is here. */
+    private static void findLamp(Level level, BlockPos pos, Vec3 middle, State s) {
+        s.lamp = null;
+        s.lampStrength = 0.0F;
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int dy = -4; dy <= 5; dy++) {
+            for (int dx = -7; dx <= 7; dx++) {
+                for (int dz = -7; dz <= 7; dz++) {
+                    p.set(pos.getX() + dx, pos.getY() + dy, pos.getZ() + dz);
+                    if (dx == 0 && dy == 0 && dz == 0) {
+                        continue;
+                    }
+                    BlockState st = level.getBlockState(p);
+                    int glow = st.isAir() ? 0 : st.getLightEmission(level, p);
+                    if (glow < 8) {
+                        continue;
+                    }
+                    Vec3 lamp = Vec3.atCenterOf(p);
+                    float dist = (float) lamp.distanceTo(middle);
+                    float strength = glow / 15.0F * Mth.clamp(1.15F - dist / 8.0F, 0.0F, 1.0F) * 0.9F;
+                    if (strength <= s.lampStrength) {
+                        continue;
+                    }
+                    // (in sight: nothing solid between them)
+                    BlockHitResult hit = level.clip(new ClipContext(middle, lamp, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, CollisionContext.empty()));
+                    if (hit.getType() == HitResult.Type.BLOCK && !hit.getBlockPos().equals(p) && !hit.getBlockPos().equals(pos)) {
+                        continue;
+                    }
+                    s.lamp = lamp;
+                    s.lampStrength = strength;
+                }
+            }
+        }
     }
 
     /** Where the sun is (a unit vector, towards it). */
@@ -207,125 +349,17 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
         return true;
     }
 
-    /** The fan's rays from the prism (bent and spread round its long edge), to where each lands; quads between them. */
-    private static void cast(Level level, BlockPos pos, Vec3 in, boolean alongX, boolean sun, Fan fan) {
-        fan.air.clear();
-        fan.land.clear();
-        Vec3 axis = alongX ? new Vec3(1, 0, 0) : new Vec3(0, 0, 1);
-        // (light along the prism's edge doesn't go through its faces: the part across it does)
-        Vec3 across = in.subtract(axis.scale(in.dot(axis)));
-        if (across.lengthSqr() < 0.05) {
-            return;
-        }
-        // bent towards its base (down): whichever way round the edge takes it lower
-        Vec3 plus = rotate(in, axis, BEND), minus = rotate(in, axis, -BEND);
-        float sign = plus.y < minus.y ? 1.0F : -1.0F;
-        Vec3 centre = Vec3.atLowerCornerOf(pos).add(0.5, 5.5 / 16, 0.5);
-        Vec3[] hits = new Vec3[RAYS];
-        Direction[] faces = new Direction[RAYS];
-        Vec3[] dirs = new Vec3[RAYS];
-        // (the sun: out across the prism, away from the sun's side - or, at noon, its south side - dipping down to the floor,
-        // red the least, violet the most)
-        Vec3 perp = alongX ? new Vec3(0, 0, 1) : new Vec3(1, 0, 0);
-        double side = Math.abs(in.dot(perp)) < 0.12 ? 1.0 : Math.signum(in.dot(perp));
-        for (int i = 0; i < RAYS; i++) {
-            float t = i / (float) (RAYS - 1);
-            Vec3 d;
-            if (sun) {
-                double dip = Math.toRadians(9.0 + 30.0 * t);
-                d = perp.scale(side * Math.cos(dip)).add(0, -Math.sin(dip), 0);
-            } else {
-                d = rotate(in, axis, sign * (BEND + SPREAD * (t - 0.5F)));
-            }
-            dirs[i] = d;
-            Vec3 from = centre.add(d.scale(0.3));
-            BlockHitResult hit = level.clip(new ClipContext(from, from.add(d.scale(REACH)), ClipContext.Block.VISUAL, ClipContext.Fluid.NONE,
-                    CollisionContext.empty()));
-            if (hit.getType() == HitResult.Type.BLOCK && !hit.getBlockPos().equals(pos)) {
-                hits[i] = hit.getLocation();
-                faces[i] = hit.getDirection();
-            }
-        }
-        Vec3 origin = Vec3.atLowerCornerOf(pos);
-        for (int i = 0; i + 1 < RAYS; i++) {
-            float h0 = i / (float) (RAYS - 1), h1 = (i + 1) / (float) (RAYS - 1);
-            Vec3 a = centre.add(dirs[i].scale(0.3)), b = centre.add(dirs[i + 1].scale(0.3));
-            Vec3 ea = hits[i] != null ? hits[i] : a.add(dirs[i].scale(4)), eb = hits[i + 1] != null ? hits[i + 1] : b.add(dirs[i + 1].scale(4));
-            // (the fan through the air: bright at the prism, fading out)
-            fan.air.add(quad(origin, a, b, eb, ea, h0, h1, h1, h0, 1, 1, hits[i + 1] != null ? 0.6F : 0, hits[i] != null ? 0.6F : 0));
-            if (hits[i] == null || hits[i + 1] == null || faces[i] != faces[i + 1] || hits[i].distanceToSqr(hits[i + 1]) > 1.0) {
-                continue;
-            }
-            // (where it lands: a stripe of that colour, as wide as the prism's long, along its edge's way on that surface)
-            Vec3 n = Vec3.atLowerCornerOf(faces[i].getNormal());
-            Vec3 w = axis.subtract(n.scale(axis.dot(n)));
-            if (w.lengthSqr() < 0.01) {
-                w = new Vec3(n.z, n.x, n.y); // (the edge points straight at the surface: any way across it)
-            }
-            w = w.normalize().scale(WIDTH * 0.5);
-            Vec3 lift = n.scale(0.012);
-            Vec3 p0 = hits[i].add(lift), p1 = hits[i + 1].add(lift);
-            float fade0 = 1.0F - (float) hits[i].distanceTo(centre) / (REACH + 1), fade1 = 1.0F - (float) hits[i + 1].distanceTo(centre) / (REACH + 1);
-            fan.land.add(quad(origin, p0.subtract(w), p1.subtract(w), p1.add(w), p0.add(w), h0, h1, h1, h0, fade0, fade1, fade1, fade0));
-        }
-    }
-
-    private static float[] quad(Vec3 o, Vec3 a, Vec3 b, Vec3 c, Vec3 d, float ha, float hb, float hc, float hd, float sa, float sb, float sc, float sd) {
-        return new float[] {(float) (a.x - o.x), (float) (a.y - o.y), (float) (a.z - o.z), (float) (b.x - o.x), (float) (b.y - o.y), (float) (b.z - o.z),
-                (float) (c.x - o.x), (float) (c.y - o.y), (float) (c.z - o.z), (float) (d.x - o.x), (float) (d.y - o.y), (float) (d.z - o.z),
-                ha, hb, hc, hd, sa, sb, sc, sd};
-    }
-
     /** v turned by angle (radians) round the unit axis k. */
     private static Vec3 rotate(Vec3 v, Vec3 k, float angle) {
         double c = Math.cos(angle), s = Math.sin(angle);
         return v.scale(c).add(k.cross(v).scale(s)).add(k.scale(k.dot(v) * (1 - c)));
     }
 
-    /** The glass: a bar with triangular ends, apex up, along the prism's axis (3 .. 13 pixels), from 2.5 to 9 up. */
-    private static void glass(PoseStack ps, MultiBufferSource buffers, int light, int overlay, boolean alongX) {
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityTranslucent(GLASS));
-        PoseStack.Pose pose = ps.last();
-        float a0 = 3.0F / 16, a1 = 13.0F / 16, y0 = 2.5F / 16, y1 = 9.0F / 16, half = 3.2F / 16;
-        // the triangle's corners across the axis: (across, up)
-        float[][] tri = {{-half, y0}, {half, y0}, {0, y1}};
-        for (int s = 0; s < 3; s++) {
-            float[] p = tri[s], q = tri[(s + 1) % 3];
-            float nx = q[1] - p[1], ny = -(q[0] - p[0]);
-            float len = (float) Math.sqrt(nx * nx + ny * ny);
-            nx /= len;
-            ny /= len;
-            // (a long face: from p to q, the length of the bar)
-            quadGlass(vc, pose, alongX, a0, a1, p, q, -nx, -ny, light, overlay);
+    /** (The light round a block, packed as the light map wants it.) */
+    private static final class LevelRendererLight {
+        static int at(Level level, BlockPos pos) {
+            return net.minecraft.client.renderer.LevelRenderer.getLightColor(level, pos);
         }
-        // the ends
-        for (int e = 0; e < 2; e++) {
-            float along = e == 0 ? a0 : a1, n = e == 0 ? -1 : 1;
-            float[][] c = {tri[0], tri[1], tri[2], tri[2]};
-            float[][] uv = {{0, 1}, {1, 1}, {0.5F, 0}, {0.5F, 0}};
-            for (int i = 0; i < 4; i++) {
-                Vector3f p = place(alongX, along, c[i][0], c[i][1]);
-                Vector3f nn = alongX ? new Vector3f(n, 0, 0) : new Vector3f(0, 0, n);
-                vc.addVertex(pose, p.x, p.y, p.z).setColor(255, 255, 255, 200).setUv(uv[i][0], uv[i][1]).setOverlay(overlay).setLight(light)
-                        .setNormal(pose, nn.x, nn.y, nn.z);
-            }
-        }
-    }
-
-    private static void quadGlass(VertexConsumer vc, PoseStack.Pose pose, boolean alongX, float a0, float a1, float[] p, float[] q, float nx, float ny, int light,
-                                  int overlay) {
-        Vector3f[] c = {place(alongX, a0, p[0], p[1]), place(alongX, a1, p[0], p[1]), place(alongX, a1, q[0], q[1]), place(alongX, a0, q[0], q[1])};
-        float[][] uv = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
-        Vector3f n = alongX ? new Vector3f(0, ny, nx) : new Vector3f(nx, ny, 0);
-        for (int i = 0; i < 4; i++) {
-            vc.addVertex(pose, c[i].x, c[i].y, c[i].z).setColor(255, 255, 255, 200).setUv(uv[i][0], uv[i][1]).setOverlay(overlay).setLight(light)
-                    .setNormal(pose, n.x, n.y, n.z);
-        }
-    }
-
-    /** A point of the glass: along its axis, across it (from the middle), up. */
-    private static Vector3f place(boolean alongX, float along, float across, float up) {
-        return alongX ? new Vector3f(along, up, 0.5F + across) : new Vector3f(0.5F + across, up, along);
     }
 
     @Override
@@ -336,5 +370,10 @@ public class PrismRenderer implements BlockEntityRenderer<SimpleRenderedBlockEnt
     @Override
     public boolean shouldRenderOffScreen(SimpleRenderedBlockEntity be) {
         return true;
+    }
+
+    @Override
+    public int getViewDistance() {
+        return 96;
     }
 }

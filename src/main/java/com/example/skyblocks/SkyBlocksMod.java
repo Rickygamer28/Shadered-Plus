@@ -159,6 +159,7 @@ public class SkyBlocksMod {
                 .playToServer(TimeCrystalPayload.TYPE, TimeCrystalPayload.STREAM_CODEC, TimeCrystalPayload::handle)
                 .playToServer(ElevatorPayload.TYPE, ElevatorPayload.STREAM_CODEC, ElevatorPayload::handle)
                 .playToServer(HourglassPayload.TYPE, HourglassPayload.STREAM_CODEC, HourglassPayload::handle)
+                .playToServer(SpotlightPayload.TYPE, SpotlightPayload.STREAM_CODEC, SpotlightPayload::handle)
                 .playToServer(EraseTrailPayload.TYPE, EraseTrailPayload.STREAM_CODEC, EraseTrailPayload::handle)
                 .playToClient(MoonJar.Payload.TYPE, MoonJar.Payload.STREAM_CODEC, MoonJar.Payload::handle)
                 .playToClient(SunJar.Payload.TYPE, SunJar.Payload.STREAM_CODEC, SunJar.Payload::handle)

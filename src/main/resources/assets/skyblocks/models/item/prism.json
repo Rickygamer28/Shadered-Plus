@@ -1,3 +1,6 @@
 {
-  "parent": "skyblocks:block/prism"
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "skyblocks:item/prism"
+  }
 }

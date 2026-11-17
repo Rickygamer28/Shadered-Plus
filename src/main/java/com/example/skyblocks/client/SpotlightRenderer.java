@@ -36,7 +36,8 @@ import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import org.joml.Matrix4f;
 
 /**
- * The spotlight: its lamp turning smoothly to the nearest player in reach (a slow sweep with nobody near), a soft cone
+ * The spotlight: its lamp turning smoothly to the nearest player in reach (a slow sweep with nobody near) - or, aimed,
+ * the way it was aimed (while being aimed, where the player's looking: SpotlightAim) - a soft cone
  * of light to where it lands and a pool of light there - brighter in a fog machine's fog, pulsing a little with music.
  */
 public class SpotlightRenderer implements BlockEntityRenderer<SpotlightBlockEntity> {
@@ -81,33 +82,43 @@ public class SpotlightRenderer implements BlockEntityRenderer<SpotlightBlockEnti
         // (the lamp's pivot: 3 pixels out from the middle, the way its stand points)
         float ox = 0.5F + mount.getStepX() * 3.0F / 16, oy = 0.5F + mount.getStepY() * 3.0F / 16, oz = 0.5F + mount.getStepZ() * 3.0F / 16;
         Vec3 lamp = new Vec3(pos.getX() + ox, pos.getY() + oy, pos.getZ() + oz);
-        // what it follows: the nearest player in reach - else a slow sweep
-        Player target = null;
-        double best = REACH * REACH;
-        for (Player p : level.players()) {
-            double d = p.distanceToSqr(lamp);
-            if (d < best && !p.isSpectator()) {
-                best = d;
-                target = p;
-            }
-        }
         float t = (level.getGameTime() + partialTick) / 20.0F;
-        float wantYaw, wantPitch;
-        if (target != null) {
-            Vec3 at = target.getPosition(partialTick).add(0, 0.9, 0).subtract(lamp);
-            wantYaw = (float) Mth.atan2(at.x, at.z);
-            wantPitch = (float) Mth.atan2(at.y, Math.sqrt(at.x * at.x + at.z * at.z));
+        float wantYaw, wantPitch, speed = 1.0F;
+        if (SpotlightAim.aimingAt(pos)) {
+            float[] way = SpotlightAim.towards(lamp, SpotlightAim.target(partialTick));
+            wantYaw = way[0];
+            wantPitch = way[1];
+            speed = 3.0F; // (keeping up with where you look)
+        } else if (be.aimed()) {
+            wantYaw = be.aimYaw();
+            wantPitch = be.aimPitch();
         } else {
-            wantYaw = t * 0.4F;
-            wantPitch = mount == net.minecraft.core.Direction.UP ? 0.5F : mount == net.minecraft.core.Direction.DOWN ? -0.9F : -0.35F;
+            // what it follows: the nearest player in reach - else a slow sweep
+            Player target = null;
+            double best = REACH * REACH;
+            for (Player p : level.players()) {
+                double d = p.distanceToSqr(lamp);
+                if (d < best && !p.isSpectator()) {
+                    best = d;
+                    target = p;
+                }
+            }
+            if (target != null) {
+                Vec3 at = target.getPosition(partialTick).add(0, 0.9, 0).subtract(lamp);
+                wantYaw = (float) Mth.atan2(at.x, at.z);
+                wantPitch = (float) Mth.atan2(at.y, Math.sqrt(at.x * at.x + at.z * at.z));
+            } else {
+                wantYaw = t * 0.4F;
+                wantPitch = mount == net.minecraft.core.Direction.UP ? 0.5F : mount == net.minecraft.core.Direction.DOWN ? -0.9F : -0.35F;
+            }
         }
         // (turning smoothly, at most so fast)
         long now = System.nanoTime();
         float dt = be.turnedAt == 0 ? 1.0F : Math.min(0.2F, (now - be.turnedAt) / 1.0e9F);
         be.turnedAt = now;
         float dy = Mth.wrapDegrees((wantYaw - be.yaw) * Mth.RAD_TO_DEG) * Mth.DEG_TO_RAD;
-        be.yaw += Mth.clamp(dy, -3.0F * dt, 3.0F * dt);
-        be.pitch += Mth.clamp(wantPitch - be.pitch, -2.0F * dt, 2.0F * dt);
+        be.yaw += Mth.clamp(dy, -3.0F * speed * dt, 3.0F * speed * dt);
+        be.pitch += Mth.clamp(wantPitch - be.pitch, -2.0F * speed * dt, 2.0F * speed * dt);
 
         // the lamp's housing, turned that way (on the stand of its model)
         poseStack.pushPose();
@@ -155,6 +166,15 @@ public class SpotlightRenderer implements BlockEntityRenderer<SpotlightBlockEnti
         if (shader != null && !LatePass.later(draw)) {
             draw.accept(DrawNow.now(buffers));
         }
+    }
+
+    /** Where a spotlight's lamp turns about (3 pixels out from the block's middle, the way its stand points). */
+    public static Vec3 pivot(SpotlightBlockEntity be) {
+        net.minecraft.core.Direction mount = be.getBlockState().hasProperty(com.example.skyblocks.SpotlightBlock.FACING)
+                ? be.getBlockState().getValue(com.example.skyblocks.SpotlightBlock.FACING) : net.minecraft.core.Direction.UP;
+        BlockPos pos = be.getBlockPos();
+        return new Vec3(pos.getX() + 0.5 + mount.getStepX() * 3.0 / 16, pos.getY() + 0.5 + mount.getStepY() * 3.0 / 16,
+                pos.getZ() + 0.5 + mount.getStepZ() * 3.0 / 16);
     }
 
     /** A strip from a to b facing the camera, widening from r0 to r1. */

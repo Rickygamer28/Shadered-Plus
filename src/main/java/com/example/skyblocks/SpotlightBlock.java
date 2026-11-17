@@ -31,7 +31,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A stage spotlight - on a floor, a ceiling or a wall: a lamp on a stand that turns to follow the nearest player (sweeping round when there's nobody),
  * a soft cone of light and a pool of it where it lands (client/SpotlightRenderer). Right-click: on / off; a dye: its
- * colour; glowstone dust: back to white.
+ * colour; glowstone dust: back to white. Sneak + right-click: aim it (it follows where you look until you right-click,
+ * and stays pointing there: client/SpotlightAim); sneak + right-click it again then: it follows players again.
  */
 public class SpotlightBlock extends BaseEntityBlock {
     public static final MapCodec<SpotlightBlock> CODEC = simpleCodec(SpotlightBlock::new);
@@ -87,6 +88,13 @@ public class SpotlightBlock extends BaseEntityBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        if (player.isShiftKeyDown()) {
+            // aiming it: it follows where you look until you right-click (client/SpotlightAim)
+            if (level.isClientSide) {
+                com.example.skyblocks.client.SpotlightAim.start(pos);
+            }
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
         if (!level.isClientSide && level.getBlockEntity(pos) instanceof SpotlightBlockEntity be) {
             be.setOn(!be.on());
             level.playSound(null, pos, SoundEvents.STONE_BUTTON_CLICK_ON, SoundSource.BLOCKS, 0.6F, be.on() ? 1.0F : 0.7F);
