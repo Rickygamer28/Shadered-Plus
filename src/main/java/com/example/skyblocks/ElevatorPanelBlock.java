@@ -138,6 +138,30 @@ public class ElevatorPanelBlock extends HorizontalDirectionalBlock {
     }
 
     @Override
+    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moving) {
+        super.onPlace(state, level, pos, old, moving);
+        if (!level.isClientSide && !old.is(this)) {
+            tellBase(level, pos);
+        }
+    }
+
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState now, boolean moving) {
+        super.onRemove(state, level, pos, now, moving);
+        if (!level.isClientSide && !now.is(this)) {
+            tellBase(level, pos);
+        }
+    }
+
+    /** Its elevator's floors found again (one more, or one less). */
+    private static void tellBase(Level level, BlockPos pos) {
+        ElevatorBaseBlockEntity be = base(level, pos);
+        if (be != null) {
+            be.floorsChanged();
+        }
+    }
+
+    @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.skyblocks.elevator_panel").withStyle(ChatFormatting.GRAY));
     }

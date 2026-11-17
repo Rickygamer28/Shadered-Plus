@@ -26,6 +26,16 @@ float hash1(float n) {
     return fract(sin(n * 91.345) * 47453.5453);
 }
 
+// the ray's entry and exit of a ball (radius r round c): (t0, t1), t1 < t0 if it misses
+vec2 ball(vec3 ro, vec3 rd, vec3 c, float r) {
+    vec3 oc = ro - c;
+    float b = dot(oc, rd);
+    float h = b * b - (dot(oc, oc) - r * r);
+    if (h < 0.0) return vec2(1.0, -1.0);
+    h = sqrt(h);
+    return vec2(-b - h, -b + h);
+}
+
 mat3 rotY(float a) {
     float c = cos(a), s = sin(a);
     return mat3(c, 0.0, -s, 0.0, 1.0, 0.0, s, 0.0, c);
@@ -102,33 +112,67 @@ void main() {
     float tt = t0, hitT = -1.0, nearT = -1.0, nearD = 1e9;
     vec3 colA = vec3(0.35, 1.0, 0.9), colB = vec3(0.85, 0.45, 1.0);
     float dim = 0.3 + 0.7 * live;
-    for (int i = 0; i < 128; i++) {
-        vec3 p = ro + rd * tt;
-        float g = gem(p);
-        if (g < 0.0015) {
-            hitT = tt;
-            break;
+    if (part == 1) {
+        // the crystal alone: only where it can be (a ball round it), traced to its surface
+        vec2 bs = ball(ro, rd, vec3(0.0, bob, 0.0), 0.76);
+        if (bs.y <= bs.x || bs.y < t0) {
+            discard;
         }
-        // the rings: light only (their runes glowing, a haze round them)
-        vec3 qa = ringA * p;
-        vec2 a = ring(p, ringA, 0.78, 0.0), b = ring(p, ringB, 1.02, 0.0);
-        float ra = runes(a.y, 48.0, 1.0) * dim + 0.1;
-        float rb = runes(b.y, 64.0, 7.0) * dim + 0.1;
-        float tick = step(fract(a.y * 60.0), 0.2) * dim;
-        float dt = length(vec2(length(qa.xz) - 0.66, qa.y));
-        float hA = exp(-a.x * 70.0) * ra + exp(-a.x * 12.0) * 0.05 * dim + exp(-dt * 110.0) * tick * 0.8;
-        float hB = exp(-b.x * 70.0) * rb + exp(-b.x * 12.0) * 0.05 * dim;
-        float rd_ = min(min(a.x, b.x), dt);
-        if (rd_ < nearD) {
-            nearD = rd_;
-            nearT = tt;
+        tt = max(bs.x, t0);
+        for (int i = 0; i < 64 && tt < bs.y; i++) {
+            float g = gem(ro + rd * tt);
+            if (g < 0.0015) {
+                hitT = tt;
+                break;
+            }
+            tt += max(g, 0.002);
         }
-        float st = clamp(min(g, rd_ * 0.6), 0.003, 0.06);
-        glow += (colA * hA + colB * hB) * st * 30.0;
-        glowA += (hA + hB) * st * 30.0;
-        tt += st;
-        if (tt > t1) {
-            break;
+        if (hitT < 0.0) {
+            discard;
+        }
+    } else {
+        // the rings' light, and the crystal: only in the ball the rings (and the haze round them) fill
+        vec2 bs = ball(ro, rd, vec3(0.0), 1.36);
+        if (bs.y <= bs.x) {
+            discard;
+        }
+        tt = max(t0, bs.x);
+        float tEnd = min(t1, bs.y);
+        for (int i = 0; i < 128; i++) {
+            vec3 p = ro + rd * tt;
+            float g = gem(p);
+            if (g < 0.0015) {
+                hitT = tt;
+                break;
+            }
+            // the rings: light only (their runes glowing, a haze round them) - the runes and ticks worked out only near
+            // their ring (further, their light is nothing to see)
+            vec3 qa = ringA * p, qb = ringB * p;
+            float da = length(vec2(length(qa.xz) - 0.78, qa.y)), db = length(vec2(length(qb.xz) - 1.02, qb.y));
+            float dt = length(vec2(length(qa.xz) - 0.66, qa.y));
+            float hA = exp(-da * 12.0) * 0.05 * dim, hB = exp(-db * 12.0) * 0.05 * dim;
+            if (da < 0.14 || dt < 0.08) {
+                float ua = fract(atan(qa.z, qa.x) / TAU);
+                hA += exp(-da * 70.0) * (runes(ua, 48.0, 1.0) * dim + 0.1)
+                    + exp(-dt * 110.0) * step(fract(ua * 60.0), 0.2) * dim * 0.8;
+            }
+            if (db < 0.14) {
+                float ub = fract(atan(qb.z, qb.x) / TAU);
+                hB += exp(-db * 70.0) * (runes(ub, 64.0, 7.0) * dim + 0.1);
+            }
+            float rd_ = min(min(da, db), dt);
+            if (rd_ < nearD) {
+                nearD = rd_;
+                nearT = tt;
+            }
+            // (fine steps near the rings, where their light is; longer ones away from them, where it's next to nothing)
+            float st = clamp(min(g, rd_ * 0.6), 0.003, rd_ > 0.3 ? 0.2 : 0.06);
+            glow += (colA * hA + colB * hB) * st * 30.0;
+            glowA += (hA + hB) * st * 30.0;
+            tt += st;
+            if (tt > tEnd) {
+                break;
+            }
         }
     }
     glowA = clamp(glowA, 0.0, 1.0);

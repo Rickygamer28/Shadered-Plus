@@ -123,7 +123,7 @@ float glassBody(vec3 p) {
     } else if (skin == 4) {
         float h = sdHex(p.xz, 1.38);
         // (a pointed roof: highest in the middle)
-        float roof = p.y - (FY + 2.95 - (1.38 + h) * 0.45);
+        float roof = (p.y - (FY + 2.95 - (1.38 + h) * 0.45)) / 1.0966; // (over its slope: a true distance)
         return max(max(h, roof), FY - p.y);
     }
     return 1e3;
@@ -266,6 +266,18 @@ void main() {
     vec3 col = vec3(0.0);
     float a = 0.0, depthT = -1.0;
     float t = t0;
+    if (skin == 5) {
+        // (the cloud: only where it can be - a slab round its floor; the rest of the box is empty)
+        vec3 lo = vec3(-1.6, FY - 0.72, -1.6), hi = vec3(1.6, FY + 0.32, 1.6);
+        vec3 ca = (lo - ro) * inv, cb = (hi - ro) * inv;
+        float c0 = max(max(max(min(ca.x, cb.x), min(ca.y, cb.y)), min(ca.z, cb.z)), t0);
+        float c1 = min(min(min(max(ca.x, cb.x), max(ca.y, cb.y)), max(ca.z, cb.z)), t1);
+        if (c1 <= c0) {
+            discard;
+        }
+        t = c0;
+        t1 = c1;
+    }
     for (int i = 0; i < 140 && t < t1 && a < 0.97; i++) {
         vec3 p = ro + rd * t;
         if (skin == 5) {
@@ -303,7 +315,10 @@ void main() {
             t += 0.02;
             continue;
         }
-        float dt = clamp(min(s, g), 0.003, 0.12);
+        float dt = max(min(s, g), 0.003);
+        if (skin == 1) {
+            dt = min(dt, 0.12); // (its trail of light under the floor: sampled, not stepped over)
+        }
         if (dot(glow, glow) > 0.0) {
             dt = min(dt, 0.05);
             col += (1.0 - a) * glow * dt * 3.0;

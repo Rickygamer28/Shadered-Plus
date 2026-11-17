@@ -215,6 +215,7 @@ vec4 storm(vec3 ro, vec3 rd, float t0, float t1, float t) {
         } else if (p.y > -1.0) {
             // the rain: streaks falling (thin in x and z, long in y), under the cloud's footprint, fading as it nears the floor
             float under = smoothstep(0.85, 0.35, length(p.xz)) * smoothstep(-1.0, -0.55, p.y);
+            if (under <= 0.0) continue; // (none falls outside its footprint)
             float n = noise(vec3(p.x * 34.0, p.y * 2.2 + t * 7.5, p.z * 34.0));
             dens = smoothstep(0.74, 0.9, n) * under * (0.25 + 0.45 * full) * 0.6;
             c = vec3(0.55, 0.62, 0.78) * (0.6 + 0.4 * gloom);

@@ -692,6 +692,9 @@ vec2 bxSceneSDF(vec3 p, float t){
     for (int x=0; x<=1; x++){
         vec3 c = id2 + vec3(x,y,z)*s;
         vec3 q = p - c;
+        // (Shadered+: a cell whose whole contents - all within 0.82 of its middle - are further than what's been found
+        // can't be nearer: not worked out. The same surfaces, found as before.)
+        if (length(q) - 0.82 >= d) continue;
         float n = bxHash(c);
         
         float dd = 0.0, mid = 0.0;
@@ -779,7 +782,9 @@ vec3 dataCubeSkybox() {
     float dd = bxBg(grid, SkyTime);
     col = mix(col, vec3(0.15), BX_S(dd));
 
-    vec2 tb = bxBoxIntersection(ro, rd);
+    // (Shadered+: the cubes are cut to a box of 0.38 round the middle - traced only through that)
+    vec3 bm = 1.0 / rd, bn = bm * ro, bk = abs(bm) * 0.38;
+    vec2 tb = vec2(max(max(-bn.x - bk.x, -bn.y - bk.y), -bn.z - bk.z), min(min(-bn.x + bk.x, -bn.y + bk.y), -bn.z + bk.z));
     if (tb.x < tb.y && tb.y > 0.0) {
         float t = max(tb.x, 0.0);
         for (int i = 0; i < 96; i++) {

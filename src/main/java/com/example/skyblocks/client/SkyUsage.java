@@ -591,8 +591,28 @@ public final class SkyUsage {
         }
         SkyblockBatchData data = itemTypes.get(type);
         Minecraft mc = Minecraft.getInstance();
-        if (data == null || mc.screen != null || skyProjection == null
-                || GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING) != mc.getMainRenderTarget().frameBufferId) {
+        if (data == null) {
+            return;
+        }
+        boolean pack = com.example.skyblocks.client.iris.IrisCompat.shaderPackInUse();
+        if (pack && com.example.skyblocks.client.iris.IrisCompat.renderingShadowPass()) {
+            // (the shader pack's shadow map: the sky's picture isn't seen there - not asked for)
+            itemPlaceKnown = true;
+            placeKnown = true;
+            return;
+        }
+        if (mc.screen != null || skyProjection == null) {
+            return;
+        }
+        boolean main = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING) == mc.getMainRenderTarget().frameBufferId;
+        if (!main) {
+            // with a shader pack (drawn into its own pictures, not the screen): off the screen, nothing asked for; on it,
+            // the whole picture, as before (not a painting's picture: as before)
+            if (pack && !com.example.skyblocks.client.island.IslandRendering.inIsland && rectOfMesh(mesh) == OFF) {
+                itemPlaceKnown = true;
+                placeKnown = true;
+                markLight(data);
+            }
             return;
         }
         int[] rect = rectOfMesh(mesh);

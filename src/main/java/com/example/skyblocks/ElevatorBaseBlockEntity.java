@@ -40,6 +40,8 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
     @Nullable
     private UUID cabinId;
     private final ArrayDeque<Integer> queue = new ArrayDeque<>();
+    /** Its floors to be found again (a call panel put up or taken down by it): at once, rather than at the next look. */
+    private boolean floorsChanged = true;
 
     /** (client) Its cabin, as last found. */
     @Nullable
@@ -147,7 +149,9 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, ElevatorBaseBlockEntity be) {
-        if (level.getGameTime() % 40 == pos.hashCode() % 40 || be.floors.length == 0) {
+        // (found again when a panel's put up or taken down by it - and now and then, in case)
+        if (be.floorsChanged || Math.floorMod(level.getGameTime() + pos.hashCode(), 600L) == 0) {
+            be.floorsChanged = false;
             be.findFloors();
         }
         ElevatorCabinEntity cabin = be.cabin();
@@ -204,14 +208,42 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
         return Integer.MIN_VALUE;
     }
 
-    /** Its floors: floor 1 on top of it, and one for each call panel beside the shaft above. */
+    /**
+     * Its floors: floor 1 on top of it, and one for each call panel beside the shaft above. (A stretch of 16 blocks up
+     * with no call panel anywhere in it, by the game's own note of which blocks each chunk section has, is passed over.)
+     */
     private void findFloors() {
         List<Integer> found = new ArrayList<>();
         int base = worldPosition.getY() + 1;
         found.add(base);
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         int max = Math.min(worldPosition.getY() + REACH, level.getMaxBuildHeight() - 3);
+        // the chunks the ring round the shaft is in
+        List<net.minecraft.world.level.chunk.LevelChunk> chunks = new ArrayList<>();
+        for (int cx = (worldPosition.getX() - 4) >> 4; cx <= (worldPosition.getX() + 4) >> 4; cx++) {
+            for (int cz = (worldPosition.getZ() - 4) >> 4; cz <= (worldPosition.getZ() + 4) >> 4; cz++) {
+                if (level.hasChunk(cx, cz)) {
+                    chunks.add(level.getChunk(cx, cz));
+                }
+            }
+        }
         for (int y = base; y <= max; y++) {
+            if (y == base || (y & 15) == 0) {
+                // (a section with no panel in any of these chunks: on to the next)
+                int section = level.getSectionIndex(y);
+                boolean any = false;
+                for (net.minecraft.world.level.chunk.LevelChunk c : chunks) {
+                    if (section >= 0 && section < c.getSections().length
+                            && c.getSections()[section].maybeHas(st -> st.getBlock() instanceof ElevatorPanelBlock)) {
+                        any = true;
+                        break;
+                    }
+                }
+                if (!any) {
+                    y = (y | 15);
+                    continue;
+                }
+            }
             for (int dx = -4; dx <= 4; dx++) {
                 for (int dz = -4; dz <= 4; dz++) {
                     if (Math.max(Math.abs(dx), Math.abs(dz)) < 2) {
@@ -232,6 +264,11 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
             floors = now;
             changed();
         }
+    }
+
+    /** Its floors to be found again (ElevatorPanelBlock: one put up or taken down by it). */
+    public void floorsChanged() {
+        floorsChanged = true;
     }
 
     /** Taken away: its cabin goes too (what it carried set down where it is). */
