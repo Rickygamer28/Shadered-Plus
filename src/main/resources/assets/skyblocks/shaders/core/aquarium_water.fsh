@@ -93,7 +93,10 @@ void main() {
     if (floorSeen) {
         vec3 b = behind + CamPos;
         float sink = clamp(world.y - b.y, 0.0, 32.0);
-        float fl = caustics(b.xz * 1.6 + vec2(t * 0.1, 0.0), t * 1.6);
+        // (on floors only: on a wall the cells would run down it in streaks)
+        vec3 n = cross(dFdx(behind), dFdy(behind));
+        float flat = smoothstep(0.6, 0.9, abs(n.y) / max(length(n), 1.0e-6));
+        float fl = flat > 0.0 ? caustics(b.xz * 1.6 + vec2(t * 0.1, 0.0), t * 1.6) * flat : 0.0;
         col += vec3(0.75, 0.92, 1.0) * fl * 0.2 * exp(-sink * 0.12) * (0.35 + 0.65 * Day) * (1.0 - a * 0.6);
     }
     // ... and on the surface itself, catching the light

@@ -227,8 +227,9 @@ public final class ClientSetup {
             public void modifyFogRender(net.minecraft.client.Camera camera, net.minecraft.client.renderer.FogRenderer.FogMode mode,
                                         float renderDistance, float partialTick, float nearDistance, float farDistance,
                                         com.mojang.blaze3d.shaders.FogShape shape) {
-                com.mojang.blaze3d.systems.RenderSystem.setShaderFogStart(-2.0F);
-                com.mojang.blaze3d.systems.RenderSystem.setShaderFogEnd(Math.min(renderDistance, 28.0F));
+                // (about as thick as the tanks' water: a third of the colour 3 blocks off, most of it by 10)
+                com.mojang.blaze3d.systems.RenderSystem.setShaderFogStart(-3.0F);
+                com.mojang.blaze3d.systems.RenderSystem.setShaderFogEnd(Math.min(renderDistance, 14.0F));
             }
         }, com.example.skyblocks.ModFluids.AQUARIUM_WATER_TYPE.get());
         for (com.example.skyblocks.ModFluids.SkyLiquid liquid : com.example.skyblocks.ModFluids.ALL) {
