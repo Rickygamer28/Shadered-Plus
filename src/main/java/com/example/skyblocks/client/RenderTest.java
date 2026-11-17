@@ -824,6 +824,8 @@ public final class RenderTest {
                             // (each tick: never a step down while it rises)
                             if (mc.player.getY() < elevLastY - 0.005) {
                                 elevDrops++;
+                                SkyBlocksMod.LOGGER.info("Shadered+ render test: elevator step down at tick {}: {} -> {}", ticks,
+                                        String.format(java.util.Locale.ROOT, "%.3f", elevLastY), String.format(java.util.Locale.ROOT, "%.3f", mc.player.getY()));
                             }
                             elevLastY = mc.player.getY();
                         } else if (elevCall >= 0 && ticks == 45 && mc.player != null) {
