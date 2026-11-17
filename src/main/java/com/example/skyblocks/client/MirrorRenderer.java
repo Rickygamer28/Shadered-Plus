@@ -1703,7 +1703,7 @@ public final class MirrorRenderer {
                     if (sameMirror(level, here, pos, pos.relative(upward), kind)) edges |= 8;
                 }
                 int seed = kind == PORTAL_KIND && level != null
-                        ? level.getBlockState(pos).getValue(com.example.skyblocks.PortalMirrorBlock.COLOR).getId() // (a portal: its colour)
+                        ? level.getBlockState(pos).getOptionalValue(com.example.skyblocks.PortalMirrorBlock.COLOR).map(c -> c.getId()).orElse(0) // (a portal: its colour)
                         : (int) ((pos.asLong() * 0x9E3779B97F4A7C15L) >>> 60) & 15;
                 faceU = 4.0F * (kind + 8 * seed);
                 faceV = 4.0F * edges;

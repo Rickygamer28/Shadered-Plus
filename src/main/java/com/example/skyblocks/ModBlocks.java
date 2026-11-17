@@ -523,10 +523,6 @@ public final class ModBlocks {
     public static final DeferredBlock<HourglassBlock> HOURGLASS = BLOCKS.registerBlock("hourglass", HourglassBlock::new,
             BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.WOOD).noOcclusion().lightLevel(state -> 5)
                     .mapColor(net.minecraft.world.level.material.MapColor.WOOD));
-    /** A glitch block (GlitchBlock). */
-    public static final DeferredBlock<GlitchBlock> GLITCH_BLOCK = BLOCKS.registerBlock("glitch_block", GlitchBlock::new,
-            BlockBehaviour.Properties.of().strength(1.5F, 6.0F).sound(SoundType.AMETHYST).noOcclusion().lightLevel(state -> 6)
-                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_MAGENTA));
     /** Chalk on the ground (MagicChalkItem): a mark, and a rune - the middle of a magic circle (ChalkMarkBlock, ChalkRuneBlock). */
     public static final DeferredBlock<ChalkMarkBlock> CHALK_MARK = BLOCKS.registerBlock("chalk_mark", ChalkMarkBlock::new,
             BlockBehaviour.Properties.of().noCollission().instabreak().sound(SoundType.CALCITE).noOcclusion().replaceable()

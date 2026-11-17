@@ -46,7 +46,6 @@
     "skyblocks:spin_pad",
     "skyblocks:time_crystal",
     "skyblocks:elevator_base",
-    "skyblocks:elevator_panel",
-    "skyblocks:glitch_block"
+    "skyblocks:elevator_panel"
   ]
 }

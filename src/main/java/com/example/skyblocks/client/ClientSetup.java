@@ -118,7 +118,6 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.TIME_CRYSTAL.get(), TimeCrystalRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.ELEVATOR_BASE.get(), ElevatorRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.HOURGLASS.get(), HourglassRenderer::new);
-        event.registerBlockEntityRenderer(ModBlockEntities.GLITCH.get(), GlitchRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.CHALK_RUNE.get(), MagicCircleRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.FILTER.get(), FilterRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SHADER_LIGHT.get(), ShaderLightRenderer::new);

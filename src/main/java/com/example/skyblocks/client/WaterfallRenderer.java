@@ -86,7 +86,7 @@ public class WaterfallRenderer implements BlockEntityRenderer<SimpleRenderedBloc
         float top = 10.0F / 16, bottom = 1.0F - blocks; // (the top of the block it lands on)
         length = top - bottom;
         time = ((level.getGameTime() % 240000L) + partialTick) / 20.0F + (pos.asLong() & 63);
-        float lit = Math.max(0.3F, brightness(level, pos));
+        float lit = Math.max(0.3F, brightness(level, pos, facing));
 
         poseStack.pushPose();
         poseStack.translate(0.5F, 0.0F, 0.5F);
@@ -125,8 +125,8 @@ public class WaterfallRenderer implements BlockEntityRenderer<SimpleRenderedBloc
         }
     }
 
-    private static float brightness(ClientLevel level, BlockPos pos) {
-        int packed = net.minecraft.client.renderer.LevelRenderer.getLightColor(level, pos.relative(level.getBlockState(pos).getValue(WaterfallBlock.FACING)));
+    private static float brightness(ClientLevel level, BlockPos pos, Direction facing) {
+        int packed = net.minecraft.client.renderer.LevelRenderer.getLightColor(level, pos.relative(facing));
         float sky = LightTexture.sky(packed) / 15.0F * (1.0F - level.getSkyDarken() / 15.0F), block = LightTexture.block(packed) / 15.0F;
         return Math.min(1.0F, Math.max(sky, block) * 0.9F + 0.1F);
     }

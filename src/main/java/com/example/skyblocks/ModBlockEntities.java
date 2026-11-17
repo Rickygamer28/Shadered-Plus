@@ -163,8 +163,6 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(ElevatorBaseBlockEntity::new, ModBlocks.ELEVATOR_BASE.get()).build(null));
     public static final Supplier<BlockEntityType<HourglassBlockEntity>> HOURGLASS = TYPES.register("hourglass",
             () -> BlockEntityType.Builder.of(HourglassBlockEntity::new, ModBlocks.HOURGLASS.get()).build(null));
-    public static final Supplier<BlockEntityType<GlitchBlockEntity>> GLITCH = TYPES.register("glitch_block",
-            () -> BlockEntityType.Builder.of(GlitchBlockEntity::new, ModBlocks.GLITCH_BLOCK.get()).build(null));
     public static final Supplier<BlockEntityType<ChalkRuneBlockEntity>> CHALK_RUNE = TYPES.register("chalk_rune",
             () -> BlockEntityType.Builder.of(ChalkRuneBlockEntity::new, ModBlocks.CHALK_RUNE.get()).build(null));
     public static final Supplier<BlockEntityType<CatFlapBlockEntity>> CAT_FLAP = TYPES.register("cat_flap",
