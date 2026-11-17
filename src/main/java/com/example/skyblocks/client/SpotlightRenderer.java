@@ -84,8 +84,8 @@ public class SpotlightRenderer implements BlockEntityRenderer<SpotlightBlockEnti
                 ? be.getBlockState().getValue(com.example.skyblocks.SpotlightBlock.FACING) : net.minecraft.core.Direction.UP;
         // (the lamp's pivot: 3 pixels out from the middle, the way its stand points - a beam light's, 4.5 pixels out from what it's on)
         boolean small = be.getBlockState().getBlock() instanceof com.example.skyblocks.BeamLightBlock;
-        float out = small ? -3.5F / 16 : 3.0F / 16;
-        float ox = 0.5F + mount.getStepX() * out, oy = 0.5F + mount.getStepY() * out, oz = 0.5F + mount.getStepZ() * out;
+        float reach = small ? -3.5F / 16 : 3.0F / 16;
+        float ox = 0.5F + mount.getStepX() * reach, oy = 0.5F + mount.getStepY() * reach, oz = 0.5F + mount.getStepZ() * reach;
         Vec3 lamp = new Vec3(pos.getX() + ox, pos.getY() + oy, pos.getZ() + oz);
         float t = (level.getGameTime() + partialTick) / 20.0F;
         float wantYaw, wantPitch, speed = 1.0F;
