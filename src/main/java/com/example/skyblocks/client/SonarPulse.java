@@ -108,6 +108,14 @@ public final class SonarPulse {
 
     private SonarPulse() {}
 
+    /** (For the render test.) */
+    public static String debug() {
+        return "origin " + origin + ", found " + FOUND.size() + (FOUND.isEmpty() ? "" : " first " + FOUND.get(0)) + ", glowing " + GLOWING.size()
+                + ", mob entries " + mobEntries + ", drew " + drew;
+    }
+
+    private static int drew;
+
     // ---- what a list's entries find ----
 
     private static ResourceLocation id(String s) {
@@ -320,6 +328,7 @@ public final class SonarPulse {
             float a = Math.min(1.0F, 0.55F + 0.45F * (float) Math.exp(-since * 3.0)) * fadeAll;
             boxes.add(new float[] {f.pos().getX() - (float) cam.x, f.pos().getY() - (float) cam.y, f.pos().getZ() - (float) cam.z, f.colour(), a});
         }
+        drew = boxes.size();
         if (boxes.isEmpty()) {
             return;
         }

@@ -1080,6 +1080,9 @@ public final class RenderTest {
                         if (echoTest && ticks >= 40 && ticks < 98 && ticks % 3 == 0) {
                             run(mc.getSingleplayerServer(), "execute as @e[tag=echo] at @s run tp @s ~0.3 ~ ~0.12 ~9 ~");
                         }
+                        if (ticks == 97 && sonarTest) {
+                            SkyBlocksMod.LOGGER.info("Shadered+ render test: sonar - {}", com.example.skyblocks.client.SonarPulse.debug());
+                        }
                         if (ticks == 97 && echoTest) {
                             SkyBlocksMod.LOGGER.info("Shadered+ render test: echo - {}", com.example.skyblocks.client.EchoField.debug());
                         }
