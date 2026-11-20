@@ -316,8 +316,8 @@ public final class SonarPulse {
             }
             return;
         }
-        // what it found: with the world's own camera turned (after its creatures - with a shader pack, put off to the end then)
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES || FOUND.isEmpty()) {
+        // what it found: with the world's own camera turned (after the particles, as the world's other lights)
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES || FOUND.isEmpty()) {
             return;
         }
         // what it found, outlined through walls - from when the ring reached it, fading at the end
