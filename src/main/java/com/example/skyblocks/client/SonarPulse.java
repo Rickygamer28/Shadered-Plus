@@ -63,7 +63,7 @@ public final class SonarPulse {
     private static final float REACH = 40.0F, SPEED = 18.0F, STAYS = 8.0F;
     private static final int MOST_BLOCKS = 4000;
 
-    static ShaderInstance waveShader;
+    static ShaderInstance waveShader, lineShader;
 
     @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
@@ -73,17 +73,17 @@ public final class SonarPulse {
         public static void registerSonarShader(RegisterShadersEvent event) {
             ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "sonar_wave"), DefaultVertexFormat.POSITION,
                     s -> waveShader = s);
+            ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "sonar_line"), DefaultVertexFormat.POSITION_COLOR,
+                    s -> lineShader = s);
         }
     }
 
     abstract static class Types extends RenderType {
-        /** Outlines seen through everything. */
-        static final RenderType OUTLINE = create("skyblocks_sonar_outline", DefaultVertexFormat.POSITION_COLOR_NORMAL, VertexFormat.Mode.LINES, 1 << 16,
+        /** Outlines seen through everything: each edge a thin strip facing the eye, added as light (its own shader, so a shader pack leaves it be). */
+        static final RenderType OUTLINE = create("skyblocks_sonar_outline", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 1 << 16,
                 false, false, CompositeState.builder()
-                        .setShaderState(RENDERTYPE_LINES_SHADER)
-                        .setLineState(new LineStateShard(OptionalDouble.of(2.5)))
-                        .setLayeringState(VIEW_OFFSET_Z_LAYERING)
-                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .setShaderState(new ShaderStateShard(() -> lineShader))
+                        .setTransparencyState(ADDITIVE_TRANSPARENCY)
                         .setWriteMaskState(COLOR_WRITE)
                         .setDepthTestState(NO_DEPTH_TEST)
                         .setCullState(NO_CULL)
@@ -337,18 +337,44 @@ public final class SonarPulse {
         if (boxes.isEmpty()) {
             return;
         }
+        if (lineShader == null) {
+            return;
+        }
         java.util.function.Consumer<MultiBufferSource.BufferSource> draw = src -> {
-            PoseStack pose = new PoseStack();
             VertexConsumer vc = src.getBuffer(Types.OUTLINE);
             for (float[] b : boxes) {
                 int c = (int) b[3];
-                LevelRenderer.renderLineBox(pose, vc, new AABB(b[0] + 0.002, b[1] + 0.002, b[2] + 0.002, b[0] + 0.998, b[1] + 0.998, b[2] + 0.998),
-                        (c >> 16 & 255) / 255.0F, (c >> 8 & 255) / 255.0F, (c & 255) / 255.0F, b[4]);
+                int r = Math.round((c >> 16 & 255) * b[4]), g = Math.round((c >> 8 & 255) * b[4]), bl = Math.round((c & 255) * b[4]);
+                box(vc, b[0], b[1], b[2], r, g, bl);
             }
             src.endBatch(Types.OUTLINE);
         };
         if (!LatePass.later(draw)) {
             draw.accept(Minecraft.getInstance().renderBuffers().bufferSource());
+        }
+    }
+
+    /** A block's twelve edges (its corner camera-relative), each a strip facing the eye. */
+    private static void box(VertexConsumer vc, float x, float y, float z, int r, int g, int b) {
+        float[][] c = new float[8][];
+        for (int i = 0; i < 8; i++) {
+            c[i] = new float[] {x + (i & 1), y + (i >> 1 & 1), z + (i >> 2 & 1)};
+        }
+        int[][] edges = {{0, 1}, {2, 3}, {4, 5}, {6, 7}, {0, 2}, {1, 3}, {4, 6}, {5, 7}, {0, 4}, {1, 5}, {2, 6}, {3, 7}};
+        for (int[] e : edges) {
+            float[] a = c[e[0]], o = c[e[1]];
+            Vec3 d = new Vec3(o[0] - a[0], o[1] - a[1], o[2] - a[2]);
+            Vec3 mid = new Vec3((a[0] + o[0]) * 0.5, (a[1] + o[1]) * 0.5, (a[2] + o[2]) * 0.5);
+            // (the camera's at 0: across the edge, square to the way to the eye; wider further off, so it stays a line)
+            Vec3 side = d.cross(mid);
+            if (side.lengthSqr() < 1e-10) {
+                continue;
+            }
+            side = side.normalize().scale(0.012 + mid.length() * 0.0016);
+            vc.addVertex((float) (a[0] - side.x), (float) (a[1] - side.y), (float) (a[2] - side.z)).setColor(r, g, b, 1);
+            vc.addVertex((float) (a[0] + side.x), (float) (a[1] + side.y), (float) (a[2] + side.z)).setColor(r, g, b, 1);
+            vc.addVertex((float) (o[0] + side.x), (float) (o[1] + side.y), (float) (o[2] + side.z)).setColor(r, g, b, 1);
+            vc.addVertex((float) (o[0] - side.x), (float) (o[1] - side.y), (float) (o[2] - side.z)).setColor(r, g, b, 1);
         }
     }
 

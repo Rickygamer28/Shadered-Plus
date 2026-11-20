@@ -388,7 +388,7 @@ public final class RenderTest {
             "setblock 898 -60 0 skyblocks:echo_field", "summon minecraft:pig 894 -60 2 {NoAI:1b,Tags:[\"echo\"],PersistenceRequired:1b}",
             "fill 908 -60 -4 914 -56 2 minecraft:stone", "setblock 910 -58 -1 minecraft:diamond_ore", "setblock 911 -59 0 minecraft:gold_ore",
             "setblock 912 -57 -2 minecraft:iron_ore", "setblock 909 -60 -3 minecraft:coal_ore", "setblock 913 -59 1 minecraft:emerald_ore",
-            "fill 918 -60 -4 918 -56 4 minecraft:stone_bricks", "summon minecraft:creeper 920 -60 0 {NoAI:1b,PersistenceRequired:1b}",
+            "fill 918 -60 -4 918 -56 4 minecraft:stone_bricks", "difficulty easy", "summon minecraft:creeper 920 -60 0 {NoAI:1b,PersistenceRequired:1b}",
             // a beam light pointed at a prism
             "fill 852 -60 -3 862 -56 -3 minecraft:stone_bricks", "setblock 856 -60 0 skyblocks:prism",
             "setblock 859 -60 2 skyblocks:beam_light[facing=up]{aim_yaw:-2.1588f,aim_pitch:0.0744f}",
