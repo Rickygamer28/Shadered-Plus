@@ -65,6 +65,17 @@ public final class EchoField {
 
     private EchoField() {}
 
+    /** (For the render test: the fields, trails, ghosts, and how many kinds of picture could / couldn't be ghosted.) */
+    public static String debug() {
+        int ghosts = 0;
+        for (Trail t : TRAILS.values()) {
+            ghosts += t.ghosts.size();
+        }
+        long ok = GHOST_TYPES.values().stream().filter(Optional::isPresent).count();
+        return FIELDS.size() + " fields, " + TRAILS.size() + " trails, " + ghosts + " ghosts, picture kinds " + ok + " ghosted / "
+                + (GHOST_TYPES.size() - ok) + " not " + GHOST_TYPES.keySet();
+    }
+
     /** Says where a field is (its block entity's renderer, each frame it's in sight). */
     public static final class Renderer implements BlockEntityRenderer<SimpleRenderedBlockEntity> {
         public Renderer(BlockEntityRendererProvider.Context context) {}

@@ -1,7 +1,7 @@
 #version 150
 
 // A fractal in a glass box, traced by its distance function: 0 a bulb (its power slowly changing), 1 a sponge (its
-// holes sliding), 2 a pyramid of pyramids (twisting), 3 a folded crystal (unfolding and folding). Turning slowly;
+// holes sliding), 2 a pyramid of pyramids (twisting), 3 a mandelbox maze (breathing in and out). Turning slowly;
 // coloured by how its points wander as they're worked out (drifting colours); lit, its hollows darker; a glow round
 // it, brighter to music; faint glass on the box. Writes its depth.
 
@@ -77,21 +77,27 @@ float pyramid(vec3 z) {
     return (length(z) - 1.5) * pow(2.0, -9.0);
 }
 
+// a mandelbox: folded into a box and through a sphere over and over - a maze of rooms and towers
 float crystal(vec3 p) {
-    float s = 1.0;
+    vec3 z = p;
+    float dr = 1.0;
+    float S = -1.75 + 0.15 * sin(T * 0.1);
     trap = 1e9;
-    for (int i = 0; i < 7; i++) {
-        p = abs(p);
-        if (p.x < p.y) p.xy = p.yx;
-        if (p.x < p.z) p.xz = p.zx;
-        if (p.y < p.z) p.yz = p.zy;
-        p.xz *= rot(0.25 + 0.2 * sin(T * 0.09));
-        p.xy *= rot(0.4 + 0.15 * sin(T * 0.07));
-        p = p * 1.8 - vec3(0.9, 0.5, 0.35) * 0.8;
-        s *= 1.8;
-        trap = min(trap, dot(p, p) * 0.2);
+    for (int i = 0; i < 10; i++) {
+        z = clamp(z, -1.0, 1.0) * 2.0 - z;
+        float r2 = dot(z, z);
+        if (r2 < 0.25) {
+            z *= 4.0;
+            dr *= 4.0;
+        } else if (r2 < 1.0) {
+            z /= r2;
+            dr /= r2;
+        }
+        z = z * S + p;
+        dr = dr * abs(S) + 1.0;
+        trap = min(trap, r2 * 0.25);
     }
-    return sdBox(p, vec3(0.9)) / s;
+    return length(z) / abs(dr);
 }
 
 // distance (in the box's own size, -1 .. 1 across it) - each fractal scaled to fill it
@@ -100,7 +106,7 @@ float de(vec3 q) {
     if (kind < 0.5) return bulb(q * 1.3) / 1.3;
     if (kind < 1.5) return sponge(q * 1.15) / 1.15;
     if (kind < 2.5) return pyramid(q * 1.25) / 1.25;
-    return crystal(q * 1.1) / 1.1;
+    return crystal(q * 3.6) / 3.6;
 }
 
 vec3 palette(float t) {

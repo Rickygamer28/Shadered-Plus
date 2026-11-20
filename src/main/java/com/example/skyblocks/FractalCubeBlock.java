@@ -23,7 +23,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A fractal cube: a glass case with a glowing 3D fractal in it, slowly turning and changing shape, pulsing to music
- * (client/FractalCubeRenderer, shaders/core/fractal_cube). Right-click: the next fractal (bulb, sponge, pyramid, crystal).
+ * (client/FractalCubeRenderer, shaders/core/fractal_cube). Right-click: the next fractal (bulb, sponge, pyramid, maze).
  */
 public class FractalCubeBlock extends BaseEntityBlock {
     public static final MapCodec<FractalCubeBlock> CODEC = simpleCodec(FractalCubeBlock::new);
