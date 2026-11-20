@@ -7,7 +7,6 @@ import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -295,36 +294,25 @@ public final class EchoField {
     // ---- drawing it as a ghost: each of its pictures glowing and see-through, in one colour ----
 
     private static final Map<RenderType, Optional<RenderType>> GHOST_TYPES = new HashMap<>();
-    private static Method STATE, TEXTURE;
-    private static Field TEXTURE_STATE;
+    private static final java.util.regex.Pattern TEXTURE = java.util.regex.Pattern.compile("texture\\[Optional\\[([a-z0-9_.-]+:[a-z0-9_./-]+)\\]");
 
-    /** The ghost's way to draw what's drawn one way: the same picture, glowing, see-through (none: drawn not at all). */
+    /**
+     * The ghost's way to draw what's drawn one way: the same picture, glowing, see-through (none: drawn not at all). Its
+     * picture read from how the way it's drawn describes itself ("texture[Optional[minecraft:textures/entity/...]").
+     */
     private static Optional<RenderType> ghostType(RenderType type) {
         return GHOST_TYPES.computeIfAbsent(type, t -> {
             String name = t.toString();
-            if (name.contains("text") || name.contains("shadow") || name.contains("lines")) {
+            if (name.contains("text") && !name.contains("texture[") || name.startsWith("RenderType[text") || name.contains("shadow")
+                    || name.contains("lines") || name.contains("glint")) {
                 return Optional.empty();
             }
-            try {
-                if (STATE == null) {
-                    Class<?> composite = Class.forName("net.minecraft.client.renderer.RenderType$CompositeRenderType");
-                    STATE = composite.getDeclaredMethod("state");
-                    STATE.setAccessible(true);
-                    TEXTURE_STATE = Class.forName("net.minecraft.client.renderer.RenderType$CompositeState").getDeclaredField("textureState");
-                    TEXTURE_STATE.setAccessible(true);
-                    TEXTURE = Class.forName("net.minecraft.client.renderer.RenderStateShard$EmptyTextureStateShard").getDeclaredMethod("cutoutTexture");
-                    TEXTURE.setAccessible(true);
-                }
-                if (!STATE.getDeclaringClass().isInstance(t)) {
-                    return Optional.empty();
-                }
-                Object textures = TEXTURE_STATE.get(STATE.invoke(t));
-                @SuppressWarnings("unchecked")
-                Optional<ResourceLocation> tex = (Optional<ResourceLocation>) TEXTURE.invoke(textures);
-                return tex.map(RenderType::entityTranslucentEmissive);
-            } catch (ReflectiveOperationException | RuntimeException ex) {
+            java.util.regex.Matcher m = TEXTURE.matcher(name);
+            if (!m.find()) {
                 return Optional.empty();
             }
+            ResourceLocation tex = ResourceLocation.tryParse(m.group(1));
+            return tex == null ? Optional.empty() : Optional.of(RenderType.entityTranslucentEmissive(tex));
         });
     }
 
