@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "GGG",
+    "GEG",
+    "BBB"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:glass"
+    },
+    "E": {
+      "item": "minecraft:ender_pearl"
+    },
+    "B": {
+      "item": "minecraft:polished_blackstone"
+    }
+  },
+  "result": {
+    "id": "skyblocks:fractal_cube",
+    "count": 1
+  }
+}

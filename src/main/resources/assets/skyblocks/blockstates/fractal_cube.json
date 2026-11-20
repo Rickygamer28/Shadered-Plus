@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "kind=0": {
+      "model": "skyblocks:block/fractal_cube"
+    },
+    "kind=1": {
+      "model": "skyblocks:block/fractal_cube"
+    },
+    "kind=2": {
+      "model": "skyblocks:block/fractal_cube"
+    },
+    "kind=3": {
+      "model": "skyblocks:block/fractal_cube"
+    }
+  }
+}

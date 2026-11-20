@@ -1,0 +1,104 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "base": "minecraft:block/polished_blackstone",
+    "top": "skyblocks:block/echo_field_top",
+    "crystal": "minecraft:block/amethyst_block",
+    "particle": "minecraft:block/polished_blackstone"
+  },
+  "elements": [
+    {
+      "from": [
+        2,
+        0,
+        2
+      ],
+      "to": [
+        14,
+        3,
+        14
+      ],
+      "faces": {
+        "north": {
+          "texture": "#base"
+        },
+        "south": {
+          "texture": "#base"
+        },
+        "east": {
+          "texture": "#base"
+        },
+        "west": {
+          "texture": "#base"
+        },
+        "up": {
+          "texture": "#base"
+        },
+        "down": {
+          "texture": "#base"
+        }
+      }
+    },
+    {
+      "from": [
+        3,
+        3,
+        3
+      ],
+      "to": [
+        13,
+        4,
+        13
+      ],
+      "faces": {
+        "up": {
+          "texture": "#top"
+        },
+        "north": {
+          "texture": "#base"
+        },
+        "south": {
+          "texture": "#base"
+        },
+        "east": {
+          "texture": "#base"
+        },
+        "west": {
+          "texture": "#base"
+        }
+      }
+    },
+    {
+      "from": [
+        7,
+        4,
+        7
+      ],
+      "to": [
+        9,
+        6,
+        9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#crystal"
+        },
+        "south": {
+          "texture": "#crystal"
+        },
+        "east": {
+          "texture": "#crystal"
+        },
+        "west": {
+          "texture": "#crystal"
+        },
+        "up": {
+          "texture": "#crystal"
+        },
+        "down": {
+          "texture": "#crystal"
+        }
+      }
+    }
+  ]
+}

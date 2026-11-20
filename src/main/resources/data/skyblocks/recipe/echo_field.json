@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:amethyst_block"
+    },
+    {
+      "item": "minecraft:ender_pearl"
+    },
+    {
+      "item": "minecraft:redstone"
+    },
+    {
+      "item": "minecraft:polished_blackstone_slab"
+    }
+  ],
+  "result": {
+    "id": "skyblocks:echo_field",
+    "count": 1
+  }
+}

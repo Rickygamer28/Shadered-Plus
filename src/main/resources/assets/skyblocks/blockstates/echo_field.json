@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "size=0": {
+      "model": "skyblocks:block/echo_field"
+    },
+    "size=1": {
+      "model": "skyblocks:block/echo_field"
+    },
+    "size=2": {
+      "model": "skyblocks:block/echo_field"
+    }
+  }
+}

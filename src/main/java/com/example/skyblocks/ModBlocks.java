@@ -232,6 +232,19 @@ public final class ModBlocks {
     public static final DeferredBlock<SpotlightBlock> SPOTLIGHT = BLOCKS.registerBlock("spotlight", SpotlightBlock::new,
             BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 7)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+    /** A phase block (PhaseBlock): a wall a redstone signal burns away. */
+    public static final DeferredBlock<PhaseBlock> PHASE_BLOCK = BLOCKS.registerBlock("phase_block", PhaseBlock::new,
+            BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 3)
+                    .isViewBlocking((s, l, p) -> false).isSuffocating((s, l, p) -> !s.getValue(PhaseBlock.OPEN))
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_CYAN));
+    /** A fractal cube (FractalCubeBlock). */
+    public static final DeferredBlock<FractalCubeBlock> FRACTAL_CUBE = BLOCKS.registerBlock("fractal_cube", FractalCubeBlock::new,
+            BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.GLASS).noOcclusion().lightLevel(state -> 8)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE));
+    /** An echo field (EchoFieldBlock). */
+    public static final DeferredBlock<EchoFieldBlock> ECHO_FIELD = BLOCKS.registerBlock("echo_field", EchoFieldBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.AMETHYST).noOcclusion().lightLevel(state -> 6)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_MAGENTA));
     /** A beam light (BeamLightBlock): a small white lamp pointed where you like. */
     public static final DeferredBlock<BeamLightBlock> BEAM_LIGHT = BLOCKS.registerBlock("beam_light", BeamLightBlock::new,
             BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 5)

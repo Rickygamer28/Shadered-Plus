@@ -33,7 +33,9 @@
     "SkyblockRenderPassMixin",
     "SkyPassMixin",
     "SkyRenderTypeDrawMixin",
-    "SkyboxSeamMixin"
+    "SkyboxSeamMixin",
+    "SonarColourMixin",
+    "SonarGlowMixin"
   ],
   "injectors": {
     "defaultRequire": 1
