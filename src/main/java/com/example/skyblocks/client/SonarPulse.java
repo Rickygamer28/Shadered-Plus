@@ -302,17 +302,22 @@ public final class SonarPulse {
 
     @SubscribeEvent
     public static void onStage(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_WEATHER || origin == null || pulseLevel == null) {
+        if (origin == null || pulseLevel == null) {
             return;
         }
         float pt = event.getPartialTick().getGameTimeDeltaPartialTick(false);
         float age = (pulseLevel.getGameTime() - startedAt + pt) / 20.0F;
         Vec3 cam = event.getCamera().getPosition();
-        boolean pack = com.example.skyblocks.client.iris.IrisIslandTarget.deferSky();
-        if (!pack && waveShader != null && age * SPEED < REACH + 12.0F) {
-            wave(event, cam, age);
+        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_WEATHER) {
+            // the ring: over everything (its own matrices, from the event)
+            boolean pack = com.example.skyblocks.client.iris.IrisIslandTarget.deferSky();
+            if (!pack && waveShader != null && age * SPEED < REACH + 12.0F) {
+                wave(event, cam, age);
+            }
+            return;
         }
-        if (FOUND.isEmpty()) {
+        // what it found: with the world's own camera turned (after the particles, as the world's other lights)
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES || FOUND.isEmpty()) {
             return;
         }
         // what it found, outlined through walls - from when the ring reached it, fading at the end
