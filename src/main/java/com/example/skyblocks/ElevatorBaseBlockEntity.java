@@ -198,14 +198,14 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
             }
         }
         // the panels at the floor it's stopped at: a redstone signal (when it's set to)
-        int at = be.redstone && cabin != null && cabin.settled() ? Math.round(cabin.landing()) : Integer.MIN_VALUE;
+        int at = be.redstone && cabin != null && !cabin.moving() ? Math.round(cabin.landing()) : Integer.MIN_VALUE;
         if (at != be.poweredLanding) {
             be.powerPanels(be.poweredLanding, false);
             be.powerPanels(at, true);
             be.poweredLanding = at;
         }
         // the doors in front of the shaft at the floor it's stopped at: open (and the ones it opened shut, when it leaves)
-        int doorsAt = be.doors && cabin != null && cabin.settled() ? Math.round(cabin.landing()) : Integer.MIN_VALUE;
+        int doorsAt = be.doors && cabin != null && !cabin.moving() ? Math.round(cabin.landing()) : Integer.MIN_VALUE;
         if (doorsAt != be.doorsLanding) {
             be.shutDoors();
             be.openDoors(doorsAt);

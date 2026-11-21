@@ -30,7 +30,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * A floor sensor: a small block near an elevator's landing (on a floor, a wall or a ceiling) giving a redstone signal
  * for that floor - to things next to it, and through the block it's on. Right-click: what it gives a signal for -
  * while the cabin's stopped here, a pulse as it arrives, a pulse as it leaves, or while the elevator's moving. Looks for
- * the nearest cabin within 4 blocks across and its floor within a block or two of its own height, every other tick.
+ * the nearest cabin within 4 blocks across and its floor within a block or two of its own height, every tick.
  */
 public class ElevatorSensorBlock extends Block {
     public static final MapCodec<ElevatorSensorBlock> CODEC = simpleCodec(ElevatorSensorBlock::new);
@@ -39,7 +39,7 @@ public class ElevatorSensorBlock extends Block {
     public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
     /** (The cabin stopped here last look; ticks of a pulse left.) */
     public static final BooleanProperty HERE = BooleanProperty.create("here");
-    public static final IntegerProperty PULSE = IntegerProperty.create("pulse", 0, 5);
+    public static final IntegerProperty PULSE = IntegerProperty.create("pulse", 0, 10);
     private static final String[] MODES = {"here", "arrive", "leave", "moving"};
     private static final java.util.Map<Direction, VoxelShape> SHAPES = java.util.Map.of(
             Direction.UP, Block.box(4, 0, 4, 12, 3, 12), Direction.DOWN, Block.box(4, 13, 4, 12, 16, 12),
@@ -74,7 +74,7 @@ public class ElevatorSensorBlock extends Block {
     @Override
     protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moving) {
         if (!old.is(this)) {
-            level.scheduleTick(pos, this, 2);
+            level.scheduleTick(pos, this, 1);
         }
     }
 
@@ -92,7 +92,7 @@ public class ElevatorSensorBlock extends Block {
 
     @Override
     protected void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
-        level.scheduleTick(pos, this, 2);
+        level.scheduleTick(pos, this, 1);
         // the nearest cabin: stopped at a floor by this height? moving?
         List<ElevatorCabinEntity> cabins = level.getEntitiesOfClass(ElevatorCabinEntity.class, new AABB(pos).inflate(4.5, 48.0, 4.5));
         ElevatorCabinEntity cabin = null;
@@ -105,13 +105,13 @@ public class ElevatorSensorBlock extends Block {
             }
         }
         int off = cabin == null ? 99 : pos.getY() - Math.round(cabin.landing());
-        boolean here = cabin != null && cabin.settled() && off >= -1 && off <= 2;
+        boolean here = cabin != null && !cabin.moving() && off >= -1 && off <= 2; // (the moment it stops)
         boolean moving = cabin != null && cabin.moving();
         boolean wasHere = state.getValue(HERE);
         int pulse = Math.max(0, state.getValue(PULSE) - 1);
         int mode = state.getValue(MODE);
         if (mode == 1 && here && !wasHere || mode == 2 && !here && wasHere) {
-            pulse = 5; // (10 ticks)
+            pulse = 10; // (10 ticks)
         }
         boolean on = switch (mode) {
             case 0 -> here;
