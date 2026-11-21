@@ -855,7 +855,10 @@ public final class RenderTest {
                         best = t;
                     }
                 }
-                SkyBlocksMod.LOGGER.info("Shadered+ render test: send to {}: {}", st, best != null && best.goTo(st));
+                com.example.skyblocks.TrainEntity.whyNot = best == null ? "no train near" : "";
+                boolean ok = best != null && best.goTo(st);
+                SkyBlocksMod.LOGGER.info("Shadered+ render test: send to {}: {} {} (train at {})", st, ok, com.example.skyblocks.TrainEntity.whyNot,
+                        best == null ? "-" : best.at(best.head(0)));
             }));
             return;
         }

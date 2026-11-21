@@ -771,6 +771,7 @@ public class TrainEntity extends Entity {
         Vec3 stop = TrainRoute.stopPoint(level(), station);
         float h = head(0.0F);
         if (stop == null || !TrainRoute.onLine(level(), at(h))) {
+            whyNot = stop == null ? "no stop point by the station" : "not on a line at " + at(h);
             return false;
         }
         if (!moving() && (at(h).distanceTo(stop) < 1.0 || inside(stop.add(0, 1.5, 0)) >= 0) && !onlyAhead) {
@@ -786,6 +787,7 @@ public class TrainEntity extends Entity {
                     waitFor(station);
                     return true;
                 }
+                whyNot = "no way there on the track";
                 return false;
             }
             stopWaiting();
@@ -861,6 +863,9 @@ public class TrainEntity extends Entity {
     public boolean goTo(BlockPos station) {
         return goTo(station, false);
     }
+
+    /** (for the CI run's log) why the last goTo said no. */
+    public static String whyNot = "";
 
     /** (server) Its planned way: its legs, which it's on, when it stopped between them. */
     @Nullable
