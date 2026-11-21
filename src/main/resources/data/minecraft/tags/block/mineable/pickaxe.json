@@ -50,6 +50,8 @@
     "skyblocks:beam_light",
     "skyblocks:phase_block",
     "skyblocks:echo_field",
-    "skyblocks:elevator_sensor"
+    "skyblocks:elevator_sensor",
+    "skyblocks:train_rail",
+    "skyblocks:station"
   ]
 }

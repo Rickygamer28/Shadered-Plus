@@ -28,6 +28,10 @@ public final class ModEntities {
     public static final Supplier<EntityType<ElevatorCabinEntity>> ELEVATOR_CABIN = TYPES.register("elevator_cabin",
             () -> EntityType.Builder.<ElevatorCabinEntity>of(ElevatorCabinEntity::new, MobCategory.MISC).sized(2.9F, ElevatorCabinEntity.PLATE)
                     .clientTrackingRange(16).updateInterval(10).fireImmune().build("elevator_cabin"));
+    /** A train (TrainEntity): its locomotive and cars, along a line of train rails. */
+    public static final Supplier<EntityType<TrainEntity>> TRAIN = TYPES.register("train",
+            () -> EntityType.Builder.<TrainEntity>of(TrainEntity::new, MobCategory.MISC).sized(2.0F, 2.6F)
+                    .clientTrackingRange(16).updateInterval(20).fireImmune().build("train"));
 
     static void attributes(EntityAttributeCreationEvent event) {
         event.put(OIIA_CAT.get(), OiiaCatEntity.createAttributes().build());

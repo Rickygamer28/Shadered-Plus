@@ -163,6 +163,8 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(ElevatorBaseBlockEntity::new, ModBlocks.ELEVATOR_BASE.get()).build(null));
     public static final Supplier<BlockEntityType<PhaseBlockEntity>> PHASE_BLOCK = TYPES.register("phase_block",
             () -> BlockEntityType.Builder.of(PhaseBlockEntity::new, ModBlocks.PHASE_BLOCK.get()).build(null));
+    public static final Supplier<BlockEntityType<StationBlockEntity>> STATION = TYPES.register("station",
+            () -> BlockEntityType.Builder.of(StationBlockEntity::new, ModBlocks.STATION.get()).build(null));
     public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> ECHO_FIELD = TYPES.register("echo_field",
             () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.ECHO_FIELD.get(), p, st), ModBlocks.ECHO_FIELD.get()).build(null));
     public static final Supplier<BlockEntityType<HourglassBlockEntity>> HOURGLASS = TYPES.register("hourglass",

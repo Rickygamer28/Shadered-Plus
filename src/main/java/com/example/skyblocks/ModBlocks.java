@@ -536,6 +536,13 @@ public final class ModBlocks {
     public static final DeferredBlock<ElevatorPanelBlock> ELEVATOR_PANEL = BLOCKS.registerBlock("elevator_panel", ElevatorPanelBlock::new,
             BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.METAL).noCollission().noOcclusion().lightLevel(state -> 5)
                     .mapColor(net.minecraft.world.level.material.MapColor.METAL));
+    /** A train line (TrainRailBlock) and its stations (StationBlock). */
+    public static final DeferredBlock<TrainRailBlock> TRAIN_RAIL = BLOCKS.registerBlock("train_rail", TrainRailBlock::new,
+            BlockBehaviour.Properties.of().strength(0.7F).sound(SoundType.METAL).noCollission().noOcclusion()
+                    .mapColor(net.minecraft.world.level.material.MapColor.METAL));
+    public static final DeferredBlock<StationBlock> STATION = BLOCKS.registerBlock("station", StationBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 6)
+                    .mapColor(net.minecraft.world.level.material.MapColor.METAL));
 
     /** An hourglass timer (HourglassBlock). */
     public static final DeferredBlock<HourglassBlock> HOURGLASS = BLOCKS.registerBlock("hourglass", HourglassBlock::new,

@@ -157,6 +157,7 @@ public class SkyBlocksMod {
                 .playToServer(WhirlpoolPayload.TYPE, WhirlpoolPayload.STREAM_CODEC, WhirlpoolPayload::handle)
                 .playToServer(PowerCorePayload.TYPE, PowerCorePayload.STREAM_CODEC, PowerCorePayload::handle)
                 .playToServer(TimeCrystalPayload.TYPE, TimeCrystalPayload.STREAM_CODEC, TimeCrystalPayload::handle)
+                .playToServer(TrainPayload.TYPE, TrainPayload.STREAM_CODEC, TrainPayload::handle)
                 .playToServer(ElevatorPayload.TYPE, ElevatorPayload.STREAM_CODEC, ElevatorPayload::handle)
                 .playToServer(HourglassPayload.TYPE, HourglassPayload.STREAM_CODEC, HourglassPayload::handle)
                 .playToServer(SpotlightPayload.TYPE, SpotlightPayload.STREAM_CODEC, SpotlightPayload::handle)
