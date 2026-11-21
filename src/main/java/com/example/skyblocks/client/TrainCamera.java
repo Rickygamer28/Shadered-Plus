@@ -22,7 +22,17 @@ public final class TrainCamera {
     private TrainCamera() {}
 
     @Nullable
-    public static Vec3 place(Camera camera, BlockGetter level, Entity entity, Vec3 was, float partialTick) {
+    public static Vec3 place(Camera camera, BlockGetter level, Entity entity, Vec3 was, float partialTick, boolean detached) {
+        // standing in a moving car: the camera with you as you are in the car as drawn (TrainClient.standing)
+        Vec3 stand = TrainClient.standing(entity, partialTick);
+        Vec3 shift = Vec3.ZERO;
+        if (stand != null) {
+            shift = stand.subtract(entity.getPosition(partialTick));
+            was = was.add(shift);
+        }
+        if (!detached) {
+            return stand == null ? null : was;
+        }
         if (entity.getVehicle() instanceof TrainEntity t) {
             Integer key = t.seatOf(entity);
             int unit = key == null ? 0 : Math.min(key / 16, t.units() - 1);
@@ -45,7 +55,7 @@ public final class TrainCamera {
             if (t.level() != entity.level() || t.isRemoved()) {
                 continue;
             }
-            Vec3 eye = entity.getEyePosition(partialTick);
+            Vec3 eye = entity.getEyePosition(partialTick).add(shift);
             int k = t.inside(entity.position());
             if (k < 0) {
                 continue;
@@ -67,8 +77,8 @@ public final class TrainCamera {
                 double keep = Math.max(0.0, tExit - 0.05);
                 return eye.add(was.subtract(eye).scale(keep));
             }
-            return null;
+            return stand == null ? null : was;
         }
-        return null;
+        return stand == null ? null : was;
     }
 }

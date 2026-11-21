@@ -781,9 +781,13 @@ public class TrainEntity extends Entity {
         // smooth track: planned - its switches set as it goes, backing up past one if it must, round other trains
         if (TrackNetwork.of(level()).nearest(at(h), 0.8) != null) {
             List<TrainRoute.Leg> legs = TrainRoute.plan(level(), at(h), frontWay(h), at(h - length()), backWay(h), length(), stop, true, occ::near);
+            List<TrainRoute.Leg> free = TrainRoute.plan(level(), at(h), frontWay(h), at(h - length()), backWay(h), length(), stop, true);
+            if (legs != null && free != null && reversals(legs) > reversals(free)) {
+                legs = null; // (round the other train only by backing up: wait for it instead)
+            }
             if (legs == null || legs.isEmpty()) {
                 // (no way clear: is there a way at all? then wait for it)
-                if (TrainRoute.plan(level(), at(h), frontWay(h), at(h - length()), backWay(h), length(), stop, true) != null) {
+                if (free != null) {
                     waitFor(station);
                     return true;
                 }
@@ -1067,10 +1071,11 @@ public class TrainEntity extends Entity {
         Frame lf = frame(locoUnit(), 0.0F);
         setPos(lf.mid().x, lf.mid().y, lf.mid().z);
         if (level().isClientSide) {
-            if (style() == 1 && random.nextFloat() < 0.25F + speed(0.0F) * 1.5F) {
+            // (a light puff from the chimney now and then - more as it goes, but short-lived: not a wall of smoke)
+            if (style() == 1 && random.nextFloat() < 0.06F + speed(0.0F) * 0.35F) {
                 Vec3 c = lf.world(HL - 0.6, 5.0, 0.0), n = lf.f();
-                level().addParticle(net.minecraft.core.particles.ParticleTypes.CAMPFIRE_COSY_SMOKE, c.x, c.y, c.z, -n.x * speed(0.0F) * 0.5,
-                        0.06, -n.z * speed(0.0F) * 0.5);
+                level().addParticle(net.minecraft.core.particles.ParticleTypes.CLOUD, c.x, c.y, c.z, n.x * speed(0.0F) * 0.6,
+                        0.05, n.z * speed(0.0F) * 0.6);
             }
             return;
         }
@@ -1192,6 +1197,14 @@ public class TrainEntity extends Entity {
     }
 
     /** Whether a point (in a unit's own space) is in it: its floor to its ceiling, between its walls, its gangways too. */
+    private static int reversals(List<TrainRoute.Leg> legs) {
+        int n = 0;
+        for (TrainRoute.Leg l : legs) {
+            n += l.reverse() ? 1 : 0;
+        }
+        return n;
+    }
+
     public static boolean within(Vec3 l) {
         return Math.abs(l.x) < HL + GANG_OUT && Math.abs(l.z) < OW && l.y > FL - 0.6 && l.y < CE;
     }

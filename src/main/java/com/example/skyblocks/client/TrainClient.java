@@ -31,7 +31,27 @@ public final class TrainClient {
     private static int held;
     private static boolean braking, faced;
 
+    /** Standing in a train: which car, and where in it you were last tick and are this one (its own frame). */
+    @org.jetbrains.annotations.Nullable
+    private static TrainEntity standIn;
+    private static int standUnit;
+    private static Vec3 standWas = Vec3.ZERO, standNow = Vec3.ZERO;
+
     private TrainClient() {}
+
+    /**
+     * Where you are now, standing in a moving train, as it's drawn this frame: the car as drawn (between ticks), you in
+     * it - not a tick behind it, as you'd be drawn otherwise (and so jolting about in it as it speeds, slows and turns).
+     */
+    @org.jetbrains.annotations.Nullable
+    public static Vec3 standing(net.minecraft.world.entity.Entity who, float partialTick) {
+        TrainEntity t = standIn;
+        if (t == null || who != Minecraft.getInstance().player || who.isPassenger() || t.isRemoved() || standUnit >= t.units()) {
+            return null;
+        }
+        Vec3 l = standWas.lerp(standNow, partialTick);
+        return t.frameP(standUnit, partialTick).world(l.x, l.y, l.z);
+    }
 
     @SubscribeEvent
     public static void onTick(ClientTickEvent.Post event) {
@@ -40,6 +60,7 @@ public final class TrainClient {
             return;
         }
         LocalPlayer me = mc.player;
+        boolean carried = false;
         List<TrainEntity> trains;
         synchronized (TrainEntity.class) {
             trains = new ArrayList<>(TrainEntity.CLIENT);
@@ -58,6 +79,14 @@ public final class TrainClient {
                     if (TrainEntity.within(l)) {
                         Vec3 p = now[k].world(l.x, l.y, l.z);
                         me.setPos(p.x, p.y, p.z);
+                        // (where you were in it a tick ago, and now: the camera drawn from these, with the car as drawn)
+                        Vec3 lo = was[k].local(new Vec3(me.xo, me.yo, me.zo));
+                        boolean same = standIn == t && standUnit == k && TrainEntity.within(lo);
+                        standIn = t;
+                        standUnit = k;
+                        standWas = same ? lo : l;
+                        standNow = l;
+                        carried = true;
                         float turn = Mth.wrapDegrees(now[k].yaw() - was[k].yaw());
                         me.setYRot(me.getYRot() + turn);
                         me.setYHeadRot(me.getYHeadRot() + turn);
@@ -66,6 +95,9 @@ public final class TrainClient {
                     }
                 }
             }
+        }
+        if (!carried) {
+            standIn = null;
         }
         if (me != null && me.getVehicle() instanceof TrainEntity t) {
             // (just sat down: facing the way the seat does)

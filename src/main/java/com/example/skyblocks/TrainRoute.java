@@ -294,6 +294,9 @@ public final class TrainRoute {
      * by turning back (its back now its front), and if so whether it turns back where its front stopped (its points
      * then start at its old front: the length of it to be skipped).
      */
+    /** What backing up costs, in blocks of track: it goes forward the long way round rather than back, when it can. */
+    private static final float REVERSE_COST = 600.0F;
+
     public record Leg(List<Vec3> pts, List<int[]> switches, boolean reverse, boolean fromHead) {}
 
     private record PState(int seg, boolean fwd, int entry, float cost, @Nullable PState parent, @Nullable int[] sw, boolean reversed, boolean fromHead,
@@ -321,7 +324,7 @@ public final class TrainRoute {
         java.util.PriorityQueue<PState> todo = new java.util.PriorityQueue<>((a, b) -> Float.compare(a.cost, b.cost));
         todo.add(new PState(hn.seg().id, hn.seg().tan[hn.index()].dot(headDir) >= 0, hn.index(), 0.0F, null, null, false, false, true, 0.0F));
         if (mayReverse && tn != null) {
-            todo.add(new PState(tn.seg().id, tn.seg().tan[tn.index()].dot(tailDir) >= 0, tn.index(), 4.0F, null, null, true, false, true, 0.0F));
+            todo.add(new PState(tn.seg().id, tn.seg().tan[tn.index()].dot(tailDir) >= 0, tn.index(), REVERSE_COST, null, null, true, false, true, 0.0F));
         }
         java.util.Set<Long> seen = new java.util.HashSet<>();
         float reverseRoom = length + 2.0F;
@@ -369,7 +372,7 @@ public final class TrainRoute {
                 for (int j = st.entry + step; j >= 0 && j < n; j += step) {
                     since += (float) seg.pts[j].distanceTo(seg.pts[j - step]);
                     if (since >= reverseRoom) {
-                        todo.add(new PState(st.seg, !st.fwd, j, st.cost + reverseRoom * 2.0F + 30.0F, st, null, true, true, false, 0.0F));
+                        todo.add(new PState(st.seg, !st.fwd, j, st.cost + reverseRoom * 2.0F + REVERSE_COST, st, null, true, true, false, 0.0F));
                         reversedHere = true;
                         break;
                     }

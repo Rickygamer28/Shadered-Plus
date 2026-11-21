@@ -74,7 +74,13 @@ public class StationRenderer implements BlockEntityRenderer<StationBlockEntity> 
             be.clientTick = level.getGameTime();
             int st = 0;
             Vec3 c = com.example.skyblocks.TrainRoute.stopPoint(level, be.getBlockPos());
+            be.clientB = 1.55F;
             if (c != null) {
+                // (close by the track: up over a train's roof, not through its side)
+                Vec3 mid = Vec3.atBottomCenterOf(be.getBlockPos());
+                if (Math.hypot(c.x - mid.x, c.z - mid.z) < TrainEntity.OW + 1.4) {
+                    be.clientB = (float) Math.max(1.55, c.y - be.getBlockPos().getY() + TrainEntity.RT + 1.0);
+                }
                 for (TrainEntity t : level.getEntitiesOfClass(TrainEntity.class, new AABB(be.getBlockPos()).inflate(256.0, 64.0, 256.0))) {
                     boolean goingHere = t.end().distanceToSqr(c) < 2.5;
                     // (here: stopped alongside it - any of its cars by it)
@@ -104,7 +110,7 @@ public class StationRenderer implements BlockEntityRenderer<StationBlockEntity> 
         float facing = -be.getBlockState().getValue(StationBlock.FACING).toYRot();
         PoseStack ps = new PoseStack();
         ps.last().pose().set(pose.last().pose());
-        ps.translate(0.5F, 1.55F, 0.5F);
+        ps.translate(0.5F, be.clientB > 0.0F ? be.clientB : 1.55F, 0.5F);
         ps.mulPose(Axis.YP.rotationDegrees(facing));
         Matrix4f m = new Matrix4f(ps.last().pose());
         String name = be.name();

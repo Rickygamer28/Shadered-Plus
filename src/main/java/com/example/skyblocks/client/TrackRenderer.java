@@ -142,7 +142,7 @@ public final class TrackRenderer {
     }
 
     /** How far out from a switch its signal stands (clear of trains going by), and which side. */
-    private static final double LAMP_OUT = 2.0;
+    private static final double LAMP_OUT = 3.1;
 
     private static Vec3 lampSide(TrackNetwork.Node n) {
         Vec3 s = n.dir.cross(new Vec3(0, 1, 0));

@@ -22,10 +22,10 @@ public abstract class CameraTrainMixin {
 
     @Inject(method = "setup", at = @At("TAIL"))
     private void skyblocks$trainCamera(BlockGetter level, Entity entity, boolean detached, boolean reverse, float partialTick, CallbackInfo ci) {
-        if (!detached || entity == null) {
+        if (entity == null) {
             return;
         }
-        Vec3 p = TrainCamera.place((Camera) (Object) this, level, entity, getPosition(), partialTick);
+        Vec3 p = TrainCamera.place((Camera) (Object) this, level, entity, getPosition(), partialTick, detached);
         if (p != null) {
             setPosition(p);
         }
