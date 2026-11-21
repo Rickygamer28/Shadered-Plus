@@ -359,7 +359,7 @@ vec3 solidColour(vec3 p, vec3 n, vec3 rd, int mat) {
         return o + (style == 0 ? vec3(0.2, 0.9, 1.0) : vec3(1.0, 0.7, 0.3)) * edge * (0.3 + moving);
     }
     if (mat == 10) {
-        vec3 o = shade(vec3(0.25, 0.27, 0.3), n, rd, 0.4, true);
+        vec3 o = shade(p.x < 2.8 ? vec3(0.78, 0.8, 0.83) : vec3(0.3, 0.32, 0.35), n, rd, 0.4, true);
         if (p.x > 4.85 && n.y > 0.5) {
             // (the desk's screens)
             float scr = step(0.0, sin(p.z * 9.0)) * step(abs(p.z), 1.0);

@@ -79,11 +79,12 @@ public class StationRenderer implements BlockEntityRenderer<StationBlockEntity> 
                 Vec3 c = TrainLine.centre(level, rail);
                 for (TrainEntity t : level.getEntitiesOfClass(TrainEntity.class, new AABB(be.getBlockPos()).inflate(256.0, 64.0, 256.0))) {
                     boolean goingHere = t.end().distanceToSqr(c) < 2.5;
-                    if (goingHere && !t.moving()) {
+                    // (here: stopped alongside it - any of its cars by it)
+                    if (!t.moving() && t.inside(c.add(0, 1.5, 0)) >= 0) {
                         st = 2;
                         break;
                     }
-                    if (goingHere) {
+                    if (goingHere && t.moving()) {
                         st = 1;
                     }
                 }
