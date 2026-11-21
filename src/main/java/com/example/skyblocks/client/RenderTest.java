@@ -431,7 +431,7 @@ public final class RenderTest {
             "setblock 1018 -60 243 skyblocks:station{name:\"Left\"}", "setblock 1018 -60 278 skyblocks:station{name:\"Right\"}",
             "#trainat 985.5 -59.9 260.5 0 1", "#trainat 957 -59.9 260.5 1 1",
             "#watch front 979 -60 260", "#watch behind 951 -60 260",
-            "#send 979 -60 260 1018 -60 243", "#send 951 -60 260 1018 -60 278",
+            "#send 979 -60 260 1018 -60 243", "#send 951 -60 260 1018 -60 277",
             "#track 930.5,-59.9,300.5 -90 980.5,-59.9,300.5", "#track 980.5,-59.9,300.5 -90 1030.5,-59.9,300.5",
             "setblock 1028 -60 303 skyblocks:station{name:\"East\"}", "setblock 933 -60 303 skyblocks:station{name:\"West\"}",
             "#trainat 960.5 -59.9 300.5 0 1 0", "#trainat 975.5 -59.9 300.5 1 1 180",
