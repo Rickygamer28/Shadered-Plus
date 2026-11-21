@@ -426,13 +426,13 @@ public final class RenderTest {
             // signalling: a Y junction - two trains, the front one sent left, the one behind right; a single line, two
             // trains sent through each other
             "forceload add 912 236 1040 312",
-            "#track 920.5,-59.9,260.5 -90 990.5,-59.9,260.5", "#track 990.5,-59.9,260.5 0 1020.5,-59.9,245.5",
+            "#track 920.5,-59.9,260.5 -90 960.5,-59.9,260.5", "#track 960.5,-59.9,260.5 -90 990.5,-59.9,260.5", "#track 990.5,-59.9,260.5 0 1020.5,-59.9,245.5",
             "#track 990.5,-59.9,260.5 0 1020.5,-59.9,275.5",
             "setblock 1018 -60 243 skyblocks:station{name:\"Left\"}", "setblock 1018 -60 278 skyblocks:station{name:\"Right\"}",
             "#trainat 985.5 -59.9 260.5 0 1", "#trainat 957 -59.9 260.5 1 1",
             "#watch front 979 -60 260", "#watch behind 951 -60 260",
             "#send 979 -60 260 1018 -60 243", "#send 951 -60 260 1018 -60 278",
-            "#track 930.5,-59.9,300.5 -90 1030.5,-59.9,300.5",
+            "#track 930.5,-59.9,300.5 -90 980.5,-59.9,300.5", "#track 980.5,-59.9,300.5 -90 1030.5,-59.9,300.5",
             "setblock 1028 -60 303 skyblocks:station{name:\"East\"}", "setblock 933 -60 303 skyblocks:station{name:\"West\"}",
             "#trainat 960.5 -59.9 300.5 0 1 0", "#trainat 975.5 -59.9 300.5 1 1 180",
             "#watch eastbound 954 -60 300", "#watch westbound 981 -60 300",
