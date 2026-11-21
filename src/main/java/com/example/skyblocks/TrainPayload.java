@@ -88,7 +88,7 @@ public record TrainPayload(int train, int action, int value, BlockPos pos, Strin
                     // (value: unit * 64 + 32 + notch; + 0x1000: brake) - only from that cab's driver's seat
                     int v = p.value & 0xFFF, unit = v / 64, notch = v % 64 - 32;
                     Integer key = t.seatOf(player);
-                    if (player.getVehicle() == t && key != null && key / 16 == unit && TrainEntity.driverSeat(t.kind(unit), key % 16)) {
+                    if (player.getVehicle() == t && key != null && key / 16 == unit && TrainEntity.driverSeat(t.kindP(unit), key % 16)) {
                         t.throttle(unit, notch, (p.value & 0x1000) != 0);
                     }
                 }

@@ -25,8 +25,8 @@ public final class TrainCamera {
     public static Vec3 place(Camera camera, BlockGetter level, Entity entity, Vec3 was, float partialTick) {
         if (entity.getVehicle() instanceof TrainEntity t) {
             Integer key = t.seatOf(entity);
-            int unit = key == null ? t.locoUnit() : Math.min(key / 16, t.units() - 1);
-            TrainEntity.Frame f = t.frame(unit, partialTick);
+            int unit = key == null ? 0 : Math.min(key / 16, t.units() - 1);
+            TrainEntity.Frame f = t.frameP(unit, partialTick);
             Vec3 pivot = f.world(0.0, TrainEntity.CE * 0.7, 0.0);
             Vec3 look = new Vec3(camera.getLookVector());
             Vec3 want = pivot.subtract(look.scale(RIDING));
@@ -50,7 +50,7 @@ public final class TrainCamera {
             if (k < 0) {
                 continue;
             }
-            TrainEntity.Frame f = t.frame(k, partialTick);
+            TrainEntity.Frame f = t.frameP(k, partialTick);
             Vec3 a = f.local(eye), b = f.local(was);
             double[] lo = {-TrainEntity.HL + 0.35, TrainEntity.FL + 0.1, -TrainEntity.IW + 0.15};
             double[] hi = {TrainEntity.HL - 0.35, TrainEntity.CE - 0.1, TrainEntity.IW - 0.15};

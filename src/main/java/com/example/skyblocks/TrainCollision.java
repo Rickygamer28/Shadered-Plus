@@ -74,7 +74,7 @@ public final class TrainCollision {
                 AABB lb = new AABB(lc.x - hw, lc.y - hh, lc.z - hw, lc.x + hw, lc.y + hh, lc.z + hw);
                 List<VoxelShape> shapes = new ArrayList<>();
                 AABB reach = lb.expandTowards(m).inflate(0.1);
-                for (VoxelShape s : shapes(t.style(), t.kind(k), t.gangPlus(k), t.gangMinus(k), open)) {
+                for (VoxelShape s : shapes(t.style(), t.kindP(k), t.gangPlusP(k), t.gangMinusP(k), open)) {
                     if (s.bounds().intersects(reach)) {
                         shapes.add(s);
                     }

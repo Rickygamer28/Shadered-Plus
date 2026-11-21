@@ -49,7 +49,7 @@ public final class TrainClient {
                 continue;
             }
             TrainEntity.Frame[] was = t.clientFrames;
-            TrainEntity.Frame[] now = t.frames(0.0F);
+            TrainEntity.Frame[] now = t.framesP(0.0F);
             t.clientFrames = now;
             // you, standing in it: carried from where you were in it to the same place now
             if (me != null && !me.isPassenger() && !me.isSpectator() && was != null && was.length == now.length) {
@@ -73,7 +73,7 @@ public final class TrainClient {
             if (!faced && key != null) {
                 faced = true;
                 int unit = Math.min(key / 16, t.units() - 1);
-                Vec3 f = t.frame(unit, 0.0F).f().scale(TrainEntity.seatFacing(t.style(), t.kind(unit), key % 16));
+                Vec3 f = t.frameP(unit, 0.0F).f().scale(TrainEntity.seatFacing(t.style(), t.kindP(unit), key % 16));
                 float yaw = (float) (Mth.atan2(-f.x, f.z) * Mth.RAD_TO_DEG);
                 me.setYRot(yaw);
                 me.yRotO = yaw;
@@ -94,7 +94,7 @@ public final class TrainClient {
             return -1;
         }
         int unit = key / 16;
-        return unit < t.units() && TrainEntity.driverSeat(t.kind(unit), key % 16) ? unit : -1;
+        return unit < t.units() && TrainEntity.driverSeat(t.kindP(unit), key % 16) ? unit : -1;
     }
 
     private static void drive(Minecraft mc, LocalPlayer me, TrainEntity t) {
@@ -189,7 +189,7 @@ public final class TrainClient {
                     if (hitTrain == null) {
                         hitTrain = t;
                     }
-                    float[][] seats = TrainEntity.seatsOf(t.style(), t.kind(k));
+                    float[][] seats = TrainEntity.seatsOf(t.style(), t.kindP(k));
                     for (int s = 0; s < seats.length; s++) {
                         if (Math.abs(l.x - seats[s][0]) < 0.45 && Math.abs(l.z - seats[s][1]) < 0.5 && l.y < TrainEntity.FL + 1.4) {
                             hitTrain = t;

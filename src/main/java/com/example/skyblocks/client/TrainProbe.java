@@ -108,7 +108,7 @@ public final class TrainProbe {
         // then driven: throttle full ahead from its cab, then brakes
         if (tk == 1100) {
             t.setLoop(false);
-            t.throttle(t.locoUnit(), 6, false);
+            t.throttle(0, 6, false);
             SkyBlocksMod.LOGGER.info("Shadered+ train probe: throttle 6");
         }
         if (tk > 1100 && tk < 1400 && tk % 20 == 0) {
@@ -116,7 +116,7 @@ public final class TrainProbe {
                     String.format("%.2f", t.doors(0)));
         }
         if (tk == 1260) {
-            t.throttle(t.locoUnit(), 0, true);
+            t.throttle(0, 0, true);
             SkyBlocksMod.LOGGER.info("Shadered+ train probe: brake");
         }
     }

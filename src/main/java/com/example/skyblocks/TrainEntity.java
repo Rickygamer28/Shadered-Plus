@@ -419,9 +419,51 @@ public class TrainEntity extends Entity {
         return style() == 0 && k == (locoFront() ? units() - 1 : 0) ? 2 : 1;
     }
 
-    /** Whether a unit's turned round (a cab at the back: its nose that way). */
+    /**
+     * Whether a unit's turned round (from the way its way runs). Every car keeps its own facing whichever way the train
+     * runs (its locomotive's nose out ahead; a maglev's cab car's out behind; the cars between facing the locomotive) -
+     * so turning the train back turns nothing in it (or anyone standing in it).
+     */
     public boolean flipped(int k) {
-        return k == units() - 1 && kind(k) != 1;
+        int kd = kind(k);
+        if (kd == 0) {
+            return k == units() - 1 && units() > 1;
+        }
+        if (kd == 2) {
+            return k == units() - 1;
+        }
+        return !locoFront();
+    }
+
+    // ---- its units by where they are in it (0 its locomotive, on along it): the same whichever way it runs ----
+
+    /** A unit's place along its way (0 its front), from its place in the train. */
+    public int wayIndex(int p) {
+        return locoFront() ? p : units() - 1 - p;
+    }
+
+    public Frame frameP(int p, float partialTick) {
+        return frame(wayIndex(p), partialTick);
+    }
+
+    public Frame[] framesP(float partialTick) {
+        Frame[] out = new Frame[units()];
+        for (int p = 0; p < out.length; p++) {
+            out[p] = frameP(p, partialTick);
+        }
+        return out;
+    }
+
+    public int kindP(int p) {
+        return kind(wayIndex(p));
+    }
+
+    public boolean gangPlusP(int p) {
+        return gangPlus(wayIndex(p));
+    }
+
+    public boolean gangMinusP(int p) {
+        return gangMinus(wayIndex(p));
     }
 
     /** A unit's gangways, at its own +x end and its -x end (to the cars it joins). */
@@ -495,10 +537,10 @@ public class TrainEntity extends Entity {
         return out;
     }
 
-    /** Its cars as walls and floors see them: on a client, as at the end of the last tick. */
+    /** Its cars (by their places in it) as walls and floors see them: on a client, as at the end of the last tick. */
     public Frame[] solidFrames() {
         Frame[] fr = clientFrames;
-        return level().isClientSide && fr != null && fr.length == units() ? fr : frames(0.0F);
+        return level().isClientSide && fr != null && fr.length == units() ? fr : framesP(0.0F);
     }
 
     /** Unit k's middle and the way along its way it points (towards the way's far end). */
@@ -833,10 +875,11 @@ public class TrainEntity extends Entity {
     }
 
     /** Its throttle set from a cab (that unit): -3 .. 6 notches its nose's way; brake: stop, hard. */
-    public void throttle(int unit, int notch, boolean brake) {
-        if (unit < 0 || unit >= units() || kind(unit) == 1) {
+    public void throttle(int cab, int notch, boolean brake) {
+        if (cab < 0 || cab >= units() || kindP(cab) == 1) {
             return;
         }
+        int unit = wayIndex(cab);
         if (loop()) {
             entityData.set(LOOP, false);
         }
@@ -1002,7 +1045,7 @@ public class TrainEntity extends Entity {
 
     /** (server) Mobs and dropped things standing in it ride along with it. */
     private void carry() {
-        Frame[] now = frames(0.0F);
+        Frame[] now = framesP(0.0F);
         Frame[] was = lastFrames;
         lastFrames = now;
         if (was == null || was.length != now.length) {
@@ -1173,7 +1216,7 @@ public class TrainEntity extends Entity {
         if (unit < 0 || unit >= units() || rider.isPassenger()) {
             return false;
         }
-        int n = seatsOf(style(), kind(unit)).length;
+        int n = seatsOf(style(), kindP(unit)).length;
         List<Integer> order = new ArrayList<>();
         order.add(Math.min(want, n - 1));
         for (int s = 0; s < n; s++) {
@@ -1214,7 +1257,7 @@ public class TrainEntity extends Entity {
 
     private float[] seatSpot(int key) {
         int unit = Math.min(key / 16, units() - 1);
-        float[][] all = seatsOf(style(), kind(unit));
+        float[][] all = seatsOf(style(), kindP(unit));
         return all[Math.min(key % 16, all.length - 1)];
     }
 
@@ -1222,7 +1265,7 @@ public class TrainEntity extends Entity {
     protected void positionRider(Entity passenger, MoveFunction move) {
         Integer key = seatOf(passenger);
         if (key == null) {
-            key = locoUnit() * 16;
+            key = 0;
         }
         int unit = Math.min(key / 16, units() - 1);
         float[] s = seatSpot(key);
@@ -1234,9 +1277,9 @@ public class TrainEntity extends Entity {
     @Override
     public Vec3 getDismountLocationForPassenger(LivingEntity passenger) {
         Integer key = seatOf(passenger);
-        int unit = key == null ? locoUnit() : Math.min(key / 16, units() - 1);
+        int unit = key == null ? 0 : Math.min(key / 16, units() - 1);
         float[] s = key == null ? new float[] {0, 0} : seatSpot(key);
-        return frame(unit, 0.0F).world(s[0], FL + 0.05, 0.0);
+        return frameP(unit, 0.0F).world(s[0], FL + 0.05, 0.0);
     }
 
     @Override
