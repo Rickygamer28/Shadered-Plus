@@ -86,6 +86,9 @@ public final class SonarPulse {
                         .setTransparencyState(ADDITIVE_TRANSPARENCY)
                         .setWriteMaskState(COLOR_WRITE)
                         .setDepthTestState(NO_DEPTH_TEST)
+                        // (Minecraft's "no depth test" leaves it as it finds it - on, while the world's drawn: turned off here)
+                        .setTexturingState(new TexturingStateShard("skyblocks_sonar_through_walls", RenderSystem::disableDepthTest,
+                                RenderSystem::enableDepthTest))
                         .setCullState(NO_CULL)
                         .createCompositeState(false));
 
