@@ -30,7 +30,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A phase block: a solid sci-fi wall panel. Given a redstone signal it burns away - dissolving with glowing edges - and
  * can be walked through; the signal gone, it forms again (client/PhaseBlockRenderer draws it all). Phase blocks
- * touching each other are one wall: a signal to any of them opens them all.
+ * touching each other are one wall: a signal to any of them opens them all. Right-click: the block it looks like (any)
+ * and how it opens - burning, pixels, a scan, a hologram, a ripple (client/PhaseScreen) - for its whole wall.
  */
 public class PhaseBlock extends BaseEntityBlock {
     public static final MapCodec<PhaseBlock> CODEC = simpleCodec(PhaseBlock::new);
@@ -105,6 +106,16 @@ public class PhaseBlock extends BaseEntityBlock {
         }
     }
 
+    /** Right-click: its look and how it opens (client/PhaseScreen). */
+    @Override
+    protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, net.minecraft.world.entity.player.Player player,
+                                                                   net.minecraft.world.phys.BlockHitResult hit) {
+        if (level.isClientSide && level.getBlockEntity(pos) instanceof PhaseBlockEntity be) {
+            com.example.skyblocks.client.PhaseScreen.open(pos, be);
+        }
+        return net.minecraft.world.InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.INVISIBLE;
@@ -133,6 +144,6 @@ public class PhaseBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new SimpleRenderedBlockEntity(ModBlockEntities.PHASE_BLOCK.get(), pos, state);
+        return new PhaseBlockEntity(pos, state);
     }
 }

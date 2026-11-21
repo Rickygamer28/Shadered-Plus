@@ -382,7 +382,8 @@ public final class RenderTest {
             // the new four: a phase wall (another opening, caught mid-burn), a fractal cube of each kind, an echo field with a
             // pig nudged along by it, ores in a stone box and a zombie behind a wall for a sonar pulse
             "forceload add 866 -8 930 12",
-            "fill 870 -60 -2 874 -57 -2 skyblocks:phase_block", "fill 877 -60 -2 881 -57 -2 skyblocks:phase_block",
+            "fill 870 -60 -2 874 -57 -2 skyblocks:phase_block{look:{Name:\"minecraft:oak_planks\"},mode:1}",
+            "fill 877 -60 -2 881 -57 -2 skyblocks:phase_block{look:{Name:\"minecraft:stone_bricks\"},mode:2}",
             "setblock 884 -60 0 skyblocks:fractal_cube[kind=0]", "setblock 886 -60 0 skyblocks:fractal_cube[kind=1]",
             "setblock 888 -60 0 skyblocks:fractal_cube[kind=2]", "setblock 890 -60 0 skyblocks:fractal_cube[kind=3]",
             "setblock 898 -60 0 skyblocks:echo_field", "summon minecraft:pig 894 -60 2 {NoAI:1b,Tags:[\"echo\"],PersistenceRequired:1b}",

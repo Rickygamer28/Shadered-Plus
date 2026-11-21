@@ -32,13 +32,27 @@ import org.jetbrains.annotations.Nullable;
  * inside it, on its buttons); sneak + right-click: the elevator's look and speed (client/ElevatorScreen).
  */
 public class ElevatorPanelBlock extends HorizontalDirectionalBlock {
+    /** A redstone signal, while the cabin's stopped at its floor (when its elevator's set to: ElevatorBaseBlockEntity). */
+    public static final net.minecraft.world.level.block.state.properties.BooleanProperty POWERED =
+            net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED;
+
+    @Override
+    protected boolean isSignalSource(BlockState state) {
+        return true;
+    }
+
+    @Override
+    protected int getSignal(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos, Direction direction) {
+        return state.getValue(POWERED) ? 15 : 0;
+    }
+
     public static final MapCodec<ElevatorPanelBlock> CODEC = simpleCodec(ElevatorPanelBlock::new);
     private static final VoxelShape NORTH = Block.box(4, 3, 14, 12, 13, 16), SOUTH = Block.box(4, 3, 0, 12, 13, 2),
             WEST = Block.box(14, 3, 4, 16, 13, 12), EAST = Block.box(0, 3, 4, 2, 13, 12);
 
     public ElevatorPanelBlock(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
+        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(POWERED, false));
     }
 
     @Override
@@ -48,7 +62,7 @@ public class ElevatorPanelBlock extends HorizontalDirectionalBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
+        builder.add(FACING, POWERED);
     }
 
     @Nullable

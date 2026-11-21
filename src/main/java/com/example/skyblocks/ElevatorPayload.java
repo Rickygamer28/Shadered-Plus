@@ -10,7 +10,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /** An elevator's floor buttons and screen: a floor to go to, its look or its speed chosen (value: which), or its side turned. */
 public record ElevatorPayload(BlockPos base, int action, int value) implements CustomPacketPayload {
-    public static final int GO = 0, SKIN = 1, SPEED = 2, SIDE = 3;
+    public static final int GO = 0, SKIN = 1, SPEED = 2, SIDE = 3, REDSTONE = 4;
     public static final Type<ElevatorPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "elevator_action"));
     public static final StreamCodec<RegistryFriendlyByteBuf, ElevatorPayload> STREAM_CODEC = StreamCodec.of((buf, p) -> {
         buf.writeBlockPos(p.base);
@@ -38,6 +38,7 @@ public record ElevatorPayload(BlockPos base, int action, int value) implements C
                 case SKIN -> be.setSkin(payload.value);
                 case SPEED -> be.setSpeed(payload.value);
                 case SIDE -> be.nextSide();
+                case REDSTONE -> be.toggleRedstone();
                 default -> {}
             }
         });

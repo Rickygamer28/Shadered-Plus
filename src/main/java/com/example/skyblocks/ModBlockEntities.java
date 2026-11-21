@@ -161,8 +161,8 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(TimeCrystalBlockEntity::new, ModBlocks.TIME_CRYSTAL.get()).build(null));
     public static final Supplier<BlockEntityType<ElevatorBaseBlockEntity>> ELEVATOR_BASE = TYPES.register("elevator_base",
             () -> BlockEntityType.Builder.of(ElevatorBaseBlockEntity::new, ModBlocks.ELEVATOR_BASE.get()).build(null));
-    public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> PHASE_BLOCK = TYPES.register("phase_block",
-            () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.PHASE_BLOCK.get(), p, st), ModBlocks.PHASE_BLOCK.get()).build(null));
+    public static final Supplier<BlockEntityType<PhaseBlockEntity>> PHASE_BLOCK = TYPES.register("phase_block",
+            () -> BlockEntityType.Builder.of(PhaseBlockEntity::new, ModBlocks.PHASE_BLOCK.get()).build(null));
     public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> FRACTAL_CUBE = TYPES.register("fractal_cube",
             () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.FRACTAL_CUBE.get(), p, st), ModBlocks.FRACTAL_CUBE.get()).build(null));
     public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> ECHO_FIELD = TYPES.register("echo_field",

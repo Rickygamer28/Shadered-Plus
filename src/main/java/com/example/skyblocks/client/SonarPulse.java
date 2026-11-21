@@ -340,17 +340,47 @@ public final class SonarPulse {
         if (lineShader == null) {
             return;
         }
+        // (faces between two found blocks aren't filled: a vein glows as one)
+        java.util.Set<Long> lit = new java.util.HashSet<>();
+        for (Found f : FOUND) {
+            if (age >= f.reached()) {
+                lit.add(f.pos().asLong());
+            }
+        }
         java.util.function.Consumer<MultiBufferSource.BufferSource> draw = src -> {
             VertexConsumer vc = src.getBuffer(Types.OUTLINE);
             for (float[] b : boxes) {
                 int c = (int) b[3];
                 int r = Math.round((c >> 16 & 255) * b[4]), g = Math.round((c >> 8 & 255) * b[4]), bl = Math.round((c & 255) * b[4]);
+                faces(vc, b[0], b[1], b[2], r, g, bl, lit, cam);
                 box(vc, b[0], b[1], b[2], r, g, bl);
             }
             src.endBatch(Types.OUTLINE);
         };
         if (!LatePass.later(draw)) {
             draw.accept(Minecraft.getInstance().renderBuffers().bufferSource());
+        }
+    }
+
+    /** A found block's faces, softly filled in its colour (the shader adds a glint sweeping over them): shiny through walls. */
+    private static void faces(VertexConsumer vc, float x, float y, float z, int r, int g, int b, java.util.Set<Long> lit, Vec3 cam) {
+        BlockPos at = BlockPos.containing(x + cam.x + 0.5, y + cam.y + 0.5, z + cam.z + 0.5);
+        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+            if (lit.contains(at.relative(d).asLong())) {
+                continue;
+            }
+            float[][] c = switch (d) {
+                case UP -> new float[][] {{0, 1, 0}, {0, 1, 1}, {1, 1, 1}, {1, 1, 0}};
+                case DOWN -> new float[][] {{0, 0, 0}, {1, 0, 0}, {1, 0, 1}, {0, 0, 1}};
+                case NORTH -> new float[][] {{1, 1, 0}, {1, 0, 0}, {0, 0, 0}, {0, 1, 0}};
+                case SOUTH -> new float[][] {{0, 1, 1}, {0, 0, 1}, {1, 0, 1}, {1, 1, 1}};
+                case WEST -> new float[][] {{0, 1, 0}, {0, 0, 0}, {0, 0, 1}, {0, 1, 1}};
+                default -> new float[][] {{1, 1, 1}, {1, 0, 1}, {1, 0, 0}, {1, 1, 0}};
+            };
+            for (float[] p : c) {
+                // (alpha 0: a face - the shader fills it faintly and makes it shine; the edges' alpha 1)
+                vc.addVertex(x + p[0], y + p[1], z + p[2]).setColor(r, g, b, 0);
+            }
         }
     }
 

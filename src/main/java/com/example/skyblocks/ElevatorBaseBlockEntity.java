@@ -35,6 +35,9 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
     private int skin, speed = 1;
     /** The side its floor buttons and crystal rail are on: -1 worked out (the side with the most wall), 0 north, 1 south, 2 west, 3 east. */
     private int side = -1;
+    /** Whether the call panels at the floor its cabin's stopped at give a redstone signal (doors by them opening); which floor's do now. */
+    private boolean redstone;
+    private int poweredLanding = Integer.MIN_VALUE;
     /** Its floors: where you stand on each (y), from the bottom; the first on top of the base. */
     private int[] floors = new int[0];
     @Nullable
@@ -92,6 +95,15 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
     }
 
     /** The next side (auto, north, east, south, west). */
+    public boolean redstone() {
+        return redstone;
+    }
+
+    public void toggleRedstone() {
+        redstone = !redstone;
+        changed();
+    }
+
     public void nextSide() {
         int[] order = {-1, 0, 3, 1, 2};
         int at = 0;
@@ -172,6 +184,13 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
                 be.setChanged();
             }
         }
+        // the panels at the floor it's stopped at: a redstone signal (when it's set to)
+        int at = be.redstone && cabin != null && cabin.settled() ? Math.round(cabin.landing()) : Integer.MIN_VALUE;
+        if (at != be.poweredLanding) {
+            be.powerPanels(be.poweredLanding, false);
+            be.powerPanels(at, true);
+            be.poweredLanding = at;
+        }
         if (cabin != null && !cabin.moving() && !be.queue.isEmpty()) {
             int to = be.queue.poll();
             int from = Math.round(cabin.landing());
@@ -212,6 +231,29 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
      * Its floors: floor 1 on top of it, and one for each call panel beside the shaft above. (A stretch of 16 blocks up
      * with no call panel anywhere in it, by the game's own note of which blocks each chunk section has, is passed over.)
      */
+    /** The call panels round the shaft for the floor at landing: on or off. */
+    private void powerPanels(int landing, boolean on) {
+        if (landing == Integer.MIN_VALUE || level == null) {
+            return;
+        }
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int y = landing - 3; y <= landing + 3; y++) {
+            for (int dx = -4; dx <= 4; dx++) {
+                for (int dz = -4; dz <= 4; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) < 2) {
+                        continue;
+                    }
+                    p.set(worldPosition.getX() + dx, y, worldPosition.getZ() + dz);
+                    BlockState st = level.getBlockState(p);
+                    if (st.getBlock() instanceof ElevatorPanelBlock && st.getValue(ElevatorPanelBlock.POWERED) != on
+                            && (!on || ElevatorPanelBlock.landing(level, p) == landing)) {
+                        level.setBlock(p, st.setValue(ElevatorPanelBlock.POWERED, on), Block.UPDATE_ALL);
+                    }
+                }
+            }
+        }
+    }
+
     private void findFloors() {
         List<Integer> found = new ArrayList<>();
         int base = worldPosition.getY() + 1;
@@ -296,6 +338,8 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
         tag.putInt("speed", speed);
         tag.putIntArray("floors", floors);
         tag.putInt("side", side);
+        tag.putBoolean("redstone", redstone);
+        tag.putInt("powered_landing", poweredLanding);
     }
 
     @Override
@@ -305,6 +349,8 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
         speed = tag.contains("speed") ? Math.floorMod(tag.getInt("speed"), SPEEDS.length) : 1;
         floors = tag.getIntArray("floors");
         side = tag.contains("side") ? Math.max(-1, Math.min(3, tag.getInt("side"))) : -1;
+        redstone = tag.getBoolean("redstone");
+        poweredLanding = tag.contains("powered_landing") ? tag.getInt("powered_landing") : Integer.MIN_VALUE;
         clientPanelAt = -1000;
         cabinId = tag.hasUUID("cabin") ? tag.getUUID("cabin") : null;
         clientWallsAt = -1000;

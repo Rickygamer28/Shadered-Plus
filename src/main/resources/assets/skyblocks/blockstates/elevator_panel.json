@@ -1,17 +1,32 @@
 {
   "variants": {
-    "facing=north": {
+    "facing=north,powered=false": {
       "model": "skyblocks:block/elevator_panel"
     },
-    "facing=east": {
+    "facing=north,powered=true": {
+      "model": "skyblocks:block/elevator_panel"
+    },
+    "facing=east,powered=false": {
       "model": "skyblocks:block/elevator_panel",
       "y": 90
     },
-    "facing=south": {
+    "facing=east,powered=true": {
+      "model": "skyblocks:block/elevator_panel",
+      "y": 90
+    },
+    "facing=south,powered=false": {
       "model": "skyblocks:block/elevator_panel",
       "y": 180
     },
-    "facing=west": {
+    "facing=south,powered=true": {
+      "model": "skyblocks:block/elevator_panel",
+      "y": 180
+    },
+    "facing=west,powered=false": {
+      "model": "skyblocks:block/elevator_panel",
+      "y": 270
+    },
+    "facing=west,powered=true": {
       "model": "skyblocks:block/elevator_panel",
       "y": 270
     }
