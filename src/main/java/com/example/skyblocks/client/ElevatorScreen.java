@@ -24,7 +24,7 @@ public class ElevatorScreen extends Screen {
     private int left, top, h;
     private final Button[] skinButtons = new Button[ElevatorBaseBlockEntity.SKINS.length];
     private final Button[] speedButtons = new Button[ElevatorBaseBlockEntity.SPEEDS.length];
-    private Button sideButton, redstoneButton;
+    private Button sideButton, redstoneButton, doorsButton;
 
     public ElevatorScreen(BlockPos base) {
         super(Component.translatable("screen.skyblocks.elevator"));
@@ -48,7 +48,7 @@ public class ElevatorScreen extends Screen {
 
     @Override
     protected void init() {
-        h = 184;
+        h = 206;
         left = (width - W) / 2;
         top = (height - h) / 2;
         int y = top + 54;
@@ -68,6 +68,8 @@ public class ElevatorScreen extends Screen {
                 .bounds(left + 8, y + 68, W - 16, 18).build());
         redstoneButton = addRenderableWidget(Button.builder(Component.empty(), b -> PacketDistributor.sendToServer(new ElevatorPayload(base, ElevatorPayload.REDSTONE, 0)))
                 .bounds(left + 8, y + 90, W - 16, 18).build());
+        doorsButton = addRenderableWidget(Button.builder(Component.empty(), b -> PacketDistributor.sendToServer(new ElevatorPayload(base, ElevatorPayload.DOORS, 0)))
+                .bounds(left + 8, y + 112, W - 16, 18).build());
     }
 
     @Override
@@ -83,6 +85,7 @@ public class ElevatorScreen extends Screen {
         for (int i = 0; i < speedButtons.length; i++) {
             speedButtons[i].active = be.speedIndex() != i;
         }
+        doorsButton.setMessage(Component.translatable("screen.skyblocks.elevator.doors", Component.translatable(be.doors() ? "options.on" : "options.off")));
         redstoneButton.setMessage(Component.translatable("screen.skyblocks.elevator.redstone",
                 Component.translatable(be.redstone() ? "options.on" : "options.off")));
         String[] sides = {"north", "south", "west", "east"};

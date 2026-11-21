@@ -38,6 +38,10 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
     /** Whether the call panels at the floor its cabin's stopped at give a redstone signal (doors by them opening); which floor's do now. */
     private boolean redstone;
     private int poweredLanding = Integer.MIN_VALUE;
+    /** Whether it opens the doors (trapdoors, fence gates) in front of the shaft at the floor it's stopped at; which it opened. */
+    private boolean doors = true;
+    private int doorsLanding = Integer.MIN_VALUE;
+    private final List<BlockPos> opened = new ArrayList<>();
     /** Its floors: where you stand on each (y), from the bottom; the first on top of the base. */
     private int[] floors = new int[0];
     @Nullable
@@ -97,6 +101,15 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
     /** The next side (auto, north, east, south, west). */
     public boolean redstone() {
         return redstone;
+    }
+
+    public boolean doors() {
+        return doors;
+    }
+
+    public void toggleDoors() {
+        doors = !doors;
+        changed();
     }
 
     public void toggleRedstone() {
@@ -191,6 +204,13 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
             be.powerPanels(at, true);
             be.poweredLanding = at;
         }
+        // the doors in front of the shaft at the floor it's stopped at: open (and the ones it opened shut, when it leaves)
+        int doorsAt = be.doors && cabin != null && cabin.settled() ? Math.round(cabin.landing()) : Integer.MIN_VALUE;
+        if (doorsAt != be.doorsLanding) {
+            be.shutDoors();
+            be.openDoors(doorsAt);
+            be.doorsLanding = doorsAt;
+        }
         if (cabin != null && !cabin.moving() && !be.queue.isEmpty()) {
             int to = be.queue.poll();
             int from = Math.round(cabin.landing());
@@ -231,6 +251,63 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
      * Its floors: floor 1 on top of it, and one for each call panel beside the shaft above. (A stretch of 16 blocks up
      * with no call panel anywhere in it, by the game's own note of which blocks each chunk section has, is passed over.)
      */
+    /** Opens the doors, trapdoors and fence gates one or two blocks out from the shaft at a floor (feet and head height). */
+    private void openDoors(int landing) {
+        if (landing == Integer.MIN_VALUE || level == null) {
+            return;
+        }
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int y = landing; y <= landing + 1; y++) {
+            for (int dx = -3; dx <= 3; dx++) {
+                for (int dz = -3; dz <= 3; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) < 2) {
+                        continue;
+                    }
+                    p.set(worldPosition.getX() + dx, y, worldPosition.getZ() + dz);
+                    if (setOpen(p, true)) {
+                        opened.add(p.immutable());
+                    }
+                }
+            }
+        }
+        if (!opened.isEmpty()) {
+            setChanged();
+        }
+    }
+
+    /** Shuts the doors it opened (those still there and open). */
+    private void shutDoors() {
+        for (BlockPos p : opened) {
+            setOpen(p, false);
+        }
+        if (!opened.isEmpty()) {
+            opened.clear();
+            setChanged();
+        }
+    }
+
+    /** A door, trapdoor or fence gate there opened or shut; whether it changed. */
+    private boolean setOpen(BlockPos p, boolean open) {
+        BlockState st = level.getBlockState(p);
+        if (st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock door) {
+            if (st.getValue(net.minecraft.world.level.block.DoorBlock.HALF) != net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER
+                    || door.isOpen(st) == open) {
+                return false;
+            }
+            door.setOpen(null, level, st, p, open);
+            return true;
+        }
+        net.minecraft.world.level.block.state.properties.BooleanProperty prop = net.minecraft.world.level.block.state.properties.BlockStateProperties.OPEN;
+        if ((st.getBlock() instanceof net.minecraft.world.level.block.TrapDoorBlock || st.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock)
+                && st.getValue(prop) != open) {
+            level.setBlock(p, st.setValue(prop, open), Block.UPDATE_ALL);
+            level.playSound(null, p, open ? net.minecraft.sounds.SoundEvents.WOODEN_TRAPDOOR_OPEN : net.minecraft.sounds.SoundEvents.WOODEN_TRAPDOOR_CLOSE,
+                    net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);
+            return true;
+        }
+        return false;
+    }
+
     /** The call panels round the shaft for the floor at landing: on or off. */
     private void powerPanels(int landing, boolean on) {
         if (landing == Integer.MIN_VALUE || level == null) {
@@ -339,6 +416,9 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
         tag.putIntArray("floors", floors);
         tag.putInt("side", side);
         tag.putBoolean("redstone", redstone);
+        tag.putBoolean("no_doors", !doors);
+        tag.putInt("doors_landing", doorsLanding);
+        tag.putLongArray("opened", opened.stream().mapToLong(BlockPos::asLong).toArray());
         tag.putInt("powered_landing", poweredLanding);
     }
 
@@ -350,6 +430,12 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
         floors = tag.getIntArray("floors");
         side = tag.contains("side") ? Math.max(-1, Math.min(3, tag.getInt("side"))) : -1;
         redstone = tag.getBoolean("redstone");
+        doors = !tag.getBoolean("no_doors");
+        doorsLanding = tag.contains("doors_landing") ? tag.getInt("doors_landing") : Integer.MIN_VALUE;
+        opened.clear();
+        for (long l : tag.getLongArray("opened")) {
+            opened.add(BlockPos.of(l));
+        }
         poweredLanding = tag.contains("powered_landing") ? tag.getInt("powered_landing") : Integer.MIN_VALUE;
         clientPanelAt = -1000;
         cabinId = tag.hasUUID("cabin") ? tag.getUUID("cabin") : null;

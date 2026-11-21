@@ -1,0 +1,128 @@
+{
+  "multipart": [
+    {
+      "when": {
+        "facing": "up",
+        "powered": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/elevator_sensor"
+      }
+    },
+    {
+      "when": {
+        "facing": "up",
+        "powered": "true"
+      },
+      "apply": {
+        "model": "skyblocks:block/elevator_sensor_on"
+      }
+    },
+    {
+      "when": {
+        "facing": "down",
+        "powered": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/elevator_sensor",
+        "x": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "down",
+        "powered": "true"
+      },
+      "apply": {
+        "model": "skyblocks:block/elevator_sensor_on",
+        "x": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "powered": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/elevator_sensor",
+        "x": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "powered": "true"
+      },
+      "apply": {
+        "model": "skyblocks:block/elevator_sensor_on",
+        "x": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "powered": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/elevator_sensor",
+        "x": 90,
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "powered": "true"
+      },
+      "apply": {
+        "model": "skyblocks:block/elevator_sensor_on",
+        "x": 90,
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "powered": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/elevator_sensor",
+        "x": 90,
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "powered": "true"
+      },
+      "apply": {
+        "model": "skyblocks:block/elevator_sensor_on",
+        "x": 90,
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "powered": "false"
+      },
+      "apply": {
+        "model": "skyblocks:block/elevator_sensor",
+        "x": 90,
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "powered": "true"
+      },
+      "apply": {
+        "model": "skyblocks:block/elevator_sensor_on",
+        "x": 90,
+        "y": 90
+      }
+    }
+  ]
+}

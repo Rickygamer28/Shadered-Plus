@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "redstone",
+  "ingredients": [
+    {
+      "item": "minecraft:observer"
+    },
+    {
+      "item": "minecraft:redstone"
+    },
+    {
+      "item": "minecraft:polished_blackstone_slab"
+    }
+  ],
+  "result": {
+    "id": "skyblocks:elevator_sensor",
+    "count": 1
+  }
+}

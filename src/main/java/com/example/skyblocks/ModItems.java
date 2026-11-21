@@ -134,6 +134,7 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> SPOTLIGHT = ITEMS.registerSimpleBlockItem("spotlight", ModBlocks.SPOTLIGHT);
     public static final DeferredItem<BlockItem> BEAM_LIGHT = ITEMS.registerSimpleBlockItem("beam_light", ModBlocks.BEAM_LIGHT);
     public static final DeferredItem<BlockItem> PHASE_BLOCK = ITEMS.registerSimpleBlockItem("phase_block", ModBlocks.PHASE_BLOCK);
+    public static final DeferredItem<BlockItem> ELEVATOR_SENSOR = ITEMS.registerSimpleBlockItem("elevator_sensor", ModBlocks.ELEVATOR_SENSOR);
     public static final DeferredItem<BlockItem> FRACTAL_CUBE = ITEMS.registerSimpleBlockItem("fractal_cube", ModBlocks.FRACTAL_CUBE);
     public static final DeferredItem<BlockItem> ECHO_FIELD = ITEMS.registerSimpleBlockItem("echo_field", ModBlocks.ECHO_FIELD);
     public static final DeferredItem<SonarItem> SONAR = ITEMS.register("sonar", () -> new SonarItem(new Item.Properties().stacksTo(1)));

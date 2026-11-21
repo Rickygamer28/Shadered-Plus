@@ -232,6 +232,11 @@ public final class ModBlocks {
     public static final DeferredBlock<SpotlightBlock> SPOTLIGHT = BLOCKS.registerBlock("spotlight", SpotlightBlock::new,
             BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 7)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+    /** A floor sensor (ElevatorSensorBlock): a redstone signal for an elevator's floor. */
+    public static final DeferredBlock<ElevatorSensorBlock> ELEVATOR_SENSOR = BLOCKS.registerBlock("elevator_sensor", ElevatorSensorBlock::new,
+            BlockBehaviour.Properties.of().strength(0.6F).sound(SoundType.METAL).noOcclusion()
+                    .lightLevel(state -> state.getValue(ElevatorSensorBlock.POWERED) ? 7 : 0)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_RED));
     /** A phase block (PhaseBlock): a wall a redstone signal burns away. */
     public static final DeferredBlock<PhaseBlock> PHASE_BLOCK = BLOCKS.registerBlock("phase_block", PhaseBlock::new,
             BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 3)
