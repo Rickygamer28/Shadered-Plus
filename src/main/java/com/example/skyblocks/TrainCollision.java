@@ -20,6 +20,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  */
 public final class TrainCollision {
     private static final Map<Integer, List<VoxelShape>> SHAPES = new HashMap<>();
+    private static final double EPS = 0.005;
 
     private TrainCollision() {}
 
@@ -82,8 +83,20 @@ public final class TrainCollision {
                 if (shapes.isEmpty()) {
                     continue;
                 }
-                double y = Shapes.collide(Direction.Axis.Y, lb, shapes, m.y);
-                lb = lb.move(0, y, 0);
+                // (a hair into a floor - the car turned and moved since, numbers rounded - still stands on it: lifted onto it)
+                double lift = 0.0;
+                for (VoxelShape s : shapes) {
+                    AABB sb = s.bounds();
+                    if (sb.maxX > lb.minX + EPS && sb.minX < lb.maxX - EPS && sb.maxZ > lb.minZ + EPS && sb.minZ < lb.maxZ - EPS
+                            && sb.maxY > lb.minY && sb.maxY - lb.minY < 0.06) {
+                        lift = Math.max(lift, sb.maxY - lb.minY);
+                    }
+                }
+                lb = lb.move(0, lift, 0);
+                // (and a hair into a wall: kept out of it - the box tested a hair smaller)
+                double y = lift + Shapes.collide(Direction.Axis.Y, lb.deflate(EPS, 0.0, EPS), shapes, m.y);
+                lb = lb.move(0, y - lift, 0);
+                lb = lb.deflate(EPS, EPS, EPS);
                 double x, z;
                 if (Math.abs(m.x) >= Math.abs(m.z)) {
                     x = Shapes.collide(Direction.Axis.X, lb, shapes, m.x);
