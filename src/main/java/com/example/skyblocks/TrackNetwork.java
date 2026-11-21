@@ -288,6 +288,9 @@ public class TrackNetwork extends SavedData {
         Vec3 t = s.tan[index];
         Node mid = addNode(s.pts[index], new Vec3(t.x, 0, t.z));
         removeSeg(s);
+        // (its ends kept, though cutting it left them bare for a moment)
+        nodes.putIfAbsent(a.id, a);
+        nodes.putIfAbsent(b.id, b);
         addSeg(a, s.aSide, mid, -1);
         addSeg(mid, 1, b, s.bSide);
         return mid;
