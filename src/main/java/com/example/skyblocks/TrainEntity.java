@@ -73,6 +73,8 @@ public class TrainEntity extends Entity {
     private static final EntityDataAccessor<CompoundTag> TRIP = SynchedEntityData.defineId(TrainEntity.class, EntityDataSerializers.COMPOUND_TAG);
     /** The stations it passes by going round (their places): stopped at, all the others. */
     private static final EntityDataAccessor<CompoundTag> SKIP = SynchedEntityData.defineId(TrainEntity.class, EntityDataSerializers.COMPOUND_TAG);
+    /** The stations it goes round, in order (p: their places; custom: set by hand, not worked out). */
+    private static final EntityDataAccessor<CompoundTag> ORDER = SynchedEntityData.defineId(TrainEntity.class, EntityDataSerializers.COMPOUND_TAG);
     /** Who sits where (ids, keys: unit * 16 + seat). */
     private static final EntityDataAccessor<CompoundTag> SEATS = SynchedEntityData.defineId(TrainEntity.class, EntityDataSerializers.COMPOUND_TAG);
 
@@ -106,6 +108,7 @@ public class TrainEntity extends Entity {
         builder.define(TRIP, new CompoundTag());
         builder.define(SEATS, new CompoundTag());
         builder.define(SKIP, new CompoundTag());
+        builder.define(ORDER, new CompoundTag());
     }
 
     @Override
@@ -157,11 +160,58 @@ public class TrainEntity extends Entity {
     public void setLoop(boolean on) {
         entityData.set(LOOP, on);
         arrivedAt = level().getGameTime() - WAIT + 20;
+        if (on && !level().isClientSide && !customOrder()) {
+            setOrder(defaultOrder(), false); // (worked out afresh: where it is now)
+        }
     }
 
     public float length() {
         return units() * CAR;
     }
+
+    /** The stations it goes round, in order. */
+    public List<BlockPos> order() {
+        List<BlockPos> out = new ArrayList<>();
+        for (long l : entityData.get(ORDER).getLongArray("p")) {
+            out.add(BlockPos.of(l));
+        }
+        return out;
+    }
+
+    /** Whether its order was set by hand. */
+    public boolean customOrder() {
+        return entityData.get(ORDER).getBoolean("custom");
+    }
+
+    public void setOrder(List<BlockPos> stations, boolean custom) {
+        CompoundTag t = new CompoundTag();
+        t.putLongArray("p", stations.stream().limit(64).mapToLong(BlockPos::asLong).toArray());
+        t.putBoolean("custom", custom);
+        entityData.set(ORDER, t);
+        nextStop = 0;
+    }
+
+    /** Its order worked out: the station it's at, then the ones on ahead, nearest first, then the rest of its network. */
+    public List<BlockPos> defaultOrder() {
+        List<BlockPos> out = new ArrayList<>();
+        List<List<BlockPos>> ways = stations();
+        for (List<BlockPos> w : ways) {
+            for (BlockPos p : w) {
+                if (!out.contains(p)) {
+                    out.add(p);
+                }
+            }
+        }
+        for (BlockPos p : TrainRoute.stationsOn(level(), at(head(0.0F)))) {
+            if (!out.contains(p)) {
+                out.add(p);
+            }
+        }
+        return out;
+    }
+
+    /** (server) Which of its order it goes to next. */
+    private int nextStop;
 
     /** Whether it passes a station by going round (not stopping there). */
     public boolean skips(BlockPos station) {
@@ -326,6 +376,9 @@ public class TrainEntity extends Entity {
     /** How open its doors are (0 .. 1): open while it's stopped, shut before it sets off. */
     public float doors(float partialTick) {
         CompoundTag t = trip();
+        if (t.getBoolean("pass")) {
+            return 0.0F; // (stopping only to turn back: its doors stay shut)
+        }
         float e = elapsed(partialTick), delay = t.getInt("delay"), dw = t.getFloat("dw");
         if (e < delay) {
             return dw * (1.0F - Mth.clamp(e / (SHUT - 4), 0.0F, 1.0F));
@@ -608,6 +661,17 @@ public class TrainEntity extends Entity {
         if (!moving() && (at(h).distanceTo(stop) < 1.0 || inside(stop.add(0, 1.5, 0)) >= 0) && !onlyAhead) {
             return true;
         }
+        // smooth track: planned - its switches set as it goes, backing up past one if it must
+        if (TrackNetwork.of(level()).nearest(at(h), 0.8) != null) {
+            List<TrainRoute.Leg> legs = TrainRoute.plan(level(), at(h), frontWay(h), at(h - length()), backWay(h), length(), stop, true);
+            if (legs == null || legs.isEmpty()) {
+                return false;
+            }
+            plan = legs;
+            planLeg = 0;
+            startLeg();
+            return true;
+        }
         List<Vec3> ahead = ahead(h, FAR).pts();
         List<Vec3> astern = onlyAhead ? List.of() : astern(h, FAR).pts();
         int ia = find(ahead, stop, 1.0), ib = find(astern, stop, 1.0);
@@ -668,6 +732,62 @@ public class TrainEntity extends Entity {
         return goTo(station, false);
     }
 
+    /** (server) Its planned way: its legs, which it's on, when it stopped between them. */
+    @Nullable
+    private List<TrainRoute.Leg> plan;
+    private int planLeg;
+    private long legDone = Long.MIN_VALUE;
+
+    /** Sets out on the leg of its plan it's on: its switches set; turned back, if it starts so; its doors kept shut till the last. */
+    private void startLeg() {
+        TrainRoute.Leg leg = plan.get(planLeg);
+        boolean last = planLeg == plan.size() - 1;
+        TrainRoute.setSwitches(level(), leg.switches());
+        float h = head(0.0F);
+        List<Vec3> under = under(h);
+        boolean loco = locoFront();
+        Vec3 from0, dir;
+        if (leg.reverse()) {
+            Collections.reverse(under);
+            loco = !loco;
+            from0 = at(h - length());
+            dir = backWay(h);
+        } else {
+            from0 = at(h);
+            dir = frontWay(h);
+        }
+        List<Vec3> way = new ArrayList<>(under);
+        way = clean(way);
+        float from = lengthOf(way);
+        boolean on = false;
+        for (Vec3 p : leg.pts()) {
+            if (!on && p.subtract(from0).dot(dir) > 0.02) {
+                on = true;
+            }
+            if (on) {
+                way.add(p);
+            }
+        }
+        way = clean(way);
+        float doorsNow = doors(0.0F);
+        CompoundTag t = new CompoundTag();
+        t.putInt("mode", 0);
+        t.putFloat("from", from);
+        t.putFloat("to", Math.max(from, lengthOf(way)));
+        t.putInt("time", Math.max(20, Math.round(Math.abs(lengthOf(way) - from) / top() * 1.5F)));
+        t.putInt("delay", doorsNow > 0.01F ? SHUT : 0);
+        t.putFloat("dw", doorsNow);
+        t.putBoolean("front", loco);
+        t.putBoolean("pass", !last);
+        setTrip(t, way);
+        entityData.set(NOTCH, 0);
+        arrivedAt = Long.MIN_VALUE;
+        if (planLeg == 0) {
+            level().playSound(null, getX(), getY(), getZ(), style() == 1 ? SoundEvents.FIRE_EXTINGUISH : SoundEvents.BEACON_POWER_SELECT, SoundSource.NEUTRAL,
+                    0.8F, style() == 1 ? 0.6F : 1.6F);
+        }
+    }
+
     // ---- driving ----
 
     /**
@@ -710,6 +830,7 @@ public class TrainEntity extends Entity {
         if (loop()) {
             entityData.set(LOOP, false);
         }
+        plan = null;
         notch = Mth.clamp(notch, NOTCH_MIN, NOTCH_MAX);
         entityData.set(NOTCH, brake ? 0 : notch);
         float sign = flipped(unit) ? -1.0F : 1.0F;
@@ -792,10 +913,25 @@ public class TrainEntity extends Entity {
         carry();
         boolean moving = moving();
         if (wasMoving && !moving) {
-            arrivedAt = level().getGameTime();
-            level().playSound(null, getX(), getY() + 1.0, getZ(), SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.NEUTRAL, 1.0F, 1.2F);
+            if (plan != null && planLeg < plan.size() - 1) {
+                legDone = level().getGameTime();
+            } else {
+                plan = null;
+                arrivedAt = level().getGameTime();
+                level().playSound(null, getX(), getY() + 1.0, getZ(), SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.NEUTRAL, 1.0F, 1.2F);
+            }
         }
         wasMoving = moving;
+        // (between legs of its plan: a moment, then on - turned back)
+        if (plan != null && !moving && legDone != Long.MIN_VALUE && level().getGameTime() - legDone >= 12) {
+            legDone = Long.MIN_VALUE;
+            planLeg++;
+            if (planLeg < plan.size()) {
+                startLeg();
+            } else {
+                plan = null;
+            }
+        }
         // players standing in it: not falling, not flying
         for (Player p : level().getEntitiesOfClass(Player.class, getBoundingBoxForCulling())) {
             if (!p.isPassenger() && inside(p.position()) >= 0) {
@@ -805,7 +941,7 @@ public class TrainEntity extends Entity {
                 }
             }
         }
-        if (loop() && !moving && arrivedAt != Long.MIN_VALUE && level().getGameTime() - arrivedAt >= WAIT) {
+        if (loop() && plan == null && !moving && arrivedAt != Long.MIN_VALUE && level().getGameTime() - arrivedAt >= WAIT) {
             arrivedAt = level().getGameTime();
             goRound();
         }
@@ -814,29 +950,26 @@ public class TrainEntity extends Entity {
         }
     }
 
-    /** Going round: on to the next station the way it was going (on a loop line, always on); at its line's end, back. */
+    /** Going round: on to the next station in its order (worked out, if it hasn't one: see defaultOrder). */
     private void goRound() {
         float h = head(0.0F);
         if (!TrainRoute.onLine(level(), at(h))) {
             return;
         }
-        boolean ring = ahead(h, FAR).looped();
-        List<List<BlockPos>> ways = stations();
-        for (int w = 0; w < ways.size(); w++) {
-            if (ring && w > 0) {
-                break;
+        List<BlockPos> order = order();
+        if (order.isEmpty() && !customOrder()) {
+            setOrder(defaultOrder(), false);
+            order = order();
+        }
+        for (int tries = 0; tries < order.size(); tries++) {
+            BlockPos s = order.get(Math.floorMod(nextStop, order.size()));
+            nextStop = Math.floorMod(nextStop + 1, order.size());
+            Vec3 stop = TrainRoute.stopPoint(level(), s);
+            if (stop == null || (stop.distanceTo(at(h)) < 2.0 || inside(stop.add(0, 1.5, 0)) >= 0)) {
+                continue; // (there now, or gone)
             }
-            for (BlockPos s : ways.get(w)) {
-                if (skips(s)) {
-                    continue; // (passed by)
-                }
-                Vec3 stop = TrainRoute.stopPoint(level(), s);
-                if (stop != null && stop.distanceTo(at(h)) > 2.0 && inside(stop.add(0, 1.5, 0)) < 0 && goTo(s, true)) {
-                    return;
-                }
-                if (stop != null && w == 1 && stop.distanceTo(at(h)) > 2.0 && goTo(s, false)) {
-                    return;
-                }
+            if (goTo(s, false)) {
+                return;
             }
         }
     }
@@ -1153,6 +1286,8 @@ public class TrainEntity extends Entity {
         setCars(tag.contains("cars") ? tag.getInt("cars") : 2);
         entityData.set(LOOP, tag.getBoolean("loop"));
         entityData.set(SKIP, tag.getCompound("skip"));
+        entityData.set(ORDER, tag.getCompound("order"));
+        nextStop = tag.getInt("next");
         CompoundTag t = tag.getCompound("trip");
         // (saved mid-trip: standing where it was, its doors open)
         int[] bits = t.getIntArray("pts");
@@ -1174,5 +1309,7 @@ public class TrainEntity extends Entity {
         tag.put("trip", trip().copy());
         tag.putFloat("head", head(0.0F));
         tag.put("skip", entityData.get(SKIP).copy());
+        tag.put("order", entityData.get(ORDER).copy());
+        tag.putInt("next", nextStop);
     }
 }

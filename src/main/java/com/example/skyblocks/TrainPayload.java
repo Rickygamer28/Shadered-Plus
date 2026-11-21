@@ -15,7 +15,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
  * going round set, it sent to a station, it picked up; or a station renamed or a train called to it (client/StationScreen).
  */
 public record TrainPayload(int train, int action, int value, BlockPos pos, String text) implements CustomPacketPayload {
-    public static final int SIT = 0, STYLE = 1, CARS = 2, LOOP = 3, GO = 4, PICK_UP = 5, RENAME = 6, CALL = 7, THROTTLE = 8, SKIP = 9;
+    public static final int SIT = 0, STYLE = 1, CARS = 2, LOOP = 3, GO = 4, PICK_UP = 5, RENAME = 6, CALL = 7, THROTTLE = 8, SKIP = 9, ORDER = 10;
     public static final Type<TrainPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "train_action"));
     public static final StreamCodec<RegistryFriendlyByteBuf, TrainPayload> STREAM_CODEC = StreamCodec.of((buf, p) -> {
         buf.writeVarInt(p.train);
@@ -67,6 +67,23 @@ public record TrainPayload(int train, int action, int value, BlockPos pos, Strin
                 }
                 case PICK_UP -> t.pickUp(player);
                 case SKIP -> t.setSkip(p.pos, p.value != 0);
+                case ORDER -> {
+                    // (value 1: worked out again; else the stations' places, in order, in text)
+                    if (p.value == 1) {
+                        t.setOrder(t.defaultOrder(), false);
+                    } else {
+                        java.util.List<BlockPos> order = new java.util.ArrayList<>();
+                        for (String part : p.text.split(",")) {
+                            if (!part.isBlank()) {
+                                try {
+                                    order.add(BlockPos.of(Long.parseLong(part.trim())));
+                                } catch (NumberFormatException ignored) {
+                                }
+                            }
+                        }
+                        t.setOrder(order, true);
+                    }
+                }
                 case THROTTLE -> {
                     // (value: unit * 64 + 32 + notch; + 0x1000: brake) - only from that cab's driver's seat
                     int v = p.value & 0xFFF, unit = v / 64, notch = v % 64 - 32;

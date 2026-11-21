@@ -1,34 +1,22 @@
 package com.example.skyblocks.mixin;
 
 import com.example.skyblocks.TrainCollision;
-import java.util.ArrayList;
-import java.util.List;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.phys.shapes.VoxelShape;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/** Things moving bump into trains' walls and stand on their floors (TrainCollision), as into blocks. */
+/** Things moving bump into trains' walls and stand on their floors (TrainCollision), as on blocks. */
 @Mixin(Entity.class)
 public abstract class TrainCollideMixin {
-    @ModifyArg(method = "collide", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/world/entity/Entity;collideBoundingBox(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/phys/Vec3;Lnet/minecraft/world/phys/AABB;Lnet/minecraft/world/level/Level;Ljava/util/List;)Lnet/minecraft/world/phys/Vec3;"),
-            index = 4, require = 1)
-    private List<VoxelShape> skyblocks$trainWalls(Entity entity, Vec3 move, AABB box, Level level, List<VoxelShape> shapes) {
-        if (entity == null) {
-            return shapes;
+    @Inject(method = "collide", at = @At("RETURN"), cancellable = true)
+    private void skyblocks$trainWalls(Vec3 move, CallbackInfoReturnable<Vec3> cir) {
+        Vec3 was = cir.getReturnValue();
+        Vec3 now = TrainCollision.collide((Entity) (Object) this, was);
+        if (now != was) {
+            cir.setReturnValue(now);
         }
-        List<VoxelShape> walls = TrainCollision.shapes(entity, box.expandTowards(move).inflate(0.5));
-        if (walls.isEmpty()) {
-            return shapes;
-        }
-        List<VoxelShape> all = new ArrayList<>(shapes.size() + walls.size());
-        all.addAll(shapes);
-        all.addAll(walls);
-        return all;
     }
 }

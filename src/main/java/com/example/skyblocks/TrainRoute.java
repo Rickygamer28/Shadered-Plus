@@ -287,6 +287,198 @@ public final class TrainRoute {
         return out;
     }
 
+    // ---- planning a way there: through switches, backing up past one if it must ----
+
+    /**
+     * One leg of a planned way: its points (the way its front goes), the switches to set before it, whether it starts
+     * by turning back (its back now its front), and if so whether it turns back where its front stopped (its points
+     * then start at its old front: the length of it to be skipped).
+     */
+    public record Leg(List<Vec3> pts, List<int[]> switches, boolean reverse, boolean fromHead) {}
+
+    private record PState(int seg, boolean fwd, int entry, float cost, @Nullable PState parent, @Nullable int[] sw, boolean reversed, boolean fromHead,
+            boolean initial, float since) {}
+
+    /**
+     * The best way along smooth track from a train (its front and back, the ways they face out) to a spot, each switch
+     * set as it needs - or backing up past a switch onto the other way, where its whole length fits. Null if none (or
+     * it's not on smooth track).
+     */
+    @Nullable
+    public static List<Leg> plan(Level level, Vec3 headAt, Vec3 headDir, Vec3 tailAt, Vec3 tailDir, float length, Vec3 target, boolean mayReverse) {
+        TrackNetwork net = TrackNetwork.of(level);
+        TrackNetwork.Near hn = net.nearest(headAt, ON), tn = net.nearest(tailAt, ON);
+        if (hn == null) {
+            return null;
+        }
+        java.util.PriorityQueue<PState> todo = new java.util.PriorityQueue<>((a, b) -> Float.compare(a.cost, b.cost));
+        todo.add(new PState(hn.seg().id, hn.seg().tan[hn.index()].dot(headDir) >= 0, hn.index(), 0.0F, null, null, false, false, true, 0.0F));
+        if (mayReverse && tn != null) {
+            todo.add(new PState(tn.seg().id, tn.seg().tan[tn.index()].dot(tailDir) >= 0, tn.index(), 4.0F, null, null, true, false, true, 0.0F));
+        }
+        java.util.Set<Long> seen = new java.util.HashSet<>();
+        float reverseRoom = length + 2.0F;
+        int guard = 0;
+        while (!todo.isEmpty() && guard++ < 4000) {
+            PState st = todo.poll();
+            TrackNetwork.Seg seg = net.segs.get(st.seg);
+            if (seg == null) {
+                continue;
+            }
+            long key = st.seg * 8L + (st.fwd ? 4 : 0) + (st.reversed ? 2 : 0) + (st.initial ? 1 : 0);
+            if (!seen.add(key)) {
+                continue;
+            }
+            int n = seg.pts.length, step = st.fwd ? 1 : -1;
+            // the spot on this piece, ahead of where it came on: there
+            float d = 0.0F;
+            for (int j = st.entry; j >= 0 && j < n; j += step) {
+                if (j != st.entry) {
+                    d += (float) seg.pts[j].distanceTo(seg.pts[j - step]);
+                }
+                if (seg.pts[j].distanceToSqr(target) < 1.0 && (j != st.entry || !st.initial)) {
+                    return legs(net, st, j);
+                }
+            }
+            // or back up, once its whole length is past the last switch it went through (or, setting out, past itself)
+            boolean reversedHere = false;
+            float since = st.since;
+            if (mayReverse) {
+                for (int j = st.entry + step; j >= 0 && j < n; j += step) {
+                    since += (float) seg.pts[j].distanceTo(seg.pts[j - step]);
+                    if (since >= reverseRoom) {
+                        todo.add(new PState(st.seg, !st.fwd, j, st.cost + reverseRoom * 2.0F + 30.0F, st, null, true, true, false, 0.0F));
+                        reversedHere = true;
+                        break;
+                    }
+                }
+            } else {
+                since += d;
+            }
+            // on through its node: every piece on its other side
+            int end = st.fwd ? 1 : 0;
+            TrackNetwork.Node node = net.nodes.get(seg.node(end));
+            if (node != null) {
+                int arrived = seg.sideAt(end);
+                List<Integer> side = node.side(-arrived);
+                // (a switch passed: its whole length must clear it again before it may back up)
+                float carry = node.isSwitch() ? 0.0F : (reversedHere ? reverseRoom : since);
+                for (int k = 0; k < side.size(); k++) {
+                    TrackNetwork.Seg ns = net.segs.get(side.get(k));
+                    if (ns == null) {
+                        continue;
+                    }
+                    boolean fwd = ns.a == node.id && ns.aSide == -arrived;
+                    int[] sw = side.size() > 1 ? new int[] {node.id, -arrived > 0 ? 1 : 0, k} : null;
+                    todo.add(new PState(ns.id, fwd, fwd ? 0 : ns.pts.length - 1, st.cost + d, st, sw, false, false, false, carry));
+                }
+            }
+        }
+        return null;
+    }
+
+    /** The legs of a found way: split where it turns back. */
+    private static List<Leg> legs(TrackNetwork net, PState goal, int goalIndex) {
+        List<PState> chain = new ArrayList<>();
+        for (PState s = goal; s != null; s = s.parent) {
+            chain.add(0, s);
+        }
+        List<Leg> out = new ArrayList<>();
+        List<Vec3> pts = new ArrayList<>();
+        List<int[]> sw = new ArrayList<>();
+        boolean rev = chain.get(0).reversed, fromHead = false;
+        for (int c = 0; c < chain.size(); c++) {
+            PState st = chain.get(c);
+            if (c > 0 && st.reversed) {
+                out.add(new Leg(pts, sw, rev, fromHead));
+                pts = new ArrayList<>();
+                sw = new ArrayList<>();
+                rev = true;
+                fromHead = st.fromHead;
+            }
+            if (st.sw != null) {
+                sw.add(st.sw);
+            }
+            TrackNetwork.Seg seg = net.segs.get(st.seg);
+            int step = st.fwd ? 1 : -1;
+            int stop;
+            if (c == chain.size() - 1) {
+                stop = goalIndex;
+            } else if (chain.get(c + 1).reversed) {
+                stop = chain.get(c + 1).entry;
+            } else {
+                stop = st.fwd ? seg.pts.length - 1 : 0;
+            }
+            for (int j = st.entry; ; j += step) {
+                pts.add(seg.pts[j]);
+                if (j == stop || j + step < 0 || j + step >= seg.pts.length) {
+                    break;
+                }
+            }
+        }
+        out.add(new Leg(pts, sw, rev, fromHead));
+        return out;
+    }
+
+    /** Every line a point's on joins (smooth track through all its nodes, or a line of rails): its points, for a map. */
+    public static List<List<Vec3>> network(Level level, Vec3 at) {
+        List<List<Vec3>> out = new ArrayList<>();
+        TrackNetwork net = TrackNetwork.of(level);
+        TrackNetwork.Near near = net.nearest(at, ON);
+        if (near == null) {
+            BlockPos rail = TrainLine.railAt(level, at);
+            if (rail != null) {
+                List<Vec3> line = new ArrayList<>();
+                line.add(TrainLine.centre(level, rail));
+                for (List<BlockPos> w : TrainLine.bothWays(level, rail, TrainLine.MOST)) {
+                    for (BlockPos r : w) {
+                        line.add(TrainLine.centre(level, r));
+                    }
+                }
+                out.add(line);
+            }
+            return out;
+        }
+        java.util.Set<Integer> seen = new java.util.HashSet<>();
+        java.util.ArrayDeque<Integer> todo = new java.util.ArrayDeque<>();
+        todo.add(near.seg().id);
+        while (!todo.isEmpty() && seen.size() < 2048) {
+            int id = todo.poll();
+            TrackNetwork.Seg s = net.segs.get(id);
+            if (s == null || !seen.add(id)) {
+                continue;
+            }
+            out.add(java.util.Arrays.asList(s.pts));
+            for (int end = 0; end < 2; end++) {
+                TrackNetwork.Node n = net.nodes.get(s.node(end));
+                if (n != null) {
+                    todo.addAll(n.sides.get(0));
+                    todo.addAll(n.sides.get(1));
+                }
+            }
+        }
+        return out;
+    }
+
+    /** Every station by a train's network (the lines its point joins). */
+    public static List<BlockPos> stationsOn(Level level, Vec3 at) {
+        List<BlockPos> out = new ArrayList<>();
+        List<List<Vec3>> lines = network(level, at);
+        for (StationBlockEntity be : stations(level)) {
+            BlockPos st = be.getBlockPos();
+            search:
+            for (List<Vec3> line : lines) {
+                for (Vec3 p : line) {
+                    if (by(st, p)) {
+                        out.add(st);
+                        break search;
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
     // ---- stations ----
 
     public static final Set<StationBlockEntity> CLIENT = Collections.newSetFromMap(new java.util.WeakHashMap<>());

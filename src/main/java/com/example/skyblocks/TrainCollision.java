@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import net.minecraft.core.Direction;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
@@ -12,32 +13,40 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
- * Trains' walls, floors and seats as solid as blocks (mixin/TrainCollideMixin adds them to what a thing moving bumps
- * into): each piece of a car (TrainEntity.boxes) turned with it into the world - exactly, along a straight stretch
- * that runs along x or z; round corners, in short pieces. On the server, players aren't stopped (their own clients
- * are, a tick behind: the server would put them back where they'd been).
+ * Trains' walls, floors and seats as solid as blocks (mixin/TrainCollideMixin): a thing's move, once the world's blocks
+ * have had their say, worked out again in each car's own space - its pieces (TrainEntity.boxes) square there - so walls
+ * are exact however the car's turned (round curves, up slopes), and turned back. On the server, players aren't
+ * stopped (their own clients are, a tick behind: the server would put them back where they'd been).
  */
 public final class TrainCollision {
-    private static final Map<Integer, List<float[]>> BOXES = new HashMap<>();
+    private static final Map<Integer, List<VoxelShape>> SHAPES = new HashMap<>();
 
     private TrainCollision() {}
 
-    private static List<float[]> boxes(int style, int kind, boolean plus, boolean minus, boolean open) {
+    private static List<VoxelShape> shapes(int style, int kind, boolean plus, boolean minus, boolean open) {
         int key = style * 64 + kind * 8 + (plus ? 4 : 0) + (minus ? 2 : 0) + (open ? 1 : 0);
-        synchronized (BOXES) {
-            return BOXES.computeIfAbsent(key, k -> TrainEntity.boxes(style, kind, plus, minus, open ? 1.0F : 0.0F));
+        synchronized (SHAPES) {
+            return SHAPES.computeIfAbsent(key, k -> {
+                List<VoxelShape> out = new ArrayList<>();
+                for (float[] b : TrainEntity.boxes(style, kind, plus, minus, open ? 1.0F : 0.0F)) {
+                    out.add(Shapes.create(b[0], b[1], b[2], b[3], b[4], b[5]));
+                }
+                return out;
+            });
         }
     }
 
-    /** The shapes of the trains near a thing moving through this space. */
-    public static List<VoxelShape> shapes(Entity e, AABB region) {
-        if (e instanceof TrainEntity || e.isSpectator() || e.isPassenger()) {
-            return List.of();
+    /** A thing's move (after blocks), cut short by the trains near it. */
+    public static Vec3 collide(Entity e, Vec3 move) {
+        if (e instanceof TrainEntity || e.isSpectator() || e.isPassenger() || e.noPhysics || move.lengthSqr() < 1e-12) {
+            return move;
         }
         boolean client = e.level().isClientSide;
         if (!client && e instanceof Player) {
-            return List.of();
+            return move;
         }
+        AABB box = e.getBoundingBox();
+        AABB region = box.expandTowards(move).inflate(1.0);
         List<TrainEntity> near = new ArrayList<>();
         synchronized (TrainEntity.class) {
             for (TrainEntity t : client ? TrainEntity.CLIENT : TrainEntity.SERVER) {
@@ -47,58 +56,52 @@ public final class TrainCollision {
             }
         }
         if (near.isEmpty()) {
-            return List.of();
+            return move;
         }
-        List<VoxelShape> out = new ArrayList<>();
-        Vec3 c = region.getCenter();
-        double reach = TrainEntity.HL + 2.0 + region.getSize();
+        Vec3 c = box.getCenter();
+        double hw = box.getXsize() / 2.0, hh = box.getYsize() / 2.0;
         for (TrainEntity t : near) {
             TrainEntity.Frame[] fr = t.solidFrames();
             boolean open = t.doors(0.0F) > 0.85F;
             for (int k = 0; k < fr.length; k++) {
-                if (fr[k].mid().distanceToSqr(c) > reach * reach) {
+                TrainEntity.Frame f = fr[k];
+                Vec3 lc = f.local(c);
+                if (Math.abs(lc.x) > TrainEntity.HL + 3.0 || Math.abs(lc.z) > TrainEntity.OW + 2.5 || lc.y < -3.0 || lc.y > TrainEntity.RT + 3.0) {
                     continue;
                 }
-                for (float[] b : boxes(t.style(), t.kind(k), t.gangPlus(k), t.gangMinus(k), open)) {
-                    add(out, fr[k], b, region);
+                // (its move in the car's space; it, a box there the same size)
+                Vec3 m = new Vec3(move.dot(f.f()), move.dot(f.u()), move.dot(f.s()));
+                AABB lb = new AABB(lc.x - hw, lc.y - hh, lc.z - hw, lc.x + hw, lc.y + hh, lc.z + hw);
+                List<VoxelShape> shapes = new ArrayList<>();
+                AABB reach = lb.expandTowards(m).inflate(0.1);
+                for (VoxelShape s : shapes(t.style(), t.kind(k), t.gangPlus(k), t.gangMinus(k), open)) {
+                    if (s.bounds().intersects(reach)) {
+                        shapes.add(s);
+                    }
+                }
+                if (shapes.isEmpty()) {
+                    continue;
+                }
+                double y = Shapes.collide(Direction.Axis.Y, lb, shapes, m.y);
+                lb = lb.move(0, y, 0);
+                double x, z;
+                if (Math.abs(m.x) >= Math.abs(m.z)) {
+                    x = Shapes.collide(Direction.Axis.X, lb, shapes, m.x);
+                    lb = lb.move(x, 0, 0);
+                    z = Shapes.collide(Direction.Axis.Z, lb, shapes, m.z);
+                } else {
+                    z = Shapes.collide(Direction.Axis.Z, lb, shapes, m.z);
+                    lb = lb.move(0, 0, z);
+                    x = Shapes.collide(Direction.Axis.X, lb, shapes, m.x);
+                }
+                if (x != m.x || y != m.y || z != m.z) {
+                    Vec3 w = f.f().scale(x).add(f.u().scale(y)).add(f.s().scale(z));
+                    // (an axis it wasn't stopped on keeps the world's move exactly - no drift from turning it back and forth)
+                    move = new Vec3(Math.abs(w.x - move.x) < 1e-7 ? move.x : w.x, Math.abs(w.y - move.y) < 1e-7 ? move.y : w.y,
+                            Math.abs(w.z - move.z) < 1e-7 ? move.z : w.z);
                 }
             }
         }
-        return out;
-    }
-
-    private static void add(List<VoxelShape> out, TrainEntity.Frame f, float[] b, AABB region) {
-        Vec3 d = f.f();
-        boolean square = Math.abs(d.y) < 1e-3 && f.u().y > 0.9999 && (Math.abs(d.x) > 0.9999 || Math.abs(d.z) > 0.9999);
-        if (square) {
-            piece(out, f, b[0], b[1], b[2], b[3], b[4], b[5], region);
-            return;
-        }
-        // (turned: cut along its length, and across if it's wide, into pieces half a block or less)
-        int nx = Math.max(1, (int) Math.ceil((b[3] - b[0]) / 0.5F)), nz = Math.max(1, (int) Math.ceil((b[5] - b[2]) / 0.5F));
-        for (int i = 0; i < nx; i++) {
-            float x0 = b[0] + (b[3] - b[0]) * i / nx, x1 = b[0] + (b[3] - b[0]) * (i + 1) / nx;
-            for (int j = 0; j < nz; j++) {
-                float z0 = b[2] + (b[5] - b[2]) * j / nz, z1 = b[2] + (b[5] - b[2]) * (j + 1) / nz;
-                piece(out, f, x0, b[1], z0, x1, b[4], z1, region);
-            }
-        }
-    }
-
-    private static void piece(List<VoxelShape> out, TrainEntity.Frame f, double x0, double y0, double z0, double x1, double y1, double z1, AABB region) {
-        double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, minZ = Double.MAX_VALUE, maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
-        for (int i = 0; i < 8; i++) {
-            Vec3 p = f.world((i & 1) == 0 ? x0 : x1, (i & 2) == 0 ? y0 : y1, (i & 4) == 0 ? z0 : z1);
-            minX = Math.min(minX, p.x);
-            minY = Math.min(minY, p.y);
-            minZ = Math.min(minZ, p.z);
-            maxX = Math.max(maxX, p.x);
-            maxY = Math.max(maxY, p.y);
-            maxZ = Math.max(maxZ, p.z);
-        }
-        AABB box = new AABB(minX, minY, minZ, maxX, maxY, maxZ);
-        if (box.intersects(region)) {
-            out.add(Shapes.create(box));
-        }
+        return move;
     }
 }

@@ -1193,5 +1193,12 @@
   "message.skyblocks.track.rails": "You need %s Train Rails",
   "screen.skyblocks.train.stops": "Loop: stops here",
   "screen.skyblocks.train.skipped": "Loop: passes by",
-  "screen.skyblocks.train.map_hint": "Click a station: stop or pass"
+  "screen.skyblocks.train.map_hint": "Click a station to go. Numbers: loop order",
+  "screen.skyblocks.train.order_edit": "Edit order",
+  "screen.skyblocks.train.order_reset": "Reset order",
+  "screen.skyblocks.train.order_done": "Done",
+  "screen.skyblocks.train.order_clear": "Clear",
+  "screen.skyblocks.train.order_hint": "Click stations in loop order (right: undo)",
+  "screen.skyblocks.train.click_add": "Click: add to the loop order",
+  "screen.skyblocks.train.click_go": "Click: go here"
 }
