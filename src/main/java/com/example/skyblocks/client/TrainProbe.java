@@ -92,7 +92,7 @@ public final class TrainProbe {
         if (tk < 1100 && tk % 5 == 0 && !t.moving()) {
             for (BlockPos p : TrainRoute.allStations(level)) {
                 Vec3 stop = TrainRoute.stopPoint(level, p);
-                if (stop != null && t.inside(stop.add(0, 1.5, 0)) >= 0) {
+                if (stop != null && (t.inside(stop.add(0, 1.5, 0)) >= 0 || t.end().distanceToSqr(stop) < 2.5)) {
                     String n = name(level, p);
                     if (!n.equals(lastStop)) {
                         lastStop = n;
@@ -174,7 +174,7 @@ public final class TrainProbe {
             server.execute(() -> {
                 TrainEntity b = nearest(server.overworld(), new Vec3(1005, -59, 72), 60);
                 if (b != null) {
-                    SkyBlocksMod.LOGGER.info("Shadered+ train probe: carry - sent {}", b.goTo(new BlockPos(985, -60, 83)));
+                    SkyBlocksMod.LOGGER.info("Shadered+ train probe: carry - sent {}", b.goTo(new BlockPos(1023, -56, 128)));
                 }
             });
         }

@@ -78,7 +78,7 @@ public class StationRenderer implements BlockEntityRenderer<StationBlockEntity> 
                 for (TrainEntity t : level.getEntitiesOfClass(TrainEntity.class, new AABB(be.getBlockPos()).inflate(256.0, 64.0, 256.0))) {
                     boolean goingHere = t.end().distanceToSqr(c) < 2.5;
                     // (here: stopped alongside it - any of its cars by it)
-                    if (!t.moving() && t.inside(c.add(0, 1.5, 0)) >= 0) {
+                    if (!t.moving() && (t.inside(c.add(0, 1.5, 0)) >= 0 || t.end().distanceToSqr(c) < 2.5)) {
                         st = 2;
                         break;
                     }

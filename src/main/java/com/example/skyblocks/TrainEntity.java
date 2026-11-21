@@ -769,6 +769,16 @@ public class TrainEntity extends Entity {
             }
         }
         way = clean(way);
+        if (lengthOf(way) - from < 0.05) {
+            // (nothing to go on this leg: the next, or done)
+            planLeg++;
+            if (planLeg < plan.size()) {
+                startLeg();
+            } else {
+                plan = null;
+            }
+            return;
+        }
         float doorsNow = doors(0.0F);
         CompoundTag t = new CompoundTag();
         t.putInt("mode", 0);
@@ -878,7 +888,7 @@ public class TrainEntity extends Entity {
         // (any it's standing by first)
         for (BlockPos st : TrainRoute.allStations(level())) {
             Vec3 stop = TrainRoute.stopPoint(level(), st);
-            if (stop != null && inside(stop.add(0, 1.5, 0)) >= 0) {
+            if (stop != null && (inside(stop.add(0, 1.5, 0)) >= 0 || at(h).distanceToSqr(stop) < 2.5)) {
                 ahead.add(st);
             }
         }

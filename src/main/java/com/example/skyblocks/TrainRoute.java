@@ -332,13 +332,20 @@ public final class TrainRoute {
             int n = seg.pts.length, step = st.fwd ? 1 : -1;
             // the spot on this piece, ahead of where it came on: there
             float d = 0.0F;
+            int best = -1;
+            double bd = 1.0;
             for (int j = st.entry; j >= 0 && j < n; j += step) {
                 if (j != st.entry) {
                     d += (float) seg.pts[j].distanceTo(seg.pts[j - step]);
                 }
-                if (seg.pts[j].distanceToSqr(target) < 1.0 && (j != st.entry || !st.initial)) {
-                    return legs(net, st, j);
+                double dd = seg.pts[j].distanceToSqr(target);
+                if (dd < bd && (j != st.entry || !st.initial)) {
+                    bd = dd;
+                    best = j; // (the point nearest it: its front stops right by it)
                 }
+            }
+            if (best >= 0) {
+                return legs(net, st, best);
             }
             // or back up, once its whole length is past the last switch it went through (or, setting out, past itself)
             boolean reversedHere = false;
