@@ -62,10 +62,7 @@ public record TrainPayload(int train, int action, int value, BlockPos pos, Strin
                 case LOOP -> t.setLoop(p.value != 0);
                 case GO -> {
                     if (level.isLoaded(p.pos) && level.getBlockState(p.pos).getBlock() instanceof StationBlock) {
-                        BlockPos rail = TrainLine.railBy(level, p.pos);
-                        if (rail != null) {
-                            t.goTo(rail);
-                        }
+                        t.goTo(p.pos);
                     }
                 }
                 case PICK_UP -> t.pickUp(player);

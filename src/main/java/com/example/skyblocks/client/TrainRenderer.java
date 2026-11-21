@@ -98,11 +98,12 @@ public class TrainRenderer extends EntityRenderer<TrainEntity> {
         float sky = mc.level == null ? 1.0F : mc.level.getSkyDarken(partialTick);
         TrainEntity.Frame[] fr = new TrainEntity.Frame[units];
         float[] lit = new float[units];
-        int[] kind = new int[units], flags = new int[units];
+        int[] kind = new int[units], flags = new int[units], roll = new int[units];
         for (int k = 0; k < units; k++) {
             TrainEntity.Frame f = train.frame(k, partialTick);
             fr[k] = new TrainEntity.Frame(f.mid().subtract(base), f.f(), f.u(), f.s());
             kind[k] = train.kind(k);
+            roll[k] = Mth.clamp(Math.round((train.bank(k, partialTick) + 0.16F) / 0.32F * 63.0F), 0, 63);
             flags[k] = (train.gangPlus(k) ? 1 : 0) | (train.gangMinus(k) ? 2 : 0);
             BlockPos b = BlockPos.containing(f.mid().add(0, 2.5, 0));
             float bl = train.level().getBrightness(LightLayer.BLOCK, b) / 15.0F, sl = train.level().getBrightness(LightLayer.SKY, b) / 15.0F;
@@ -130,7 +131,7 @@ public class TrainRenderer extends EntityRenderer<TrainEntity> {
             }
             ElevatorRenderer.drawNow(Types.CAR, vc -> {
                 for (int k = 0; k < units; k++) {
-                    box(vc, m, fr[k], style, kind[k], flags[k], doorStep, speed, head, lit[k]);
+                    box(vc, m, fr[k], style, kind[k], flags[k], doorStep, roll[k], speed, head, lit[k]);
                 }
             });
         };
@@ -189,19 +190,22 @@ public class TrainRenderer extends EntityRenderer<TrainEntity> {
     }
 
     /** The box round a car: its faces turned away from the eye (from inside it: all of them). */
-    private static void box(VertexConsumer vc, Matrix4f m, TrainEntity.Frame fr, int style, int kind, int flags, int doorStep, float speed, float travel,
-            float lit) {
+    private static void box(VertexConsumer vc, Matrix4f m, TrainEntity.Frame fr, int style, int kind, int flags, int doorStep, int rollStep,
+            float speed, float travel, float lit) {
         Vec3 dir = fr.f();
         int kx = q(dir.x), ky = q(dir.y), kz = q(dir.z);
         Vector3f f = new Vector3f(kx, ky, kz).normalize();
-        Vector3f s = new Vector3f(f).cross(0, 1, 0).normalize(), u = new Vector3f(s).cross(f);
+        Vector3f s0 = new Vector3f(f).cross(0, 1, 0).normalize(), u0 = new Vector3f(s0).cross(f);
+        // (leaning into a curve: turned about its length, as the shader turns it)
+        float r = rollStep / 63.0F * 0.32F - 0.16F, cr = Mth.cos(r), sr = Mth.sin(r);
+        Vector3f u = new Vector3f(u0).mul(cr).add(new Vector3f(s0).mul(sr)), s = new Vector3f(s0).mul(cr).sub(new Vector3f(u0).mul(sr));
         Vec3 mid = fr.mid();
         Vector3f cam = m.transformPosition((float) mid.x, (float) mid.y, (float) mid.z, new Vector3f()).negate();
         float[] eye = {cam.dot(f), cam.dot(u), cam.dot(s)};
         int[][] faces = {{0, 2, 6, 4}, {1, 5, 7, 3}, {0, 4, 5, 1}, {2, 3, 7, 6}, {0, 1, 3, 2}, {4, 6, 7, 5}};
         boolean[] seen = {eye[0] < LO[0], eye[0] > HI[0], eye[1] < LO[1], eye[1] > HI[1], eye[2] < LO[2], eye[2] > HI[2]};
         int sp = Mth.clamp(Math.round(speed * 40.0F), 0, 255), li = Math.round(lit * 255);
-        int packed = doorStep * 8 + flags * 128;
+        int packed = doorStep * 8 + flags * 128 + rollStep * 512;
         for (int fc = 0; fc < 6; fc++) {
             if (seen[fc]) {
                 continue;

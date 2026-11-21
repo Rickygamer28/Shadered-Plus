@@ -69,7 +69,7 @@ public final class TrainCollision {
 
     private static void add(List<VoxelShape> out, TrainEntity.Frame f, float[] b, AABB region) {
         Vec3 d = f.f();
-        boolean square = Math.abs(d.y) < 1e-3 && (Math.abs(d.x) > 0.9999 || Math.abs(d.z) > 0.9999);
+        boolean square = Math.abs(d.y) < 1e-3 && f.u().y > 0.9999 && (Math.abs(d.x) > 0.9999 || Math.abs(d.z) > 0.9999);
         if (square) {
             piece(out, f, b[0], b[1], b[2], b[3], b[4], b[5], region);
             return;

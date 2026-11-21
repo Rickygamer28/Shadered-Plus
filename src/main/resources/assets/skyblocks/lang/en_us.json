@@ -1175,5 +1175,20 @@
   "message.skyblocks.station.called": "Train called",
   "message.skyblocks.station.no_train": "No train on this line",
   "hud.skyblocks.train.speed": "%s km/h",
-  "hud.skyblocks.train.keys": "W / S: throttle   Space: brake   Shift: get up"
+  "hud.skyblocks.train.keys": "W / S: throttle   Space: brake   Shift: get up",
+  "item.skyblocks.track_tool": "Track Tool",
+  "guide.skyblocks.track_tool": "Lays smooth train track that turns and climbs gently. Right-click a spot to start (the track runs the way you face), then right-click where it should go: a green line shows the piece first, red if the turn is too tight, the slope too steep or it's too long (64 blocks at most). Hold Sprint for an S-bend that ends running the same way it started. Ends snap onto track that's already there, and the next piece starts where the last one ended. Start or end in the middle of a piece to make a switch: right-click the switch to flip it, or power the block under it with redstone. Sneak + right-click track to remove it, or to cancel a start. It costs one Train Rail for every two blocks, given back when removed.",
+  "hud.skyblocks.track.hint": "Right-click: start a track here (on a switch: flip it)   Sneak + right-click: remove track",
+  "hud.skyblocks.track.next": "Right-click: build to here   Sprint: S-bend   Sneak + right-click: cancel",
+  "hud.skyblocks.track.info": "%s blocks, %s Train Rails",
+  "message.skyblocks.track.start": "Track started: right-click where it should go",
+  "message.skyblocks.track.cancelled": "Track cancelled",
+  "message.skyblocks.track.short": "Too short",
+  "message.skyblocks.track.long": "Too long: 64 blocks at most",
+  "message.skyblocks.track.backwards": "It can't turn back on itself",
+  "message.skyblocks.track.tight": "Too tight a turn",
+  "message.skyblocks.track.steep": "Too steep",
+  "message.skyblocks.track.full": "That side of the track already has two pieces",
+  "message.skyblocks.track.same": "Pick a different spot",
+  "message.skyblocks.track.rails": "You need %s Train Rails"
 }

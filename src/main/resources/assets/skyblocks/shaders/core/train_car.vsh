@@ -37,8 +37,12 @@ void main() {
     door = float((c >> 3) & 15) / 15.0;
     flags = (c >> 7) & 3;
     F = normalize(Normal);
-    S = normalize(cross(F, vec3(0.0, 1.0, 0.0)));
-    U = cross(S, F);
+    vec3 S0 = normalize(cross(F, vec3(0.0, 1.0, 0.0)));
+    vec3 U0 = cross(S0, F);
+    // (leaning into a curve: turned about its length)
+    float roll = float((c >> 9) & 63) / 63.0 * 0.32 - 0.16;
+    U = U0 * cos(roll) + S0 * sin(roll);
+    S = S0 * cos(roll) - U0 * sin(roll);
     lp = mix(LO, HI, vec3(float(corner & 1), float((corner >> 1) & 1), float((corner >> 2) & 1)));
     centre = Position - (F * lp.x + U * lp.y + S * lp.z);
     vec4 e = inverse(ProjMat * ModelViewMat) * vec4(0.0, 0.0, 1.0, 0.0);

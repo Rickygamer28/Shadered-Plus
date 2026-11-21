@@ -4,7 +4,6 @@ import com.example.skyblocks.SkyBlocksMod;
 import com.example.skyblocks.StationBlock;
 import com.example.skyblocks.StationBlockEntity;
 import com.example.skyblocks.TrainEntity;
-import com.example.skyblocks.TrainLine;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -74,9 +73,8 @@ public class StationRenderer implements BlockEntityRenderer<StationBlockEntity> 
         if (level.getGameTime() - be.clientTick >= 10 || be.clientTick > level.getGameTime()) {
             be.clientTick = level.getGameTime();
             int st = 0;
-            BlockPos rail = TrainLine.railBy(level, be.getBlockPos());
-            if (rail != null) {
-                Vec3 c = TrainLine.centre(level, rail);
+            Vec3 c = com.example.skyblocks.TrainRoute.stopPoint(level, be.getBlockPos());
+            if (c != null) {
                 for (TrainEntity t : level.getEntitiesOfClass(TrainEntity.class, new AABB(be.getBlockPos()).inflate(256.0, 64.0, 256.0))) {
                     boolean goingHere = t.end().distanceToSqr(c) < 2.5;
                     // (here: stopped alongside it - any of its cars by it)

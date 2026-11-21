@@ -2,7 +2,6 @@ package com.example.skyblocks.client;
 
 import com.example.skyblocks.StationBlockEntity;
 import com.example.skyblocks.TrainEntity;
-import com.example.skyblocks.TrainLine;
 import com.example.skyblocks.TrainPayload;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,20 +22,17 @@ public class TrainScreen extends Screen {
     private static final int W = 300, H = 230;
     private final TrainEntity train;
     /** Its line: the rails along it (both ways from its front), and its stations on it, by name. */
-    private final List<BlockPos> rails = new ArrayList<>();
+    private final List<Vec3> rails = new ArrayList<>();
     private final List<BlockPos> stations = new ArrayList<>();
     private int minX, maxX, minZ, maxZ;
 
     private TrainScreen(TrainEntity train) {
         super(Component.translatable("screen.skyblocks.train"));
         this.train = train;
-        BlockPos front = TrainLine.railAt(train.level(), train.at(train.head(0.0F)));
-        if (front != null) {
-            rails.add(front);
-            for (List<BlockPos> w : TrainLine.bothWays(train.level(), front, TrainLine.MOST)) {
-                rails.addAll(w);
-            }
-        }
+        Vec3 front = train.at(train.head(0.0F)), d = train.unit(0, 0.0F)[1];
+        rails.add(front);
+        rails.addAll(com.example.skyblocks.TrainRoute.onward(train.level(), front, d, 1500).pts());
+        rails.addAll(com.example.skyblocks.TrainRoute.onward(train.level(), front, d.scale(-1), 1500).pts());
         for (List<BlockPos> w : train.stations()) {
             for (BlockPos s : w) {
                 if (!stations.contains(s)) {
@@ -46,11 +42,11 @@ public class TrainScreen extends Screen {
         }
         minX = minZ = Integer.MAX_VALUE;
         maxX = maxZ = Integer.MIN_VALUE;
-        for (BlockPos r : rails) {
-            minX = Math.min(minX, r.getX());
-            maxX = Math.max(maxX, r.getX());
-            minZ = Math.min(minZ, r.getZ());
-            maxZ = Math.max(maxZ, r.getZ());
+        for (Vec3 r : rails) {
+            minX = Math.min(minX, (int) Math.floor(r.x));
+            maxX = Math.max(maxX, (int) Math.floor(r.x));
+            minZ = Math.min(minZ, (int) Math.floor(r.z));
+            maxZ = Math.max(maxZ, (int) Math.floor(r.z));
         }
     }
 
@@ -118,14 +114,14 @@ public class TrainScreen extends Screen {
             float span = Math.max(Math.max(maxX - minX, maxZ - minZ), 8);
             float sc = (Math.min(mw, mh) - 12) / span;
             float ox = mx0 + mw / 2.0F - (minX + maxX) / 2.0F * sc, oz = my0 + mh / 2.0F - (minZ + maxZ) / 2.0F * sc;
-            for (BlockPos r : rails) {
-                int px = Math.round(ox + r.getX() * sc), pz = Math.round(oz + r.getZ() * sc);
+            for (Vec3 r : rails) {
+                int px = Math.round(ox + (float) r.x * sc), pz = Math.round(oz + (float) r.z * sc);
                 g.fill(px, pz, px + 2, pz + 2, 0xFF3A6A80);
             }
             for (BlockPos s : stations) {
-                BlockPos r = TrainLine.railBy(train.level(), s);
+                Vec3 r = com.example.skyblocks.TrainRoute.stopPoint(train.level(), s);
                 if (r != null) {
-                    int px = Math.round(ox + r.getX() * sc), pz = Math.round(oz + r.getZ() * sc);
+                    int px = Math.round(ox + (float) r.x * sc), pz = Math.round(oz + (float) r.z * sc);
                     g.fill(px - 2, pz - 2, px + 4, pz + 4, 0xFFFFC040);
                 }
             }

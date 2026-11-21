@@ -74,15 +74,14 @@ public class StationBlock extends BaseEntityBlock {
 
     /** Calls the nearest train on its line to it; says how it went. */
     public static void call(ServerLevel level, BlockPos station, Player player) {
-        BlockPos rail = TrainLine.railBy(level, station);
-        if (rail == null) {
+        if (TrainRoute.stopPoint(level, station) == null) {
             player.displayClientMessage(Component.translatable("message.skyblocks.station.no_rail"), true);
             return;
         }
         List<TrainEntity> trains = level.getEntitiesOfClass(TrainEntity.class, new AABB(station).inflate(512.0, 128.0, 512.0));
         trains.sort((a, b) -> Double.compare(a.distanceToSqr(station.getCenter()), b.distanceToSqr(station.getCenter())));
         for (TrainEntity t : trains) {
-            if (t.goTo(rail)) {
+            if (t.goTo(station)) {
                 player.displayClientMessage(Component.translatable("message.skyblocks.station.called"), true);
                 return;
             }

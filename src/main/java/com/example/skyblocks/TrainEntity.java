@@ -60,8 +60,6 @@ public class TrainEntity extends Entity {
     public static final int NOTCH_MIN = -3, NOTCH_MAX = 6;
     /** How long it waits at a station going round; how long its doors take to shut before it sets off (ticks). */
     private static final int WAIT = 100, SHUT = 16;
-    /** How far along the line ahead and behind it a driven train knows its way (rails). */
-    private static final int REACH = 200;
 
     private static final EntityDataAccessor<Integer> STYLE = SynchedEntityData.defineId(TrainEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> CARS = SynchedEntityData.defineId(TrainEntity.class, EntityDataSerializers.INT);
@@ -368,6 +366,21 @@ public class TrainEntity extends Entity {
         }
     }
 
+    /** How far a unit leans into the curve it's on (radians, towards its own +z), now: more the faster and tighter. */
+    public float bank(int k, float partialTick) {
+        float c = head(partialTick) - k * CAR - BODY / 2.0F;
+        Vec3 fa = at(c + BODY * 0.4F + 0.6F).subtract(at(c + BODY * 0.4F - 0.6F)), ba = at(c - BODY * 0.4F + 0.6F).subtract(at(c - BODY * 0.4F - 0.6F));
+        if (fa.lengthSqr() < 1e-6 || ba.lengthSqr() < 1e-6) {
+            return 0.0F;
+        }
+        fa = new Vec3(fa.x, 0, fa.z).normalize();
+        ba = new Vec3(ba.x, 0, ba.z).normalize();
+        double crossY = ba.z * fa.x - ba.x * fa.z;
+        float v = speed(partialTick);
+        float b = Mth.clamp((float) (-crossY / (BODY * 0.8F)) * v * v * 40.0F, -0.14F, 0.14F);
+        return flipped(k) ? -b : b;
+    }
+
     /** Unit k's place, now: 0 at the front (its way's far end). */
     public Frame frame(int k, float partialTick) {
         float c = head(partialTick) - k * CAR - BODY / 2.0F;
@@ -380,7 +393,15 @@ public class TrainEntity extends Entity {
         }
         Vec3 s = dir.cross(new Vec3(0, 1, 0));
         s = s.lengthSqr() < 1e-6 ? new Vec3(0, 0, 1) : s.normalize();
-        return new Frame(mid, dir, s.cross(dir), s);
+        Vec3 u = s.cross(dir);
+        float r = bank(k, partialTick);
+        if (r != 0.0F) {
+            double cr = Math.cos(r), sr = Math.sin(r);
+            Vec3 u2 = u.scale(cr).add(s.scale(sr)), s2 = s.scale(cr).subtract(u.scale(sr));
+            u = u2;
+            s = s2;
+        }
+        return new Frame(mid, dir, u, s);
     }
 
     public Frame[] frames(float partialTick) {
@@ -439,53 +460,50 @@ public class TrainEntity extends Entity {
         setTrip(t, way);
     }
 
-    /** Put on a line: its front at a rail, facing the way given (the way you looked), its cars along the line behind. */
+    /** Put on a line of rails: its front at a rail, facing the way given, its cars along the line behind. */
     public void placeAt(BlockPos rail, Vec3 facing) {
-        Level level = level();
-        List<List<BlockPos>> ways = TrainLine.bothWays(level, rail, 128);
-        List<BlockPos> behind = List.of();
-        double best = Double.MAX_VALUE;
-        for (List<BlockPos> w : ways) {
-            double d = Vec3.atLowerCornerOf(w.get(0).subtract(rail)).dot(facing);
-            if (d < best) {
-                best = d;
-                behind = w;
-            }
-        }
-        List<Vec3> way = new ArrayList<>();
-        for (int i = behind.size() - 1; i >= 0; i--) {
-            way.add(TrainLine.centre(level, behind.get(i)));
-        }
-        way.add(TrainLine.centre(level, rail));
+        placeAt(TrainLine.centre(level(), rail), facing);
+    }
+
+    /** Put on a line (rails or track): its front here, facing the way given (the way you looked), its cars along it behind. */
+    public void placeAt(Vec3 at, Vec3 facing) {
+        Vec3 f = new Vec3(facing.x, 0, facing.z);
+        f = f.lengthSqr() < 1e-6 ? new Vec3(1, 0, 0) : f.normalize();
+        List<Vec3> behind = new ArrayList<>(TrainRoute.onward(level(), at, f.scale(-1), 160).pts());
+        Collections.reverse(behind);
+        List<Vec3> way = new ArrayList<>(behind);
+        way.add(at);
         if (way.size() == 1) {
-            way.add(0, way.get(0).add(-facing.x, 0, -facing.z));
+            way.add(0, at.subtract(f));
         }
-        float at = lengthOf(way);
-        for (List<BlockPos> w : ways) {
-            if (w != behind) {
-                for (int i = 0; i < Math.min(w.size(), 4); i++) {
-                    way.add(TrainLine.centre(level, w.get(i)));
-                }
-            }
-        }
-        stand(way, at, true, 1.0F);
-        Vec3 h = at(at);
+        way = clean(way);
+        float s = lengthOf(way);
+        way.addAll(TrainRoute.onward(level(), at, f, 6).pts());
+        stand(clean(way), s, true, 1.0F);
+        Vec3 h = at(s);
         setPos(h.x, h.y, h.z);
     }
 
-    @Nullable
-    private BlockPos railUnder(float s) {
-        return TrainLine.railAt(level(), at(s));
+    private static final float FAR = 2048.0F, REACH_D = 160.0F;
+
+    /** The way it's going at its front (along its way), and at its back (outward). */
+    private Vec3 frontWay(float h) {
+        Vec3 d = at(h).subtract(at(h - 1.0F));
+        return d.lengthSqr() < 1e-6 ? new Vec3(1, 0, 0) : d.normalize();
     }
 
-    /** The rails on past an end of it (the way away from its cars: 'inward' is a point back along it). */
-    private List<BlockPos> beyond(BlockPos end, Vec3 inward, int most) {
-        for (List<BlockPos> w : TrainLine.bothWays(level(), end, most)) {
-            if (w.get(0).getCenter().distanceToSqr(inward) > end.getCenter().distanceToSqr(inward) - 0.01) {
-                return w;
-            }
-        }
-        return List.of();
+    private Vec3 backWay(float h) {
+        Vec3 d = at(h - length()).subtract(at(h - length() + 1.0F));
+        return d.lengthSqr() < 1e-6 ? new Vec3(-1, 0, 0) : d.normalize();
+    }
+
+    /** The way on past its front, and past its back. */
+    private TrainRoute.Onward ahead(float h, float most) {
+        return TrainRoute.onward(level(), at(h), frontWay(h), most);
+    }
+
+    private TrainRoute.Onward astern(float h, float most) {
+        return TrainRoute.onward(level(), at(h - length()), backWay(h), most);
     }
 
     /** The points of its way under it now (from just behind its back to its front). */
@@ -513,26 +531,51 @@ public class TrainEntity extends Entity {
         return out;
     }
 
+    /** The index of the point on a way nearest a spot (within reach), or -1; and how far along the way it is. */
+    private static int find(List<Vec3> pts, Vec3 p, double reach) {
+        int best = -1;
+        double bd = reach * reach;
+        for (int i = 0; i < pts.size(); i++) {
+            double d = pts.get(i).distanceToSqr(p);
+            if (d < bd) {
+                bd = d;
+                best = i;
+            }
+        }
+        return best;
+    }
+
+    private static float along(Vec3 from, List<Vec3> pts, int upTo) {
+        float d = 0.0F;
+        Vec3 last = from;
+        for (int i = 0; i <= upTo; i++) {
+            d += (float) pts.get(i).distanceTo(last);
+            last = pts.get(i);
+        }
+        return d;
+    }
+
     /**
-     * Sent to a rail on its line (a station's): there from its front if it's ahead, or backing up to it if it's behind
-     * (onlyAhead: never back). Its doors shut first. Returns whether it's going.
+     * Sent to a station on its line: there from its front if it's ahead, or backing up to it if it's behind (onlyAhead:
+     * never back). Its doors shut first. Returns whether it's going (or there already).
      */
-    public boolean goTo(BlockPos target, boolean onlyAhead) {
+    public boolean goTo(BlockPos station, boolean onlyAhead) {
+        Vec3 stop = TrainRoute.stopPoint(level(), station);
         float h = head(0.0F);
-        BlockPos front = railUnder(h), back = railUnder(h - length() + 0.5F);
-        if (front == null) {
+        if (stop == null || !TrainRoute.onLine(level(), at(h))) {
             return false;
         }
-        if (front.equals(target) && !moving()) {
+        if (!moving() && (at(h).distanceTo(stop) < 1.0 || inside(stop.add(0, 1.5, 0)) >= 0) && !onlyAhead) {
             return true;
         }
-        List<BlockPos> ahead = beyond(front, at(h - 1.0F), TrainLine.MOST);
-        List<BlockPos> astern = back == null ? List.of() : beyond(back, at(h - length() + 1.5F), TrainLine.MOST);
-        int ia = ahead.indexOf(target), ib = onlyAhead ? -1 : astern.indexOf(target);
+        List<Vec3> ahead = ahead(h, FAR).pts();
+        List<Vec3> astern = onlyAhead ? List.of() : astern(h, FAR).pts();
+        int ia = find(ahead, stop, 1.0), ib = find(astern, stop, 1.0);
         if (ia < 0 && ib < 0) {
             return false;
         }
-        boolean forward = ia >= 0 && (ib < 0 || ia <= ib);
+        float da = ia < 0 ? Float.MAX_VALUE : along(at(h), ahead, ia), db = ib < 0 ? Float.MAX_VALUE : along(at(h - length()), astern, ib);
+        boolean forward = da <= db;
         List<Vec3> under = under(h);
         List<Vec3> way = new ArrayList<>();
         float from;
@@ -540,16 +583,12 @@ public class TrainEntity extends Entity {
         if (forward) {
             way.addAll(under);
             from = lengthOf(clean(way));
-            for (int i = 0; i <= ia; i++) {
-                way.add(TrainLine.centre(level(), ahead.get(i)));
-            }
+            way.addAll(ahead.subList(0, ia + 1));
         } else {
             Collections.reverse(under);
             way.addAll(under);
             from = lengthOf(clean(way));
-            for (int i = 0; i <= ib; i++) {
-                way.add(TrainLine.centre(level(), astern.get(i)));
-            }
+            way.addAll(astern.subList(0, ib + 1));
             loco = !loco;
         }
         way = clean(way);
@@ -570,8 +609,8 @@ public class TrainEntity extends Entity {
         return true;
     }
 
-    public boolean goTo(BlockPos target) {
-        return goTo(target, false);
+    public boolean goTo(BlockPos station) {
+        return goTo(station, false);
     }
 
     // ---- driving ----
@@ -583,20 +622,13 @@ public class TrainEntity extends Entity {
     private void drive(float vt, float acc) {
         float h = head(0.0F), v = velocity(0.0F), doorsNow = doors(0.0F);
         boolean still = Math.abs(v) < 1e-4F;
-        BlockPos front = railUnder(h), back = railUnder(h - length() + 0.5F);
-        List<BlockPos> ahead = front == null ? List.of() : beyond(front, at(h - 1.0F), REACH);
-        List<BlockPos> astern = back == null ? List.of() : beyond(back, at(h - length() + 1.5F), REACH);
-        List<Vec3> way = new ArrayList<>();
-        for (int i = astern.size() - 1; i >= 0; i--) {
-            way.add(TrainLine.centre(level(), astern.get(i)));
-        }
-        List<Vec3> under = under(h);
-        way.addAll(under);
+        TrainRoute.Onward ahead = ahead(h, REACH_D), astern = astern(h, REACH_D);
+        List<Vec3> way = new ArrayList<>(astern.pts());
+        Collections.reverse(way);
+        way.addAll(under(h));
         way = clean(way);
         float s = lengthOf(way);
-        for (BlockPos r : ahead) {
-            way.add(TrainLine.centre(level(), r));
-        }
+        way.addAll(ahead.pts());
         way = clean(way);
         CompoundTag t = new CompoundTag();
         t.putInt("mode", 1);
@@ -608,8 +640,8 @@ public class TrainEntity extends Entity {
         t.putFloat("dw", still ? doorsNow : 0.0F);
         t.putFloat("lo", length() + 0.3F);
         t.putFloat("hi", lengthOf(way) - 0.3F);
-        t.putBoolean("openLo", astern.size() >= REACH);
-        t.putBoolean("openHi", ahead.size() >= REACH);
+        t.putBoolean("openLo", astern.open() || astern.looped());
+        t.putBoolean("openHi", ahead.open() || ahead.looped());
         t.putBoolean("front", locoFront());
         setTrip(t, way);
         arrivedAt = Long.MIN_VALUE;
@@ -658,37 +690,21 @@ public class TrainEntity extends Entity {
 
     // ---- stations ----
 
-    /** The stations along its line from its front: [ahead, behind] - nearest first. */
+    /** The stations along its line: [ahead of its front, behind its back] - nearest first. */
     public List<List<BlockPos>> stations() {
         List<List<BlockPos>> out = new ArrayList<>();
         float h = head(0.0F);
-        BlockPos front = railUnder(h);
-        if (front == null) {
+        if (!TrainRoute.onLine(level(), at(h))) {
             return out;
         }
-        Vec3 behindPt = at(h - 1.0F);
-        for (List<BlockPos> w : TrainLine.bothWays(level(), front, TrainLine.MOST)) {
+        for (TrainRoute.Onward w : new TrainRoute.Onward[] {ahead(h, FAR), astern(h, FAR)}) {
             List<BlockPos> st = new ArrayList<>();
-            for (BlockPos r : w) {
-                BlockPos s = TrainLine.stationBy(level(), r);
-                if (s != null && !st.contains(s)) {
-                    st.add(s);
-                }
+            for (TrainRoute.Stop s : TrainRoute.stationsAlong(level(), w.pts())) {
+                st.add(s.station());
             }
-            boolean isAhead = w.get(0).getCenter().distanceToSqr(behindPt) > front.getCenter().distanceToSqr(behindPt) - 0.01;
-            out.add(isAhead ? 0 : out.size(), st);
+            out.add(st);
         }
         return out;
-    }
-
-    /** Whether its line goes round back to itself. */
-    private boolean circular(BlockPos front) {
-        List<List<BlockPos>> ways = TrainLine.bothWays(level(), front, TrainLine.MOST);
-        if (ways.size() != 2 || ways.get(0).isEmpty()) {
-            return false;
-        }
-        List<BlockPos> w = ways.get(0);
-        return w.size() < TrainLine.MOST - 2 && TrainLine.neighbours(level(), w.get(w.size() - 1)).contains(front);
     }
 
     // ---- each tick ----
@@ -736,19 +752,22 @@ public class TrainEntity extends Entity {
 
     /** Going round: on to the next station the way it was going (on a loop line, always on); at its line's end, back. */
     private void goRound() {
-        BlockPos here = railUnder(head(0.0F));
-        if (here == null) {
+        float h = head(0.0F);
+        if (!TrainRoute.onLine(level(), at(h))) {
             return;
         }
-        boolean ring = circular(here);
+        boolean ring = ahead(h, FAR).looped();
         List<List<BlockPos>> ways = stations();
         for (int w = 0; w < ways.size(); w++) {
             if (ring && w > 0) {
                 break;
             }
             for (BlockPos s : ways.get(w)) {
-                BlockPos r = TrainLine.railBy(level(), s);
-                if (r != null && !r.equals(here) && goTo(r, ring || w == 0)) {
+                Vec3 stop = TrainRoute.stopPoint(level(), s);
+                if (stop != null && stop.distanceTo(at(h)) > 2.0 && inside(stop.add(0, 1.5, 0)) < 0 && goTo(s, true)) {
+                    return;
+                }
+                if (stop != null && w == 1 && stop.distanceTo(at(h)) > 2.0 && goTo(s, false)) {
                     return;
                 }
             }

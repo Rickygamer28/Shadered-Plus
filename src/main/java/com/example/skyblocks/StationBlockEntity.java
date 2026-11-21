@@ -29,6 +29,32 @@ public class StationBlockEntity extends SimpleRenderedBlockEntity {
     }
 
     @Override
+    public void onLoad() {
+        super.onLoad();
+        synchronized (TrainRoute.class) {
+            (level != null && level.isClientSide ? TrainRoute.CLIENT : TrainRoute.SERVER).add(this);
+        }
+    }
+
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        synchronized (TrainRoute.class) {
+            TrainRoute.CLIENT.remove(this);
+            TrainRoute.SERVER.remove(this);
+        }
+    }
+
+    @Override
+    public void onChunkUnloaded() {
+        super.onChunkUnloaded();
+        synchronized (TrainRoute.class) {
+            TrainRoute.CLIENT.remove(this);
+            TrainRoute.SERVER.remove(this);
+        }
+    }
+
+    @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.putString("name", name);
