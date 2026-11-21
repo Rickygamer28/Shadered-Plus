@@ -36,7 +36,8 @@
     "SkyRenderTypeDrawMixin",
     "SkyboxSeamMixin",
     "SonarColourMixin",
-    "SonarGlowMixin"
+    "SonarGlowMixin",
+    "CameraTrainMixin"
   ],
   "injectors": {
     "defaultRequire": 1
