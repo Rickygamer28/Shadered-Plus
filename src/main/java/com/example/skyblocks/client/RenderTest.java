@@ -412,7 +412,7 @@ public final class RenderTest {
             "#track 962.5,-59.9,80.5 -90 1000.5,-59.9,80.5", "#track 1000.5,-59.9,80.5 0 1020.5,-59.9,100.5",
             "#track 1020.5,-59.9,100.5 0 1020.5,-55.9,130.5", "#track 988.5,-59.9,80.5 0 1008.5,-59.9,72.5",
             "fill 1018 -60 101 1022 -60 131 minecraft:air", "setblock 985 -60 83 skyblocks:station{name:\"Track Halt\"}",
-            "#trainat 986.5 -59.9 80.5 0 1", "setblock 1006 -60 69 skyblocks:station{name:\"Branch Halt\"}",
+            "#trainat 986.5 -59.9 80.5 0 1", "setblock 1007 -60 70 skyblocks:station{name:\"Branch Halt\"}",
             "#send 986 -60 80 1007 -60 70",
             // a beam light pointed at a prism
             "fill 852 -60 -3 862 -56 -3 minecraft:stone_bricks", "setblock 856 -60 0 skyblocks:prism",
