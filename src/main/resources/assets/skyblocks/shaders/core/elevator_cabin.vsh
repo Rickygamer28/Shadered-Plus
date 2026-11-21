@@ -25,7 +25,8 @@ void main() {
     gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
     int corner = int(UV0.x + 0.5);
     float wide = max(floor(Color.g * 255.0 + 0.5), 1.0), tall = max(floor(Color.b * 255.0 + 0.5), 1.0);
-    SC = vec3(wide / 3.0, tall / 3.0, wide / 3.0);
+    // (drawn for 3 across, its roof's top 2.73 over its floor: scaled so that's as tall as it's set to be)
+    SC = vec3(wide / 3.0, tall / 2.73, wide / 3.0);
     lp = (vec3(float(corner & 1), float((corner >> 1) & 1), float((corner >> 2) & 1)) * 2.0 - 1.0) * HALF * SC;
     vec4 e = inverse(ProjMat * ModelViewMat) * vec4(0.0, 0.0, 1.0, 0.0);
     vec3 eyeCam = abs(e.w) > 1e-6 ? e.xyz / e.w : vec3(0.0);

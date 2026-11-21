@@ -44,6 +44,8 @@ public class ElevatorRenderer implements BlockEntityRenderer<ElevatorBaseBlockEn
     static ShaderInstance cabinShader, shaftShader, buttonShader;
     /** The box round the cabin: from its floor's top, its middle; and its half-size. */
     private static final float MID = 0.8F, HX = 1.5F, HY = 2.0F;
+    /** How tall its cabin's drawn, at its scale of 1 (its roof's top over its floor). */
+    static final float ROOF = 2.73F;
     private static final int[] LIGHT = {0x7CCBFF, 0x7CFFCF, 0xE7A0FF, 0xB09CFF, 0xC88CFF, 0xFFF0C8};
     /** Which looks turn the shaft's walls: the bubble pod (water), the warp cabin (space), the cloud (sky). */
     private static boolean walls(int skin) {
@@ -205,8 +207,8 @@ public class ElevatorRenderer implements BlockEntityRenderer<ElevatorBaseBlockEn
 
     /** The box round the cabin: its faces turned away from the eye (from inside it: all of them). */
     private static void cabinBox(VertexConsumer vc, Matrix4f m, float landing, int skin, float vel, float cx, float cz, int wide, int tall) {
-        // (its box, scaled to its width and height: 3 x 3 the size it was drawn for)
-        float hx = HX * wide / 3.0F, hy = HY * tall / 3.0F, cy = landing + MID * tall / 3.0F;
+        // (its box, scaled to its width and height: drawn for 3 across, its roof's top 2.73 over its floor - scaled so that's its height)
+        float hx = HX * wide / 3.0F, hy = HY * tall / ROOF, cy = landing + MID * tall / ROOF;
         Vector3f centre = m.transformPosition(cx, cy, cz, new Vector3f());
         float ex = -centre.x, ey = -centre.y, ez = -centre.z;
         int[][] faces = {{0, 2, 6, 4}, {1, 5, 7, 3}, {0, 4, 5, 1}, {2, 3, 7, 6}, {0, 1, 3, 2}, {4, 6, 7, 5}};
