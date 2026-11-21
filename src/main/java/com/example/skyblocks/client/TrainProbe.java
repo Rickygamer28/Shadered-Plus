@@ -178,14 +178,6 @@ public final class TrainProbe {
                 }
             });
         }
-        if (t != null && tk >= 24 && tk <= 40) {
-            TrainEntity.Frame[] cf = t.clientFrames;
-            TrainEntity.Frame now = t.frameP(1, 0.0F);
-            SkyBlocksMod.LOGGER.info("Shadered+ train probe: carry detail tick {} player {} vehicle {} head {} front {} snap1 {} now1 {} localSnap {} localNow {}", tk,
-                    mc.player.position(), mc.player.getVehicle(), String.format("%.2f", t.head(0)), t.locoFront(),
-                    cf == null || cf.length < 2 ? "-" : cf[1].mid(), now.mid(), cf == null || cf.length < 2 ? "-" : cf[1].local(mc.player.position()),
-                    now.local(mc.player.position()));
-        }
         if (t != null && tk % 5 == 0 && tk > 0) {
             int k = t.inside(mc.player.position());
             Vec3 l = k >= 0 ? t.solidFrames()[k].local(mc.player.position()) : Vec3.ZERO;
