@@ -34,6 +34,26 @@ public final class TrainProbe {
 
     private TrainProbe() {}
 
+    /** Trains written to the log as they go: their names, their ids. */
+    private static final java.util.Map<String, Integer> WATCH = new java.util.LinkedHashMap<>();
+    private static int watchTicks;
+
+    static void watch(ServerLevel level, String name, Vec3 at) {
+        TrainEntity t = nearest(level, at, 20);
+        if (t != null) {
+            WATCH.put(name, t.getId());
+        }
+    }
+
+    private static void watchStep(ServerLevel level, int tk) {
+        for (java.util.Map.Entry<String, Integer> e : WATCH.entrySet()) {
+            if (level.getEntity(e.getValue()) instanceof TrainEntity t) {
+                SkyBlocksMod.LOGGER.info("Shadered+ train probe: watch {} tick {} head {} moving {} waiting {} for {}", e.getKey(), tk,
+                        t.at(t.head(0)), t.moving(), t.waiting(), t.waitingFor() == null ? "-" : name(level, t.waitingFor()));
+            }
+        }
+    }
+
     static void startLoop(Vec3 at) {
         loopAt = at;
         loopTicks = 0;
@@ -62,6 +82,12 @@ public final class TrainProbe {
         MinecraftServer server = mc.getSingleplayerServer();
         if (server == null) {
             return;
+        }
+        if (!WATCH.isEmpty() && watchTicks < 900) {
+            int wt = watchTicks++;
+            if (wt % 30 == 0) {
+                server.execute(() -> watchStep(server.overworld(), wt));
+            }
         }
         if (loopTicks >= 0) {
             int tk = loopTicks++;

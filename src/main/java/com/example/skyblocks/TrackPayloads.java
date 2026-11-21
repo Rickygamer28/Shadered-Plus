@@ -284,6 +284,11 @@ public final class TrackPayloads {
                 TrackNetwork net = TrackNetwork.of(level);
                 TrackNetwork.Node n = net.nodes.get(p.node);
                 if (n != null && player.position().distanceTo(n.pos) < 16) {
+                    if (TrainSignals.claimed(level, n.pos)) {
+                        // (a train's on it, or coming over it: locked)
+                        player.displayClientMessage(Component.translatable("message.skyblocks.track.in_use"), true);
+                        return;
+                    }
                     net.toggle(n);
                     level.playSound(null, n.pos.x, n.pos.y, n.pos.z, SoundEvents.PISTON_EXTEND, SoundSource.BLOCKS, 0.5F, 1.4F);
                     send(level);
@@ -341,7 +346,7 @@ public final class TrackPayloads {
                 continue;
             }
             boolean on = level.hasNeighborSignal(at.below()) || level.hasNeighborSignal(at) || level.getBestNeighborSignal(at.below()) > 0;
-            if (on != n.powered) {
+            if (on != n.powered && !TrainSignals.claimed(level, n.pos)) {
                 n.powered = on;
                 n.pick[side > 0 ? 1 : 0] = on ? 1 : 0;
                 net.changed();

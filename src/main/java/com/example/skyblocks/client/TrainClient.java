@@ -149,6 +149,15 @@ public final class TrainClient {
         }
         g.fill(w / 2 - 1, y + 11, w / 2 + 1, y + 21, 0xFFFFFFFF);
         g.drawCenteredString(mc.font, Component.translatable("hud.skyblocks.train.keys"), w / 2, y + 30, 0xA0B0B8);
+        // (a train or a claim on the track ahead: a red light)
+        java.util.List<Vec3> ahead = new java.util.ArrayList<>();
+        float h = t.head(0.0F), v = t.velocity(0.0F);
+        for (int i = 2; i < 40; i += 2) {
+            ahead.add(v < 0 ? t.at(h - t.length() - i) : t.at(h + i));
+        }
+        if (com.example.skyblocks.TrainSignals.others(mc.level, t, true).first(ahead) >= 0) {
+            g.drawCenteredString(mc.font, Component.translatable("hud.skyblocks.train.blocked"), w / 2, y - 14, 0xFF6050);
+        }
     }
 
     @SubscribeEvent

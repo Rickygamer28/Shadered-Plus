@@ -1200,5 +1200,10 @@
   "screen.skyblocks.train.order_clear": "Clear",
   "screen.skyblocks.train.order_hint": "Click stations in loop order (right: undo)",
   "screen.skyblocks.train.click_add": "Click: add to the loop order",
-  "screen.skyblocks.train.click_go": "Click: go here"
+  "screen.skyblocks.train.click_go": "Click: go here",
+  "message.skyblocks.train.blocked": "Track ahead occupied: stopping",
+  "message.skyblocks.track.in_use": "A train is using that switch",
+  "block.skyblocks.station.status.waiting": "Train waiting",
+  "screen.skyblocks.train.waiting": "Waiting for track to %s",
+  "hud.skyblocks.train.blocked": "● Track ahead occupied"
 }

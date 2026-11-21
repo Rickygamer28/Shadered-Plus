@@ -35,7 +35,7 @@ import org.joml.Matrix4f;
  */
 public class StationRenderer implements BlockEntityRenderer<StationBlockEntity> {
     static ShaderInstance boardShader;
-    private static final int[] COLOUR = {0x5FD8FF, 0xFFC040, 0x60FF90};
+    private static final int[] COLOUR = {0x5FD8FF, 0xFFC040, 0x60FF90, 0xFF6050};
 
     @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class Shaders {
@@ -84,6 +84,8 @@ public class StationRenderer implements BlockEntityRenderer<StationBlockEntity> 
                     }
                     if (goingHere && t.moving()) {
                         st = 1;
+                    } else if (st == 0 && be.getBlockPos().equals(t.waitingFor())) {
+                        st = 3; // (one's waiting for the track to clear to come here)
                     }
                 }
             }
@@ -106,7 +108,7 @@ public class StationRenderer implements BlockEntityRenderer<StationBlockEntity> 
         ps.mulPose(Axis.YP.rotationDegrees(facing));
         Matrix4f m = new Matrix4f(ps.last().pose());
         String name = be.name();
-        Component line = Component.translatable("block.skyblocks.station.status." + (st == 2 ? "here" : st == 1 ? "coming" : "none"));
+        Component line = Component.translatable("block.skyblocks.station.status." + (st == 2 ? "here" : st == 1 ? "coming" : st == 3 ? "waiting" : "none"));
         Runnable draw = () -> {
             ElevatorRenderer.drawNow(Types.BOARD, vc -> board(vc, m, colour));
             text(m, name, line, colour);

@@ -84,6 +84,9 @@ public final class TrackRenderer {
             lastVersion = net.version;
             rebuild(mc.level, net);
         }
+        if (age % 5 == 0) {
+            lamps(mc.level, net);
+        }
     }
 
     private static void clear() {
@@ -112,6 +115,50 @@ public final class TrackRenderer {
             VertexBuffer.unbind();
             Vec3 mid = s.pts[s.pts.length / 2];
             MESHES.put(s.id, new Mesh(vb, o, mid, s.length() / 2.0 + 2.0));
+        }
+        // a signal post by each switch (its lamp drawn as it changes: drawLamps)
+        for (TrackNetwork.Node n : net.nodes.values()) {
+            if (!n.isSwitch()) {
+                continue;
+            }
+            Vec3 o = Vec3.atLowerCornerOf(BlockPos.containing(n.pos));
+            BufferBuilder bb = new BufferBuilder(bytes, VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL);
+            Vec3 side = lampSide(n), up = new Vec3(0, 1, 0);
+            Vec3 base = n.pos.add(side.scale(LAMP_OUT));
+            BlockPos lb = BlockPos.containing(base.add(0, 1, 0));
+            Light L = new Light(level.getBrightness(LightLayer.BLOCK, lb), level.getBrightness(LightLayer.SKY, lb));
+            cube(bb, o, base, n.dir, side, up, 0.0F, 0.0F, 1.15F, 0.06F, 0.06F, 1.25F, 6, L, 0.0F);
+            cube(bb, o, base, n.dir, side, up, 0.0F, 0.0F, 2.55F, 0.16F, 0.16F, 0.22F, 6, L, 0.0F);
+            cube(bb, o, base, n.dir, side, up, 0.0F, 0.0F, -0.05F, 0.22F, 0.22F, 0.05F, 0, L, 0.0F);
+            MeshData mesh = bb.build();
+            if (mesh != null) {
+                VertexBuffer vb = new VertexBuffer(VertexBuffer.Usage.STATIC);
+                vb.bind();
+                vb.upload(mesh);
+                VertexBuffer.unbind();
+                MESHES.put(-n.id, new Mesh(vb, o, base, 4.0));
+            }
+        }
+    }
+
+    /** How far out from a switch its signal stands (clear of trains going by), and which side. */
+    private static final double LAMP_OUT = 2.0;
+
+    private static Vec3 lampSide(TrackNetwork.Node n) {
+        Vec3 s = n.dir.cross(new Vec3(0, 1, 0));
+        return s.lengthSqr() < 1e-6 ? new Vec3(1, 0, 0) : s.normalize();
+    }
+
+    /** Switches with a train on them or coming over them (red), by node. */
+    private static final java.util.Set<Integer> RED = new java.util.HashSet<>();
+
+    private static void lamps(Level level, TrackNetwork net) {
+        RED.clear();
+        com.example.skyblocks.TrainSignals.Occupancy occ = com.example.skyblocks.TrainSignals.others(level, null, true);
+        for (TrackNetwork.Node n : net.nodes.values()) {
+            if (n.isSwitch() && occ.near(n.pos)) {
+                RED.add(n.id);
+            }
         }
     }
 
@@ -251,10 +298,12 @@ public final class TrackRenderer {
             com.example.skyblocks.client.iris.IrisDefer.extra(() -> {
                 draw(new Matrix4f(RenderSystem.getModelViewMatrix()), new Matrix4f(RenderSystem.getProjectionMatrix()));
                 drawPreview();
+                drawLamps();
             });
         }
         if (!pack && event.getStage() == RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
             drawPreview();
+            drawLamps();
         }
     }
 
@@ -281,6 +330,43 @@ public final class TrackRenderer {
         }
         VertexBuffer.unbind();
         RenderSystem.enableCull();
+    }
+
+    /** The switches' signal lamps: green, clear; red, a train on it or coming. Glowing discs, facing you. */
+    private static void drawLamps() {
+        Minecraft mc = Minecraft.getInstance();
+        if (TrainRenderer.glowShader == null || mc.level == null) {
+            return;
+        }
+        net.minecraft.client.Camera camera = mc.gameRenderer.getMainCamera();
+        Vec3 cam = camera.getPosition();
+        Vec3 left = new Vec3(camera.getLeftVector()), upv = new Vec3(camera.getUpVector());
+        java.util.List<float[]> lamps = new java.util.ArrayList<>();
+        for (TrackNetwork.Node n : TrackNetwork.client.nodes.values()) {
+            if (!n.isSwitch()) {
+                continue;
+            }
+            Vec3 p = n.pos.add(lampSide(n).scale(LAMP_OUT)).add(0, 2.55, 0);
+            if (p.distanceToSqr(cam) > 128 * 128) {
+                continue;
+            }
+            boolean red = RED.contains(n.id);
+            lamps.add(new float[] {(float) (p.x - cam.x), (float) (p.y - cam.y), (float) (p.z - cam.z), red ? 1 : 0});
+        }
+        if (lamps.isEmpty()) {
+            return;
+        }
+        ElevatorRenderer.drawNow(TrainRenderer.Types.GLOW, vc -> {
+            for (float[] l : lamps) {
+                int r = l[3] > 0 ? 255 : 50, gc = l[3] > 0 ? 50 : 255, b = l[3] > 0 ? 40 : 90;
+                float sz = 0.35F;
+                for (int i = 0; i < 4; i++) {
+                    double a = (i == 0 || i == 3) ? -1 : 1, c = (i < 2) ? -1 : 1;
+                    Vec3 q = left.scale(a * sz).add(upv.scale(c * sz));
+                    vc.addVertex(l[0] + (float) q.x, l[1] + (float) q.y, l[2] + (float) q.z).setUv((float) a, 0.0F).setColor(r, gc, b, 255);
+                }
+            }
+        });
     }
 
     /** The Track Tool's piece to be: a line along it, green if it'll do, red if not. */

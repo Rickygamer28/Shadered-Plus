@@ -306,6 +306,13 @@ public final class TrainRoute {
      */
     @Nullable
     public static List<Leg> plan(Level level, Vec3 headAt, Vec3 headDir, Vec3 tailAt, Vec3 tailDir, float length, Vec3 target, boolean mayReverse) {
+        return plan(level, headAt, headDir, tailAt, tailDir, length, target, mayReverse, null);
+    }
+
+    /** As above, but never through track another train's on or has claimed ('blocked'): round it, if there's a way. */
+    @Nullable
+    public static List<Leg> plan(Level level, Vec3 headAt, Vec3 headDir, Vec3 tailAt, Vec3 tailDir, float length, Vec3 target, boolean mayReverse,
+            @Nullable java.util.function.Predicate<Vec3> blocked) {
         TrackNetwork net = TrackNetwork.of(level);
         TrackNetwork.Near hn = net.nearest(headAt, ON), tn = net.nearest(tailAt, ON);
         if (hn == null) {
@@ -334,9 +341,14 @@ public final class TrainRoute {
             float d = 0.0F;
             int best = -1;
             double bd = 1.0;
+            int stopAt = -1;
             for (int j = st.entry; j >= 0 && j < n; j += step) {
                 if (j != st.entry) {
                     d += (float) seg.pts[j].distanceTo(seg.pts[j - step]);
+                }
+                if (blocked != null && j != st.entry && blocked.test(seg.pts[j])) {
+                    stopAt = j; // (another train: no further this way)
+                    break;
                 }
                 double dd = seg.pts[j].distanceToSqr(target);
                 if (dd < bd && (j != st.entry || !st.initial)) {
@@ -346,6 +358,9 @@ public final class TrainRoute {
             }
             if (best >= 0) {
                 return legs(net, st, best);
+            }
+            if (stopAt >= 0) {
+                continue;
             }
             // or back up, once its whole length is past the last switch it went through (or, setting out, past itself)
             boolean reversedHere = false;

@@ -75,6 +75,9 @@ public class TrainEntity extends Entity {
     private static final EntityDataAccessor<CompoundTag> SKIP = SynchedEntityData.defineId(TrainEntity.class, EntityDataSerializers.COMPOUND_TAG);
     /** The stations it goes round, in order (p: their places; custom: set by hand, not worked out). */
     private static final EntityDataAccessor<CompoundTag> ORDER = SynchedEntityData.defineId(TrainEntity.class, EntityDataSerializers.COMPOUND_TAG);
+    /** Whether it's waiting for track to clear (1), and the station it's waiting to go to (its place). */
+    private static final EntityDataAccessor<Integer> STATUS = SynchedEntityData.defineId(TrainEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Long> WAIT_FOR = SynchedEntityData.defineId(TrainEntity.class, EntityDataSerializers.LONG);
     /** Who sits where (ids, keys: unit * 16 + seat). */
     private static final EntityDataAccessor<CompoundTag> SEATS = SynchedEntityData.defineId(TrainEntity.class, EntityDataSerializers.COMPOUND_TAG);
 
@@ -109,6 +112,8 @@ public class TrainEntity extends Entity {
         builder.define(SEATS, new CompoundTag());
         builder.define(SKIP, new CompoundTag());
         builder.define(ORDER, new CompoundTag());
+        builder.define(STATUS, 0);
+        builder.define(WAIT_FOR, 0L);
     }
 
     @Override
@@ -167,6 +172,74 @@ public class TrainEntity extends Entity {
 
     public float length() {
         return units() * CAR;
+    }
+
+    // ---- signalling (TrainSignals) ----
+
+    /** Whether it's waiting for the track it needs to clear. */
+    public boolean waiting() {
+        return entityData.get(STATUS) == 1;
+    }
+
+    /** The station it's waiting to go to, or null. */
+    @Nullable
+    public BlockPos waitingFor() {
+        return waiting() ? BlockPos.of(entityData.get(WAIT_FOR)) : null;
+    }
+
+    /** (server) The station it's going to (or waiting to), and since when it's waited. */
+    @Nullable
+    private BlockPos target, pending;
+    private long waitSince;
+
+    private void waitFor(BlockPos station) {
+        if (pending == null) {
+            waitSince = level().getGameTime();
+        }
+        pending = station;
+        plan = null;
+        entityData.set(STATUS, 1);
+        entityData.set(WAIT_FOR, station.asLong());
+    }
+
+    private void stopWaiting() {
+        pending = null;
+        entityData.set(STATUS, 0);
+    }
+
+    /** Points every block along part of its way (between two distances along it). */
+    private List<Vec3> sample(float from, float to) {
+        List<Vec3> out = new ArrayList<>();
+        if (to < from) {
+            float x = from;
+            from = to;
+            to = x;
+        }
+        int n = Math.min(600, (int) Math.ceil(to - from));
+        for (int i = 0; i <= n; i++) {
+            out.add(at(from + (to - from) * i / Math.max(n, 1)));
+        }
+        return out;
+    }
+
+    /** Where it is: points along it, end to end. */
+    public List<Vec3> bodyPts() {
+        float h = head(0.0F);
+        return sample(h - length() + 0.6F, h);
+    }
+
+    /** The track it's claimed: on ahead of it to where it's going (driven, as far as it'd take to stop, and more). */
+    public List<Vec3> claimPts() {
+        if (!moving()) {
+            return List.of();
+        }
+        float h = head(0.0F);
+        if (driven()) {
+            float v = velocity(0.0F), a = Math.max(trip().getFloat("acc"), ACC[style()]);
+            float dist = v * v / (2.0F * a) + 8.0F;
+            return v >= 0 ? sample(h, h + dist) : sample(h - length() - dist, h - length());
+        }
+        return sample(h, trip().getFloat("to"));
     }
 
     /** The stations it goes round, in order. */
@@ -703,12 +776,20 @@ public class TrainEntity extends Entity {
         if (!moving() && (at(h).distanceTo(stop) < 1.0 || inside(stop.add(0, 1.5, 0)) >= 0) && !onlyAhead) {
             return true;
         }
-        // smooth track: planned - its switches set as it goes, backing up past one if it must
+        TrainSignals.Occupancy occ = TrainSignals.others(level(), this, true);
+        // smooth track: planned - its switches set as it goes, backing up past one if it must, round other trains
         if (TrackNetwork.of(level()).nearest(at(h), 0.8) != null) {
-            List<TrainRoute.Leg> legs = TrainRoute.plan(level(), at(h), frontWay(h), at(h - length()), backWay(h), length(), stop, true);
+            List<TrainRoute.Leg> legs = TrainRoute.plan(level(), at(h), frontWay(h), at(h - length()), backWay(h), length(), stop, true, occ::near);
             if (legs == null || legs.isEmpty()) {
+                // (no way clear: is there a way at all? then wait for it)
+                if (TrainRoute.plan(level(), at(h), frontWay(h), at(h - length()), backWay(h), length(), stop, true) != null) {
+                    waitFor(station);
+                    return true;
+                }
                 return false;
             }
+            stopWaiting();
+            target = station;
             plan = legs;
             planLeg = 0;
             startLeg();
@@ -753,6 +834,13 @@ public class TrainEntity extends Entity {
             loco = !loco;
         }
         way = clean(way);
+        // (another train on the way: wait for it to clear)
+        if (occ.first(forward ? ahead.subList(0, ia + 1) : astern.subList(0, ib + 1)) >= 0) {
+            waitFor(station);
+            return true;
+        }
+        stopWaiting();
+        target = station;
         float doorsNow = doors(0.0F);
         CompoundTag t = new CompoundTag();
         t.putInt("mode", 0);
@@ -779,6 +867,21 @@ public class TrainEntity extends Entity {
     private List<TrainRoute.Leg> plan;
     private int planLeg;
     private long legDone = Long.MIN_VALUE;
+
+    /** A new way's points past where it is now (this far along it). */
+    private static List<Vec3> wayAhead(List<Vec3> way, float from) {
+        List<Vec3> out = new ArrayList<>();
+        float d = 0.0F;
+        for (int i = 0; i < way.size(); i++) {
+            if (i > 0) {
+                d += (float) way.get(i).distanceTo(way.get(i - 1));
+            }
+            if (d > from + 0.5F) {
+                out.add(way.get(i));
+            }
+        }
+        return out;
+    }
 
     /** Sets out on the leg of its plan it's on: its switches set; turned back, if it starts so; its doors kept shut till the last. */
     private void startLeg() {
@@ -811,6 +914,11 @@ public class TrainEntity extends Entity {
             }
         }
         way = clean(way);
+        if (planLeg > 0 && target != null && TrainSignals.others(level(), this, true).first(wayAhead(way, from)) >= 0) {
+            // (the next leg's track taken since it set out: wait, then find its way again)
+            waitFor(target);
+            return;
+        }
         if (lengthOf(way) - from < 0.05) {
             // (nothing to go on this leg: the next, or done)
             planLeg++;
@@ -884,6 +992,7 @@ public class TrainEntity extends Entity {
             entityData.set(LOOP, false);
         }
         plan = null;
+        stopWaiting();
         notch = Mth.clamp(notch, NOTCH_MIN, NOTCH_MAX);
         entityData.set(NOTCH, brake ? 0 : notch);
         float sign = flipped(unit) ? -1.0F : 1.0F;
@@ -994,12 +1103,62 @@ public class TrainEntity extends Entity {
                 }
             }
         }
-        if (loop() && plan == null && !moving && arrivedAt != Long.MIN_VALUE && level().getGameTime() - arrivedAt >= WAIT) {
+        // waiting for track: try again now and then; going round, give up on a stop after a while and go on to the next
+        if (pending != null && !moving && tickCount % 20 == 0) {
+            BlockPos s = pending;
+            if (loop() && level().getGameTime() - waitSince > 400) {
+                stopWaiting();
+                arrivedAt = level().getGameTime() - WAIT;
+            } else if (!goTo(s, false)) {
+                stopWaiting();
+            }
+        }
+        // something on the track just ahead (a train come onto it since): stop short of it, then wait
+        if (moving && tickCount % 4 == 0) {
+            guard();
+        }
+        if (loop() && plan == null && pending == null && !moving && arrivedAt != Long.MIN_VALUE && level().getGameTime() - arrivedAt >= WAIT) {
             arrivedAt = level().getGameTime();
             goRound();
         }
         if (arrivedAt == Long.MIN_VALUE && !moving && loop()) {
             arrivedAt = level().getGameTime();
+        }
+    }
+
+    /** Stops short of another train on the track just ahead (if there's one), and waits to go on. */
+    private void guard() {
+        float h = head(0.0F), v = velocity(0.0F);
+        float sp = Math.abs(v);
+        if (sp < 0.01F) {
+            return;
+        }
+        float look = sp * sp / (2.0F * ACC[style()]) + 6.0F;
+        List<Vec3> ahead;
+        if (driven()) {
+            ahead = v >= 0 ? sample(h, h + look) : sample(h - length() - look, h - length());
+            if (v < 0) {
+                Collections.reverse(ahead);
+            }
+        } else {
+            ahead = sample(h, Math.min(h + look, trip().getFloat("to")));
+        }
+        int i = TrainSignals.others(level(), this, false).first(ahead);
+        if (i < 0) {
+            return;
+        }
+        float room = Math.max(i - 3.0F, 0.3F);
+        BlockPos went = target;
+        boolean wasDriven = driven();
+        drive(0.0F, Math.max(ACC[style()], sp * sp / (2.0F * room)));
+        entityData.set(NOTCH, 0);
+        if (!wasDriven && went != null) {
+            waitFor(went);
+        }
+        for (Entity e : getPassengers()) {
+            if (e instanceof Player p) {
+                p.displayClientMessage(Component.translatable("message.skyblocks.train.blocked"), true);
+            }
         }
     }
 

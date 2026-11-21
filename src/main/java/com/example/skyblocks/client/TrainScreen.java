@@ -218,6 +218,11 @@ public class TrainScreen extends Screen {
         super.render(g, mx, my, pt);
         g.drawString(font, title, x + 8, y + 7, 0x8FEFFF, false);
         g.drawString(font, Component.translatable("screen.skyblocks.train.go"), x + 160, y + 7, 0xB0C8D0, false);
+        if (train.waiting()) {
+            // (waiting for track to clear: where to)
+            BlockPos w = train.waitingFor();
+            g.drawString(font, Component.translatable("screen.skyblocks.train.waiting", w == null ? "" : name(w)), x + 50, y + 7, 0xFF7050, false);
+        }
         int mx0 = x + 8, my0 = y + 22;
         g.fill(mx0, my0, mx0 + MW, my0 + MH, editing ? 0xFF14101A : 0xFF0A1016);
         if (editing) {
