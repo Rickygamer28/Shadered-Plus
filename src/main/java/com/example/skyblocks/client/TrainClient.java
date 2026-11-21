@@ -29,7 +29,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class TrainClient {
     private static int held;
-    private static boolean braking;
+    private static boolean braking, faced;
 
     private TrainClient() {}
 
@@ -68,9 +68,22 @@ public final class TrainClient {
             }
         }
         if (me != null && me.getVehicle() instanceof TrainEntity t) {
+            // (just sat down: facing the way the seat does)
+            Integer key = t.seatOf(me);
+            if (!faced && key != null) {
+                faced = true;
+                int unit = Math.min(key / 16, t.units() - 1);
+                Vec3 f = t.frame(unit, 0.0F).f().scale(TrainEntity.seatFacing(t.style(), t.kind(unit), key % 16));
+                float yaw = (float) (Mth.atan2(-f.x, f.z) * Mth.RAD_TO_DEG);
+                me.setYRot(yaw);
+                me.yRotO = yaw;
+                me.setYHeadRot(yaw);
+                me.setXRot(5.0F);
+            }
             drive(mc, me, t);
         } else {
             held = 0;
+            faced = false;
         }
     }
 

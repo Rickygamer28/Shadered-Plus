@@ -866,6 +866,21 @@ public class TrainEntity extends Entity {
         return out.toArray(new float[0][]);
     }
 
+    /** Which way a seat faces along its car: +1 its nose's way, -1 back (as the shader draws their backs). */
+    public static int seatFacing(int style, int kind, int seat) {
+        if (kind == 0 && style == 1) {
+            return 1;
+        }
+        if (kind != 1) {
+            if (seat == 0) {
+                return 1;
+            }
+            seat--;
+        }
+        int xi = seat / 2;
+        return xi == 2 || xi == 4 || xi == 5 ? -1 : 1;
+    }
+
     public static boolean driverSeat(int kind, int seat) {
         return kind != 1 && seat == 0;
     }

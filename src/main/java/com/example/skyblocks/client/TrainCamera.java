@@ -52,8 +52,8 @@ public final class TrainCamera {
             }
             TrainEntity.Frame f = t.frame(k, partialTick);
             Vec3 a = f.local(eye), b = f.local(was);
-            double[] lo = {-TrainEntity.HL - 0.3, TrainEntity.FL + 0.1, -TrainEntity.IW + 0.15};
-            double[] hi = {TrainEntity.HL + 0.3, TrainEntity.CE - 0.1, TrainEntity.IW - 0.15};
+            double[] lo = {-TrainEntity.HL + 0.35, TrainEntity.FL + 0.1, -TrainEntity.IW + 0.15};
+            double[] hi = {TrainEntity.HL - 0.35, TrainEntity.CE - 0.1, TrainEntity.IW - 0.15};
             double[] o = {a.x, a.y, a.z}, d = {b.x - a.x, b.y - a.y, b.z - a.z};
             double tExit = 1.0;
             for (int i = 0; i < 3; i++) {

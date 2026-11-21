@@ -140,7 +140,7 @@ float outer(vec3 p) {
     if (style == 0) {
         float s = noseS(p.x);
         float yb = 0.3 + 0.4 * s * s;
-        float yt = RT - (RT - 1.25) * pow(s, 1.45);
+        float yt = RT - (RT - 1.5) * pow(s, 2.2);
         float hw = OW * (1.0 - 0.42 * s * s);
         float zz = abs(p.z) + 0.11 * smoothstep(FL + 2.2, RT, p.y);
         float r = min(0.62, min((yt - yb) * 0.45, hw * 0.75));
@@ -162,7 +162,7 @@ float outer(vec3 p) {
 }
 
 float inner(vec3 p) {
-    float b = steamLoco() ? box2(p, vec3(-HL + 0.15, FL, -IW), vec3(-1.35, CE, IW)) : box2(p, vec3(-HL + 0.15, FL, -IW), vec3(HL - 0.15, CE, IW));
+    float b = steamLoco() ? box2(p, vec3(-HL + 0.15, FL, -IW), vec3(-1.35, CE, IW)) : box2(p, vec3(-HL + 0.15, FL, -IW), vec3(cab() ? HL + 1.2 : HL - 0.15, CE, IW));
     return max(b, outer(p) + 0.13);
 }
 
@@ -186,10 +186,10 @@ float windowIn(vec3 p) {
     float az = abs(p.z);
     if (style == 0) {
         float s = noseS(p.x);
-        if (cab() && s > 0.08) {
-            // the wrap-round windscreen: over the nose's waist, back from its tip
-            float top = RT - (RT - 1.25) * pow(s, 1.45);
-            return min(min(p.y - (FL + 1.15 + 0.25 * s), top - 0.25 - p.y), min(HL + 0.75 - p.x, 1.2 - az * 0.55)) * 4.0;
+        if (cab() && s > 0.1) {
+            // the wrap-round windscreen: over the nose's waist, from the cab's roof to near its tip
+            float hw = OW * (1.0 - 0.42 * s * s);
+            return min(min(p.y - (FL + 1.12 - 0.35 * s), 0.86 - s), min(s - 0.1, hw * 0.93 - abs(p.z) + 0.25)) * 4.0;
         }
         if (az < IW - 0.05 || p.y < FL + 1.0 || p.y > FL + 2.3) return -1.0;
         if (abs(p.x + DX) < DH + 0.25 || (kind == 1 && abs(p.x - DX) < DH + 0.25) || abs(p.x) > HL - 0.5) return -1.0;
