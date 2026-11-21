@@ -292,6 +292,15 @@ public final class TrainRoute {
     public static final Set<StationBlockEntity> CLIENT = Collections.newSetFromMap(new java.util.WeakHashMap<>());
     public static final Set<StationBlockEntity> SERVER = Collections.newSetFromMap(new java.util.WeakHashMap<>());
 
+    /** Every station loaded in a world. */
+    public static List<BlockPos> allStations(Level level) {
+        List<BlockPos> out = new ArrayList<>();
+        for (StationBlockEntity be : stations(level)) {
+            out.add(be.getBlockPos());
+        }
+        return out;
+    }
+
     private static List<StationBlockEntity> stations(Level level) {
         List<StationBlockEntity> out = new ArrayList<>();
         synchronized (TrainRoute.class) {

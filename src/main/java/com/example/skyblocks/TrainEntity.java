@@ -753,7 +753,20 @@ public class TrainEntity extends Entity {
             return out;
         }
         // (any way the switches could send it)
-        out.add(TrainRoute.stationsAnyWay(level(), at(h), frontWay(h), FAR));
+        List<BlockPos> ahead = new ArrayList<>();
+        // (any it's standing by first)
+        for (BlockPos st : TrainRoute.allStations(level())) {
+            Vec3 stop = TrainRoute.stopPoint(level(), st);
+            if (stop != null && inside(stop.add(0, 1.5, 0)) >= 0) {
+                ahead.add(st);
+            }
+        }
+        for (BlockPos st : TrainRoute.stationsAnyWay(level(), at(h), frontWay(h), FAR)) {
+            if (!ahead.contains(st)) {
+                ahead.add(st);
+            }
+        }
+        out.add(ahead);
         out.add(TrainRoute.stationsAnyWay(level(), at(h - length()), backWay(h), FAR));
         return out;
     }
