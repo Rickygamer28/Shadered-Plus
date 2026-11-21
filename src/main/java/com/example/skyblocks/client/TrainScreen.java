@@ -31,8 +31,16 @@ public class TrainScreen extends Screen {
         this.train = train;
         Vec3 front = train.at(train.head(0.0F)), d = train.unit(0, 0.0F)[1];
         rails.add(front);
-        rails.addAll(com.example.skyblocks.TrainRoute.onward(train.level(), front, d, 1500).pts());
-        rails.addAll(com.example.skyblocks.TrainRoute.onward(train.level(), front, d.scale(-1), 1500).pts());
+        // (every way on, through switches either way)
+        for (Vec3 way : new Vec3[] {d, d.scale(-1)}) {
+            List<com.example.skyblocks.TrainRoute.Branch> bs = com.example.skyblocks.TrainRoute.branches(train.level(), front, way, 1500);
+            if (bs.isEmpty()) {
+                rails.addAll(com.example.skyblocks.TrainRoute.onward(train.level(), front, way, 1500).pts());
+            }
+            for (com.example.skyblocks.TrainRoute.Branch b : bs) {
+                rails.addAll(b.pts());
+            }
+        }
         for (List<BlockPos> w : train.stations()) {
             for (BlockPos s : w) {
                 if (!stations.contains(s)) {

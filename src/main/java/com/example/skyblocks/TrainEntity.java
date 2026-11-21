@@ -545,6 +545,16 @@ public class TrainEntity extends Entity {
         return best;
     }
 
+    private static float distTo(TrainRoute.Branch b, Vec3 p) {
+        float best = Float.MAX_VALUE;
+        for (int i = 0; i < b.pts().size(); i++) {
+            if (b.pts().get(i).distanceToSqr(p) < 1.0) {
+                best = Math.min(best, b.dist().get(i));
+            }
+        }
+        return best;
+    }
+
     private static float along(Vec3 from, List<Vec3> pts, int upTo) {
         float d = 0.0F;
         Vec3 last = from;
@@ -572,7 +582,22 @@ public class TrainEntity extends Entity {
         List<Vec3> astern = onlyAhead ? List.of() : astern(h, FAR).pts();
         int ia = find(ahead, stop, 1.0), ib = find(astern, stop, 1.0);
         if (ia < 0 && ib < 0) {
-            return false;
+            // not the way the switches are set: the way they could be, set for it (the nearer way, ahead or back)
+            TrainRoute.Branch ra = TrainRoute.routeTo(level(), at(h), frontWay(h), stop, FAR);
+            TrainRoute.Branch rb = onlyAhead ? null : TrainRoute.routeTo(level(), at(h - length()), backWay(h), stop, FAR);
+            float da = ra == null ? Float.MAX_VALUE : distTo(ra, stop), db = rb == null ? Float.MAX_VALUE : distTo(rb, stop);
+            TrainRoute.Branch r = da <= db ? ra : rb;
+            if (r == null) {
+                return false;
+            }
+            TrainRoute.setSwitches(level(), r.switches());
+            ahead = ahead(h, FAR).pts();
+            astern = onlyAhead ? List.of() : astern(h, FAR).pts();
+            ia = find(ahead, stop, 1.0);
+            ib = find(astern, stop, 1.0);
+            if (ia < 0 && ib < 0) {
+                return false;
+            }
         }
         float da = ia < 0 ? Float.MAX_VALUE : along(at(h), ahead, ia), db = ib < 0 ? Float.MAX_VALUE : along(at(h - length()), astern, ib);
         boolean forward = da <= db;
@@ -697,13 +722,9 @@ public class TrainEntity extends Entity {
         if (!TrainRoute.onLine(level(), at(h))) {
             return out;
         }
-        for (TrainRoute.Onward w : new TrainRoute.Onward[] {ahead(h, FAR), astern(h, FAR)}) {
-            List<BlockPos> st = new ArrayList<>();
-            for (TrainRoute.Stop s : TrainRoute.stationsAlong(level(), w.pts())) {
-                st.add(s.station());
-            }
-            out.add(st);
-        }
+        // (any way the switches could send it)
+        out.add(TrainRoute.stationsAnyWay(level(), at(h), frontWay(h), FAR));
+        out.add(TrainRoute.stationsAnyWay(level(), at(h - length()), backWay(h), FAR));
         return out;
     }
 
