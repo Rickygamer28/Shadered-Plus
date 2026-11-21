@@ -242,10 +242,6 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 3)
                     .isViewBlocking((s, l, p) -> false).isSuffocating((s, l, p) -> !s.getValue(PhaseBlock.OPEN))
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_CYAN));
-    /** A fractal cube (FractalCubeBlock). */
-    public static final DeferredBlock<FractalCubeBlock> FRACTAL_CUBE = BLOCKS.registerBlock("fractal_cube", FractalCubeBlock::new,
-            BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.GLASS).noOcclusion().lightLevel(state -> 8)
-                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE));
     /** An echo field (EchoFieldBlock). */
     public static final DeferredBlock<EchoFieldBlock> ECHO_FIELD = BLOCKS.registerBlock("echo_field", EchoFieldBlock::new,
             BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.AMETHYST).noOcclusion().lightLevel(state -> 6)
