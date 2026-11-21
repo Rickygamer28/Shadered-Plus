@@ -31,8 +31,21 @@ public class StationBlockEntity extends SimpleRenderedBlockEntity {
     @Override
     public void onLoad() {
         super.onLoad();
-        synchronized (TrainRoute.class) {
-            (level != null && level.isClientSide ? TrainRoute.CLIENT : TrainRoute.SERVER).add(this);
+        register();
+    }
+
+    @Override
+    public void setLevel(net.minecraft.world.level.Level level) {
+        super.setLevel(level);
+        register();
+    }
+
+    /** Known to trains (TrainRoute): placed, or loaded. */
+    private void register() {
+        if (level != null) {
+            synchronized (TrainRoute.class) {
+                (level.isClientSide ? TrainRoute.CLIENT : TrainRoute.SERVER).add(this);
+            }
         }
     }
 
