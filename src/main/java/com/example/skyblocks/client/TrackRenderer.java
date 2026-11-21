@@ -126,8 +126,13 @@ public final class TrackRenderer {
         return false;
     }
 
-    private static final float GAUGE = 0.297F, RAIL_W = 0.047F, RAIL_LO = -0.006F, RAIL_HI = 0.12F;
+    private static final float GAUGE = 0.72F;
 
+    /**
+     * A piece's mesh: a gravel bed (sloped sides, a bottom where it's off the ground), rails with a foot, a web and a
+     * head, a glowing strip down the middle, concrete sleepers every 0.6 blocks with base plates and clips. Parts:
+     * 0 sleeper, 1 rail head, 2 strip, 3 strip dimmed (a switch's way not taken), 4 rail sides, 5 gravel, 6 plates and clips.
+     */
     private static void build(VertexConsumer vc, Level level, TrackNetwork net, TrackNetwork.Seg s, Vec3 o) {
         int n = s.pts.length;
         Vec3[] side = new Vec3[n], up = new Vec3[n];
@@ -143,49 +148,82 @@ public final class TrackRenderer {
             sl[i] = level.getBrightness(LightLayer.SKY, b);
         }
         int glowMat = notTaken(net, s) ? 3 : 2;
-        // the rails and the glowing strip: lengths between each point and the next
         for (int i = 0; i + 1 < n; i++) {
+            int j = i + 1;
+            Light L = new Light(bl[i], sl[i]);
+            // the gravel bed: its top, its sloping sides, its bottom
+            strip(vc, o, s, side, up, i, j, -1.15F, -0.07F, 1.15F, -0.07F, 5, L);
+            strip(vc, o, s, side, up, i, j, 1.15F, -0.07F, 1.45F, -0.3F, 5, L);
+            strip(vc, o, s, side, up, i, j, -1.45F, -0.3F, -1.15F, -0.07F, 5, L);
+            strip(vc, o, s, side, up, i, j, 1.45F, -0.3F, -1.45F, -0.3F, 5, L);
+            // the rails: foot, web, head
             for (int r = -1; r <= 1; r += 2) {
                 float c = r * GAUGE;
-                Vec3 a0 = off(s.pts[i], side[i], up[i], c - RAIL_W, RAIL_HI), a1 = off(s.pts[i], side[i], up[i], c + RAIL_W, RAIL_HI);
-                Vec3 b0 = off(s.pts[i + 1], side[i + 1], up[i + 1], c - RAIL_W, RAIL_HI), b1 = off(s.pts[i + 1], side[i + 1], up[i + 1], c + RAIL_W, RAIL_HI);
-                Vec3 a0l = off(s.pts[i], side[i], up[i], c - RAIL_W, RAIL_LO), a1l = off(s.pts[i], side[i], up[i], c + RAIL_W, RAIL_LO);
-                Vec3 b0l = off(s.pts[i + 1], side[i + 1], up[i + 1], c - RAIL_W, RAIL_LO), b1l = off(s.pts[i + 1], side[i + 1], up[i + 1], c + RAIL_W, RAIL_LO);
-                quad(vc, o, a0, a1, b1, b0, up[i], 1, bl[i], sl[i], s.cum[i]);
-                quad(vc, o, a1l, b1l, b1, a1, side[i], 1, bl[i], sl[i], s.cum[i]);
-                quad(vc, o, b0l, a0l, a0, b0, side[i].scale(-1), 1, bl[i], sl[i], s.cum[i]);
+                strip(vc, o, s, side, up, i, j, c - 0.075F, 0.0F, c + 0.075F, 0.0F, 6, L);
+                strip(vc, o, s, side, up, i, j, c + 0.075F, 0.0F, c + 0.075F, -0.012F, 6, L);
+                strip(vc, o, s, side, up, i, j, c - 0.075F, -0.012F, c - 0.075F, 0.0F, 6, L);
+                strip(vc, o, s, side, up, i, j, c + 0.018F, 0.075F, c + 0.018F, 0.0F, 4, L);
+                strip(vc, o, s, side, up, i, j, c - 0.018F, 0.0F, c - 0.018F, 0.075F, 4, L);
+                strip(vc, o, s, side, up, i, j, c - 0.042F, 0.125F, c + 0.042F, 0.125F, 1, L);
+                strip(vc, o, s, side, up, i, j, c + 0.042F, 0.125F, c + 0.042F, 0.075F, 4, L);
+                strip(vc, o, s, side, up, i, j, c - 0.042F, 0.075F, c - 0.042F, 0.125F, 4, L);
+                strip(vc, o, s, side, up, i, j, c - 0.018F, 0.075F, c - 0.042F, 0.075F, 4, L);
+                strip(vc, o, s, side, up, i, j, c + 0.042F, 0.075F, c + 0.018F, 0.075F, 4, L);
             }
-            Vec3 g0 = off(s.pts[i], side[i], up[i], -0.0625F, -0.04F), g1 = off(s.pts[i], side[i], up[i], 0.0625F, -0.04F);
-            Vec3 h0 = off(s.pts[i + 1], side[i + 1], up[i + 1], -0.0625F, -0.04F), h1 = off(s.pts[i + 1], side[i + 1], up[i + 1], 0.0625F, -0.04F);
-            quad(vc, o, g0, g1, h1, h0, up[i], glowMat, 15, 15, s.cum[i]);
+            strip(vc, o, s, side, up, i, j, -0.06F, -0.045F, 0.06F, -0.045F, glowMat, new Light(15, 15));
         }
-        // sleepers, every 0.6 blocks
+        // sleepers, every 0.6 blocks: concrete, a plate under each rail, clips either side of its foot
         float total = s.length();
         int count = Math.max(1, Math.round(total / 0.6F));
         for (int k = 0; k < count; k++) {
             float at = (k + 0.5F) * total / count;
             int i = Math.min(n - 1, Math.round(at / Math.max(total, 1e-3F) * (n - 1)));
-            Vec3 p = s.pts[i].add(up[i].scale(-0.053));
-            Vec3 t = s.tan[i].scale(0.0625), sd = side[i].scale(0.47), u = up[i].scale(0.047);
-            sleeper(vc, o, p, t, sd, u, bl[i], sl[i], at);
+            Vec3 t = s.tan[i], sd = side[i], u = up[i];
+            Light L = new Light(bl[i], sl[i]);
+            Vec3 p = s.pts[i];
+            cube(vc, o, p, t, sd, u, 0.0F, 0.0F, -0.06F, 0.08F, 1.0F, 0.05F, 0, L, at);
+            for (int r = -1; r <= 1; r += 2) {
+                float c = r * GAUGE;
+                cube(vc, o, p, t, sd, u, 0.0F, c, -0.006F, 0.065F, 0.11F, 0.006F, 6, L, at);
+                cube(vc, o, p, t, sd, u, 0.0F, c - 0.1F, 0.01F, 0.03F, 0.025F, 0.02F, 6, L, at);
+                cube(vc, o, p, t, sd, u, 0.0F, c + 0.1F, 0.01F, 0.03F, 0.025F, 0.02F, 6, L, at);
+            }
         }
+    }
+
+    private record Light(int block, int sky) {}
+
+    /** A strip between two points across the track (across, height), from point i to point j. */
+    private static void strip(VertexConsumer vc, Vec3 o, TrackNetwork.Seg s, Vec3[] side, Vec3[] up, int i, int j, float a0, float h0, float a1, float h1,
+            int mat, Light L) {
+        Vec3 p0 = off(s.pts[i], side[i], up[i], a0, h0), p1 = off(s.pts[i], side[i], up[i], a1, h1);
+        Vec3 q0 = off(s.pts[j], side[j], up[j], a0, h0), q1 = off(s.pts[j], side[j], up[j], a1, h1);
+        // (its face's way out: across the strip turned up a quarter)
+        float da = a1 - a0, dh = h1 - h0;
+        Vec3 nrm = side[i].scale(-dh).add(up[i].scale(da));
+        nrm = nrm.lengthSqr() < 1e-9 ? up[i] : nrm.normalize();
+        quad(vc, o, p0, p1, q1, q0, nrm, mat, L.block(), L.sky(), s.cum[i]);
     }
 
     private static Vec3 off(Vec3 p, Vec3 side, Vec3 up, float across, float height) {
         return p.add(side.scale(across)).add(up.scale(height));
     }
 
-    private static void sleeper(VertexConsumer vc, Vec3 o, Vec3 c, Vec3 t, Vec3 s, Vec3 u, int bl, int sl, float v) {
+    /** A little box on the track: its middle (along, across, up), half its size each way. */
+    private static void cube(VertexConsumer vc, Vec3 o, Vec3 p, Vec3 t, Vec3 s, Vec3 u, float along, float across, float height, float ha, float hc,
+            float hh, int mat, Light L, float v) {
+        Vec3 c = p.add(t.scale(along)).add(s.scale(across)).add(u.scale(height));
+        Vec3 tt = t.scale(ha), ss = s.scale(hc), uu = u.scale(hh);
         Vec3[] q = new Vec3[8];
         for (int i = 0; i < 8; i++) {
-            q[i] = c.add(t.scale((i & 1) == 0 ? -1 : 1)).add(u.scale((i & 2) == 0 ? -1 : 1)).add(s.scale((i & 4) == 0 ? -1 : 1));
+            q[i] = c.add(tt.scale((i & 1) == 0 ? -1 : 1)).add(uu.scale((i & 2) == 0 ? -1 : 1)).add(ss.scale((i & 4) == 0 ? -1 : 1));
         }
-        Vec3 un = u.normalize(), tn = t.normalize(), sn = s.normalize();
-        quad(vc, o, q[2], q[3], q[7], q[6], un, 0, bl, sl, v);
-        quad(vc, o, q[1], q[5], q[7], q[3], tn, 0, bl, sl, v);
-        quad(vc, o, q[0], q[2], q[6], q[4], tn.scale(-1), 0, bl, sl, v);
-        quad(vc, o, q[4], q[6], q[7], q[5], sn, 0, bl, sl, v);
-        quad(vc, o, q[0], q[1], q[3], q[2], sn.scale(-1), 0, bl, sl, v);
+        int b = L.block(), k = L.sky();
+        quad(vc, o, q[2], q[3], q[7], q[6], u, mat, b, k, v);
+        quad(vc, o, q[1], q[5], q[7], q[3], t, mat, b, k, v);
+        quad(vc, o, q[0], q[2], q[6], q[4], t.scale(-1), mat, b, k, v);
+        quad(vc, o, q[4], q[6], q[7], q[5], s, mat, b, k, v);
+        quad(vc, o, q[0], q[1], q[3], q[2], s.scale(-1), mat, b, k, v);
     }
 
     private static void quad(VertexConsumer vc, Vec3 o, Vec3 a, Vec3 b, Vec3 c, Vec3 d, Vec3 n, int mat, int bl, int sl, float v) {
