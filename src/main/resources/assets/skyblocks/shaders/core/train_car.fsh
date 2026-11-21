@@ -300,7 +300,9 @@ vec4 glassColour(vec3 p, vec3 n, vec3 rd) {
     float streak = step(0.6, hash1(row * 1.7)) * smoothstep(0.0, 0.2, dash) * smoothstep(0.7, 0.2, dash);
     float fast = clamp((speed - 0.08) * 2.2, 0.0, 1.0);
     vec3 c = tint * (0.25 + 0.5 * fres) * max(lit, 0.3) + vec3(0.85, 0.95, 1.0) * streak * fast * 0.7;
-    return vec4(c, clamp(0.16 + fres * 0.45 + streak * fast * 0.5, 0.0, 0.9));
+    // (at night: its cars' lights glowing warm through it)
+    c += vec3(1.0, 0.78, 0.45) * clamp(0.75 - lit, 0.0, 1.0) * 0.6 * (1.0 - fres);
+    return vec4(c, clamp(0.16 + fres * 0.45 + streak * fast * 0.5 + clamp(0.75 - lit, 0.0, 1.0) * 0.4, 0.0, 0.9));
 }
 
 void main() {
