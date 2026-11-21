@@ -27,7 +27,7 @@ public class TrainItem extends Item {
                 return InteractionResult.FAIL;
             }
             t.setPos(ctx.getClickedPos().getCenter());
-            t.placeAt(ctx.getClickedPos());
+            t.placeAt(ctx.getClickedPos(), ctx.getPlayer() != null ? ctx.getPlayer().getLookAngle() : new net.minecraft.world.phys.Vec3(ctx.getHorizontalDirection().getStepX(), 0, ctx.getHorizontalDirection().getStepZ()));
             level.addFreshEntity(t);
             if (ctx.getPlayer() == null || !ctx.getPlayer().getAbilities().instabuild) {
                 ctx.getItemInHand().shrink(1);

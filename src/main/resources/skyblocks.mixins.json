@@ -8,7 +8,8 @@
     "SkyblockItemTypesMixin",
     "SkyblockRegistryMixin",
     "SkyblockTypeInvoker",
-    "SkyblockTypeMixin"
+    "SkyblockTypeMixin",
+    "TrainCollideMixin"
   ],
   "client": [
     "AssimpRendererBonesMixin",

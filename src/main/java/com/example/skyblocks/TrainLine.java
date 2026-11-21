@@ -127,8 +127,8 @@ public final class TrainLine {
     @Nullable
     public static BlockPos stationBy(BlockGetter level, BlockPos rail) {
         for (int dy = -1; dy <= 1; dy++) {
-            for (int dx = -2; dx <= 2; dx++) {
-                for (int dz = -2; dz <= 2; dz++) {
+            for (int dx = -3; dx <= 3; dx++) {
+                for (int dz = -3; dz <= 3; dz++) {
                     BlockPos p = rail.offset(dx, dy, dz);
                     if ((dx != 0 || dz != 0) && level.getBlockState(p).getBlock() instanceof StationBlock) {
                         return p;
@@ -145,8 +145,8 @@ public final class TrainLine {
         BlockPos best = null;
         double bestD = Double.MAX_VALUE;
         for (int dy = -1; dy <= 1; dy++) {
-            for (int dx = -2; dx <= 2; dx++) {
-                for (int dz = -2; dz <= 2; dz++) {
+            for (int dx = -3; dx <= 3; dx++) {
+                for (int dz = -3; dz <= 3; dz++) {
                     BlockPos p = station.offset(dx, dy, dz);
                     if (isRail(level, p) && p.distSqr(station) < bestD) {
                         bestD = p.distSqr(station);

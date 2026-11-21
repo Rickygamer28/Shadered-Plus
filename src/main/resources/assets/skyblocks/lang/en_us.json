@@ -1155,8 +1155,8 @@
   "block.skyblocks.station.status.coming": "Train arriving",
   "block.skyblocks.station.status.none": "No train",
   "guide.skyblocks.train_rail": "Rails for a train. Lay them like normal rails - straight, round corners and up slopes - to make a line. Minecarts can use them too.",
-  "guide.skyblocks.station": "A station for a train line. Put it next to a Train Rail (up to two blocks away). It shows a hologram board with its name and whether a train is here, arriving or not. Right-click it to rename it or to call the nearest train on the line.",
-  "guide.skyblocks.train": "A train that runs on Train Rails. Use it on a rail to place it: the locomotive goes there and its cars follow the rails behind it. Right-click a car to sit in it. Sneak and right-click it (or right-click while riding) to open its screen: a map of the line, its stations to send it to, maglev or steam style, 1 to 4 cars, a loop mode that goes from station to station by itself, and picking it up. Maglevs light up the rails under them and the windows streak as it speeds up; steam trains puff smoke.",
+  "guide.skyblocks.station": "A station for a train line. Put it within three blocks of a Train Rail - on a platform one block high, level with the train's floor, is best. It shows a hologram board with its name and whether a train is here, arriving or not. Right-click it to rename it or to call the nearest train on the line.",
+  "guide.skyblocks.train": "A big train that runs on Train Rails: each car is 12 blocks long and 3 wide inside, with a corridor between rows of seats, sliding doors and gangways between the cars. Use it on a rail to place it - it faces the way you look, its cars along the rails behind. Its walls are solid: walk in through the doors, which open whenever it stops. Right-click a seat to sit. Sit in the driver's seat at the front of a cab to drive: W and S move the throttle (forward or reverse), Space brakes. Sneak and right-click inside it (or right-click while seated) for its screen: a map of the line, stations to send it to, maglev or steam, 1 to 4 cars, a loop mode that goes station to station by itself, and picking it up. A maglev has a cab at both ends; a steam train puffs smoke.",
   "screen.skyblocks.station": "Train Station",
   "screen.skyblocks.station.name": "Name",
   "screen.skyblocks.station.call": "Call train",
@@ -1173,5 +1173,7 @@
   "message.skyblocks.train.rails": "Use it on a Train Rail",
   "message.skyblocks.station.no_rail": "This station has no Train Rail next to it",
   "message.skyblocks.station.called": "Train called",
-  "message.skyblocks.station.no_train": "No train on this line"
+  "message.skyblocks.station.no_train": "No train on this line",
+  "hud.skyblocks.train.speed": "%s km/h",
+  "hud.skyblocks.train.keys": "W / S: throttle   Space: brake   Shift: get up"
 }
