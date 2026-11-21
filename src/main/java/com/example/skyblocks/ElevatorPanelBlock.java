@@ -107,14 +107,15 @@ public class ElevatorPanelBlock extends HorizontalDirectionalBlock {
             if (y < level.getMinBuildHeight()) {
                 break;
             }
-            for (int dx = -4; dx <= 4; dx++) {
-                for (int dz = -4; dz <= 4; dz++) {
-                    if (Math.max(Math.abs(dx), Math.abs(dz)) < 2) {
-                        continue;
-                    }
+            // (a base whose shaft - up to 7 across - this panel is beside: 1 to 3 blocks out from it)
+            for (int dx = -9; dx <= 9; dx++) {
+                for (int dz = -9; dz <= 9; dz++) {
                     p.set(panel.getX() + dx, y, panel.getZ() + dz);
                     if (level.getBlockEntity(p) instanceof ElevatorBaseBlockEntity be) {
-                        return be;
+                        int out = be.outside(panel.getX(), panel.getZ());
+                        if (out >= 1 && out <= 3) {
+                            return be;
+                        }
                     }
                 }
             }

@@ -19,6 +19,7 @@ flat in vec3 eye;
 flat in vec3 centre;
 flat in int skin;
 flat in float vel;
+flat in vec3 SC; // (its size from 3 x 3: everything below is worked out at 3 x 3, in its space scaled by this)
 
 out vec4 fragColor;
 
@@ -257,7 +258,9 @@ void main() {
     vec3 ro = eye;
     vec3 rd = normalize(lp - eye);
     vec3 inv = 1.0 / (sign(rd) * max(abs(rd), vec3(1e-6)));
-    vec3 ta = (-HALF - ro) * inv, tb = (HALF - ro) * inv;
+    vec3 ta = (-HALF * SC - ro) * inv, tb = (HALF * SC - ro) * inv;
+    // (its space scaled: distances there, times its smaller scale, never too far to step in the world's)
+    float K = min(SC.x, SC.y);
     float t0 = max(max(max(min(ta.x, tb.x), min(ta.y, tb.y)), min(ta.z, tb.z)), 0.0);
     float t1 = min(min(max(ta.x, tb.x), max(ta.y, tb.y)), max(ta.z, tb.z));
     if (t1 <= t0) {
@@ -268,7 +271,7 @@ void main() {
     float t = t0;
     if (skin == 5) {
         // (the cloud: only where it can be - a slab round its floor; the rest of the box is empty)
-        vec3 lo = vec3(-1.6, FY - 0.72, -1.6), hi = vec3(1.6, FY + 0.32, 1.6);
+        vec3 lo = vec3(-1.6, FY - 0.72, -1.6) * SC, hi = vec3(1.6, FY + 0.32, 1.6) * SC;
         vec3 ca = (lo - ro) * inv, cb = (hi - ro) * inv;
         float c0 = max(max(max(min(ca.x, cb.x), min(ca.y, cb.y)), min(ca.z, cb.z)), t0);
         float c1 = min(min(min(max(ca.x, cb.x), max(ca.y, cb.y)), max(ca.z, cb.z)), t1);
@@ -279,7 +282,7 @@ void main() {
         t1 = c1;
     }
     for (int i = 0; i < 140 && t < t1 && a < 0.97; i++) {
-        vec3 p = ro + rd * t;
+        vec3 p = (ro + rd * t) / SC;
         if (skin == 5) {
             // the cloud: soft, marched in steps
             float d = cloud(p);
@@ -291,7 +294,7 @@ void main() {
                 a += (1.0 - a) * k;
                 if (depthT < 0.0 && a > 0.3) depthT = t;
             }
-            t += 0.045;
+            t += 0.045 * K;
             continue;
         }
         int mat;
@@ -299,7 +302,7 @@ void main() {
         float g = glass(p);
         vec3 glow = glowAt(p);
         if (s < 0.002) {
-            vec3 n = solidNormal(p);
+            vec3 n = normalize(solidNormal(p) / SC);
             vec3 c = solidColour(p, n, rd, mat);
             col += (1.0 - a) * c;
             a = 1.0;
@@ -307,21 +310,21 @@ void main() {
             break;
         }
         if (g < 0.002) {
-            vec3 n = glassNormal(p);
+            vec3 n = normalize(glassNormal(p) / SC);
             vec4 gc = glassColour(p, n, rd);
             col += (1.0 - a) * gc.rgb;
             a += (1.0 - a) * gc.a;
             if (depthT < 0.0 && gc.a > 0.02) depthT = t;
-            t += 0.02;
+            t += 0.02 * K;
             continue;
         }
-        float dt = max(min(s, g), 0.003);
+        float dt = max(min(s, g), 0.003) * K;
         if (skin == 1) {
-            dt = min(dt, 0.12); // (its trail of light under the floor: sampled, not stepped over)
+            dt = min(dt, 0.12 * K); // (its trail of light under the floor: sampled, not stepped over)
         }
         if (dot(glow, glow) > 0.0) {
-            dt = min(dt, 0.05);
-            col += (1.0 - a) * glow * dt * 3.0;
+            dt = min(dt, 0.05 * K);
+            col += (1.0 - a) * glow * dt / K * 3.0;
             if (depthT < 0.0 && dot(glow, glow) > 0.02) depthT = t;
         }
         t += dt;

@@ -33,6 +33,10 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
     public static final int REACH = 256, GAP = 3;
 
     private int skin, speed = 1;
+    /** Its size: as set (0 fitted to the shaft, else 1 .. 7 across) and its cabin's height (2 .. 4 blocks); the shaft as it is
+     *  now - how wide, and its corner (from the base: the base under it, in the middle when it's odd). */
+    private int sizeSetting, cabinHeight = 3;
+    private int width = 3, ox = -1, oz = -1;
     /** The side its floor buttons and crystal rail are on: -1 worked out (the side with the most wall), 0 north, 1 south, 2 west, 3 east. */
     private int side = -1;
     /** Whether the call panels at the floor its cabin's stopped at give a redstone signal (doors by them opening); which floor's do now. */
@@ -68,6 +72,57 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
         return skin;
     }
 
+    /** How wide the shaft (and its cabin) is: 1 .. 7. */
+    public int width() {
+        return width;
+    }
+
+    /** How tall its cabin is (blocks). */
+    public int cabinHeight() {
+        return cabinHeight;
+    }
+
+    public int sizeSetting() {
+        return sizeSetting;
+    }
+
+    /** The shaft's corner (smallest x, z). */
+    public int x0() {
+        return worldPosition.getX() + ox;
+    }
+
+    public int z0() {
+        return worldPosition.getZ() + oz;
+    }
+
+    /** The shaft's middle (x, z). */
+    public double centreX() {
+        return x0() + width / 2.0;
+    }
+
+    public double centreZ() {
+        return z0() + width / 2.0;
+    }
+
+    /** How far outside the shaft a column is (0 in it, 1 next to it ...). */
+    public int outside(int x, int z) {
+        int dx = x < x0() ? x0() - x : x >= x0() + width ? x - (x0() + width - 1) : 0;
+        int dz = z < z0() ? z0() - z : z >= z0() + width ? z - (z0() + width - 1) : 0;
+        return Math.max(dx, dz);
+    }
+
+    public void setSize(int s) {
+        sizeSetting = Math.max(0, Math.min(7, s));
+        floorsChanged = true;
+        changed();
+    }
+
+    public void setCabinHeight(int h) {
+        cabinHeight = Math.max(2, Math.min(4, h));
+        floorsChanged = true;
+        changed();
+    }
+
     public int speedIndex() {
         return speed;
     }
@@ -79,7 +134,7 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
     /** The top of the shaft (y): a few blocks over its top floor. */
     public int top() {
         int[] f = floors();
-        return f[f.length - 1] + 3;
+        return f[f.length - 1] + cabinHeight;
     }
 
     /** Which floor (0 ..) is nearest a height. */
@@ -149,8 +204,7 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
 
     /** The space the shaft takes (the cabin's whole way). */
     public AABB shaft() {
-        return new AABB(worldPosition.getX() - 1, worldPosition.getY(), worldPosition.getZ() - 1,
-                worldPosition.getX() + 2, top() + 1, worldPosition.getZ() + 2);
+        return new AABB(x0(), worldPosition.getY(), z0(), x0() + width, top() + 1, z0() + width);
     }
 
     /** Sends the cabin to a floor (once it's done with those asked for before). */
@@ -211,6 +265,9 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
             be.openDoors(doorsAt);
             be.doorsLanding = doorsAt;
         }
+        if (cabin != null) {
+            cabin.shape(be.width, (float) (be.centreX() - pos.getX() - 0.5), (float) (be.centreZ() - pos.getZ() - 0.5), be.cabinHeight);
+        }
         if (cabin != null && !cabin.moving() && !be.queue.isEmpty()) {
             int to = be.queue.poll();
             int from = Math.round(cabin.landing());
@@ -231,12 +288,12 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
 
     /** The height where something solid blocks the shaft between two floors, or Integer.MIN_VALUE if it's clear. */
     private int blockedBetween(int a, int b) {
-        int lo = Math.min(a, b), hi = Math.max(a, b) + 2;
+        int lo = Math.min(a, b), hi = Math.max(a, b) + cabinHeight - 1;
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         for (int y = lo; y <= hi; y++) {
-            for (int dx = -1; dx <= 1; dx++) {
-                for (int dz = -1; dz <= 1; dz++) {
-                    p.set(worldPosition.getX() + dx, y, worldPosition.getZ() + dz);
+            for (int dx = 0; dx < width; dx++) {
+                for (int dz = 0; dz < width; dz++) {
+                    p.set(x0() + dx, y, z0() + dz);
                     BlockState s = level.getBlockState(p);
                     if (!s.getCollisionShape(level, p).isEmpty()) {
                         return y;
@@ -258,12 +315,12 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
         }
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         for (int y = landing; y <= landing + 1; y++) {
-            for (int dx = -3; dx <= 3; dx++) {
-                for (int dz = -3; dz <= 3; dz++) {
-                    if (Math.max(Math.abs(dx), Math.abs(dz)) < 2) {
+            for (int x = x0() - 2; x < x0() + width + 2; x++) {
+                for (int z = z0() - 2; z < z0() + width + 2; z++) {
+                    if (outside(x, z) == 0) {
                         continue;
                     }
-                    p.set(worldPosition.getX() + dx, y, worldPosition.getZ() + dz);
+                    p.set(x, y, z);
                     if (setOpen(p, true)) {
                         opened.add(p.immutable());
                     }
@@ -315,12 +372,12 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
         }
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         for (int y = landing - 3; y <= landing + 3; y++) {
-            for (int dx = -4; dx <= 4; dx++) {
-                for (int dz = -4; dz <= 4; dz++) {
-                    if (Math.max(Math.abs(dx), Math.abs(dz)) < 2) {
+            for (int x = x0() - 3; x < x0() + width + 3; x++) {
+                for (int z = z0() - 3; z < z0() + width + 3; z++) {
+                    if (outside(x, z) == 0) {
                         continue;
                     }
-                    p.set(worldPosition.getX() + dx, y, worldPosition.getZ() + dz);
+                    p.set(x, y, z);
                     BlockState st = level.getBlockState(p);
                     if (st.getBlock() instanceof ElevatorPanelBlock && st.getValue(ElevatorPanelBlock.POWERED) != on
                             && (!on || ElevatorPanelBlock.landing(level, p) == landing)) {
@@ -331,6 +388,95 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
         }
     }
 
+    /**
+     * The shaft's size and corner: as set, or fitted - the widest square (7 across at most) clear of anything solid all the
+     * way up, from just over the base to its top floor's ceiling, over the base (odd: the base in its middle; even: to
+     * whichever side's clear). As set: the place for that size with the most clear.
+     */
+    private void fitShaft() {
+        int bx = worldPosition.getX(), bz = worldPosition.getZ();
+        int lo = worldPosition.getY() + 1, hi = floors()[floors().length - 1] + cabinHeight - 1;
+        // which columns round the base are clear all the way up
+        boolean[][] clear = new boolean[13][13];
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int i = 0; i < 13; i++) {
+            for (int k = 0; k < 13; k++) {
+                boolean ok = true;
+                for (int y = lo; y <= hi && ok; y++) {
+                    p.set(bx - 6 + i, y, bz - 6 + k);
+                    ok = level.getBlockState(p).getCollisionShape(level, p).isEmpty();
+                }
+                clear[i][k] = ok;
+            }
+        }
+        int bestN = 1, bestX = 0, bestZ = 0;
+        if (sizeSetting == 0) {
+            // the widest that's clear all over
+            search:
+            for (int n = 7; n >= 1; n--) {
+                for (int ax : corners(n)) {
+                    for (int az : corners(n)) {
+                        if (score(clear, n, ax, az) == n * n) {
+                            bestN = n;
+                            bestX = ax;
+                            bestZ = az;
+                            break search;
+                        }
+                    }
+                }
+            }
+        } else {
+            // as set: where it's most clear
+            int n = sizeSetting, best = -1;
+            for (int ax : corners(n)) {
+                for (int az : corners(n)) {
+                    int sc = score(clear, n, ax, az);
+                    if (sc > best) {
+                        best = sc;
+                        bestX = ax;
+                        bestZ = az;
+                    }
+                }
+            }
+            bestN = n;
+        }
+        if (bestN != width || bestX != ox || bestZ != oz) {
+            width = bestN;
+            ox = bestX;
+            oz = bestZ;
+            clientWallsAt = -1000;
+            floorsChanged = true; // (the panels round it looked for again, round it as it is now)
+            changed();
+        }
+    }
+
+    /** Where a shaft n across can have its corner (from the base) with the base under it: the middle first. */
+    private static int[] corners(int n) {
+        int[] out = new int[n];
+        int mid = (n - 1) / 2;
+        for (int k = 0; k < n; k++) {
+            out[k] = -(k % 2 == 0 ? mid + k / 2 : mid - (k + 1) / 2);
+        }
+        // (past either end: folded back in)
+        for (int k = 0; k < n; k++) {
+            out[k] = Math.max(-(n - 1), Math.min(0, out[k]));
+        }
+        return out;
+    }
+
+    /** How many of a square's columns are clear (the grid round the base: 6, 6 its middle). */
+    private static int score(boolean[][] clear, int n, int ax, int az) {
+        int score = 0;
+        for (int i = 0; i < n; i++) {
+            for (int k = 0; k < n; k++) {
+                if (clear[6 + ax + i][6 + az + k]) {
+                    score++;
+                }
+            }
+        }
+        return score;
+    }
+
     private void findFloors() {
         List<Integer> found = new ArrayList<>();
         int base = worldPosition.getY() + 1;
@@ -339,8 +485,8 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
         int max = Math.min(worldPosition.getY() + REACH, level.getMaxBuildHeight() - 3);
         // the chunks the ring round the shaft is in
         List<net.minecraft.world.level.chunk.LevelChunk> chunks = new ArrayList<>();
-        for (int cx = (worldPosition.getX() - 4) >> 4; cx <= (worldPosition.getX() + 4) >> 4; cx++) {
-            for (int cz = (worldPosition.getZ() - 4) >> 4; cz <= (worldPosition.getZ() + 4) >> 4; cz++) {
+        for (int cx = (worldPosition.getX() - 10) >> 4; cx <= (worldPosition.getX() + 10) >> 4; cx++) {
+            for (int cz = (worldPosition.getZ() - 10) >> 4; cz <= (worldPosition.getZ() + 10) >> 4; cz++) {
                 if (level.hasChunk(cx, cz)) {
                     chunks.add(level.getChunk(cx, cz));
                 }
@@ -363,12 +509,12 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
                     continue;
                 }
             }
-            for (int dx = -4; dx <= 4; dx++) {
-                for (int dz = -4; dz <= 4; dz++) {
-                    if (Math.max(Math.abs(dx), Math.abs(dz)) < 2) {
+            for (int x = x0() - 3; x < x0() + width + 3; x++) {
+                for (int z = z0() - 3; z < z0() + width + 3; z++) {
+                    if (outside(x, z) == 0) {
                         continue;
                     }
-                    p.set(worldPosition.getX() + dx, y, worldPosition.getZ() + dz);
+                    p.set(x, y, z);
                     if (level.getBlockState(p).getBlock() instanceof ElevatorPanelBlock) {
                         int landing = ElevatorPanelBlock.landing(level, p);
                         if (landing > base && found.stream().allMatch(f -> Math.abs(f - landing) >= GAP)) {
@@ -383,6 +529,7 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
             floors = now;
             changed();
         }
+        fitShaft();
     }
 
     /** Its floors to be found again (ElevatorPanelBlock: one put up or taken down by it). */
@@ -416,6 +563,11 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
         tag.putIntArray("floors", floors);
         tag.putInt("side", side);
         tag.putBoolean("redstone", redstone);
+        tag.putInt("size", sizeSetting);
+        tag.putInt("cabin_height", cabinHeight);
+        tag.putInt("width", width);
+        tag.putInt("ox", ox);
+        tag.putInt("oz", oz);
         tag.putBoolean("no_doors", !doors);
         tag.putInt("doors_landing", doorsLanding);
         tag.putLongArray("opened", opened.stream().mapToLong(BlockPos::asLong).toArray());
@@ -430,6 +582,11 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
         floors = tag.getIntArray("floors");
         side = tag.contains("side") ? Math.max(-1, Math.min(3, tag.getInt("side"))) : -1;
         redstone = tag.getBoolean("redstone");
+        sizeSetting = Math.max(0, Math.min(7, tag.getInt("size")));
+        cabinHeight = tag.contains("cabin_height") ? Math.max(2, Math.min(4, tag.getInt("cabin_height"))) : 3;
+        width = tag.contains("width") ? Math.max(1, Math.min(7, tag.getInt("width"))) : 3;
+        ox = tag.contains("ox") ? Math.max(-6, Math.min(0, tag.getInt("ox"))) : -1;
+        oz = tag.contains("oz") ? Math.max(-6, Math.min(0, tag.getInt("oz"))) : -1;
         doors = !tag.getBoolean("no_doors");
         doorsLanding = tag.contains("doors_landing") ? tag.getInt("doors_landing") : Integer.MIN_VALUE;
         opened.clear();
@@ -456,7 +613,7 @@ public class ElevatorBaseBlockEntity extends BlockEntity {
     }
 
     /** Whether an entity is where the cabin's riders stand (in the shaft, a little over the cabin's floor). */
-    public static boolean standingIn(Entity e, double cx, double cz, double landing) {
-        return Math.abs(e.getX() - cx) < 1.45 && Math.abs(e.getZ() - cz) < 1.45 && e.getY() > landing - 0.4 && e.getY() < landing + 1.2;
+    public static boolean standingIn(Entity e, double cx, double cz, double half, double landing) {
+        return Math.abs(e.getX() - cx) < half - 0.05 && Math.abs(e.getZ() - cz) < half - 0.05 && e.getY() > landing - 0.4 && e.getY() < landing + 1.2;
     }
 }

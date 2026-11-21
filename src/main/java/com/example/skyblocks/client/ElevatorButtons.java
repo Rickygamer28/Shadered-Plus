@@ -34,7 +34,12 @@ import org.joml.Matrix4f;
 @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class ElevatorButtons {
     /** The panel's distance from the shaft's middle; its lowest buttons' middle over the cabin's floor. */
-    private static final float OUT = 1.32F, LOW = 1.0F;
+    private static final float LOW = 1.0F;
+
+    /** How far its panel is out from the shaft's middle: just in from the wall. */
+    static float out(ElevatorBaseBlockEntity be) {
+        return be.width() / 2.0F - 0.18F;
+    }
 
     private ElevatorButtons() {}
 
@@ -74,13 +79,14 @@ public final class ElevatorButtons {
             return be.clientPanelSide;
         }
         be.clientPanelAt = level.getGameTime();
-        BlockPos b = be.getBlockPos();
-        int[][] out = {{0, -2}, {0, 2}, {-2, 0}, {2, 0}};
+        // (the block just outside the middle of each side)
+        int mx = be.x0() + (be.width() - 1) / 2, mz = be.z0() + (be.width() - 1) / 2;
+        int[][] at = {{mx, be.z0() - 1}, {mx, be.z0() + be.width()}, {be.x0() - 1, mz}, {be.x0() + be.width(), mz}};
         int[] count = new int[4];
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         for (int y = be.floors()[0]; y <= be.top(); y++) {
             for (int s = 0; s < 4; s++) {
-                p.set(b.getX() + out[s][0], y, b.getZ() + out[s][1]);
+                p.set(at[s][0], y, at[s][1]);
                 if (level.getBlockState(p).isSolidRender(level, p)) {
                     count[s]++;
                 }
@@ -108,7 +114,7 @@ public final class ElevatorButtons {
         }
         float landing = cabin.landing(), vel = cabin.velocity(0.0F);
         double dy = p.getDeltaMovement().y;
-        boolean over = Math.abs(p.getX() - cabin.getX()) < 1.45 && Math.abs(p.getZ() - cabin.getZ()) < 1.45;
+        boolean over = Math.abs(p.getX() - cabin.getX()) < cabin.half() - 0.05 && Math.abs(p.getZ() - cabin.getZ()) < cabin.half() - 0.05;
         boolean near = p.getY() > landing - 0.6F - Math.abs(vel) * 2.0F && p.getY() < landing + Math.abs(vel) + 0.25F;
         boolean jumping = dy > Math.max(vel, 0.0F) + 0.12;
         if (over && near && !jumping) {
@@ -148,8 +154,8 @@ public final class ElevatorButtons {
         Layout l = layout(be);
         BlockPos b = be.getBlockPos();
         Vec3 n = normal(l.side()), r = right(l.side());
-        Vec3 centre = new Vec3(b.getX() + 0.5, landing, b.getZ() + 0.5);
-        Vec3 p0 = centre.subtract(n.scale(OUT));
+        Vec3 centre = new Vec3(be.centreX(), landing, be.centreZ());
+        Vec3 p0 = centre.subtract(n.scale(out(be)));
         Vec3 eye = player.getEyePosition(partialTick), look = player.getViewVector(partialTick);
         double dn = look.dot(n);
         if (dn > -1e-4) {
@@ -216,8 +222,9 @@ public final class ElevatorButtons {
         int hover = mc.player != null ? looking(mc.player, be, landingWorld, partialTick) : -1;
         boolean blink = (System.currentTimeMillis() / 300) % 2 == 0;
         Vec3 nn = normal(l.side()), r = right(l.side());
-        // (the panel from the base's corner: the shaft's middle is at 0.5, 0.5)
-        float px = 0.5F - (float) nn.x * OUT, pz = 0.5F - (float) nn.z * OUT;
+        // (the panel from the base's corner: the shaft's middle, then out to its wall)
+        float px = (float) (be.centreX() - be.getBlockPos().getX()) - (float) nn.x * out(be),
+                pz = (float) (be.centreZ() - be.getBlockPos().getZ()) - (float) nn.z * out(be);
         int ar = (accent >> 16) & 255, ag = (accent >> 8) & 255, ab = accent & 255;
         ElevatorRenderer.drawNow(ElevatorRenderer.Types.BUTTONS, vc -> {
             // its backing

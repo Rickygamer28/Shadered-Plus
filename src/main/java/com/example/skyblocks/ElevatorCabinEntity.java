@@ -25,7 +25,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityMountEvent;
 
 /**
- * An elevator's cabin (ElevatorBaseBlockEntity): a floor 3 x 3 you can stand on, that rides up and down its shaft.
+ * An elevator's cabin (ElevatorBaseBlockEntity): a floor as wide as its shaft (1 .. 7 across) you can stand on, that rides
+ * up and down it.
  * Players on it as it moves stand on it and walk about on it (held on its floor by their own client:
  * client/ElevatorButtons.keepOn; the server not taking them for flying); mobs ride it - held where they stood on it,
  * standing - and are set down on the floor it stops at. Its trip (from, to, when it set off, how long it takes) is known to the server and
@@ -42,6 +43,11 @@ public class ElevatorCabinEntity extends Entity {
     private static final EntityDataAccessor<Float> TO = SynchedEntityData.defineId(ElevatorCabinEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Long> START = SynchedEntityData.defineId(ElevatorCabinEntity.class, EntityDataSerializers.LONG);
     private static final EntityDataAccessor<Integer> TIME = SynchedEntityData.defineId(ElevatorCabinEntity.class, EntityDataSerializers.INT);
+    /** How wide it is, how tall (blocks), and its middle from its base's middle (x, z). */
+    private static final EntityDataAccessor<Integer> WIDTH = SynchedEntityData.defineId(ElevatorCabinEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> HEIGHT = SynchedEntityData.defineId(ElevatorCabinEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Float> OFF_X = SynchedEntityData.defineId(ElevatorCabinEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Float> OFF_Z = SynchedEntityData.defineId(ElevatorCabinEntity.class, EntityDataSerializers.FLOAT);
 
     /** Where each rider stands on it (x, z from its middle), kept until it's let off. */
     private final Map<Integer, Vec3> riders = new HashMap<>();
@@ -60,7 +66,10 @@ public class ElevatorCabinEntity extends Entity {
         c.entityData.set(TO, (float) landing);
         c.entityData.set(START, level.getGameTime() - 1000);
         c.entityData.set(TIME, 1);
-        c.setPos(base.getX() + 0.5, landing - PLATE, base.getZ() + 0.5);
+        if (level.getBlockEntity(base) instanceof ElevatorBaseBlockEntity be) {
+            c.shape(be.width(), (float) (be.centreX() - base.getX() - 0.5), (float) (be.centreZ() - base.getZ() - 0.5), be.cabinHeight());
+        }
+        c.setPos(c.middleX(), landing - PLATE, c.middleZ());
         return c;
     }
 
@@ -71,10 +80,54 @@ public class ElevatorCabinEntity extends Entity {
         builder.define(TO, 0.0F);
         builder.define(START, 0L);
         builder.define(TIME, 1);
+        builder.define(WIDTH, 3);
+        builder.define(HEIGHT, 3);
+        builder.define(OFF_X, 0.0F);
+        builder.define(OFF_Z, 0.0F);
     }
 
     public BlockPos base() {
         return entityData.get(BASE);
+    }
+
+    /** Its size and place (its base's: as its shaft is now). */
+    public void shape(int width, float offX, float offZ, int height) {
+        if (entityData.get(WIDTH) != width) {
+            entityData.set(WIDTH, width);
+        }
+        if (entityData.get(HEIGHT) != height) {
+            entityData.set(HEIGHT, height);
+        }
+        if (entityData.get(OFF_X) != offX) {
+            entityData.set(OFF_X, offX);
+        }
+        if (entityData.get(OFF_Z) != offZ) {
+            entityData.set(OFF_Z, offZ);
+        }
+    }
+
+    /** Half its width (blocks). */
+    public float half() {
+        return entityData.get(WIDTH) / 2.0F;
+    }
+
+    public int cabinHeight() {
+        return entityData.get(HEIGHT);
+    }
+
+    private double middleX() {
+        return base().getX() + 0.5 + entityData.get(OFF_X);
+    }
+
+    private double middleZ() {
+        return base().getZ() + 0.5 + entityData.get(OFF_Z);
+    }
+
+    /** Its floor: a slab as wide as it, its top where its riders stand. */
+    @Override
+    protected net.minecraft.world.phys.AABB makeBoundingBox() {
+        float h = half() - 0.03F;
+        return new net.minecraft.world.phys.AABB(getX() - h, getY(), getZ() - h, getX() + h, getY() + PLATE, getZ() + h);
     }
 
     /** Where it'll stop (y of its floor's top). */
@@ -158,7 +211,7 @@ public class ElevatorCabinEntity extends Entity {
         BlockPos b = base();
         List<Entity> on = level().getEntities(this, getBoundingBox().inflate(0.0, 2.0, 0.0),
                 e -> e instanceof LivingEntity && !(e instanceof Player) && !e.isPassenger() && !e.isSpectator()
-                        && ElevatorBaseBlockEntity.standingIn(e, getX(), getZ(), from));
+                        && ElevatorBaseBlockEntity.standingIn(e, getX(), getZ(), half(), from));
         for (Entity e : on) {
             e.startRiding(this, true);
         }
@@ -166,14 +219,14 @@ public class ElevatorCabinEntity extends Entity {
         entityData.set(TO, (float) to);
         entityData.set(START, level().getGameTime());
         entityData.set(TIME, time);
-        level().playSound(null, b.getX() + 0.5, from + 1.0, b.getZ() + 0.5, SoundEvents.BEACON_POWER_SELECT, SoundSource.BLOCKS, 0.6F, 1.7F);
+        level().playSound(null, middleX(), from + 1.0, middleZ(), SoundEvents.BEACON_POWER_SELECT, SoundSource.BLOCKS, 0.6F, 1.7F);
     }
 
     @Override
     public void tick() {
         super.tick();
         BlockPos b = base();
-        setPos(b.getX() + 0.5, landing() - PLATE, b.getZ() + 0.5);
+        setPos(middleX(), landing() - PLATE, middleZ());
         if (level().isClientSide) {
             if (!settled()) {
                 com.example.skyblocks.client.ElevatorButtons.keepOn(this);
@@ -184,13 +237,13 @@ public class ElevatorCabinEntity extends Entity {
             // (anything that lands on it - or that it comes up under - on the way: it rides too, rather than fall through)
             float landing = landing(), reach = 0.6F + Math.abs(velocity(0.0F)) * 2.0F;
             for (Entity e : level().getEntities(this, getBoundingBox().inflate(0.0, 2.5, 0.0),
-                    e -> e instanceof LivingEntity && !(e instanceof Player) && !e.isPassenger() && !e.isSpectator() && Math.abs(e.getX() - getX()) < 1.45
-                            && Math.abs(e.getZ() - getZ()) < 1.45 && e.getY() > landing - reach && e.getY() < landing + 0.35)) {
+                    e -> e instanceof LivingEntity && !(e instanceof Player) && !e.isPassenger() && !e.isSpectator() && Math.abs(e.getX() - getX()) < half() - 0.05
+                            && Math.abs(e.getZ() - getZ()) < half() - 0.05 && e.getY() > landing - reach && e.getY() < landing + 0.35)) {
                 e.startRiding(this, true);
             }
             // players on it: not falling, not flying (standing on a cabin, not a block, the server would think they were)
             for (Player p : level().getEntitiesOfClass(Player.class, getBoundingBox().inflate(0.0, 3.0, 0.0),
-                    p -> Math.abs(p.getX() - getX()) < 1.6 && Math.abs(p.getZ() - getZ()) < 1.6 && p.getY() > landing - 1.5 && p.getY() < landing + 2.0)) {
+                    p -> Math.abs(p.getX() - getX()) < half() + 0.1 && Math.abs(p.getZ() - getZ()) < half() + 0.1 && p.getY() > landing - 1.5 && p.getY() < landing + 2.0)) {
                 p.fallDistance = 0.0F;
                 if (p instanceof net.minecraft.server.level.ServerPlayer sp) {
                     notFlying(sp);
@@ -240,7 +293,8 @@ public class ElevatorCabinEntity extends Entity {
 
     @Override
     protected void addPassenger(Entity passenger) {
-        riders.put(passenger.getId(), new Vec3(Mth.clamp(passenger.getX() - getX(), -1.2, 1.2), 0.0, Mth.clamp(passenger.getZ() - getZ(), -1.2, 1.2)));
+        double h = Math.max(0.0, half() - 0.3);
+        riders.put(passenger.getId(), new Vec3(Mth.clamp(passenger.getX() - getX(), -h, h), 0.0, Mth.clamp(passenger.getZ() - getZ(), -h, h)));
         super.addPassenger(passenger);
     }
 

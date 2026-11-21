@@ -126,12 +126,13 @@ public class ElevatorRenderer implements BlockEntityRenderer<ElevatorBaseBlockEn
         int top = be.top() - b.getY();
         it.unimi.dsi.fastutil.ints.IntArrayList out = new it.unimi.dsi.fastutil.ints.IntArrayList();
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
-        // side 0 north (z -2), 1 south (z +2), 2 west (x -2), 3 east (x +2); t: along it, -1 .. 1
+        // side 0 north, 1 south, 2 west, 3 east (the blocks one out from the shaft's edge); t: along it, 0 .. width - 1
+        int w = be.width(), x0 = be.x0(), z0 = be.z0();
         for (int y = 1; y <= top; y++) {
             for (int side = 0; side < 4; side++) {
-                for (int t = -1; t <= 1; t++) {
-                    int dx = side < 2 ? t : (side == 2 ? -2 : 2), dz = side < 2 ? (side == 0 ? -2 : 2) : t;
-                    p.set(b.getX() + dx, b.getY() + y, b.getZ() + dz);
+                for (int t = 0; t < w; t++) {
+                    int x = side < 2 ? x0 + t : (side == 2 ? x0 - 1 : x0 + w), z = side < 2 ? (side == 0 ? z0 - 1 : z0 + w) : z0 + t;
+                    p.set(x, b.getY() + y, z);
                     BlockState s = level.getBlockState(p);
                     if (s.isSolidRender(level, p)) {
                         out.add(side);
@@ -159,25 +160,29 @@ public class ElevatorRenderer implements BlockEntityRenderer<ElevatorBaseBlockEn
         int skin = be.skin();
         int top = be.top() - b.getY();
         Matrix4f m = new Matrix4f(pose.last().pose());
-        ShaderLightRenderer.add(pose, 0.5F, landing + 1.2F, 0.5F, 6.0F, LIGHT[skin]);
+        // (the shaft's middle and half its width, from the base's corner; its cabin's height)
+        float cx = (float) (be.centreX() - b.getX()), cz = (float) (be.centreZ() - b.getZ()), half = be.width() / 2.0F;
+        int tall = be.cabinHeight();
+        int lx0 = be.x0() - b.getX(), lz0 = be.z0() - b.getZ(), wide = be.width();
+        ShaderLightRenderer.add(pose, cx, landing + 1.2F, cz, 3.0F + half * 2.0F, LIGHT[skin]);
         int[] walls = walls(skin) ? walls(be) : new int[0];
         int floor = be.floorAt(shown) + 1;
         int target = cabin != null ? be.floorAt(cabin.target()) + 1 : floor;
         Runnable draw = () -> {
             if (walls.length > 0) {
-                drawNow(Types.WALL, vc -> walls(vc, m, walls, skin, landing, vel));
+                drawNow(Types.WALL, vc -> walls(vc, m, walls, skin, landing, vel, lx0, lz0, wide));
             }
             if (skin == 0) {
-                drawNow(Types.GLOW, vc -> rings(vc, m, top, landing, vel));
+                drawNow(Types.GLOW, vc -> rings(vc, m, top, landing, vel, cx, cz, half));
             } else if (skin == 4) {
                 int side = ElevatorButtons.side(be);
-                drawNow(Types.GLOW, vc -> rail(vc, m, top, vel, side));
+                drawNow(Types.GLOW, vc -> rail(vc, m, top, vel, side, cx, cz, half));
             }
             // (the buttons before the cabin: its glass laid over them, seen from outside)
             ElevatorButtons.draw(m, be, landing, landing + b.getY(), floor - 1, target - 1, moving, com.example.skyblocks.client.ElevatorScreen.ACCENT[skin] & 0xFFFFFF,
                     partialTick);
-            drawNow(Types.CABIN, vc -> cabinBox(vc, m, landing, skin, vel));
-            label(m, landing, moving ? (vel > 0 ? "▲ " : "▼ ") + target : String.valueOf(floor), skin);
+            drawNow(Types.CABIN, vc -> cabinBox(vc, m, landing, skin, vel, cx, cz, wide, tall));
+            label(m, cx, cz, landing + tall + 0.05F, moving ? (vel > 0 ? "▲ " : "▼ ") + target : String.valueOf(floor), skin);
         };
         if (!LatePass.later(src -> draw.run())) {
             draw.run();
@@ -199,39 +204,43 @@ public class ElevatorRenderer implements BlockEntityRenderer<ElevatorBaseBlockEn
     }
 
     /** The box round the cabin: its faces turned away from the eye (from inside it: all of them). */
-    private static void cabinBox(VertexConsumer vc, Matrix4f m, float landing, int skin, float vel) {
-        float cy = landing + MID;
-        Vector3f centre = m.transformPosition(0.5F, cy, 0.5F, new Vector3f());
+    private static void cabinBox(VertexConsumer vc, Matrix4f m, float landing, int skin, float vel, float cx, float cz, int wide, int tall) {
+        // (its box, scaled to its width and height: 3 x 3 the size it was drawn for)
+        float hx = HX * wide / 3.0F, hy = HY * tall / 3.0F, cy = landing + MID * tall / 3.0F;
+        Vector3f centre = m.transformPosition(cx, cy, cz, new Vector3f());
         float ex = -centre.x, ey = -centre.y, ez = -centre.z;
         int[][] faces = {{0, 2, 6, 4}, {1, 5, 7, 3}, {0, 4, 5, 1}, {2, 3, 7, 6}, {0, 1, 3, 2}, {4, 6, 7, 5}};
-        float[] towards = {-ex - HX, ex - HX, -ey - HY, ey - HY, -ez - HX, ez - HX};
+        float[] towards = {-ex - hx, ex - hx, -ey - hy, ey - hy, -ez - hx, ez - hx};
         for (int f = 0; f < 6; f++) {
             if (towards[f] > 0) {
                 continue;
             }
             for (int c : faces[f]) {
-                float x = ((c & 1) * 2 - 1) * HX, y = (((c >> 1) & 1) * 2 - 1) * HY, z = (((c >> 2) & 1) * 2 - 1) * HX;
-                vc.addVertex(m, 0.5F + x, cy + y, 0.5F + z).setColor(skin, 0, 0, 255).setUv(c, vel);
+                float x = ((c & 1) * 2 - 1) * hx, y = (((c >> 1) & 1) * 2 - 1) * hy, z = (((c >> 2) & 1) * 2 - 1) * hx;
+                vc.addVertex(m, cx + x, cy + y, cz + z).setColor(skin, wide, tall, 255).setUv(c, vel);
             }
         }
     }
 
     /** The walls: a sheet just in front of each solid block's face round the shaft. */
-    private static void walls(VertexConsumer vc, Matrix4f m, int[] walls, int skin, float landing, float vel) {
+    private static void walls(VertexConsumer vc, Matrix4f m, int[] walls, int skin, float landing, float vel, int lx0, int lz0, int wide) {
         int vb = velByte(vel);
-        float in = 1.5F - 0.004F;
+        float e = 0.004F;
+        // (the shaft's sides, from the base's corner: north z, south z, west x, east x)
+        float nz = lz0 + e, sz = lz0 + wide - e, wx = lx0 + e, ex = lx0 + wide - e;
         // (each look's pattern slides by as the cabin goes: how far, for so far up)
         float slide = skin == 3 ? landing * 1.6F : skin == 5 ? landing * 0.5F : landing * 0.25F;
         for (int i = 0; i + 2 < walls.length; i += 3) {
             int side = walls[i], t = walls[i + 1], y = walls[i + 2];
-            float a0 = t - 0.5F, a1 = t + 0.5F, y0 = y, y1 = y + 1;
-            float u0 = a0 + side * 7.0F, u1 = a1 + side * 7.0F; // (each wall its own part of the pattern)
+            float y0 = y, y1 = y + 1;
+            float u0 = t + side * 7.0F, u1 = t + 1 + side * 7.0F; // (each wall its own part of the pattern)
             float v0 = y0 - slide, v1 = y1 - slide;
+            float ax0 = lx0 + t, ax1 = lx0 + t + 1, az0 = lz0 + t, az1 = lz0 + t + 1;
             switch (side) {
-                case 0 -> quad(vc, m, 0.5F + a0, y0, 0.5F - in, 0.5F + a1, y0, 0.5F - in, 0.5F + a1, y1, 0.5F - in, 0.5F + a0, y1, 0.5F - in, u0, u1, v0, v1, skin, 0, vb);
-                case 1 -> quad(vc, m, 0.5F + a0, y0, 0.5F + in, 0.5F + a1, y0, 0.5F + in, 0.5F + a1, y1, 0.5F + in, 0.5F + a0, y1, 0.5F + in, u0, u1, v0, v1, skin, 0, vb);
-                case 2 -> quad(vc, m, 0.5F - in, y0, 0.5F + a0, 0.5F - in, y0, 0.5F + a1, 0.5F - in, y1, 0.5F + a1, 0.5F - in, y1, 0.5F + a0, u0, u1, v0, v1, skin, 0, vb);
-                default -> quad(vc, m, 0.5F + in, y0, 0.5F + a0, 0.5F + in, y0, 0.5F + a1, 0.5F + in, y1, 0.5F + a1, 0.5F + in, y1, 0.5F + a0, u0, u1, v0, v1, skin, 0, vb);
+                case 0 -> quad(vc, m, ax0, y0, nz, ax1, y0, nz, ax1, y1, nz, ax0, y1, nz, u0, u1, v0, v1, skin, 0, vb);
+                case 1 -> quad(vc, m, ax0, y0, sz, ax1, y0, sz, ax1, y1, sz, ax0, y1, sz, u0, u1, v0, v1, skin, 0, vb);
+                case 2 -> quad(vc, m, wx, y0, az0, wx, y0, az1, wx, y1, az1, wx, y1, az0, u0, u1, v0, v1, skin, 0, vb);
+                default -> quad(vc, m, ex, y0, az0, ex, y0, az1, ex, y1, az1, ex, y1, az0, u0, u1, v0, v1, skin, 0, vb);
             }
         }
     }
@@ -245,25 +254,25 @@ public class ElevatorRenderer implements BlockEntityRenderer<ElevatorBaseBlockEn
     }
 
     /** The glass capsule's rings of energy, every two blocks up the shaft: brighter near the cabin, and as it speeds. */
-    private static void rings(VertexConsumer vc, Matrix4f m, int top, float landing, float vel) {
+    private static void rings(VertexConsumer vc, Matrix4f m, int top, float landing, float vel, float cx, float cz, float half) {
         int vb = velByte(vel);
         for (int y = 2; y <= top; y += 2) {
             float d = Math.abs(y - (landing + 1.2F));
             int near = Mth.clamp(Math.round(255 - d * 18.0F), 40, 255);
-            float s = 1.5F, yy = y + 0.01F;
-            vc.addVertex(m, 0.5F - s, yy, 0.5F - s).setColor(0, 1, vb, near).setUv(-1, -1);
-            vc.addVertex(m, 0.5F - s, yy, 0.5F + s).setColor(0, 1, vb, near).setUv(-1, 1);
-            vc.addVertex(m, 0.5F + s, yy, 0.5F + s).setColor(0, 1, vb, near).setUv(1, 1);
-            vc.addVertex(m, 0.5F + s, yy, 0.5F - s).setColor(0, 1, vb, near).setUv(1, -1);
+            float s = half, yy = y + 0.01F;
+            vc.addVertex(m, cx - s, yy, cz - s).setColor(0, 1, vb, near).setUv(-1, -1);
+            vc.addVertex(m, cx - s, yy, cz + s).setColor(0, 1, vb, near).setUv(-1, 1);
+            vc.addVertex(m, cx + s, yy, cz + s).setColor(0, 1, vb, near).setUv(1, 1);
+            vc.addVertex(m, cx + s, yy, cz - s).setColor(0, 1, vb, near).setUv(1, -1);
         }
     }
 
     /** The crystal cabin's rail: a strip of crystal up the middle of one side of the shaft (its buttons' side). */
-    private static void rail(VertexConsumer vc, Matrix4f m, int top, float vel, int side) {
+    private static void rail(VertexConsumer vc, Matrix4f m, int top, float vel, int side, float mx, float mz, float half) {
         int vb = velByte(vel);
         net.minecraft.world.phys.Vec3 n = ElevatorButtons.normal(side), r = ElevatorButtons.right(side);
-        float out = 1.5F - 0.02F, w = 0.2F;
-        float cx = 0.5F - (float) n.x * out, cz = 0.5F - (float) n.z * out;
+        float out = half - 0.02F, w = 0.2F;
+        float cx = mx - (float) n.x * out, cz = mz - (float) n.z * out;
         float x0 = cx - (float) r.x * w, z0 = cz - (float) r.z * w, x1 = cx + (float) r.x * w, z1 = cz + (float) r.z * w;
         vc.addVertex(m, x0, 0.0F, z0).setColor(4, 2, vb, 255).setUv(-1, 0);
         vc.addVertex(m, x1, 0.0F, z1).setColor(4, 2, vb, 255).setUv(1, 0);
@@ -272,12 +281,12 @@ public class ElevatorRenderer implements BlockEntityRenderer<ElevatorBaseBlockEn
     }
 
     /** The floor it's at (or going to, with an arrow) over the cabin, turned to face you. */
-    private static void label(Matrix4f m, float landing, String text, int skin) {
+    private static void label(Matrix4f m, float x, float z, float y, String text, int skin) {
         Minecraft mc = Minecraft.getInstance();
         Font font = mc.font;
         PoseStack ps = new PoseStack();
         ps.last().pose().set(m);
-        ps.translate(0.5F, landing + 3.05F, 0.5F);
+        ps.translate(x, y, z);
         ps.mulPose(mc.getEntityRenderDispatcher().cameraOrientation());
         ps.scale(0.035F, -0.035F, 0.035F);
         MultiBufferSource.BufferSource src = DrawNow.now(null);

@@ -25,6 +25,7 @@ public class ElevatorScreen extends Screen {
     private final Button[] skinButtons = new Button[ElevatorBaseBlockEntity.SKINS.length];
     private final Button[] speedButtons = new Button[ElevatorBaseBlockEntity.SPEEDS.length];
     private Button sideButton, redstoneButton, doorsButton;
+    private final Button[] sizeButtons = new Button[8], heightButtons = new Button[3];
 
     public ElevatorScreen(BlockPos base) {
         super(Component.translatable("screen.skyblocks.elevator"));
@@ -48,7 +49,7 @@ public class ElevatorScreen extends Screen {
 
     @Override
     protected void init() {
-        h = 206;
+        h = 274;
         left = (width - W) / 2;
         top = (height - h) / 2;
         int y = top + 54;
@@ -64,12 +65,25 @@ public class ElevatorScreen extends Screen {
             speedButtons[i] = addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.elevator.speed." + i),
                     b -> PacketDistributor.sendToServer(new ElevatorPayload(base, ElevatorPayload.SPEED, k))).bounds(left + 8 + i * (pw + 4), y + 34, pw, 18).build());
         }
+        // its size (fitted to the shaft, or 1 .. 7 across) and its cabin's height
+        int zw = (W - 16 - 7 * 3) / 8;
+        for (int i = 0; i < sizeButtons.length; i++) {
+            int k = i;
+            sizeButtons[i] = addRenderableWidget(Button.builder(i == 0 ? Component.translatable("screen.skyblocks.elevator.size.auto") : Component.literal(i + "x" + i),
+                    b -> PacketDistributor.sendToServer(new ElevatorPayload(base, ElevatorPayload.SIZE, k))).bounds(left + 8 + i * (zw + 3), y + 68, zw, 18).build());
+        }
+        int hw = (W - 16 - 2 * 4) / 3;
+        for (int i = 0; i < heightButtons.length; i++) {
+            int k = i + 2;
+            heightButtons[i] = addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.elevator.height.blocks", k),
+                    b -> PacketDistributor.sendToServer(new ElevatorPayload(base, ElevatorPayload.HEIGHT, k))).bounds(left + 8 + i * (hw + 4), y + 102, hw, 18).build());
+        }
         sideButton = addRenderableWidget(Button.builder(Component.empty(), b -> PacketDistributor.sendToServer(new ElevatorPayload(base, ElevatorPayload.SIDE, 0)))
-                .bounds(left + 8, y + 68, W - 16, 18).build());
+                .bounds(left + 8, y + 136, W - 16, 18).build());
         redstoneButton = addRenderableWidget(Button.builder(Component.empty(), b -> PacketDistributor.sendToServer(new ElevatorPayload(base, ElevatorPayload.REDSTONE, 0)))
-                .bounds(left + 8, y + 90, W - 16, 18).build());
+                .bounds(left + 8, y + 158, W - 16, 18).build());
         doorsButton = addRenderableWidget(Button.builder(Component.empty(), b -> PacketDistributor.sendToServer(new ElevatorPayload(base, ElevatorPayload.DOORS, 0)))
-                .bounds(left + 8, y + 112, W - 16, 18).build());
+                .bounds(left + 8, y + 180, W - 16, 18).build());
     }
 
     @Override
@@ -84,6 +98,12 @@ public class ElevatorScreen extends Screen {
         }
         for (int i = 0; i < speedButtons.length; i++) {
             speedButtons[i].active = be.speedIndex() != i;
+        }
+        for (int i = 0; i < sizeButtons.length; i++) {
+            sizeButtons[i].active = be.sizeSetting() != i;
+        }
+        for (int i = 0; i < heightButtons.length; i++) {
+            heightButtons[i].active = be.cabinHeight() != i + 2;
         }
         doorsButton.setMessage(Component.translatable("screen.skyblocks.elevator.doors", Component.translatable(be.doors() ? "options.on" : "options.off")));
         redstoneButton.setMessage(Component.translatable("screen.skyblocks.elevator.redstone",
@@ -130,5 +150,7 @@ public class ElevatorScreen extends Screen {
         int y = top + 40;
         g.drawString(font, Component.translatable("screen.skyblocks.elevator.look"), left + 8, y, 0xFFB8B0C8, false);
         g.drawString(font, Component.translatable("screen.skyblocks.elevator.speed"), left + 8, y + 34, 0xFFB8B0C8, false);
+        g.drawString(font, Component.translatable("screen.skyblocks.elevator.size", be.width() + "x" + be.width()), left + 8, y + 68, 0xFFB8B0C8, false);
+        g.drawString(font, Component.translatable("screen.skyblocks.elevator.height"), left + 8, y + 102, 0xFFB8B0C8, false);
     }
 }

@@ -94,10 +94,14 @@ public class ElevatorSensorBlock extends Block {
     protected void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
         level.scheduleTick(pos, this, 1);
         // the nearest cabin: stopped at a floor by this height? moving?
-        List<ElevatorCabinEntity> cabins = level.getEntitiesOfClass(ElevatorCabinEntity.class, new AABB(pos).inflate(4.5, 48.0, 4.5));
+        List<ElevatorCabinEntity> cabins = level.getEntitiesOfClass(ElevatorCabinEntity.class, new AABB(pos).inflate(8.0, 48.0, 8.0));
         ElevatorCabinEntity cabin = null;
         double best = Double.MAX_VALUE;
         for (ElevatorCabinEntity c : cabins) {
+            // (within 4 blocks of its edge)
+            if (Math.max(Math.abs(c.getX() - pos.getX() - 0.5), Math.abs(c.getZ() - pos.getZ() - 0.5)) > c.half() + 4.0) {
+                continue;
+            }
             double d = (c.getX() - pos.getX() - 0.5) * (c.getX() - pos.getX() - 0.5) + (c.getZ() - pos.getZ() - 0.5) * (c.getZ() - pos.getZ() - 0.5);
             if (d < best) {
                 best = d;
