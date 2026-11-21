@@ -331,7 +331,8 @@ void main() {
     if (a < 0.01 || depthT < 0.0) {
         discard;
     }
-    vec4 clip = ProjMat * ModelViewMat * vec4(centre + ro + rd * depthT, 1.0);
+    // (a hair nearer than it is: its floor's top is level with the base's and the landing's blocks - they'd show through it in rings)
+    vec4 clip = ProjMat * ModelViewMat * vec4(centre + ro + rd * max(depthT - 0.012, 0.0), 1.0);
     gl_FragDepth = clamp(clip.z / clip.w * 0.5 + 0.5, 0.0, 1.0);
     fragColor = vec4(col / max(a, 0.001), a);
 }
