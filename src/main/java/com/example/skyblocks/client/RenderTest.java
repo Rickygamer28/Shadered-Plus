@@ -752,14 +752,14 @@ public final class RenderTest {
         });
     }
 
-    private static com.example.skyblocks.TrackPayloads.Spec spec(com.example.skyblocks.TrackNetwork net, String at, float yaw) {
+    private static com.example.skyblocks.TrackPayloads.Spec spec(com.example.skyblocks.TrackNetwork tn, String at, float yaw) {
         String[] c = at.split(",");
         net.minecraft.world.phys.Vec3 p = new net.minecraft.world.phys.Vec3(Double.parseDouble(c[0]), Double.parseDouble(c[1]), Double.parseDouble(c[2]));
-        com.example.skyblocks.TrackNetwork.Node n = net.nearestNode(p, 0.6);
+        com.example.skyblocks.TrackNetwork.Node n = tn.nearestNode(p, 0.6);
         if (n != null) {
             return new com.example.skyblocks.TrackPayloads.Spec(1, n.id, 0, n.pos, n.dir);
         }
-        com.example.skyblocks.TrackNetwork.Near near = net.nearest(p, 0.6);
+        com.example.skyblocks.TrackNetwork.Near near = tn.nearest(p, 0.6);
         if (near != null) {
             return new com.example.skyblocks.TrackPayloads.Spec(2, near.seg().id, near.index(), near.seg().pts[near.index()], near.seg().tan[near.index()]);
         }
@@ -767,13 +767,13 @@ public final class RenderTest {
         return new com.example.skyblocks.TrackPayloads.Spec(0, 0, 0, p, new net.minecraft.world.phys.Vec3(-net.minecraft.util.Mth.sin(r), 0, net.minecraft.util.Mth.cos(r)));
     }
 
-    private static com.example.skyblocks.TrackNetwork.End end(com.example.skyblocks.TrackNetwork net, com.example.skyblocks.TrackPayloads.Spec s, int side,
+    private static com.example.skyblocks.TrackNetwork.End end(com.example.skyblocks.TrackNetwork tn, com.example.skyblocks.TrackPayloads.Spec s, int side,
             net.minecraft.world.phys.Vec3 p, net.minecraft.world.phys.Vec3 d) {
         if (s.type() == 1) {
-            return new com.example.skyblocks.TrackNetwork.End(net.nodes.get(s.id()), side, p, d);
+            return new com.example.skyblocks.TrackNetwork.End(tn.nodes.get(s.id()), side, p, d);
         }
         if (s.type() == 2) {
-            return new com.example.skyblocks.TrackNetwork.End(net.split(net.segs.get(s.id()), s.index()), side, p, d);
+            return new com.example.skyblocks.TrackNetwork.End(tn.split(tn.segs.get(s.id()), s.index()), side, p, d);
         }
         return new com.example.skyblocks.TrackNetwork.End(null, 0, p, d);
     }
