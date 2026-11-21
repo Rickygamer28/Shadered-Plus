@@ -1190,5 +1190,8 @@
   "message.skyblocks.track.steep": "Too steep",
   "message.skyblocks.track.full": "That side of the track already has two pieces",
   "message.skyblocks.track.same": "Pick a different spot",
-  "message.skyblocks.track.rails": "You need %s Train Rails"
+  "message.skyblocks.track.rails": "You need %s Train Rails",
+  "screen.skyblocks.train.stops": "Loop: stops here",
+  "screen.skyblocks.train.skipped": "Loop: passes by",
+  "screen.skyblocks.train.map_hint": "Click a station: stop or pass"
 }

@@ -25,6 +25,8 @@ public class TrainScreen extends Screen {
     private final List<Vec3> rails = new ArrayList<>();
     private final List<BlockPos> stations = new ArrayList<>();
     private int minX, maxX, minZ, maxZ;
+    /** Where each station's trains stop (on the map). */
+    private final java.util.Map<BlockPos, Vec3> stops = new java.util.HashMap<>();
 
     private TrainScreen(TrainEntity train) {
         super(Component.translatable("screen.skyblocks.train"));
@@ -46,6 +48,12 @@ public class TrainScreen extends Screen {
                 if (!stations.contains(s)) {
                     stations.add(s);
                 }
+            }
+        }
+        for (BlockPos s : stations) {
+            Vec3 r = com.example.skyblocks.TrainRoute.stopPoint(train.level(), s);
+            if (r != null) {
+                stops.put(s, r);
             }
         }
         minX = minZ = Integer.MAX_VALUE;
@@ -76,7 +84,11 @@ public class TrainScreen extends Screen {
             addRenderableWidget(Button.builder(Component.literal(name(s)), b -> {
                 PacketDistributor.sendToServer(new TrainPayload(train.getId(), TrainPayload.GO, 0, s, ""));
                 onClose();
-            }).bounds(x + 160, y + 22 + i * 21, 132, 19).build());
+            }).bounds(x + 160, y + 22 + i * 21, 110, 19).build());
+            // (stopped at going round, or passed by)
+            Button stop = addRenderableWidget(Button.builder(Component.literal(train.skips(s) ? "-" : "\u2714"), b -> toggle(s))
+                    .bounds(x + 272, y + 22 + i * 21, 20, 19).build());
+            stop.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable(train.skips(s) ? "screen.skyblocks.train.skipped" : "screen.skyblocks.train.stops")));
         }
         int by = y + H - 50;
         for (int i = 0; i < TrainEntity.STYLES.length; i++) {
@@ -101,6 +113,49 @@ public class TrainScreen extends Screen {
         }).bounds(x + 160, by + 24, 132, 18).build());
     }
 
+    /** A station stopped at going round, or passed by. */
+    private void toggle(BlockPos s) {
+        boolean skip = !train.skips(s);
+        PacketDistributor.sendToServer(new TrainPayload(train.getId(), TrainPayload.SKIP, skip ? 1 : 0, s, ""));
+        train.setSkip(s, skip);
+        init();
+    }
+
+    /** The map's scale and where its middle is: [scale, x offset, z offset]. */
+    private float[] mapScale() {
+        int x = width / 2 - W / 2, y = height / 2 - H / 2;
+        int mx0 = x + 8, my0 = y + 22, mw = 144, mh = 126;
+        float span = Math.max(Math.max(maxX - minX, maxZ - minZ), 8);
+        float sc = (Math.min(mw, mh) - 12) / span;
+        return new float[] {sc, mx0 + mw / 2.0F - (minX + maxX) / 2.0F * sc, my0 + mh / 2.0F - (minZ + maxZ) / 2.0F * sc};
+    }
+
+    /** The station whose dot on the map is under the mouse, or null. */
+    @org.jetbrains.annotations.Nullable
+    private BlockPos stationAt(double mx, double my) {
+        if (rails.isEmpty()) {
+            return null;
+        }
+        float[] m = mapScale();
+        for (BlockPos s : stations) {
+            Vec3 r = stops.get(s);
+            if (r != null && Math.abs(m[1] + (float) r.x * m[0] + 1 - mx) <= 4 && Math.abs(m[2] + (float) r.z * m[0] + 1 - my) <= 4) {
+                return s;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public boolean mouseClicked(double mx, double my, int button) {
+        BlockPos s = stationAt(mx, my);
+        if (s != null && button == 0) {
+            toggle(s);
+            return true;
+        }
+        return super.mouseClicked(mx, my, button);
+    }
+
     private void cars(int d) {
         int n = Math.max(1, Math.min(4, train.cars() + d));
         PacketDistributor.sendToServer(TrainPayload.of(train, TrainPayload.CARS, n));
@@ -119,18 +174,23 @@ public class TrainScreen extends Screen {
         int mx0 = x + 8, my0 = y + 22, mw = 144, mh = 126;
         g.fill(mx0, my0, mx0 + mw, my0 + mh, 0xFF0A1016);
         if (!rails.isEmpty()) {
-            float span = Math.max(Math.max(maxX - minX, maxZ - minZ), 8);
-            float sc = (Math.min(mw, mh) - 12) / span;
-            float ox = mx0 + mw / 2.0F - (minX + maxX) / 2.0F * sc, oz = my0 + mh / 2.0F - (minZ + maxZ) / 2.0F * sc;
+            float[] ms = mapScale();
+            float sc = ms[0], ox = ms[1], oz = ms[2];
             for (Vec3 r : rails) {
                 int px = Math.round(ox + (float) r.x * sc), pz = Math.round(oz + (float) r.z * sc);
                 g.fill(px, pz, px + 2, pz + 2, 0xFF3A6A80);
             }
+            // its stations: filled, stopped at going round; hollow, passed by
             for (BlockPos s : stations) {
-                Vec3 r = com.example.skyblocks.TrainRoute.stopPoint(train.level(), s);
+                Vec3 r = stops.get(s);
                 if (r != null) {
                     int px = Math.round(ox + (float) r.x * sc), pz = Math.round(oz + (float) r.z * sc);
-                    g.fill(px - 2, pz - 2, px + 4, pz + 4, 0xFFFFC040);
+                    if (train.skips(s)) {
+                        g.renderOutline(px - 2, pz - 2, 6, 6, 0xFF808890);
+                    } else {
+                        g.fill(px - 3, pz - 3, px + 5, pz + 5, 0xFF000000);
+                        g.fill(px - 2, pz - 2, px + 4, pz + 4, 0xFFFFC040);
+                    }
                 }
             }
             Vec3 h = train.at(train.head(pt));
@@ -138,6 +198,12 @@ public class TrainScreen extends Screen {
             int blink = (System.currentTimeMillis() / 300) % 2 == 0 ? 0xFF6FF0FF : 0xFFFFFFFF;
             g.fill(px - 2, pz - 2, px + 4, pz + 4, blink);
         }
+        BlockPos hover = stationAt(mx, my);
+        if (hover != null) {
+            g.renderTooltip(font, java.util.List.of(Component.literal(name(hover)).getVisualOrderText(),
+                    Component.translatable(train.skips(hover) ? "screen.skyblocks.train.skipped" : "screen.skyblocks.train.stops").withStyle(net.minecraft.ChatFormatting.GRAY).getVisualOrderText()), mx, my);
+        }
+        g.drawString(font, Component.translatable("screen.skyblocks.train.map_hint"), x + 8, y + 150, 0x7890A0, false);
         if (stations.isEmpty()) {
             g.drawWordWrap(font, Component.translatable("screen.skyblocks.train.no_stations"), x + 160, y + 24, 132, 0x90A0A8);
         }

@@ -71,6 +71,8 @@ public class TrainEntity extends Entity {
      * the line going on past them), dw (how open its doors were as it began).
      */
     private static final EntityDataAccessor<CompoundTag> TRIP = SynchedEntityData.defineId(TrainEntity.class, EntityDataSerializers.COMPOUND_TAG);
+    /** The stations it passes by going round (their places): stopped at, all the others. */
+    private static final EntityDataAccessor<CompoundTag> SKIP = SynchedEntityData.defineId(TrainEntity.class, EntityDataSerializers.COMPOUND_TAG);
     /** Who sits where (ids, keys: unit * 16 + seat). */
     private static final EntityDataAccessor<CompoundTag> SEATS = SynchedEntityData.defineId(TrainEntity.class, EntityDataSerializers.COMPOUND_TAG);
 
@@ -103,6 +105,7 @@ public class TrainEntity extends Entity {
         builder.define(NOTCH, 0);
         builder.define(TRIP, new CompoundTag());
         builder.define(SEATS, new CompoundTag());
+        builder.define(SKIP, new CompoundTag());
     }
 
     @Override
@@ -158,6 +161,33 @@ public class TrainEntity extends Entity {
 
     public float length() {
         return units() * CAR;
+    }
+
+    /** Whether it passes a station by going round (not stopping there). */
+    public boolean skips(BlockPos station) {
+        for (long l : entityData.get(SKIP).getLongArray("p")) {
+            if (l == station.asLong()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Stops at a station going round, or passes it by. */
+    public void setSkip(BlockPos station, boolean skip) {
+        long[] was = entityData.get(SKIP).getLongArray("p");
+        java.util.List<Long> out = new ArrayList<>();
+        for (long l : was) {
+            if (l != station.asLong()) {
+                out.add(l);
+            }
+        }
+        if (skip && out.size() < 256) {
+            out.add(station.asLong());
+        }
+        CompoundTag t = new CompoundTag();
+        t.putLongArray("p", out.stream().mapToLong(Long::longValue).toArray());
+        entityData.set(SKIP, t);
     }
 
     /** Its top speed (blocks a tick). */
@@ -784,6 +814,9 @@ public class TrainEntity extends Entity {
                 break;
             }
             for (BlockPos s : ways.get(w)) {
+                if (skips(s)) {
+                    continue; // (passed by)
+                }
                 Vec3 stop = TrainRoute.stopPoint(level(), s);
                 if (stop != null && stop.distanceTo(at(h)) > 2.0 && inside(stop.add(0, 1.5, 0)) < 0 && goTo(s, true)) {
                     return;
@@ -1106,6 +1139,7 @@ public class TrainEntity extends Entity {
         setStyle(tag.getInt("style"));
         setCars(tag.contains("cars") ? tag.getInt("cars") : 2);
         entityData.set(LOOP, tag.getBoolean("loop"));
+        entityData.set(SKIP, tag.getCompound("skip"));
         CompoundTag t = tag.getCompound("trip");
         // (saved mid-trip: standing where it was, its doors open)
         int[] bits = t.getIntArray("pts");
@@ -1126,5 +1160,6 @@ public class TrainEntity extends Entity {
         tag.putBoolean("loop", loop());
         tag.put("trip", trip().copy());
         tag.putFloat("head", head(0.0F));
+        tag.put("skip", entityData.get(SKIP).copy());
     }
 }
