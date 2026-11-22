@@ -71,8 +71,10 @@ public class SkyLanternRenderer implements BlockEntityRenderer<SkyLanternBlockEn
     /** Each sky's colour, as a light (blended over time: see the top), and when it's next looked at. */
     private static final class SkyColour {
         float r = 1, g = 1, b = 1;
+        /** The last colour read: the light eases towards it. */
+        float tr = 1, tg = 1, tb = 1;
         boolean known;
-        long next;
+        long next, eased;
     }
 
     private static final Map<Integer, SkyColour> COLOURS = new HashMap<>();
@@ -152,32 +154,49 @@ public class SkyLanternRenderer implements BlockEntityRenderer<SkyLanternBlockEn
         source.endBatch(Types.GLOW);
     }
 
-    /** A sky's colour as a light: looked at every few ticks, blended in. */
+    /**
+     * A sky's colour as a light: read about once a second (the whole picture brought up to date for it, then read back
+     * without waiting), the light easing towards it smoothly every frame - steadier than steps, and the whole picture
+     * drawn once a second for it, not every frame.
+     */
     private static SkyColour colour(int sky, long now) {
         SkyColour c = COLOURS.computeIfAbsent(sky, k -> new SkyColour());
-        if (now >= c.next || now < c.next - 100) {
-            c.next = now + 5;
-            float[] seen = sample(sky);
-            if (seen != null) {
-                // (a light's colour: the hue, its brightest part full; a grey sky barely tints, a colourful one strongly)
-                float peak = Math.max(seen[0], Math.max(seen[1], seen[2]));
-                float r = 1, g = 1, b = 1;
-                if (peak > 0.02F) {
-                    r = seen[0] / peak;
-                    g = seen[1] / peak;
-                    b = seen[2] / peak;
-                    float grey = (r + g + b) / 3.0F;
-                    r = Mth.clamp(grey + (r - grey) * 1.35F, 0.0F, 1.0F);
-                    g = Mth.clamp(grey + (g - grey) * 1.35F, 0.0F, 1.0F);
-                    b = Mth.clamp(grey + (b - grey) * 1.35F, 0.0F, 1.0F);
-                }
-                float k = c.known ? 0.12F : 1.0F;
-                c.r += (r - c.r) * k;
-                c.g += (g - c.g) * k;
-                c.b += (b - c.b) * k;
+        boolean start = now >= c.next || now < c.next - 100;
+        if (start) {
+            c.next = now + 20;
+        }
+        float[] seen = sample(sky, start);
+        if (seen != null) {
+            // (a light's colour: the hue, its brightest part full; a grey sky barely tints, a colourful one strongly)
+            float peak = Math.max(seen[0], Math.max(seen[1], seen[2]));
+            float r = 1, g = 1, b = 1;
+            if (peak > 0.02F) {
+                r = seen[0] / peak;
+                g = seen[1] / peak;
+                b = seen[2] / peak;
+                float grey = (r + g + b) / 3.0F;
+                r = Mth.clamp(grey + (r - grey) * 1.35F, 0.0F, 1.0F);
+                g = Mth.clamp(grey + (g - grey) * 1.35F, 0.0F, 1.0F);
+                b = Mth.clamp(grey + (b - grey) * 1.35F, 0.0F, 1.0F);
+            }
+            c.tr = r;
+            c.tg = g;
+            c.tb = b;
+            if (!c.known) {
+                c.r = r;
+                c.g = g;
+                c.b = b;
                 c.known = true;
             }
         }
+        // (eased: about two seconds to settle, as the old blend every quarter second)
+        long t = System.nanoTime();
+        float dt = c.eased == 0L ? 0.0F : Math.min(1.0F, (t - c.eased) / 1.0e9F);
+        c.eased = t;
+        float k = 1.0F - (float) Math.exp(-dt / 2.0F);
+        c.r += (c.tr - c.r) * k;
+        c.g += (c.tg - c.g) * k;
+        c.b += (c.tb - c.b) * k;
         return c;
     }
 
@@ -194,7 +213,7 @@ public class SkyLanternRenderer implements BlockEntityRenderer<SkyLanternBlockEn
      * or null if it couldn't be, or isn't back yet. The read is handed to the card and collected on a later call, once
      * it's done - never waited for (reading straight back stalled the frame till the card caught up).
      */
-    private static float[] sample(int sky) {
+    private static float[] sample(int sky, boolean begin) {
         if (sampleFailed) {
             return null;
         }
@@ -210,7 +229,9 @@ public class SkyLanternRenderer implements BlockEntityRenderer<SkyLanternBlockEn
                 r.fence = 0L;
                 got = collect(r);
             }
-            start(sky, r);
+            if (begin) {
+                start(sky, r);
+            }
         } catch (RuntimeException | LinkageError e) {
             sampleFailed = true;
             SkyBlocksMod.LOGGER.warn("Shadered+ sky lantern: couldn't read its sky's colour; its light stays white", e);
