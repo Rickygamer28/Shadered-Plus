@@ -36,7 +36,8 @@
     "SkyRenderTypeDrawMixin",
     "SkyboxSeamMixin",
     "SonarColourMixin",
-    "SonarGlowMixin"
+    "SonarGlowMixin",
+    "StudioSkyNameMixin"
   ],
   "injectors": {
     "defaultRequire": 1

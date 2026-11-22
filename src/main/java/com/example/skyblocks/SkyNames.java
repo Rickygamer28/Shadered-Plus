@@ -14,7 +14,7 @@ import java.util.Locale;
  *  - lang keys           skyblock_type.skyblocks.<name>, item.skyblocks.<name>_sky_block
  */
 public final class SkyNames {
-    public static final String[] NAMES = {"jupiter", "cat", "twilight", "hell", "nebula", "golden_hour", "scadu_altus", "cerulean_coast", "gravesite_plain", "mountaintops", "altus_plateau_night", "altus_plateau_sunset", "altus_plateau", "divine_tower", "caelid", "siofra_river", "limgrave_sunset", "limgrave_rainy", "academy_of_raya_lucaria", "liurnia_sunset", "liurnia_rainy", "liurnia", "chaos", "synthwave", "synthwave_outrun", "synthwave_night", "synthwave_miami", "darksynth", "synthwave_terminal", "vaporwave", "aurora", "underwater", "swirl", "light_cycle", "universe_within", "data_cube", "end_portal", "end_gateway", "classic_end_portal", "ink_swirl", "lava_blobs", "marble"};
+    public static final String[] NAMES = {"jupiter", "cat", "twilight", "hell", "nebula", "golden_hour", "scadu_altus", "cerulean_coast", "gravesite_plain", "mountaintops", "altus_plateau_night", "altus_plateau_sunset", "altus_plateau", "divine_tower", "caelid", "siofra_river", "limgrave_sunset", "limgrave_rainy", "academy_of_raya_lucaria", "liurnia_sunset", "liurnia_rainy", "liurnia", "chaos", "synthwave", "synthwave_outrun", "synthwave_night", "synthwave_miami", "darksynth", "synthwave_terminal", "vaporwave", "aurora", "underwater", "swirl", "light_cycle", "universe_within", "data_cube", "end_portal", "end_gateway", "classic_end_portal", "ink_swirl", "lava_blobs", "marble", "studio_1", "studio_2", "studio_3", "studio_4", "studio_5", "studio_6", "studio_7", "studio_8"};
 
     /** The chaos sky: not a picture but Draconic Evolution's chaos shader (adapted with credit, client/ShaderSky). */
     public static final String CHAOS = "chaos";
@@ -30,6 +30,11 @@ public final class SkyNames {
      * CREDITS.md): shader skies (client/ShaderSky, shaders/include/tvm_skies.glsl).
      */
     public static final String[] TVM = {"swirl", "light_cycle", "universe_within", "data_cube", "end_portal", "end_gateway", "classic_end_portal", "ink_swirl", "lava_blobs", "marble"};
+
+    /** The Sky Studio's skies (StudioSkies): drawn by one shader from settings players make (client/ShaderSky). */
+    public static boolean studio(String name) {
+        return name.startsWith("studio_");
+    }
 
     public static boolean tvm(String name) {
         return java.util.Arrays.asList(TVM).contains(name);

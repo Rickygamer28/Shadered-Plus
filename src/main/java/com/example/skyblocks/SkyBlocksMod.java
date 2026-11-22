@@ -91,6 +91,7 @@ public class SkyBlocksMod {
         for (ModFluids.SkyLiquid liquid : ModFluids.ALL) {
             out.accept(new net.minecraft.world.item.ItemStack(liquid.bucket.get()));
         }
+        out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_STUDIO.get()));
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_JELLYFISH_SPAWN_EGG.get()));
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_WHALE_SPAWN_EGG.get()));
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_MOTH_SPAWN_EGG.get()));
@@ -152,7 +153,10 @@ public class SkyBlocksMod {
         event.registrar("1").executesOn(net.neoforged.neoforge.network.registration.HandlerThread.NETWORK)
                 .playBidirectional(ArcadeNetPayload.TYPE, ArcadeNetPayload.STREAM_CODEC, ArcadeNetPayload::handle);
         event.registrar("1").playToClient(SkyPaint.Set.TYPE, SkyPaint.Set.STREAM_CODEC, SkyPaint.Set::handle)
-                .playToClient(SkyPaint.Chunk.TYPE, SkyPaint.Chunk.STREAM_CODEC, SkyPaint.Chunk::handle);
+                .playToClient(SkyPaint.Chunk.TYPE, SkyPaint.Chunk.STREAM_CODEC, SkyPaint.Chunk::handle)
+                .playToClient(StudioSkies.Sync.TYPE, StudioSkies.Sync.STREAM_CODEC, StudioSkies.Sync::handle)
+                .playToServer(StudioSkies.Save.TYPE, StudioSkies.Save.STREAM_CODEC, StudioSkies.Save::handle)
+                .playToServer(StudioSkies.Take.TYPE, StudioSkies.Take.STREAM_CODEC, StudioSkies.Take::handle);
         event.registrar("1").playToServer(ScanIslandPayload.TYPE, ScanIslandPayload.STREAM_CODEC, ScanIslandPayload::handle)
                 .playToServer(FogAreaPayload.TYPE, FogAreaPayload.STREAM_CODEC, FogAreaPayload::handle)
                 .playToServer(NeonSignPayload.TYPE, NeonSignPayload.STREAM_CODEC, NeonSignPayload::handle)

@@ -483,6 +483,11 @@ public final class ModBlocks {
                     .requiresCorrectToolForDrops().mapColor(net.minecraft.world.level.material.MapColor.DEEPSLATE));
 
     /** A sky lantern: a sky in a lantern, lighting the room in its colours (SkyLanternBlock, client/SkyLanternRenderer). */
+    /** The Sky Studio: design your own skies (StudioSkies). */
+    public static final DeferredBlock<SkyStudioBlock> SKY_STUDIO = BLOCKS.registerBlock("sky_studio", SkyStudioBlock::new,
+            net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().strength(2.0F).sound(net.minecraft.world.level.block.SoundType.AMETHYST)
+                    .lightLevel(s -> 7));
+
     public static final DeferredBlock<SkyLanternBlock> SKY_LANTERN = BLOCKS.registerBlock("sky_lantern", SkyLanternBlock::new,
             BlockBehaviour.Properties.of().strength(3.5F).sound(SoundType.LANTERN).noOcclusion().lightLevel(state -> 15)
                     .requiresCorrectToolForDrops().pushReaction(PushReaction.DESTROY).mapColor(net.minecraft.world.level.material.MapColor.METAL));

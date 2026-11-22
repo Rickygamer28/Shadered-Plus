@@ -50,6 +50,13 @@ public final class ShaderSky {
     private static ShaderInstance synthwave;
     private static ShaderInstance aurora;
     private static ShaderInstance underwater;
+    /** The Sky Studio's skies (StudioSkies), and the studio screen's preview of one. */
+    private static ShaderInstance studio, studioPreview;
+
+    @org.jetbrains.annotations.Nullable
+    public static ShaderInstance studioPreview() {
+        return studioPreview;
+    }
     /** The Valley Mod's skies (SkyNames.TVM), by name. */
     private static final java.util.Map<String, ShaderInstance> TVM = new java.util.HashMap<>();
     static final ResourceLocation END_SKY = ResourceLocation.withDefaultNamespace("textures/environment/end_sky.png");
@@ -76,6 +83,10 @@ public final class ShaderSky {
                             LightCycleMusic.apply(shader);
                         }
                     });
+            case "studio_1", "studio_2", "studio_3", "studio_4", "studio_5", "studio_6", "studio_7", "studio_8" -> {
+                int slot = Integer.parseInt(name.substring("studio_".length())) - 1;
+                yield new Pass(folder, batch, () -> studio, null, shader -> StudioSkiesClient.apply(shader, com.example.skyblocks.StudioSkiesStore.PARAMS[slot]));
+            }
             default -> SynthwavePalettes.has(name) // the synthwave skies: one scene, their own colours, reacting to music
                     ? new Pass(folder, batch, () -> synthwave, MusicReactor.HISTORY, shader -> {
                         MusicReactor.apply(shader);
@@ -94,6 +105,8 @@ public final class ShaderSky {
             com.example.skyblocks.client.ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "chaos_sky"), DefaultVertexFormat.POSITION, s -> chaos = s);
             com.example.skyblocks.client.ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "synthwave_sky"), DefaultVertexFormat.POSITION, s -> synthwave = s);
             com.example.skyblocks.client.ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "aurora_sky"), DefaultVertexFormat.POSITION, s -> aurora = s);
+            com.example.skyblocks.client.ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "studio_sky"), DefaultVertexFormat.POSITION, s -> studio = s);
+            com.example.skyblocks.client.ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "studio_preview"), DefaultVertexFormat.POSITION_TEX, s -> studioPreview = s);
             com.example.skyblocks.client.ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "underwater_sky"), DefaultVertexFormat.POSITION, s -> underwater = s);
             for (String name : SkyNames.TVM) {
                 com.example.skyblocks.client.ShaderLoad.register(event, ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "tvm_" + name + "_sky"),

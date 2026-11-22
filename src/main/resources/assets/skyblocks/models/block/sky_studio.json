@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "side": "skyblocks:block/sky_studio_side",
+    "top": "skyblocks:block/sky_studio_top",
+    "bottom": "skyblocks:block/sky_studio_bottom"
+  }
+}

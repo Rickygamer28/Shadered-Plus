@@ -141,6 +141,8 @@ public final class ModItems {
     public static final DeferredItem<net.neoforged.neoforge.common.DeferredSpawnEggItem> SKY_MOTH_SPAWN_EGG = ITEMS.register("sky_moth_spawn_egg",
             () -> new net.neoforged.neoforge.common.DeferredSpawnEggItem(ModEntities.SKY_MOTH, 0x2A0B3D, 0xFF9A5A, new Item.Properties()));
 
+    public static final DeferredItem<net.minecraft.world.item.BlockItem> SKY_STUDIO = ITEMS.registerSimpleBlockItem("sky_studio", ModBlocks.SKY_STUDIO);
+
     public static final DeferredItem<GuideBookItem> GUIDE_BOOK = ITEMS.register("guide_book",
             () -> new GuideBookItem(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<BlockItem> ARCADE = ITEMS.registerSimpleBlockItem("arcade", ModBlocks.ARCADE);

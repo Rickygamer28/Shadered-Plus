@@ -15,6 +15,10 @@ public final class ClientAccess {
         }
     }
 
+    public static void openSkyStudio(BlockPos pos) {
+        Minecraft.getInstance().setScreen(new SkyStudioScreen(pos));
+    }
+
     public static void openFogMachine(BlockPos pos) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.level.getBlockEntity(pos) instanceof com.example.skyblocks.FogMachineBlockEntity machine) {
