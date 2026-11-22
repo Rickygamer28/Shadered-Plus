@@ -33,17 +33,11 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
  * liquids, shapes, paint, creatures), each drawn by one shader (shaders/include/studio_sky.glsl) from its {@link #SIZE}
  * settings, and named by whoever made it. Kept per server (in the Overworld's data), sent to every player.
  *
- * <p>The settings, in order (all 0 .. 1; colours r g b): sky colour top, middle, horizon, horizon height, glow, on;
- * nebula on, colour 1, colour 2, amount, drift speed, softness; stars on, density, twinkle, size; aurora on, colour 1,
- * colour 2, brightness, wave speed, height; sun/moon on, colour, size, glow, height; shooting stars on, how often, trail
- * length; grid on, colour, spacing, scroll speed.
+ * <p>The settings: StudioSpec (written by tools/studio_spec.py, with the shader's list).
  */
 @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID)
 public final class StudioSkies extends SavedData {
-    public static final int SLOTS = 8, SIZE = 52;
-
-    /** Where each layer's "on" setting is. */
-    public static final int GRADIENT_ON = 11, NEBULA_ON = 12, STARS_ON = 22, AURORA_ON = 26, MOON_ON = 36, SHOOTING_ON = 43, GRID_ON = 46;
+    public static final int SLOTS = 8, SIZE = StudioSpec.SIZE;
 
     public final String[] names = new String[SLOTS];
     public final float[][] params = new float[SLOTS][];
@@ -60,42 +54,9 @@ public final class StudioSkies extends SavedData {
                 "skyblocks_studio_skies");
     }
 
-    /** A slot's sky to begin with: one of four looks, each a little different. */
+    /** A slot's sky to begin with: one of the looks (StudioSpec.PRESETS). */
     public static float[] preset(int slot) {
-        String[][] looks = {
-                {"#120d2e", "#3b1f5c", "#f08a5d", "#7c4dff", "#ff6fae", "#5ef2c2", "#ff6fae", "#ff5fd2"},
-                {"#02030a", "#0b1640", "#1b3a6b", "#3aa0ff", "#9b5cff", "#6ad8ff", "#9b5cff", "#49c6ff"},
-                {"#0a0018", "#2a0b4d", "#ff3d81", "#ff2bd6", "#2bf0ff", "#c6ff3d", "#2bf0ff", "#2bf0ff"},
-                {"#1d2b4f", "#5b6fa8", "#ffc59e", "#ffd6e8", "#a5d8ff", "#b8ffd9", "#ffd6e8", "#ffb3c7"}};
-        int[][] layers = {{1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 0, 1, 1, 0}, {1, 0, 1, 1, 0, 1, 1}, {1, 1, 0, 0, 1, 0, 0}};
-        String[] c = looks[slot % 4];
-        int[] on = layers[(slot / 2 + slot) % 4];
-        List<Float> p = new ArrayList<>();
-        rgb(p, c[0]); rgb(p, c[1]); rgb(p, c[2]); add(p, 0.55F, 0.7F, on[0]);
-        add(p, on[1]); rgb(p, c[3]); rgb(p, c[4]); add(p, 0.6F, 0.25F, 0.8F);
-        add(p, on[2], 0.45F, 0.65F, 0.3F);
-        add(p, on[3]); rgb(p, c[5]); rgb(p, c[6]); add(p, 0.75F, 0.4F, 0.35F);
-        add(p, on[4]); rgb(p, "#f4efe1"); add(p, 0.4F, 0.3F, 0.35F + 0.1F * (slot % 3));
-        add(p, on[5], 0.6F, 0.55F);
-        add(p, on[6]); rgb(p, c[7]); add(p, 0.5F, 0.6F);
-        float[] out = new float[SIZE];
-        for (int i = 0; i < SIZE; i++) {
-            out[i] = p.get(i);
-        }
-        return out;
-    }
-
-    private static void rgb(List<Float> p, String hex) {
-        int v = Integer.parseInt(hex.substring(1), 16);
-        p.add(((v >> 16) & 255) / 255.0F);
-        p.add(((v >> 8) & 255) / 255.0F);
-        p.add((v & 255) / 255.0F);
-    }
-
-    private static void add(List<Float> p, float... values) {
-        for (float v : values) {
-            p.add(v);
-        }
+        return StudioSpec.PRESETS[slot % StudioSpec.PRESETS.length].clone();
     }
 
     private static StudioSkies load(CompoundTag tag, HolderLookup.Provider registries) {
@@ -246,6 +207,9 @@ public final class StudioSkies extends SavedData {
                 skies.names[s.slot] = s.name.strip().length() > 32 ? s.name.strip().substring(0, 32) : s.name.strip();
                 skies.params[s.slot] = s.params.clone();
                 skies.setDirty();
+                if (player.level().getBlockEntity(s.pos) instanceof SkyStudioBlockEntity studio) {
+                    studio.setSlot(s.slot);
+                }
                 PacketDistributor.sendToAllPlayers(skies.sync());
                 player.level().playSound(null, s.pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 1.0F, 1.2F);
             });
@@ -269,6 +233,9 @@ public final class StudioSkies extends SavedData {
                 int index = t.slot >= 0 && t.slot < SLOTS ? index(t.slot) : -1;
                 if (index < 0 || !atStudio(player, t.pos)) {
                     return;
+                }
+                if (player.level().getBlockEntity(t.pos) instanceof SkyStudioBlockEntity studio) {
+                    studio.setSlot(t.slot);
                 }
                 int count = 0;
                 boolean free = player.getAbilities().instabuild;

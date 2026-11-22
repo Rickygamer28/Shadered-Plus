@@ -72,6 +72,7 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.WHIRLPOOL.get(), WhirlpoolRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.POWER_CORE.get(), PowerCoreRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.KALEIDOSCOPE.get(), KaleidoscopeRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.SKY_STUDIO.get(), SkyStudioRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.EFFECT_BLOCK.get(), EffectBlockRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.WEATHER_GLOBE.get(), WeatherGlobeRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.LAVA_PILLAR.get(), LavaPillarRenderer::new);

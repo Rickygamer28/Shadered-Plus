@@ -486,7 +486,7 @@ public final class ModBlocks {
     /** The Sky Studio: design your own skies (StudioSkies). */
     public static final DeferredBlock<SkyStudioBlock> SKY_STUDIO = BLOCKS.registerBlock("sky_studio", SkyStudioBlock::new,
             net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().strength(2.0F).sound(net.minecraft.world.level.block.SoundType.AMETHYST)
-                    .lightLevel(s -> 7));
+                    .lightLevel(s -> 7).noOcclusion());
 
     public static final DeferredBlock<SkyLanternBlock> SKY_LANTERN = BLOCKS.registerBlock("sky_lantern", SkyLanternBlock::new,
             BlockBehaviour.Properties.of().strength(3.5F).sound(SoundType.LANTERN).noOcclusion().lightLevel(state -> 15)

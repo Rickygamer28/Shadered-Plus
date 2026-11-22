@@ -1,7 +1,19 @@
 {
-  "variants": {
-    "": {
-      "model": "skyblocks:block/sky_studio"
-    }
+ "variants": {
+  "facing=north": {
+   "model": "skyblocks:block/sky_studio"
+  },
+  "facing=east": {
+   "model": "skyblocks:block/sky_studio",
+   "y": 90
+  },
+  "facing=south": {
+   "model": "skyblocks:block/sky_studio",
+   "y": 180
+  },
+  "facing=west": {
+   "model": "skyblocks:block/sky_studio",
+   "y": 270
   }
+ }
 }
