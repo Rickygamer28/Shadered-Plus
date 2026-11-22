@@ -201,7 +201,11 @@ final class IslandMesh implements AutoCloseable {
 
     void render(PoseStack.Pose pose, MultiBufferSource buffer) {
         if (!uploadTried) {
+            long started = System.nanoTime();
             upload();
+            if (com.example.skyblocks.client.WorldTiming.force) {
+                com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+ render test: island mesh uploaded in {} ms", (System.nanoTime() - started) / 1.0e6);
+            }
         }
         drawUploaded(pose);
         Matrix4f matrix = pose.pose();

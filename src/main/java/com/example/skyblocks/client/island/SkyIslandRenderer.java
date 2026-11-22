@@ -85,10 +85,14 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
             if (be.clientView instanceof IslandView old) {
                 old.close();
             }
+            long started = System.nanoTime();
             try {
                 view = IslandView.decode(data, level, be.getBlockPos());
             } catch (RuntimeException e) {
                 view = null;
+            }
+            if (com.example.skyblocks.client.WorldTiming.force) {
+                com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+ render test: island decoded in {} ms", (System.nanoTime() - started) / 1.0e6);
             }
             be.clientView = view != null ? view : new Broken(data);
             if (view == null) {
@@ -97,7 +101,11 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
         }
         IslandMesh mesh;
         try {
+            long started = System.nanoTime();
             mesh = view.mesh();
+            if (com.example.skyblocks.client.WorldTiming.force && System.nanoTime() - started > 1_000_000L) {
+                com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+ render test: island mesh built in {} ms", (System.nanoTime() - started) / 1.0e6);
+            }
         } catch (RuntimeException e) {
             view.close();
             be.clientView = new Broken(data);
