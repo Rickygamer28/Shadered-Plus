@@ -209,6 +209,14 @@
     {
       "id": "skyblocks:marble_liquid_bucket",
       "required": false
-    }
+    },
+    "skyblocks:studio_1_sky_block",
+    "skyblocks:studio_2_sky_block",
+    "skyblocks:studio_3_sky_block",
+    "skyblocks:studio_4_sky_block",
+    "skyblocks:studio_5_sky_block",
+    "skyblocks:studio_6_sky_block",
+    "skyblocks:studio_7_sky_block",
+    "skyblocks:studio_8_sky_block"
   ]
 }
