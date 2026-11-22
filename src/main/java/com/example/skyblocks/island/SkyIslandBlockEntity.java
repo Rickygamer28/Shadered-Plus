@@ -99,7 +99,7 @@ public class SkyIslandBlockEntity extends BlockEntity {
     }
 
     /** Island Painting: puts an island in, with its item's name (or takes it out with null). */
-    void setIsland(@Nullable IslandData island, @Nullable Component name) {
+    public void setIsland(@Nullable IslandData island, @Nullable Component name) {
         this.island = island;
         this.name = island != null ? name : null;
         setChanged();
