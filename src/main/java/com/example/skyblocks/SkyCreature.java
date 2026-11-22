@@ -95,6 +95,12 @@ public abstract class SkyCreature extends PathfinderMob {
         }
     }
 
+    /** An angle turned towards another by at most max degrees. */
+    protected static float rotlerp(float from, float to, float max) {
+        float d = net.minecraft.util.Mth.wrapDegrees(to - from);
+        return from + net.minecraft.util.Mth.clamp(d, -max, max);
+    }
+
     /** One that came by itself, by day: fades away now and then. */
     protected boolean leaveByDay() {
         return wild && !isPersistenceRequired() && level().isDay() && !isVehicle() && random.nextInt(400) == 0;
