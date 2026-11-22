@@ -60,7 +60,9 @@ public final class SkyWindow {
         SkyblockType sky = SKIES.get(type);
         if (sky != null) {
             try {
-                SkyUsage.ensureFresh(com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(sky));
+                // (only where it'll be on screen: its quads' box, relative to the camera as world renderers draw them)
+                SkyUsage.ensurePart(com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(sky),
+                        com.example.skyblocks.client.iris.IrisCompat.renderingShadowPass() ? null : rectOf(pose, quads, count));
             } catch (RuntimeException ignored) {
                 // (drawn as it is)
             }
@@ -72,6 +74,26 @@ public final class SkyWindow {
             return;
         }
         emit(buffers.getBuffer(type), pose, quads, count);
+    }
+
+    /** Where the quads are on screen (SkyUsage.rectOfBox of their box through the pose): null if unsure (whole picture). */
+    @Nullable
+    private static int[] rectOf(Matrix4f pose, float[] q, int count) {
+        float x0 = Float.MAX_VALUE, y0 = Float.MAX_VALUE, z0 = Float.MAX_VALUE, x1 = -Float.MAX_VALUE, y1 = -Float.MAX_VALUE, z1 = -Float.MAX_VALUE;
+        org.joml.Vector3f v = new org.joml.Vector3f();
+        for (int i = 0; i < count * 4; i++) {
+            pose.transformPosition(q[i * 3], q[i * 3 + 1], q[i * 3 + 2], v);
+            x0 = Math.min(x0, v.x);
+            y0 = Math.min(y0, v.y);
+            z0 = Math.min(z0, v.z);
+            x1 = Math.max(x1, v.x);
+            y1 = Math.max(y1, v.y);
+            z1 = Math.max(z1, v.z);
+        }
+        if (!(x1 >= x0) || !Float.isFinite(x0 + x1 + y0 + y1 + z0 + z1)) {
+            return null;
+        }
+        return SkyUsage.rectOfBox(x0, y0, z0, x1, y1, z1);
     }
 
     private static void emit(VertexConsumer c, Matrix4f m, float[] q, int count) {

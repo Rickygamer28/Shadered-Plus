@@ -54,6 +54,8 @@ public final class AquariumRenderer {
     private static final class Floor {
         final List<Face> faces = new ArrayList<>();
         final Set<BlockPos> blocks = new HashSet<>();
+        /** Per face, worked out once (the tank's blocks don't change while it's this floor): faceData. */
+        final Map<Face, int[]> faceData = new HashMap<>();
         BlockPos min;
         int sizeX, sizeY, sizeZ;
         /** Which spots of the box round the tank are water (1 bit each, 24 to a number, 4 numbers to a vec4); or the whole box. */
@@ -1492,31 +1494,46 @@ public final class AquariumRenderer {
     private static MeshData mesh(Floor floor, List<Face> faces, Vec3 cam, boolean frame) {
         BufferBuilder b = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         for (Face f : faces) {
-            Direction side = f.side();
-            Direction du = side.getAxis() == Direction.Axis.X ? Direction.SOUTH : Direction.EAST;
-            Direction dv = side.getAxis() == Direction.Axis.Y ? Direction.SOUTH : Direction.UP;
-            int flags = !frame ? 0 : (framed(floor, f.pos(), du.getOpposite(), side) ? 0xFF : 0)
-                    | (framed(floor, f.pos(), du, side) ? 0xFF00 : 0)
-                    | (framed(floor, f.pos(), dv.getOpposite(), side) ? 0xFF0000 : 0)
-                    | (framed(floor, f.pos(), dv, side) ? 0xFF000000 : 0);
-            int x = f.pos().getX(), y = f.pos().getY(), z = f.pos().getZ();
-            int[][] corners = switch (side) {
-                case UP -> new int[][] {{x, y + 1, z}, {x, y + 1, z + 1}, {x + 1, y + 1, z + 1}, {x + 1, y + 1, z}};
-                case DOWN -> new int[][] {{x, y, z}, {x + 1, y, z}, {x + 1, y, z + 1}, {x, y, z + 1}};
-                case NORTH -> new int[][] {{x + 1, y, z}, {x, y, z}, {x, y + 1, z}, {x + 1, y + 1, z}};
-                case SOUTH -> new int[][] {{x, y, z + 1}, {x + 1, y, z + 1}, {x + 1, y + 1, z + 1}, {x, y + 1, z + 1}};
-                case WEST -> new int[][] {{x, y, z}, {x, y, z + 1}, {x, y + 1, z + 1}, {x, y + 1, z}};
-                case EAST -> new int[][] {{x + 1, y, z + 1}, {x + 1, y, z}, {x + 1, y + 1, z}, {x + 1, y + 1, z + 1}};
-            };
-            for (int[] c : corners) {
-                int ox = c[0] - x, oy = c[1] - y, oz = c[2] - z;
-                float u = side.getAxis() == Direction.Axis.X ? oz : ox;
-                float v = side.getAxis() == Direction.Axis.Y ? oz : oy;
-                b.addVertex((float) (c[0] - cam.x), (float) (c[1] - cam.y), (float) (c[2] - cam.z)).setUv(u, v)
-                        .setColor(flags & 0xFF, (flags >> 8) & 0xFF, (flags >> 16) & 0xFF, (flags >>> 24) & 0xFF);
+            int[] d = floor.faceData.computeIfAbsent(f, k -> faceData(floor, k));
+            int flags = frame ? d[20] : 0;
+            int r = flags & 0xFF, g = (flags >> 8) & 0xFF, bl = (flags >> 16) & 0xFF, a = (flags >>> 24) & 0xFF;
+            for (int c = 0; c < 4; c++) {
+                int o = c * 5;
+                b.addVertex((float) (d[o] - cam.x), (float) (d[o + 1] - cam.y), (float) (d[o + 2] - cam.z)).setUv(d[o + 3], d[o + 4]).setColor(r, g, bl, a);
             }
         }
         return b.build();
+    }
+
+    /** A face's corners (x, y, z in the world, u, v: 5 numbers each, 4 of them) and its frame's edges (the 21st). */
+    private static int[] faceData(Floor floor, Face f) {
+        Direction side = f.side();
+        Direction du = side.getAxis() == Direction.Axis.X ? Direction.SOUTH : Direction.EAST;
+        Direction dv = side.getAxis() == Direction.Axis.Y ? Direction.SOUTH : Direction.UP;
+        int flags = (framed(floor, f.pos(), du.getOpposite(), side) ? 0xFF : 0)
+                | (framed(floor, f.pos(), du, side) ? 0xFF00 : 0)
+                | (framed(floor, f.pos(), dv.getOpposite(), side) ? 0xFF0000 : 0)
+                | (framed(floor, f.pos(), dv, side) ? 0xFF000000 : 0);
+        int x = f.pos().getX(), y = f.pos().getY(), z = f.pos().getZ();
+        int[][] corners = switch (side) {
+            case UP -> new int[][] {{x, y + 1, z}, {x, y + 1, z + 1}, {x + 1, y + 1, z + 1}, {x + 1, y + 1, z}};
+            case DOWN -> new int[][] {{x, y, z}, {x + 1, y, z}, {x + 1, y, z + 1}, {x, y, z + 1}};
+            case NORTH -> new int[][] {{x + 1, y, z}, {x, y, z}, {x, y + 1, z}, {x + 1, y + 1, z}};
+            case SOUTH -> new int[][] {{x, y, z + 1}, {x + 1, y, z + 1}, {x + 1, y + 1, z + 1}, {x, y + 1, z + 1}};
+            case WEST -> new int[][] {{x, y, z}, {x, y, z + 1}, {x, y + 1, z + 1}, {x, y + 1, z}};
+            case EAST -> new int[][] {{x + 1, y, z + 1}, {x + 1, y, z}, {x + 1, y + 1, z}, {x + 1, y + 1, z + 1}};
+        };
+        int[] d = new int[21];
+        for (int c = 0; c < 4; c++) {
+            int ox = corners[c][0] - x, oy = corners[c][1] - y, oz = corners[c][2] - z;
+            d[c * 5] = corners[c][0];
+            d[c * 5 + 1] = corners[c][1];
+            d[c * 5 + 2] = corners[c][2];
+            d[c * 5 + 3] = side.getAxis() == Direction.Axis.X ? oz : ox;
+            d[c * 5 + 4] = side.getAxis() == Direction.Axis.Y ? oz : oy;
+        }
+        d[20] = flags;
+        return d;
     }
 
     /** A tank's outside faces: 4 corners (x, y, z, in the world) each. */
