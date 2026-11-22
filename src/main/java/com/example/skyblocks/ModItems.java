@@ -122,6 +122,10 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> LIGHT_BRIDGE_BENDER = ITEMS.registerSimpleBlockItem("light_bridge_bender", ModBlocks.LIGHT_BRIDGE_BENDER);
     public static final DeferredItem<BlockItem> LASER_PROJECTOR = ITEMS.registerSimpleBlockItem("laser_projector", ModBlocks.LASER_PROJECTOR);
     /** The guide book (GuideBookItem). */
+    /** Paints a sky onto the faces of blocks (SkyBrushItem, SkyPaint). */
+    public static final DeferredItem<SkyBrushItem> SKY_BRUSH = ITEMS.register("sky_brush",
+            () -> new SkyBrushItem(new Item.Properties().stacksTo(1)));
+
     public static final DeferredItem<GuideBookItem> GUIDE_BOOK = ITEMS.register("guide_book",
             () -> new GuideBookItem(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<BlockItem> ARCADE = ITEMS.registerSimpleBlockItem("arcade", ModBlocks.ARCADE);

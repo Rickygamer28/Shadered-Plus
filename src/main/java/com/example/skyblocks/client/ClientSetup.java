@@ -188,6 +188,17 @@ public final class ClientSetup {
                 com.mojang.blaze3d.systems.RenderSystem.setShaderFogEnd(24.0F);
             }
         };
+        event.registerItem(new IClientItemExtensions() {
+            private SkyBrushItemRenderer renderer;
+
+            @Override
+            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (renderer == null) {
+                    renderer = new SkyBrushItemRenderer();
+                }
+                return renderer;
+            }
+        }, com.example.skyblocks.ModItems.SKY_BRUSH.get());
         // Sky Shapes' items: their shape, showing their sky
         IClientItemExtensions shapeLook = new IClientItemExtensions() {
             private SkyShapeItemRenderer renderer;
@@ -415,6 +426,7 @@ public final class ClientSetup {
         event.register(LIQUID_MODEL);
         event.register(SHAPE_ITEM_MODEL);
         event.register(SHAPE_MODEL);
+        event.register(SkyBrushItemRenderer.BASE);
         event.register(CAUSTICS_OVERLAY);
         event.register(RAIN_OVERLAY);
         event.register(BambooSpoutRenderer.TUBE);

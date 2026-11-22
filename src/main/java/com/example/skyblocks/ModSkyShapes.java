@@ -56,6 +56,10 @@ public final class ModSkyShapes {
     public static final DeferredHolder<RecipeSerializer<?>, SimpleCraftingRecipeSerializer<ShapeRecipe>> RECIPE =
             RECIPES.register("sky_shape", () -> new SimpleCraftingRecipeSerializer<>(ShapeRecipe::new));
 
+    /** A Sky Brush and a sky block = the brush, dipped in that sky (SkyBrushItem). */
+    public static final DeferredHolder<RecipeSerializer<?>, SimpleCraftingRecipeSerializer<SkyBrushItem.DipRecipe>> DIP_RECIPE =
+            RECIPES.register("sky_brush_dip", () -> new SimpleCraftingRecipeSerializer<>(SkyBrushItem.DipRecipe::new));
+
     /** The kinds of shape. */
     public enum Kind {
         STAIRS("stairs"), SLAB("slab"), WALL("wall"), PANE("pane"), CARPET("carpet"), BUTTON("button");

@@ -91,6 +91,10 @@ public class SkyBlocksMod {
         for (ModFluids.SkyLiquid liquid : ModFluids.ALL) {
             out.accept(new net.minecraft.world.item.ItemStack(liquid.bucket.get()));
         }
+        out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_BRUSH.get()));
+        for (ModSkyShapes.Shapes shapes : ModSkyShapes.ALL) {
+            out.accept(SkyBrushItem.with(new net.minecraft.world.item.ItemStack(ModItems.SKY_BRUSH.get()), shapes.sky));
+        }
         for (ModSkyShapes.Kind kind : ModSkyShapes.Kind.values()) {
             for (ModSkyShapes.Shapes shapes : ModSkyShapes.ALL) {
                 out.accept(new net.minecraft.world.item.ItemStack(shapes.items.get(kind).get()));
@@ -142,6 +146,8 @@ public class SkyBlocksMod {
         // (versus at the arcade: each frame's buttons passed straight on as they come - not waiting for the next tick)
         event.registrar("1").executesOn(net.neoforged.neoforge.network.registration.HandlerThread.NETWORK)
                 .playBidirectional(ArcadeNetPayload.TYPE, ArcadeNetPayload.STREAM_CODEC, ArcadeNetPayload::handle);
+        event.registrar("1").playToClient(SkyPaint.Set.TYPE, SkyPaint.Set.STREAM_CODEC, SkyPaint.Set::handle)
+                .playToClient(SkyPaint.Chunk.TYPE, SkyPaint.Chunk.STREAM_CODEC, SkyPaint.Chunk::handle);
         event.registrar("1").playToServer(ScanIslandPayload.TYPE, ScanIslandPayload.STREAM_CODEC, ScanIslandPayload::handle)
                 .playToServer(FogAreaPayload.TYPE, FogAreaPayload.STREAM_CODEC, FogAreaPayload::handle)
                 .playToServer(NeonSignPayload.TYPE, NeonSignPayload.STREAM_CODEC, NeonSignPayload::handle)

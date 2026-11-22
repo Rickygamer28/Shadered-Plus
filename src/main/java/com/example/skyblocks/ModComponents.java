@@ -34,6 +34,11 @@ public final class ModComponents {
     public static final Supplier<DataComponentType<Trophy>> TROPHY = COMPONENTS.register("trophy",
             () -> DataComponentType.<Trophy>builder().persistent(Trophy.CODEC).networkSynchronized(Trophy.STREAM_CODEC).build());
 
+    /** The sky a Sky Brush (SkyBrushItem) is loaded with: its name (Shadered's SkyblockType). */
+    public static final Supplier<DataComponentType<String>> SKY_BRUSH = COMPONENTS.register("sky_brush",
+            () -> DataComponentType.<String>builder().persistent(com.mojang.serialization.Codec.STRING)
+                    .networkSynchronized(net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8).build());
+
     /** A photo (CameraItem): which picture (PhotoStore), who took it, on which day. */
     public record Photo(int id, String by, long day) {
         public static final com.mojang.serialization.Codec<Photo> CODEC = com.mojang.serialization.codecs.RecordCodecBuilder.create(i -> i.group(

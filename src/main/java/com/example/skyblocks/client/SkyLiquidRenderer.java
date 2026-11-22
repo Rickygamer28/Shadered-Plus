@@ -176,14 +176,20 @@ public final class SkyLiquidRenderer {
         originZ = chunkZ << 4;
         originY = (int) Math.floor(cameraY);
         FloatCollector collector = new FloatCollector();
-        for (Map.Entry<SkyblockType, List<BlockPos>> entry : FOUND.entrySet()) {
+        java.util.Set<SkyblockType> skies = new java.util.LinkedHashSet<>(FOUND.keySet());
+        skies.addAll(PAINTED.keySet());
+        for (SkyblockType skyOf : skies) {
             collector.size = 0;
-            for (BlockPos pos : entry.getValue()) {
+            for (BlockPos pos : FOUND.getOrDefault(skyOf, List.of())) {
                 drawAny(level, pos, pos.getX() - originX, pos.getY() - originY, pos.getZ() - originZ, collector);
+            }
+            for (long[] painted : PAINTED.getOrDefault(skyOf, List.of())) {
+                BlockPos pos = BlockPos.of(painted[0]);
+                drawPaint(level, pos, Direction.from3DDataValue((int) painted[1]), pos.getX() - originX, pos.getY() - originY, pos.getZ() - originZ, collector);
             }
             if (collector.size > 0) {
                 float[] d = java.util.Arrays.copyOf(collector.data, collector.size);
-                GEOMETRY.put(entry.getKey(), d);
+                GEOMETRY.put(skyOf, d);
                 Map<Long, float[]> cells = new java.util.HashMap<>();
                 for (int i = 0; i < d.length; i += 5) {
                     int f = i - (i / 5 % 4) * 5; // (a face's four corners all in its first corner's cell)
@@ -197,7 +203,7 @@ public final class SkyLiquidRenderer {
                         b[a + 3] = Math.max(b[a + 3], d[i + a]);
                     }
                 }
-                BOXES.put(entry.getKey(), new ArrayList<>(cells.values()));
+                BOXES.put(skyOf, new ArrayList<>(cells.values()));
             }
         }
     }
@@ -405,10 +411,72 @@ public final class SkyLiquidRenderer {
                 .setLight(LightTexture.FULL_BRIGHT).setNormal(0.0F, 1.0F, 0.0F);
     }
 
+    /** Sky paint (SkyPaint, the brush) on the faces near the camera: per sky, {block, face} pairs. */
+    private static final Map<SkyblockType, List<long[]>> PAINTED = new LinkedHashMap<>();
+
+    private static void scanPaint(int chunkX, int chunkZ) {
+        Map<Long, Long> chunk = com.example.skyblocks.SkyPaintStore.of(chunkX, chunkZ);
+        if (chunk == null) {
+            return;
+        }
+        for (Map.Entry<Long, Long> e : chunk.entrySet()) {
+            for (Direction d : Direction.values()) {
+                SkyblockType sky = com.example.skyblocks.SkyPaint.skyOf(e.getValue(), d);
+                if (sky != null) {
+                    PAINTED.computeIfAbsent(sky, k -> new ArrayList<>()).add(new long[] {e.getKey(), d.get3DDataValue()});
+                }
+            }
+        }
+    }
+
+    /**
+     * A face painted with a sky (SkyPaint): that side of each box of the block's shape, a hair out from it, unless it's
+     * flat against a solid block.
+     */
+    private static void drawPaint(BlockGetter level, BlockPos pos, Direction d, float x, float y, float z, VertexConsumer c) {
+        net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
+        if (state.isAir()) {
+            return;
+        }
+        BlockPos next = pos.relative(d);
+        boolean solid = level.getBlockState(next).isSolidRender(level, next);
+        net.minecraft.world.phys.shapes.VoxelShape shape = state.getShape(level, pos);
+        if (shape.isEmpty()) {
+            shape = net.minecraft.world.phys.shapes.Shapes.block();
+        }
+        final float o = 0.003F, e = 1.0E-4F;
+        shape.forAllBoxes((ax, ay, az, bx, by, bz) -> {
+            float x0 = x + (float) ax, y0 = y + (float) ay, z0 = z + (float) az, x1 = x + (float) bx, y1 = y + (float) by, z1 = z + (float) bz;
+            switch (d) {
+                case UP -> { if (!(solid && by >= 1 - e)) face(c, x0, y1 + o, z0, x1, y1 + o, z0, x1, y1 + o, z1, x0, y1 + o, z1); }
+                case DOWN -> { if (!(solid && ay <= e)) face(c, x0, y0 - o, z0, x0, y0 - o, z1, x1, y0 - o, z1, x1, y0 - o, z0); }
+                case NORTH -> { if (!(solid && az <= e)) face(c, x0, y0, z0 - o, x1, y0, z0 - o, x1, y1, z0 - o, x0, y1, z0 - o); }
+                case SOUTH -> { if (!(solid && bz >= 1 - e)) face(c, x1, y0, z1 + o, x0, y0, z1 + o, x0, y1, z1 + o, x1, y1, z1 + o); }
+                case WEST -> { if (!(solid && ax <= e)) face(c, x0 - o, y0, z1, x0 - o, y0, z0, x0 - o, y1, z0, x0 - o, y1, z1); }
+                case EAST -> { if (!(solid && bx >= 1 - e)) face(c, x1 + o, y0, z0, x1 + o, y0, z1, x1 + o, y1, z1, x1 + o, y1, z0); }
+            }
+        });
+    }
+
+    @SubscribeEvent
+    public static void onChunkUnload(net.neoforged.neoforge.event.level.ChunkEvent.Unload event) {
+        if (event.getLevel().isClientSide()) {
+            com.example.skyblocks.SkyPaintStore.forget(event.getChunk().getPos().toLong());
+        }
+    }
+
+    @SubscribeEvent
+    public static void onLevelUnload(net.neoforged.neoforge.event.level.LevelEvent.Unload event) {
+        if (event.getLevel().isClientSide()) {
+            com.example.skyblocks.SkyPaintStore.clear();
+        }
+    }
+
     private static void scan(ClientLevel level, int centerX, int centerZ, int radius) {
         FOUND.clear();
+        PAINTED.clear();
         foundCount = 0;
-        foundHash = 17L;
+        foundHash = 17L + com.example.skyblocks.SkyPaintStore.version * 1000003L;
         // nearest rings first, so the cap drops the far ones
         for (int ring = 0; ring <= radius && foundCount < MAX_BLOCKS; ring++) {
             for (int dx = -ring; dx <= ring; dx++) {
@@ -419,6 +487,7 @@ public final class SkyLiquidRenderer {
                     LevelChunk chunk = level.getChunkSource().getChunk(centerX + dx, centerZ + dz, false);
                     if (chunk != null) {
                         scanChunk(chunk);
+                        scanPaint(centerX + dx, centerZ + dz);
                     }
                 }
             }

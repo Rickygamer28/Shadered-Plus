@@ -1153,5 +1153,12 @@
   "block.skyblocks.sky_pane": "%s Pane",
   "block.skyblocks.sky_carpet": "%s Carpet",
   "block.skyblocks.sky_button": "%s Button",
-  "guide.skyblocks.sky_shapes": "Every sky also comes as stairs, slabs, walls, panes, carpets and buttons. Craft them like the stone ones from that sky’s blocks: a pane is a sky block ringed by 8 glass panes, a button a sky block and a stone button."
+  "guide.skyblocks.sky_shapes": "Every sky also comes as stairs, slabs, walls, panes, carpets and buttons. Craft them like the stone ones from that sky’s blocks: a pane is a sky block ringed by 8 glass panes, a button a sky block and a stone button.",
+  "item.skyblocks.sky_brush": "Sky Brush",
+  "item.skyblocks.sky_brush.with": "%s Sky Brush",
+  "tooltip.skyblocks.sky_brush.dip": "Dip it in a sky: craft it with a sky block",
+  "tooltip.skyblocks.sky_brush.use": "Hold use and sweep it over blocks to paint their faces",
+  "tooltip.skyblocks.sky_brush.wipe": "Sneak while brushing to wipe sky paint off",
+  "message.skyblocks.sky_brush.dry": "The brush is dry: craft it with a sky block to dip it in that sky",
+  "guide.skyblocks.sky_brush": "Paints a sky onto any block's faces without replacing the block: a starry inlay in a floor, a nebula window in a brick wall. Craft it with a sky block to dip it in that sky, then hold use and sweep it over blocks. Sneak while brushing to wipe paint off; breaking a block takes its paint with it."
 }
