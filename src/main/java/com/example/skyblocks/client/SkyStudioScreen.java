@@ -51,13 +51,13 @@ public class SkyStudioScreen extends Screen {
     private final float[] hsv = new float[3];
     private final ArrayDeque<float[]> undo = new ArrayDeque<>();
     private EditBox nameBox;
-    private int x0, y0, w, h;
+    private int x0, y0, w, h, lwid, rw;
     private int px0, py0, px1, py1;
     private float viewYaw = 0.0F, viewPitch = 0.2F;
     private boolean turning = true, dragging;
     private int layerScroll, fieldScroll;
     private final List<AbstractWidget> layerWidgets = new ArrayList<>(), fieldWidgets = new ArrayList<>();
-    private int layerTop, layerBottom, fieldTop, fieldBottom, swatchY = -1;
+    private int layerTop, layerBottom, fieldTop, fieldBottom, swatchY = -1, helpY;
 
     public SkyStudioScreen(BlockPos pos) {
         super(Component.translatable("screen.skyblocks.studio"));
@@ -161,25 +161,10 @@ public class SkyStudioScreen extends Screen {
                 pickColour(colourField);
             }
         });
-        Component lookName = Component.translatable("screen.skyblocks.studio.look." + StudioSpec.PRESET_NAMES[look]);
-        Component lookLabel = Component.translatable("screen.skyblocks.studio.look", lookName);
-        int lw = font.width(lookLabel) + 10;
-        addRenderableWidget(Button.builder(lookLabel, x -> {
-            remember();
-            params = StudioSpec.PRESETS[look].clone();
-            look = (look + 1) % StudioSpec.PRESETS.length;
-            pickColour(firstColour());
-            rebuildWidgets();
-        }).bounds(tx, ty, lw, 16).build());
-        tx += lw + 2;
-        Component turnLabel = Component.translatable("screen.skyblocks.studio.turn",
-                Component.translatable(turning ? "screen.skyblocks.studio.on" : "screen.skyblocks.studio.off"));
-        addRenderableWidget(Button.builder(turnLabel, x -> {
-            turning = !turning;
-            rebuildWidgets();
-        }).bounds(tx, ty, font.width(turnLabel) + 10, 16).build());
         // ---- left: the layers ----
-        int lx = x0 + 6, lwid = 122;
+        lwid = Mth.clamp(w / 4, 92, 122);
+        rw = Mth.clamp(w * 9 / 28, 132, 176);
+        int lx = x0 + 6;
         layerTop = y0 + 46;
         layerBottom = y0 + h - 6;
         for (int i = 0; i < StudioSpec.LAYERS.length; i++) {
@@ -204,20 +189,42 @@ public class SkyStudioScreen extends Screen {
             }
         }
         // ---- middle: the preview, save, sky blocks ----
-        int rw = 176;
         int mx0 = lx + lwid + 6, mx1 = x0 + w - rw - 10;
         px0 = mx0 + 2;
         px1 = mx1 - 2;
         py0 = y0 + 48;
-        py1 = Math.min(py0 + (int) ((px1 - px0) * 0.6F), y0 + h - 72);
-        int by = py1 + 6;
-        int half = (px1 - px0 - 4) / 2;
+        py1 = Math.max(py0 + 40, Math.min(py0 + (int) ((px1 - px0) * 0.62F), y0 + h - (px1 - px0 >= 150 ? 50 : 90)));
+        int by = py1 + 5, mw = px1 - px0;
+        boolean wide = mw >= 150;
+        int half = wide ? (mw - 4) / 2 : mw;
         addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.studio.save"), x -> {
             keepName();
             PacketDistributor.sendToServer(new StudioSkies.Save(pos, slot, name, params.clone()));
-        }).bounds(px0, by, half, 20).build());
+        }).bounds(px0, by, half, 18).build());
+        if (!wide) {
+            by += 20;
+        }
         addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.studio.take"), x ->
-                PacketDistributor.sendToServer(new StudioSkies.Take(pos, slot))).bounds(px0 + half + 4, by, half, 20).build());
+                PacketDistributor.sendToServer(new StudioSkies.Take(pos, slot))).bounds(wide ? px0 + half + 4 : px0, by, half, 18).build());
+        by += 20;
+        Component lookName = Component.translatable("screen.skyblocks.studio.look." + StudioSpec.PRESET_NAMES[look]);
+        addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.studio.look", lookName), x -> {
+            remember();
+            params = StudioSpec.PRESETS[look].clone();
+            look = (look + 1) % StudioSpec.PRESETS.length;
+            pickColour(firstColour());
+            rebuildWidgets();
+        }).bounds(px0, by, half, 18).build());
+        if (!wide) {
+            by += 20;
+        }
+        Component turnLabel = Component.translatable("screen.skyblocks.studio.turn",
+                Component.translatable(turning ? "screen.skyblocks.studio.on" : "screen.skyblocks.studio.off"));
+        addRenderableWidget(Button.builder(turnLabel, x -> {
+            turning = !turning;
+            rebuildWidgets();
+        }).bounds(wide ? px0 + half + 4 : px0, by, half, 18).build());
+        helpY = by + 24;
         // ---- right: the picked layer's colours and settings ----
         int fx = x0 + w - rw - 6;
         fieldTop = y0 + 46;
@@ -336,8 +343,8 @@ public class SkyStudioScreen extends Screen {
         super.renderBackground(g, mouseX, mouseY, partialTick);
         g.fill(x0 - 2, y0 - 2, x0 + w + 2, y0 + h + 2, EDGE);
         g.fill(x0, y0, x0 + w, y0 + h, BG);
-        g.fill(x0 + 6, layerTop, x0 + 128, layerBottom, PANEL);
-        g.fill(x0 + w - 182, fieldTop, x0 + w - 6, fieldBottom, PANEL);
+        g.fill(x0 + 6, layerTop, x0 + 6 + lwid, layerBottom, PANEL);
+        g.fill(x0 + w - rw - 6, fieldTop, x0 + w - 6, fieldBottom, PANEL);
         g.fill(px0 - 2, py0 - 2, px1 + 2, py1 + 2, EDGE);
         g.flush();
         ShaderInstance shader = ShaderSky.studioPreview();
@@ -369,32 +376,39 @@ public class SkyStudioScreen extends Screen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
         g.drawString(font, title, x0 + 8, y0 + 9, ACCENT, false);
-        int fx = x0 + w - 182;
+        int fx = x0 + w - rw - 6;
         if (swatchY >= 0 && colourField >= 0) {
             int sy = swatchY - fieldScroll;
             if (sy >= fieldTop && sy + 19 <= fieldBottom) {
                 for (int i = 0; i < QUICK.length; i++) {
-                    int sx = fx + 4 + (i % 8) * 21, row = sy + (i / 8) * 10;
-                    g.fill(sx, row, sx + 19, row + 9, 0xFF000000 | QUICK[i]);
+                    int sx = fx + 4 + (i % 8) * sw(), row = sy + (i / 8) * 10;
+                    g.fill(sx, row, sx + sw() - 2, row + 9, 0xFF000000 | QUICK[i]);
                 }
             }
             for (StudioSpec.Field f : current().fields()) {
                 if (f.kind() == 'c') {
                     int cy = fieldY(f.at());
                     if (cy >= fieldTop && cy + 16 <= fieldBottom) {
-                        g.fill(fx + 156, cy + 1, fx + 174, cy + 15, f.at() == colourField ? ACCENT : EDGE);
-                        g.fill(fx + 158, cy + 3, fx + 172, cy + 13, rgb(f.at()));
+                        g.fill(fx + rw - 20, cy + 1, fx + rw - 2, cy + 15, f.at() == colourField ? ACCENT : EDGE);
+                        g.fill(fx + rw - 18, cy + 3, fx + rw - 4, cy + 13, rgb(f.at()));
                     }
                 }
             }
         }
-        g.drawWordWrap(font, Component.translatable("screen.skyblocks.studio.help"), px0, py1 + 32, px1 - px0, DIM);
+        if (helpY + 30 < y0 + h) {
+            g.drawWordWrap(font, Component.translatable("screen.skyblocks.studio.help"), px0, helpY, px1 - px0, DIM);
+        }
         if (layerScroll > 0 || maxLayerScroll() > layerScroll) {
             g.drawString(font, "↕", x0 + 118, layerBottom - 10, DIM, false);
         }
         if (fieldScroll > 0 || maxFieldScroll() > fieldScroll) {
             g.drawString(font, "↕", x0 + w - 14, fieldBottom - 10, DIM, false);
         }
+    }
+
+    /** A quick colour's width (8 to a row). */
+    private int sw() {
+        return (rw - 8) / 8;
     }
 
     private int rgb(int at) {
@@ -437,10 +451,10 @@ public class SkyStudioScreen extends Screen {
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (swatchY >= 0 && colourField >= 0) {
-            int fx = x0 + w - 182, sy = swatchY - fieldScroll;
+            int fx = x0 + w - rw - 6, sy = swatchY - fieldScroll;
             for (int i = 0; i < QUICK.length; i++) {
-                int sx = fx + 4 + (i % 8) * 21, row = sy + (i / 8) * 10;
-                if (mx >= sx && mx < sx + 19 && my >= row && my < row + 9 && row >= fieldTop && row + 9 <= fieldBottom) {
+                int sx = fx + 4 + (i % 8) * sw(), row = sy + (i / 8) * 10;
+                if (mx >= sx && mx < sx + sw() - 2 && my >= row && my < row + 9 && row >= fieldTop && row + 9 <= fieldBottom) {
                     remember();
                     setColour(QUICK[i]);
                     pickColour(colourField);
@@ -474,12 +488,12 @@ public class SkyStudioScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double sx, double sy) {
-        if (mx < x0 + 130) {
+        if (mx < x0 + 8 + lwid) {
             layerScroll = Mth.clamp(layerScroll - (int) (sy * 20), 0, maxLayerScroll());
             rebuildWidgets();
             return true;
         }
-        if (mx > x0 + w - 184) {
+        if (mx > x0 + w - rw - 8) {
             fieldScroll = Mth.clamp(fieldScroll - (int) (sy * 18), 0, maxFieldScroll());
             rebuildWidgets();
             return true;
