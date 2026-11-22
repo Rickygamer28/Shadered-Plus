@@ -126,6 +126,21 @@ public final class ModItems {
     public static final DeferredItem<SkyBrushItem> SKY_BRUSH = ITEMS.register("sky_brush",
             () -> new SkyBrushItem(new Item.Properties().stacksTo(1)));
 
+    /** From sky creatures: a sky jellyfish's jelly (eaten: a slow fall), a sky whale's scale, a moth in a bottle. */
+    public static final DeferredItem<Item> SKY_JELLY = ITEMS.register("sky_jelly", () -> new Item(new Item.Properties()
+            .food(new net.minecraft.world.food.FoodProperties.Builder().nutrition(2).saturationModifier(0.3F).alwaysEdible()
+                    .effect(() -> new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.SLOW_FALLING, 600, 0), 1.0F)
+                    .usingConvertsTo(net.minecraft.world.item.Items.GLASS_BOTTLE).build())));
+    public static final DeferredItem<Item> STARLIGHT_SCALE = ITEMS.register("starlight_scale", () -> new Item(new Item.Properties()));
+    public static final DeferredItem<BottledSkyMothItem> BOTTLED_SKY_MOTH = ITEMS.register("bottled_sky_moth",
+            () -> new BottledSkyMothItem(new Item.Properties().stacksTo(16)));
+    public static final DeferredItem<net.neoforged.neoforge.common.DeferredSpawnEggItem> SKY_JELLYFISH_SPAWN_EGG = ITEMS.register("sky_jellyfish_spawn_egg",
+            () -> new net.neoforged.neoforge.common.DeferredSpawnEggItem(ModEntities.SKY_JELLYFISH, 0x1B1640, 0x5EF2C2, new Item.Properties()));
+    public static final DeferredItem<net.neoforged.neoforge.common.DeferredSpawnEggItem> SKY_WHALE_SPAWN_EGG = ITEMS.register("sky_whale_spawn_egg",
+            () -> new net.neoforged.neoforge.common.DeferredSpawnEggItem(ModEntities.SKY_WHALE, 0x060A1E, 0x6AB4FF, new Item.Properties()));
+    public static final DeferredItem<net.neoforged.neoforge.common.DeferredSpawnEggItem> SKY_MOTH_SPAWN_EGG = ITEMS.register("sky_moth_spawn_egg",
+            () -> new net.neoforged.neoforge.common.DeferredSpawnEggItem(ModEntities.SKY_MOTH, 0x2A0B3D, 0xFF9A5A, new Item.Properties()));
+
     public static final DeferredItem<GuideBookItem> GUIDE_BOOK = ITEMS.register("guide_book",
             () -> new GuideBookItem(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<BlockItem> ARCADE = ITEMS.registerSimpleBlockItem("arcade", ModBlocks.ARCADE);

@@ -124,6 +124,9 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.FILTER.get(), FilterRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SHADER_LIGHT.get(), ShaderLightRenderer::new);
         event.registerEntityRenderer(com.example.skyblocks.ModEntities.SKY_TRAIL.get(), SkyTrailRenderer::new);
+        event.registerEntityRenderer(com.example.skyblocks.ModEntities.SKY_JELLYFISH.get(), SkyCreatureRenderer.Jellyfish::new);
+        event.registerEntityRenderer(com.example.skyblocks.ModEntities.SKY_WHALE.get(), SkyCreatureRenderer.Whale::new);
+        event.registerEntityRenderer(com.example.skyblocks.ModEntities.SKY_MOTH.get(), SkyCreatureRenderer.Moth::new);
         event.registerEntityRenderer(com.example.skyblocks.ModEntities.ELEVATOR_CABIN.get(), net.minecraft.client.renderer.entity.NoopRenderer::new); // (its base draws it)
         BlockEntityRendererProvider<OiiaCatBlockEntity> big = OiiaCatRenderer::new;
         event.registerBlockEntityRenderer(ModBlockEntities.BIG_OIIA_CAT.get(), big);

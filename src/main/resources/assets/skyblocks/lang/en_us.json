@@ -1160,5 +1160,21 @@
   "tooltip.skyblocks.sky_brush.use": "Hold use and sweep it over blocks to paint their faces",
   "tooltip.skyblocks.sky_brush.wipe": "Sneak while brushing to wipe sky paint off",
   "message.skyblocks.sky_brush.dry": "The brush is dry: craft it with a sky block to dip it in that sky",
-  "guide.skyblocks.sky_brush": "Paints a sky onto any block's faces without replacing the block: a starry inlay in a floor, a nebula window in a brick wall. Craft it with a sky block to dip it in that sky, then hold use and sweep it over blocks. Sneak while brushing to wipe paint off; breaking a block takes its paint with it."
+  "guide.skyblocks.sky_brush": "Paints a sky onto any block's faces without replacing the block: a starry inlay in a floor, a nebula window in a brick wall. Craft it with a sky block to dip it in that sky, then hold use and sweep it over blocks. Sneak while brushing to wipe paint off; breaking a block takes its paint with it.",
+  "entity.skyblocks.sky_jellyfish": "Sky Jellyfish",
+  "entity.skyblocks.sky_whale": "Sky Whale",
+  "entity.skyblocks.sky_moth": "Sky Moth",
+  "item.skyblocks.sky_jellyfish_spawn_egg": "Sky Jellyfish Spawn Egg",
+  "item.skyblocks.sky_whale_spawn_egg": "Sky Whale Spawn Egg",
+  "item.skyblocks.sky_moth_spawn_egg": "Sky Moth Spawn Egg",
+  "item.skyblocks.sky_jelly": "Sky Jelly",
+  "item.skyblocks.starlight_scale": "Starlight Scale",
+  "item.skyblocks.bottled_sky_moth": "Bottled Sky Moth",
+  "tooltip.skyblocks.bottled_sky_moth": "Use on a block to let it out",
+  "guide.skyblocks.sky_jellyfish_spawn_egg": "Sky Jellyfish drift high in the sky on clear nights. Touch one to float up for a moment, then fall slowly. Scoop Sky Jelly off one with a glass bottle. Drop a slimeball into a sky liquid to raise a jellyfish of that sky.",
+  "guide.skyblocks.sky_whale_spawn_egg": "A rare Sky Whale loops over the sea at dusk. Feed it fish, then use it with an empty hand to ride on its back: it turns the way you look. Brush it for a Starlight Scale now and then. Drop a Heart of the Sea into a sky liquid and a whale of that sky rises from it.",
+  "guide.skyblocks.sky_moth_spawn_egg": "Sky Moths gather round sky lanterns at night, their wings showing the lantern's sky. They scatter when you move near and come back when you stand still. Catch one in a glass bottle; glowstone dust on a sky lantern draws one to it.",
+  "guide.skyblocks.sky_jelly": "Scooped off a Sky Jellyfish with a glass bottle. Eat it to fall slowly for half a minute.",
+  "guide.skyblocks.starlight_scale": "Brushed off a Sky Whale (it doesn't mind).",
+  "guide.skyblocks.bottled_sky_moth": "A Sky Moth in a bottle. Use it on a block to let it out; it stays near where you set it free."
 }

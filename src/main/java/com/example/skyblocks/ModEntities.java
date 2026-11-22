@@ -29,8 +29,22 @@ public final class ModEntities {
             () -> EntityType.Builder.<ElevatorCabinEntity>of(ElevatorCabinEntity::new, MobCategory.MISC).sized(2.9F, ElevatorCabinEntity.PLATE)
                     .clientTrackingRange(16).updateInterval(10).fireImmune().build("elevator_cabin"));
 
+    /** Sky creatures (SkyCreature): peaceful, flying, each with a sky for a body. */
+    public static final Supplier<EntityType<SkyJellyfish>> SKY_JELLYFISH = TYPES.register("sky_jellyfish",
+            () -> EntityType.Builder.<SkyJellyfish>of(SkyJellyfish::new, MobCategory.AMBIENT).sized(0.9F, 1.1F).clientTrackingRange(10)
+                    .build("sky_jellyfish"));
+    public static final Supplier<EntityType<SkyWhale>> SKY_WHALE = TYPES.register("sky_whale",
+            () -> EntityType.Builder.<SkyWhale>of(SkyWhale::new, MobCategory.AMBIENT).sized(3.2F, 2.0F).clientTrackingRange(16)
+                    .updateInterval(1).build("sky_whale"));
+    public static final Supplier<EntityType<SkyMoth>> SKY_MOTH = TYPES.register("sky_moth",
+            () -> EntityType.Builder.<SkyMoth>of(SkyMoth::new, MobCategory.AMBIENT).sized(0.35F, 0.3F).clientTrackingRange(8)
+                    .build("sky_moth"));
+
     static void attributes(EntityAttributeCreationEvent event) {
         event.put(OIIA_CAT.get(), OiiaCatEntity.createAttributes().build());
+        event.put(SKY_JELLYFISH.get(), SkyJellyfish.createAttributes().build());
+        event.put(SKY_WHALE.get(), SkyWhale.createAttributes().build());
+        event.put(SKY_MOTH.get(), SkyMoth.createAttributes().build());
     }
 
     private ModEntities() {}
