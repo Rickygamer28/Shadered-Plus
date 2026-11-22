@@ -161,7 +161,7 @@ public class SkyStudioScreen extends Screen {
             for (int i = 0; i < 3; i++) {
                 final int k = i;
                 addRenderableWidget(new Slider(x0 + 290, y, 102, "screen.skyblocks.studio.number." + hsvNames[i], () -> hsv[k], v -> {
-                    hsv[k] = (float) v;
+                    hsv[k] = v.floatValue();
                     int rgb = Mth.hsvToRgb(hsv[0] >= 1.0F ? 0.999F : hsv[0], hsv[1], hsv[2]);
                     int at = LAYERS[layer].colours[colour];
                     params[at] = ((rgb >> 16) & 255) / 255.0F;
@@ -175,7 +175,7 @@ public class SkyStudioScreen extends Screen {
         for (int i = 0; i < l.numbers.length; i++) {
             final int at = l.numbers[i];
             addRenderableWidget(new Slider(x0 + 290, y, 102, "screen.skyblocks.studio.number." + l.numberNames[i], () -> params[at],
-                    v -> params[at] = (float) v));
+                    v -> params[at] = v.floatValue()));
             y += 18;
         }
     }
