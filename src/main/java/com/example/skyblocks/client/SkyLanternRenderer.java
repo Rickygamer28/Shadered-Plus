@@ -181,28 +181,85 @@ public class SkyLanternRenderer implements BlockEntityRenderer<SkyLanternBlockEn
         return c;
     }
 
+    /** A read of a sky's shrunk picture on its way back from the graphics card (into a buffer, without waiting for it). */
+    private static final class Reading {
+        int pbo = -1;
+        long fence;
+    }
+
+    private static final java.util.Map<Integer, Reading> READINGS = new java.util.HashMap<>();
+
     /**
      * A sky's picture, shrunk to 16 x 16 (the graphics card blits it down) and read back: its average colour (r g b, 0 .. 1),
-     * or null if it couldn't be.
+     * or null if it couldn't be, or isn't back yet. The read is handed to the card and collected on a later call, once
+     * it's done - never waited for (reading straight back stalled the frame till the card caught up).
      */
     private static float[] sample(int sky) {
         if (sampleFailed) {
             return null;
         }
-        int prevRead = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING);
-        int prevDraw = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
-        boolean scissor = org.lwjgl.opengl.GL11.glIsEnabled(org.lwjgl.opengl.GL11.GL_SCISSOR_TEST);
-        java.nio.ByteBuffer buf = null;
+        Reading r = READINGS.computeIfAbsent(sky, k -> new Reading());
+        float[] got = null;
         try {
-            int id = net.minecraft.client.Minecraft.getInstance().getTextureManager().getTexture(ShaderPaintRender.picture(sky)).getId();
-            if (id <= 0) {
+            if (r.fence != 0L) {
+                int status = org.lwjgl.opengl.GL32.glClientWaitSync(r.fence, 0, 0L);
+                if (status != org.lwjgl.opengl.GL32.GL_ALREADY_SIGNALED && status != org.lwjgl.opengl.GL32.GL_CONDITION_SATISFIED) {
+                    return null; // (not back yet)
+                }
+                org.lwjgl.opengl.GL32.glDeleteSync(r.fence);
+                r.fence = 0L;
+                got = collect(r);
+            }
+            start(sky, r);
+        } catch (RuntimeException | LinkageError e) {
+            sampleFailed = true;
+            SkyBlocksMod.LOGGER.warn("Shadered+ sky lantern: couldn't read its sky's colour; its light stays white", e);
+            return null;
+        }
+        return got;
+    }
+
+    /** The finished read's average colour. */
+    private static float[] collect(Reading r) {
+        int prevPack = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER_BINDING);
+        org.lwjgl.opengl.GL15.glBindBuffer(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER, r.pbo);
+        try {
+            java.nio.ByteBuffer buf = org.lwjgl.opengl.GL30.glMapBufferRange(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER, 0, 16 * 16 * 4,
+                    org.lwjgl.opengl.GL30.GL_MAP_READ_BIT);
+            if (buf == null) {
                 return null;
             }
+            float cr = 0, cg = 0, cb = 0;
+            for (int i = 0; i < 256; i++) {
+                cr += (buf.get(i * 4) & 255);
+                cg += (buf.get(i * 4 + 1) & 255);
+                cb += (buf.get(i * 4 + 2) & 255);
+            }
+            org.lwjgl.opengl.GL15.glUnmapBuffer(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER);
+            return new float[] {cr / 256 / 255, cg / 256 / 255, cb / 256 / 255};
+        } finally {
+            org.lwjgl.opengl.GL15.glBindBuffer(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER, prevPack);
+        }
+    }
+
+    /** Shrinks the sky's picture and starts reading it back into the reading's buffer. */
+    private static void start(int sky, Reading r) {
+        // (the average's over all of the picture: brought up to date all over for it - only now and then, for the read)
+        SkyUsage.ensureAllNow(com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(ShaderPaintRender.skies()[sky]));
+        int id = net.minecraft.client.Minecraft.getInstance().getTextureManager().getTexture(ShaderPaintRender.picture(sky)).getId();
+        if (id <= 0) {
+            return;
+        }
+        int prevRead = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING);
+        int prevDraw = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+        int prevPack = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER_BINDING);
+        boolean scissor = org.lwjgl.opengl.GL11.glIsEnabled(org.lwjgl.opengl.GL11.GL_SCISSOR_TEST);
+        try {
             com.mojang.blaze3d.platform.GlStateManager._bindTexture(id);
             int w = org.lwjgl.opengl.GL11.glGetTexLevelParameteri(org.lwjgl.opengl.GL11.GL_TEXTURE_2D, 0, org.lwjgl.opengl.GL11.GL_TEXTURE_WIDTH);
             int h = org.lwjgl.opengl.GL11.glGetTexLevelParameteri(org.lwjgl.opengl.GL11.GL_TEXTURE_2D, 0, org.lwjgl.opengl.GL11.GL_TEXTURE_HEIGHT);
             if (w <= 0 || h <= 0) {
-                return null;
+                return;
             }
             if (readFbo < 0) {
                 readFbo = org.lwjgl.opengl.GL30.glGenFramebuffers();
@@ -217,6 +274,11 @@ public class SkyLanternRenderer implements BlockEntityRenderer<SkyLanternBlockEn
                 org.lwjgl.opengl.GL30.glFramebufferTexture2D(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, org.lwjgl.opengl.GL30.GL_COLOR_ATTACHMENT0,
                         org.lwjgl.opengl.GL11.GL_TEXTURE_2D, smallTex, 0);
             }
+            if (r.pbo < 0) {
+                r.pbo = org.lwjgl.opengl.GL15.glGenBuffers();
+                org.lwjgl.opengl.GL15.glBindBuffer(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER, r.pbo);
+                org.lwjgl.opengl.GL15.glBufferData(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER, 16 * 16 * 4, org.lwjgl.opengl.GL15.GL_STREAM_READ);
+            }
             if (scissor) {
                 org.lwjgl.opengl.GL11.glDisable(org.lwjgl.opengl.GL11.GL_SCISSOR_TEST);
             }
@@ -226,23 +288,11 @@ public class SkyLanternRenderer implements BlockEntityRenderer<SkyLanternBlockEn
             org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, smallFbo);
             org.lwjgl.opengl.GL30.glBlitFramebuffer(0, 0, w, h, 0, 0, 16, 16, org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT, org.lwjgl.opengl.GL11.GL_LINEAR);
             org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, smallFbo);
-            buf = org.lwjgl.system.MemoryUtil.memAlloc(16 * 16 * 4);
-            org.lwjgl.opengl.GL11.glReadPixels(0, 0, 16, 16, org.lwjgl.opengl.GL11.GL_RGBA, org.lwjgl.opengl.GL11.GL_UNSIGNED_BYTE, buf);
-            float r = 0, g = 0, b = 0;
-            for (int i = 0; i < 256; i++) {
-                r += (buf.get(i * 4) & 255);
-                g += (buf.get(i * 4 + 1) & 255);
-                b += (buf.get(i * 4 + 2) & 255);
-            }
-            return new float[] {r / 256 / 255, g / 256 / 255, b / 256 / 255};
-        } catch (RuntimeException e) {
-            sampleFailed = true;
-            SkyBlocksMod.LOGGER.warn("Shadered+ sky lantern: couldn't read its sky's colour; its light stays white", e);
-            return null;
+            org.lwjgl.opengl.GL15.glBindBuffer(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER, r.pbo);
+            org.lwjgl.opengl.GL11.glReadPixels(0, 0, 16, 16, org.lwjgl.opengl.GL11.GL_RGBA, org.lwjgl.opengl.GL11.GL_UNSIGNED_BYTE, 0L);
+            r.fence = org.lwjgl.opengl.GL32.glFenceSync(org.lwjgl.opengl.GL32.GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
         } finally {
-            if (buf != null) {
-                org.lwjgl.system.MemoryUtil.memFree(buf);
-            }
+            org.lwjgl.opengl.GL15.glBindBuffer(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER, prevPack);
             org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, prevRead);
             org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, prevDraw);
             if (scissor) {

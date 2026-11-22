@@ -56,9 +56,9 @@ public final class ShaderPaintRender {
             return null;
         }
         try {
-            // (its sky's picture brought up to date first, all of it, as sky liquids and paintings do: a sky nothing else
+            // (its sky's picture brought up to date first - the middle of it, all the paint shows: a sky nothing else
             // shows isn't drawn every frame, and its picture could be out of date)
-            SkyUsage.ensureFresh(com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(skies[sky]));
+            SkyUsage.ensureCentre(com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(skies[sky]));
         } catch (RuntimeException ignored) {
             // (drawn as it is)
         }

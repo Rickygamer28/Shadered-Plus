@@ -550,6 +550,45 @@ public final class SkyUsage {
         ensure(data, rect);
     }
 
+    /**
+     * For sky paint (shaders/core/sky_paint: lanterns, painted armour, altars, the paint screen), which shows only the
+     * middle of a sky's picture wherever it's drawn: that middle (a square 0.7 of the picture's height, and a margin for
+     * its looks' offsets) brought up to date, not the whole picture every frame.
+     */
+    /** All of a sky's picture brought up to date now, once (not kept whole every frame after, as ensureFresh does). */
+    public static void ensureAllNow(@Nullable SkyblockBatchData data) {
+        if (MirrorRenderer.isRenderingReflection()) {
+            ensureFresh(data);
+            return;
+        }
+        markLight(data);
+        ensure(data, null);
+    }
+
+    public static void ensureCentre(@Nullable SkyblockBatchData data) {
+        ComplexPassRenderer renderer = ComplexPassRenderer.getInstance();
+        int width = renderer.getPreviousWidth(), height = renderer.getPreviousHeight();
+        if (width <= 0 || height <= 0) {
+            ensureFresh(data);
+            return;
+        }
+        int half = (int) Math.ceil(height * 0.39F) + 4;
+        int cx = width / 2, cy = height / 2;
+        ensurePart(data, new int[] {Math.max(0, cx - half), Math.max(0, cy - half), Math.min(width, cx + half), Math.min(height, cy + half)});
+    }
+
+    /** A band of a sky's picture brought up to date (all across it; from y0 to y1 of its height, from the bottom). */
+    public static void ensureBand(@Nullable SkyblockBatchData data, float y0, float y1) {
+        ComplexPassRenderer renderer = ComplexPassRenderer.getInstance();
+        int width = renderer.getPreviousWidth(), height = renderer.getPreviousHeight();
+        if (width <= 0 || height <= 0) {
+            ensureFresh(data);
+            return;
+        }
+        int margin = (int) Math.ceil(height * 0.04F) + 4;
+        ensurePart(data, new int[] {0, Math.max(0, (int) (height * y0) - margin), width, Math.min(height, (int) Math.ceil(height * y1) + margin)});
+    }
+
     // ---- Shadered's sky render types (items, ores... in the world): only where each batch is on screen ----
 
     /** Each of Shadered's sky render types, by the sky it shows (made on first use). */

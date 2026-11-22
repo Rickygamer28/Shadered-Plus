@@ -9,6 +9,9 @@ on:
       from:
         description: 'Render test: the first spot to shoot (0: all)'
         default: '0'
+      to:
+        description: 'Render test: the last spot to shoot (0: to the end)'
+        default: '0'
       runs:
         description: 'Render test: which runs (plain sodium shaders)'
         default: 'plain sodium shaders'
@@ -108,7 +111,7 @@ jobs:
             rm -f run/config/iris.properties
             [ $v = shaders ] && printf 'enableShaders=true\nshaderPack=%s\n' "$PACK" > run/config/iris.properties
             LIMIT=200; [ $v = shaders ] && LIMIT=500
-            (SKYBLOCKS_RENDER_TEST=$v SKYBLOCKS_RENDER_FROM=${{ inputs.from || '0' }} xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient $EXTRA --no-daemon > client_$v.log 2>&1 &)
+            (SKYBLOCKS_RENDER_TEST=$v SKYBLOCKS_RENDER_FROM=${{ inputs.from || '0' }} SKYBLOCKS_RENDER_TO=${{ inputs.to || '0' }} xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient $EXTRA --no-daemon > client_$v.log 2>&1 &)
             for i in $(seq 1 $LIMIT); do
               sleep 5
               if grep -qE "render test done|Crash report saved|BUILD FAILED" client_$v.log; then sleep 5; break; fi

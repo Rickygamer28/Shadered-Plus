@@ -35,7 +35,7 @@ public final class MirrorTiming {
     private static final Frame[] FRAMES = new Frame[RING];
     private static final List<Integer> FREE = new ArrayList<>();
     private static int current = -1;
-    private static boolean supported = true;
+    private static boolean supported = true, on;
     private static final double[] gpuMs = new double[COUNT], cpuMs = new double[COUNT];
     private static double passes, pictures;
     private static long lastSeen;
@@ -45,6 +45,9 @@ public final class MirrorTiming {
     private static final java.util.Map<String, double[]> KINDS = new java.util.HashMap<>();
 
     public static void blockEntity(String kind, long nanos) {
+        if (!on) {
+            return;
+        }
         double[] k = KINDS_NOW.computeIfAbsent(kind, x -> new double[2]);
         k[0] += nanos / 1.0e6;
         k[1]++;
@@ -55,7 +58,11 @@ public final class MirrorTiming {
 
     /** Start of a frame's mirrors: collect a frame from a few frames ago (its results are ready by now). */
     public static void beginFrame() {
-        if (!supported) {
+        // (timed only while it can be seen - F3 - or a test asks: the timer queries aren't free)
+        on = supported && (WorldTiming.force || net.minecraft.client.Minecraft.getInstance().getDebugOverlay().showDebugScreen());
+        if (!on) {
+            end();
+            current = -1;
             return;
         }
         try {

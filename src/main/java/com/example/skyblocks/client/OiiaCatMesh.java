@@ -138,10 +138,34 @@ final class OiiaCatMesh {
     }
 
     /** Skins the mesh with these bone matrices (by bone index: model space at rest -> posed) and draws it with this pose. */
+    /** Each bone with the pose put on it (and the pose's own normal turn): worked out once a draw, not per vertex. */
+    private Matrix4f[] posed = new Matrix4f[0];
+    private Matrix3f[] posedNor = new Matrix3f[0];
+
     void render(PoseStack.Pose pose, MultiBufferSource buffers, Matrix4f[] boneMats, int light, int overlay) {
+        int bones = boneMats.length;
+        if (posed.length < bones + 1) {
+            posed = new Matrix4f[bones + 1];
+            posedNor = new Matrix3f[bones + 1];
+            for (int b = 0; b <= bones; b++) {
+                posed[b] = new Matrix4f();
+                posedNor[b] = new Matrix3f();
+            }
+        }
+        // (slot 'bones': no bone - the pose alone)
+        Matrix4f pm = pose.pose();
+        Matrix3f pn = pose.normal();
+        for (int b = 0; b <= bones; b++) {
+            Matrix4f bm = b < bones ? boneMats[b] : null;
+            if (bm == null) {
+                posed[b].set(pm);
+                posedNor[b].set(pn);
+            } else {
+                pm.mul(bm, posed[b]);
+                pn.mul(bm.get3x3(posedNor[b]), posedNor[b]);
+            }
+        }
         int n = pos.length / 3;
-        Matrix4f m = new Matrix4f();
-        Matrix3f mn = new Matrix3f();
         for (int v = 0; v < n; v++) {
             float x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2];
             float nx = nor[v * 3], ny = nor[v * 3 + 1], nz = nor[v * 3 + 2];
@@ -152,22 +176,26 @@ final class OiiaCatMesh {
                     continue;
                 }
                 int j = joints[v * 4 + k];
-                Matrix4f bm = j < boneMats.length && boneMats[j] != null ? boneMats[j] : m.identity();
+                int slot = j < bones && j >= 0 && boneMats[j] != null ? j : bones;
+                Matrix4f bm = posed[slot];
+                Matrix3f bn = posedNor[slot];
                 ox += w * (bm.m00() * x + bm.m10() * y + bm.m20() * z + bm.m30());
                 oy += w * (bm.m01() * x + bm.m11() * y + bm.m21() * z + bm.m31());
                 oz += w * (bm.m02() * x + bm.m12() * y + bm.m22() * z + bm.m32());
-                onx += w * (bm.m00() * nx + bm.m10() * ny + bm.m20() * nz);
-                ony += w * (bm.m01() * nx + bm.m11() * ny + bm.m21() * nz);
-                onz += w * (bm.m02() * nx + bm.m12() * ny + bm.m22() * nz);
+                onx += w * (bn.m00() * nx + bn.m10() * ny + bn.m20() * nz);
+                ony += w * (bn.m01() * nx + bn.m11() * ny + bn.m21() * nz);
+                onz += w * (bn.m02() * nx + bn.m12() * ny + bn.m22() * nz);
                 total += w;
             }
             if (total < 0.01F) {
-                ox = x;
-                oy = y;
-                oz = z;
-                onx = nx;
-                ony = ny;
-                onz = nz;
+                Matrix4f bm = posed[bones];
+                Matrix3f bn = posedNor[bones];
+                ox = bm.m00() * x + bm.m10() * y + bm.m20() * z + bm.m30();
+                oy = bm.m01() * x + bm.m11() * y + bm.m21() * z + bm.m31();
+                oz = bm.m02() * x + bm.m12() * y + bm.m22() * z + bm.m32();
+                onx = bn.m00() * nx + bn.m10() * ny + bn.m20() * nz;
+                ony = bn.m01() * nx + bn.m11() * ny + bn.m21() * nz;
+                onz = bn.m02() * nx + bn.m12() * ny + bn.m22() * nz;
             } else if (total != 1.0F) {
                 ox /= total;
                 oy /= total;
@@ -189,15 +217,16 @@ final class OiiaCatMesh {
         VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
         for (int t = 0; t + 2 < indices.length; t += 3) {
             // (a triangle, as a quad with its last corner twice)
-            vertex(vc, pose, indices[t], light, overlay);
-            vertex(vc, pose, indices[t + 1], light, overlay);
-            vertex(vc, pose, indices[t + 2], light, overlay);
-            vertex(vc, pose, indices[t + 2], light, overlay);
+            vertex(vc, indices[t], light, overlay);
+            vertex(vc, indices[t + 1], light, overlay);
+            vertex(vc, indices[t + 2], light, overlay);
+            vertex(vc, indices[t + 2], light, overlay);
         }
     }
 
-    private void vertex(VertexConsumer vc, PoseStack.Pose pose, int v, int light, int overlay) {
-        vc.addVertex(pose, skinned[v * 3], skinned[v * 3 + 1], skinned[v * 3 + 2]).setColor(-1).setUv(uv[v * 2], uv[v * 2 + 1]).setOverlay(overlay)
-                .setLight(light).setNormal(pose, skinnedNor[v * 3], skinnedNor[v * 3 + 1], skinnedNor[v * 3 + 2]);
+    /** (already in the pose's space: skinned with it) */
+    private void vertex(VertexConsumer vc, int v, int light, int overlay) {
+        vc.addVertex(skinned[v * 3], skinned[v * 3 + 1], skinned[v * 3 + 2]).setColor(-1).setUv(uv[v * 2], uv[v * 2 + 1]).setOverlay(overlay)
+                .setLight(light).setNormal(skinnedNor[v * 3], skinnedNor[v * 3 + 1], skinnedNor[v * 3 + 2]);
     }
 }

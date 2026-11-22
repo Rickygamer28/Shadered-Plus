@@ -52,7 +52,8 @@ public class SpinPadRenderer implements BlockEntityRenderer<SpinPadBlockEntity> 
             return null;
         }
         try {
-            SkyUsage.ensureFresh(com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(com.noodlegamer76.shadered.client.util.SkyblockType.values()[index]));
+            // (the vortex shows only a band across the middle of the picture: spin_aura.fsh)
+            SkyUsage.ensureBand(com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(com.noodlegamer76.shadered.client.util.SkyblockType.values()[index]), 0.35F, 0.65F);
         } catch (RuntimeException ignored) {
             // (drawn as it is)
         }

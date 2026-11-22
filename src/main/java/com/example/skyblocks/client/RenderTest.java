@@ -40,6 +40,13 @@ public final class RenderTest {
     private static int stage = 0;
     /** The first spot to shoot (SKYBLOCKS_RENDER_FROM: to shoot just the newest; the shots keep their numbers). */
     private static final int FROM = Math.max(0, parseInt(System.getenv("SKYBLOCKS_RENDER_FROM")));
+    /** The last spot to shoot (SKYBLOCKS_RENDER_TO; 0 or none: to the end). */
+    private static final int TO = parseInt(System.getenv("SKYBLOCKS_RENDER_TO"));
+
+    /** How many spots this run goes up to. */
+    private static int end() {
+        return TO > 0 ? Math.min(TO + 1, spots().length) : spots().length;
+    }
 
     private static int parseInt(String s) {
         try {
@@ -818,7 +825,7 @@ public final class RenderTest {
                     }
                 }
                 default -> {
-                    if (stage >= 2 && stage < 2 + spots().length) {
+                    if (stage >= 2 && stage < 2 + end()) {
                         int spot = stage - 2;
                         if (ticks == 1 && "shaders".equals(TAG) && (spots()[spot].contains("burst ") || spots()[spot].startsWith("nobridge "))) {
                             stage++; // (with a shader pack the frames come slowly: no frame-by-frame spots)
@@ -1156,7 +1163,7 @@ public final class RenderTest {
                             stage++;
                             ticks = 0;
                         }
-                    } else if (stage == 2 + spots().length || stage == 99) {
+                    } else if (stage == 2 + end() || stage == 99) {
                         if (ticks == 60) {
                             SkyBlocksMod.LOGGER.info("Shadered+ render test done");
                             mc.stop();
