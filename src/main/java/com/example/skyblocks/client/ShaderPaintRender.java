@@ -126,7 +126,15 @@ public final class ShaderPaintRender {
                     pictureOf = ModRenderTypes.class.getDeclaredMethod("getSkyboxTextureId", SkyblockType.class);
                     pictureOf.setAccessible(true);
                 }
-                return (int) pictureOf.invoke(null, sky);
+                // (whoever binds it - sky paint, a lantern, a spin pad - has brought the part of the picture it shows up to
+                // date already: not asking for the whole picture every frame, as a sky item drawn anywhere does)
+                boolean was = SkyUsage.placeKnown;
+                SkyUsage.placeKnown = true;
+                try {
+                    return (int) pictureOf.invoke(null, sky);
+                } finally {
+                    SkyUsage.placeKnown = was;
+                }
             } catch (ReflectiveOperationException | RuntimeException e) {
                 return 0;
             }
