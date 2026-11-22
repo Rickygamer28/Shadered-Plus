@@ -32,14 +32,10 @@ public final class RenderTest {
     /** (the elevators: which to send up to floor 3 at tick 40 - -1 all, -2 none; and its screen opened) */
     private static int elevCall = -2;
     private static boolean elevUi, elevPress, elevJump;
-    /** (a train's seat to sit in - unit * 16 + seat - and the way to look once sat; -1 none) */
-    private static int rideKey = -1;
-    private static float rideYaw, ridePitch;
-    private static boolean trainUi;
     private static double elevLastY;
     private static int elevDrops;
 
-    public static final boolean ON = System.getenv("SKYBLOCKS_RENDER_TEST") != null;
+    static final boolean ON = System.getenv("SKYBLOCKS_RENDER_TEST") != null;
     private static final String TAG = System.getenv().getOrDefault("SKYBLOCKS_RENDER_TEST", "x");
     private static int stage = 0;
     /** The first spot to shoot (SKYBLOCKS_RENDER_FROM: to shoot just the newest; the shots keep their numbers). */
@@ -396,47 +392,6 @@ public final class RenderTest {
             "forceload add 934 -8 962 8",
             "setblock 940 -61 0 skyblocks:elevator_base{skin:0,size:5}", "setblock 949 -61 0 skyblocks:elevator_base{skin:3,size:2,cabin_height:2}",
             "setblock 955 -61 0 skyblocks:elevator_base{skin:1,size:1,cabin_height:4}",
-            // trains: a maglev (two cars) by a platform and its station, its line round a corner; a steam train beside it;
-            // track pieces (a slope, a corner) on their own
-            "forceload add 960 20 1046 60",
-            "fill 966 -60 30 1040 -60 30 skyblocks:train_rail[shape=east_west]", "setblock 1041 -60 30 skyblocks:train_rail[shape=north_west]",
-            "fill 1041 -60 29 1041 -60 22 skyblocks:train_rail[shape=north_south]",
-            "fill 1008 -60 32 1036 -60 33 minecraft:smooth_stone", "setblock 1022 -59 33 skyblocks:station{name:\"Central\"}",
-            "fill 966 -60 44 1040 -60 44 skyblocks:train_rail[shape=east_west]", "setblock 1020 -60 47 skyblocks:station{name:\"Old Town\"}",
-            "fill 1000 -60 55 1004 -60 55 skyblocks:train_rail[shape=east_west]", "setblock 1005 -60 55 skyblocks:train_rail[shape=ascending_east]",
-            "fill 1006 -59 55 1008 -59 55 skyblocks:train_rail[shape=east_west]", "fill 1006 -60 55 1008 -60 55 minecraft:stone",
-            "setblock 1011 -60 55 skyblocks:train_rail[shape=east_west]", "setblock 1010 -60 55 skyblocks:train_rail[shape=south_east]",
-            "setblock 1010 -60 56 skyblocks:train_rail[shape=north_south]",
-            "#train 1030 -60 30 0 2", "#train 1030 -60 44 1 2",
-            // smooth track: a straight, a long curve, a ramp up, a switch off the straight; a maglev on it, a station by it
-            "forceload add 928 60 1040 140",
-            "#track 940.5,-59.9,80.5 -90 1000.5,-59.9,80.5", "#track 1000.5,-59.9,80.5 0 1020.5,-59.9,100.5",
-            "#track 1020.5,-59.9,100.5 0 1020.5,-55.9,130.5", "#track 988.5,-59.9,80.5 0 1008.5,-59.9,72.5",
-            "fill 1018 -60 101 1022 -60 131 minecraft:air", "setblock 985 -60 83 skyblocks:station{name:\"Track Halt\"}",
-            "#trainat 996.5 -59.9 80.5 0 1", "setblock 1007 -60 70 skyblocks:station{name:\"Branch Halt\"}",
-            "#send 996 -60 80 1007 -60 70", "#order 996 -60 80", "setblock 1023 -56 128 skyblocks:station{name:\"Far End\"}",
-            // a ring line with three stations and a maglev going round it (TrainProbe)
-            "forceload add 928 150 1040 230",
-            "#track 960.5,-59.9,170.5 -90 1000.5,-59.9,170.5", "#track 1000.5,-59.9,170.5 0 1020.5,-59.9,190.5",
-            "#track 1020.5,-59.9,190.5 0 1000.5,-59.9,210.5", "#track 1000.5,-59.9,210.5 0 960.5,-59.9,210.5",
-            "#track 960.5,-59.9,210.5 0 940.5,-59.9,190.5", "#track 940.5,-59.9,190.5 0 960.5,-59.9,170.5",
-            "setblock 980 -60 173 skyblocks:station{name:\"Ring A\"}", "setblock 1023 -60 190 skyblocks:station{name:\"Ring B\"}",
-            "setblock 980 -60 213 skyblocks:station{name:\"Ring C\"}", "setblock 938 -60 190 skyblocks:station{name:\"Ring D\"}",
-            "#trainat 995.5 -59.9 170.5 0 2", "#probe 990 -60 170",
-            // signalling: a Y junction - two trains, the front one sent left, the one behind right; a single line, two
-            // trains sent through each other
-            "forceload add 912 236 1040 312",
-            "#track 920.5,-59.9,260.5 -90 960.5,-59.9,260.5", "#track 960.5,-59.9,260.5 -90 990.5,-59.9,260.5", "#track 990.5,-59.9,260.5 0 1020.5,-59.9,245.5",
-            "#track 990.5,-59.9,260.5 0 1020.5,-59.9,275.5",
-            "setblock 1018 -60 243 skyblocks:station{name:\"Left\"}", "setblock 1018 -60 278 skyblocks:station{name:\"Right\"}",
-            "#trainat 985.5 -59.9 260.5 0 1", "#trainat 957 -59.9 260.5 1 1",
-            "#watch front 979 -60 260", "#watch behind 951 -60 260",
-            "#send 979 -60 260 1018 -60 243", "#send 951 -60 260 1018 -60 277",
-            "#track 930.5,-59.9,300.5 -90 980.5,-59.9,300.5", "#track 980.5,-59.9,300.5 -90 1030.5,-59.9,300.5",
-            "setblock 1028 -60 303 skyblocks:station{name:\"East\"}", "setblock 933 -60 303 skyblocks:station{name:\"West\"}",
-            "#trainat 960.5 -59.9 300.5 0 1 0", "#trainat 975.5 -59.9 300.5 1 1 180",
-            "#watch eastbound 954 -60 300", "#watch westbound 981 -60 300",
-            "#send 954 -60 300 1028 -60 303", "#send 981 -60 300 933 -60 303",
             // a beam light pointed at a prism
             "fill 852 -60 -3 862 -56 -3 minecraft:stone_bricks", "setblock 856 -60 0 skyblocks:prism",
             "setblock 859 -60 2 skyblocks:beam_light[facing=up]{aim_yaw:-2.1588f,aim_pitch:0.0744f}",
@@ -730,7 +685,7 @@ public final class RenderTest {
             "catwalk 338.8 -59.6 1.4 0 18", "catwalk 340.6 -59.7 3.2 90 12", "holdphoto 333.5 -60 -3 0 8", "holdcamera 333.5 -60 -3 0 8", "356.5 -59.4 4.5 0 8", "night 356.5 -59.4 4.5 0 8", "334 -59.5 10.2 0 22", "331 -59.7 10.9 0 25", 
             "376 -58.3 8.8 180 22", "373.5 -59.35 5.4 180 12", "376.5 -59.35 5.4 180 15", "379.5 -59.1 4.4 180 32", "382.5 -57.6 5.6 180 12",
             "370.5 -59.2 4.6 180 30", "374.5 -59.45 7.0 180 4", "372 -59.6 6.2 200 18", "387.5 -59.2 4.2 180 8", "night 397.5 -58.5 3.3 180 25", "397 -58.2 3.3 160 10", "405.5 -58.6 3.4 180 18", "405.5 -59.2 3.6 180 28", "411.5 -58.6 3.4 180 18", 
-            "watch 7 open 270 -60 0 270.5 -58.6 -7 0 3", "watch 7 open 270 -60 0 270.5 -59.3 -1.1 0 52", "watch 7 open 270 -60 0 night 270.5 -58.6 -7 0 3", "418 -59.1 3.9 180 10", "416.5 -58.7 2.2 180 14", "419.5 -58.7 2.2 180 14", "418 -59.1 -2.9 0 10", "worn open 422 -60 0 422.5 -60 -1.6 0 15", "wornflat open 422 -60 0 422.5 -60 -1.6 0 15", "open 422 -60 0 422.5 -60 -1.6 0 15", "426.5 -59 2.6 180 24", "431.5 -58.8 2.9 180 20", "437.5 -59 2.4 180 22", "444.8 -59.3 2.8 180 24", "449.5 -59 2.6 180 38", "456.5 -59.2 3.4 180 5", "night 456.5 -59.2 3.4 180 5", "456.5 -59.2 3.4 180 -32", "464.5 -58.5 2.6 180 12", "464.5 -58.6 -3.4 0 8", "470 -59 2.6 160 32", "474 -59.2 1.7 180 38", "478.5 -58.6 1.5 180 0", "night 478.5 -58.6 1.5 180 0", "482.5 -58.3 2.6 180 42", "486.7 -59.4 2.7 180 6", "489.5 -59.4 2.7 180 6", "492.3 -59.4 2.7 180 6", "495.1 -59.4 2.7 180 6", "486.7 -59.3 6.7 180 6", "489.5 -59.3 6.7 180 6", "491.6 -59.3 6.3 180 6", "501.5 -59 3.5 180 55", "501.5 -59.4 3.0 180 25", "507.5 -59.3 3.0 180 5", "night 507.5 -59.3 3.0 180 5", "night 504.5 -59.3 2.0 135 5", "513.5 -59.5 1.4 180 30", "night 513.5 -59.5 1.4 180 30", "518.5 -58 10 180 -12", "night 518.5 -58 10 180 -12", "518.5 -54 24 180 -10", "524.5 -58.6 3.2 180 22", "530.5 -58.8 4.5 180 5", "night 530.5 -58.8 4.5 180 5", "537.5 -59.0 2.2 180 35", "night 513.5 -59 1.4 180 -89", "nomoon night 513.5 -59 1.4 180 -89", "544.5 -59.2 3.0 180 12", "550.5 -58.6 3.2 180 22", "557 -59.2 2.6 180 5", "560 -59.2 2.6 180 5", "563 -59.2 2.6 180 5", "566 -59.2 2.6 180 5", "569 -59.2 2.6 180 5", "572 -59.2 2.6 180 5", "575 -59.2 2.6 180 5", "578 -59.2 2.6 180 5", "581 -59.2 2.6 180 5", "584 -59.2 2.6 180 5", "587 -59.2 2.6 180 5", "590 -59.2 2.6 180 5", "593 -59.2 2.6 180 5", "584 -59.2 1.4 180 5", "569.3 -59.2 0.4 160 5", "557 -59 15.2 180 5", "560 -59 15.2 180 5", "563 -59 15.2 180 5", "566 -59 15.2 180 5", "569 -59 15.2 180 5", "572 -59 15.2 180 5", "575 -59 15.2 180 5", "579 -59 15.2 180 5", "582 -59 15.2 180 5", "585 -59 15.2 180 5", "592 -58.3 13 0 18", "night 592 -58.3 13 0 18", "590.5 -59.4 -6.2 180 12", "585 -59.2 -7.4 180 3", "nosun 590.5 -59 -8 180 -89", "590.5 -59 -8 180 -89", "595.5 -59.3 -4.6 180 12", "holdwand 595.5 -59.3 -4.6 180 12", "night 590.5 -58.8 -5.2 180 30", "605 -59.4 2.3 180 8", "609 -59.4 2.3 180 8", "night 607 -59.2 3.2 180 10", "618.5 -56.5 8.5 180 8", "night 618.5 -56.5 8.5 180 8", "630.5 -57.5 6.5 180 8", "night 630.5 -57.5 6.5 180 8", "638.5 -57.5 6.5 180 8", "coreui 618.5 -56.5 8.5 180 8", "616.5 -57.2 -1.5 315 5", "605.2 -59.3 1.3 200 15", "609.2 -59.3 1.3 200 15", "603 -57.5 -5 180 25", "padui 605.5 -58.4 -9.6 180 40", "655.5 -58.3 8.5 180 15", "655.5 -59.1 2.6 180 25", "668.5 -59.1 2.4 180 15", "680.5 -55 16 180 18", "night 680.5 -55 16 180 18", "680.5 -59.3 4.5 180 -55", "timeui 655.5 -58.3 8.5 180 15", "685.5 -57.2 2.5 180 40", "706.5 -57.5 6.5 135 12", "716.5 -57.5 6.5 135 12", "726.5 -57.5 6.5 135 12", "736.5 -57.5 6.5 135 12", "746.5 -57.5 6.5 135 12", "756.5 -57.5 6.5 135 12", "elevride 3 730.5 -60 0.5 180 25", "700.5 -60 1.3 180 18", "elevpress 700.76 -60 0.6 180 23.6", "elevjump 4 744 -59 4 135 20", "elevcall 721 -51 9 150 8", "elevui 706.5 -59 3.5 135 10", "766 -60.4 1.9 180 2", "790.5 -56.5 3.2 180 62", "800.5 -55.5 5.0 180 58", "night 790.5 -56.5 3.2 180 62", "765.5 -60.6 1.3 180 0", "482.5 -59.3 1.7 180 22", "night 832.5 -58.5 4.5 180 25", "night 842.5 -58 5.5 180 20", "night 842.5 -59.2 1.6 180 15", "832.5 -58.5 4.5 180 25", "night 856.5 -58.3 5.5 180 18", "night 860.2 -59.6 4.2 150 12", "856.5 -58.3 5.5 180 18", "morning 832.5 -57.5 5.5 180 25", "872.5 -58.5 3.5 180 15", "burn 879 -60 -3 879.5 -58.5 3.5 180 15", "night 879.5 -58.5 3.5 180 15", "echo 896 -57.5 10 180 22", "sonar night 911 -58 9 180 15", "night 730.5 -58.2 0.9 180 75", "night 700.5 -58.2 0.9 180 75", "947.5 -56.5 11 180 18", "940.5 -57 0.5 180 85", "1036 -55 38 135 15", "night 1036 -55 38 135 15", "1036 -55.5 52 135 15", "1016 -59 30.5 90 5", "1015.5 -59 34.5 180 10", "1022.5 -58 37 180 0", "1008 -57.5 59 195 40", "1025 -59 30.5 -90 10", "1003 -55 68 30 18", "1034 -52 114 115 22", "1003 -57 87 140 12", "ride 0 993 -59 80.5 -90 4", "ride 21 993 -59 80.5 -90 4", "third ride 0 993 -59 80.5 -125 18", "third ride 20 1010 -59 44 -60 15", "ride 22 1010 -59 44 -90 3", "third 1016 -59 30.5 120 15", "1018 -53 58 30 25", "trainui 1000 -59 76 0 0", "960 -50 70 -20 30", "walk 1000 -59 76 0 0", "carry 1000 -59 76 0 0", "990 -40 160 20 35", "1030 -45 230 150 35", "1010 -53 284 150 12", "985 -53 318 180 15"};
+            "watch 7 open 270 -60 0 270.5 -58.6 -7 0 3", "watch 7 open 270 -60 0 270.5 -59.3 -1.1 0 52", "watch 7 open 270 -60 0 night 270.5 -58.6 -7 0 3", "418 -59.1 3.9 180 10", "416.5 -58.7 2.2 180 14", "419.5 -58.7 2.2 180 14", "418 -59.1 -2.9 0 10", "worn open 422 -60 0 422.5 -60 -1.6 0 15", "wornflat open 422 -60 0 422.5 -60 -1.6 0 15", "open 422 -60 0 422.5 -60 -1.6 0 15", "426.5 -59 2.6 180 24", "431.5 -58.8 2.9 180 20", "437.5 -59 2.4 180 22", "444.8 -59.3 2.8 180 24", "449.5 -59 2.6 180 38", "456.5 -59.2 3.4 180 5", "night 456.5 -59.2 3.4 180 5", "456.5 -59.2 3.4 180 -32", "464.5 -58.5 2.6 180 12", "464.5 -58.6 -3.4 0 8", "470 -59 2.6 160 32", "474 -59.2 1.7 180 38", "478.5 -58.6 1.5 180 0", "night 478.5 -58.6 1.5 180 0", "482.5 -58.3 2.6 180 42", "486.7 -59.4 2.7 180 6", "489.5 -59.4 2.7 180 6", "492.3 -59.4 2.7 180 6", "495.1 -59.4 2.7 180 6", "486.7 -59.3 6.7 180 6", "489.5 -59.3 6.7 180 6", "491.6 -59.3 6.3 180 6", "501.5 -59 3.5 180 55", "501.5 -59.4 3.0 180 25", "507.5 -59.3 3.0 180 5", "night 507.5 -59.3 3.0 180 5", "night 504.5 -59.3 2.0 135 5", "513.5 -59.5 1.4 180 30", "night 513.5 -59.5 1.4 180 30", "518.5 -58 10 180 -12", "night 518.5 -58 10 180 -12", "518.5 -54 24 180 -10", "524.5 -58.6 3.2 180 22", "530.5 -58.8 4.5 180 5", "night 530.5 -58.8 4.5 180 5", "537.5 -59.0 2.2 180 35", "night 513.5 -59 1.4 180 -89", "nomoon night 513.5 -59 1.4 180 -89", "544.5 -59.2 3.0 180 12", "550.5 -58.6 3.2 180 22", "557 -59.2 2.6 180 5", "560 -59.2 2.6 180 5", "563 -59.2 2.6 180 5", "566 -59.2 2.6 180 5", "569 -59.2 2.6 180 5", "572 -59.2 2.6 180 5", "575 -59.2 2.6 180 5", "578 -59.2 2.6 180 5", "581 -59.2 2.6 180 5", "584 -59.2 2.6 180 5", "587 -59.2 2.6 180 5", "590 -59.2 2.6 180 5", "593 -59.2 2.6 180 5", "584 -59.2 1.4 180 5", "569.3 -59.2 0.4 160 5", "557 -59 15.2 180 5", "560 -59 15.2 180 5", "563 -59 15.2 180 5", "566 -59 15.2 180 5", "569 -59 15.2 180 5", "572 -59 15.2 180 5", "575 -59 15.2 180 5", "579 -59 15.2 180 5", "582 -59 15.2 180 5", "585 -59 15.2 180 5", "592 -58.3 13 0 18", "night 592 -58.3 13 0 18", "590.5 -59.4 -6.2 180 12", "585 -59.2 -7.4 180 3", "nosun 590.5 -59 -8 180 -89", "590.5 -59 -8 180 -89", "595.5 -59.3 -4.6 180 12", "holdwand 595.5 -59.3 -4.6 180 12", "night 590.5 -58.8 -5.2 180 30", "605 -59.4 2.3 180 8", "609 -59.4 2.3 180 8", "night 607 -59.2 3.2 180 10", "618.5 -56.5 8.5 180 8", "night 618.5 -56.5 8.5 180 8", "630.5 -57.5 6.5 180 8", "night 630.5 -57.5 6.5 180 8", "638.5 -57.5 6.5 180 8", "coreui 618.5 -56.5 8.5 180 8", "616.5 -57.2 -1.5 315 5", "605.2 -59.3 1.3 200 15", "609.2 -59.3 1.3 200 15", "603 -57.5 -5 180 25", "padui 605.5 -58.4 -9.6 180 40", "655.5 -58.3 8.5 180 15", "655.5 -59.1 2.6 180 25", "668.5 -59.1 2.4 180 15", "680.5 -55 16 180 18", "night 680.5 -55 16 180 18", "680.5 -59.3 4.5 180 -55", "timeui 655.5 -58.3 8.5 180 15", "685.5 -57.2 2.5 180 40", "706.5 -57.5 6.5 135 12", "716.5 -57.5 6.5 135 12", "726.5 -57.5 6.5 135 12", "736.5 -57.5 6.5 135 12", "746.5 -57.5 6.5 135 12", "756.5 -57.5 6.5 135 12", "elevride 3 730.5 -60 0.5 180 25", "700.5 -60 1.3 180 18", "elevpress 700.76 -60 0.6 180 23.6", "elevjump 4 744 -59 4 135 20", "elevcall 721 -51 9 150 8", "elevui 706.5 -59 3.5 135 10", "766 -60.4 1.9 180 2", "790.5 -56.5 3.2 180 62", "800.5 -55.5 5.0 180 58", "night 790.5 -56.5 3.2 180 62", "765.5 -60.6 1.3 180 0", "482.5 -59.3 1.7 180 22", "night 832.5 -58.5 4.5 180 25", "night 842.5 -58 5.5 180 20", "night 842.5 -59.2 1.6 180 15", "832.5 -58.5 4.5 180 25", "night 856.5 -58.3 5.5 180 18", "night 860.2 -59.6 4.2 150 12", "856.5 -58.3 5.5 180 18", "morning 832.5 -57.5 5.5 180 25", "872.5 -58.5 3.5 180 15", "burn 879 -60 -3 879.5 -58.5 3.5 180 15", "night 879.5 -58.5 3.5 180 15", "echo 896 -57.5 10 180 22", "sonar night 911 -58 9 180 15", "night 730.5 -58.2 0.9 180 75", "night 700.5 -58.2 0.9 180 75", "947.5 -56.5 11 180 18", "940.5 -57 0.5 180 85"};
 
     private static boolean burst, moving, burstOn;
     private static int burstFrame;
@@ -779,121 +734,11 @@ public final class RenderTest {
         });
     }
 
-    private static com.example.skyblocks.TrackPayloads.Spec spec(com.example.skyblocks.TrackNetwork tn, String at, float yaw) {
-        String[] c = at.split(",");
-        net.minecraft.world.phys.Vec3 p = new net.minecraft.world.phys.Vec3(Double.parseDouble(c[0]), Double.parseDouble(c[1]), Double.parseDouble(c[2]));
-        com.example.skyblocks.TrackNetwork.Node n = tn.nearestNode(p, 0.6);
-        if (n != null) {
-            return new com.example.skyblocks.TrackPayloads.Spec(1, n.id, 0, n.pos, n.dir);
-        }
-        com.example.skyblocks.TrackNetwork.Near near = tn.nearest(p, 0.6);
-        if (near != null) {
-            return new com.example.skyblocks.TrackPayloads.Spec(2, near.seg().id, near.index(), near.seg().pts[near.index()], near.seg().tan[near.index()]);
-        }
-        float r = yaw * net.minecraft.util.Mth.DEG_TO_RAD;
-        return new com.example.skyblocks.TrackPayloads.Spec(0, 0, 0, p, new net.minecraft.world.phys.Vec3(-net.minecraft.util.Mth.sin(r), 0, net.minecraft.util.Mth.cos(r)));
-    }
-
-    private static com.example.skyblocks.TrackNetwork.End end(com.example.skyblocks.TrackNetwork tn, com.example.skyblocks.TrackPayloads.Spec s, int side,
-            net.minecraft.world.phys.Vec3 p, net.minecraft.world.phys.Vec3 d) {
-        if (s.type() == 1) {
-            return new com.example.skyblocks.TrackNetwork.End(tn.nodes.get(s.id()), side, p, d);
-        }
-        if (s.type() == 2) {
-            return new com.example.skyblocks.TrackNetwork.End(tn.split(tn.segs.get(s.id()), s.index()), side, p, d);
-        }
-        return new com.example.skyblocks.TrackNetwork.End(null, 0, p, d);
-    }
-
     /**
      * Scene steps no command can do. "#photo x y z facing standing": a framed photo (a test picture).
      */
     private static void special(MinecraftServer server, String[] a) {
         net.minecraft.server.level.ServerLevel lvl = server.overworld();
-        if (a[0].equals("#track")) {
-            // "#track x,y,z yaw x,y,z [s]": a piece of smooth track (an end on track there already snaps to it)
-            com.example.skyblocks.TrackNetwork net = com.example.skyblocks.TrackNetwork.of(lvl);
-            com.example.skyblocks.TrackPayloads.Spec p = spec(net, a[1], Float.parseFloat(a[2])), q = spec(net, a[3], 0);
-            com.example.skyblocks.TrackPayloads.Resolved r = com.example.skyblocks.TrackPayloads.resolve(net, p, q, a.length > 4);
-            if (r == null || r.plan().problem() != null) {
-                SkyBlocksMod.LOGGER.warn("Shadered+ render test: track {} -> {}: {}", a[1], a[3], r == null ? "unresolved" : r.plan().problem());
-                return;
-            }
-            net.build(end(net, p, r.side0(), r.p0(), r.d0()), end(net, q, r.side3(), r.p3(), r.d1()));
-            com.example.skyblocks.TrackPayloads.send(lvl);
-            return;
-        }
-        if (a[0].equals("#probe")) {
-            // "#probe x y z": the train nearest there tested going round its loop, then driven (TrainProbe)
-            TrainProbe.startLoop(new net.minecraft.world.phys.Vec3(Double.parseDouble(a[1]), Double.parseDouble(a[2]), Double.parseDouble(a[3])));
-            return;
-        }
-        if (a[0].equals("#order")) {
-            // "#order x y z": the train nearest there given its loop order, worked out
-            net.minecraft.world.phys.Vec3 at = new net.minecraft.world.phys.Vec3(Double.parseDouble(a[1]), Double.parseDouble(a[2]), Double.parseDouble(a[3]));
-            for (com.example.skyblocks.TrainEntity t : lvl.getEntitiesOfClass(com.example.skyblocks.TrainEntity.class, new net.minecraft.world.phys.AABB(at, at).inflate(30))) {
-                t.setOrder(t.defaultOrder(), false);
-            }
-            return;
-        }
-        if (a[0].equals("#skip")) {
-            // "#skip x y z sx sy sz": the train nearest x y z passes the station at sx sy sz by, going round
-            net.minecraft.world.phys.Vec3 at = new net.minecraft.world.phys.Vec3(Double.parseDouble(a[1]), Double.parseDouble(a[2]), Double.parseDouble(a[3]));
-            for (com.example.skyblocks.TrainEntity t : lvl.getEntitiesOfClass(com.example.skyblocks.TrainEntity.class, new net.minecraft.world.phys.AABB(at, at).inflate(8))) {
-                t.setSkip(new net.minecraft.core.BlockPos(Integer.parseInt(a[4]), Integer.parseInt(a[5]), Integer.parseInt(a[6])), true);
-            }
-            return;
-        }
-        if (a[0].equals("#send")) {
-            // "#send x y z sx sy sz": the train nearest x y z sent to the station at sx sy sz (switches set for it)
-            net.minecraft.world.phys.Vec3 at = new net.minecraft.world.phys.Vec3(Double.parseDouble(a[1]), Double.parseDouble(a[2]), Double.parseDouble(a[3]));
-            net.minecraft.core.BlockPos st = new net.minecraft.core.BlockPos(Integer.parseInt(a[4]), Integer.parseInt(a[5]), Integer.parseInt(a[6]));
-            lvl.getServer().tell(new net.minecraft.server.TickTask(lvl.getServer().getTickCount() + 20, () -> {
-                com.example.skyblocks.TrainEntity best = null;
-                for (com.example.skyblocks.TrainEntity t : lvl.getEntitiesOfClass(com.example.skyblocks.TrainEntity.class, new net.minecraft.world.phys.AABB(at, at).inflate(64))) {
-                    if (best == null || t.distanceToSqr(at) < best.distanceToSqr(at)) {
-                        best = t;
-                    }
-                }
-                com.example.skyblocks.TrainEntity.whyNot = best == null ? "no train near" : "";
-                boolean ok = best != null && best.goTo(st);
-                SkyBlocksMod.LOGGER.info("Shadered+ render test: send to {}: {} {} waiting {} (train at {})", st, ok, com.example.skyblocks.TrainEntity.whyNot,
-                        best != null && best.waiting(), best == null ? "-" : best.at(best.head(0)));
-            }));
-            return;
-        }
-        if (a[0].equals("#trainat")) {
-            // "#trainat x y z style cars": a train put on smooth track there, facing +x
-            net.minecraft.world.phys.Vec3 at = new net.minecraft.world.phys.Vec3(Double.parseDouble(a[1]), Double.parseDouble(a[2]), Double.parseDouble(a[3]));
-            com.example.skyblocks.TrainEntity t = com.example.skyblocks.ModEntities.TRAIN.get().create(lvl);
-            if (t != null) {
-                t.setStyle(Integer.parseInt(a[4]));
-                t.setCars(Integer.parseInt(a[5]));
-                t.setPos(at);
-                float yaw = a.length > 6 ? Float.parseFloat(a[6]) * net.minecraft.util.Mth.DEG_TO_RAD : 0.0F;
-                t.placeAt(at, new net.minecraft.world.phys.Vec3(net.minecraft.util.Mth.cos(yaw), 0, net.minecraft.util.Mth.sin(yaw)));
-                lvl.addFreshEntity(t);
-            }
-            return;
-        }
-        if (a[0].equals("#watch")) {
-            // "#watch name x y z": the train nearest there written to the log as it goes (TrainProbe)
-            TrainProbe.watch(lvl, a[1], new net.minecraft.world.phys.Vec3(Double.parseDouble(a[2]), Double.parseDouble(a[3]), Double.parseDouble(a[4])));
-            return;
-        }
-        if (a[0].equals("#train")) {
-            // "#train x y z style cars": a train put on the rail there
-            net.minecraft.core.BlockPos at = new net.minecraft.core.BlockPos(Integer.parseInt(a[1]), Integer.parseInt(a[2]), Integer.parseInt(a[3]));
-            com.example.skyblocks.TrainEntity t = com.example.skyblocks.ModEntities.TRAIN.get().create(lvl);
-            if (t != null) {
-                t.setStyle(Integer.parseInt(a[4]));
-                t.setCars(Integer.parseInt(a[5]));
-                t.setPos(at.getCenter());
-                t.placeAt(at, new net.minecraft.world.phys.Vec3(1, 0, 0));
-                lvl.addFreshEntity(t);
-            }
-            return;
-        }
         if (a[0].equals("#photo")) {
             int w = com.example.skyblocks.PhotoStore.W, h = com.example.skyblocks.PhotoStore.H;
             int[] rgb = new int[w * h];
@@ -1190,36 +1035,6 @@ public final class RenderTest {
                                 burnAt = new net.minecraft.core.BlockPos(Integer.parseInt(w[1]), Integer.parseInt(w[2]), Integer.parseInt(w[3]));
                                 where = String.join(" ", java.util.Arrays.copyOfRange(w, 4, w.length));
                             }
-                            trainUi = where.startsWith("trainui ");
-                            if (trainUi) {
-                                where = where.substring(8);
-                                mc.options.hideGui = false;
-                            } else if (mc.screen instanceof TrainScreen) {
-                                mc.setScreen(null);
-                            }
-                            if (where.startsWith("walk ")) {
-                                where = where.substring(5);
-                                TrainProbe.walk = 0;
-                            }
-                            if (where.startsWith("carry ")) {
-                                where = where.substring(6);
-                                TrainProbe.carry = 0;
-                            }
-                            boolean third = where.startsWith("third ");
-                            if (third) {
-                                where = where.substring(6);
-                            }
-                            mc.options.setCameraType(third ? net.minecraft.client.CameraType.THIRD_PERSON_BACK : net.minecraft.client.CameraType.FIRST_PERSON);
-                            rideKey = -1;
-                            run(mc.getSingleplayerServer(), "ride @a dismount");
-                            if (where.startsWith("ride ")) {
-                                String[] w = where.split(" ", 3);
-                                rideKey = Integer.parseInt(w[1]);
-                                where = w[2];
-                                String[] c = where.trim().split(" ");
-                                rideYaw = Float.parseFloat(c[c.length - 2]);
-                                ridePitch = Float.parseFloat(c[c.length - 1]);
-                            }
                             sonarTest = where.startsWith("sonar ");
                             if (sonarTest) {
                                 where = where.substring(6);
@@ -1258,39 +1073,6 @@ public final class RenderTest {
                             }
                             run(mc.getSingleplayerServer(), "tp @a " + where);
                             mc.setScreen(null);
-                        }
-                        if (ticks == 45 && trainUi && mc.player != null) {
-                            com.example.skyblocks.TrainEntity best = null;
-                            for (com.example.skyblocks.TrainEntity t : com.example.skyblocks.TrainEntity.CLIENT) {
-                                if (best == null || t.distanceToSqr(mc.player) < best.distanceToSqr(mc.player)) {
-                                    best = t;
-                                }
-                            }
-                            if (best != null) {
-                                TrainScreen.open(best);
-                            }
-                        }
-                        if (ticks == 30 && rideKey >= 0) {
-                            int key = rideKey;
-                            net.minecraft.server.MinecraftServer server = mc.getSingleplayerServer();
-                            server.execute(() -> {
-                                net.minecraft.server.level.ServerPlayer sp = server.getPlayerList().getPlayers().get(0);
-                                com.example.skyblocks.TrainEntity best = null;
-                                for (com.example.skyblocks.TrainEntity t : sp.serverLevel().getEntitiesOfClass(com.example.skyblocks.TrainEntity.class, sp.getBoundingBox().inflate(80))) {
-                                    if (best == null || t.distanceToSqr(sp) < best.distanceToSqr(sp)) {
-                                        best = t;
-                                    }
-                                }
-                                if (best != null) {
-                                    best.sit(sp, key);
-                                }
-                            });
-                        }
-                        if (ticks >= 36 && ticks < 99 && rideKey >= 0 && mc.player != null) {
-                            mc.player.setYRot(rideYaw);
-                            mc.player.setXRot(ridePitch);
-                            mc.player.yRotO = rideYaw;
-                            mc.player.xRotO = ridePitch;
                         }
                         if (ticks == 90 && burnAt != null) {
                             run(mc.getSingleplayerServer(), "setblock " + burnAt.getX() + " " + burnAt.getY() + " " + burnAt.getZ() + " minecraft:redstone_block");

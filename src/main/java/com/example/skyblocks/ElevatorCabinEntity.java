@@ -268,7 +268,7 @@ public class ElevatorCabinEntity extends Entity {
     private static boolean noField;
 
     /** A player standing on a moving cabin isn't kicked for flying (their time off the ground counted again from 0). */
-    static void notFlying(net.minecraft.server.level.ServerPlayer sp) {
+    private static void notFlying(net.minecraft.server.level.ServerPlayer sp) {
         if (noField) {
             return;
         }

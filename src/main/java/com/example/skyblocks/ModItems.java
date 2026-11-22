@@ -200,10 +200,6 @@ public final class ModItems {
             new net.minecraft.world.item.Item.Properties().fireResistant());
     public static final DeferredItem<BlockItem> ELEVATOR_BASE = ITEMS.registerSimpleBlockItem("elevator_base", ModBlocks.ELEVATOR_BASE);
     public static final DeferredItem<BlockItem> ELEVATOR_PANEL = ITEMS.registerSimpleBlockItem("elevator_panel", ModBlocks.ELEVATOR_PANEL);
-    public static final DeferredItem<BlockItem> TRAIN_RAIL = ITEMS.registerSimpleBlockItem("train_rail", ModBlocks.TRAIN_RAIL);
-    public static final DeferredItem<BlockItem> STATION = ITEMS.registerSimpleBlockItem("station", ModBlocks.STATION);
-    public static final DeferredItem<TrackToolItem> TRACK_TOOL = ITEMS.register("track_tool", () -> new TrackToolItem(new Item.Properties().stacksTo(1)));
-    public static final DeferredItem<TrainItem> TRAIN = ITEMS.register("train", () -> new TrainItem(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<BlockItem> HOURGLASS = ITEMS.registerSimpleBlockItem("hourglass", ModBlocks.HOURGLASS);
     public static final DeferredItem<MagicChalkItem> MAGIC_CHALK = ITEMS.register("magic_chalk", () -> new MagicChalkItem(new Item.Properties().durability(160)));
 

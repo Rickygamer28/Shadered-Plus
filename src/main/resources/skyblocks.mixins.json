@@ -8,8 +8,7 @@
     "SkyblockItemTypesMixin",
     "SkyblockRegistryMixin",
     "SkyblockTypeInvoker",
-    "SkyblockTypeMixin",
-    "TrainCollideMixin"
+    "SkyblockTypeMixin"
   ],
   "client": [
     "AssimpRendererBonesMixin",
@@ -36,8 +35,7 @@
     "SkyRenderTypeDrawMixin",
     "SkyboxSeamMixin",
     "SonarColourMixin",
-    "SonarGlowMixin",
-    "CameraTrainMixin"
+    "SonarGlowMixin"
   ],
   "injectors": {
     "defaultRequire": 1

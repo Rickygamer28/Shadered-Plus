@@ -87,7 +87,6 @@ public final class IrisDefer {
                 || be.getBlockState().getBlock() instanceof com.example.skyblocks.MoonJarBlock
                 || be.getBlockState().getBlock() instanceof com.example.skyblocks.SunJarBlock
                 || be instanceof com.example.skyblocks.TimeCrystalBlockEntity
-                || be instanceof com.example.skyblocks.StationBlockEntity
                 || be instanceof com.example.skyblocks.ElevatorBaseBlockEntity
                 || be instanceof com.example.skyblocks.HourglassBlockEntity
                 || be.getBlockState().getBlock() instanceof com.example.skyblocks.PrismBlock
@@ -107,15 +106,6 @@ public final class IrisDefer {
                 LevelRenderer.getLightColor(be.getLevel(), be.getBlockPos())));
     }
 
-    /** Something else drawn over the pack's image with the block entities (trains: client/TrainRenderer), now camera-relative. */
-    private static final List<Runnable> EXTRA = new ArrayList<>();
-
-    public static void extra(Runnable draw) {
-        if (!drawing && IrisCompat.shaderPackInUse() && !IrisCompat.renderingShadowPass() && EXTRA.size() < 256) {
-            EXTRA.add(draw);
-        }
-    }
-
     /** Whether the noted-down ones are being drawn now (in the cats' target). */
     public static boolean drawing() {
         return drawing;
@@ -123,13 +113,11 @@ public final class IrisDefer {
 
     @SubscribeEvent
     public static void onStage(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES || (JOBS.isEmpty() && EXTRA.isEmpty())) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES || JOBS.isEmpty()) {
             return;
         }
         List<Job> jobs = new ArrayList<>(JOBS);
         JOBS.clear();
-        List<Runnable> extra = new ArrayList<>(EXTRA);
-        EXTRA.clear();
         if (!IrisCompat.shaderPackInUse()) {
             return;
         }
@@ -149,16 +137,6 @@ public final class IrisDefer {
                 RenderSystem.setProjectionMatrix(projection, VertexSorting.DISTANCE_TO_ORIGIN);
                 stack.set(view);
                 RenderSystem.applyModelViewMatrix();
-                for (Runnable r : extra) {
-                    try {
-                        r.run();
-                    } catch (RuntimeException e) {
-                        warnOnce(e);
-                    }
-                    RenderSystem.enableDepthTest();
-                    RenderSystem.depthMask(true);
-                    RenderSystem.enableCull();
-                }
                 for (Job job : jobs) {
                     if (job.be().isRemoved()) {
                         continue;
