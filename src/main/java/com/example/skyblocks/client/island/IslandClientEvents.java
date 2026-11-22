@@ -33,7 +33,13 @@ public final class IslandClientEvents {
                 for (IslandView view : new ArrayList<>(IslandView.LIVE)) {
                     view.close();
                 }
+                IslandView.forgetShared();
             }
+        }
+
+        @SubscribeEvent
+        public static void onFrame(net.neoforged.neoforge.client.event.RenderFrameEvent.Pre event) {
+            IslandView.nextFrame();
         }
 
         private GameBus() {}

@@ -486,13 +486,100 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
 
     IslandMesh mesh() {
         if (mesh == null || meshGeneration != generation) {
-            if (mesh != null) {
-                mesh.close();
+            release();
+            Shared shared = shareable() ? SHARED.get(source) : null;
+            if (shared != null && shared.generation == generation) {
+                shared.users++;
+                mesh = shared.mesh;
+                sharedMesh = shared;
+            } else {
+                builtFrame = frame;
+                mesh = IslandMesh.build(this);
+                if (shareable()) {
+                    if (shared != null && shared.users <= 0) {
+                        shared.mesh.close();
+                    }
+                    sharedMesh = new Shared(mesh, generation);
+                    SHARED.put(source, sharedMesh);
+                }
             }
-            mesh = IslandMesh.build(this);
             meshGeneration = generation;
         }
         return mesh;
+    }
+
+    /**
+     * Whether mesh() is ready without baking: baked already, or another view of the same island has it. (Baking an
+     * island takes a while - 20 ms or so - so only one is baked a frame: the others show up a frame or two later, not
+     * all at once in one long stutter.)
+     */
+    boolean meshReady() {
+        if (mesh != null && meshGeneration == generation) {
+            return true;
+        }
+        Shared shared = shareable() ? SHARED.get(source) : null;
+        return shared != null && shared.generation == generation;
+    }
+
+    /** Whether an island may be baked now (none has been yet this frame). */
+    static boolean mayBake() {
+        return builtFrame != frame;
+    }
+
+    /** A new frame (IslandClientEvents): one more island may be baked. */
+    static void nextFrame() {
+        frame++;
+    }
+
+    private static long frame, builtFrame = -1;
+
+    /**
+     * Islands' baked blocks, shared by every view of the same island (the pedestals and paintings showing it: they're
+     * baked the same, from the island alone) - baked once, not once each.
+     */
+    private static final class Shared {
+        final IslandMesh mesh;
+        final int generation;
+        int users = 1;
+
+        Shared(IslandMesh mesh, int generation) {
+            this.mesh = mesh;
+            this.generation = generation;
+        }
+    }
+
+    private static final Map<IslandData, Shared> SHARED = new java.util.HashMap<>();
+    @Nullable
+    private Shared sharedMesh;
+
+    /** (a view cut to a shape - in a globe - bakes its own) */
+    private boolean shareable() {
+        return source != null && clip == null && cutR <= 0.0F;
+    }
+
+    /** Lets go of this view's mesh (freed once nothing uses it). */
+    private void release() {
+        if (mesh == null) {
+            return;
+        }
+        if (sharedMesh != null) {
+            if (--sharedMesh.users <= 0) {
+                sharedMesh.mesh.close();
+                SHARED.values().remove(sharedMesh);
+            }
+            sharedMesh = null;
+        } else {
+            mesh.close();
+        }
+        mesh = null;
+    }
+
+    /** Every shared mesh let go (the world unloads). */
+    static void forgetShared() {
+        for (Shared shared : SHARED.values()) {
+            shared.mesh.close();
+        }
+        SHARED.clear();
     }
 
     // ---- mobs ----
@@ -855,10 +942,7 @@ public final class IslandView implements BlockAndTintGetter, AutoCloseable {
 
     @Override
     public void close() {
-        if (mesh != null) {
-            mesh.close();
-            mesh = null;
-        }
+        release();
         LIVE.remove(this);
     }
 }

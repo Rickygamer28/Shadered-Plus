@@ -99,6 +99,13 @@ public class SkyIslandRenderer implements BlockEntityRenderer<SkyIslandBlockEnti
                 return;
             }
         }
+        if (!view.meshReady() && !IslandView.mayBake()) {
+            // (another island was baked this frame: this one next frame - not all at once, in one long stutter)
+            if (painting) {
+                IslandWindow.render(null, null, be.background(), be.rotation(), state.getValue(IslandPaintingBlock.FACING), width, height, poseStack, partialTick, packedLight, 0, 0, false);
+            }
+            return;
+        }
         IslandMesh mesh;
         try {
             long started = System.nanoTime();
