@@ -67,7 +67,7 @@ public class SkyStudioRenderer implements BlockEntityRenderer<SkyStudioBlockEnti
         // ---- the tilted panel: its frame, then the screen ----
         ps.pushPose();
         ps.translate(0.0F, 11.0F / 16.0F, 0.0F);
-        ps.mulPose(Axis.XP.rotationDegrees(22.5F)); // (as the model's bezel: block/sky_studio.json)
+        ps.mulPose(Axis.XP.rotationDegrees(-22.5F)); // (as the model's bezel: block/sky_studio.json)
         VertexConsumer solid = buffers.getBuffer(RenderType.entityCutout(WHITE));
         // (four little lights along the bezel's front edge)
         for (int i = 0; i < 4; i++) {

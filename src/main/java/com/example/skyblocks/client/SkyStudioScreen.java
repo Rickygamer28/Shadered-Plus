@@ -395,8 +395,9 @@ public class SkyStudioScreen extends Screen {
                 }
             }
         }
-        if (helpY + 30 < y0 + h) {
-            g.drawWordWrap(font, Component.translatable("screen.skyblocks.studio.help"), px0, helpY, px1 - px0, DIM);
+        Component help = Component.translatable("screen.skyblocks.studio.help");
+        if (helpY + font.split(help, px1 - px0).size() * 9 <= y0 + h - 4) {
+            g.drawWordWrap(font, help, px0, helpY, px1 - px0, DIM);
         }
         if (layerScroll > 0 || maxLayerScroll() > layerScroll) {
             g.drawString(font, "↕", x0 + 118, layerBottom - 10, DIM, false);
