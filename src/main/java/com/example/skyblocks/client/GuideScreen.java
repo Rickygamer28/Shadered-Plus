@@ -111,7 +111,8 @@ public class GuideScreen extends Screen {
                 String id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
                 String key = "guide.skyblocks." + id;
                 if (!I18n.exists(key)) {
-                    key = id.endsWith("_bucket") ? "guide.skyblocks.sky_liquid" : id.endsWith("_sky_block") ? "guide.skyblocks.sky_block" : null;
+                    key = id.endsWith("_bucket") ? "guide.skyblocks.sky_liquid" : id.endsWith("_sky_block") ? "guide.skyblocks.sky_block"
+                            : stack.getItem() instanceof com.example.skyblocks.ModSkyShapes.ShapeItem ? "guide.skyblocks.sky_shapes" : null;
                 }
                 if (key != null) {
                     text(out, Component.translatable(key), INK);

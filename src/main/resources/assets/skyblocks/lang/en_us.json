@@ -1146,5 +1146,12 @@
   "screen.skyblocks.elevator.size": "Size (now %s)",
   "screen.skyblocks.elevator.size.auto": "Fit",
   "screen.skyblocks.elevator.height": "Cabin height",
-  "screen.skyblocks.elevator.height.blocks": "%s blocks"
+  "screen.skyblocks.elevator.height.blocks": "%s blocks",
+  "block.skyblocks.sky_stairs": "%s Stairs",
+  "block.skyblocks.sky_slab": "%s Slab",
+  "block.skyblocks.sky_wall": "%s Wall",
+  "block.skyblocks.sky_pane": "%s Pane",
+  "block.skyblocks.sky_carpet": "%s Carpet",
+  "block.skyblocks.sky_button": "%s Button",
+  "guide.skyblocks.sky_shapes": "Every sky also comes as stairs, slabs, walls, panes, carpets and buttons. Craft them like the stone ones from that sky’s blocks: a pane is a sky block ringed by 8 glass panes, a button a sky block and a stone button."
 }

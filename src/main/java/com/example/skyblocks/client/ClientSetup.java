@@ -188,6 +188,23 @@ public final class ClientSetup {
                 com.mojang.blaze3d.systems.RenderSystem.setShaderFogEnd(24.0F);
             }
         };
+        // Sky Shapes' items: their shape, showing their sky
+        IClientItemExtensions shapeLook = new IClientItemExtensions() {
+            private SkyShapeItemRenderer renderer;
+
+            @Override
+            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (renderer == null) {
+                    renderer = new SkyShapeItemRenderer();
+                }
+                return renderer;
+            }
+        };
+        for (com.example.skyblocks.ModSkyShapes.Shapes shapes : com.example.skyblocks.ModSkyShapes.ALL) {
+            for (var item : shapes.items.values()) {
+                event.registerItem(shapeLook, item.get());
+            }
+        }
         for (com.example.skyblocks.ModFluids.SkyLiquid liquid : com.example.skyblocks.ModFluids.ALL) {
             event.registerFluidType(liquidLook, liquid.type.get());
             final com.noodlegamer76.shadered.client.util.SkyblockType sky = liquid.sky;
@@ -376,6 +393,14 @@ public final class ClientSetup {
             net.minecraft.client.resources.model.ModelResourceLocation.standalone(
                     net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "block/sky_liquid"));
 
+    /** The shared models of the Sky Shapes (ModSkyShapes): a sky added later, without model files, falls back to these. */
+    private static final net.minecraft.client.resources.model.ModelResourceLocation SHAPE_ITEM_MODEL =
+            net.minecraft.client.resources.model.ModelResourceLocation.standalone(
+                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "item/sky_shape"));
+    private static final net.minecraft.client.resources.model.ModelResourceLocation SHAPE_MODEL =
+            net.minecraft.client.resources.model.ModelResourceLocation.standalone(
+                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "block/sky_shape"));
+
     private static final net.minecraft.client.resources.model.ModelResourceLocation CAUSTICS_OVERLAY =
             net.minecraft.client.resources.model.ModelResourceLocation.standalone(
                     net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "block/water_caustics_overlay"));
@@ -388,6 +413,8 @@ public final class ClientSetup {
     public static void registerModels(net.neoforged.neoforge.client.event.ModelEvent.RegisterAdditional event) {
         event.register(BUCKET_MODEL);
         event.register(LIQUID_MODEL);
+        event.register(SHAPE_ITEM_MODEL);
+        event.register(SHAPE_MODEL);
         event.register(CAUSTICS_OVERLAY);
         event.register(RAIN_OVERLAY);
         event.register(BambooSpoutRenderer.TUBE);
@@ -633,6 +660,27 @@ public final class ClientSetup {
         net.minecraft.client.resources.model.BakedModel missing = models.get(net.minecraft.client.resources.model.ModelBakery.MISSING_MODEL_VARIANT);
         net.minecraft.client.resources.model.BakedModel bucket = models.get(BUCKET_MODEL);
         net.minecraft.client.resources.model.BakedModel liquidModel = models.get(LIQUID_MODEL);
+        net.minecraft.client.resources.model.BakedModel shapeItem = models.get(SHAPE_ITEM_MODEL);
+        net.minecraft.client.resources.model.BakedModel shapeModel = models.get(SHAPE_MODEL);
+        for (com.example.skyblocks.ModSkyShapes.Shapes shapes : com.example.skyblocks.ModSkyShapes.ALL) {
+            for (var item : shapes.items.values()) {
+                var key = net.minecraft.client.resources.model.ModelResourceLocation.inventory(item.getId());
+                if (shapeItem != null && (models.get(key) == null || models.get(key) == missing)) {
+                    models.put(key, shapeItem);
+                }
+            }
+            for (var block : shapes.blocks.values()) {
+                if (shapeModel == null) {
+                    break;
+                }
+                for (net.minecraft.world.level.block.state.BlockState state : block.get().getStateDefinition().getPossibleStates()) {
+                    var key = net.minecraft.client.renderer.block.BlockModelShaper.stateToModelLocation(state);
+                    if (models.get(key) == null || models.get(key) == missing) {
+                        models.put(key, shapeModel);
+                    }
+                }
+            }
+        }
         for (com.example.skyblocks.ModFluids.SkyLiquid liquid : com.example.skyblocks.ModFluids.ALL) {
             var item = net.minecraft.client.resources.model.ModelResourceLocation.inventory(liquid.bucket.getId());
             if (bucket != null && (models.get(item) == null || models.get(item) == missing)) {

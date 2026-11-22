@@ -8,7 +8,8 @@
     "SkyblockItemTypesMixin",
     "SkyblockRegistryMixin",
     "SkyblockTypeInvoker",
-    "SkyblockTypeMixin"
+    "SkyblockTypeMixin",
+    "WallSkyShapeMixin"
   ],
   "client": [
     "AssimpRendererBonesMixin",

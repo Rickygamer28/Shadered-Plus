@@ -1,6 +1,7 @@
 package com.example.skyblocks.client;
 
 import com.example.skyblocks.ModFluids;
+import com.example.skyblocks.ModSkyShapes;
 import com.example.skyblocks.SkyBlocksMod;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -46,7 +47,7 @@ public final class SkyLiquidRenderer {
     private static final int MAX_BLOCKS = 20000;
     private static final int RESCAN_TICKS = 4;
 
-    private static final Map<ModFluids.SkyLiquid, List<BlockPos>> FOUND = new LinkedHashMap<>();
+    private static final Map<SkyblockType, List<BlockPos>> FOUND = new LinkedHashMap<>();
     private static int foundCount;
     private static long lastScan = Long.MIN_VALUE;
     private static ClientLevel lastLevel;
@@ -101,9 +102,9 @@ public final class SkyLiquidRenderer {
         boolean defer = com.example.skyblocks.client.iris.IrisIslandTarget.deferSky();
         // a liquid's sky gets its picture brought up to date first (see SkyUsage): only where the liquid is on screen
         // (a liquid out of view: neither its sky's picture nor the liquid drawn)
-        java.util.Set<ModFluids.SkyLiquid> inView = new java.util.HashSet<>();
-        for (ModFluids.SkyLiquid liquid : GEOMETRY.keySet()) {
-            com.noodlegamer76.shadered.client.util.skyblock.SkyblockBatchData data = com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(liquid.sky);
+        java.util.Set<SkyblockType> inView = new java.util.HashSet<>();
+        for (SkyblockType liquid : GEOMETRY.keySet()) {
+            com.noodlegamer76.shadered.client.util.skyblock.SkyblockBatchData data = com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(liquid);
             // (with a shader pack too: off the screen, its sky's picture isn't drawn - on it, the whole picture, as before)
             int[] rect = SkyUsage.OFF;
             List<float[]> cells = BOXES.get(liquid);
@@ -132,8 +133,8 @@ public final class SkyLiquidRenderer {
         MultiBufferSource.BufferSource buffers = defer ? null : MultiBufferSource.immediate(memory);
         SkyUsage.placeKnown = !defer;
         try {
-        for (Map.Entry<ModFluids.SkyLiquid, float[]> entry : GEOMETRY.entrySet()) {
-            RenderType sky = skyType(entry.getKey().sky);
+        for (Map.Entry<SkyblockType, float[]> entry : GEOMETRY.entrySet()) {
+            RenderType sky = skyType(entry.getKey());
             if (sky == null || !inView.contains(entry.getKey())) {
                 continue;
             }
@@ -159,12 +160,12 @@ public final class SkyLiquidRenderer {
     }
 
     /** The liquid faces found by the last search, per liquid (x, y, z relative to the origin, u, v per vertex). */
-    private static final Map<ModFluids.SkyLiquid, float[]> GEOMETRY = new LinkedHashMap<>();
+    private static final Map<SkyblockType, float[]> GEOMETRY = new LinkedHashMap<>();
     /**
      * Each liquid's faces' bounds, by 8-block cells (x0, y0, z0, x1, y1, z1, relative to the origin): where on screen
      * its sky is needed.
      */
-    private static final Map<ModFluids.SkyLiquid, List<float[]>> BOXES = new LinkedHashMap<>();
+    private static final Map<SkyblockType, List<float[]>> BOXES = new LinkedHashMap<>();
     private static int originX, originY, originZ;
 
     /** Works out the faces of the blocks just found, relative to the camera's chunk. */
@@ -175,10 +176,10 @@ public final class SkyLiquidRenderer {
         originZ = chunkZ << 4;
         originY = (int) Math.floor(cameraY);
         FloatCollector collector = new FloatCollector();
-        for (Map.Entry<ModFluids.SkyLiquid, List<BlockPos>> entry : FOUND.entrySet()) {
+        for (Map.Entry<SkyblockType, List<BlockPos>> entry : FOUND.entrySet()) {
             collector.size = 0;
             for (BlockPos pos : entry.getValue()) {
-                drawBlock(level, pos, pos.getX() - originX, pos.getY() - originY, pos.getZ() - originZ, collector);
+                drawAny(level, pos, pos.getX() - originX, pos.getY() - originY, pos.getZ() - originZ, collector);
             }
             if (collector.size > 0) {
                 float[] d = java.util.Arrays.copyOf(collector.data, collector.size);
@@ -265,6 +266,57 @@ public final class SkyLiquidRenderer {
     @Nullable
     public static ModFluids.SkyLiquid liquid(FluidState fluid) {
         return fluid.isEmpty() ? null : ModFluids.of(fluid.getFluidType());
+    }
+
+    /** A Sky Liquid's or a Sky Shape's faces at (x, y, z) (see drawBlock, drawShape). */
+    public static void drawAny(BlockGetter level, BlockPos pos, float x, float y, float z, VertexConsumer c) {
+        if (level.getBlockState(pos).getBlock() instanceof ModSkyShapes.Shape) {
+            drawShape(level, pos, x, y, z, c);
+        } else {
+            drawBlock(level, pos, x, y, z, c);
+        }
+    }
+
+    /**
+     * One Sky Shape's faces at (x, y, z) (ModSkyShapes: stairs, slabs, walls...): every side of each box of its shape,
+     * but those flat against a solid block next to it. (Each face shows its sky's picture at its pixels, so the boxes'
+     * faces inside the shape, hidden behind the outer ones, are no matter.)
+     */
+    public static void drawShape(BlockGetter level, BlockPos pos, float x, float y, float z, VertexConsumer c) {
+        net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
+        boolean[] solid = new boolean[6];
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (Direction d : Direction.values()) {
+            p.setWithOffset(pos, d);
+            solid[d.ordinal()] = level.getBlockState(p).isSolidRender(level, p);
+        }
+        shapeFaces(state.getShape(level, pos), x, y, z, solid, c);
+    }
+
+    /** The faces of a shape's boxes, placed at (x, y, z); sides flat on the block's edge where solid[direction] left out. */
+    public static void shapeFaces(net.minecraft.world.phys.shapes.VoxelShape shape, float x, float y, float z, boolean[] solid, VertexConsumer c) {
+        final float e = 1.0E-4F;
+        shape.forAllBoxes((ax, ay, az, bx, by, bz) -> {
+            float x0 = x + (float) ax, y0 = y + (float) ay, z0 = z + (float) az, x1 = x + (float) bx, y1 = y + (float) by, z1 = z + (float) bz;
+            if (!(by >= 1.0 - e && solid != null && solid[Direction.UP.ordinal()])) {
+                face(c, x0, y1, z0, x1, y1, z0, x1, y1, z1, x0, y1, z1);
+            }
+            if (!(ay <= e && solid != null && solid[Direction.DOWN.ordinal()])) {
+                face(c, x0, y0, z0, x0, y0, z1, x1, y0, z1, x1, y0, z0);
+            }
+            if (!(az <= e && solid != null && solid[Direction.NORTH.ordinal()])) {
+                face(c, x0, y0, z0, x1, y0, z0, x1, y1, z0, x0, y1, z0);
+            }
+            if (!(bz >= 1.0 - e && solid != null && solid[Direction.SOUTH.ordinal()])) {
+                face(c, x1, y0, z1, x0, y0, z1, x0, y1, z1, x1, y1, z1);
+            }
+            if (!(ax <= e && solid != null && solid[Direction.WEST.ordinal()])) {
+                face(c, x0, y0, z1, x0, y0, z0, x0, y1, z0, x0, y1, z1);
+            }
+            if (!(bx >= 1.0 - e && solid != null && solid[Direction.EAST.ordinal()])) {
+                face(c, x1, y0, z0, x1, y0, z1, x1, y1, z1, x1, y1, z0);
+            }
+        });
     }
 
     /**
@@ -378,19 +430,31 @@ public final class SkyLiquidRenderer {
         int baseX = chunk.getPos().getMinBlockX(), baseZ = chunk.getPos().getMinBlockZ();
         for (int i = 0; i < sections.length; i++) {
             LevelChunkSection section = sections[i];
-            if (section == null || section.hasOnlyAir() || !section.maybeHas(state -> liquid(state.getFluidState()) != null)) {
+            if (section == null || section.hasOnlyAir()
+                    || !section.maybeHas(state -> liquid(state.getFluidState()) != null || state.getBlock() instanceof ModSkyShapes.Shape)) {
                 continue;
             }
             int baseY = SectionPos.sectionToBlockCoord(chunk.getSectionYFromSectionIndex(i));
             for (int y = 0; y < 16; y++) {
                 for (int z = 0; z < 16; z++) {
                     for (int x = 0; x < 16; x++) {
-                        net.minecraft.world.level.material.FluidState fluid = section.getFluidState(x, y, z);
-                        ModFluids.SkyLiquid liquid = liquid(fluid);
-                        if (liquid != null) {
-                            foundHash = foundHash * 31L + (BlockPos.asLong(baseX + x, baseY + y, baseZ + z) ^ ((long) fluid.getAmount() << 58) ^ (fluid.isSource() ? 1L << 63 : 0L)
-                                    ^ ((long) System.identityHashCode(liquid) << 20));
-                            FOUND.computeIfAbsent(liquid, l -> new ArrayList<>()).add(new BlockPos(baseX + x, baseY + y, baseZ + z));
+                        net.minecraft.world.level.block.state.BlockState state = section.getBlockState(x, y, z);
+                        SkyblockType sky = null;
+                        long mark = 0L;
+                        if (state.getBlock() instanceof ModSkyShapes.Shape shape) {
+                            sky = shape.sky();
+                            mark = (long) net.minecraft.world.level.block.Block.getId(state) << 32;
+                        } else {
+                            net.minecraft.world.level.material.FluidState fluid = state.getFluidState();
+                            ModFluids.SkyLiquid liquid = liquid(fluid);
+                            if (liquid != null) {
+                                sky = liquid.sky;
+                                mark = ((long) fluid.getAmount() << 58) ^ (fluid.isSource() ? 1L << 63 : 0L);
+                            }
+                        }
+                        if (sky != null) {
+                            foundHash = foundHash * 31L + (BlockPos.asLong(baseX + x, baseY + y, baseZ + z) ^ mark ^ ((long) sky.ordinal() << 20));
+                            FOUND.computeIfAbsent(sky, l -> new ArrayList<>()).add(new BlockPos(baseX + x, baseY + y, baseZ + z));
                             if (++foundCount >= MAX_BLOCKS) {
                                 return;
                             }

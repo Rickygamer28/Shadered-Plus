@@ -38,6 +38,8 @@ public class SkyBlocksMod {
         ModFluids.TYPES.register(modEventBus);
         ModFluids.FLUIDS.register(modEventBus);
         ModFluids.RECIPES.register(modEventBus);
+        ModSkyShapes.init();
+        ModSkyShapes.RECIPES.register(modEventBus);
         java.util.Objects.requireNonNull(SpinPadMenu.TYPE); // (its menu type put on the list before the list is registered)
         SingularityMenu.MENUS.register(modEventBus);
         TABS.register(modEventBus);
@@ -88,6 +90,11 @@ public class SkyBlocksMod {
         }
         for (ModFluids.SkyLiquid liquid : ModFluids.ALL) {
             out.accept(new net.minecraft.world.item.ItemStack(liquid.bucket.get()));
+        }
+        for (ModSkyShapes.Kind kind : ModSkyShapes.Kind.values()) {
+            for (ModSkyShapes.Shapes shapes : ModSkyShapes.ALL) {
+                out.accept(new net.minecraft.world.item.ItemStack(shapes.items.get(kind).get()));
+            }
         }
     }
 

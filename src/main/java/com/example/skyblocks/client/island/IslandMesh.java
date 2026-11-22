@@ -53,6 +53,12 @@ final class IslandMesh implements AutoCloseable {
                         BlockPos at = new BlockPos(x, y, z);
                         com.example.skyblocks.ModFluids.SkyLiquid liquid =
                                 com.example.skyblocks.client.SkyLiquidRenderer.liquid(state.getFluidState());
+                        if (state.getBlock() instanceof com.example.skyblocks.ModSkyShapes.Shape shape) {
+                            QuadCollector collector = skyCollectors.computeIfAbsent(shape.sky(), k -> new QuadCollector());
+                            collector.mark();
+                            com.example.skyblocks.client.SkyLiquidRenderer.drawShape(island, at, x, y, z, collector);
+                            continue;
+                        }
                         if (liquid != null) {
                             QuadCollector collector = skyCollectors.computeIfAbsent(liquid.sky, k -> new QuadCollector());
                             collector.mark();
