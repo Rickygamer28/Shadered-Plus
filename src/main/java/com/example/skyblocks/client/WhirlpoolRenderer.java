@@ -76,6 +76,31 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         float full = be.fullness();
         be.shownFull = be.shownFull < 0 ? full : be.shownFull + (full - be.shownFull) * 0.05F;
         float seconds = (System.currentTimeMillis() % 3_600_000L) / 1000.0F;
+        if (be.skin() != 0 && !be.still() && StorageSkins.ready()) {
+            // (one of its other skins: the water planet, the bubbles, the fluid helix - StorageSkins; alone, inside its
+            // frame; in a tank, filling it)
+            int n = Math.min(10, be.entries().size());
+            int[] rgb = new int[n];
+            float[] shares = new float[n];
+            int glow = 0;
+            // (lightest first: on the planet, the light ones on top and the heavy ones at the bottom)
+            Integer[] order = new Integer[be.entries().size()];
+            for (int i = 0; i < order.length; i++) {
+                order[i] = i;
+            }
+            java.util.Arrays.sort(order, (a, b) -> Integer.compare(looks.get(a).density(), looks.get(b).density()));
+            for (int i = 0; i < n; i++) {
+                int k = order[i];
+                rgb[i] = StorageSkins.fluidColour(be.entries().get(k).fluid);
+                shares[i] = looks.get(k).share();
+                if (looks.get(k).glows()) {
+                    glow |= 1 << i;
+                }
+            }
+            float half = be.tank() > 0 ? (be.tank() - 1) / 2.0F - 0.53F : 0.37F;
+            StorageSkins.draw(poseStack, buffers, StorageSkins.PLANET + be.skin() - 1, Math.max(be.shownFull, 0.05F), be.tank() > 0, half, rgb, shares, glow);
+            return;
+        }
         if (be.tank() > 0) {
             tank(be, looks, poseStack, buffers, light, seconds);
         } else if (be.still()) {

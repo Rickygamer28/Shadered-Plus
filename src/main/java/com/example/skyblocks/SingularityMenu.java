@@ -116,7 +116,7 @@ public class SingularityMenu extends AbstractContainerMenu {
 
     // ---- the actions from the menu (SingularityPayloads.Action, on the server) ----
 
-    public static final int TAKE = 0, PUT = 1, DESTROY = 2, VACUUM = 3, DESTROY_TAG = 4;
+    public static final int TAKE = 0, PUT = 1, DESTROY = 2, VACUUM = 3, DESTROY_TAG = 4, SKIN = 5;
     private static final int PAGE = 256;
     // (client: the pages coming in)
     private final List<ItemStack> incomingItems = new ArrayList<>();
@@ -152,6 +152,7 @@ public class SingularityMenu extends AbstractContainerMenu {
                 if (!which.isEmpty()) be.toggleDestroy(which.getItem());
             }
             case VACUUM -> be.toggleVacuum();
+            case SKIN -> be.cycleSkin();
             case DESTROY_TAG -> be.toggleDestroyTag(text);
             default -> {
             }

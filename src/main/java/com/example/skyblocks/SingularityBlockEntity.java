@@ -63,6 +63,9 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
     private final Set<Item> destroy = new HashSet<>();
     private final List<TagKey<Item>> destroyTags = new ArrayList<>();
     private boolean vacuum;
+    /** Its look (SKINS): the black hole, or a skin (client/StorageSkins). */
+    private int skin;
+    public static final String[] SKINS = {"black_hole", "dyson", "tesseract", "galaxy"};
     /** The containment chamber round it: how many blocks across (0: none). */
     private int chamber;
     private int colour = 0x9A6BFF;
@@ -432,6 +435,15 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
         changed(false);
     }
 
+    public int skin() {
+        return skin;
+    }
+
+    public void cycleSkin() {
+        skin = (skin + 1) % SKINS.length;
+        changed(true);
+    }
+
     public void toggleVacuum() {
         vacuum = !vacuum;
         changed(true);
@@ -583,6 +595,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
         tag.put("destroyTags", tags);
         tag.putBoolean("vacuum", vacuum);
         tag.putInt("colour", colour);
+        tag.putInt("skin", skin);
         tag.putInt("chamber", chamber);
     }
 
@@ -629,6 +642,7 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
             }
         }
         vacuum = tag.getBoolean("vacuum");
+        skin = Math.floorMod(tag.getInt("skin"), SKINS.length);
         chamber = tag.getInt("chamber");
         if (tag.contains("colour")) {
             colour = tag.getInt("colour") & 0xFFFFFF;

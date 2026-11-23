@@ -45,6 +45,25 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
     @Override
     public void render(SingularityBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
         float reach = shownReach(be);
+        if (be.skin() != 0 && StorageSkins.ready()) {
+            // (one of its other skins: the Dyson sphere, the tesseract, the item galaxy - StorageSkins)
+            float full = be.fullness();
+            float half = be.chamber() > 0 ? (be.chamber() - 1) / 2.0F - 0.55F : 0.42F + 0.45F * full;
+            int skin = be.skin() == 1 ? StorageSkins.DYSON : be.skin() == 2 ? StorageSkins.TESSERACT : StorageSkins.GALAXY;
+            int[] rgb;
+            if (skin == StorageSkins.GALAXY) {
+                rgb = StorageSkins.itemColours(be.shown());
+                if (rgb.length == 0) {
+                    rgb = new int[] {be.colour()};
+                }
+            } else {
+                rgb = new int[] {be.colour()};
+            }
+            float[] shares = new float[rgb.length];
+            java.util.Arrays.fill(shares, 1.0F / rgb.length);
+            StorageSkins.draw(poseStack, buffers, skin, full, be.chamber() > 0, half, rgb, shares, 0);
+            return;
+        }
         float t = (float) LavaLampRenderer.seconds();
         // now and then, some of what it holds drifting slowly round in the disk - drawn right after the hole, in front
         // of it (not bent out of sight by it)

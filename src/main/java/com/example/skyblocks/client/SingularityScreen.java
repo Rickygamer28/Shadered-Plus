@@ -27,7 +27,7 @@ import org.lwjgl.glfw.GLFW;
 public class SingularityScreen extends AbstractContainerScreen<SingularityMenu> {
     private static final int COLS = 9, ROWS = 5, GRID_X = 8, GRID_Y = 20, CELL = 18;
     private EditBox search;
-    private Button vacuumButton, destroyButton, addTagButton;
+    private Button vacuumButton, destroyButton, addTagButton, skinButton;
     private EditBox tagBox;
     /** The destroy filter's page (instead of what it holds). */
     private boolean filterView;
@@ -57,9 +57,11 @@ public class SingularityScreen extends AbstractContainerScreen<SingularityMenu> 
         search.setMaxLength(50);
         addRenderableWidget(search);
         vacuumButton = addRenderableWidget(Button.builder(Component.empty(), b -> send(SingularityMenu.VACUUM, ItemStack.EMPTY, 0))
-                .bounds(leftPos + 8, topPos + GRID_Y + ROWS * CELL + 3, 70, 12).build());
+                .bounds(leftPos + 8, topPos + GRID_Y + ROWS * CELL + 3, 58, 12).build());
         destroyButton = addRenderableWidget(Button.builder(Component.empty(), b -> setFilterView(!filterView))
-                .bounds(leftPos + 80, topPos + GRID_Y + ROWS * CELL + 3, 86, 12).build());
+                .bounds(leftPos + 68, topPos + GRID_Y + ROWS * CELL + 3, 62, 12).build());
+        skinButton = addRenderableWidget(Button.builder(Component.empty(), b -> send(SingularityMenu.SKIN, ItemStack.EMPTY, 0))
+                .bounds(leftPos + 132, topPos + GRID_Y + ROWS * CELL + 3, 54, 12).build());
         tagBox = new EditBox(font, leftPos + GRID_X, topPos + TAG_Y, 124, 12, Component.translatable("gui.skyblocks.singularity.tag_hint"));
         tagBox.setHint(Component.translatable("gui.skyblocks.singularity.tag_hint").withStyle(ChatFormatting.DARK_GRAY));
         tagBox.setMaxLength(120);
@@ -175,6 +177,12 @@ public class SingularityScreen extends AbstractContainerScreen<SingularityMenu> 
     protected void containerTick() {
         super.containerTick();
         vacuumButton.setMessage(Component.translatable(menu.vacuum ? "gui.skyblocks.singularity.vacuum_on" : "gui.skyblocks.singularity.vacuum_off"));
+        if (minecraft != null && minecraft.level != null && minecraft.level.getBlockEntity(menu.pos) instanceof com.example.skyblocks.SingularityBlockEntity be) {
+            String skin = com.example.skyblocks.SingularityBlockEntity.SKINS[Math.floorMod(be.skin(), com.example.skyblocks.SingularityBlockEntity.SKINS.length)];
+            skinButton.setMessage(Component.translatable("gui.skyblocks.singularity.skin." + skin));
+            skinButton.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("gui.skyblocks.singularity.skin",
+                    Component.translatable("gui.skyblocks.singularity.skin." + skin))));
+        }
         destroyButton.setMessage(Component.translatable(filterView ? "gui.skyblocks.singularity.back" : "gui.skyblocks.singularity.filter")
                 .withStyle(filterView ? ChatFormatting.WHITE : ChatFormatting.RED));
     }

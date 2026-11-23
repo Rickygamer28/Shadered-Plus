@@ -1355,5 +1355,15 @@
   "message.skyblocks.heat_wand.on": "The air shimmers with heat",
   "message.skyblocks.heat_wand.off": "The shimmer fades",
   "guide.skyblocks.heat_wand": "Heat shimmer makes the air waver over fire, lit campfires, lit furnaces and lava. With the Heat Wand you can give it to any block: right-click the block (again to take it away). Breaking the block takes its shimmer with it.\n\n(Heat shimmer is turned off while a shader pack is in use.)",
-  "guide.skyblocks.chapter.sky_craft": "Sky Crafting"
+  "guide.skyblocks.chapter.sky_craft": "Sky Crafting",
+  "gui.skyblocks.singularity.skin": "Look: %s (click for the next)",
+  "gui.skyblocks.singularity.skin.black_hole": "Black hole",
+  "gui.skyblocks.singularity.skin.dyson": "Dyson sphere",
+  "gui.skyblocks.singularity.skin.tesseract": "Tesseract",
+  "gui.skyblocks.singularity.skin.galaxy": "Item galaxy",
+  "screen.skyblocks.whirlpool.skin": "Look: %s",
+  "screen.skyblocks.whirlpool.skin.whirlpool": "Whirlpool",
+  "screen.skyblocks.whirlpool.skin.planet": "Water planet",
+  "screen.skyblocks.whirlpool.skin.bubbles": "Bubbles",
+  "screen.skyblocks.whirlpool.skin.helix": "Fluid helix"
 }

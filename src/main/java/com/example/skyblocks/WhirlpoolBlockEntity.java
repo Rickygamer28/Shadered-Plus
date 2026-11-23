@@ -65,6 +65,9 @@ public class WhirlpoolBlockEntity extends BlockEntity {
     private boolean drain;
     /** Shown as a plain tank of what it holds, not a whirlpool (its look only). */
     private boolean still;
+    /** Its look (SKINS): the whirlpool, or a skin (client/StorageSkins). */
+    private int skin;
+    public static final String[] SKINS = {"whirlpool", "planet", "bubbles", "helix"};
     /** Its containment tank: how many blocks across (0: none). */
     private int tank;
     private long total;
@@ -104,6 +107,15 @@ public class WhirlpoolBlockEntity extends BlockEntity {
 
     public boolean still() {
         return still;
+    }
+
+    public int skin() {
+        return skin;
+    }
+
+    public void cycleSkin() {
+        skin = (skin + 1) % SKINS.length;
+        changed(true);
     }
 
     public void toggleStill() {
@@ -511,6 +523,7 @@ public class WhirlpoolBlockEntity extends BlockEntity {
         tag.put("voidTags", tags);
         tag.putBoolean("drain", drain);
         tag.putBoolean("still", still);
+        tag.putInt("skin", skin);
         tag.putInt("tank", tank);
     }
 
@@ -548,6 +561,7 @@ public class WhirlpoolBlockEntity extends BlockEntity {
         }
         drain = tag.getBoolean("drain");
         still = tag.getBoolean("still");
+        skin = Math.floorMod(tag.getInt("skin"), SKINS.length);
         tank = tag.getInt("tank");
     }
 
