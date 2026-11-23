@@ -118,7 +118,7 @@ public final class GlowTrails {
 
     @SubscribeEvent
     public static void draw(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES || TRAILS.isEmpty()) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES || TRAILS.isEmpty()) {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
