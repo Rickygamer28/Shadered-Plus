@@ -134,6 +134,16 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(SkyHolderBlockEntity::rift, ModBlocks.SKY_RIFT.get()).build(null));
     public static final Supplier<BlockEntityType<SkyHolderBlockEntity>> SKY_BEACON = TYPES.register("sky_beacon",
             () -> BlockEntityType.Builder.of(SkyHolderBlockEntity::beacon, ModBlocks.SKY_BEACON.get()).build(null));
+    public static final Supplier<BlockEntityType<SkyHolderBlockEntity>> SKY_FOUNTAIN = TYPES.register("sky_fountain",
+            () -> BlockEntityType.Builder.of(SkyHolderBlockEntity::fountain, ModBlocks.SKY_FOUNTAIN.get()).build(null));
+    public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> WATER_FOUNTAIN = TYPES.register("water_fountain",
+            () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.WATER_FOUNTAIN.get(), p, st), ModBlocks.WATER_FOUNTAIN.get()).build(null));
+    public static final Supplier<BlockEntityType<PlanetGlobeBlock.Entity>> PLANET_GLOBE = TYPES.register("planet_globe",
+            () -> BlockEntityType.Builder.of(PlanetGlobeBlock.Entity::new, ModBlocks.PLANET_GLOBE.get()).build(null));
+    public static final Supplier<BlockEntityType<ConstellationBoardBlock.Entity>> CONSTELLATION_BOARD = TYPES.register("constellation_board",
+            () -> BlockEntityType.Builder.of(ConstellationBoardBlock.Entity::new, ModBlocks.CONSTELLATION_BOARD.get()).build(null));
+    public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> AURORA_CURTAIN = TYPES.register("aurora_curtain",
+            () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.AURORA_CURTAIN.get(), p, st), ModBlocks.AURORA_CURTAIN.get()).build(null));
     public static final Supplier<BlockEntityType<SkyStudioBlockEntity>> SKY_STUDIO = TYPES.register("sky_studio",
             () -> BlockEntityType.Builder.of(SkyStudioBlockEntity::new, ModBlocks.SKY_STUDIO.get()).build(null));
     public static final Supplier<BlockEntityType<SkyLanternBlockEntity>> SKY_LANTERN = TYPES.register("sky_lantern",

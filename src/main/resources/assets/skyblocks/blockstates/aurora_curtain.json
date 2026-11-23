@@ -1,0 +1,21 @@
+{
+ "multipart": [
+  {
+   "when": {
+    "axis": "x"
+   },
+   "apply": {
+    "model": "skyblocks:block/aurora_curtain"
+   }
+  },
+  {
+   "when": {
+    "axis": "z"
+   },
+   "apply": {
+    "model": "skyblocks:block/aurora_curtain",
+    "y": 90
+   }
+  }
+ ]
+}

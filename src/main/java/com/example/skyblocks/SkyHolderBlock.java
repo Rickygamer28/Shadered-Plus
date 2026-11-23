@@ -29,30 +29,47 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A block showing a sky (SkyHolderBlockEntity): the Sky Rift (a crack in the air with the sky through it,
- * client/SkyRiftRenderer) and the Sky Beacon (a beam of the sky up into the heavens, client/SkyBeaconRenderer).
+ * client/SkyRiftRenderer), the Sky Beacon (a beam of the sky up into the heavens, client/SkyBeaconRenderer) and the
+ * Sky Fountain (a fountain of sky liquid, client/FountainRenderer).
  * Right-click it with any sky block to change its sky (the sky block isn't used up).
  */
 public class SkyHolderBlock extends BaseEntityBlock {
+    public enum Kind { RIFT, BEACON, FOUNTAIN }
+
+    private final Kind kind;
     private final boolean rift;
     private final BiFunction<BlockPos, BlockState, BlockEntity> make;
 
-    public SkyHolderBlock(Properties properties, boolean rift) {
+    public SkyHolderBlock(Properties properties, Kind kind) {
         super(properties);
-        this.rift = rift;
-        this.make = rift ? SkyHolderBlockEntity::rift : SkyHolderBlockEntity::beacon;
+        this.kind = kind;
+        this.rift = kind == Kind.RIFT;
+        this.make = switch (kind) {
+            case RIFT -> SkyHolderBlockEntity::rift;
+            case BEACON -> SkyHolderBlockEntity::beacon;
+            case FOUNTAIN -> SkyHolderBlockEntity::fountain;
+        };
+    }
+
+    public Kind kind() {
+        return kind;
     }
 
     public static SkyHolderBlock rift(Properties properties) {
-        return new SkyHolderBlock(properties, true);
+        return new SkyHolderBlock(properties, Kind.RIFT);
     }
 
     public static SkyHolderBlock beacon(Properties properties) {
-        return new SkyHolderBlock(properties, false);
+        return new SkyHolderBlock(properties, Kind.BEACON);
+    }
+
+    public static SkyHolderBlock fountain(Properties properties) {
+        return new SkyHolderBlock(properties, Kind.FOUNTAIN);
     }
 
     @Override
     protected com.mojang.serialization.MapCodec<? extends BaseEntityBlock> codec() {
-        return simpleCodec(rift ? SkyHolderBlock::rift : SkyHolderBlock::beacon);
+        return simpleCodec(p -> new SkyHolderBlock(p, kind));
     }
 
     @Override
@@ -64,12 +81,12 @@ public class SkyHolderBlock extends BaseEntityBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return rift ? RIFT : Shapes.block();
+        return rift ? RIFT : kind == Kind.FOUNTAIN ? FountainBlock.SHAPE : Shapes.block();
     }
 
     @Override
     protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return rift ? Shapes.empty() : Shapes.block();
+        return rift ? Shapes.empty() : kind == Kind.FOUNTAIN ? FountainBlock.SHAPE : Shapes.block();
     }
 
     @Nullable
@@ -80,7 +97,7 @@ public class SkyHolderBlock extends BaseEntityBlock {
 
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, java.util.List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable(rift ? "tooltip.skyblocks.sky_rift" : "tooltip.skyblocks.sky_beacon").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("tooltip.skyblocks." + name()).withStyle(ChatFormatting.GRAY));
     }
 
     @Override
@@ -92,11 +109,22 @@ public class SkyHolderBlock extends BaseEntityBlock {
         }
         if (!level.isClientSide) {
             holder.setSky(sky);
-            level.playSound(null, pos, rift ? SoundEvents.AMETHYST_BLOCK_RESONATE : SoundEvents.BEACON_POWER_SELECT, SoundSource.BLOCKS, 1.0F, 1.1F);
-            player.displayClientMessage(Component.translatable(rift ? "message.skyblocks.sky_rift.sky" : "message.skyblocks.sky_beacon.sky",
-                    stack.getHoverName()), true);
+            level.playSound(null, pos, switch (kind) {
+                case RIFT -> SoundEvents.AMETHYST_BLOCK_RESONATE;
+                case BEACON -> SoundEvents.BEACON_POWER_SELECT;
+                case FOUNTAIN -> SoundEvents.BUCKET_EMPTY;
+            }, SoundSource.BLOCKS, 1.0F, 1.1F);
+            player.displayClientMessage(Component.translatable("message.skyblocks." + name() + ".sky", stack.getHoverName()), true);
         }
         return ItemInteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    private String name() {
+        return switch (kind) {
+            case RIFT -> "sky_rift";
+            case BEACON -> "sky_beacon";
+            case FOUNTAIN -> "sky_fountain";
+        };
     }
 
     @Override
@@ -107,6 +135,8 @@ public class SkyHolderBlock extends BaseEntityBlock {
                 level.addParticle(ParticleTypes.REVERSE_PORTAL, pos.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.6, y,
                         pos.getZ() + 0.5 + (random.nextDouble() - 0.5) * 0.6, 0.0, 0.0, 0.0);
             }
+        } else if (kind == Kind.FOUNTAIN) {
+            FountainBlock.splash(level, pos, random, true);
         } else if (random.nextInt(3) == 0) {
             level.addParticle(ParticleTypes.END_ROD, pos.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.3, pos.getY() + 1.1,
                     pos.getZ() + 0.5 + (random.nextDouble() - 0.5) * 0.3, 0.0, 0.03, 0.0);

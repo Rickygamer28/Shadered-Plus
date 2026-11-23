@@ -27,6 +27,10 @@ public class SkyHolderBlockEntity extends BlockEntity {
         return new SkyHolderBlockEntity(ModBlockEntities.SKY_RIFT.get(), pos, state);
     }
 
+    public static SkyHolderBlockEntity fountain(BlockPos pos, BlockState state) {
+        return new SkyHolderBlockEntity(ModBlockEntities.SKY_FOUNTAIN.get(), pos, state);
+    }
+
     public static SkyHolderBlockEntity beacon(BlockPos pos, BlockState state) {
         return new SkyHolderBlockEntity(ModBlockEntities.SKY_BEACON.get(), pos, state);
     }

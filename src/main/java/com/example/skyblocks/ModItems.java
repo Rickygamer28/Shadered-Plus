@@ -178,6 +178,11 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> GEODE_LAMP = ITEMS.registerSimpleBlockItem("geode_lamp", ModBlocks.GEODE_LAMP);
     public static final DeferredItem<BlockItem> SKY_RIFT = ITEMS.registerSimpleBlockItem("sky_rift", ModBlocks.SKY_RIFT);
     public static final DeferredItem<BlockItem> SKY_BEACON = ITEMS.registerSimpleBlockItem("sky_beacon", ModBlocks.SKY_BEACON);
+    public static final DeferredItem<BlockItem> SKY_FOUNTAIN = ITEMS.registerSimpleBlockItem("sky_fountain", ModBlocks.SKY_FOUNTAIN);
+    public static final DeferredItem<BlockItem> WATER_FOUNTAIN = ITEMS.registerSimpleBlockItem("water_fountain", ModBlocks.WATER_FOUNTAIN);
+    public static final DeferredItem<BlockItem> PLANET_GLOBE = ITEMS.registerSimpleBlockItem("planet_globe", ModBlocks.PLANET_GLOBE);
+    public static final DeferredItem<BlockItem> CONSTELLATION_BOARD = ITEMS.registerSimpleBlockItem("constellation_board", ModBlocks.CONSTELLATION_BOARD);
+    public static final DeferredItem<BlockItem> AURORA_CURTAIN = ITEMS.registerSimpleBlockItem("aurora_curtain", ModBlocks.AURORA_CURTAIN);
     public static final DeferredItem<BlockItem> SKY_LANTERN = ITEMS.registerSimpleBlockItem("sky_lantern", ModBlocks.SKY_LANTERN);
     public static final DeferredItem<BlockItem> CAT_WINDOW_PERCH = ITEMS.registerSimpleBlockItem("cat_window_perch", ModBlocks.CAT_WINDOW_PERCH);
     public static final DeferredItem<BlockItem> FERROFLUID = ITEMS.registerSimpleBlockItem("ferrofluid", ModBlocks.FERROFLUID);

@@ -53,6 +53,9 @@
     "skyblocks:elevator_sensor",
     "skyblocks:sky_rift",
     "skyblocks:sky_beacon",
-    "skyblocks:sky_studio"
+    "skyblocks:sky_studio",
+    "skyblocks:sky_fountain",
+    "skyblocks:water_fountain",
+    "skyblocks:planet_globe"
   ]
 }

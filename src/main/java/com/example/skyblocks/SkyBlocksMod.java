@@ -94,6 +94,11 @@ public class SkyBlocksMod {
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_STUDIO.get()));
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_RIFT.get()));
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_BEACON.get()));
+        out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_FOUNTAIN.get()));
+        out.accept(new net.minecraft.world.item.ItemStack(ModItems.WATER_FOUNTAIN.get()));
+        out.accept(new net.minecraft.world.item.ItemStack(ModItems.PLANET_GLOBE.get()));
+        out.accept(new net.minecraft.world.item.ItemStack(ModItems.CONSTELLATION_BOARD.get()));
+        out.accept(new net.minecraft.world.item.ItemStack(ModItems.AURORA_CURTAIN.get()));
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_BRUSH.get()));
         for (ModSkyShapes.Shapes shapes : ModSkyShapes.ALL) {
             out.accept(SkyBrushItem.with(new net.minecraft.world.item.ItemStack(ModItems.SKY_BRUSH.get()), shapes.sky));

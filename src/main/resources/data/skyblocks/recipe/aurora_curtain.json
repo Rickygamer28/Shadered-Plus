@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "III",
+    "GLG"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_nugget"
+    },
+    "G": {
+      "item": "minecraft:glow_ink_sac"
+    },
+    "L": {
+      "item": "minecraft:lime_dye"
+    }
+  },
+  "result": {
+    "id": "skyblocks:aurora_curtain",
+    "count": 1
+  }
+}

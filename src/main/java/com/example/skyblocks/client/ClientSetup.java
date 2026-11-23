@@ -75,6 +75,11 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.SKY_STUDIO.get(), SkyStudioRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SKY_RIFT.get(), SkyRiftRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SKY_BEACON.get(), SkyBeaconRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.SKY_FOUNTAIN.get(), FountainRenderer.of(true));
+        event.registerBlockEntityRenderer(ModBlockEntities.WATER_FOUNTAIN.get(), FountainRenderer.of(false));
+        event.registerBlockEntityRenderer(ModBlockEntities.PLANET_GLOBE.get(), PlanetGlobeRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.CONSTELLATION_BOARD.get(), ConstellationBoardRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.AURORA_CURTAIN.get(), AuroraCurtainRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.EFFECT_BLOCK.get(), EffectBlockRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.WEATHER_GLOBE.get(), WeatherGlobeRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.LAVA_PILLAR.get(), LavaPillarRenderer::new);
