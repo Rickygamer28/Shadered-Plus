@@ -84,11 +84,22 @@ for layer, has_on, settings in LAYERS:
     for sid, kind, default in settings:
         fields.append((layer, sid, kind, offset))
         offset += 3 if kind == 'c' else 1
+SIZE_BEFORE_ORDER = offset  # (skies saved before the draw order came keep their settings: the ranks come after)
+# the draw order: every layer but the whole sky and its colour has a rank (rank / 16); the lower, the further back
+ORDERED = ['nebula', 'stars', 'planet', 'moon', 'rays', 'aurora', 'clouds', 'shooting', 'sparkles', 'grid', 'mountains', 'lake']
+assert sorted(ORDERED) == sorted(l[0] for l in LAYERS if l[0] not in ('global', 'gradient'))
+order_index = {}
+for layer in ORDERED:
+    order_index[layer] = offset
+    fields.append((layer, 'order', 'r', offset))
+    offset += 1
 SIZE = offset
 VECS = (SIZE + 3) // 4
 
 def defaults():
     out = [0.0] * SIZE
+    for rank, layer in enumerate(ORDERED):
+        out[order_index[layer]] = rank / 16
     for layer, has_on, settings in LAYERS:
         for sid, kind, default in settings:
             o = next(f[3] for f in fields if f[0] == layer and f[1] == sid)
@@ -148,14 +159,18 @@ j = ['package com.example.skyblocks;', '', '/**',
      ' * (shaders/include/studio_params.glsl).', ' */', 'public final class StudioSpec {',
      '    /** How many numbers a studio sky has (each 0 .. 1), and in how many vec4s the shader gets them. */',
      '    public static final int SIZE = %d, VECS = %d;' % (SIZE, VECS), '',
+     '    /** How many numbers a studio sky had before the draw order (its ranks come after them). */',
+     '    public static final int SIZE_BEFORE_ORDER = %d;' % SIZE_BEFORE_ORDER, '',
+     '    /** How many layers can be put in order (a rank: 0, 1/16, 2/16, ...). */',
+     '    public static final int ORDERED = %d;' % len(ORDERED), '',
      '    /** A setting: its name, kind (\'o\' the layer\'s switch, \'c\' a colour: 3 numbers, \'n\' a number), where it is. */',
      '    public record Field(String id, char kind, int at) {}', '',
-     '    /** A layer: its name, where its switch is (-1: always on), its settings. */',
-     '    public record Layer(String id, int on, Field[] fields) {}', '',
+     '    /** A layer: its name, where its switch is (-1: always on), where its rank in the draw order is (-1: always at the back), its settings. */',
+     '    public record Layer(String id, int on, int order, Field[] fields) {}', '',
      '    public static final Layer[] LAYERS = {']
 for layer, has_on, settings in LAYERS:
-    fs = ', '.join('new Field("%s", \'%s\', %d)' % (f[1], f[2], f[3]) for f in fields if f[0] == layer and f[2] != 'o')
-    j.append('            new Layer("%s", %d, new Field[] {%s}),' % (layer, on_index.get(layer, -1), fs))
+    fs = ', '.join('new Field("%s", \'%s\', %d)' % (f[1], f[2], f[3]) for f in fields if f[0] == layer and f[2] not in 'or')
+    j.append('            new Layer("%s", %d, %d, new Field[] {%s}),' % (layer, on_index.get(layer, -1), order_index.get(layer, -1), fs))
 j.append('    };')
 j.append('')
 j.append('    public static final String[] PRESET_NAMES = {%s};' % ', '.join('"%s"' % p[0] for p in PRESETS))
@@ -186,7 +201,7 @@ LAYER_NAMES = {'global': 'Whole sky', 'gradient': 'Sky colour', 'nebula': 'Nebul
 for k, v in LAYER_NAMES.items():
     lang['screen.skyblocks.studio.layer.' + k] = v
 for layer, sid, kind, o in fields:
-    if kind != 'o':
+    if kind not in 'or':
         words = sid.replace('_', ' ')
         words = {'colour1': 'Colour 1', 'colour2': 'Colour 2', 'colour3': 'Colour 3'}.get(sid, words[0].upper() + words[1:])
         lang['screen.skyblocks.studio.field.' + sid] = words

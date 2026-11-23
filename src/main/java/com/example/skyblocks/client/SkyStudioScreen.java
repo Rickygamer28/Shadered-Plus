@@ -167,19 +167,34 @@ public class SkyStudioScreen extends Screen {
         int lx = x0 + 6;
         layerTop = y0 + 46;
         layerBottom = y0 + h - 6;
-        for (int i = 0; i < StudioSpec.LAYERS.length; i++) {
-            final int k = i;
-            StudioSpec.Layer l = StudioSpec.LAYERS[i];
-            int y = layerTop + 2 + i * 20 - layerScroll;
+        int[] shown = shownOrder();
+        for (int row = 0; row < shown.length; row++) {
+            final int k = shown[row];
+            StudioSpec.Layer l = StudioSpec.LAYERS[k];
+            int y = layerTop + 2 + row * 20 - layerScroll;
+            int pickW = lwid - 4 - (l.on() >= 0 ? 29 : 0) - (l.order() >= 0 ? 13 : 0);
             Button pick = Button.builder(Component.translatable("screen.skyblocks.studio.layer." + l.id()), x -> {
                 keepName();
                 layer = k;
                 fieldScroll = 0;
                 pickColour(firstColour());
                 rebuildWidgets();
-            }).bounds(lx + 2, y, l.on() >= 0 ? lwid - 32 : lwid - 4, 18).build();
-            pick.active = i != layer;
+            }).bounds(lx + 2, y, pickW, 18).build();
+            pick.active = k != layer;
             layerWidgets.add(addRenderableWidget(pick));
+            if (l.order() >= 0) {
+                // further back (up the list) or further forward (down it): swaps places with its neighbour
+                final int above = row > 0 && StudioSpec.LAYERS[shown[row - 1]].order() >= 0 ? shown[row - 1] : -1;
+                final int below = row + 1 < shown.length ? shown[row + 1] : -1;
+                Arrow up = new Arrow(lx + 3 + pickW, y, true, () -> swapRank(k, above));
+                up.active = above >= 0;
+                up.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("screen.skyblocks.studio.back")));
+                Arrow down = new Arrow(lx + 3 + pickW, y + 9, false, () -> swapRank(k, below));
+                down.active = below >= 0;
+                down.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("screen.skyblocks.studio.front")));
+                layerWidgets.add(addRenderableWidget(up));
+                layerWidgets.add(addRenderableWidget(down));
+            }
             if (l.on() >= 0) {
                 layerWidgets.add(addRenderableWidget(Button.builder(Component.translatable(params[l.on()] > 0.5F ? "screen.skyblocks.studio.on" : "screen.skyblocks.studio.off"), x -> {
                     remember();
@@ -268,6 +283,78 @@ public class SkyStudioScreen extends Screen {
             y += 18;
         }
         clip();
+    }
+
+    /** The layers as the list shows them: the ones always at the back, then the rest in draw order (back first). */
+    private int[] shownOrder() {
+        Integer[] idx = new Integer[StudioSpec.LAYERS.length];
+        for (int i = 0; i < idx.length; i++) {
+            idx[i] = i;
+        }
+        java.util.Arrays.sort(idx, java.util.Comparator.comparingDouble(i -> {
+            StudioSpec.Layer l = StudioSpec.LAYERS[i];
+            return l.order() < 0 ? -1.0 + i * 0.01 : params[l.order()] + i * 1.0E-4;
+        }));
+        int[] out = new int[idx.length];
+        for (int i = 0; i < idx.length; i++) {
+            out[i] = idx[i];
+        }
+        return out;
+    }
+
+    /** Two layers swap places in the draw order (then every rank is tidied to 0, 1/16, 2/16, ...). */
+    private void swapRank(int a, int b) {
+        if (b < 0 || StudioSpec.LAYERS[a].order() < 0 || StudioSpec.LAYERS[b].order() < 0) {
+            return;
+        }
+        remember();
+        int oa = StudioSpec.LAYERS[a].order(), ob = StudioSpec.LAYERS[b].order();
+        float t = params[oa];
+        params[oa] = params[ob];
+        params[ob] = t;
+        if (params[oa] == params[ob]) {
+            params[oa] += a < b ? 0.5F / 16.0F : -0.5F / 16.0F; // (they were level: put them apart)
+        }
+        int rank = 0;
+        for (int k : shownOrder()) {
+            if (StudioSpec.LAYERS[k].order() >= 0) {
+                params[StudioSpec.LAYERS[k].order()] = rank++ / 16.0F;
+            }
+        }
+    }
+
+    /** A little arrow button (half a row high): moves a layer back or forward. */
+    private final class Arrow extends net.minecraft.client.gui.components.AbstractButton {
+        private final boolean up;
+        private final Runnable run;
+
+        Arrow(int x, int y, boolean up, Runnable run) {
+            super(x, y, 11, 9, Component.translatable(up ? "screen.skyblocks.studio.back" : "screen.skyblocks.studio.front"));
+            this.up = up;
+            this.run = run;
+        }
+
+        @Override
+        public void onPress() {
+            run.run();
+            rebuildWidgets();
+        }
+
+        @Override
+        protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+            int x = getX(), y = getY();
+            g.fill(x, y, x + width, y + height, !active ? 0xFF24212F : isHoveredOrFocused() ? 0xFF4A4266 : EDGE);
+            int c = active ? (isHoveredOrFocused() ? ACCENT : 0xFFE6E2F2) : 0xFF55506A;
+            for (int r = 0; r < 3; r++) {
+                int row = up ? y + 3 + r : y + 5 - r;
+                g.fill(x + 5 - r, row, x + 6 + r, row + 1, c);
+            }
+        }
+
+        @Override
+        protected void updateWidgetNarration(net.minecraft.client.gui.narration.NarrationElementOutput out) {
+            defaultButtonNarrationText(out);
+        }
     }
 
     /** A tool button along the top; returns where the next one goes. */

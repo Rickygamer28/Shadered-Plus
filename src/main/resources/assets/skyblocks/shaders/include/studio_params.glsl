@@ -42,6 +42,9 @@ uniform vec4 P38;
 uniform vec4 P39;
 uniform vec4 P40;
 uniform vec4 P41;
+uniform vec4 P42;
+uniform vec4 P43;
+uniform vec4 P44;
 
 #define S_global_brightness P0.x
 #define S_global_contrast P0.y
@@ -158,3 +161,15 @@ uniform vec4 P41;
 #define S_sparkles_size P40.z
 #define S_sparkles_speed P40.w
 #define S_sparkles_twinkle P41.x
+#define S_nebula_order P41.y
+#define S_stars_order P41.z
+#define S_planet_order P41.w
+#define S_moon_order P42.x
+#define S_rays_order P42.y
+#define S_aurora_order P42.z
+#define S_clouds_order P42.w
+#define S_shooting_order P43.x
+#define S_sparkles_order P43.y
+#define S_grid_order P43.z
+#define S_mountains_order P43.w
+#define S_lake_order P44.x

@@ -106,11 +106,13 @@ void st_body(inout vec3 col, vec3 d, vec3 c, float size, float roundness, vec3 c
     }
 }
 
-// the sky above (and seen in the lake): everything but what's below the horizon
-vec3 st_upper(vec3 d, float t) {
+// ---- the layers, each drawn over what's behind it (the draw order: each layer's rank, S_<layer>_order) ----
+
+void st_base(inout vec3 col, vec3 d, float t) {
     float horizon = st_horizon();
     float above = d.y - horizon;
-    vec3 col = vec3(0.0);
+    float sky = smoothstep(-0.02, 0.06, above);
+    col = vec3(0.0);
     if (S_gradient_on > 0.5) {
         float h = clamp(above / max(1.0 - horizon, 0.05), 0.0, 1.0);
         h = pow(h, mix(2.2, 0.45, S_gradient_curve));
@@ -119,16 +121,12 @@ vec3 st_upper(vec3 d, float t) {
         col = above >= 0.0 ? sky : S_gradient_ground;
         col += S_gradient_horizon * S_gradient_glow * 0.8 * exp(-abs(above) * mix(30.0, 3.0, S_gradient_glow_width));
     }
+}
+
+void st_nebula(inout vec3 col, vec3 d, float t) {
+    float horizon = st_horizon();
+    float above = d.y - horizon;
     float sky = smoothstep(-0.02, 0.06, above);
-    if (S_stars_on > 0.5 && S_stars_milky_way > 0.01) {
-        float tilt = (S_stars_band_tilt - 0.5) * 2.4;
-        vec3 n = normalize(vec3(sin(tilt), cos(tilt), 0.35));
-        float band = exp(-pow(dot(d, n) / 0.18, 2.0));
-        float haze = st_fbm(d * 6.0, 0.7);
-        col += S_stars_colour * band * (0.15 + 0.35 * haze) * S_stars_milky_way * sky;
-        float dust = step(0.985 - band * 0.03 * S_stars_milky_way, st_hash13(floor(d * 380.0)));
-        col += S_stars_colour * dust * band * S_stars_milky_way * sky;
-    }
     if (S_nebula_on > 0.5) {
         float s = mix(0.8, 5.0, S_nebula_scale);
         vec3 q = d * s;
@@ -143,6 +141,21 @@ vec3 st_upper(vec3 d, float t) {
         vec3 c = mix(S_nebula_colour1, S_nebula_colour2, clamp(k * 1.6 - 0.3, 0.0, 1.0));
         c = mix(c, S_nebula_colour3, clamp((n - cut - edge) * 3.0, 0.0, 1.0) * 0.6);
         col += c * m * mix(0.3, 1.5, S_nebula_brightness) * smoothstep(-0.05, 0.12, above);
+    }
+}
+
+void st_stars(inout vec3 col, vec3 d, float t) {
+    float horizon = st_horizon();
+    float above = d.y - horizon;
+    float sky = smoothstep(-0.02, 0.06, above);
+    if (S_stars_on > 0.5 && S_stars_milky_way > 0.01) {
+        float tilt = (S_stars_band_tilt - 0.5) * 2.4;
+        vec3 n = normalize(vec3(sin(tilt), cos(tilt), 0.35));
+        float band = exp(-pow(dot(d, n) / 0.18, 2.0));
+        float haze = st_fbm(d * 6.0, 0.7);
+        col += S_stars_colour * band * (0.15 + 0.35 * haze) * S_stars_milky_way * sky;
+        float dust = step(0.985 - band * 0.03 * S_stars_milky_way, st_hash13(floor(d * 380.0)));
+        col += S_stars_colour * dust * band * S_stars_milky_way * sky;
     }
     if (S_stars_on > 0.5 && above > 0.0) {
         for (int layer = 0; layer < 2; layer++) {
@@ -164,16 +177,35 @@ vec3 st_upper(vec3 d, float t) {
             }
         }
     }
+}
+
+void st_planet(inout vec3 col, vec3 d, float t) {
+    float horizon = st_horizon();
+    float above = d.y - horizon;
+    float sky = smoothstep(-0.02, 0.06, above);
     if (S_planet_on > 0.5) {
         vec3 c = st_dirAt(S_planet_direction * 2.0 * ST_PI, mix(0.05, 1.3, S_planet_height));
         st_body(col, d, c, mix(0.06, 0.5, S_planet_size), 1.0, S_planet_colour1, 0.0, S_planet_glow, S_planet_rings,
-                S_planet_ring_colour, S_planet_bands, S_planet_colour2, S_planet_turn, t);
+        S_planet_ring_colour, S_planet_bands, S_planet_colour2, S_planet_turn, t);
     }
+}
+
+void st_moon(inout vec3 col, vec3 d, float t) {
+    float horizon = st_horizon();
+    float above = d.y - horizon;
+    float sky = smoothstep(-0.02, 0.06, above);
     vec3 m = st_moonDir(t);
     if (S_moon_on > 0.5) {
         st_body(col, d, m, mix(0.03, 0.16, S_moon_size), S_moon_round, S_moon_colour, S_moon_craters, S_moon_glow, S_moon_rings,
-                S_moon_ring_colour, 0.0, S_moon_colour, 0.0, t);
+        S_moon_ring_colour, 0.0, S_moon_colour, 0.0, t);
     }
+}
+
+void st_rays(inout vec3 col, vec3 d, float t) {
+    float horizon = st_horizon();
+    float above = d.y - horizon;
+    float sky = smoothstep(-0.02, 0.06, above);
+    vec3 m = st_moonDir(t);
     if (S_rays_on > 0.5) {
         vec2 l = st_local(d, m);
         float facing = dot(d, m);
@@ -184,6 +216,12 @@ vec3 st_upper(vec3 d, float t) {
             col += S_rays_colour * ray * S_rays_strength * pow(facing, 3.0) * 0.9 * sky;
         }
     }
+}
+
+void st_aurora(inout vec3 col, vec3 d, float t) {
+    float horizon = st_horizon();
+    float above = d.y - horizon;
+    float sky = smoothstep(-0.02, 0.06, above);
     if (S_aurora_on > 0.5 && above > 0.0) {
         float az = atan(d.x, d.z);
         float el = asin(clamp(d.y, -1.0, 1.0));
@@ -193,14 +231,20 @@ vec3 st_upper(vec3 d, float t) {
             float fi = float(i);
             float wave = S_aurora_waviness * 0.18;
             float centre = mix(0.2, 0.9, S_aurora_height) + 0.07 * fi
-                    + wave * sin(az * 2.0 + fi * 2.1 + t * 0.004 * S_aurora_wave_speed * 10.0)
-                    + wave * 0.5 * sin(az * 5.0 - fi + t * 0.007 * S_aurora_wave_speed * 10.0);
+            + wave * sin(az * 2.0 + fi * 2.1 + t * 0.004 * S_aurora_wave_speed * 10.0)
+            + wave * 0.5 * sin(az * 5.0 - fi + t * 0.007 * S_aurora_wave_speed * 10.0);
             float k = (el - centre) / mix(0.03, 0.14, S_aurora_thickness);
             float band = exp(-k * k) * (0.55 + 0.45 * st_noise(vec3(az * 6.0 + fi * 9.0, t * 0.01 * S_aurora_wave_speed * 10.0, fi)));
             float rays = 1.0 - S_aurora_rays * 0.5 * (0.5 + 0.5 * sin(az * 70.0 + fi * 7.0 + t * 0.02));
             col += mix(S_aurora_colour1, S_aurora_colour2, clamp(k * 0.5 + 0.5, 0.0, 1.0)) * band * rays * S_aurora_brightness * 0.6;
         }
     }
+}
+
+void st_clouds(inout vec3 col, vec3 d, float t) {
+    float horizon = st_horizon();
+    float above = d.y - horizon;
+    float sky = smoothstep(-0.02, 0.06, above);
     if (S_clouds_on > 0.5 && above > 0.0) {
         float lift = mix(0.05, 0.6, S_clouds_height);
         vec2 p = d.xz / max(d.y + lift * 0.3, 0.02) * mix(0.3, 1.6, S_clouds_scale);
@@ -212,6 +256,12 @@ vec3 st_upper(vec3 d, float t) {
         vec3 cc = mix(S_clouds_shadow, S_clouds_colour, clamp(shade * 1.4, 0.0, 1.0));
         col = mix(col, cc, c * smoothstep(0.0, 0.15, above));
     }
+}
+
+void st_shooting(inout vec3 col, vec3 d, float t) {
+    float horizon = st_horizon();
+    float above = d.y - horizon;
+    float sky = smoothstep(-0.02, 0.06, above);
     if (S_shooting_on > 0.5 && above > 0.0) {
         float period = mix(900.0, 90.0, S_shooting_how_often);
         float slot = floor(t / period), phase = fract(t / period);
@@ -234,6 +284,12 @@ vec3 st_upper(vec3 d, float t) {
             }
         }
     }
+}
+
+void st_sparkles(inout vec3 col, vec3 d, float t) {
+    float horizon = st_horizon();
+    float above = d.y - horizon;
+    float sky = smoothstep(-0.02, 0.06, above);
     if (S_sparkles_on > 0.5) {
         vec3 p = d * 40.0 + vec3(0.0, -t * 0.01 * S_sparkles_speed * 10.0, 0.0);
         vec3 cell = floor(p);
@@ -245,26 +301,40 @@ vec3 st_upper(vec3 d, float t) {
             col += S_sparkles_colour * smoothstep(r, 0.0, length(f)) * tw * 1.4;
         }
     }
-    return col;
 }
 
-vec3 studioSky(vec3 d, float t) {
-    t *= mix(0.0, 2.0, S_global_speed);
-    float spin = t * 0.0006 * S_global_spin * 10.0;
-    d.xz = mat2(cos(spin), -sin(spin), sin(spin), cos(spin)) * d.xz;
+void st_mountains(inout vec3 col, vec3 d, float t) {
     float horizon = st_horizon();
     float above = d.y - horizon;
-    vec3 col = st_upper(d, t);
+    float sky = smoothstep(-0.02, 0.06, above);
+    if (S_mountains_on > 0.5) {
+        float az = atan(d.x, d.z);
+        int layers = 1 + int(S_mountains_layers * 2.0 + 0.5);
+        for (int i = 2; i >= 0; i--) {
+            if (i >= layers) continue;
+            float fi = float(i);
+            float h = 0.0, a = 1.0, f = mix(1.5, 4.0, S_mountains_roughness);
+            for (int o = 0; o < 4; o++) {
+                h += st_noise1(az * f * (1.0 + fi * 0.7) + fi * 13.0) * a;
+                f *= 2.1;
+                a *= 0.5 * (0.6 + S_mountains_roughness * 0.6);
+            }
+            float top = horizon + h * mix(0.04, 0.3, S_mountains_height) * (1.0 - fi * 0.25);
+            if (d.y < top && d.y > horizon - 0.15) {
+                float far = fi / 2.0;
+                vec3 c = mix(S_mountains_colour, S_mountains_far_colour, far);
+                col = mix(c, S_gradient_horizon, far * S_mountains_haze * 0.6);
+            }
+        }
+    }
+}
+
+void st_grid(inout vec3 col, vec3 d, float t) {
+    float horizon = st_horizon();
+    float above = d.y - horizon;
+    float sky = smoothstep(-0.02, 0.06, above);
     if (above < 0.0) {
         float below = -above;
-        if (S_lake_on > 0.5) {
-            vec3 r = vec3(d.x, horizon + below, d.z);
-            float rip = S_lake_ripples * 0.04 * st_noise(vec3(d.xz / max(below, 0.01) * 4.0, t * 0.02 * S_lake_ripple_speed * 10.0));
-            r.x += rip;
-            r.z += rip * 0.7;
-            vec3 mirrored = st_upper(normalize(r), t);
-            col = mix(S_lake_tint * 0.35, mirrored * mix(vec3(1.0), S_lake_tint * 1.6, 0.35), S_lake_clarity);
-        }
         if (S_grid_on > 0.5) {
             vec2 p = d.xz / max(below, 0.004) * mix(0.25, 1.2, S_grid_spacing);
             p.y += t * 0.01 * S_grid_scroll * 4.0;
@@ -287,24 +357,68 @@ vec3 studioSky(vec3 d, float t) {
             if (stripes > 0.5) col = mix(S_grid_sun_colour, S_gradient_horizon, clamp(-y, 0.0, 1.0) * 0.6);
         }
     }
-    // mountains on the horizon, in layers fading into the haze
-    if (S_mountains_on > 0.5) {
-        float az = atan(d.x, d.z);
-        int layers = 1 + int(S_mountains_layers * 2.0 + 0.5);
-        for (int i = 2; i >= 0; i--) {
-            if (i >= layers) continue;
-            float fi = float(i);
-            float h = 0.0, a = 1.0, f = mix(1.5, 4.0, S_mountains_roughness);
-            for (int o = 0; o < 4; o++) {
-                h += st_noise1(az * f * (1.0 + fi * 0.7) + fi * 13.0) * a;
-                f *= 2.1;
-                a *= 0.5 * (0.6 + S_mountains_roughness * 0.6);
-            }
-            float top = horizon + h * mix(0.04, 0.3, S_mountains_height) * (1.0 - fi * 0.25);
-            if (d.y < top && d.y > horizon - 0.15) {
-                float far = fi / 2.0;
-                vec3 c = mix(S_mountains_colour, S_mountains_far_colour, far);
-                col = mix(c, S_gradient_horizon, far * S_mountains_haze * 0.6);
+}
+
+// the layers' ranks, in the order of st_draw's ids (0 nebula .. 9 mountains, 10 lake, 11 grid)
+int st_rank(int id) {
+    float r = id == 0 ? S_nebula_order : id == 1 ? S_stars_order : id == 2 ? S_planet_order : id == 3 ? S_moon_order
+            : id == 4 ? S_rays_order : id == 5 ? S_aurora_order : id == 6 ? S_clouds_order : id == 7 ? S_shooting_order
+            : id == 8 ? S_sparkles_order : id == 9 ? S_mountains_order : id == 10 ? S_lake_order : S_grid_order;
+    return int(r * 16.0 + 0.5);
+}
+
+// one layer (not the lake: see studioSky)
+void st_draw(inout vec3 col, int id, vec3 d, float t) {
+    if (id == 0) st_nebula(col, d, t);
+    else if (id == 1) st_stars(col, d, t);
+    else if (id == 2) st_planet(col, d, t);
+    else if (id == 3) st_moon(col, d, t);
+    else if (id == 4) st_rays(col, d, t);
+    else if (id == 5) st_aurora(col, d, t);
+    else if (id == 6) st_clouds(col, d, t);
+    else if (id == 7) st_shooting(col, d, t);
+    else if (id == 8) st_sparkles(col, d, t);
+    else if (id == 9) st_mountains(col, d, t);
+    else if (id == 11) st_grid(col, d, t);
+}
+
+// what the lake mirrors: the sky's colour and every layer drawn before the lake (ranks below upTo)
+vec3 st_behind(vec3 d, float t, int upTo) {
+    vec3 col = vec3(0.0);
+    st_base(col, d, t);
+    for (int rank = 0; rank < 16; rank++) {
+        if (rank >= upTo) break;
+        for (int id = 0; id < 12; id++) {
+            if (id != 10 && st_rank(id) == rank) st_draw(col, id, d, t);
+        }
+    }
+    return col;
+}
+
+vec3 studioSky(vec3 d, float t) {
+    t *= mix(0.0, 2.0, S_global_speed);
+    float spin = t * 0.0006 * S_global_spin * 10.0;
+    d.xz = mat2(cos(spin), -sin(spin), sin(spin), cos(spin)) * d.xz;
+    float horizon = st_horizon();
+    float above = d.y - horizon;
+    vec3 col = vec3(0.0);
+    st_base(col, d, t);
+    for (int rank = 0; rank < 16; rank++) {
+        for (int id = 0; id < 12; id++) {
+            if (st_rank(id) != rank) continue;
+            if (id != 10) {
+                st_draw(col, id, d, t);
+            } else if (above < 0.0) {
+                // the lake: below the horizon, mirroring the sky and every layer behind it
+                float below = -above;
+                if (S_lake_on > 0.5) {
+                    vec3 r = vec3(d.x, horizon + below, d.z);
+                    float rip = S_lake_ripples * 0.04 * st_noise(vec3(d.xz / max(below, 0.01) * 4.0, t * 0.02 * S_lake_ripple_speed * 10.0));
+                    r.x += rip;
+                    r.z += rip * 0.7;
+                    vec3 mirrored = st_behind(normalize(r), t, rank);
+                    col = mix(S_lake_tint * 0.35, mirrored * mix(vec3(1.0), S_lake_tint * 1.6, 0.35), S_lake_clarity);
+                }
             }
         }
     }

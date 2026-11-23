@@ -1193,7 +1193,7 @@
   "screen.skyblocks.studio.save": "Save sky",
   "screen.skyblocks.studio.take": "Sky blocks",
   "screen.skyblocks.studio.editing": "Editing: %s",
-  "screen.skyblocks.studio.help": "Drag the preview to look around. Save shares the sky with everyone; Sky blocks swaps your glass for blocks of it (up to 16).",
+  "screen.skyblocks.studio.help": "Drag the preview to look around. The layer list is the draw order: lower ones are drawn over higher ones (use the arrows), and the lake mirrors everything above it in the list. Save shares the sky with everyone; Sky blocks swaps your glass for blocks of it (up to 16).",
   "message.skyblocks.studio.glass": "Bring glass: each glass block becomes one sky block of this sky",
   "guide.skyblocks.sky_studio": "Design your own skies. The server has 8 studio skies: pick one, switch its layers on and off (sky colour, nebula, stars, aurora, sun or moon, shooting stars, horizon grid), set their colours and numbers while the preview changes live, name it and save it for everyone. They are real skies like any other: take sky blocks of one for glass, and its liquid, stairs, slabs, brush paint and creatures all show it.",
   "screen.skyblocks.studio.layer.global": "Whole sky",
@@ -1288,5 +1288,7 @@
   "screen.skyblocks.studio.look": "Look: %s",
   "screen.skyblocks.studio.turn": "Turn: %s",
   "screen.skyblocks.studio.colours": "Colours",
-  "screen.skyblocks.studio.numbers": "Settings"
+  "screen.skyblocks.studio.numbers": "Settings",
+  "screen.skyblocks.studio.back": "Move back (drawn behind the layer above)",
+  "screen.skyblocks.studio.front": "Move forward (drawn over the layer below)"
 }
