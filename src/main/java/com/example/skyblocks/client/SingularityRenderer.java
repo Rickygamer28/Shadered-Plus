@@ -48,7 +48,7 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
         if (be.skin() != 0 && StorageSkins.ready()) {
             // (one of its other skins: the Dyson sphere, the tesseract, the item galaxy - StorageSkins)
             float full = be.fullness();
-            float half = be.chamber() > 0 ? (be.chamber() - 1) / 2.0F - 0.55F : 0.42F + 0.45F * full;
+            float half = be.chamber() > 0 ? (be.chamber() - 1) / 2.0F - 0.55F : 0.42F; // (alone: inside its frame - how full it is shows in the skin itself)
             int skin = be.skin() == 1 ? StorageSkins.DYSON : be.skin() == 2 ? StorageSkins.TESSERACT : StorageSkins.GALAXY;
             int[] rgb;
             if (skin == StorageSkins.GALAXY) {

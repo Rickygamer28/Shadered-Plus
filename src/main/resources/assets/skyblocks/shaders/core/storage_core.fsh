@@ -249,13 +249,13 @@ vec4 galaxy(vec3 ro, vec3 rd, float t) {
                 // (dust in the arms)
                 c = vec4(mix(vec3(0.35, 0.3, 0.7), C0.rgb, 0.4), dens * 0.25 * (0.4 + 0.6 * full));
                 // the stars: little squares, each the colour of something held
-                float cells = 26.0 + 12.0 * full;
+                float cells = 11.0 + 6.0 * full;
                 vec2 rq = vec2(cos(-t * 0.08) * q.x - sin(-t * 0.08) * q.y, sin(-t * 0.08) * q.x + cos(-t * 0.08) * q.y) * cells;
                 vec2 cell = floor(rq), f = fract(rq) - 0.5;
                 float h = hash2(cell);
-                if (h < dens * (0.35 + 0.65 * full) + 0.03 * full) {
+                if (h < dens * (0.55 + 0.45 * full) + 0.05 * full) {
                     vec2 off = (vec2(hash2(cell + 1.3), hash2(cell + 2.9)) - 0.5) * 0.4;
-                    float size = 0.16 + 0.14 * hash2(cell + 5.1);
+                    float size = 0.2 + 0.12 * hash2(cell + 5.1);
                     vec2 a = abs(f - off);
                     if (max(a.x, a.y) < size) {
                         int which = int(hash2(cell + 7.7) * float(count()));
