@@ -58,7 +58,7 @@ public class AuroraCurtainRenderer implements BlockEntityRenderer<SimpleRendered
         int rows = Math.max(2, Math.round(hang * 2));
         float base = alongX ? be.getBlockPos().getX() : be.getBlockPos().getZ();
         Matrix4f m = ps.last().pose();
-        VertexConsumer vc = buffers.getBuffer(FxShaders.Types.AURORA);
+        VertexConsumer vc = buffers.getBuffer(com.example.skyblocks.client.iris.IrisCompat.shaderPackInUse() ? FxShaders.Types.AURORA_PACK : FxShaders.Types.AURORA);
         for (int i = 0; i < ACROSS; i++) {
             float s0 = i / (float) ACROSS, s1 = (i + 1) / (float) ACROSS;
             for (int j = 0; j < rows; j++) {

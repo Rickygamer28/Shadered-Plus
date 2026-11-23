@@ -34,6 +34,6 @@ void main() {
     bend += (vec2(noise(vec3(p * 2.7, t)), noise(vec3(p * 2.7 + 9.1, t))) - 0.5) * 0.5;
     float fade = smoothstep(1.0, 0.4, abs(uv.x)) * smoothstep(0.0, 0.15, uv.y) * smoothstep(1.0, 0.45, uv.y);
     float far = clamp(gl_FragCoord.w * 4.0, 0.15, 1.0);
-    vec2 at = gl_FragCoord.xy / ScreenSize + bend * 0.012 * fade * far;
+    vec2 at = gl_FragCoord.xy / ScreenSize + bend * 0.02 * fade * far;
     fragColor = vec4(texture(Sampler0, at).rgb, 1.0);
 }

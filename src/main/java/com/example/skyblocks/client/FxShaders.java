@@ -54,6 +54,11 @@ public final class FxShaders {
                 CompositeState.builder().setShaderState(new ShaderStateShard(() -> aurora)).setTransparencyState(LIGHTNING_TRANSPARENCY)
                         .setCullState(NO_CULL).setWriteMaskState(COLOR_WRITE).createCompositeState(false));
 
+        /** (with a shader pack: blended over what's behind instead - packs don't keep added light) */
+        static final RenderType AURORA_PACK = create("skyblocks_aurora_curtain_pack", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 2048, false, true,
+                CompositeState.builder().setShaderState(new ShaderStateShard(() -> aurora)).setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .setCullState(NO_CULL).setWriteMaskState(COLOR_WRITE).createCompositeState(false));
+
         private Types() {
             super("", DefaultVertexFormat.POSITION, VertexFormat.Mode.QUADS, 0, false, false, () -> {}, () -> {});
         }
