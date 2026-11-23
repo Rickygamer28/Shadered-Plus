@@ -64,7 +64,7 @@ public class SkyBeaconRenderer implements BlockEntityRenderer<SkyHolderBlockEnti
         n = box(quads, n, ps.last().pose(), 0.21F);
         ps.popPose();
         // ---- the beam: a slowly turning square column of the sky ----
-        float r = 0.16F;
+        float r = 0.2F;
         if (height > 0) {
             ps.pushPose();
             ps.mulPose(Axis.YP.rotationDegrees(t * 0.8F));
@@ -88,8 +88,8 @@ public class SkyBeaconRenderer implements BlockEntityRenderer<SkyHolderBlockEnti
                 ps.pushPose();
                 ps.mulPose(Axis.YP.rotationDegrees(-t * (0.5F + layer * 0.4F) + layer * 45.0F));
                 Matrix4f m = ps.last().pose();
-                float rr = r + 0.07F + layer * 0.08F;
-                int alpha = layer == 0 ? 46 : 22;
+                float rr = r + 0.05F + layer * 0.07F;
+                int alpha = layer == 0 ? 14 : 7;
                 float[][] c = {{-rr, -rr}, {rr, -rr}, {rr, rr}, {-rr, rr}};
                 for (int i = 0; i < 4; i++) {
                     float[] a = c[i], b = c[(i + 1) % 4];
