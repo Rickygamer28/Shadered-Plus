@@ -488,6 +488,12 @@ public final class ModBlocks {
             net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().strength(2.0F).sound(net.minecraft.world.level.block.SoundType.AMETHYST)
                     .lightLevel(s -> 7).noOcclusion());
 
+    public static final DeferredBlock<SkyHolderBlock> SKY_RIFT = BLOCKS.registerBlock("sky_rift", SkyHolderBlock::rift,
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.AMETHYST).noOcclusion().noCollission().lightLevel(state -> 10)
+                    .pushReaction(PushReaction.DESTROY).mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE));
+    public static final DeferredBlock<SkyHolderBlock> SKY_BEACON = BLOCKS.registerBlock("sky_beacon", SkyHolderBlock::beacon,
+            BlockBehaviour.Properties.of().strength(3.0F).sound(SoundType.GLASS).noOcclusion().lightLevel(state -> 15)
+                    .mapColor(net.minecraft.world.level.material.MapColor.DIAMOND));
     public static final DeferredBlock<SkyLanternBlock> SKY_LANTERN = BLOCKS.registerBlock("sky_lantern", SkyLanternBlock::new,
             BlockBehaviour.Properties.of().strength(3.5F).sound(SoundType.LANTERN).noOcclusion().lightLevel(state -> 15)
                     .requiresCorrectToolForDrops().pushReaction(PushReaction.DESTROY).mapColor(net.minecraft.world.level.material.MapColor.METAL));

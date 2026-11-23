@@ -55,6 +55,8 @@ public class SkyStudioScreen extends Screen {
     private int px0, py0, px1, py1;
     private float viewYaw = 0.0F, viewPitch = 0.2F;
     private boolean turning = true, dragging;
+    /** The preview's time of day (0 noon .. 0.5 midnight) and rain: start as the world's, set in the day and weather layers. */
+    private float previewDay = -1.0F, previewRain = -1.0F;
     private int layerScroll, fieldScroll;
     private final List<AbstractWidget> layerWidgets = new ArrayList<>(), fieldWidgets = new ArrayList<>();
     private int layerTop, layerBottom, fieldTop, fieldBottom, swatchY = -1, helpY;
@@ -64,6 +66,16 @@ public class SkyStudioScreen extends Screen {
         this.pos = pos;
         var level = net.minecraft.client.Minecraft.getInstance().level;
         load(level != null && level.getBlockEntity(pos) instanceof com.example.skyblocks.SkyStudioBlockEntity be ? be.slot() : 0);
+    }
+
+    private void worldPreview() {
+        var level = net.minecraft.client.Minecraft.getInstance().level;
+        if (previewDay < 0.0F) {
+            previewDay = level != null ? level.getTimeOfDay(1.0F) : 0.0F;
+        }
+        if (previewRain < 0.0F) {
+            previewRain = level != null ? Math.max(level.getRainLevel(1.0F), level.getThunderLevel(1.0F) * 0.999F) : 0.0F;
+        }
     }
 
     private void load(int s) {
@@ -273,6 +285,21 @@ public class SkyStudioScreen extends Screen {
             }
             y += 4;
         }
+        worldPreview();
+        if (current().id().equals("daycycle")) {
+            fieldWidgets.add(addRenderableWidget(new Slider(fx + 2, y, rw - 4, Component.empty(), () -> previewDay, v -> previewDay = v.floatValue()) {
+                @Override
+                protected void updateMessage() {
+                    int minutes = Math.round((12.0F + (float) value * 24.0F) * 60.0F) % (24 * 60);
+                    setMessage(Component.translatable("screen.skyblocks.studio.preview_time", String.format("%02d:%02d", minutes / 60, minutes % 60)));
+                }
+            }));
+            y += 22;
+        } else if (current().id().equals("weather")) {
+            fieldWidgets.add(addRenderableWidget(new Slider(fx + 2, y, rw - 4, Component.translatable("screen.skyblocks.studio.preview_rain"),
+                    () -> previewRain, v -> previewRain = v.floatValue())));
+            y += 22;
+        }
         for (StudioSpec.Field f : current().fields()) {
             if (f.kind() != 'n') {
                 continue;
@@ -443,7 +470,8 @@ public class SkyStudioScreen extends Screen {
         if (turning && !dragging) {
             viewYaw += 0.0025F;
         }
-        StudioSkiesClient.apply(shader, params);
+        worldPreview();
+        StudioSkiesClient.apply(shader, params, previewDay, previewRain, Math.max(0.0F, previewRain * 2.0F - 1.0F));
         float ticks = (minecraft != null && minecraft.level != null ? minecraft.level.getGameTime() % 240000L : 0) + partialTick;
         shader.safeGetUniform("Time").set(ticks);
         shader.safeGetUniform("View").set(viewYaw, viewPitch);
@@ -531,7 +559,8 @@ public class SkyStudioScreen extends Screen {
                 rows++;
             }
         }
-        int total = (colours > 0 ? 3 * 18 + 22 + colours * 18 + 4 : 0) + rows * 18 + 4;
+        int total = (colours > 0 ? 3 * 18 + 22 + colours * 18 + 4 : 0) + rows * 18 + 4
+                + (current().id().equals("daycycle") || current().id().equals("weather") ? 22 : 0);
         return Math.max(0, total - (fieldBottom - fieldTop));
     }
 
@@ -596,8 +625,8 @@ public class SkyStudioScreen extends Screen {
     }
 
     /** A setting from 0 to 1 (shown as a percentage); a change can be undone. */
-    private final class Slider extends AbstractSliderButton {
-        private final Component label;
+    private class Slider extends AbstractSliderButton {
+        protected final Component label;
         private final Consumer<Double> set;
 
         Slider(int x, int y, int width, Component label, DoubleSupplier get, Consumer<Double> set) {

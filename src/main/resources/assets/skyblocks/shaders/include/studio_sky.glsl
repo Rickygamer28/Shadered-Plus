@@ -68,8 +68,38 @@ float st_horizon() {
     return (S_gradient_horizon_height - 0.5) * 0.6;
 }
 
+// ---- day and night: the world's time of day ----
+// how high the world's sun is (1 noon, -1 midnight)
+float st_sunHigh() {
+    return cos(DayTime * 2.0 * ST_PI);
+}
+
+// how much it's day, and how much night (0 .. 1 each; dusk and dawn: the sky as designed)
+vec2 st_dayNight() {
+    if (S_daycycle_on < 0.5) return vec2(0.0);
+    float h = st_sunHigh();
+    return vec2(smoothstep(0.0, 0.35, h), smoothstep(0.0, 0.35, -h)) * S_daycycle_strength;
+}
+
+vec3 st_cycle(vec3 designed, vec3 day, vec3 night) {
+    vec2 w = st_dayNight();
+    return mix(mix(designed, day, w.x), night, w.y);
+}
+
+#define G_TOP st_cycle(S_gradient_top, S_daycycle_day_top, S_daycycle_night_top)
+#define G_MIDDLE st_cycle(S_gradient_middle, S_daycycle_day_middle, S_daycycle_night_middle)
+#define G_HORIZON st_cycle(S_gradient_horizon, S_daycycle_day_horizon, S_daycycle_night_horizon)
+
+// the world's sun (by day) or moon (by night): where it is in the sky (east to west, a little to the south)
+vec3 st_worldSun() {
+    float a = DayTime * 2.0 * ST_PI;
+    vec3 sun = normalize(vec3(-sin(a), cos(a), -0.25));
+    return sun.y >= -0.05 ? sun : -sun;
+}
+
 // the sun or moon's direction (it can circle the sky)
 vec3 st_moonDir(float t) {
+    if (S_daycycle_on > 0.5 && S_daycycle_sun_follows > 0.5) return st_worldSun();
     float az = S_moon_direction * 2.0 * ST_PI + t * 0.0004 * S_moon_orbit * 10.0;
     return st_dirAt(az, mix(0.05, 1.3, S_moon_height));
 }
@@ -106,9 +136,19 @@ void st_body(inout vec3 col, vec3 d, vec3 c, float size, float roundness, vec3 c
     }
 }
 
+// by day (the day and night layer), a soft glow round the sun
+void st_sunGlow(inout vec3 col, vec3 d, float t) {
+    float day = st_dayNight().x * S_daycycle_day_light;
+    if (day > 0.001) {
+        vec3 m = st_moonDir(t);
+        col += G_HORIZON * pow(max(dot(d, m), 0.0), 6.0) * day * 0.6 + vec3(1.0, 0.97, 0.9) * pow(max(dot(d, m), 0.0), 400.0) * day * 3.0;
+    }
+}
+
 // ---- the layers, each drawn over what's behind it (the draw order: each layer's rank, S_<layer>_order) ----
 
 void st_base(inout vec3 col, vec3 d, float t) {
+    st_sunGlow(col, d, t);
     float horizon = st_horizon();
     float above = d.y - horizon;
     float sky = smoothstep(-0.02, 0.06, above);
@@ -116,10 +156,10 @@ void st_base(inout vec3 col, vec3 d, float t) {
     if (S_gradient_on > 0.5) {
         float h = clamp(above / max(1.0 - horizon, 0.05), 0.0, 1.0);
         h = pow(h, mix(2.2, 0.45, S_gradient_curve));
-        vec3 sky = mix(S_gradient_horizon, S_gradient_middle, smoothstep(0.0, 0.35, h));
-        sky = mix(sky, S_gradient_top, smoothstep(0.3, 1.0, h));
+        vec3 sky = mix(G_HORIZON, G_MIDDLE, smoothstep(0.0, 0.35, h));
+        sky = mix(sky, G_TOP, smoothstep(0.3, 1.0, h));
         col = above >= 0.0 ? sky : S_gradient_ground;
-        col += S_gradient_horizon * S_gradient_glow * 0.8 * exp(-abs(above) * mix(30.0, 3.0, S_gradient_glow_width));
+        col += G_HORIZON * S_gradient_glow * 0.8 * exp(-abs(above) * mix(30.0, 3.0, S_gradient_glow_width));
     }
 }
 
@@ -323,7 +363,7 @@ void st_mountains(inout vec3 col, vec3 d, float t) {
             if (d.y < top && d.y > horizon - 0.15) {
                 float far = fi / 2.0;
                 vec3 c = mix(S_mountains_colour, S_mountains_far_colour, far);
-                col = mix(c, S_gradient_horizon, far * S_mountains_haze * 0.6);
+                col = mix(c, G_HORIZON, far * S_mountains_haze * 0.6);
             }
         }
     }
@@ -354,21 +394,96 @@ void st_grid(inout vec3 col, vec3 d, float t) {
         if (length(c) < size) {
             float y = c.y / size;
             float stripes = step(0.0, y) + step(0.35, fract(y * 6.0 + t * 0.01));
-            if (stripes > 0.5) col = mix(S_grid_sun_colour, S_gradient_horizon, clamp(-y, 0.0, 1.0) * 0.6);
+            if (stripes > 0.5) col = mix(S_grid_sun_colour, G_HORIZON, clamp(-y, 0.0, 1.0) * 0.6);
         }
     }
 }
 
-// the layers' ranks, in the order of st_draw's ids (0 nebula .. 9 mountains, 10 lake, 11 grid)
+// ---- weather: rain, snow, lightning, a rainbow (as much as the world's weather says, if it follows it) ----
+void st_weather(inout vec3 col, vec3 d, float t) {
+    if (S_weather_on < 0.5) return;
+    float horizon = st_horizon();
+    float above = d.y - horizon;
+    float rainWorld = mix(1.0, Weather.x, S_weather_follow_world);
+    float thunderWorld = mix(1.0, Weather.y, S_weather_follow_world);
+    float az = atan(d.x, d.z) / ST_PI;
+    float el = asin(clamp(d.y, -1.0, 1.0));
+    // a rainbow, opposite the sun (behind the rain)
+    if (S_weather_rainbow > 0.01 && above > -0.01) {
+        vec3 m = st_moonDir(t);
+        vec3 anti = normalize(vec3(-m.x, -0.12, -m.z));
+        float ang = acos(clamp(dot(d, anti), -1.0, 1.0));
+        float k = (ang - 0.70) / 0.075;
+        if (k > 0.0 && k < 1.0) {
+            vec3 bow = clamp(abs(fract(vec3(1.0 - k * 0.8) + vec3(0.0, 2.0 / 3.0, 1.0 / 3.0)) * 6.0 - 3.0) - 1.0, 0.0, 1.0);
+            float edge = smoothstep(0.0, 0.15, k) * smoothstep(1.0, 0.85, k);
+            col += bow * edge * S_weather_rainbow * 0.45 * smoothstep(-0.01, 0.08, above) * mix(1.0, rainWorld, 0.5);
+        }
+    }
+    // lightning: now and then the sky flashes, and a bolt comes down
+    float strike = S_weather_lightning * thunderWorld;
+    if (strike > 0.01) {
+        float period = mix(420.0, 70.0, strike);
+        float slot = floor(t / period), phase = t - slot * period;
+        float flash = exp(-phase * 0.35) + 0.6 * exp(-abs(phase - 5.0) * 0.8);
+        if (phase < 16.0) {
+            col += S_weather_lightning_colour * flash * 0.35 * smoothstep(-0.1, 0.3, above);
+            float boltAz = st_hash12(vec2(slot, 7.0)) * 2.0 - 1.0;
+            float wig = (st_noise1(el * 14.0 + slot * 3.1) - 0.5) * 0.06 + (st_noise1(el * 50.0 + slot) - 0.5) * 0.015;
+            float dx = abs(mod(az - boltAz - wig + 1.0, 2.0) - 1.0);
+            float top = 0.45 + st_hash12(vec2(slot, 9.0)) * 0.4;
+            if (el < top && above > 0.0) {
+                col += S_weather_lightning_colour * smoothstep(0.004, 0.0, dx) * 2.5 * exp(-phase * 0.25);
+            }
+        }
+    }
+    // rain: thin falling streaks, near and far
+    float rain = S_weather_rain * rainWorld;
+    if (rain > 0.01) {
+        for (int l = 0; l < 3; l++) {
+            float fl = float(l);
+            float scale = 1.0 + fl * 0.8;
+            vec2 p = vec2(az * 90.0 * scale + el * S_weather_rain_slant * 60.0 * scale, el * 6.0 * scale + t * mix(0.08, 0.4, S_weather_rain_speed) * (1.4 - fl * 0.3));
+            vec2 cell = floor(p);
+            float h = st_hash12(cell + fl * 31.0);
+            if (h < rain * 0.45) {
+                vec2 f = fract(p);
+                float x = abs(f.x - 0.2 - h * 1.2);
+                float streak = smoothstep(0.12, 0.0, x) * smoothstep(0.0, 0.3, f.y) * smoothstep(1.0, 0.7, f.y);
+                col = mix(col, S_weather_rain_colour, streak * (0.45 - fl * 0.1));
+            }
+        }
+        col = mix(col, S_weather_rain_colour * 0.5, rain * 0.15); // (and a grey haze)
+    }
+    // snow: soft flakes drifting down
+    float snow = S_weather_snow * rainWorld;
+    if (snow > 0.01) {
+        for (int l = 0; l < 2; l++) {
+            float fl = float(l);
+            float scale = 30.0 + fl * 25.0;
+            vec2 p = vec2(az * scale * 1.6, el * scale + t * (0.02 + fl * 0.01));
+            p.x += sin(p.y * 0.7 + t * 0.03) * 0.4;
+            vec2 cell = floor(p);
+            float h = st_hash12(cell + fl * 13.0);
+            if (h < snow * 0.5) {
+                vec2 f = fract(p) - 0.5 - (vec2(st_hash12(cell + 2.0), st_hash12(cell + 3.0)) - 0.5) * 0.5;
+                col = mix(col, S_weather_snow_colour, smoothstep(0.16 - fl * 0.04, 0.02, length(f)) * 0.85);
+            }
+        }
+    }
+}
+
+// the layers' ranks, in the order of st_draw's ids (0 nebula .. 9 mountains, 10 lake, 11 grid, 12 weather)
 int st_rank(int id) {
     float r = id == 0 ? S_nebula_order : id == 1 ? S_stars_order : id == 2 ? S_planet_order : id == 3 ? S_moon_order
             : id == 4 ? S_rays_order : id == 5 ? S_aurora_order : id == 6 ? S_clouds_order : id == 7 ? S_shooting_order
-            : id == 8 ? S_sparkles_order : id == 9 ? S_mountains_order : id == 10 ? S_lake_order : S_grid_order;
+            : id == 8 ? S_sparkles_order : id == 9 ? S_mountains_order : id == 10 ? S_lake_order : id == 11 ? S_grid_order
+            : S_weather_order;
     return int(r * 16.0 + 0.5);
 }
 
-// one layer (not the lake: see studioSky)
-void st_draw(inout vec3 col, int id, vec3 d, float t) {
+// one layer, as it is (not the lake: see studioSky)
+void st_drawRaw(inout vec3 col, int id, vec3 d, float t) {
     if (id == 0) st_nebula(col, d, t);
     else if (id == 1) st_stars(col, d, t);
     else if (id == 2) st_planet(col, d, t);
@@ -380,6 +495,16 @@ void st_draw(inout vec3 col, int id, vec3 d, float t) {
     else if (id == 8) st_sparkles(col, d, t);
     else if (id == 9) st_mountains(col, d, t);
     else if (id == 11) st_grid(col, d, t);
+    else if (id == 12) st_weather(col, d, t);
+}
+
+// one layer: the night ones (nebula, stars, aurora, shooting stars, sparkles) fade by day (the day and night layer)
+void st_draw(inout vec3 col, int id, vec3 d, float t) {
+    vec3 before = col;
+    st_drawRaw(col, id, d, t);
+    if (id == 0 || id == 1 || id == 5 || id == 7 || id == 8) {
+        col = mix(col, before, st_dayNight().x * S_daycycle_fade_stars);
+    }
 }
 
 // what the lake mirrors: the sky's colour and every layer drawn before the lake (ranks below upTo)
@@ -388,7 +513,7 @@ vec3 st_behind(vec3 d, float t, int upTo) {
     st_base(col, d, t);
     for (int rank = 0; rank < 16; rank++) {
         if (rank >= upTo) break;
-        for (int id = 0; id < 12; id++) {
+        for (int id = 0; id < 13; id++) {
             if (id != 10 && st_rank(id) == rank) st_draw(col, id, d, t);
         }
     }
@@ -404,7 +529,7 @@ vec3 studioSky(vec3 d, float t) {
     vec3 col = vec3(0.0);
     st_base(col, d, t);
     for (int rank = 0; rank < 16; rank++) {
-        for (int id = 0; id < 12; id++) {
+        for (int id = 0; id < 13; id++) {
             if (st_rank(id) != rank) continue;
             if (id != 10) {
                 st_draw(col, id, d, t);

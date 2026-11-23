@@ -7,13 +7,16 @@ package com.example.skyblocks;
  */
 public final class StudioSpec {
     /** How many numbers a studio sky has (each 0 .. 1), and in how many vec4s the shader gets them. */
-    public static final int SIZE = 177, VECS = 45;
+    public static final int SIZE = 218, VECS = 55;
 
     /** How many numbers a studio sky had before the draw order (its ranks come after them). */
     public static final int SIZE_BEFORE_ORDER = 165;
 
+    /** How many it had before the day cycle and weather (the layers after those come after them). */
+    public static final int SIZE_BEFORE_DAY = 177;
+
     /** How many layers can be put in order (a rank: 0, 1/16, 2/16, ...). */
-    public static final int ORDERED = 12;
+    public static final int ORDERED = 13;
 
     /** A setting: its name, kind ('o' the layer's switch, 'c' a colour: 3 numbers, 'n' a number), where it is. */
     public record Field(String id, char kind, int at) {}
@@ -36,6 +39,8 @@ public final class StudioSpec {
             new Layer("grid", 138, 174, new Field[] {new Field("colour", 'c', 139), new Field("spacing", 'n', 142), new Field("line_width", 'n', 143), new Field("scroll", 'n', 144), new Field("glow", 'n', 145), new Field("sun", 'n', 146), new Field("sun_colour", 'c', 147)}),
             new Layer("lake", 150, 176, new Field[] {new Field("tint", 'c', 151), new Field("clarity", 'n', 154), new Field("ripples", 'n', 155), new Field("ripple_speed", 'n', 156)}),
             new Layer("sparkles", 157, 173, new Field[] {new Field("colour", 'c', 158), new Field("amount", 'n', 161), new Field("size", 'n', 162), new Field("speed", 'n', 163), new Field("twinkle", 'n', 164)}),
+            new Layer("daycycle", 177, -1, new Field[] {new Field("day_top", 'c', 178), new Field("day_middle", 'c', 181), new Field("day_horizon", 'c', 184), new Field("night_top", 'c', 187), new Field("night_middle", 'c', 190), new Field("night_horizon", 'c', 193), new Field("strength", 'n', 196), new Field("fade_stars", 'n', 197), new Field("sun_follows", 'n', 198), new Field("day_light", 'n', 199)}),
+            new Layer("weather", 200, 217, new Field[] {new Field("rain", 'n', 201), new Field("rain_colour", 'c', 202), new Field("rain_speed", 'n', 205), new Field("rain_slant", 'n', 206), new Field("snow", 'n', 207), new Field("snow_colour", 'c', 208), new Field("lightning", 'n', 211), new Field("lightning_colour", 'c', 212), new Field("rainbow", 'n', 215), new Field("follow_world", 'n', 216)}),
     };
 
     public static final String[] PRESET_NAMES = {"dusk", "space", "neon", "dawn", "alien", "storm", "arctic", "inferno"};
@@ -60,7 +65,11 @@ public final class StudioSpec {
                 0.3725F, 0.8235F, 0.5F, 0.3F, 0.6F, 0.5F, 0.0F, 1.0F, 0.702F, 0.2784F,
                 0.0F, 0.2314F, 0.4353F, 0.6588F, 0.6F, 0.4F, 0.4F, 0.0F, 1.0F, 0.9451F,
                 0.7216F, 0.4F, 0.4F, 0.3F, 0.6F, 0.0F, 0.0625F, 0.125F, 0.1875F, 0.25F,
-                0.3125F, 0.375F, 0.4375F, 0.5F, 0.5625F, 0.625F, 0.6875F
+                0.3125F, 0.375F, 0.4375F, 0.5F, 0.5625F, 0.625F, 0.6875F, 0.0F, 0.2275F, 0.4824F,
+                0.8353F, 0.4353F, 0.6588F, 0.9098F, 0.8118F, 0.902F, 1.0F, 0.0078F, 0.0118F, 0.0392F,
+                0.0275F, 0.0431F, 0.1216F, 0.102F, 0.1373F, 0.251F, 1.0F, 0.85F, 1.0F, 0.6F,
+                0.0F, 0.5F, 0.7216F, 0.7843F, 0.8784F, 0.5F, 0.3F, 0.0F, 1.0F, 1.0F,
+                1.0F, 0.3F, 0.902F, 0.8627F, 1.0F, 0.0F, 0.0F, 0.75F
             },
             { // space
                 0.5F, 0.5F, 0.5F, 0.0F, 0.5F, 0.0F, 0.0F, 1.0F, 0.0078F, 0.0118F,
@@ -80,7 +89,11 @@ public final class StudioSpec {
                 0.3725F, 0.8235F, 0.5F, 0.3F, 0.6F, 0.5F, 0.0F, 1.0F, 0.702F, 0.2784F,
                 0.0F, 0.2314F, 0.4353F, 0.6588F, 0.6F, 0.4F, 0.4F, 0.0F, 1.0F, 0.9451F,
                 0.7216F, 0.4F, 0.4F, 0.3F, 0.6F, 0.0F, 0.0625F, 0.125F, 0.1875F, 0.25F,
-                0.3125F, 0.375F, 0.4375F, 0.5F, 0.5625F, 0.625F, 0.6875F
+                0.3125F, 0.375F, 0.4375F, 0.5F, 0.5625F, 0.625F, 0.6875F, 0.0F, 0.2275F, 0.4824F,
+                0.8353F, 0.4353F, 0.6588F, 0.9098F, 0.8118F, 0.902F, 1.0F, 0.0078F, 0.0118F, 0.0392F,
+                0.0275F, 0.0431F, 0.1216F, 0.102F, 0.1373F, 0.251F, 1.0F, 0.85F, 1.0F, 0.6F,
+                0.0F, 0.5F, 0.7216F, 0.7843F, 0.8784F, 0.5F, 0.3F, 0.0F, 1.0F, 1.0F,
+                1.0F, 0.3F, 0.902F, 0.8627F, 1.0F, 0.0F, 0.0F, 0.75F
             },
             { // neon
                 0.5F, 0.5F, 0.5F, 0.0F, 0.5F, 0.0F, 0.0F, 1.0F, 0.0392F, 0.0F,
@@ -100,7 +113,11 @@ public final class StudioSpec {
                 0.9412F, 1.0F, 0.5F, 0.3F, 0.6F, 0.5F, 0.7F, 1.0F, 0.702F, 0.2784F,
                 0.0F, 0.2314F, 0.4353F, 0.6588F, 0.6F, 0.4F, 0.4F, 0.0F, 1.0F, 0.9451F,
                 0.7216F, 0.4F, 0.4F, 0.3F, 0.6F, 0.0F, 0.0625F, 0.125F, 0.1875F, 0.25F,
-                0.3125F, 0.375F, 0.4375F, 0.5F, 0.5625F, 0.625F, 0.6875F
+                0.3125F, 0.375F, 0.4375F, 0.5F, 0.5625F, 0.625F, 0.6875F, 0.0F, 0.2275F, 0.4824F,
+                0.8353F, 0.4353F, 0.6588F, 0.9098F, 0.8118F, 0.902F, 1.0F, 0.0078F, 0.0118F, 0.0392F,
+                0.0275F, 0.0431F, 0.1216F, 0.102F, 0.1373F, 0.251F, 1.0F, 0.85F, 1.0F, 0.6F,
+                0.0F, 0.5F, 0.7216F, 0.7843F, 0.8784F, 0.5F, 0.3F, 0.0F, 1.0F, 1.0F,
+                1.0F, 0.3F, 0.902F, 0.8627F, 1.0F, 0.0F, 0.0F, 0.75F
             },
             { // dawn
                 0.5F, 0.5F, 0.5F, 0.0F, 0.5F, 0.0F, 0.0F, 1.0F, 0.1137F, 0.1686F,
@@ -120,7 +137,11 @@ public final class StudioSpec {
                 0.3725F, 0.8235F, 0.5F, 0.3F, 0.6F, 0.5F, 0.0F, 1.0F, 0.702F, 0.2784F,
                 1.0F, 0.2314F, 0.4353F, 0.6588F, 0.6F, 0.4F, 0.4F, 0.0F, 1.0F, 0.9451F,
                 0.7216F, 0.4F, 0.4F, 0.3F, 0.6F, 0.0F, 0.0625F, 0.125F, 0.1875F, 0.25F,
-                0.3125F, 0.375F, 0.4375F, 0.5F, 0.5625F, 0.625F, 0.6875F
+                0.3125F, 0.375F, 0.4375F, 0.5F, 0.5625F, 0.625F, 0.6875F, 1.0F, 0.2275F, 0.4824F,
+                0.8353F, 0.4353F, 0.6588F, 0.9098F, 0.8118F, 0.902F, 1.0F, 0.0078F, 0.0118F, 0.0392F,
+                0.0275F, 0.0431F, 0.1216F, 0.102F, 0.1373F, 0.251F, 1.0F, 0.85F, 1.0F, 0.6F,
+                0.0F, 0.5F, 0.7216F, 0.7843F, 0.8784F, 0.5F, 0.3F, 0.0F, 1.0F, 1.0F,
+                1.0F, 0.3F, 0.902F, 0.8627F, 1.0F, 0.0F, 0.0F, 0.75F
             },
             { // alien
                 0.5F, 0.5F, 0.5F, 0.0F, 0.5F, 0.0F, 0.0F, 1.0F, 0.0235F, 0.0941F,
@@ -140,7 +161,11 @@ public final class StudioSpec {
                 0.3725F, 0.8235F, 0.5F, 0.3F, 0.6F, 0.5F, 0.0F, 1.0F, 0.702F, 0.2784F,
                 0.0F, 0.2314F, 0.4353F, 0.6588F, 0.6F, 0.4F, 0.4F, 1.0F, 1.0F, 0.9451F,
                 0.7216F, 0.4F, 0.4F, 0.3F, 0.6F, 0.0F, 0.0625F, 0.125F, 0.1875F, 0.25F,
-                0.3125F, 0.375F, 0.4375F, 0.5F, 0.5625F, 0.625F, 0.6875F
+                0.3125F, 0.375F, 0.4375F, 0.5F, 0.5625F, 0.625F, 0.6875F, 0.0F, 0.2275F, 0.4824F,
+                0.8353F, 0.4353F, 0.6588F, 0.9098F, 0.8118F, 0.902F, 1.0F, 0.0078F, 0.0118F, 0.0392F,
+                0.0275F, 0.0431F, 0.1216F, 0.102F, 0.1373F, 0.251F, 1.0F, 0.85F, 1.0F, 0.6F,
+                0.0F, 0.5F, 0.7216F, 0.7843F, 0.8784F, 0.5F, 0.3F, 0.0F, 1.0F, 1.0F,
+                1.0F, 0.3F, 0.902F, 0.8627F, 1.0F, 0.0F, 0.0F, 0.75F
             },
             { // storm
                 0.5F, 0.5F, 0.5F, 0.0F, 0.5F, 0.0F, 0.0F, 1.0F, 0.102F, 0.1216F,
@@ -160,7 +185,11 @@ public final class StudioSpec {
                 0.3725F, 0.8235F, 0.5F, 0.3F, 0.6F, 0.5F, 0.0F, 1.0F, 0.702F, 0.2784F,
                 1.0F, 0.1647F, 0.2039F, 0.2588F, 0.6F, 0.4F, 0.4F, 0.0F, 1.0F, 0.9451F,
                 0.7216F, 0.4F, 0.4F, 0.3F, 0.6F, 0.0F, 0.0625F, 0.125F, 0.1875F, 0.25F,
-                0.3125F, 0.375F, 0.4375F, 0.5F, 0.5625F, 0.625F, 0.6875F
+                0.3125F, 0.375F, 0.4375F, 0.5F, 0.5625F, 0.625F, 0.6875F, 0.0F, 0.2275F, 0.4824F,
+                0.8353F, 0.4353F, 0.6588F, 0.9098F, 0.8118F, 0.902F, 1.0F, 0.0078F, 0.0118F, 0.0392F,
+                0.0275F, 0.0431F, 0.1216F, 0.102F, 0.1373F, 0.251F, 1.0F, 0.85F, 1.0F, 0.6F,
+                1.0F, 0.75F, 0.7216F, 0.7843F, 0.8784F, 0.5F, 0.3F, 0.0F, 1.0F, 1.0F,
+                1.0F, 0.6F, 0.902F, 0.8627F, 1.0F, 0.0F, 0.0F, 0.75F
             },
             { // arctic
                 0.5F, 0.5F, 0.5F, 0.0F, 0.5F, 0.0F, 0.0F, 1.0F, 0.0078F, 0.0314F,
@@ -180,7 +209,11 @@ public final class StudioSpec {
                 0.3725F, 0.8235F, 0.5F, 0.3F, 0.6F, 0.5F, 0.0F, 1.0F, 0.702F, 0.2784F,
                 1.0F, 0.2314F, 0.4353F, 0.6588F, 0.6F, 0.4F, 0.4F, 0.0F, 1.0F, 0.9451F,
                 0.7216F, 0.4F, 0.4F, 0.3F, 0.6F, 0.0F, 0.0625F, 0.125F, 0.1875F, 0.25F,
-                0.3125F, 0.375F, 0.4375F, 0.5F, 0.5625F, 0.625F, 0.6875F
+                0.3125F, 0.375F, 0.4375F, 0.5F, 0.5625F, 0.625F, 0.6875F, 0.0F, 0.2275F, 0.4824F,
+                0.8353F, 0.4353F, 0.6588F, 0.9098F, 0.8118F, 0.902F, 1.0F, 0.0078F, 0.0118F, 0.0392F,
+                0.0275F, 0.0431F, 0.1216F, 0.102F, 0.1373F, 0.251F, 1.0F, 0.85F, 1.0F, 0.6F,
+                0.0F, 0.5F, 0.7216F, 0.7843F, 0.8784F, 0.5F, 0.3F, 0.0F, 1.0F, 1.0F,
+                1.0F, 0.3F, 0.902F, 0.8627F, 1.0F, 0.0F, 0.0F, 0.75F
             },
             { // inferno
                 0.5F, 0.5F, 0.5F, 0.0F, 0.5F, 0.0F, 0.0F, 1.0F, 0.102F, 0.0078F,
@@ -200,7 +233,11 @@ public final class StudioSpec {
                 0.3725F, 0.8235F, 0.5F, 0.3F, 0.6F, 0.5F, 0.0F, 1.0F, 0.702F, 0.2784F,
                 0.0F, 0.2314F, 0.4353F, 0.6588F, 0.6F, 0.4F, 0.4F, 1.0F, 1.0F, 0.702F,
                 0.2784F, 0.4F, 0.4F, 0.3F, 0.6F, 0.0F, 0.0625F, 0.125F, 0.1875F, 0.25F,
-                0.3125F, 0.375F, 0.4375F, 0.5F, 0.5625F, 0.625F, 0.6875F
+                0.3125F, 0.375F, 0.4375F, 0.5F, 0.5625F, 0.625F, 0.6875F, 0.0F, 0.2275F, 0.4824F,
+                0.8353F, 0.4353F, 0.6588F, 0.9098F, 0.8118F, 0.902F, 1.0F, 0.0078F, 0.0118F, 0.0392F,
+                0.0275F, 0.0431F, 0.1216F, 0.102F, 0.1373F, 0.251F, 1.0F, 0.85F, 1.0F, 0.6F,
+                0.0F, 0.5F, 0.7216F, 0.7843F, 0.8784F, 0.5F, 0.3F, 0.0F, 1.0F, 1.0F,
+                1.0F, 0.3F, 0.902F, 0.8627F, 1.0F, 0.0F, 0.0F, 0.75F
             },
     };
 

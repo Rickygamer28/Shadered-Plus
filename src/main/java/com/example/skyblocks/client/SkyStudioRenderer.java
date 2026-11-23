@@ -101,30 +101,7 @@ public class SkyStudioRenderer implements BlockEntityRenderer<SkyStudioBlockEnti
             ps.mulPose(Axis.XP.rotationDegrees(35.0F));
             ps.mulPose(Axis.ZP.rotationDegrees(45.0F));
             float[] d = skyBox(ps, 0.13F);
-            var data = com.noodlegamer76.shadered.client.renderer.SkyblockRenderer.getData(StudioSkies.type(slot));
-            if (com.example.skyblocks.client.iris.IrisIslandTarget.deferSky()) {
-                SkyUsage.ensureFresh(data);
-                com.example.skyblocks.client.iris.IrisIslandTarget.deferSky(sky, v -> emitSky(v, d));
-            } else {
-                float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, minZ = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE, maxZ = -Float.MAX_VALUE;
-                for (int i = 0; i < d.length; i += 5) {
-                    minX = Math.min(minX, d[i]);
-                    maxX = Math.max(maxX, d[i]);
-                    minY = Math.min(minY, d[i + 1]);
-                    maxY = Math.max(maxY, d[i + 1]);
-                    minZ = Math.min(minZ, d[i + 2]);
-                    maxZ = Math.max(maxZ, d[i + 2]);
-                }
-                SkyUsage.ensurePart(data, SkyUsage.rectOfBox(minX, minY, minZ, maxX, maxY, maxZ));
-                MultiBufferSource.BufferSource now = DrawNow.now(buffers);
-                SkyUsage.placeKnown = true;
-                try {
-                    emitSky(now.getBuffer(sky), d);
-                    now.endBatch(sky);
-                } finally {
-                    SkyUsage.placeKnown = false;
-                }
-            }
+            SkyQuads.draw(StudioSkies.type(slot), d, d.length, buffers);
             ps.popPose();
         }
         ps.popPose();
@@ -181,12 +158,5 @@ public class SkyStudioRenderer implements BlockEntityRenderer<SkyStudioBlockEnti
             }
         }
         return out;
-    }
-
-    private static void emitSky(VertexConsumer c, float[] d) {
-        for (int i = 0; i < d.length; i += 5) {
-            c.addVertex(d[i], d[i + 1], d[i + 2]).setColor(255, 255, 255, 255).setUv(d[i + 3], d[i + 4]).setOverlay(OverlayTexture.NO_OVERLAY)
-                    .setLight(LightTexture.FULL_BRIGHT).setNormal(0.0F, 1.0F, 0.0F);
-        }
     }
 }

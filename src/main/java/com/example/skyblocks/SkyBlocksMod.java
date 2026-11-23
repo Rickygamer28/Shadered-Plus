@@ -92,6 +92,8 @@ public class SkyBlocksMod {
             out.accept(new net.minecraft.world.item.ItemStack(liquid.bucket.get()));
         }
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_STUDIO.get()));
+        out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_RIFT.get()));
+        out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_BEACON.get()));
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_BRUSH.get()));
         for (ModSkyShapes.Shapes shapes : ModSkyShapes.ALL) {
             out.accept(SkyBrushItem.with(new net.minecraft.world.item.ItemStack(ModItems.SKY_BRUSH.get()), shapes.sky));

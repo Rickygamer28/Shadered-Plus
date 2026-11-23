@@ -130,6 +130,10 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.HOT_SPRING.get(), p, st), ModBlocks.HOT_SPRING.get()).build(null));
     public static final Supplier<BlockEntityType<InfusionAltarBlockEntity>> INFUSION_ALTAR = TYPES.register("infusion_altar",
             () -> BlockEntityType.Builder.of(InfusionAltarBlockEntity::new, ModBlocks.INFUSION_ALTAR.get()).build(null));
+    public static final Supplier<BlockEntityType<SkyHolderBlockEntity>> SKY_RIFT = TYPES.register("sky_rift",
+            () -> BlockEntityType.Builder.of(SkyHolderBlockEntity::rift, ModBlocks.SKY_RIFT.get()).build(null));
+    public static final Supplier<BlockEntityType<SkyHolderBlockEntity>> SKY_BEACON = TYPES.register("sky_beacon",
+            () -> BlockEntityType.Builder.of(SkyHolderBlockEntity::beacon, ModBlocks.SKY_BEACON.get()).build(null));
     public static final Supplier<BlockEntityType<SkyStudioBlockEntity>> SKY_STUDIO = TYPES.register("sky_studio",
             () -> BlockEntityType.Builder.of(SkyStudioBlockEntity::new, ModBlocks.SKY_STUDIO.get()).build(null));
     public static final Supplier<BlockEntityType<SkyLanternBlockEntity>> SKY_LANTERN = TYPES.register("sky_lantern",

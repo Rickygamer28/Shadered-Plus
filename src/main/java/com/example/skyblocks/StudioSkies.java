@@ -66,7 +66,7 @@ public final class StudioSkies extends SavedData {
             CompoundTag c = list.getCompound(i);
             s.names[i] = c.getString("name");
             int[] bits = c.getIntArray("params");
-            if (bits.length == SIZE || bits.length == StudioSpec.SIZE_BEFORE_ORDER) { // (skies from before the draw order: default ranks)
+            if (bits.length == SIZE || bits.length == StudioSpec.SIZE_BEFORE_ORDER || bits.length == StudioSpec.SIZE_BEFORE_DAY) { // (older skies: the newer settings as the look's)
                 for (int k = 0; k < bits.length; k++) {
                     s.params[i][k] = clamp(Float.intBitsToFloat(bits[k]));
                 }

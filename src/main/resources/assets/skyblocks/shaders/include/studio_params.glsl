@@ -45,6 +45,18 @@ uniform vec4 P41;
 uniform vec4 P42;
 uniform vec4 P43;
 uniform vec4 P44;
+uniform vec4 P45;
+uniform vec4 P46;
+uniform vec4 P47;
+uniform vec4 P48;
+uniform vec4 P49;
+uniform vec4 P50;
+uniform vec4 P51;
+uniform vec4 P52;
+uniform vec4 P53;
+uniform vec4 P54;
+uniform float DayTime; // (the world's time of day: 0 noon, 0.25 sunset, 0.5 midnight, 0.75 sunrise)
+uniform vec2 Weather;  // (the world's rain and thunder, 0 .. 1)
 
 #define S_global_brightness P0.x
 #define S_global_contrast P0.y
@@ -173,3 +185,26 @@ uniform vec4 P44;
 #define S_grid_order P43.z
 #define S_mountains_order P43.w
 #define S_lake_order P44.x
+#define S_daycycle_on P44.y
+#define S_daycycle_day_top vec3(P44.z, P44.w, P45.x)
+#define S_daycycle_day_middle vec3(P45.y, P45.z, P45.w)
+#define S_daycycle_day_horizon vec3(P46.x, P46.y, P46.z)
+#define S_daycycle_night_top vec3(P46.w, P47.x, P47.y)
+#define S_daycycle_night_middle vec3(P47.z, P47.w, P48.x)
+#define S_daycycle_night_horizon vec3(P48.y, P48.z, P48.w)
+#define S_daycycle_strength P49.x
+#define S_daycycle_fade_stars P49.y
+#define S_daycycle_sun_follows P49.z
+#define S_daycycle_day_light P49.w
+#define S_weather_on P50.x
+#define S_weather_rain P50.y
+#define S_weather_rain_colour vec3(P50.z, P50.w, P51.x)
+#define S_weather_rain_speed P51.y
+#define S_weather_rain_slant P51.z
+#define S_weather_snow P51.w
+#define S_weather_snow_colour vec3(P52.x, P52.y, P52.z)
+#define S_weather_lightning P52.w
+#define S_weather_lightning_colour vec3(P53.x, P53.y, P53.z)
+#define S_weather_rainbow P53.w
+#define S_weather_follow_world P54.x
+#define S_weather_order P54.y

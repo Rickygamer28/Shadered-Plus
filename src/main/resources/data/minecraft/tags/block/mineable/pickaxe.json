@@ -50,6 +50,9 @@
     "skyblocks:beam_light",
     "skyblocks:phase_block",
     "skyblocks:echo_field",
-    "skyblocks:elevator_sensor"
+    "skyblocks:elevator_sensor",
+    "skyblocks:sky_rift",
+    "skyblocks:sky_beacon",
+    "skyblocks:sky_studio"
   ]
 }

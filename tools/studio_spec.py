@@ -36,6 +36,13 @@ LAYERS = [
                     ('sun', 'n', 0.0), ('sun_colour', 'c', '#ffb347')]),
     ('lake', True, [('tint', 'c', '#3b6fa8'), ('clarity', 'n', 0.6), ('ripples', 'n', 0.4), ('ripple_speed', 'n', 0.4)]),
     ('sparkles', True, [('colour', 'c', '#fff1b8'), ('amount', 'n', 0.4), ('size', 'n', 0.4), ('speed', 'n', 0.3), ('twinkle', 'n', 0.6)]),
+    # (since the draw order: laid out after it, so older saved skies keep their numbers)
+    ('daycycle', True, [('day_top', 'c', '#3a7bd5'), ('day_middle', 'c', '#6fa8e8'), ('day_horizon', 'c', '#cfe6ff'),
+                        ('night_top', 'c', '#02030a'), ('night_middle', 'c', '#070b1f'), ('night_horizon', 'c', '#1a2340'),
+                        ('strength', 'n', 1.0), ('fade_stars', 'n', 0.85), ('sun_follows', 'n', 1.0), ('day_light', 'n', 0.6)]),
+    ('weather', True, [('rain', 'n', 0.5), ('rain_colour', 'c', '#b8c8e0'), ('rain_speed', 'n', 0.5), ('rain_slant', 'n', 0.3),
+                       ('snow', 'n', 0.0), ('snow_colour', 'c', '#ffffff'), ('lightning', 'n', 0.3), ('lightning_colour', 'c', '#e6dcff'),
+                       ('rainbow', 'n', 0.0), ('follow_world', 'n', 0.0)]),
 ]
 
 # which layers are on in each preset, and its colours: (name, on, {layer.setting: value})
@@ -48,7 +55,7 @@ PRESETS = [
     ('neon', ['gradient', 'stars', 'aurora', 'shooting', 'grid', 'mountains'],
      {'gradient.top': '#0a0018', 'gradient.middle': '#2a0b4d', 'gradient.horizon': '#ff3d81', 'aurora.colour1': '#c6ff3d',
       'aurora.colour2': '#2bf0ff', 'grid.colour': '#2bf0ff', 'grid.sun': 0.7, 'mountains.colour': '#12002a', 'mountains.far_colour': '#3d0a5e'}),
-    ('dawn', ['gradient', 'nebula', 'moon', 'clouds', 'rays', 'lake'],
+    ('dawn', ['gradient', 'nebula', 'moon', 'clouds', 'rays', 'lake', 'daycycle'],
      {'gradient.top': '#1d2b4f', 'gradient.middle': '#5b6fa8', 'gradient.horizon': '#ffc59e', 'nebula.colour1': '#ffd6e8',
       'nebula.colour2': '#a5d8ff', 'nebula.amount': 0.3, 'moon.colour': '#fff2c4', 'moon.round': 1.0, 'moon.height': 0.12,
       'moon.glow': 0.8, 'moon.craters': 0.0}),
@@ -56,8 +63,8 @@ PRESETS = [
      {'gradient.top': '#06180f', 'gradient.middle': '#145236', 'gradient.horizon': '#b4ff6a', 'nebula.colour1': '#3dffb0',
       'nebula.colour2': '#d6ff3d', 'planet.colour1': '#7ad6ff', 'planet.colour2': '#2a5a9e', 'mountains.colour': '#04140c',
       'mountains.far_colour': '#0f3d2a'}),
-    ('storm', ['gradient', 'clouds', 'rays', 'lake'],
-     {'gradient.top': '#1a1f2b', 'gradient.middle': '#3b4558', 'gradient.horizon': '#8a95a8', 'clouds.colour': '#9aa5b8',
+    ('storm', ['gradient', 'clouds', 'rays', 'lake', 'weather'],
+     {'weather.rain': 0.75, 'weather.lightning': 0.6, 'gradient.top': '#1a1f2b', 'gradient.middle': '#3b4558', 'gradient.horizon': '#8a95a8', 'clouds.colour': '#9aa5b8',
       'clouds.shadow': '#2a2f3a', 'clouds.amount': 0.8, 'rays.colour': '#dfe8ff', 'rays.strength': 0.3, 'lake.tint': '#2a3442'}),
     ('arctic', ['gradient', 'stars', 'aurora', 'mountains', 'lake'],
      {'gradient.top': '#020814', 'gradient.middle': '#0a2440', 'gradient.horizon': '#2a6a8a', 'aurora.colour1': '#3dffa0',
@@ -76,7 +83,20 @@ def rgb(h):
 fields = []  # (layer, setting, kind, offset)
 offset = 0
 on_index = {}
-for layer, has_on, settings in LAYERS:
+FIRST = 14  # (the layers before the draw order; the rest are laid out after its ranks)
+def lay_out(layers):
+    global offset
+    for layer, has_on, settings in layers:
+        if has_on:
+            on_index[layer] = offset
+            fields.append((layer, 'on', 'o', offset))
+            offset += 1
+        for sid, kind, default in settings:
+            fields.append((layer, sid, kind, offset))
+            offset += 3 if kind == 'c' else 1
+lay_out(LAYERS[:FIRST])
+if False:
+  for layer, has_on, settings in LAYERS:
     if has_on:
         on_index[layer] = offset
         fields.append((layer, 'on', 'o', offset))
@@ -87,9 +107,16 @@ for layer, has_on, settings in LAYERS:
 SIZE_BEFORE_ORDER = offset  # (skies saved before the draw order came keep their settings: the ranks come after)
 # the draw order: every layer but the whole sky and its colour has a rank (rank / 16); the lower, the further back
 ORDERED = ['nebula', 'stars', 'planet', 'moon', 'rays', 'aurora', 'clouds', 'shooting', 'sparkles', 'grid', 'mountains', 'lake']
-assert sorted(ORDERED) == sorted(l[0] for l in LAYERS if l[0] not in ('global', 'gradient'))
+assert sorted(ORDERED) == sorted(l[0] for l in LAYERS[:14] if l[0] not in ('global', 'gradient'))
 order_index = {}
 for layer in ORDERED:
+    order_index[layer] = offset
+    fields.append((layer, 'order', 'r', offset))
+    offset += 1
+SIZE_BEFORE_DAY = offset
+lay_out(LAYERS[FIRST:])
+ORDERED_LATER = ['weather']  # (ranks after the first ones: 12/16, ...)
+for layer in ORDERED_LATER:
     order_index[layer] = offset
     fields.append((layer, 'order', 'r', offset))
     offset += 1
@@ -98,7 +125,7 @@ VECS = (SIZE + 3) // 4
 
 def defaults():
     out = [0.0] * SIZE
-    for rank, layer in enumerate(ORDERED):
+    for rank, layer in enumerate(ORDERED + ORDERED_LATER):
         out[order_index[layer]] = rank / 16
     for layer, has_on, settings in LAYERS:
         for sid, kind, default in settings:
@@ -129,6 +156,8 @@ def ref(i):
 glsl = ['// Written by tools/studio_spec.py: the Sky Studio\'s settings (StudioSpec.java has the same list).', '']
 for v in range(VECS):
     glsl.append('uniform vec4 P%d;' % v)
+glsl.append('uniform float DayTime; // (the world\'s time of day: 0 noon, 0.25 sunset, 0.5 midnight, 0.75 sunrise)')
+glsl.append('uniform vec2 Weather;  // (the world\'s rain and thunder, 0 .. 1)')
 glsl.append('')
 for layer, sid, kind, o in fields:
     name = 'S_%s_%s' % (layer, sid)
@@ -143,7 +172,9 @@ ident = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
 P = [{'name': 'P%d' % i, 'type': 'float', 'count': 4, 'values': [0.0] * 4} for i in range(VECS)]
 base = [{'name': 'ModelViewMat', 'type': 'matrix4x4', 'count': 16, 'values': ident},
         {'name': 'ProjMat', 'type': 'matrix4x4', 'count': 16, 'values': ident},
-        {'name': 'Time', 'type': 'float', 'count': 1, 'values': [0.0]}]
+        {'name': 'Time', 'type': 'float', 'count': 1, 'values': [0.0]},
+        {'name': 'DayTime', 'type': 'float', 'count': 1, 'values': [0.0]},
+        {'name': 'Weather', 'type': 'float', 'count': 2, 'values': [0.0, 0.0]}]
 core = os.path.join(ROOT, 'src/main/resources/assets/skyblocks/shaders/core/')
 json.dump({'vertex': 'skyblocks:shader_sky', 'fragment': 'skyblocks:studio_sky', 'uniforms': base + P}, open(core + 'studio_sky.json', 'w'), indent=2)
 json.dump({'vertex': 'skyblocks:studio_preview', 'fragment': 'skyblocks:studio_preview',
@@ -161,8 +192,10 @@ j = ['package com.example.skyblocks;', '', '/**',
      '    public static final int SIZE = %d, VECS = %d;' % (SIZE, VECS), '',
      '    /** How many numbers a studio sky had before the draw order (its ranks come after them). */',
      '    public static final int SIZE_BEFORE_ORDER = %d;' % SIZE_BEFORE_ORDER, '',
+     '    /** How many it had before the day cycle and weather (the layers after those come after them). */',
+     '    public static final int SIZE_BEFORE_DAY = %d;' % SIZE_BEFORE_DAY, '',
      '    /** How many layers can be put in order (a rank: 0, 1/16, 2/16, ...). */',
-     '    public static final int ORDERED = %d;' % len(ORDERED), '',
+     '    public static final int ORDERED = %d;' % len(ORDERED + ORDERED_LATER), '',
      '    /** A setting: its name, kind (\'o\' the layer\'s switch, \'c\' a colour: 3 numbers, \'n\' a number), where it is. */',
      '    public record Field(String id, char kind, int at) {}', '',
      '    /** A layer: its name, where its switch is (-1: always on), where its rank in the draw order is (-1: always at the back), its settings. */',
@@ -197,7 +230,8 @@ L = os.path.join(ROOT, 'src/main/resources/assets/skyblocks/lang/en_us.json')
 lang = json.load(open(L))
 LAYER_NAMES = {'global': 'Whole sky', 'gradient': 'Sky colour', 'nebula': 'Nebula', 'stars': 'Stars', 'aurora': 'Aurora',
                'moon': 'Sun or moon', 'planet': 'Planet', 'clouds': 'Clouds', 'rays': 'Light rays', 'shooting': 'Shooting stars',
-               'mountains': 'Mountains', 'grid': 'Horizon grid', 'lake': 'Lake', 'sparkles': 'Sparkles'}
+               'mountains': 'Mountains', 'grid': 'Horizon grid', 'lake': 'Lake', 'sparkles': 'Sparkles', 'daycycle': 'Day and night',
+               'weather': 'Weather'}
 for k, v in LAYER_NAMES.items():
     lang['screen.skyblocks.studio.layer.' + k] = v
 for layer, sid, kind, o in fields:
