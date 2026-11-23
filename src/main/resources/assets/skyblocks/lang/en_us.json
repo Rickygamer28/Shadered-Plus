@@ -1354,5 +1354,6 @@
   "tooltip.skyblocks.heat_wand": "Right-click a block to make the air over it shimmer with heat (again to stop)",
   "message.skyblocks.heat_wand.on": "The air shimmers with heat",
   "message.skyblocks.heat_wand.off": "The shimmer fades",
-  "guide.skyblocks.heat_wand": "Heat shimmer makes the air waver over fire, lit campfires, lit furnaces and lava. With the Heat Wand you can give it to any block: right-click the block (again to take it away). Breaking the block takes its shimmer with it.\n\n(Heat shimmer is turned off while a shader pack is in use.)"
+  "guide.skyblocks.heat_wand": "Heat shimmer makes the air waver over fire, lit campfires, lit furnaces and lava. With the Heat Wand you can give it to any block: right-click the block (again to take it away). Breaking the block takes its shimmer with it.\n\n(Heat shimmer is turned off while a shader pack is in use.)",
+  "guide.skyblocks.chapter.sky_craft": "Sky Crafting"
 }
