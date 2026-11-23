@@ -506,13 +506,8 @@ public final class RenderTest {
             "#paint 1174 -59 12 1176 -57 12 north SPACE", "#paint 1178 -58 12 1179 -57 12 north AURORA",
             "#paint 1173 -61 9 1179 -61 9 up AURORA", "#paint 1176 -61 7 1176 -61 11 up SPACE",
             // sky creatures: a whale, jellyfish, moths round a sky lantern (held still for the pictures)
-            "fill 1184 -60 -4 1208 -40 30 minecraft:air",
-            "summon skyblocks:sky_whale 1196 -54 16 {NoAI:1b,Sky:\"SPACE\",Rotation:[90f,0f]}",
-            "summon skyblocks:sky_jellyfish 1189 -57 8 {NoAI:1b,Sky:\"SKYBLOCKS_GOLDEN_HOUR\"}",
-            "summon skyblocks:sky_jellyfish 1191.5 -56 10 {NoAI:1b,Sky:\"SKYBLOCKS_UNDERWATER\"}",
-            "setblock 1187 -60 4 skyblocks:sky_lantern{sky:\"SKYBLOCKS_GOLDEN_HOUR\",pass:\"NORMAL\"}",
-            "summon skyblocks:sky_moth 1186.6 -59.2 3.6 {NoAI:1b,Sky:\"SKYBLOCKS_GOLDEN_HOUR\",Rotation:[30f,0f]}",
-            "summon skyblocks:sky_moth 1187.6 -58.7 3.2 {NoAI:1b,Sky:\"SKYBLOCKS_GOLDEN_HOUR\",Rotation:[200f,0f]}",
+            "fill 1184 -60 -4 1208 -40 30 minecraft:air",Rotation:[90f,0f]}",
+            "setblock 1187 -60 4 skyblocks:sky_lantern{sky:\"SKYBLOCKS_GOLDEN_HOUR\",pass:\"NORMAL\"}",Rotation:[30f,0f]}",Rotation:[200f,0f]}",
             // the Sky Studio, and its skies on stairs, a slab wall, paint and a jellyfish
             "fill 1210 -61 -4 1228 -61 10 minecraft:smooth_stone", "fill 1210 -60 -4 1228 -50 10 minecraft:air",
             "setblock 1212 -60 -2 skyblocks:sky_studio",
@@ -520,7 +515,6 @@ public final class RenderTest {
             "fill 1215 -60 4 1219 -60 4 skyblocks:studio_1_slab[type=double]",
             "fill 1221 -60 4 1225 -56 4 skyblocks:studio_2_slab[type=double]", "fill 1221 -60 6 1225 -56 6 minecraft:stone_bricks",
             "#paint 1221 -60 6 1225 -56 6 north SKYBLOCKS_STUDIO_3",
-            "summon skyblocks:sky_jellyfish 1218 -56.5 1 {NoAI:1b,Sky:\"SKYBLOCKS_STUDIO_4\"}",
     };
     /** The newer things (SKYBLOCKS_RENDER_SET=new: only these), well away from the rest. */
     static final boolean NEW = "new".equals(System.getenv("SKYBLOCKS_RENDER_SET"));
