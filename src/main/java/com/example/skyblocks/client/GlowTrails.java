@@ -98,7 +98,7 @@ public final class GlowTrails {
             Entity entity = level.getEntity(id < 0 ? -id - 1 : id);
             boolean moving = entity != null && entity.isAlive() && entity.getDeltaMovement().lengthSqr() > 0.004
                     && (id >= 0 || entity instanceof Player p && p.isFallFlying());
-            Vec3 at = entity == null ? null : id < 0 ? entity.position().add(0, 0.6, 0) : entity.position();
+            Vec3 at = entity == null ? null : id < 0 ? behind(entity, entity.position()) : entity.position();
             if (moving && (trail.points.isEmpty() || trail.points.peekLast().distanceToSqr(at) > 1.0E-4)) {
                 trail.points.addLast(at);
                 while (trail.points.size() > (id < 0 ? GLIDE_LENGTH : LENGTH)) {
@@ -157,12 +157,22 @@ public final class GlowTrails {
             if (trail.points.size() < 2) {
                 continue;
             }
-            List<Vec3> pts = new ArrayList<>(trail.points);
+            List<Vec3> all = new ArrayList<>(trail.points);
             int id = e.getKey();
             Entity entity = level.getEntity(id < 0 ? -id - 1 : id);
             if (trail.live && entity != null) {
                 Vec3 head = entity.getPosition(pt);
-                pts.add(id < 0 ? head.add(0, 0.6, 0) : head);
+                all.add(id < 0 ? behind(entity, head) : head);
+            }
+            // (nothing right by the camera: a glider's own trail would fill the screen)
+            List<Vec3> pts = new ArrayList<>(all.size());
+            for (Vec3 p : all) {
+                if (p.distanceToSqr(cam) > 1.5 * 1.5) {
+                    pts.add(p);
+                }
+            }
+            if (pts.size() < 2) {
+                continue;
             }
             SkyblockType sky = SkyGlow.sky(trail.sky);
             Vector3f up = event.getCamera().getUpVector(), left = event.getCamera().getLeftVector();
@@ -279,6 +289,13 @@ public final class GlowTrails {
                 }
             }
         }
+    }
+
+    /** Where a glider's trail streams from: the middle of its body, a little behind it. */
+    private static Vec3 behind(Entity entity, Vec3 at) {
+        Vec3 v = entity.getDeltaMovement();
+        Vec3 back = v.lengthSqr() > 1.0E-4 ? v.normalize().scale(-1.2) : Vec3.ZERO;
+        return at.add(back.x, 0.3 + back.y, back.z);
     }
 
     /** (for the render test) */
