@@ -35,7 +35,8 @@ import org.joml.Vector3f;
 
 /**
  * Glow trails (SkyGlow): behind an arrow or trident in flight, or a player gliding on elytra, a ribbon of its sky -
- * a window into it (SkyWindow) turned to face you, narrowing away to nothing at its tail, a soft glow along its edges.
+ * its picture (sky paint) turned to face you, narrowing away to nothing at its tail, with a chain of little sky diamonds
+ * along it and a soft glow along its edges.
  * Once the arrow stops (or the glide ends), the trail draws in after it and is gone.
  */
 @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, value = Dist.CLIENT)
@@ -43,7 +44,6 @@ public final class GlowTrails {
     private static final int LENGTH = 26, GLIDE_LENGTH = 40;
     private static final Map<Integer, Trail> TRAILS = new HashMap<>();
     private static final Map<Integer, String> PENDING = new HashMap<>();
-    private static final SkyWindow.Quads QUADS = new SkyWindow.Quads();
 
     private GlowTrails() {}
 
@@ -161,29 +161,34 @@ public final class GlowTrails {
                 pts.add(id < 0 ? head.add(0, 0.6, 0) : head);
             }
             SkyblockType sky = SkyGlow.sky(trail.sky);
-            RenderType window = sky == null ? null : SkyWindow.type(sky.name(), "NORMAL");
-            if (window == null) {
+            int style = sky == null ? 0 : com.example.skyblocks.ShaderPaintStyles.of(sky.ordinal(), 0);
+            RenderType paint = style == 0 ? null : ShaderPaintRender.type(style);
+            if (paint == null) {
                 continue;
             }
+            // (the sky as a picture along the trail - shaders/core/sky_paint, as painted armour shows it: ready
+            // whatever's drawing the world, Sodium's or a shader pack's)
             float[][] in = sides(pts, cam, trail.width, 1.0F), out = sides(pts, cam, trail.width, 1.8F);
-            QUADS.clear();
-            for (int i = 0; i + 1 < in.length; i++) {
-                QUADS.add(in[i][0], in[i][1], in[i][2], in[i][3], in[i][4], in[i][5], in[i + 1][3], in[i + 1][4], in[i + 1][5],
-                        in[i + 1][0], in[i + 1][1], in[i + 1][2]);
+            VertexConsumer vc = buffers.getBuffer(paint);
+            int n = in.length;
+            for (int i = 0; i + 1 < n; i++) {
+                float u0 = i / (float) (n - 1), u1 = (i + 1) / (float) (n - 1);
+                float[][] q = {{in[i][0], in[i][1], in[i][2], u0, 0}, {in[i][3], in[i][4], in[i][5], u0, 1},
+                        {in[i + 1][3], in[i + 1][4], in[i + 1][5], u1, 1}, {in[i + 1][0], in[i + 1][1], in[i + 1][2], u1, 0}};
+                paintQuad(vc, m, q, style);
             }
             // (and a chain of little diamonds of the sky, turned to face you: seen whichever way the trail runs -
             // even straight away from you, as an arrow you've just shot)
             Vector3f up = event.getCamera().getUpVector(), left = event.getCamera().getLeftVector();
-            int n = pts.size();
             for (int i = n - 1; i >= 1; i -= 2) {
                 Vec3 p = pts.get(i);
                 float k = i / (float) (n - 1), s = trail.width * (0.25F + 0.45F * k);
                 float x = (float) p.x, y = (float) p.y, z = (float) p.z;
-                QUADS.add(x + up.x * s, y + up.y * s, z + up.z * s, x + left.x * s, y + left.y * s, z + left.z * s,
-                        x - up.x * s, y - up.y * s, z - up.z * s, x - left.x * s, y - left.y * s, z - left.z * s);
+                float c = k * 0.8F;
+                paintQuad(vc, m, new float[][] {{x + up.x * s, y + up.y * s, z + up.z * s, c, 0.1F}, {x + left.x * s, y + left.y * s, z + left.z * s, c + 0.1F, 0.5F},
+                        {x - up.x * s, y - up.y * s, z - up.z * s, c + 0.2F, 0.9F}, {x - left.x * s, y - left.y * s, z - left.z * s, c + 0.1F, 0.5F}}, style);
             }
-            SkyWindow.draw(buffers, window, m, QUADS.data, QUADS.count);
-            buffers.endBatch(window);
+            buffers.endBatch(paint);
             glows.add(in);
             glows.add(out);
         }
@@ -193,6 +198,16 @@ public final class GlowTrails {
                 edge(vc, m, glows.get(g), glows.get(g + 1));
             }
             buffers.endBatch(RenderType.lightning());
+        }
+    }
+
+    /** A quad of sky paint (corners x y z u v), both ways round. */
+    private static void paintQuad(VertexConsumer vc, Matrix4f m, float[][] q, int style) {
+        for (int pass = 0; pass < 2; pass++) {
+            for (int k = 0; k < 4; k++) {
+                float[] c = q[pass == 0 ? k : 3 - k];
+                ShaderPaintRender.vertex(vc, m, c[0], c[1], c[2], c[3], c[4], style, 64);
+            }
         }
     }
 
