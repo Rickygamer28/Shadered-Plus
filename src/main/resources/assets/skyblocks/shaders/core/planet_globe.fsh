@@ -1,7 +1,7 @@
 #version 150
 
-// A planet on a globe stand: traced as a ball (and its rings, a flat disc round it) in the world's directions, so its
-// day side stays to the light as you walk round it. It turns on its tilted axis; each look has its own ground:
+// A planet on a globe stand: traced as a ball (and its rings, a flat disc round it) in the world's directions, lit
+// from over your shoulder, so you see its day side and the dusk line round its edge. It turns on its tilted axis; each look has its own ground:
 // 0 a blue world with green and brown land, ice caps, clouds and city lights at night; 1 a gas giant, banded, with a
 // great storm; 2 ice; 3 lava, cracked and glowing; 4 a red desert; 5 an alien world, glowing teal and violet;
 // 6 a grey cratered moon; 7 a world under thick yellow clouds. A thin bright atmosphere at its edge.
@@ -127,7 +127,7 @@ void main() {
     vec2 q = uv;
     vec3 o = toWorld * vec3(q, 3.0);
     vec3 d = toWorld * vec3(0.0, 0.0, -1.0);
-    vec3 L = normalize(vec3(0.6, 0.45, 0.55));
+    vec3 L = toWorld * normalize(vec3(-0.5, 0.45, 0.75)); // (the light: from over your shoulder, up to the left)
     float tilt = 0.4;
     mat3 axis = rotX(tilt);
     vec3 N = axis * vec3(0.0, 1.0, 0.0);

@@ -63,8 +63,8 @@ void main() {
         float r = length(uv);
         float tw = 0.8 + 0.2 * sin(t * (2.0 + fract(seed * 0.37) * 3.0) + seed);
         vec3 tint = mix(vec3(0.75, 0.85, 1.0), vec3(1.0, 0.9, 0.7), fract(seed * 0.618));
-        float core = smoothstep(0.22, 0.0, r);
-        float glow = exp(-r * 4.5) * 0.7;
+        float core = smoothstep(0.26, 0.0, r);
+        float glow = exp(-r * 3.5) * 0.9;
         float spikes = (smoothstep(0.08, 0.0, abs(uv.x)) + smoothstep(0.08, 0.0, abs(uv.y))) * smoothstep(1.0, 0.1, r) * 0.6;
         float a = clamp(core + glow * tw + spikes * tw, 0.0, 1.0);
         vec3 c = mix(tint, vec3(1.0), core) * (0.7 + 0.5 * data.g);

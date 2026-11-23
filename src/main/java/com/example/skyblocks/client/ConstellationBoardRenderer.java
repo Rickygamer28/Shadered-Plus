@@ -59,7 +59,7 @@ public class ConstellationBoardRenderer implements BlockEntityRenderer<Constella
                 continue;
             }
             float[] p = spot(i);
-            float s = 0.07F;
+            float s = 0.11F;
             int seed = (i * 37 + (int) be.getBlockPos().asLong()) & 255;
             int g = i == be.picked ? 255 : 160;
             float ox = bx + fx * 2, oz = bz + fz * 2;

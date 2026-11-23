@@ -42,9 +42,9 @@ void main() {
     float len = data.a * 16.0;
     float x = uv.x, y = uv.y;
     float fromBottom = len - y;
-    float rays = 0.55 + 0.45 * fbm(vec3(x * 2.2, t * 0.15, 0.0));
-    rays *= 0.65 + 0.35 * noise(vec3(x * 14.0, y * 0.4 - t * 0.6, t * 0.2));
-    float edge = smoothstep(0.0, 0.18, fromBottom) * (0.35 + 0.65 * exp(-fromBottom * 0.9));
+    float rays = pow(fbm(vec3(x * 2.2, t * 0.15, 0.0)) * 1.6, 2.2);
+    rays *= 0.35 + 0.65 * pow(noise(vec3(x * 16.0, y * 0.25 - t * 0.5, t * 0.2)), 1.5) * 1.6;
+    float edge = smoothstep(0.0, 0.12, fromBottom) * (0.18 + 0.82 * exp(-fromBottom * 1.3)) + 0.6 * exp(-fromBottom * 6.0);
     float top = smoothstep(0.0, min(1.2, len * 0.4), y);
     float ripple = 0.75 + 0.25 * sin(x * 1.7 - t * 1.2 + noise(vec3(x * 0.5, t * 0.1, 3.0)) * 4.0);
     float a = clamp(rays * edge * top * ripple * 1.4, 0.0, 1.0);

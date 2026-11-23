@@ -121,7 +121,7 @@ public final class HeatShimmer {
             if (mesh == null) {
                 return;
             }
-            FxShaders.shimmer.setSampler("Sampler0", copy.getColorTextureId());
+            RenderSystem.setShaderTexture(0, copy.getColorTextureId()); // (the shader's Sampler0 is set from this as it's drawn)
             RenderSystem.setShader(() -> FxShaders.shimmer);
             RenderSystem.enableDepthTest();
             RenderSystem.depthMask(false);
