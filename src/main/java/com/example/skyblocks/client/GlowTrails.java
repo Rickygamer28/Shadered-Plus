@@ -132,6 +132,21 @@ public final class GlowTrails {
         pose.translate(-cam.x, -cam.y, -cam.z);
         Matrix4f m = pose.last().pose();
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
+        // (drawn with the camera's own turn set here - not trusting whatever's set at this point of the frame, which
+        // differs with some renderers)
+        org.joml.Matrix4fStack view = com.mojang.blaze3d.systems.RenderSystem.getModelViewStack();
+        view.pushMatrix();
+        view.set(event.getModelViewMatrix());
+        com.mojang.blaze3d.systems.RenderSystem.applyModelViewMatrix();
+        try {
+            drawTrails(event, level, pt, cam, m, buffers);
+        } finally {
+            view.popMatrix();
+            com.mojang.blaze3d.systems.RenderSystem.applyModelViewMatrix();
+        }
+    }
+
+    private static void drawTrails(RenderLevelStageEvent event, ClientLevel level, float pt, Vec3 cam, Matrix4f m, MultiBufferSource.BufferSource buffers) {
         List<float[][]> glows = new ArrayList<>();
         for (Map.Entry<Integer, Trail> e : TRAILS.entrySet()) {
             Trail trail = e.getValue();
