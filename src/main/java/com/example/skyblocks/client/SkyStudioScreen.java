@@ -371,7 +371,8 @@ public class SkyStudioScreen extends Screen {
     /** Hides what's scrolled out of its column. */
     private void clip() {
         for (AbstractWidget wd : layerWidgets) {
-            wd.visible = wd.getY() >= layerTop && wd.getY() + wd.getHeight() <= layerBottom;
+            int top = wd instanceof Arrow a && !a.up ? wd.getY() - 9 : wd.getY(); // (a row at a time)
+            wd.visible = top >= layerTop && top + 18 <= layerBottom;
         }
         for (AbstractWidget wd : fieldWidgets) {
             wd.visible = wd.getY() >= fieldTop && wd.getY() + wd.getHeight() <= fieldBottom;
