@@ -95,6 +95,7 @@ public class SkyBlocksMod {
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_RIFT.get()));
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_BEACON.get()));
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_FOUNTAIN.get()));
+        out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_CRYSTAL.get()));
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.WATER_FOUNTAIN.get()));
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.PLANET_GLOBE.get()));
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.CONSTELLATION_BOARD.get()));
@@ -157,6 +158,7 @@ public class SkyBlocksMod {
         event.registrar("1").playToClient(SkyPaint.Set.TYPE, SkyPaint.Set.STREAM_CODEC, SkyPaint.Set::handle)
                 .playToClient(SkyPaint.Chunk.TYPE, SkyPaint.Chunk.STREAM_CODEC, SkyPaint.Chunk::handle)
                 .playToClient(StudioSkies.Sync.TYPE, StudioSkies.Sync.STREAM_CODEC, StudioSkies.Sync::handle)
+                .playToClient(SkyGlow.Trail.TYPE, SkyGlow.Trail.STREAM_CODEC, SkyGlow.Trail::handle)
                 .playToServer(StudioSkies.Save.TYPE, StudioSkies.Save.STREAM_CODEC, StudioSkies.Save::handle)
                 .playToServer(StudioSkies.Take.TYPE, StudioSkies.Take.STREAM_CODEC, StudioSkies.Take::handle);
         event.registrar("1").playToServer(ScanIslandPayload.TYPE, ScanIslandPayload.STREAM_CODEC, ScanIslandPayload::handle)

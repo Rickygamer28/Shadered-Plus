@@ -1,0 +1,9 @@
+{
+  "asset_name": "sky",
+  "description": {
+    "translate": "trim_material.skyblocks.sky",
+    "color": "#9EE6FF"
+  },
+  "ingredient": "skyblocks:sky_crystal",
+  "item_model_index": 0.95
+}

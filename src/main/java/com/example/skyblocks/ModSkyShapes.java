@@ -57,6 +57,8 @@ public final class ModSkyShapes {
             RECIPES.register("sky_shape", () -> new SimpleCraftingRecipeSerializer<>(ShapeRecipe::new));
 
     /** A Sky Brush and a sky block = the brush, dipped in that sky (SkyBrushItem). */
+    public static final DeferredHolder<RecipeSerializer<?>, SimpleCraftingRecipeSerializer<SkyGlow.InfuseRecipe>> GLOW_RECIPE =
+            RECIPES.register("sky_glow", () -> new SimpleCraftingRecipeSerializer<>(SkyGlow.InfuseRecipe::new));
     public static final DeferredHolder<RecipeSerializer<?>, SimpleCraftingRecipeSerializer<SkyBrushItem.DipRecipe>> DIP_RECIPE =
             RECIPES.register("sky_brush_dip", () -> new SimpleCraftingRecipeSerializer<>(SkyBrushItem.DipRecipe::new));
 

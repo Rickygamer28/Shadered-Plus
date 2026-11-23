@@ -790,6 +790,7 @@ public final class ArmorPaintRender {
                 if (stack.isEmpty() || slotOf(stack) != slot) {
                     continue;
                 }
+                drawSkyTrim(layer, ps, buffers, entity, stack, slot);
                 ModComponents.ArmorPaint paint = stack.get(ModComponents.ARMOR_PAINT.get());
                 ModComponents.ShaderPaint icon = paint == null ? stack.get(ModComponents.SHADER_PAINT.get()) : null;
                 if (paint == null && icon == null) {
@@ -802,6 +803,36 @@ public final class ArmorPaintRender {
                 SkyBlocksMod.LOGGER.warn("Shadered+ armour paint: couldn't draw on worn armour", e);
             }
         }
+    }
+
+    /**
+     * A sky armour trim (trimmed with a Sky Crystal: SkyGlow): over each pixel of the trim's pattern, its sky - just
+     * outside the armour, as painted skies are.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static void drawSkyTrim(HumanoidArmorLayer<?, ?, ?> layer, PoseStack ps, MultiBufferSource buffers, LivingEntity entity, ItemStack stack,
+                                    EquipmentSlot slot) {
+        net.minecraft.world.item.armortrim.ArmorTrim trim = stack.get(net.minecraft.core.component.DataComponents.TRIM);
+        com.noodlegamer76.shadered.client.util.SkyblockType sky = com.example.skyblocks.SkyGlow.sky(com.example.skyblocks.SkyGlow.of(stack));
+        if (trim == null || sky == null || !trim.material().unwrapKey().map(k -> k.location().equals(com.example.skyblocks.SkyGlow.TRIM_MATERIAL)).orElse(false)) {
+            return;
+        }
+        HumanoidModel model = model(layer, slot == EquipmentSlot.LEGS);
+        if (model == null || !(layer.getParentModel() instanceof HumanoidModel parent)) {
+            return;
+        }
+        parent.copyPropertiesTo(model);
+        showFor(model, slot);
+        if (model.young) {
+            return;
+        }
+        ResourceLocation asset = trim.pattern().value().assetId();
+        Sheet sheet = sheet(asset.withPath("textures/trims/models/armor/" + asset.getPath() + (slot == EquipmentSlot.LEGS ? "_leggings" : "") + ".png"));
+        if (sheet == null) {
+            return;
+        }
+        int style = com.example.skyblocks.ShaderPaintStyles.of(sky.ordinal(), 0);
+        drawSkies(ps, model, sheet.w(), sheet.h(), (x, y, rect) -> sheet.opaque(x, y) ? style : 0, DrawNow.now(buffers));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

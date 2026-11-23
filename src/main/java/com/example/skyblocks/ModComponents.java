@@ -34,6 +34,11 @@ public final class ModComponents {
     public static final Supplier<DataComponentType<Trophy>> TROPHY = COMPONENTS.register("trophy",
             () -> DataComponentType.<Trophy>builder().persistent(Trophy.CODEC).networkSynchronized(Trophy.STREAM_CODEC).build());
 
+    /** A sky's glow (SkyGlow): arrows, tridents and elytra trail it; a Sky Crystal and armour trimmed with one show it. */
+    public static final Supplier<DataComponentType<String>> SKY_GLOW = COMPONENTS.register("sky_glow",
+            () -> DataComponentType.<String>builder().persistent(com.mojang.serialization.Codec.STRING)
+                    .networkSynchronized(net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8).build());
+
     /** The sky a Sky Brush (SkyBrushItem) is loaded with: its name (Shadered's SkyblockType). */
     public static final Supplier<DataComponentType<String>> SKY_BRUSH = COMPONENTS.register("sky_brush",
             () -> DataComponentType.<String>builder().persistent(com.mojang.serialization.Codec.STRING)

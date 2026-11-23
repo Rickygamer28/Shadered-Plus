@@ -178,6 +178,7 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> GEODE_LAMP = ITEMS.registerSimpleBlockItem("geode_lamp", ModBlocks.GEODE_LAMP);
     public static final DeferredItem<BlockItem> SKY_RIFT = ITEMS.registerSimpleBlockItem("sky_rift", ModBlocks.SKY_RIFT);
     public static final DeferredItem<BlockItem> SKY_BEACON = ITEMS.registerSimpleBlockItem("sky_beacon", ModBlocks.SKY_BEACON);
+    public static final DeferredItem<Item> SKY_CRYSTAL = ITEMS.registerSimpleItem("sky_crystal");
     public static final DeferredItem<BlockItem> SKY_FOUNTAIN = ITEMS.registerSimpleBlockItem("sky_fountain", ModBlocks.SKY_FOUNTAIN);
     public static final DeferredItem<BlockItem> WATER_FOUNTAIN = ITEMS.registerSimpleBlockItem("water_fountain", ModBlocks.WATER_FOUNTAIN);
     public static final DeferredItem<BlockItem> PLANET_GLOBE = ITEMS.registerSimpleBlockItem("planet_globe", ModBlocks.PLANET_GLOBE);
