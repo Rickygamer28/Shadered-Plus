@@ -44,6 +44,7 @@ public final class GlowTrails {
     private static final int LENGTH = 26, GLIDE_LENGTH = 40;
     private static final Map<Integer, Trail> TRAILS = new HashMap<>();
     private static final Map<Integer, String> PENDING = new HashMap<>();
+    private static final SkyWindow.Quads QUADS = new SkyWindow.Quads();
 
     private GlowTrails() {}
 
@@ -118,7 +119,10 @@ public final class GlowTrails {
 
     @SubscribeEvent
     public static void draw(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES || TRAILS.isEmpty()) {
+        boolean pack = com.example.skyblocks.client.iris.IrisCompat.shaderPackInUse();
+        // (with a shader pack: windows into the sky, late in the frame - kept for the pack's end of the frame like the
+        // other skies; without: sky paint, with the block entities)
+        if (event.getStage() != (pack ? RenderLevelStageEvent.Stage.AFTER_PARTICLES : RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES) || TRAILS.isEmpty()) {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
@@ -139,14 +143,14 @@ public final class GlowTrails {
         view.set(event.getModelViewMatrix());
         com.mojang.blaze3d.systems.RenderSystem.applyModelViewMatrix();
         try {
-            drawTrails(event, level, pt, cam, m, buffers);
+            drawTrails(event, level, pt, cam, m, buffers, pack);
         } finally {
             view.popMatrix();
             com.mojang.blaze3d.systems.RenderSystem.applyModelViewMatrix();
         }
     }
 
-    private static void drawTrails(RenderLevelStageEvent event, ClientLevel level, float pt, Vec3 cam, Matrix4f m, MultiBufferSource.BufferSource buffers) {
+    private static void drawTrails(RenderLevelStageEvent event, ClientLevel level, float pt, Vec3 cam, Matrix4f m, MultiBufferSource.BufferSource buffers, boolean pack) {
         List<float[][]> glows = new ArrayList<>();
         for (Map.Entry<Integer, Trail> e : TRAILS.entrySet()) {
             Trail trail = e.getValue();
@@ -161,6 +165,32 @@ public final class GlowTrails {
                 pts.add(id < 0 ? head.add(0, 0.6, 0) : head);
             }
             SkyblockType sky = SkyGlow.sky(trail.sky);
+            Vector3f up = event.getCamera().getUpVector(), left = event.getCamera().getLeftVector();
+            if (pack) {
+                RenderType window = sky == null ? null : SkyWindow.type(sky.name(), "NORMAL");
+                if (window == null) {
+                    continue;
+                }
+                float[][] in = sides(pts, cam, trail.width, 1.0F), out = sides(pts, cam, trail.width, 1.8F);
+                QUADS.clear();
+                for (int i = 0; i + 1 < in.length; i++) {
+                    QUADS.add(in[i][0], in[i][1], in[i][2], in[i][3], in[i][4], in[i][5], in[i + 1][3], in[i + 1][4], in[i + 1][5],
+                            in[i + 1][0], in[i + 1][1], in[i + 1][2]);
+                }
+                int n = pts.size();
+                for (int i = n - 1; i >= 1; i -= 2) {
+                    Vec3 p = pts.get(i);
+                    float k = i / (float) (n - 1), s = trail.width * (0.25F + 0.45F * k);
+                    float x = (float) p.x, y = (float) p.y, z = (float) p.z;
+                    QUADS.add(x + up.x * s, y + up.y * s, z + up.z * s, x + left.x * s, y + left.y * s, z + left.z * s,
+                            x - up.x * s, y - up.y * s, z - up.z * s, x - left.x * s, y - left.y * s, z - left.z * s);
+                }
+                SkyWindow.draw(buffers, window, m, QUADS.data, QUADS.count);
+                buffers.endBatch(window);
+                glows.add(in);
+                glows.add(out);
+                continue;
+            }
             int style = sky == null ? 0 : com.example.skyblocks.ShaderPaintStyles.of(sky.ordinal(), 0);
             RenderType paint = style == 0 ? null : ShaderPaintRender.type(style);
             if (paint == null) {
@@ -179,7 +209,6 @@ public final class GlowTrails {
             }
             // (and a chain of little diamonds of the sky, turned to face you: seen whichever way the trail runs -
             // even straight away from you, as an arrow you've just shot)
-            Vector3f up = event.getCamera().getUpVector(), left = event.getCamera().getLeftVector();
             for (int i = n - 1; i >= 1; i -= 2) {
                 Vec3 p = pts.get(i);
                 float k = i / (float) (n - 1), s = trail.width * (0.25F + 0.45F * k);
