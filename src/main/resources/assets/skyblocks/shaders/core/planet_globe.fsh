@@ -32,7 +32,7 @@ float noise(vec3 p) {
 
 float fbm(vec3 p) {
     float v = 0.0, a = 0.5;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 4; i++) {
         v += a * noise(p);
         p = p * 2.03 + vec3(3.1, 1.7, 5.3);
         a *= 0.5;
@@ -125,6 +125,9 @@ void main() {
     float seed = data.b * 255.0;
     mat3 toWorld = transpose(mat3(ModelViewMat));
     vec2 q = uv;
+    // (nothing out past the halo, or the rings: let go at once)
+    float reach = rings ? R * 2.05 : R * 1.25;
+    if (dot(q, q) > reach * reach) discard;
     vec3 o = toWorld * vec3(q, 3.0);
     vec3 d = toWorld * vec3(0.0, 0.0, -1.0);
     vec3 L = toWorld * normalize(vec3(-0.5, 0.45, 0.75)); // (the light: from over your shoulder, up to the left)

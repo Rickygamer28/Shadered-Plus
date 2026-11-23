@@ -96,9 +96,9 @@ public class SkyBlocksMod {
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_BEACON.get()));
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_FOUNTAIN.get()));
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_CRYSTAL.get()));
+        out.accept(new net.minecraft.world.item.ItemStack(ModItems.HEAT_WAND.get()));
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.WATER_FOUNTAIN.get()));
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.PLANET_GLOBE.get()));
-        out.accept(new net.minecraft.world.item.ItemStack(ModItems.CONSTELLATION_BOARD.get()));
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.AURORA_CURTAIN.get()));
         out.accept(new net.minecraft.world.item.ItemStack(ModItems.SKY_BRUSH.get()));
         for (ModSkyShapes.Shapes shapes : ModSkyShapes.ALL) {
@@ -159,6 +159,8 @@ public class SkyBlocksMod {
                 .playToClient(SkyPaint.Chunk.TYPE, SkyPaint.Chunk.STREAM_CODEC, SkyPaint.Chunk::handle)
                 .playToClient(StudioSkies.Sync.TYPE, StudioSkies.Sync.STREAM_CODEC, StudioSkies.Sync::handle)
                 .playToClient(SkyGlow.Trail.TYPE, SkyGlow.Trail.STREAM_CODEC, SkyGlow.Trail::handle)
+                .playToClient(HeatMarks.Mark.TYPE, HeatMarks.Mark.STREAM_CODEC, HeatMarks.Mark::handle)
+                .playToClient(HeatMarks.Chunk.TYPE, HeatMarks.Chunk.STREAM_CODEC, HeatMarks.Chunk::handle)
                 .playToServer(StudioSkies.Save.TYPE, StudioSkies.Save.STREAM_CODEC, StudioSkies.Save::handle)
                 .playToServer(StudioSkies.Take.TYPE, StudioSkies.Take.STREAM_CODEC, StudioSkies.Take::handle);
         event.registrar("1").playToServer(ScanIslandPayload.TYPE, ScanIslandPayload.STREAM_CODEC, ScanIslandPayload::handle)

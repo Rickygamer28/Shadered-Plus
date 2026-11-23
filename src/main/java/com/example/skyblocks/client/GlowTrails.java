@@ -212,6 +212,13 @@ public final class GlowTrails {
         }
     }
 
+    /** (for the render test) */
+    public static String debug() {
+        StringBuilder b = new StringBuilder("pending " + PENDING.size() + ", trails " + TRAILS.size() + ":");
+        TRAILS.forEach((id, t) -> b.append(' ').append(id).append('=').append(t.sky).append('/').append(t.points.size()).append(t.live ? " live" : ""));
+        return b.toString();
+    }
+
     /** Glowing items say which sky. */
     @SubscribeEvent
     public static void tooltip(ItemTooltipEvent event) {

@@ -140,8 +140,6 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.WATER_FOUNTAIN.get(), p, st), ModBlocks.WATER_FOUNTAIN.get()).build(null));
     public static final Supplier<BlockEntityType<PlanetGlobeBlock.Entity>> PLANET_GLOBE = TYPES.register("planet_globe",
             () -> BlockEntityType.Builder.of(PlanetGlobeBlock.Entity::new, ModBlocks.PLANET_GLOBE.get()).build(null));
-    public static final Supplier<BlockEntityType<ConstellationBoardBlock.Entity>> CONSTELLATION_BOARD = TYPES.register("constellation_board",
-            () -> BlockEntityType.Builder.of(ConstellationBoardBlock.Entity::new, ModBlocks.CONSTELLATION_BOARD.get()).build(null));
     public static final Supplier<BlockEntityType<SimpleRenderedBlockEntity>> AURORA_CURTAIN = TYPES.register("aurora_curtain",
             () -> BlockEntityType.Builder.of((p, st) -> new SimpleRenderedBlockEntity(ModBlockEntities.AURORA_CURTAIN.get(), p, st), ModBlocks.AURORA_CURTAIN.get()).build(null));
     public static final Supplier<BlockEntityType<SkyStudioBlockEntity>> SKY_STUDIO = TYPES.register("sky_studio",

@@ -30,7 +30,8 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL30;
 
 /**
- * Heat shimmer: over fire, lit campfires, lit furnaces and lava's surface, the air wavers - the frame so far copied,
+ * Heat shimmer: over fire, lit campfires, lit furnaces, lava's surface and blocks given it with the Heat Wand
+ * (HeatMarks), the air wavers - the frame so far copied,
  * then sheets of hot air (turned to face you) drawn over it seeing it a little bent (shaders/core/heat_shimmer).
  * Looked for round the player twice a second. Not with a shader pack (packs bring their own effects).
  */
@@ -39,10 +40,28 @@ public final class HeatShimmer {
     private static final int RANGE = 14, UP = 6, MAX = 160;
     /** The sheets: x, bottom, z (the middle of their foot), height, half their width. */
     private static final List<float[]> SHEETS = new ArrayList<>();
+    /** Blocks given shimmer with the Heat Wand (HeatMarks), as sent by the server. */
+    private static final java.util.Set<Long> MARKED = new java.util.HashSet<>();
     private static TextureTarget copy;
     private static int failures;
 
     private HeatShimmer() {}
+
+    /** (leaving a world: its marks go; the next world's come with its chunks) */
+    @SubscribeEvent
+    public static void unload(net.neoforged.neoforge.event.level.LevelEvent.Unload event) {
+        if (event.getLevel().isClientSide()) {
+            MARKED.clear();
+        }
+    }
+
+    public static void mark(long pos, boolean on) {
+        if (on) {
+            MARKED.add(pos);
+        } else {
+            MARKED.remove(pos);
+        }
+    }
 
     @SubscribeEvent
     public static void tick(ClientTickEvent.Post event) {
@@ -67,6 +86,9 @@ public final class HeatShimmer {
                         sheet = new float[] {p.getX() + 0.5F, p.getY() + 0.45F, p.getZ() + 0.5F, 1.8F, 0.5F};
                     } else if (s.getBlock() instanceof AbstractFurnaceBlock && s.getValue(AbstractFurnaceBlock.LIT)) {
                         sheet = new float[] {p.getX() + 0.5F, p.getY() + 1.0F, p.getZ() + 0.5F, 1.0F, 0.4F};
+                    } else if (!MARKED.isEmpty() && MARKED.contains(p.asLong())) {
+                        sheet = new float[] {p.getX() + 0.5F, p.getY() + (float) Math.max(s.getShape(level, p).max(net.minecraft.core.Direction.Axis.Y), 0.0) - 0.1F,
+                                p.getZ() + 0.5F, 1.5F, 0.6F};
                     } else if (s.getFluidState().is(FluidTags.LAVA) && ((p.getX() + p.getZ()) & 1) == 0) {
                         above.set(p.getX(), p.getY() + 1, p.getZ());
                         if (level.getBlockState(above).isAir()) {

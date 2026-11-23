@@ -21,21 +21,19 @@ public class PlanetGlobeRenderer implements BlockEntityRenderer<PlanetGlobeBlock
         if (FxShaders.planet == null) {
             return;
         }
-        if (be.look == 3 || be.look == 5) {
-            ShaderLightRenderer.add(ps, 0.5F, 0.78F, 0.5F, 6.0F, be.look == 3 ? 0xFF6A20 : 0x9A5CFF); // (a lava or alien world glows)
-        }
         ps.pushPose();
         ps.translate(0.5F, 0.78F, 0.5F);
         ps.mulPose(Minecraft.getInstance().getEntityRenderDispatcher().cameraOrientation());
-        float s = 0.68F;
+        // (just big enough for the planet and its halo - or its rings: the fewer pixels traced, the better)
+        float k = be.rings ? 1.0F : 0.62F, s = 0.68F * k;
         Matrix4f m = ps.last().pose();
         VertexConsumer vc = buffers.getBuffer(FxShaders.Types.PLANET);
         int seed = (int) (be.getBlockPos().asLong() * 31 & 255);
         int g = be.rings ? 255 : 0;
-        vc.addVertex(m, -s, -s, 0).setUv(-1, -1).setColor(be.look, g, seed, 255);
-        vc.addVertex(m, s, -s, 0).setUv(1, -1).setColor(be.look, g, seed, 255);
-        vc.addVertex(m, s, s, 0).setUv(1, 1).setColor(be.look, g, seed, 255);
-        vc.addVertex(m, -s, s, 0).setUv(-1, 1).setColor(be.look, g, seed, 255);
+        vc.addVertex(m, -s, -s, 0).setUv(-k, -k).setColor(be.look, g, seed, 255);
+        vc.addVertex(m, s, -s, 0).setUv(k, -k).setColor(be.look, g, seed, 255);
+        vc.addVertex(m, s, s, 0).setUv(k, k).setColor(be.look, g, seed, 255);
+        vc.addVertex(m, -s, s, 0).setUv(-k, k).setColor(be.look, g, seed, 255);
         ps.popPose();
     }
 

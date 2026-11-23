@@ -1,7 +1,180 @@
 {
- "variants": {
-  "": {
-   "model": "skyblocks:block/sky_fountain"
+ "multipart": [
+  {
+   "when": {
+    "north": "false",
+    "east": "false",
+    "south": "false",
+    "west": "false"
+   },
+   "apply": {
+    "model": "skyblocks:block/sky_fountain_alone"
+   }
+  },
+  {
+   "when": {
+    "north": "false",
+    "east": "false",
+    "south": "false",
+    "west": "true"
+   },
+   "apply": {
+    "model": "skyblocks:block/sky_fountain_w"
+   }
+  },
+  {
+   "when": {
+    "north": "false",
+    "east": "false",
+    "south": "true",
+    "west": "false"
+   },
+   "apply": {
+    "model": "skyblocks:block/sky_fountain_s"
+   }
+  },
+  {
+   "when": {
+    "north": "false",
+    "east": "false",
+    "south": "true",
+    "west": "true"
+   },
+   "apply": {
+    "model": "skyblocks:block/sky_fountain_sw"
+   }
+  },
+  {
+   "when": {
+    "north": "false",
+    "east": "true",
+    "south": "false",
+    "west": "false"
+   },
+   "apply": {
+    "model": "skyblocks:block/sky_fountain_e"
+   }
+  },
+  {
+   "when": {
+    "north": "false",
+    "east": "true",
+    "south": "false",
+    "west": "true"
+   },
+   "apply": {
+    "model": "skyblocks:block/sky_fountain_ew"
+   }
+  },
+  {
+   "when": {
+    "north": "false",
+    "east": "true",
+    "south": "true",
+    "west": "false"
+   },
+   "apply": {
+    "model": "skyblocks:block/sky_fountain_es"
+   }
+  },
+  {
+   "when": {
+    "north": "false",
+    "east": "true",
+    "south": "true",
+    "west": "true"
+   },
+   "apply": {
+    "model": "skyblocks:block/sky_fountain_esw"
+   }
+  },
+  {
+   "when": {
+    "north": "true",
+    "east": "false",
+    "south": "false",
+    "west": "false"
+   },
+   "apply": {
+    "model": "skyblocks:block/sky_fountain_n"
+   }
+  },
+  {
+   "when": {
+    "north": "true",
+    "east": "false",
+    "south": "false",
+    "west": "true"
+   },
+   "apply": {
+    "model": "skyblocks:block/sky_fountain_nw"
+   }
+  },
+  {
+   "when": {
+    "north": "true",
+    "east": "false",
+    "south": "true",
+    "west": "false"
+   },
+   "apply": {
+    "model": "skyblocks:block/sky_fountain_ns"
+   }
+  },
+  {
+   "when": {
+    "north": "true",
+    "east": "false",
+    "south": "true",
+    "west": "true"
+   },
+   "apply": {
+    "model": "skyblocks:block/sky_fountain_nsw"
+   }
+  },
+  {
+   "when": {
+    "north": "true",
+    "east": "true",
+    "south": "false",
+    "west": "false"
+   },
+   "apply": {
+    "model": "skyblocks:block/sky_fountain_ne"
+   }
+  },
+  {
+   "when": {
+    "north": "true",
+    "east": "true",
+    "south": "false",
+    "west": "true"
+   },
+   "apply": {
+    "model": "skyblocks:block/sky_fountain_new"
+   }
+  },
+  {
+   "when": {
+    "north": "true",
+    "east": "true",
+    "south": "true",
+    "west": "false"
+   },
+   "apply": {
+    "model": "skyblocks:block/sky_fountain_nes"
+   }
+  },
+  {
+   "when": {
+    "north": "true",
+    "east": "true",
+    "south": "true",
+    "west": "true"
+   },
+   "apply": {
+    "model": "skyblocks:block/sky_fountain_nesw"
+   }
   }
- }
+ ]
 }

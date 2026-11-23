@@ -494,18 +494,15 @@ public final class ModBlocks {
     public static final DeferredBlock<SkyHolderBlock> SKY_BEACON = BLOCKS.registerBlock("sky_beacon", SkyHolderBlock::beacon,
             BlockBehaviour.Properties.of().strength(3.0F).sound(SoundType.GLASS).noOcclusion().lightLevel(state -> 15)
                     .mapColor(net.minecraft.world.level.material.MapColor.DIAMOND));
-    public static final DeferredBlock<SkyHolderBlock> SKY_FOUNTAIN = BLOCKS.registerBlock("sky_fountain", SkyHolderBlock::fountain,
+    public static final DeferredBlock<FountainBlock> SKY_FOUNTAIN = BLOCKS.registerBlock("sky_fountain", FountainBlock::sky,
             BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.CALCITE).noOcclusion().lightLevel(state -> 7).requiresCorrectToolForDrops()
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_PURPLE));
-    public static final DeferredBlock<FountainBlock> WATER_FOUNTAIN = BLOCKS.registerBlock("water_fountain", FountainBlock::new,
+    public static final DeferredBlock<FountainBlock> WATER_FOUNTAIN = BLOCKS.registerBlock("water_fountain", FountainBlock::water,
             BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.STONE).noOcclusion().requiresCorrectToolForDrops()
                     .mapColor(net.minecraft.world.level.material.MapColor.STONE));
     public static final DeferredBlock<PlanetGlobeBlock> PLANET_GLOBE = BLOCKS.registerBlock("planet_globe", PlanetGlobeBlock::new,
             BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.COPPER).noOcclusion().lightLevel(state -> 4)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_ORANGE));
-    public static final DeferredBlock<ConstellationBoardBlock> CONSTELLATION_BOARD = BLOCKS.registerBlock("constellation_board", ConstellationBoardBlock::new,
-            BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.WOOD).noOcclusion().lightLevel(state -> 3)
-                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLUE));
     public static final DeferredBlock<AuroraCurtainBlock> AURORA_CURTAIN = BLOCKS.registerBlock("aurora_curtain", AuroraCurtainBlock::new,
             BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.CHAIN).noOcclusion().noCollission().lightLevel(state -> 9)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_LIGHT_GREEN));

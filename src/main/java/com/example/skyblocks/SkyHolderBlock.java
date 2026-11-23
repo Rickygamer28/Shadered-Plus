@@ -29,12 +29,12 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A block showing a sky (SkyHolderBlockEntity): the Sky Rift (a crack in the air with the sky through it,
- * client/SkyRiftRenderer), the Sky Beacon (a beam of the sky up into the heavens, client/SkyBeaconRenderer) and the
- * Sky Fountain (a fountain of sky liquid, client/FountainRenderer).
+ * client/SkyRiftRenderer) and the Sky Beacon (a beam of the sky up into the heavens, client/SkyBeaconRenderer).
+ * (The Sky Fountain keeps its sky the same way: FountainBlock.)
  * Right-click it with any sky block to change its sky (the sky block isn't used up).
  */
 public class SkyHolderBlock extends BaseEntityBlock {
-    public enum Kind { RIFT, BEACON, FOUNTAIN }
+    public enum Kind { RIFT, BEACON }
 
     private final Kind kind;
     private final boolean rift;
@@ -47,7 +47,6 @@ public class SkyHolderBlock extends BaseEntityBlock {
         this.make = switch (kind) {
             case RIFT -> SkyHolderBlockEntity::rift;
             case BEACON -> SkyHolderBlockEntity::beacon;
-            case FOUNTAIN -> SkyHolderBlockEntity::fountain;
         };
     }
 
@@ -61,10 +60,6 @@ public class SkyHolderBlock extends BaseEntityBlock {
 
     public static SkyHolderBlock beacon(Properties properties) {
         return new SkyHolderBlock(properties, Kind.BEACON);
-    }
-
-    public static SkyHolderBlock fountain(Properties properties) {
-        return new SkyHolderBlock(properties, Kind.FOUNTAIN);
     }
 
     @Override
@@ -81,12 +76,12 @@ public class SkyHolderBlock extends BaseEntityBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return rift ? RIFT : kind == Kind.FOUNTAIN ? FountainBlock.SHAPE : Shapes.block();
+        return rift ? RIFT : Shapes.block();
     }
 
     @Override
     protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return rift ? Shapes.empty() : kind == Kind.FOUNTAIN ? FountainBlock.SHAPE : Shapes.block();
+        return rift ? Shapes.empty() : Shapes.block();
     }
 
     @Nullable
@@ -112,7 +107,6 @@ public class SkyHolderBlock extends BaseEntityBlock {
             level.playSound(null, pos, switch (kind) {
                 case RIFT -> SoundEvents.AMETHYST_BLOCK_RESONATE;
                 case BEACON -> SoundEvents.BEACON_POWER_SELECT;
-                case FOUNTAIN -> SoundEvents.BUCKET_EMPTY;
             }, SoundSource.BLOCKS, 1.0F, 1.1F);
             player.displayClientMessage(Component.translatable("message.skyblocks." + name() + ".sky", stack.getHoverName()), true);
         }
@@ -123,7 +117,6 @@ public class SkyHolderBlock extends BaseEntityBlock {
         return switch (kind) {
             case RIFT -> "sky_rift";
             case BEACON -> "sky_beacon";
-            case FOUNTAIN -> "sky_fountain";
         };
     }
 
@@ -135,8 +128,6 @@ public class SkyHolderBlock extends BaseEntityBlock {
                 level.addParticle(ParticleTypes.REVERSE_PORTAL, pos.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.6, y,
                         pos.getZ() + 0.5 + (random.nextDouble() - 0.5) * 0.6, 0.0, 0.0, 0.0);
             }
-        } else if (kind == Kind.FOUNTAIN) {
-            FountainBlock.splash(level, pos, random, true);
         } else if (random.nextInt(3) == 0) {
             level.addParticle(ParticleTypes.END_ROD, pos.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.3, pos.getY() + 1.1,
                     pos.getZ() + 0.5 + (random.nextDouble() - 0.5) * 0.3, 0.0, 0.03, 0.0);

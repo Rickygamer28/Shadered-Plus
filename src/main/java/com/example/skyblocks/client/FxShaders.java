@@ -12,11 +12,11 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 
 /**
- * The shaders of the fountains, the planet globe, the constellation board, the aurora curtain and the heat shimmer
- * (shaders/core: hd_water, planet_globe, constellation, aurora_curtain, heat_shimmer), and what they're drawn with.
+ * The shaders of the fountains, the planet globe, the aurora curtain and the heat shimmer
+ * (shaders/core: hd_water, planet_globe, aurora_curtain, heat_shimmer), and what they're drawn with.
  */
 public final class FxShaders {
-    static ShaderInstance water, planet, constellation, aurora, shimmer;
+    static ShaderInstance water, planet, aurora, shimmer;
 
     private FxShaders() {}
 
@@ -28,7 +28,6 @@ public final class FxShaders {
         public static void register(RegisterShadersEvent event) {
             ShaderLoad.register(event, id("hd_water"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> water = s);
             ShaderLoad.register(event, id("planet_globe"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> planet = s);
-            ShaderLoad.register(event, id("constellation"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> constellation = s);
             ShaderLoad.register(event, id("aurora_curtain"), DefaultVertexFormat.POSITION_TEX_COLOR, s -> aurora = s);
             ShaderLoad.register(event, id("heat_shimmer"), DefaultVertexFormat.POSITION_TEX, s -> shimmer = s);
         }
@@ -39,16 +38,13 @@ public final class FxShaders {
     }
 
     abstract static class Types extends RenderType {
-        /** HD water: see-through, drawn both ways round, not hiding what's behind. */
-        static final RenderType WATER = create("skyblocks_hd_water", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 1024, false, true,
+        /** HD water: see-through, drawn both ways round - and keeping its depth, so see-through blocks behind it stay behind. */
+        static final RenderType WATER = create("skyblocks_hd_water", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 4096, false, true,
                 CompositeState.builder().setShaderState(new ShaderStateShard(() -> water)).setTransparencyState(TRANSLUCENT_TRANSPARENCY)
-                        .setCullState(NO_CULL).setWriteMaskState(COLOR_WRITE).createCompositeState(false));
+                        .setCullState(NO_CULL).setWriteMaskState(COLOR_DEPTH_WRITE).createCompositeState(false));
         static final RenderType PLANET = create("skyblocks_planet_globe", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 256, false, true,
                 CompositeState.builder().setShaderState(new ShaderStateShard(() -> planet)).setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                         .setCullState(NO_CULL).setWriteMaskState(COLOR_WRITE).createCompositeState(false));
-        static final RenderType CONSTELLATION = create("skyblocks_constellation", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 1024, false, true,
-                CompositeState.builder().setShaderState(new ShaderStateShard(() -> constellation)).setTransparencyState(TRANSLUCENT_TRANSPARENCY)
-                        .setWriteMaskState(COLOR_WRITE).createCompositeState(false));
         /** The aurora: adding light. */
         static final RenderType AURORA = create("skyblocks_aurora_curtain", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 2048, false, true,
                 CompositeState.builder().setShaderState(new ShaderStateShard(() -> aurora)).setTransparencyState(LIGHTNING_TRANSPARENCY)

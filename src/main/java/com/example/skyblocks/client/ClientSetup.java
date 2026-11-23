@@ -78,7 +78,6 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.SKY_FOUNTAIN.get(), FountainRenderer.of(true));
         event.registerBlockEntityRenderer(ModBlockEntities.WATER_FOUNTAIN.get(), FountainRenderer.of(false));
         event.registerBlockEntityRenderer(ModBlockEntities.PLANET_GLOBE.get(), PlanetGlobeRenderer::new);
-        event.registerBlockEntityRenderer(ModBlockEntities.CONSTELLATION_BOARD.get(), ConstellationBoardRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.AURORA_CURTAIN.get(), AuroraCurtainRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.EFFECT_BLOCK.get(), EffectBlockRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.WEATHER_GLOBE.get(), WeatherGlobeRenderer::new);
@@ -438,6 +437,8 @@ public final class ClientSetup {
         event.register(CAUSTICS_OVERLAY);
         event.register(RAIN_OVERLAY);
         event.register(BambooSpoutRenderer.TUBE);
+        event.register(FountainRenderer.WATER_STATUE);
+        event.register(FountainRenderer.SKY_STATUE);
         event.register(MusicBoxRenderer.LID);
         event.register(MusicBoxRenderer.DANCER);
         event.register(MusicBoxRenderer.KEY);
