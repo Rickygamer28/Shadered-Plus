@@ -191,4 +191,15 @@ public class ShaderLightRenderer implements BlockEntityRenderer<ShaderLightBlock
     public AABB getRenderBoundingBox(ShaderLightBlockEntity be) {
         return new AABB(be.getBlockPos()).inflate(15.0);
     }
+
+    /** (drawn - and so its light given - whenever anything its light reaches is on screen, not only the block itself) */
+    @Override
+    public boolean shouldRenderOffScreen(ShaderLightBlockEntity be) {
+        return true;
+    }
+
+    @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox(ShaderLightBlockEntity be) {
+        return new net.minecraft.world.phys.AABB(be.getBlockPos()).inflate(16.0);
+    }
 }

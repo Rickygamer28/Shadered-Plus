@@ -148,6 +148,6 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
 
     @Override
     public AABB getRenderBoundingBox(PowerCoreBlockEntity be) {
-        return new AABB(be.getBlockPos()).inflate(Math.max(1, (be.chamber() - 1) / 2.0));
+        return new AABB(be.getBlockPos()).inflate(Math.max(1, (be.chamber() - 1) / 2.0) + be.chamber() + 7.0); // (as far as its light reaches)
     }
 }

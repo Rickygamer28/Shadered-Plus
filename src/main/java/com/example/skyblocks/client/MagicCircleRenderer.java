@@ -110,6 +110,6 @@ public class MagicCircleRenderer implements BlockEntityRenderer<ChalkRuneBlockEn
 
     @Override
     public AABB getRenderBoundingBox(ChalkRuneBlockEntity be) {
-        return new AABB(be.getBlockPos()).inflate(4.0, 0.0, 4.0).expandTowards(0, 3.0, 0);
+        return new AABB(be.getBlockPos()).inflate(8.0, 6.0, 8.0); // (as far as its light reaches)
     }
 }

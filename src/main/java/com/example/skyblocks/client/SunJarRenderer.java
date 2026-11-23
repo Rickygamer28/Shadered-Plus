@@ -80,4 +80,15 @@ public class SunJarRenderer implements BlockEntityRenderer<SimpleRenderedBlockEn
     private static void vertex(VertexConsumer vc, Matrix4f m, float x, float y, float u, float v, int phase) {
         vc.addVertex(m, x, y, 0).setColor(phase & 7, 0, 0, 255).setUv(u, v);
     }
+
+    /** (drawn - and so its light given - whenever anything its light reaches is on screen, not only the block itself) */
+    @Override
+    public boolean shouldRenderOffScreen(SimpleRenderedBlockEntity be) {
+        return true;
+    }
+
+    @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox(SimpleRenderedBlockEntity be) {
+        return new net.minecraft.world.phys.AABB(be.getBlockPos()).inflate(13.0);
+    }
 }
