@@ -505,10 +505,10 @@ public final class RenderTest {
             "fill 1172 -60 12 1180 -55 12 minecraft:stone_bricks",
             "#paint 1174 -59 12 1176 -57 12 north SPACE", "#paint 1178 -58 12 1179 -57 12 north AURORA",
             "#paint 1173 -61 9 1179 -61 9 up AURORA", "#paint 1176 -61 7 1176 -61 11 up SPACE",
-            // sky creatures: a whale, jellyfish, moths round a sky lantern (held still for the pictures)
-            "fill 1184 -60 -4 1208 -40 30 minecraft:air",Rotation:[90f,0f]}",
-            "setblock 1187 -60 4 skyblocks:sky_lantern{sky:\"SKYBLOCKS_GOLDEN_HOUR\",pass:\"NORMAL\"}",Rotation:[30f,0f]}",Rotation:[200f,0f]}",
-            // the Sky Studio, and its skies on stairs, a slab wall, paint and a jellyfish
+            // (where the sky creatures were: a sky lantern)
+            "fill 1184 -60 -4 1208 -40 30 minecraft:air",
+            "setblock 1187 -60 4 skyblocks:sky_lantern{sky:\"SKYBLOCKS_GOLDEN_HOUR\",pass:\"NORMAL\"}",
+            // the Sky Studio, and its skies on stairs, a slab wall, and paint
             "fill 1210 -61 -4 1228 -61 10 minecraft:smooth_stone", "fill 1210 -60 -4 1228 -50 10 minecraft:air",
             "setblock 1212 -60 -2 skyblocks:sky_studio",
             "fill 1215 -60 3 1219 -60 3 skyblocks:studio_1_stairs[facing=south]", "fill 1215 -59 4 1219 -59 4 skyblocks:studio_1_stairs[facing=south]",
