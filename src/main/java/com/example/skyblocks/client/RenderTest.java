@@ -1198,6 +1198,8 @@ public final class RenderTest {
                             run(mc.getSingleplayerServer(), "summon minecraft:arrow 1205 -58.3 -4 {NoGravity:1b,Motion:[-0.35d,0.0d,0.0d],item:{id:\"minecraft:arrow\",count:1," + glow + "}}");
                             run(mc.getSingleplayerServer(), "summon minecraft:arrow 1206 -57.6 -3 {NoGravity:1b,Motion:[-0.4d,0.0d,0.0d],item:{id:\"minecraft:arrow\",count:1," + glow + "}}");
                             run(mc.getSingleplayerServer(), "summon minecraft:trident 1206 -58.9 -3.5 {NoGravity:1b,Motion:[-0.3d,0.0d,0.0d],item:{id:\"minecraft:trident\",count:1," + glow + "}}");
+                            // (and one flying straight away from the camera, as one just shot)
+                            run(mc.getSingleplayerServer(), "summon minecraft:arrow 1200.6 -58.6 -8 {NoGravity:1b,Motion:[0.0d,0.0d,0.45d],item:{id:\"minecraft:arrow\",count:1," + glow + "}}");
                         }
                         if (ticks == 97 && arrowTest) {
                             SkyBlocksMod.LOGGER.info("Shadered+ render test: glow trails - {}", com.example.skyblocks.client.GlowTrails.debug());

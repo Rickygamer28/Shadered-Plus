@@ -156,6 +156,17 @@ public final class GlowTrails {
                 QUADS.add(in[i][0], in[i][1], in[i][2], in[i][3], in[i][4], in[i][5], in[i + 1][3], in[i + 1][4], in[i + 1][5],
                         in[i + 1][0], in[i + 1][1], in[i + 1][2]);
             }
+            // (and a chain of little diamonds of the sky, turned to face you: seen whichever way the trail runs -
+            // even straight away from you, as an arrow you've just shot)
+            Vector3f up = event.getCamera().getUpVector(), left = event.getCamera().getLeftVector();
+            int n = pts.size();
+            for (int i = n - 1; i >= 1; i -= 2) {
+                Vec3 p = pts.get(i);
+                float k = i / (float) (n - 1), s = trail.width * (0.25F + 0.45F * k);
+                float x = (float) p.x, y = (float) p.y, z = (float) p.z;
+                QUADS.add(x + up.x * s, y + up.y * s, z + up.z * s, x + left.x * s, y + left.y * s, z + left.z * s,
+                        x - up.x * s, y - up.y * s, z - up.z * s, x - left.x * s, y - left.y * s, z - left.z * s);
+            }
             SkyWindow.draw(buffers, window, m, QUADS.data, QUADS.count);
             buffers.endBatch(window);
             glows.add(in);
