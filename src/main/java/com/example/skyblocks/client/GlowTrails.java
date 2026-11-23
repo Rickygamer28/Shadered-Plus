@@ -224,7 +224,7 @@ public final class GlowTrails {
             try {
                 int i = com.example.skyblocks.SkyTypes.index(sky);
                 if (i >= 0) {
-                    return com.noodlegamer76.shadered.item.SkyblockHolderBlockItem.create(sky, com.noodlegamer76.shadered.client.util.SkyblockPass.NORMAL,
+                    return com.noodlegamer76.shadered.item.SkyblockHolderBlockItem.create(sky, com.noodlegamer76.shadered.client.util.skyblock.SkyblockPass.NORMAL,
                             com.example.skyblocks.ModItems.SKY_ITEMS.get(i).get()).getHoverName();
                 }
                 String n = k.toLowerCase(java.util.Locale.ROOT).replace('_', ' ');
