@@ -148,7 +148,7 @@ public class FountainBlock extends Block implements EntityBlock {
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand,
                                               BlockHitResult hit) {
-        SkyblockType type = sky ? SkyLiquidBucketRecipe.skyOf(stack) : null;
+        SkyblockType type = sky ? SkyGlow.skyIn(stack) : null;
         if (type == null) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }

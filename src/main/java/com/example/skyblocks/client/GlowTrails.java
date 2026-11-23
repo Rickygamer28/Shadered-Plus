@@ -40,11 +40,10 @@ import org.joml.Vector3f;
  */
 @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, value = Dist.CLIENT)
 public final class GlowTrails {
-    private static final int LENGTH = 22;
+    private static final int LENGTH = 26, GLIDE_LENGTH = 40;
     private static final Map<Integer, Trail> TRAILS = new HashMap<>();
     private static final Map<Integer, String> PENDING = new HashMap<>();
     private static final SkyWindow.Quads QUADS = new SkyWindow.Quads();
-    private static final Map<String, Component> NAMES = new HashMap<>();
 
     private GlowTrails() {}
 
@@ -79,7 +78,7 @@ public final class GlowTrails {
             Map.Entry<Integer, String> e = it.next();
             Entity entity = level.getEntity(e.getKey());
             if (entity != null) {
-                TRAILS.computeIfAbsent(e.getKey(), k -> new Trail(e.getValue(), entity instanceof ThrownTrident ? 0.16F : 0.1F));
+                TRAILS.computeIfAbsent(e.getKey(), k -> new Trail(e.getValue(), entity instanceof ThrownTrident ? 0.34F : 0.24F));
                 it.remove();
             }
         }
@@ -88,7 +87,7 @@ public final class GlowTrails {
             ItemStack chest = p.getItemBySlot(EquipmentSlot.CHEST);
             String sky = chest.is(Items.ELYTRA) ? SkyGlow.of(chest) : null;
             if (sky != null && p.isFallFlying()) {
-                TRAILS.computeIfAbsent(-p.getId() - 1, k -> new Trail(sky, 0.32F)).live = true;
+                TRAILS.computeIfAbsent(-p.getId() - 1, k -> new Trail(sky, 0.7F)).live = true;
             }
         }
         for (Iterator<Map.Entry<Integer, Trail>> it = TRAILS.entrySet().iterator(); it.hasNext(); ) {
@@ -101,7 +100,7 @@ public final class GlowTrails {
             Vec3 at = entity == null ? null : id < 0 ? entity.position().add(0, 0.6, 0) : entity.position();
             if (moving && (trail.points.isEmpty() || trail.points.peekLast().distanceToSqr(at) > 1.0E-4)) {
                 trail.points.addLast(at);
-                while (trail.points.size() > LENGTH) {
+                while (trail.points.size() > (id < 0 ? GLIDE_LENGTH : LENGTH)) {
                     trail.points.removeFirst();
                 }
             } else if (!trail.points.isEmpty()) {
@@ -227,19 +226,7 @@ public final class GlowTrails {
         if (sky == null) {
             return;
         }
-        Component skyName = NAMES.computeIfAbsent(name, k -> {
-            try {
-                int i = com.example.skyblocks.SkyTypes.index(sky);
-                if (i >= 0) {
-                    return com.noodlegamer76.shadered.item.SkyblockHolderBlockItem.create(sky, com.noodlegamer76.shadered.client.util.skyblock.SkyblockPass.NORMAL,
-                            com.example.skyblocks.ModItems.SKY_ITEMS.get(i).get()).getHoverName();
-                }
-                String n = k.toLowerCase(java.util.Locale.ROOT).replace('_', ' ');
-                return Component.literal(Character.toUpperCase(n.charAt(0)) + n.substring(1));
-            } catch (RuntimeException e) {
-                return Component.literal(k);
-            }
-        });
+        Component skyName = Component.translatable(sky.getTranslationKey());
         event.getToolTip().add(Component.translatable("tooltip.skyblocks.sky_glow", skyName).withStyle(ChatFormatting.AQUA));
     }
 }

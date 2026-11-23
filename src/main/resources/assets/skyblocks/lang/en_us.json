@@ -1348,7 +1348,7 @@
   "item.skyblocks.sky_crystal": "Sky Crystal",
   "trim_material.skyblocks.sky": "Sky Material",
   "tooltip.skyblocks.sky_glow": "Sky glow: %s",
-  "guide.skyblocks.sky_crystal": "An amethyst shard crafted with a sky block: it holds that sky. Use it as an armour trim material at a smithing table - the trim then shows the moving sky itself, on every piece and every pattern.\n\nCraft a sky block with arrows (up to 8 alike), a trident or elytra to give them that sky's glow: arrows and tridents leave a trail of the sky behind them in flight, and elytra behind you as you glide.",
+  "guide.skyblocks.sky_crystal": "An amethyst shard crafted with a sky block (or a sky liquid bucket): it holds that sky. Use it as an armour trim material at a smithing table - the trim then shows the moving sky itself, on every piece and every pattern.\n\nCraft a sky block (or a sky liquid bucket) with arrows (up to 8 alike), a trident or elytra to give them that sky's glow: arrows and tridents leave a trail of the sky behind them in flight, and elytra behind you as you glide (look back, or switch to third person, to see it).",
   "tooltip.skyblocks.water_fountain": "Place fountains side by side (in a rectangle) for one big fountain",
   "item.skyblocks.heat_wand": "Heat Wand",
   "tooltip.skyblocks.heat_wand": "Right-click a block to make the air over it shimmer with heat (again to stop)",

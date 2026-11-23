@@ -26,7 +26,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Sky glow (ModComponents.SKY_GLOW: a sky's name), given by crafting with a sky block:
+ * Sky glow (ModComponents.SKY_GLOW: a sky's name), given by crafting with a sky block or a sky liquid bucket:
  * arrows (up to 8 alike) and tridents leave a trail of the sky behind them in flight; elytra, behind you as you glide
  * (client/GlowTrails). An amethyst shard becomes a Sky Crystal, the sky armour trim's material - trimmed with it,
  * the armour's trim shows its sky (client/ArmorPaintRender, mixin/SmithingTrimSkyMixin).
@@ -53,6 +53,15 @@ public final class SkyGlow {
         } catch (IllegalArgumentException e) {
             return null;
         }
+    }
+
+    /** The sky in a sky block or a sky liquid bucket, or null. */
+    @Nullable
+    public static SkyblockType skyIn(ItemStack stack) {
+        if (stack.getItem() instanceof ModFluids.SkyLiquidBucketItem bucket) {
+            return bucket.liquid.sky;
+        }
+        return SkyLiquidBucketRecipe.skyOf(stack);
     }
 
     /** What can take a sky's glow. */
@@ -119,8 +128,8 @@ public final class SkyGlow {
                 if (takes(stack) && (first.isEmpty() || ItemStack.isSameItemSameComponents(first, stack))) {
                     first = stack;
                     count++;
-                } else if (sky == null && (sky = SkyLiquidBucketRecipe.skyOf(stack)) != null) {
-                    // the sky block
+                } else if (sky == null && (sky = skyIn(stack)) != null) {
+                    // the sky block (or bucket)
                 } else {
                     return ItemStack.EMPTY;
                 }
@@ -130,6 +139,18 @@ public final class SkyGlow {
             }
             ItemStack out = first.is(Items.AMETHYST_SHARD) ? new ItemStack(ModItems.SKY_CRYSTAL.get()) : first.copyWithCount(count);
             out.set(ModComponents.SKY_GLOW.get(), sky.name());
+            return out;
+        }
+
+        /** (a sky liquid bucket gives its bucket back) */
+        @Override
+        public net.minecraft.core.NonNullList<ItemStack> getRemainingItems(CraftingInput input) {
+            net.minecraft.core.NonNullList<ItemStack> out = super.getRemainingItems(input);
+            for (int i = 0; i < input.size(); i++) {
+                if (input.getItem(i).getItem() instanceof ModFluids.SkyLiquidBucketItem) {
+                    out.set(i, new ItemStack(Items.BUCKET));
+                }
+            }
             return out;
         }
 
