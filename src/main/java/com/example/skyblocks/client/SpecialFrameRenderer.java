@@ -166,7 +166,7 @@ public class SpecialFrameRenderer implements BlockEntityRenderer<SpecialFrameBlo
         Minecraft mc = Minecraft.getInstance();
         Font font = mc.font;
         poseStack.pushPose();
-        poseStack.translate((w - 1) / 2.0F, -(h - 1) / 2.0F, 0.075F);
+        poseStack.translate((w - 1) / 2.0F, -(h - 1) / 2.0F, 0.5F - FACE + 0.012F); // (just in front of the frames' faces: one screen over them all)
         float px = 1.0F / 112.0F; // (112 of the font's pixels to a block)
         float sw = w * 112.0F - 20.0F, sh = h * 112.0F - 20.0F;
         int bright = LightTexture.FULL_BRIGHT;

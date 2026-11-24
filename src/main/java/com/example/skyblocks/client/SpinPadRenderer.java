@@ -333,9 +333,8 @@ public class SpinPadRenderer implements BlockEntityRenderer<SpinPadBlockEntity> 
         pose.scale(0.022F, -0.022F, 0.022F);
         Matrix4f hm = pose.last().pose();
         int bright = net.minecraft.client.renderer.LightTexture.FULL_BRIGHT;
-        VertexConsumer bg = buffers.getBuffer(RenderType.textBackground());
-        panel(bg, hm, -42, -16, 42, 17, 0xC00A1420, bright);
-        panel(bg, hm, -42, -16, 42, -15, 0xFF5EE6F0, bright);
+        panel(buffers, hm, -42, -16, 42, 17, 0xC00A1420, bright);
+        panel(buffers, hm, -42, -16, 42, -15, 0xFF5EE6F0, bright);
         net.minecraft.client.gui.Font font = mc.font;
         String rpm = be.rpm() + " rpm", fe = String.format(java.util.Locale.ROOT, "%,d FE/t", be.lastFe());
         font.drawInBatch(rpm, -font.width(rpm) / 2.0F, -12, 0xFF000000 | lit, false, hm, buffers, net.minecraft.client.gui.Font.DisplayMode.POLYGON_OFFSET, 0, bright);
@@ -343,12 +342,14 @@ public class SpinPadRenderer implements BlockEntityRenderer<SpinPadBlockEntity> 
         for (int i = 0; i < 20; i++) {
             float x0 = -36 + i * 3.6F;
             boolean on = (i + 0.5F) / 20 < s;
-            panel(bg, hm, x0, 10, x0 + 2.8F, 13, on ? 0xFF000000 | hue(0.33F - 0.33F * i / 20.0F, 0.85F, 1.0F) : 0xFF26303C, bright);
+            panel(buffers, hm, x0, 10, x0 + 2.8F, 13, on ? 0xFF000000 | hue(0.33F - 0.33F * i / 20.0F, 0.85F, 1.0F) : 0xFF26303C, bright);
         }
         pose.popPose();
     }
 
-    private static void panel(VertexConsumer v, Matrix4f m, float x0, float y0, float x1, float y1, int argb, int light) {
+    private static void panel(MultiBufferSource buffers, Matrix4f m, float x0, float y0, float x1, float y1, int argb, int light) {
+        // (its buffer got each time: drawing writing in between ends it)
+        VertexConsumer v = buffers.getBuffer(RenderType.textBackground());
         v.addVertex(m, x0, y0, 0).setColor(argb).setLight(light);
         v.addVertex(m, x0, y1, 0).setColor(argb).setLight(light);
         v.addVertex(m, x1, y1, 0).setColor(argb).setLight(light);
