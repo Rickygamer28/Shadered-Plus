@@ -280,7 +280,8 @@ vec4 tesseract(vec3 ro, vec3 rd, float t0, float t1, float t) {
                 if (j < i) continue;
                 vec2 h = raySeg(ro, rd, t0, t1, P[i], P[j]);
                 float w = (L == 0 ? 0.022 : 0.016);
-                glow += exp(-h.x * h.x / (w * w)) * (d == 3 ? 0.7 : 1.0);
+                // (an edge right by the eye - standing in a chamber - fades, not a streak across the view)
+                glow += exp(-h.x * h.x / (w * w)) * (d == 3 ? 0.7 : 1.0) * smoothstep(0.2, 0.9, h.y);
             }
         }
     }
@@ -304,7 +305,7 @@ vec4 galaxy(vec3 ro, vec3 rd, float t) {
     float dn = dot(rd, N);
     if (abs(dn) > 1e-4) {
         float tp = -dot(ro, N) / dn;
-        if (tp > 0.0) {
+        if (tp > 0.15) {
             vec3 p = ro + rd * tp;
             vec2 q = vec2(dot(p, e1), dot(p, e2));
             float r = length(q);
@@ -575,6 +576,12 @@ void main() {
     if (t1 <= t0) {
         discard;
     }
+    // (in a chamber or tank - which you stand inside to see - the singularity's skins keep to its middle, away from
+    // its walls and you)
+    float zoom = big > 0.5 && skin <= 2 ? 1.45 : 1.0;
+    ro *= zoom;
+    t0 *= zoom;
+    t1 *= zoom;
     vec4 c;
     if (skin == 1) {
         c = tesseract(ro, rd, t0, t1, t);
