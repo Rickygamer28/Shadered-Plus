@@ -74,7 +74,7 @@ float diskGas(float ang, float u, float hr, float rs, float t) {
 }
 
 vec3 blackbody(float k) { // (0 cool red .. 1 white-hot)
-    return mix(mix(vec3(0.6, 0.1, 0.02), vec3(1.0, 0.55, 0.15), smoothstep(0.0, 0.5, k)), vec3(1.0, 0.95, 0.85), smoothstep(0.5, 1.0, k));
+    return mix(mix(vec3(0.7, 0.07, 0.02), vec3(1.0, 0.45, 0.07), smoothstep(0.0, 0.5, k)), vec3(1.0, 0.9, 0.72), smoothstep(0.6, 1.05, k));
 }
 
 // where the straight ray (from o, relative to the middle) first meets the chamber's frames - the twelve edges of a
@@ -227,14 +227,14 @@ void main() {
                 // the side turning towards you brighter and bluer, the side turning away dimmer and redder
                 vec3 vel = normalize(cross(dn, hq));
                 float dop = 1.0 + 0.6 * dot(vel, -dir);
-                float heat = clamp((0.22 + 0.78 * pow(1.0 - u, 0.9)) * (0.55 + 0.5 * dop), 0.0, 1.15);
+                float heat = clamp((0.15 + 0.7 * pow(1.0 - u, 0.9)) * (0.6 + 0.45 * dop), 0.0, 1.1);
                 vec3 tint = vColor.rgb / max(max(vColor.r, vColor.g), max(vColor.b, 0.001));
-                vec3 col = blackbody(heat) * (1.1 + 1.6 * pow(1.0 - u, 1.6)) * dop * dop * 1.6 * tint;
+                vec3 col = blackbody(heat) * (0.75 + 1.2 * pow(1.0 - u, 1.6)) * dop * dop * 1.3 * tint;
                 col += vec3(1.0, 0.95, 0.9) * exp(-u * 40.0) * 1.2 * dop * tint; // (its blazing inner edge)
-                float a = clamp(dens * 0.95, 0.0, 1.0);
+                float a = clamp(dens * 1.1, 0.0, 1.0);
                 acc += trans * col * a;
-                // (the dim outer rim and the dim side glow, they don't hide much: no dark smudge beyond the disk)
-                trans *= 1.0 - a * clamp(max(col.r, max(col.g, col.b)), 0.0, 1.0) * (1.0 - smoothstep(0.55, 1.0, u));
+                // (it hides what's behind it - but its dim outer rim not much: no dark smudge beyond the disk)
+                trans *= 1.0 - a * (1.0 - smoothstep(0.6, 1.0, u)) * clamp(0.5 + max(col.r, max(col.g, col.b)), 0.0, 1.0);
             }
         }
         if (big) {
@@ -371,7 +371,7 @@ void main() {
     vec3 ringCol = kind > 1.5 ? mix(vColor.rgb, vec3(1.0), 0.6) : big ? vec3(1.0, 0.85, 0.6) : mix(vColor.rgb, vec3(1.0), 0.5);
     acc += trans * ringCol * ring * (big ? 0.9 : 0.6);
 
-    acc = 1.0 - exp(-acc * 1.15); // (soft on its brightest: what would burn white keeps its colour)
+    acc = (1.0 - exp(-acc * 1.6)) * 0.85 + acc * 0.15 / (1.0 + acc); // (soft on its brightest: what would burn white keeps its colour)
     vec3 col = acc + trans * bg * bgA;
     float alpha = clamp(1.0 - trans * (1.0 - bgA) + (swallowed ? 1.0 : 0.0), 0.0, 1.0);
     if (ItemMode > 0.5 && alpha < 0.02) {
