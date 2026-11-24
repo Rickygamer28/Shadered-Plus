@@ -36,6 +36,8 @@ public final class StorageSkins {
     public static final int DYSON = 0, TESSERACT = 1, GALAXY = 2, PLANET = 3, BUBBLES = 4, HELIX = 5;
     static ShaderInstance shader;
     private static final float[][] COLS = new float[10][4];
+    /** (the item galaxy's items: where each one's picture is on the block atlas - u0 v0 u1 v1; none: all 0) */
+    private static final float[][] SPRITES = new float[10][4];
     private static int count, glowBits;
 
     private StorageSkins() {}
@@ -55,6 +57,7 @@ public final class StorageSkins {
         static final RenderType SKIN = create("skyblocks_storage_skin", DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 256, false, true,
                 CompositeState.builder()
                         .setShaderState(new ShaderStateShard(() -> shader))
+                        .setTextureState(new TextureStateShard(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS, false, false))
                         .setTexturingState(new TexturingStateShard("skyblocks_storage_skin_colours", StorageSkins::colours, () -> {}))
                         .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                         .setCullState(NO_CULL)
@@ -73,6 +76,9 @@ public final class StorageSkins {
         for (int i = 0; i < COLS.length; i++) {
             shader.safeGetUniform("C" + i).set(COLS[i][0], COLS[i][1], COLS[i][2], COLS[i][3]);
         }
+        for (int i = 0; i < SPRITES.length; i++) {
+            shader.safeGetUniform("U" + i).set(SPRITES[i][0], SPRITES[i][1], SPRITES[i][2], SPRITES[i][3]);
+        }
         shader.safeGetUniform("Info").set((float) count, (float) glowBits, 0.0F, 0.0F);
     }
 
@@ -85,8 +91,20 @@ public final class StorageSkins {
      * how much of the whole each is; which of them glow (a bit each).
      */
     public static void draw(PoseStack pose, MultiBufferSource buffers, int skin, float full, boolean chamber, float half, int[] rgb, float[] shares, int glow) {
+        draw(pose, buffers, skin, full, chamber, half, rgb, shares, glow, null);
+    }
+
+    /** As above, with the items' pictures for the item galaxy (where each is on the block atlas: u0 v0 u1 v1). */
+    public static void draw(PoseStack pose, MultiBufferSource buffers, int skin, float full, boolean chamber, float half, int[] rgb, float[] shares, int glow,
+                            float[][] sprites) {
         if (shader == null || rgb.length == 0) {
             return;
+        }
+        for (int i = 0; i < SPRITES.length; i++) {
+            float[] sp = sprites != null && i < sprites.length ? sprites[i] : null;
+            for (int k = 0; k < 4; k++) {
+                SPRITES[i][k] = sp != null ? sp[k] : 0.0F;
+            }
         }
         count = Math.min(rgb.length, COLS.length);
         glowBits = glow;
@@ -181,6 +199,21 @@ public final class StorageSkins {
             int r = (base >> 16 & 255) * (tint >> 16 & 255) / 255, g = (base >> 8 & 255) * (tint >> 8 & 255) / 255, b = (base & 255) * (tint & 255) / 255;
             return r << 16 | g << 8 | b;
         });
+    }
+
+    /** Where each item's picture is on the block atlas (up to ten): u0 v0 u1 v1. */
+    public static float[][] itemSprites(List<ItemStack> items) {
+        int n = Math.min(10, items.size());
+        float[][] out = new float[n][];
+        for (int i = 0; i < n; i++) {
+            try {
+                var sp = Minecraft.getInstance().getItemRenderer().getModel(items.get(i), null, null, 0).getParticleIcon();
+                out[i] = new float[] {sp.getU0(), sp.getV0(), sp.getU1(), sp.getV1()};
+            } catch (RuntimeException e) {
+                out[i] = null;
+            }
+        }
+        return out;
     }
 
     /** (the colours of a list of items, up to ten) */

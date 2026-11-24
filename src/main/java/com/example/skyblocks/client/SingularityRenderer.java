@@ -51,8 +51,10 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
             float half = be.chamber() > 0 ? (be.chamber() - 1) / 2.0F - 0.55F : 0.42F; // (alone: inside its frame - how full it is shows in the skin itself)
             int skin = be.skin() == 1 ? StorageSkins.DYSON : be.skin() == 2 ? StorageSkins.TESSERACT : StorageSkins.GALAXY;
             int[] rgb;
+            float[][] sprites = null;
             if (skin == StorageSkins.GALAXY) {
                 rgb = StorageSkins.itemColours(be.shown());
+                sprites = StorageSkins.itemSprites(be.shown());
                 if (rgb.length == 0) {
                     rgb = new int[] {be.colour()};
                 }
@@ -61,7 +63,7 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
             }
             float[] shares = new float[rgb.length];
             java.util.Arrays.fill(shares, 1.0F / rgb.length);
-            StorageSkins.draw(poseStack, buffers, skin, full, be.chamber() > 0, half, rgb, shares, 0);
+            StorageSkins.draw(poseStack, buffers, skin, full, be.chamber() > 0, half, rgb, shares, 0, sprites);
             return;
         }
         float t = (float) LavaLampRenderer.seconds();
