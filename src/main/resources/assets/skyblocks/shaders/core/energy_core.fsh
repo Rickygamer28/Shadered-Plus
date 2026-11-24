@@ -487,7 +487,7 @@ vec3 starColour(vec3 c, int k) {
     float l = max(max(c.r, c.g), c.b);
     float m = clamp(l, 0.0, 1.0);
     if (k == 0) return mix(vec3(0.55, 0.05, 0.02), vec3(1.0, 0.42, 0.22), m) * l * 1.05;
-    if (k == 2) return mix(vec3(0.08, 0.2, 0.85), vec3(0.78, 0.9, 1.0), m) * l * 1.1;
+    if (k == 2) return mix(vec3(0.02, 0.12, 0.9), vec3(0.45, 0.72, 1.0), m * m) * l * 1.15;
     if (k == 3) return mix(vec3(0.62, 0.62, 0.8), vec3(1.0, 1.0, 1.04), m) * l * 1.12;
     return c;
 }
