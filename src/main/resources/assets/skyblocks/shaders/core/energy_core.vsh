@@ -19,12 +19,10 @@ flat out int skin;
 flat out float full;
 flat out float big;
 flat out float strength;
-flat out float ringPhase; // (its rings' turn, 0 .. 2 pi: carried in the corner number's fraction)
 
 void main() {
     gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
     int corner = int(UV0.x + 0.5);
-    ringPhase = clamp((UV0.x - float(corner) + 0.0) / 0.45, 0.0, 1.0) * 6.2831853;
     half_ = UV0.y;
     lp = (vec3(float(corner & 1), float((corner >> 1) & 1), float((corner >> 2) & 1)) * 2.0 - 1.0) * half_;
     // the true eye: the point the whole projection sees from (view bobbing is in the projection - taking the eye as the

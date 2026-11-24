@@ -120,13 +120,6 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
         VertexConsumer vc = late ? null : buffers.getBuffer(Types.CORE);
         org.joml.Vector3f at = new org.joml.Vector3f();
         int r = skin & 255, g = Math.round(full * 255), b = chamber > 0 ? 255 : 0;
-        // its containment rings (in a chamber, in the shader): turning faster the more comes in
-        long nowMs = System.currentTimeMillis();
-        float dt = be.ringAt == 0 ? 0.0F : Math.min(0.25F, (nowMs - be.ringAt) / 1000.0F);
-        be.ringAt = nowMs;
-        float speed = 0.25F + 2.2F * Mth.clamp((float) Math.log10(1.0 + be.rateIn()) / 5.5F, 0.0F, 1.0F);
-        be.ringAngle = (float) ((be.ringAngle + dt * speed) % (Math.PI * 2));
-        float phase = be.ringAngle / (float) (Math.PI * 2) * 0.45F;
 
         // each face of the box turned away from the eye - its far side (from inside: all of them): the near side would be
         // cut off by the screen's near plane as you came close (and the ray's traced from the eye in any case) - its
@@ -140,10 +133,10 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
             for (int c : faces[f]) {
                 float x = ((c & 1) * 2 - 1) * half, y = (((c >> 1) & 1) * 2 - 1) * half, z = (((c >> 2) & 1) * 2 - 1) * half;
                 if (vc != null) {
-                    vc.addVertex(m, 0.5F + x, 0.5F + y, 0.5F + z).setColor(r, g, b, 255).setUv(c + phase, half);
+                    vc.addVertex(m, 0.5F + x, 0.5F + y, 0.5F + z).setColor(r, g, b, 255).setUv(c, half);
                 } else if (VERTS.size() < 65536) {
                     m.transformPosition(0.5F + x, 0.5F + y, 0.5F + z, at);
-                    VERTS.add(new float[] {at.x, at.y, at.z, c + phase, half, r, g, b});
+                    VERTS.add(new float[] {at.x, at.y, at.z, c, half, r, g, b});
                 }
             }
         }
