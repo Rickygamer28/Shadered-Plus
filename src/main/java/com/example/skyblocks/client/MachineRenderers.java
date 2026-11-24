@@ -25,20 +25,32 @@ import org.joml.Vector3f;
 public final class MachineRenderers {
     private MachineRenderers() {}
 
-    /** A glowing dot facing the camera (added on: brighter where they overlap). */
+    /** A soft round glow (its picture: bright in the middle, fading to its edge), added on. */
+    static final ResourceLocation GLOW = ResourceLocation.fromNamespaceAndPath(com.example.skyblocks.SkyBlocksMod.MOD_ID, "textures/misc/glow_dot.png");
+
+    static VertexConsumer glows(MultiBufferSource buffers) {
+        return buffers.getBuffer(RenderType.eyes(GLOW));
+    }
+
+    /** A glowing dot facing the camera (added on: brighter where they overlap; {@code a} dims it). */
     static void sprite(VertexConsumer v, Matrix4f m, Vector3f right, Vector3f up, float x, float y, float z, float size, float r, float g, float b, float a) {
         float rx = right.x * size, ry = right.y * size, rz = right.z * size, ux = up.x * size, uy = up.y * size, uz = up.z * size;
-        v.addVertex(m, x - rx - ux, y - ry - uy, z - rz - uz).setColor(r, g, b, a);
-        v.addVertex(m, x + rx - ux, y + ry - uy, z + rz - uz).setColor(r, g, b, a);
-        v.addVertex(m, x + rx + ux, y + ry + uy, z + rz + uz).setColor(r, g, b, a);
-        v.addVertex(m, x - rx + ux, y - ry + uy, z - rz + uz).setColor(r, g, b, a);
+        float cr = r * a, cg = g * a, cb = b * a;
+        corner(v, m, x - rx - ux, y - ry - uy, z - rz - uz, 0, 1, cr, cg, cb);
+        corner(v, m, x + rx - ux, y + ry - uy, z + rz - uz, 1, 1, cr, cg, cb);
+        corner(v, m, x + rx + ux, y + ry + uy, z + rz + uz, 1, 0, cr, cg, cb);
+        corner(v, m, x - rx + ux, y - ry + uy, z - rz + uz, 0, 0, cr, cg, cb);
+    }
+
+    private static void corner(VertexConsumer v, Matrix4f m, float x, float y, float z, float u, float w, float r, float g, float b) {
+        v.addVertex(m, x, y, z).setColor(Math.min(1, r), Math.min(1, g), Math.min(1, b), 1.0F).setUv(u, w).setOverlay(OverlayTexture.NO_OVERLAY)
+                .setLight(0xF000F0).setNormal(0, 1, 0);
     }
 
     /** A soft glow: a few dots, one in another (a bright middle, fading out). */
     static void glow(VertexConsumer v, Matrix4f m, Vector3f right, Vector3f up, float x, float y, float z, float size, float r, float g, float b, float a) {
-        sprite(v, m, right, up, x, y, z, size, r, g, b, a * 0.18F);
-        sprite(v, m, right, up, x, y, z, size * 0.5F, r, g, b, a * 0.35F);
-        sprite(v, m, right, up, x, y, z, size * 0.22F, Math.min(1, r + 0.4F), Math.min(1, g + 0.4F), Math.min(1, b + 0.4F), a * 0.9F);
+        sprite(v, m, right, up, x, y, z, size, r, g, b, a * 0.55F);
+        sprite(v, m, right, up, x, y, z, size * 0.35F, Math.min(1, r + 0.5F), Math.min(1, g + 0.5F), Math.min(1, b + 0.5F), a);
     }
 
     static Vector3f[] camera() {
@@ -82,7 +94,7 @@ public final class MachineRenderers {
             float per = 8.0F * r;
             be.clientTrack = (be.clientTrack + dt * (1.0F + 8.0F * s + 50.0F * s * s)) % per;
             Vector3f[] cam = camera();
-            VertexConsumer v = buffers.getBuffer(RenderType.lightning());
+            VertexConsumer v = glows(buffers);
             Matrix4f m = pose.last().pose();
             float t = (float) LavaLampRenderer.seconds();
             // the collider's glow over it: brighter as the beams speed up
@@ -190,13 +202,19 @@ public final class MachineRenderers {
             }
             pose.popPose();
             // its emitter: a glow over the dish in its weather's colour; a beam into the sky while turning it
-            VertexConsumer v = buffers.getBuffer(RenderType.lightning());
             Matrix4f m = pose.last().pose();
             Vector3f[] cam = camera();
             float[] c = COLOURS[mode];
             float k = mode == 0 ? 0.25F : holding ? 0.9F + 0.1F * Mth.sin(t * 3) : 0.55F + 0.4F * Mth.sin(t * 9);
             float ey = y0 + 0.97F;
-            glow(v, m, cam[0], cam[1], 0.5F, ey, 0.5F, 0.9F + (holding ? 0.4F : 0), c[0], c[1], c[2], k);
+            VertexConsumer gl = glows(buffers);
+            glow(gl, m, cam[0], cam[1], 0.5F, ey, 0.5F, 0.9F + (holding ? 0.4F : 0), c[0], c[1], c[2], k);
+            // a strike (or the weather turned): a flash on the dish
+            float age = (System.currentTimeMillis() - be.clientStruckAt) / 1000.0F;
+            if (be.clientStruckAt > 0 && age < 1.0F) {
+                glow(gl, m, cam[0], cam[1], 0.5F, ey, 0.5F, 3.0F + 6.0F * age, 0.85F, 0.85F, 1.0F, 1.0F - age);
+            }
+            VertexConsumer v = buffers.getBuffer(RenderType.lightning());
             if (turning) {
                 float charge = be.charge();
                 float h = 48.0F;
@@ -213,11 +231,6 @@ public final class MachineRenderers {
                     v.addVertex(m, 0.5F + dx * w0, ey, 0.5F + dz * w0).setColor(c[0], c[1], c[2], a);
                     v.addVertex(m, 0.5F - dx * w0, ey, 0.5F - dz * w0).setColor(c[0], c[1], c[2], a);
                 }
-            }
-            // a strike (or the weather turned): a flash on the dish
-            float age = (System.currentTimeMillis() - be.clientStruckAt) / 1000.0F;
-            if (be.clientStruckAt > 0 && age < 1.0F) {
-                glow(v, m, cam[0], cam[1], 0.5F, ey, 0.5F, 3.0F + 6.0F * age, 0.85F, 0.85F, 1.0F, 1.0F - age);
             }
             // clouds gathering round over it, swirling, while it works
             long now = System.currentTimeMillis();
