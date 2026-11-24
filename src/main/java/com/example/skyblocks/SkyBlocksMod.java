@@ -41,6 +41,7 @@ public class SkyBlocksMod {
         ModSkyShapes.init();
         ModSkyShapes.RECIPES.register(modEventBus);
         java.util.Objects.requireNonNull(SpinPadMenu.TYPE); // (its menu type put on the list before the list is registered)
+        java.util.Objects.requireNonNull(MachineMenu.TYPE); // (the same: the machines' menu)
         SingularityMenu.MENUS.register(modEventBus);
         TABS.register(modEventBus);
         modEventBus.addListener(SkyBlocksMod::addToShaderedTab);
