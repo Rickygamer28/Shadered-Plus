@@ -220,14 +220,15 @@ public class ParticleAcceleratorBlockEntity extends MachineBlockEntity {
     }
 
     private void collide(ServerLevel level, ItemStack in) {
+        Smash recipe = smash(in, size);
         in.shrink(1);
         items.setStackInSlot(INPUT, in);
         speed = 0.55F;
         collisions++;
         RandomSource r = level.random;
-        int rolls = size == 3 ? 2 : size == 2 && r.nextFloat() < 0.4F ? 2 : 1;
+        int rolls = recipe != null ? 1 : size == 3 ? 2 : size == 2 && r.nextFloat() < 0.4F ? 2 : 1;
         for (int i = 0; i < rolls; i++) {
-            ItemStack got = roll(size, r);
+            ItemStack got = recipe != null ? new ItemStack(recipe.out(), recipe.count()) : roll(size, r);
             last = got.copy();
             ItemStack left = got;
             for (int k = 1; k <= OUTPUTS && !left.isEmpty(); k++) {
@@ -267,6 +268,34 @@ public class ParticleAcceleratorBlockEntity extends MachineBlockEntity {
     }
 
     // ---- what collisions make ----
+
+    /** A collision recipe: smashing {@code in} (in a ring at least {@code size} big) makes {@code count} of {@code out}. */
+    public record Smash(Item in, Item out, int count, int size) {}
+
+    /** Things smashing makes for sure (anything else: something at random, below) - many of them made no other way. */
+    public static final List<Smash> SMASHES = List.of(
+            new Smash(Items.COAL_BLOCK, Items.DIAMOND, 1, 1), new Smash(Items.LEATHER, Items.SADDLE, 1, 1),
+            new Smash(Items.PAPER, Items.NAME_TAG, 1, 1), new Smash(Items.STRING, Items.COBWEB, 2, 1),
+            new Smash(Items.DIRT, Items.GRASS_BLOCK, 4, 1), new Smash(Items.GRAVEL, Items.FLINT, 4, 1),
+            new Smash(Items.CLAY_BALL, Items.PRISMARINE_SHARD, 2, 1), new Smash(Items.GLASS_BOTTLE, Items.EXPERIENCE_BOTTLE, 2, 1),
+            new Smash(Items.DEEPSLATE, Items.REINFORCED_DEEPSLATE, 1, 2), new Smash(Items.AMETHYST_BLOCK, Items.BUDDING_AMETHYST, 1, 2),
+            new Smash(Items.GOLDEN_APPLE, Items.ENCHANTED_GOLDEN_APPLE, 1, 2), new Smash(Items.ANCIENT_DEBRIS, Items.NETHERITE_SCRAP, 2, 2),
+            new Smash(Items.NAUTILUS_SHELL, Items.HEART_OF_THE_SEA, 1, 2), new Smash(Items.CHORUS_FRUIT, Items.SHULKER_SHELL, 1, 2),
+            new Smash(Items.BONE_BLOCK, Items.SNIFFER_EGG, 1, 2), new Smash(Items.SCULK, Items.ECHO_SHARD, 1, 2),
+            new Smash(Items.PRISMARINE_CRYSTALS, Items.TRIDENT, 1, 3), new Smash(Items.EMERALD_BLOCK, Items.TOTEM_OF_UNDYING, 1, 3),
+            new Smash(Items.WITHER_SKELETON_SKULL, Items.NETHER_STAR, 1, 3), new Smash(Items.ENDER_EYE, Items.DRAGON_BREATH, 4, 3),
+            new Smash(Items.PHANTOM_MEMBRANE, Items.ELYTRA, 1, 3), new Smash(Items.DRAGON_BREATH, Items.DRAGON_EGG, 1, 3));
+
+    /** What smashing this makes for sure at this ring size (null: something at random). */
+    @Nullable
+    public static Smash smash(ItemStack in, int size) {
+        for (Smash s : SMASHES) {
+            if (in.is(s.in) && size >= s.size) {
+                return s;
+            }
+        }
+        return null;
+    }
 
     private record Drop(int weight, Item item, int min, int max) {}
 

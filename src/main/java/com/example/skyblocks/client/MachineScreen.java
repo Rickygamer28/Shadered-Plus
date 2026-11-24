@@ -144,7 +144,7 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 
     private void accelerator(GuiGraphics g, ParticleAcceleratorBlockEntity a) {
         int r = ParticleAcceleratorBlockEntity.RADIUS[a.size()] * 2 + 1;
-        g.drawCenteredString(font, Component.translatable("screen.skyblocks.particle_accelerator.smash"), 43, 28, DIM);
+        g.drawCenteredString(font, Component.translatable("screen.skyblocks.particle_accelerator.smash"), 43, 30, DIM);
         g.drawString(font, Component.translatable("screen.skyblocks.particle_accelerator.made"), 98, 16, DIM, false);
         boolean empty = menu.slots.get(0).getItem().isEmpty();
         Component state = empty ? Component.translatable("screen.skyblocks.particle_accelerator.waiting")
@@ -157,6 +157,15 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
         Component ring = Component.translatable("screen.skyblocks.particle_accelerator.ring", Component.translatable("screen.skyblocks.machine.size." + SIZES[a.size()]),
                 r, r, a.collisions());
         g.drawString(font, ring, 8, 112, DIM, false);
+        // (what's in it makes something for sure: shown)
+        var recipe = ParticleAcceleratorBlockEntity.smash(menu.slots.get(0).getItem(), a.size());
+        if (recipe != null) {
+            g.drawString(font, Component.translatable("screen.skyblocks.particle_accelerator.recipe", ""), 8, 18, 0xFF8FF0E8, false);
+            ItemStack out = new ItemStack(recipe.out(), recipe.count());
+            int ix = 8 + font.width(Component.translatable("screen.skyblocks.particle_accelerator.recipe", ""));
+            g.renderItem(out, ix, 13);
+            g.renderItemDecorations(font, out, ix, 13);
+        }
         ItemStack last = a.last();
         if (!last.isEmpty()) {
             g.drawString(font, Component.translatable("screen.skyblocks.particle_accelerator.last"), 8, 70, DIM, false);
