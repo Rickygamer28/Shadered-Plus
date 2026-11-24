@@ -38,6 +38,16 @@ uniform vec4 U6;
 uniform vec4 U7;
 uniform vec4 U8;
 uniform vec4 U9;
+uniform vec4 V0;
+uniform vec4 V1;
+uniform vec4 V2;
+uniform vec4 V3;
+uniform vec4 V4;
+uniform vec4 V5;
+uniform vec4 V6;
+uniform vec4 V7;
+uniform vec4 V8;
+uniform vec4 V9;
 
 in vec3 lp;
 flat in vec3 eye;
@@ -257,98 +267,289 @@ vec4 dyson(vec3 ro, vec3 rd, float t) {
 
 // ---- 1: tesseract ----
 
-vec3 tess(int i, float a, float b, float sc) {
+vec4 tess4(int i, float a, float b) {
     vec4 v = vec4((i & 1) != 0 ? 1.0 : -1.0, (i & 2) != 0 ? 1.0 : -1.0, (i & 4) != 0 ? 1.0 : -1.0, (i & 8) != 0 ? 1.0 : -1.0);
     float x = v.x * cos(a) - v.w * sin(a), w = v.x * sin(a) + v.w * cos(a);
     float y = v.y * cos(b) - v.z * sin(b), z = v.y * sin(b) + v.z * cos(b);
-    float k = 1.0 / (2.6 - w);
-    return vec3(x, y, z) * k * sc;
+    return vec4(x, y, z, w);
+}
+
+// a 4D corner seen in 3D (xyz), and how near it is in the fourth way round (w: -1 far .. 1 near)
+vec4 tess(int i, float a, float b, float sc) {
+    vec4 v = tess4(i, a, b);
+    float k = 1.0 / (3.2 - v.w);
+    return vec4(v.xyz * k * sc * 1.3, v.w);
+}
+
+// a ray against a capsule (a rod with round ends) from pa to pb, radius r: how far along, or -1
+float capsule(vec3 ro, vec3 rd, vec3 pa, vec3 pb, float r) {
+    vec3 ba = pb - pa, oa = ro - pa;
+    float baba = dot(ba, ba), bard = dot(ba, rd), baoa = dot(ba, oa), rdoa = dot(rd, oa), oaoa = dot(oa, oa);
+    float a = baba - bard * bard, b = baba * rdoa - baoa * bard, c = baba * oaoa - baoa * baoa - r * r * baba;
+    float h = b * b - a * c;
+    if (h >= 0.0 && a > 1e-8) {
+        float t = (-b - sqrt(h)) / a;
+        float y = baoa + t * bard;
+        if (y > 0.0 && y < baba) return t;
+        vec3 oc = y <= 0.0 ? oa : ro - pb;
+        b = dot(rd, oc);
+        c = dot(oc, oc) - r * r;
+        h = b * b - c;
+        if (h > 0.0) return -b - sqrt(h);
+    }
+    return -1.0;
 }
 
 vec4 tesseract(vec3 ro, vec3 rd, float t0, float t1, float t) {
-    vec3 col = mix(vec3(0.62, 0.55, 1.0), C0.rgb, 0.4);
-    float glow = 0.0, core = 0.0;
-    int layers = 1 + int(full * 2.99);
-    for (int L = 0; L < 3; L++) {
-        if (L >= layers) break;
-        float sc = 1.05 * pow(0.55, float(L)), a = t * (0.5 + 0.25 * float(L)), b = t * 0.33 + float(L);
-        vec3 P[16];
+    vec3 hue = mix(vec3(0.62, 0.5, 1.0), C0.rgb, 0.35);
+    vec3 far_ = vec3(0.25, 0.85, 1.0); // (its far side, in the fourth way round: cyan)
+    vec3 L = normalize(vec3(0.4, 0.8, 0.3));
+    float best = 1e9;
+    vec3 bestN = vec3(0.0), bestC = vec3(0.0);
+    float halo = 0.0;
+    vec3 haloC = hue;
+    float tMin = max(t0, 0.18); // (rods right by the eye - standing in a chamber - aren't drawn: no bar across the view)
+    int layers = full > 0.55 ? 2 : 1;
+    for (int Ly = 0; Ly < 2; Ly++) {
+        if (Ly >= layers) break;
+        float sc = Ly == 0 ? 1.0 : 0.46;
+        float a = t * (Ly == 0 ? 0.45 : -0.7), b = t * (Ly == 0 ? 0.3 : 0.5) + float(Ly) * 1.7;
+        vec4 P[16];
         for (int i = 0; i < 16; i++) P[i] = tess(i, a, b, sc);
+        float rod = (Ly == 0 ? 0.021 : 0.014);
         for (int i = 0; i < 16; i++) {
+            // its corners: little glowing balls
+            vec3 pc = P[i].xyz;
+            float rb = rod * 1.9 * (0.75 + 0.35 * (P[i].w * 0.5 + 0.5));
+            vec2 h = ball(ro, rd, pc, rb);
+            if (h.y > h.x && h.x > tMin && h.x < best) {
+                best = h.x;
+                bestN = normalize(ro + rd * h.x - pc);
+                bestC = mix(far_, vec3(1.0, 0.95, 1.0), 0.35 + 0.35 * (P[i].w * 0.5 + 0.5));
+            }
             for (int d = 0; d < 4; d++) {
                 int j = i ^ (1 << d);
                 if (j < i) continue;
-                vec2 h = raySeg(ro, rd, t0, t1, P[i], P[j]);
-                float w = (L == 0 ? 0.022 : 0.016);
-                // (an edge right by the eye - standing in a chamber - fades, not a streak across the view)
-                glow += exp(-h.x * h.x / (w * w)) * (d == 3 ? 0.7 : 1.0) * smoothstep(0.2, 0.9, h.y);
+                float w = (P[i].w + P[j].w) * 0.25 + 0.5;
+                float r = rod * (0.7 + 0.45 * w);
+                float th = capsule(ro, rd, P[i].xyz, P[j].xyz, r);
+                if (th > tMin && th < best) {
+                    best = th;
+                    vec3 p = ro + rd * th, ab = P[j].xyz - P[i].xyz;
+                    vec3 q = P[i].xyz + ab * clamp(dot(p - P[i].xyz, ab) / dot(ab, ab), 0.0, 1.0);
+                    bestN = normalize(p - q);
+                    bestC = mix(far_, hue, w);
+                }
+                // (a faint glow round each rod - the strongest, not added up: no white fog where they cross)
+                vec2 g = raySeg(ro, rd, tMin, t1, P[i].xyz, P[j].xyz);
+                float gl = exp(-g.x / (rod * 1.6)) * 0.35;
+                if (gl > halo) {
+                    halo = gl;
+                    haloC = mix(far_, hue, w);
+                }
             }
         }
     }
+    // its heart: a ball of light, swirling
+    float rc = 0.07 + 0.06 * full;
+    vec2 hc = ball(ro, rd, vec3(0.0), rc);
+    vec4 heart = vec4(0.0);
+    if (hc.y > hc.x && hc.x > t0) {
+        vec3 n = normalize(ro + rd * hc.x);
+        float sw = fbm(rotY(n, t * 0.8) * 4.0 + vec3(0.0, t * 0.4, 0.0));
+        float f = max(dot(n, -rd), 0.0);
+        heart = vec4(mix(hue * 1.1, vec3(1.0, 0.97, 1.0), 0.55 + 0.45 * f) * (0.85 + 0.35 * sw), 1.0);
+    }
     float bb = max(-dot(ro, rd), 0.0);
     float dc = length(ro + rd * bb);
-    core = exp(-dc * dc * (60.0 - 30.0 * full)) * (0.7 + 0.3 * sin(t * 3.0));
-    vec3 c = col * glow + vec3(1.0, 0.97, 1.0) * core + col * exp(-dc * dc * 8.0) * 0.25;
-    return vec4(c, clamp(glow * 0.9 + core + exp(-dc * dc * 8.0) * 0.2, 0.0, 1.0));
+    float aura = exp(-max(dc - rc, 0.0) * 22.0) * 0.55 * (0.85 + 0.15 * sin(t * 3.0));
+    vec4 back = over(vec4(hue * 1.2 + 0.2, aura), vec4(haloC, halo));
+    if (best < 1e8) {
+        float dif = max(dot(bestN, L), 0.0);
+        float facing = max(dot(bestN, -rd), 0.0);
+        float spec = pow(max(dot(reflect(rd, bestN), L), 0.0), 40.0);
+        // (a glowing glass rod: bright through its middle, its colour deepening to its edges, a shine on it)
+        vec3 c = mix(bestC * 0.45, mix(bestC, vec3(1.0), 0.45) * 1.25, pow(facing, 1.4)) * (0.8 + 0.3 * dif) + vec3(spec * 0.7);
+        if (heart.a > 0.0 && hc.x < best) return heart;
+        return vec4(c, 1.0);
+    }
+    if (heart.a > 0.0) return heart;
+    return back;
 }
 
 // ---- 2: item galaxy ----
 
+// a block item's top picture (for one drawn as a cube; none for a flat one)
+vec4 topOf(int i) {
+    if (i <= 0) return V0;
+    if (i == 1) return V1;
+    if (i == 2) return V2;
+    if (i == 3) return V3;
+    if (i == 4) return V4;
+    if (i == 5) return V5;
+    if (i == 6) return V6;
+    if (i == 7) return V7;
+    if (i == 8) return V8;
+    return V9;
+}
+
+// a ray against a box of half-size hs round the origin: (in, out), out < in for a miss; the face it goes in by
+vec2 boxHit(vec3 ro, vec3 rd, vec3 hs, out vec3 nIn) {
+    vec3 inv = 1.0 / (sign(rd) * max(abs(rd), vec3(1e-6)));
+    vec3 n = -ro * inv, k = abs(inv) * hs;
+    vec3 tA = n - k, tB = n + k;
+    float tN = max(max(tA.x, tA.y), tA.z), tF = min(min(tB.x, tB.y), tB.z);
+    nIn = -sign(rd) * step(tA.yzx, tA.xyz) * step(tA.zxy, tA.xyz);
+    return vec2(tN, tF);
+}
+
+vec3 picture(vec4 sp, vec2 f) {
+    return textureLod(Sampler0, mix(sp.xy, sp.zw, vec2(f.x, 1.0 - f.y)), 0.0).rgb;
+}
+
+// one item, in its own frame (centred, turned): a little cube for a block, otherwise its picture made solid - a
+// pixel thick, like a dropped item; (how far along, or -1; its colour unlit; its normal)
+float itemHit(vec3 ro, vec3 rd, int which, float s, out vec3 col, out vec3 nrm) {
+    vec4 sp = spriteOf(which), tp = topOf(which);
+    col = vec3(0.0);
+    nrm = vec3(0.0, 0.0, 1.0);
+    vec3 nIn;
+    if (sp.z <= sp.x) {
+        // (no picture: a little cube of its colour)
+        vec2 h = boxHit(ro, rd, vec3(s * 0.5), nIn);
+        if (h.y < h.x || h.y < 0.0) return -1.0;
+        col = pal(which).rgb;
+        nrm = nIn;
+        return h.x;
+    }
+    if (tp.z > tp.x) {
+        float cs = s * 0.62;
+        vec2 h = boxHit(ro, rd, vec3(cs), nIn);
+        if (h.y < h.x || h.y < 0.0) return -1.0;
+        vec3 p = (ro + rd * h.x) / cs * 0.5 + 0.5;
+        nrm = nIn;
+        if (abs(nIn.y) > 0.5) col = picture(tp, p.xz);
+        else if (abs(nIn.x) > 0.5) col = picture(sp, p.zy);
+        else col = picture(sp, p.xy);
+        return h.x;
+    }
+    float th = s / 16.0;
+    vec2 h = boxHit(ro, rd, vec3(s, s, th), nIn);
+    if (h.y < h.x || h.y < 0.0) return -1.0;
+    // through the pixels it crosses (a pixel grid on its face, sixteen across), to the first one there
+    vec3 pe = ro + rd * h.x;
+    vec2 g = (pe.xy / (2.0 * s) + 0.5) * 16.0;
+    vec2 dir = rd.xy / (2.0 * s) * 16.0;
+    vec2 cell = clamp(floor(g), 0.0, 15.0);
+    vec2 stp = sign(dir);
+    vec2 adir = max(abs(dir), vec2(1e-5));
+    vec2 tDelta = 1.0 / adir;
+    vec2 tMax = h.x + (stp.x >= 0.0 ? cell + 1.0 - g : g - cell) / adir;
+    float tc = h.x;
+    vec3 n = nIn;
+    for (int i = 0; i < 20; i++) {
+        vec4 tex = textureLod(Sampler0, mix(sp.xy, sp.zw, vec2((cell.x + 0.5) / 16.0, 1.0 - (cell.y + 0.5) / 16.0)), 0.0);
+        if (tex.a > 0.5) {
+            col = tex.rgb;
+            nrm = n;
+            return tc;
+        }
+        if (tMax.x < tMax.y) {
+            tc = tMax.x;
+            tMax.x += tDelta.x;
+            cell.x += stp.x;
+            n = vec3(-stp.x, 0.0, 0.0);
+        } else {
+            tc = tMax.y;
+            tMax.y += tDelta.y;
+            cell.y += stp.y;
+            n = vec3(0.0, -stp.y, 0.0);
+        }
+        if (tc > h.y || cell.x < 0.0 || cell.y < 0.0 || cell.x > 15.0 || cell.y > 15.0) break;
+    }
+    return -1.0;
+}
+
+mat3 tumble(float a, float b) {
+    float ca = cos(a), sa = sin(a), cb = cos(b), sb = sin(b);
+    return mat3(ca, 0.0, -sa, 0.0, 1.0, 0.0, sa, 0.0, ca) * mat3(1.0, 0.0, 0.0, 0.0, cb, sb, 0.0, -sb, cb);
+}
+
 vec4 galaxy(vec3 ro, vec3 rd, float t) {
-    // (its disk tipped towards the eye, wherever you stand - seen nearly face on, never edge on)
-    vec3 toEye = normalize(ro);
-    vec3 N = normalize(toEye + vec3(0.0, 0.9, 0.0) + 0.15 * vec3(1.0, 0.0, 0.6));
+    // its disk: tipped a little, turning slowly - the items it holds strewn along its arms, each turning over and over
+    // as it goes round, lit by the bright heart
+    vec3 N = normalize(vec3(0.22, 1.0, 0.14));
     vec3 e1 = normalize(cross(N, vec3(0.0, 0.0, 1.0))), e2 = cross(N, e1);
-    float bb = max(-dot(ro, rd), 0.0);
-    float dc = length(ro + rd * bb);
-    vec4 c = vec4(0.0);
+    float arms = full < 0.5 ? 2.0 : 3.0;
+    float spin = t * 0.08;
+    int n = count();
+    float bestT = 1e9;
+    vec3 bestC = vec3(0.0);
+    int items = 10 + int(full * 22.0);
+    for (int k = 0; k < 32; k++) {
+        if (k >= items) break;
+        float fk = float(k);
+        float h1 = hash1(fk * 1.7 + 0.3), h2 = hash1(fk * 3.1 + 1.1), h3 = hash1(fk * 5.7 + 2.3), h4 = hash1(fk * 7.9 + 4.1);
+        float r = 0.2 + 0.68 * sqrt(h1);
+        float ang = log(r + 0.06) * 2.6 + mod(fk, arms) * TAU / arms + (h2 - 0.5) * 0.5 + spin;
+        vec3 pos = (e1 * cos(ang) + e2 * sin(ang)) * r + N * (h3 - 0.5) * 0.16 * (1.1 - r);
+        float s = 0.07 + 0.035 * h4;
+        // (cheaply first: does the ray come near it at all)
+        vec3 oc = ro - pos;
+        float bq = dot(oc, rd), cq = dot(oc, oc) - s * s * 2.2;
+        if (bq * bq - cq < 0.0) continue;
+        mat3 R = tumble(t * (0.5 + h1) + fk * 2.0, t * (0.35 + 0.6 * h2) + fk);
+        vec3 col, nrm;
+        int which = int(mod(fk + floor(h3 * 3.0), float(n)));
+        float th = itemHit(oc * R, rd * R, which, s, col, nrm);
+        if (th > 0.12 && th < bestT) {
+            bestT = th;
+            vec3 nw = R * nrm;
+            vec3 Ld = normalize(-pos);
+            float lit = 0.4 + 0.6 * max(dot(nw, Ld), 0.0) + 0.25 * max(dot(nw, normalize(vec3(0.3, 1.0, 0.2))), 0.0);
+            float rim = pow(1.0 - abs(dot(nw, rd)), 3.0);
+            bestC = col * lit * 1.1 + vec3(1.0, 0.9, 0.75) * rim * 0.25;
+        }
+    }
+    // its dust: arms of faint glowing dust, sprinkled with tiny stars
+    vec4 dust = vec4(0.0);
+    float tp = 1e9;
     float dn = dot(rd, N);
     if (abs(dn) > 1e-4) {
-        float tp = -dot(ro, N) / dn;
-        if (tp > 0.15) {
+        tp = -dot(ro, N) / dn;
+        if (tp > 0.12) {
             vec3 p = ro + rd * tp;
             vec2 q = vec2(dot(p, e1), dot(p, e2));
             float r = length(q);
-            if (r < 0.96) {
-                float th = atan(q.y, q.x) - t * 0.08;
-                float arms = full < 0.5 ? 2.0 : 3.0, dens = 0.0;
+            if (r < 0.98) {
+                float th = atan(q.y, q.x) - spin;
+                float dens = 0.0;
                 for (int k = 0; k < 3; k++) {
                     if (float(k) >= arms) break;
-                    float ph = th - log(r + 0.06) * 2.6 - float(k) * 6.2832 / arms;
-                    float dd = mod(ph + 3.14159, 6.2832) - 3.14159;
-                    dens = max(dens, exp(-dd * dd * 5.0));
+                    float ph = th - log(r + 0.06) * 2.6 - float(k) * TAU / arms;
+                    float dd = mod(ph + 3.14159, TAU) - 3.14159;
+                    dens = max(dens, exp(-dd * dd * 4.0));
                 }
-                dens *= smoothstep(0.96, 0.6, r) * smoothstep(0.02, 0.12, r);
-                // (dust in the arms)
-                c = vec4(mix(vec3(0.35, 0.3, 0.7), C0.rgb, 0.4), dens * 0.25 * (0.4 + 0.6 * full));
-                // the stars: the items held, their own pictures (or, for want of one, a square of its colour)
-                float cells = (7.0 + 4.0 * full) * (big > 0.5 ? 0.62 : 1.0);
-                vec2 rq = vec2(cos(-t * 0.08) * q.x - sin(-t * 0.08) * q.y, sin(-t * 0.08) * q.x + cos(-t * 0.08) * q.y) * cells;
-                vec2 cell = floor(rq), f = fract(rq) - 0.5;
-                float h = hash2(cell);
-                if (h < dens * (0.6 + 0.4 * full) + 0.06 * full) {
-                    vec2 off = (vec2(hash2(cell + 1.3), hash2(cell + 2.9)) - 0.5) * 0.25;
-                    float size = 0.26 + 0.12 * hash2(cell + 5.1);
-                    vec2 a = (f - off) / size;
-                    if (max(abs(a.x), abs(a.y)) < 1.0) {
-                        int which = int(hash2(cell + 7.7) * float(count()));
-                        vec4 sp = spriteOf(which);
-                        if (sp.z > sp.x) {
-                            vec2 uv = mix(sp.xy, sp.zw, vec2(a.x * 0.5 + 0.5, 0.5 - a.y * 0.5));
-                            vec4 tex = textureLod(Sampler0, uv, 0.0);
-                            if (tex.a > 0.3) {
-                                c = vec4(tex.rgb * 1.15, 1.0);
-                            }
-                        } else if (max(abs(a.x), abs(a.y)) < 0.6) {
-                            c = vec4(pal(which).rgb * 1.15, 1.0);
-                        }
-                    }
-                }
+                dens *= smoothstep(0.98, 0.55, r) * smoothstep(0.0, 0.15, r);
+                float mottle = 0.6 + 0.8 * noise(vec3(q * 9.0, 1.0));
+                vec2 sq = vec2(cos(-spin) * q.x - sin(-spin) * q.y, sin(-spin) * q.x + cos(-spin) * q.y) * 34.0;
+                vec2 sc = floor(sq);
+                float st = step(0.93 - 0.25 * dens, hash2(sc)) * smoothstep(0.32, 0.0, length(fract(sq) - 0.5 - (vec2(hash2(sc + 1.7), hash2(sc + 3.1)) - 0.5) * 0.4));
+                vec3 dc = mix(vec3(0.45, 0.35, 0.95), C0.rgb, 0.35);
+                dust = vec4(dc * mottle + vec3(1.0) * st * 1.5, clamp(dens * 0.3 * mottle * (0.5 + 0.5 * full) + st * 0.9 * smoothstep(0.98, 0.7, r), 0.0, 1.0));
+            } else {
+                tp = 1e9;
             }
         }
     }
-    vec4 core = vec4(vec3(1.0, 0.92, 0.75), clamp(exp(-dc * dc * 70.0) + exp(-dc * dc * 12.0) * 0.35, 0.0, 1.0));
-    return over(core, c);
+    // its heart: a bright bulge of light
+    float bb = max(-dot(ro, rd), 0.0);
+    float dcen = length(ro + rd * bb);
+    vec4 heart = vec4(vec3(1.0, 0.92, 0.75), clamp(exp(-dcen * dcen * 90.0) * 1.2 + exp(-dcen * dcen * 14.0) * 0.4, 0.0, 1.0));
+    // (nearest first: an item, the dust, the heart - by where each is along the ray)
+    vec4 c = bestT < 1e8 ? vec4(bestC, 1.0) : vec4(0.0);
+    vec4 A = tp < bestT ? dust : vec4(0.0), B = bb < bestT ? heart : vec4(0.0);
+    return tp > bb ? over(B, over(A, c)) : over(A, over(B, c));
 }
 
 // ---- 3: water planet ----
@@ -476,7 +677,14 @@ float segDist(vec3 p, vec3 a, vec3 b) {
     return length(p - a - ab * h);
 }
 
-// how far from the nearest strand or rung (x), whose (y: the strand, or 10 + a rung between strand y-10 and the next)
+// how wide its base and top rings are: round all its strands
+float ringR(int n) {
+    int groups = (n + 3) / 4;
+    return groups == 1 ? 0.47 : (groups == 2 ? 0.46 : 0.52) + 0.31;
+}
+
+// how far from the nearest strand, rung, ring or bubble (x), and whose (y: the strand; 10 + a rung between strand y-10
+// and the next; 30 a ring; 40 a bubble)
 vec2 helixAt(vec3 p, float t, float bottom, float top) {
     int n = count();
     vec2 best = vec2(1e9, 0.0);
@@ -498,71 +706,135 @@ vec2 helixAt(vec3 p, float t, float bottom, float top) {
             int nx = g * 4 + (j + 1) % inG;
             float step_ = 0.16;
             float yk = (floor(p.y / step_) + 0.5) * step_;
-            if (yk > bottom + 0.04 && yk < top - 0.04) {
+            if (yk > bottom + 0.06 && yk < top - 0.06) {
                 vec2 ca = strandAt(i, n, yk, t), cb = strandAt(nx, n, yk, t);
                 float dr = segDist(p, vec3(ca.x, yk, ca.y), vec3(cb.x, yk, cb.y)) - tr * 0.32;
                 if (dr < best.x) best = vec2(dr, 10.0 + float(i));
             }
         }
+        // (bubbles rising up the middle of each helix)
+        if (j == 0) {
+            for (int k = 0; k < 3; k++) {
+                float ph = fract(t * 0.12 + float(k) / 3.0 + float(g) * 0.37);
+                float by = mix(bottom + 0.05, top - 0.05, ph);
+                vec3 bc = vec3(gc.x + 0.03 * sin(t * 2.0 + float(k) * 2.0), by, gc.y + 0.03 * cos(t * 1.7 + float(k)));
+                float rb = (0.022 + 0.012 * float(k)) * smoothstep(0.0, 0.12, ph) * smoothstep(1.0, 0.85, ph) + 0.001;
+                float db = length(p - bc) - rb;
+                if (db < best.x) best = vec2(db, 40.0);
+            }
+        }
     }
+    // (its base and the ring round its top: rings of metal)
+    float R = ringR(n);
+    float dRing = min(length(vec2(length(p.xz) - R, p.y - bottom)) - 0.04, length(vec2(length(p.xz) - R, p.y - top)) - 0.028);
+    if (dRing < best.x) best = vec2(dRing, 30.0);
     return best;
+}
+
+// a fluid's own picture flowing over it: how much lighter or darker than the picture is on the whole, at uv
+float fluidDetail(int i, vec2 uv) {
+    vec4 sp = spriteOf(i);
+    if (sp.z <= sp.x) return 1.0;
+    vec3 k = vec3(0.3, 0.59, 0.11);
+    float here = dot(textureLod(Sampler0, mix(sp.xy, sp.zw, fract(uv)), 0.0).rgb, k);
+    float all_ = 0.0;
+    for (int a = 0; a < 4; a++) {
+        vec2 f = vec2(float(a & 1), float(a >> 1)) * 0.5 + 0.25;
+        all_ += dot(textureLod(Sampler0, mix(sp.xy, sp.zw, f), 0.0).rgb, k);
+    }
+    return clamp(here / max(all_ * 0.25, 0.04), 0.55, 1.6);
 }
 
 vec4 helix(vec3 ro, vec3 rd, float t0, float t1, float t) {
     int n = count();
-    float bottom = -0.9, top = -0.9 + 1.8 * max(full, 0.08);
+    float bottom = -0.86, top = -0.86 + 1.72 * max(full, 0.1);
+    float R = ringR(n);
     float tt = t0;
     vec3 L = normalize(vec3(0.5, 0.8, 0.4));
-    vec4 c = vec4(0.0);
-    for (int s = 0; s < 110; s++) {
+    // (all its fluids together: their colour, for the lights on its rings)
+    vec3 mixC = vec3(0.0);
+    for (int i = 0; i < 10; i++) {
+        if (i >= n) break;
+        mixC += pal(i).rgb;
+    }
+    mixC /= float(n);
+    // its base: a pool of its fluids at its foot, held in the base ring, each strand rising from it, rippling round it
+    float tPool = 1e9;
+    vec4 pool = vec4(0.0);
+    if (rd.y < 0.0) {
+        float tp = (bottom + 0.005 - ro.y) / rd.y;
+        vec3 p = ro + rd * tp;
+        float r = length(p.xz);
+        if (tp > t0 && tp < t1 && r < R) {
+            tPool = tp;
+            vec3 pc = vec3(0.0);
+            float wsum = 0.0, rip = 0.0;
+            for (int i = 0; i < 10; i++) {
+                if (i >= n) break;
+                vec2 foot = strandAt(i, n, bottom, t);
+                float d = length(p.xz - foot);
+                float w = 1.0 / (d * d + 0.012);
+                pc += pal(i).rgb * w * fluidDetail(i, p.xz * 1.5 + vec2(t * 0.05, 0.0));
+                wsum += w;
+                rip += sin(d * 75.0 - t * 7.0) * exp(-d * 9.0);
+            }
+            pc /= wsum;
+            vec3 nrm = normalize(vec3(rip * 0.08 * p.x / max(r, 0.01), 1.0, rip * 0.08 * p.z / max(r, 0.01)));
+            float spec = pow(max(dot(reflect(rd, nrm), L), 0.0), 40.0);
+            float fres = pow(1.0 - max(dot(nrm, -rd), 0.0), 4.0);
+            pool = vec4(pc * (0.6 + 0.3 * max(dot(nrm, L), 0.0)) + vec3(spec * 0.7) + vec3(0.6, 0.7, 0.9) * fres * 0.3 + pc * 0.12 * rip, 1.0);
+        }
+    }
+    for (int s = 0; s < 120; s++) {
         vec3 p = ro + rd * tt;
+        if (tt > tPool) break;
         vec2 h = helixAt(p, t, bottom, top);
         if (h.x < 0.0015) {
-            bool rung = h.y >= 9.5;
-            int i = int((rung ? h.y - 10.0 : h.y) + 0.5);
             float e = 0.003;
             vec3 nrm = normalize(vec3(helixAt(p + vec3(e, 0, 0), t, bottom, top).x - helixAt(p - vec3(e, 0, 0), t, bottom, top).x,
                                       helixAt(p + vec3(0, e, 0), t, bottom, top).x - helixAt(p - vec3(0, e, 0), t, bottom, top).x,
                                       helixAt(p + vec3(0, 0, e), t, bottom, top).x - helixAt(p - vec3(0, 0, e), t, bottom, top).x));
+            float dif = max(dot(nrm, L), 0.0);
+            float spec = pow(max(dot(reflect(rd, nrm), L), 0.0), 48.0);
+            float fres = pow(1.0 - max(dot(nrm, -rd), 0.0), 3.0);
+            if (h.y > 39.5) {
+                // a bubble: clear, its edge and a shine
+                return vec4(mixC * 0.4 + vec3(0.9) * fres + vec3(spec), clamp(0.25 + fres + spec, 0.0, 1.0));
+            }
+            if (h.y > 29.5) {
+                // a ring: dark polished metal, a band of little lights round its top glowing with its fluids' colours
+                float ang = atan(p.z, p.x);
+                float stud = smoothstep(0.2, 0.08, abs(fract(ang / TAU * 16.0) - 0.5)) * smoothstep(0.3, 0.75, nrm.y);
+                float env = 0.5 + 0.5 * nrm.y;
+                vec3 c = vec3(0.13, 0.14, 0.17) * (0.5 + 0.9 * dif) + vec3(0.55, 0.6, 0.7) * env * 0.18 + mixC * fres * 0.35 + vec3(spec * 0.9);
+                c = mix(c, mixC * 1.3 + 0.15, stud * (0.75 + 0.25 * sin(t * 3.0 + ang * 4.0)));
+                return vec4(c, 1.0);
+            }
+            bool rung = h.y >= 9.5;
+            int i = int((rung ? h.y - 10.0 : h.y) + 0.5);
             vec3 fc = pal(i).rgb;
+            float around = atan(nrm.z, nrm.x) / TAU;
+            float det = fluidDetail(i, vec2(around * 2.0 + p.y * 0.8, p.y * 2.2 - t * 0.5));
             if (rung) {
                 int g = i / 4, j = i - g * 4, inG = min(4, n - g * 4);
                 fc = mix(fc, pal(g * 4 + (j + 1) % inG).rgb, 0.5);
             }
-            float dif = max(dot(nrm, L), 0.0);
-            float spec = pow(max(dot(reflect(rd, nrm), L), 0.0), 48.0);
-            float fres = pow(1.0 - max(dot(nrm, -rd), 0.0), 3.0);
-            // (the fluid flowing up: streaks, and bubbles rising inside it)
-            float flow = noise(vec3(p.y * 16.0 - t * 2.4, float(i) * 3.0, atan(nrm.z, nrm.x) * 2.0));
+            fc *= det;
+            // (the fluid flowing up: bubbles rising inside it)
             float bub = smoothstep(0.78, 0.86, noise(vec3(p.y * 30.0 - t * 4.0, float(i) * 7.0 + p.x * 9.0, p.z * 9.0)));
             vec3 col;
             if (glows(i)) {
-                col = fc * (1.05 + 0.45 * flow) + vec3(1.0, 0.85, 0.5) * bub * 0.6;
+                col = fc * 1.15 + vec3(1.0, 0.85, 0.5) * bub * 0.5 + fc * fres * 0.4;
             } else {
-                col = fc * (0.22 + 0.78 * dif) * (0.85 + 0.3 * flow);
-                col += mix(fc, vec3(1.0), 0.6) * fres * 0.55 + vec3(spec * 0.8) + vec3(bub * 0.35);
+                col = fc * (0.25 + 0.75 * dif);
+                col += mix(fc, vec3(1.0), 0.6) * fres * 0.5 + vec3(spec * 0.8) + vec3(bub * 0.3);
             }
-            return over(c, vec4(col, 1.0));
+            return vec4(col, 1.0);
         }
         tt += max(h.x, 0.003);
         if (tt > t1) break;
     }
-    // (the pool at its foot: the fluids swirling round, glowing faintly)
-    if (rd.y < 0.0) {
-        float tp = (bottom - 0.02 - ro.y) / rd.y;
-        if (tp > t0 && tp < t1) {
-            vec3 p = ro + rd * tp;
-            float r = length(p.xz);
-            if (r < 0.78) {
-                float sw = atan(p.z, p.x) + r * 6.0 - t * 0.9;
-                int i = int(mod(floor((sw / 6.2832 + 1.0) * float(n) * 2.0), float(n)));
-                vec3 pc = pal(i).rgb * (0.55 + 0.3 * noise(vec3(p.xz * 9.0, t * 0.6)));
-                float edge = smoothstep(0.78, 0.6, r);
-                return vec4(pc + vec3(0.2) * pow(max(dot(reflect(rd, vec3(0.0, 1.0, 0.0)), L), 0.0), 30.0), 0.85 * edge);
-            }
-        }
-    }
-    return c;
+    return pool;
 }
 
 void main() {

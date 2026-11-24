@@ -83,6 +83,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
             int[] rgb = new int[n];
             float[] shares = new float[n];
             int glow = 0;
+            float[][] sprites = new float[n][];
             // (lightest first: on the planet, the light ones on top and the heavy ones at the bottom)
             Integer[] order = new Integer[be.entries().size()];
             for (int i = 0; i < order.length; i++) {
@@ -92,13 +93,14 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
             for (int i = 0; i < n; i++) {
                 int k = order[i];
                 rgb[i] = StorageSkins.fluidColour(be.entries().get(k).fluid);
+                sprites[i] = StorageSkins.fluidSprite(be.entries().get(k).fluid);
                 shares[i] = looks.get(k).share();
                 if (looks.get(k).glows()) {
                     glow |= 1 << i;
                 }
             }
             float half = be.tank() > 0 ? (be.tank() - 1) / 2.0F - 0.53F : 0.37F;
-            StorageSkins.draw(poseStack, buffers, StorageSkins.PLANET + be.skin() - 1, Math.max(be.shownFull, 0.05F), be.tank() > 0, half, rgb, shares, glow);
+            StorageSkins.draw(poseStack, buffers, StorageSkins.PLANET + be.skin() - 1, Math.max(be.shownFull, 0.05F), be.tank() > 0, half, rgb, shares, glow, sprites);
             return;
         }
         if (be.tank() > 0) {

@@ -38,6 +38,7 @@ public final class StorageSkins {
     private static final float[][] COLS = new float[10][4];
     /** (the item galaxy's items: where each one's picture is on the block atlas - u0 v0 u1 v1; none: all 0) */
     private static final float[][] SPRITES = new float[10][4];
+    private static final float[][] TOPS = new float[10][4]; // (a block's top: its item drawn as a little cube)
     private static int count, glowBits;
 
     private StorageSkins() {}
@@ -78,6 +79,7 @@ public final class StorageSkins {
         }
         for (int i = 0; i < SPRITES.length; i++) {
             shader.safeGetUniform("U" + i).set(SPRITES[i][0], SPRITES[i][1], SPRITES[i][2], SPRITES[i][3]);
+            shader.safeGetUniform("V" + i).set(TOPS[i][0], TOPS[i][1], TOPS[i][2], TOPS[i][3]);
         }
         shader.safeGetUniform("Info").set((float) count, (float) glowBits, 0.0F, 0.0F);
     }
@@ -104,6 +106,7 @@ public final class StorageSkins {
             float[] sp = sprites != null && i < sprites.length ? sprites[i] : null;
             for (int k = 0; k < 4; k++) {
                 SPRITES[i][k] = sp != null ? sp[k] : 0.0F;
+                TOPS[i][k] = sp != null && sp.length >= 8 ? sp[4 + k] : 0.0F;
             }
         }
         count = Math.min(rgb.length, COLS.length);
@@ -201,19 +204,48 @@ public final class StorageSkins {
         });
     }
 
-    /** Where each item's picture is on the block atlas (up to ten): u0 v0 u1 v1. */
+    /**
+     * Where each item's picture is on the block atlas (up to ten): u0 v0 u1 v1 - and, for one that shows as a block (its
+     * item model a cube), its side's picture then its top's, so it's drawn as a little cube.
+     */
     public static float[][] itemSprites(List<ItemStack> items) {
         int n = Math.min(10, items.size());
         float[][] out = new float[n][];
         for (int i = 0; i < n; i++) {
             try {
-                var sp = Minecraft.getInstance().getItemRenderer().getModel(items.get(i), null, null, 0).getParticleIcon();
+                ItemStack stack = items.get(i);
+                var model = Minecraft.getInstance().getItemRenderer().getModel(stack, null, null, 0);
+                var sp = model.getParticleIcon();
                 out[i] = new float[] {sp.getU0(), sp.getV0(), sp.getU1(), sp.getV1()};
+                if (model.isGui3d() && stack.getItem() instanceof net.minecraft.world.item.BlockItem bi) {
+                    var state = bi.getBlock().defaultBlockState();
+                    var bm = Minecraft.getInstance().getBlockRenderer().getBlockModel(state);
+                    var rand = net.minecraft.util.RandomSource.create(42L);
+                    var side = faceSprite(bm.getQuads(state, net.minecraft.core.Direction.NORTH, rand), sp);
+                    var top = faceSprite(bm.getQuads(state, net.minecraft.core.Direction.UP, rand), side);
+                    out[i] = new float[] {side.getU0(), side.getV0(), side.getU1(), side.getV1(), top.getU0(), top.getV0(), top.getU1(), top.getV1()};
+                }
             } catch (RuntimeException e) {
                 out[i] = null;
             }
         }
         return out;
+    }
+
+    private static net.minecraft.client.renderer.texture.TextureAtlasSprite faceSprite(List<net.minecraft.client.renderer.block.model.BakedQuad> quads,
+                                                                                         net.minecraft.client.renderer.texture.TextureAtlasSprite or) {
+        return quads.isEmpty() ? or : quads.get(0).getSprite();
+    }
+
+    /** Where a fluid's still picture is on the block atlas: u0 v0 u1 v1 (the fluid helix flows with it). */
+    public static float[] fluidSprite(FluidStack fluid) {
+        try {
+            IClientFluidTypeExtensions ext = IClientFluidTypeExtensions.of(fluid.getFluid());
+            var sp = Minecraft.getInstance().getTextureAtlas(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS).apply(ext.getStillTexture(fluid));
+            return new float[] {sp.getU0(), sp.getV0(), sp.getU1(), sp.getV1()};
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     /** (the colours of a list of items, up to ten) */
