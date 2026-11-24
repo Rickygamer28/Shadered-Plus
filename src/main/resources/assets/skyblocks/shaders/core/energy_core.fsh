@@ -578,8 +578,8 @@ void main() {
     } else {
         c = star(ro, rd, t0, t1, t);
     }
-    if (big > 0.5) {
-        // (its rings: in front of what's in the middle, or behind it - judged by its middle along the ray)
+    if (big > 0.5 && skin != 0) {
+        // (its rings - not round the star: in front of what's in the middle, or behind it - judged by its middle along the ray)
         vec3 rc;
         float th = rings(ro, rd, t0, t1, rc);
         if (th > 0.0) {
