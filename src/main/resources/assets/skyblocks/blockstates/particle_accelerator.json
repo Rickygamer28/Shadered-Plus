@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "formed=false": {
+      "model": "skyblocks:block/particle_accelerator"
+    },
+    "formed=true": {
+      "model": "skyblocks:block/particle_accelerator"
+    }
+  }
+}

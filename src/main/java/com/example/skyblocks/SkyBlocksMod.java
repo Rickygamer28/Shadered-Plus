@@ -149,6 +149,15 @@ public class SkyBlocksMod {
                 (be, side) -> be.handler);
         event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK, ModBlockEntities.CORE_FRAME.get(),
                 (be, side) -> be.handler());
+        // (the new machines: their energy and items, on them and on their frames)
+        for (var type : java.util.List.of(ModBlockEntities.PARTICLE_ACCELERATOR.get(), ModBlockEntities.WEATHER_MACHINE.get(), ModBlockEntities.STAR_FORGE.get())) {
+            event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK, type, (be, side) -> be.size() > 0 ? be.energyHandler() : null);
+            event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, type, (be, side) -> be.itemHandler());
+        }
+        event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK, ModBlockEntities.MACHINE_FRAME.get(),
+                (be, side) -> be.energy());
+        event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, ModBlockEntities.MACHINE_FRAME.get(),
+                (be, side) -> be.items());
     }
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {

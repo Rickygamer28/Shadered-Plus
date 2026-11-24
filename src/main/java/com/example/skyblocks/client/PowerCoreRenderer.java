@@ -111,6 +111,21 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
         int skin = be.skin();
         ShaderLightRenderer.add(pose, 0.5F, 0.5F, 0.5F, chamber > 0 ? chamber + 1.0F + 3.0F * full : 3.0F + 4.0F * full,
                 LIGHT[Math.floorMod(skin, LIGHT.length)]);
+        int r = skin & 255, g = Math.round(full * 255), b = chamber > 0 ? 255 : 0;
+        drawBox(pose, buffers, half, r, g, b);
+        if (chamber > 0) {
+            veins(be, pose, buffers, chamber); // (after the box: getting another buffer would end its one)
+        }
+    }
+
+    /**
+     * A box traced through by energy_core (r its skin, g how full, b whether in a chamber), {@code half} across round the
+     * block's middle - drawn now, or after the coloured lights (LatePass). (The star forge's star too.)
+     */
+    static void drawBox(PoseStack pose, MultiBufferSource buffers, float half, int r, int g, int b) {
+        if (shader == null) {
+            return;
+        }
         Matrix4f m = pose.last().pose();
         org.joml.Vector3f centre = m.transformPosition(0.5F, 0.5F, 0.5F, new org.joml.Vector3f());
         // (the eye, from the middle: the pose is the block's place from the camera)
@@ -119,7 +134,6 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
         queued = late;
         VertexConsumer vc = late ? null : buffers.getBuffer(Types.CORE);
         org.joml.Vector3f at = new org.joml.Vector3f();
-        int r = skin & 255, g = Math.round(full * 255), b = chamber > 0 ? 255 : 0;
 
         // each face of the box turned away from the eye - its far side (from inside: all of them): the near side would be
         // cut off by the screen's near plane as you came close (and the ray's traced from the eye in any case) - its
@@ -139,9 +153,6 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
                     VERTS.add(new float[] {at.x, at.y, at.z, c, half, r, g, b});
                 }
             }
-        }
-        if (chamber > 0) {
-            veins(be, pose, buffers, chamber); // (after the box: getting another buffer would end its one)
         }
     }
 

@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "NDN",
+    "LCL",
+    "NDN"
+  ],
+  "key": {
+    "N": {
+      "item": "skyblocks:nebula_steel_ingot"
+    },
+    "D": {
+      "item": "minecraft:daylight_detector"
+    },
+    "L": {
+      "item": "minecraft:lightning_rod"
+    },
+    "C": {
+      "item": "minecraft:copper_block"
+    }
+  },
+  "result": {
+    "id": "skyblocks:weather_machine",
+    "count": 1
+  }
+}

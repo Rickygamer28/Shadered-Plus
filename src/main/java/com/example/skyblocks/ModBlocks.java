@@ -325,6 +325,26 @@ public final class ModBlocks {
                     .lightLevel(state -> state.getValue(CoreFrameBlock.FORMED) ? 9 : 2)
                     .mapColor(net.minecraft.world.level.material.MapColor.GOLD));
 
+    /** The new machines' frames: the particle accelerator's ring, the weather machine's masts, the star forge's chamber (MachineFrameBlock). */
+    public static final DeferredBlock<MachineFrameBlock> ACCELERATOR_FRAME = BLOCKS.registerBlock("accelerator_frame",
+            p -> new MachineFrameBlock(MachineFrameBlock.Kind.ACCELERATOR, p), machineProps(net.minecraft.world.level.material.MapColor.COLOR_CYAN));
+    public static final DeferredBlock<MachineFrameBlock> WEATHER_MAST = BLOCKS.registerBlock("weather_mast",
+            p -> new MachineFrameBlock(MachineFrameBlock.Kind.WEATHER, p), machineProps(net.minecraft.world.level.material.MapColor.QUARTZ));
+    public static final DeferredBlock<MachineFrameBlock> FORGE_FRAME = BLOCKS.registerBlock("forge_frame",
+            p -> new MachineFrameBlock(MachineFrameBlock.Kind.FORGE, p), machineProps(net.minecraft.world.level.material.MapColor.NETHER));
+    /** The new machines (MachineBlock): the particle accelerator, the weather machine, the star forge. */
+    public static final DeferredBlock<MachineBlock> PARTICLE_ACCELERATOR = BLOCKS.registerBlock("particle_accelerator",
+            p -> new MachineBlock(MachineFrameBlock.Kind.ACCELERATOR, p), machineProps(net.minecraft.world.level.material.MapColor.COLOR_CYAN).lightLevel(s -> 10));
+    public static final DeferredBlock<MachineBlock> WEATHER_MACHINE = BLOCKS.registerBlock("weather_machine",
+            p -> new MachineBlock(MachineFrameBlock.Kind.WEATHER, p), machineProps(net.minecraft.world.level.material.MapColor.QUARTZ).lightLevel(s -> 10));
+    public static final DeferredBlock<MachineBlock> STAR_FORGE = BLOCKS.registerBlock("star_forge",
+            p -> new MachineBlock(MachineFrameBlock.Kind.FORGE, p), machineProps(net.minecraft.world.level.material.MapColor.NETHER).lightLevel(s -> 12));
+
+    private static BlockBehaviour.Properties machineProps(net.minecraft.world.level.material.MapColor colour) {
+        return BlockBehaviour.Properties.of().strength(5.0F, 1200.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops().noOcclusion()
+                .mapColor(colour);
+    }
+
     /** Tank glass: clear glass without a border - a containment tank's sides of it read as one pane. */
     public static final DeferredBlock<net.minecraft.world.level.block.TransparentBlock> TANK_GLASS = BLOCKS.registerBlock("tank_glass",
             net.minecraft.world.level.block.TransparentBlock::new, BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS));

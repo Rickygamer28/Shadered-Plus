@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "SDS",
+    "DLD",
+    "SDS"
+  ],
+  "key": {
+    "S": {
+      "item": "skyblocks:star_gold_ingot"
+    },
+    "D": {
+      "item": "minecraft:diamond"
+    },
+    "L": {
+      "item": "minecraft:lodestone"
+    }
+  },
+  "result": {
+    "id": "skyblocks:particle_accelerator",
+    "count": 1
+  }
+}

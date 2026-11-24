@@ -56,6 +56,12 @@
     "skyblocks:sky_studio",
     "skyblocks:sky_fountain",
     "skyblocks:water_fountain",
-    "skyblocks:planet_globe"
+    "skyblocks:planet_globe",
+    "skyblocks:particle_accelerator",
+    "skyblocks:accelerator_frame",
+    "skyblocks:weather_machine",
+    "skyblocks:weather_mast",
+    "skyblocks:star_forge",
+    "skyblocks:forge_frame"
   ]
 }

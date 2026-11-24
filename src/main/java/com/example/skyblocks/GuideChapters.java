@@ -41,7 +41,8 @@ public final class GuideChapters {
                 ModItems.SKY_WAND, ModItems.RIFT_KNIFE, ModItems.BOTTOMLESS_PIT, ModItems.ROOM_WINDOW, ModItems.MOON_JAR, ModItems.SUN_JAR, ModItems.SPIN_PAD, ModItems.TIME_CRYSTAL, ModItems.ELEVATOR_BASE, ModItems.ELEVATOR_PANEL, ModItems.ELEVATOR_SENSOR, ModItems.HOURGLASS, ModItems.MAGIC_CHALK, ModItems.SONAR, ModItems.ECHO_FIELD, ModItems.PHASE_BLOCK,
                 ModItems.INVERTED_FILTER, ModItems.POSTERIZE_FILTER, ModItems.GRAYSCALE_FILTER, ModItems.CHROMATIC_ABERRATION_FILTER, ModItems.BLUEPRINT_FILTER,
                 ModItems.GAME_BOY_FILTER, ModItems.PIXEL_FILTER, ModItems.CROSS_STITCH_FILTER, ModItems.RED_FILTER, ModItems.SCREEN_FILTER, ModItems.TINT_FILTER, ModItems.SHADER_LIGHT,
-                ModItems.POWER_CORE, ModItems.CORE_FRAME}) {
+                ModItems.POWER_CORE, ModItems.CORE_FRAME, ModItems.PARTICLE_ACCELERATOR, ModItems.ACCELERATOR_FRAME, ModItems.WEATHER_MACHINE,
+                ModItems.WEATHER_MAST, ModItems.STAR_FORGE, ModItems.FORGE_FRAME, ModItems.STAR_GOLD_INGOT, ModItems.NEBULA_STEEL_INGOT}) {
             list.add(new ItemStack(i.get()));
         }
         return list;
@@ -69,6 +70,8 @@ public final class GuideChapters {
         out.add(of("space", ModItems.ORRERY, ModItems.PLANETARIUM, ModItems.BLACK_HOLE, ModItems.BIG_BLACK_HOLE, ModItems.SINGULARITY,
                 ModItems.CONTAINMENT_FRAME, ModItems.PORT_FRAME, ModItems.DISPLAY_FRAME, ModItems.MONITOR_FRAME, ModItems.REDSTONE_FRAME,
                 ModItems.WHIRLPOOL, ModItems.TANK_FRAME, ModItems.TANK_GLASS, ModItems.POWER_CORE, ModItems.CORE_FRAME, ModItems.PLANET_GLOBE));
+        out.add(of("machines", ModItems.STAR_FORGE, ModItems.FORGE_FRAME, ModItems.STAR_GOLD_INGOT, ModItems.NEBULA_STEEL_INGOT,
+                ModItems.PARTICLE_ACCELERATOR, ModItems.ACCELERATOR_FRAME, ModItems.WEATHER_MACHINE, ModItems.WEATHER_MAST));
         out.add(of("mirrors", ModItems.MIRROR, ModItems.ROUND_MIRROR, ModItems.CRACKED_MIRROR, ModItems.VANITY_MIRROR,
                 ModItems.INFINITY_MIRROR, ModItems.INFINITY_CUBE, ModItems.PORTAL_MIRROR, ModItems.LIGHT_BRIDGE_EMITTER, ModItems.LIGHT_BRIDGE_BENDER, ModItems.TELEPORT_PAD));
         List<ItemStack> toys = new ArrayList<>();

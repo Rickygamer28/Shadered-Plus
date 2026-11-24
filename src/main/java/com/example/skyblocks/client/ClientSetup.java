@@ -51,11 +51,15 @@ public final class ClientSetup {
     public static void registerScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
         event.register(com.example.skyblocks.SingularityMenu.TYPE.get(), SingularityScreen::new);
         event.register(com.example.skyblocks.SpinPadMenu.TYPE.get(), SpinPadScreen::new);
+        event.register(com.example.skyblocks.MachineMenu.TYPE.get(), MachineScreen::new);
     }
 
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.OIIA_CAT.get(), OiiaCatRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.PARTICLE_ACCELERATOR.get(), MachineRenderers.Accelerator::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.WEATHER_MACHINE.get(), MachineRenderers.Weather::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.STAR_FORGE.get(), MachineRenderers.Forge::new);
         event.registerBlockEntityRenderer(ModBlockEntities.WATER_CAUSTICS.get(), WaterCausticsRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.DISCO_BALL.get(), DiscoBallRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SPEAKER.get(), SpeakerRenderer::new);

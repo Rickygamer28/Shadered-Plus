@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "BFB",
+    "FMF",
+    "BFB"
+  ],
+  "key": {
+    "B": {
+      "item": "minecraft:blaze_rod"
+    },
+    "F": {
+      "item": "minecraft:blast_furnace"
+    },
+    "M": {
+      "item": "minecraft:magma_block"
+    }
+  },
+  "result": {
+    "id": "skyblocks:star_forge",
+    "count": 1
+  }
+}

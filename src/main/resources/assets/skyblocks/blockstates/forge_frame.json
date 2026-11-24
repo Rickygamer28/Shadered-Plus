@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "formed=false": {
+      "model": "skyblocks:block/forge_frame"
+    },
+    "formed=true": {
+      "model": "skyblocks:block/forge_frame_formed"
+    }
+  }
+}

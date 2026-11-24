@@ -85,6 +85,15 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(PowerCoreBlockEntity::new, ModBlocks.POWER_CORE.get()).build(null));
     public static final Supplier<BlockEntityType<CoreFrameBlockEntity>> CORE_FRAME = TYPES.register("core_frame",
             () -> BlockEntityType.Builder.of(CoreFrameBlockEntity::new, ModBlocks.CORE_FRAME.get()).build(null));
+    public static final Supplier<BlockEntityType<MachineFrameBlockEntity>> MACHINE_FRAME = TYPES.register("machine_frame",
+            () -> BlockEntityType.Builder.of(MachineFrameBlockEntity::new, ModBlocks.ACCELERATOR_FRAME.get(), ModBlocks.WEATHER_MAST.get(),
+                    ModBlocks.FORGE_FRAME.get()).build(null));
+    public static final Supplier<BlockEntityType<ParticleAcceleratorBlockEntity>> PARTICLE_ACCELERATOR = TYPES.register("particle_accelerator",
+            () -> BlockEntityType.Builder.of(ParticleAcceleratorBlockEntity::new, ModBlocks.PARTICLE_ACCELERATOR.get()).build(null));
+    public static final Supplier<BlockEntityType<WeatherMachineBlockEntity>> WEATHER_MACHINE = TYPES.register("weather_machine",
+            () -> BlockEntityType.Builder.of(WeatherMachineBlockEntity::new, ModBlocks.WEATHER_MACHINE.get()).build(null));
+    public static final Supplier<BlockEntityType<StarForgeBlockEntity>> STAR_FORGE = TYPES.register("star_forge",
+            () -> BlockEntityType.Builder.of(StarForgeBlockEntity::new, ModBlocks.STAR_FORGE.get()).build(null));
     public static final Supplier<BlockEntityType<SpecialFrameBlockEntity>> SPECIAL_FRAME = TYPES.register("special_frame",
             () -> BlockEntityType.Builder.of(SpecialFrameBlockEntity::new, ModBlocks.PORT_FRAME.get(), ModBlocks.DISPLAY_FRAME.get(),
                     ModBlocks.MONITOR_FRAME.get(), ModBlocks.REDSTONE_FRAME.get()).build(null));

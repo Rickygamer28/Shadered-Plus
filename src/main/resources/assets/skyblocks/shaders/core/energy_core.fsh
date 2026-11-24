@@ -481,6 +481,17 @@ vec4 atom(vec3 ro, vec3 rd, float t0, float t1, float t) {
     return vec4(col, alpha);
 }
 
+// the star forge's star: the pocket star in another colour - 0 red, 1 yellow (as it is), 2 blue, 3 white - its
+// brightness kept
+vec3 starColour(vec3 c, int k) {
+    float l = max(max(c.r, c.g), c.b);
+    float m = clamp(l, 0.0, 1.0);
+    if (k == 0) return mix(vec3(0.55, 0.05, 0.02), vec3(1.0, 0.42, 0.22), m) * l * 1.05;
+    if (k == 2) return mix(vec3(0.08, 0.2, 0.85), vec3(0.78, 0.9, 1.0), m) * l * 1.1;
+    if (k == 3) return mix(vec3(0.62, 0.62, 0.8), vec3(1.0, 1.0, 1.04), m) * l * 1.12;
+    return c;
+}
+
 void main() {
     float t = GameTime * 1200.0;
     // the ray, in the box's own units: from the eye (or, outside it, from where it enters the box) to where it leaves
@@ -502,6 +513,9 @@ void main() {
         c = atom(ro, rd, t0, t1, t);
     } else {
         c = star(ro, rd, t0, t1, t);
+        if (skin >= 4) {
+            c.rgb = starColour(c.rgb, skin - 4);
+        }
     }
     c.a *= strength;
     if (c.a < 0.004) {

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "formed=false": {
+      "model": "skyblocks:block/weather_machine"
+    },
+    "formed=true": {
+      "model": "skyblocks:block/weather_machine"
+    }
+  }
+}

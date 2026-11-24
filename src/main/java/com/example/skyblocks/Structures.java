@@ -66,6 +66,32 @@ public final class Structures {
                 cube(size, ModBlocks.CORE_FRAME.get(), null, ModBlocks.POWER_CORE.get()));
     }
 
+    private static Structure forge(int size) {
+        return new Structure("star_forge", new ItemStack(ModItems.STAR_FORGE.get()), size, cube(size, ModBlocks.FORGE_FRAME.get(), null, ModBlocks.STAR_FORGE.get()));
+    }
+
+    private static Structure accelerator(int r) {
+        Map<BlockPos, BlockState> map = new LinkedHashMap<>();
+        for (int x = -r; x <= r; x++) {
+            for (int z = -r; z <= r; z++) {
+                if (Math.max(Math.abs(x), Math.abs(z)) == r) {
+                    map.put(new BlockPos(x + r, 0, z + r), ModBlocks.ACCELERATOR_FRAME.get().defaultBlockState());
+                }
+            }
+        }
+        map.put(new BlockPos(r, 0, r), ModBlocks.PARTICLE_ACCELERATOR.get().defaultBlockState());
+        return new Structure("particle_accelerator", new ItemStack(ModItems.PARTICLE_ACCELERATOR.get()), 2 * r + 1, map);
+    }
+
+    private static Structure weather(int masts) {
+        Map<BlockPos, BlockState> map = new LinkedHashMap<>();
+        map.put(new BlockPos(0, 0, 0), ModBlocks.WEATHER_MACHINE.get().defaultBlockState());
+        for (int i = 1; i <= masts; i++) {
+            map.put(new BlockPos(0, i, 0), ModBlocks.WEATHER_MAST.get().defaultBlockState());
+        }
+        return new Structure("weather_machine", new ItemStack(ModItems.WEATHER_MACHINE.get()), masts + 1, map);
+    }
+
     /** For JEI: the chamber, the tank and the core chamber, each in every size (5, 7 and 9 across). */
     public static List<Structure> everySize() {
         List<Structure> out = new ArrayList<>();
@@ -78,6 +104,14 @@ public final class Structures {
         for (int size = 5; size <= 9; size += 2) {
             out.add(coreChamber(size));
         }
+        out.add(forge(5));
+        out.add(forge(7));
+        for (int r = 3; r <= 7; r += 2) {
+            out.add(accelerator(r));
+        }
+        for (int m = 2; m <= 6; m += 2) {
+            out.add(weather(m));
+        }
         return out;
     }
 
@@ -87,6 +121,9 @@ public final class Structures {
         out.add(chamber(5));
         out.add(tank(5));
         out.add(coreChamber(5));
+        out.add(forge(5));
+        out.add(accelerator(3));
+        out.add(weather(2));
         Map<BlockPos, BlockState> cats = new LinkedHashMap<>();
         for (int i = 0; i < 27; i++) {
             cats.put(new BlockPos(i % 3, i / 9, (i / 3) % 3), ModBlocks.OIIA_CAT.get().defaultBlockState());

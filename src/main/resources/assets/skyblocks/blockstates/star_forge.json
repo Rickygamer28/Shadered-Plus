@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "formed=false": {
+      "model": "skyblocks:block/star_forge"
+    },
+    "formed=true": {
+      "model": "skyblocks:block/star_forge_core"
+    }
+  }
+}

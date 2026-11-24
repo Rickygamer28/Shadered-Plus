@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "SGS",
+    "GRG",
+    "SGS"
+  ],
+  "key": {
+    "S": {
+      "item": "skyblocks:star_gold_ingot"
+    },
+    "G": {
+      "item": "minecraft:glass"
+    },
+    "R": {
+      "item": "minecraft:redstone_block"
+    }
+  },
+  "result": {
+    "id": "skyblocks:accelerator_frame",
+    "count": 8
+  }
+}

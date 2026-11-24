@@ -77,6 +77,15 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> POWER_CORE = ITEMS.registerSimpleBlockItem("power_core", ModBlocks.POWER_CORE,
             new net.minecraft.world.item.Item.Properties().stacksTo(1).fireResistant());
     public static final DeferredItem<BlockItem> CORE_FRAME = ITEMS.registerSimpleBlockItem("core_frame", ModBlocks.CORE_FRAME);
+    public static final DeferredItem<BlockItem> PARTICLE_ACCELERATOR = ITEMS.registerSimpleBlockItem("particle_accelerator", ModBlocks.PARTICLE_ACCELERATOR);
+    public static final DeferredItem<BlockItem> ACCELERATOR_FRAME = ITEMS.registerSimpleBlockItem("accelerator_frame", ModBlocks.ACCELERATOR_FRAME);
+    public static final DeferredItem<BlockItem> WEATHER_MACHINE = ITEMS.registerSimpleBlockItem("weather_machine", ModBlocks.WEATHER_MACHINE);
+    public static final DeferredItem<BlockItem> WEATHER_MAST = ITEMS.registerSimpleBlockItem("weather_mast", ModBlocks.WEATHER_MAST);
+    public static final DeferredItem<BlockItem> STAR_FORGE = ITEMS.registerSimpleBlockItem("star_forge", ModBlocks.STAR_FORGE);
+    public static final DeferredItem<BlockItem> FORGE_FRAME = ITEMS.registerSimpleBlockItem("forge_frame", ModBlocks.FORGE_FRAME);
+    /** The star forge's alloys: star gold (from a yellow star up) and nebula steel (from a blue star up). */
+    public static final DeferredItem<net.minecraft.world.item.Item> STAR_GOLD_INGOT = ITEMS.registerSimpleItem("star_gold_ingot");
+    public static final DeferredItem<net.minecraft.world.item.Item> NEBULA_STEEL_INGOT = ITEMS.registerSimpleItem("nebula_steel_ingot");
     public static final DeferredItem<BlockItem> TANK_GLASS = ITEMS.registerSimpleBlockItem("tank_glass", ModBlocks.TANK_GLASS);
     public static final DeferredItem<BlockItem> PORT_FRAME = ITEMS.registerSimpleBlockItem("port_frame", ModBlocks.PORT_FRAME);
     public static final DeferredItem<BlockItem> DISPLAY_FRAME = ITEMS.registerSimpleBlockItem("display_frame", ModBlocks.DISPLAY_FRAME);
