@@ -127,9 +127,7 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
         float speed = 0.25F + 2.2F * Mth.clamp((float) Math.log10(1.0 + be.rateIn()) / 5.5F, 0.0F, 1.0F);
         be.ringAngle = (float) ((be.ringAngle + dt * speed) % (Math.PI * 2));
         float phase = be.ringAngle / (float) (Math.PI * 2) * 0.45F;
-        if (chamber > 0) {
-            veins(be, pose, buffers, chamber);
-        }
+
         // each face of the box turned away from the eye - its far side (from inside: all of them): the near side would be
         // cut off by the screen's near plane as you came close (and the ray's traced from the eye in any case) - its
         // corners numbered x + 2y + 4z
@@ -148,6 +146,9 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
                     VERTS.add(new float[] {at.x, at.y, at.z, c + phase, half, r, g, b});
                 }
             }
+        }
+        if (chamber > 0) {
+            veins(be, pose, buffers, chamber); // (after the box: getting another buffer would end its one)
         }
     }
 
