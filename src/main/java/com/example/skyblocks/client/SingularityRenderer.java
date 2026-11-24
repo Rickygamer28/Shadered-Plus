@@ -45,6 +45,7 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
     @Override
     public void render(SingularityBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
         float reach = shownReach(be);
+        ItemStreams.render(be.getBlockPos(), poseStack, buffers); // (what its ports are moving: flying in or out)
         if (be.skin() != 0 && StorageSkins.ready()) {
             // (one of its other skins: the Dyson sphere, the tesseract, the item galaxy - StorageSkins)
             float full = be.fullness();
@@ -129,7 +130,7 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
 
     @Override
     public AABB getRenderBoundingBox(SingularityBlockEntity be) {
-        return new AABB(be.getBlockPos()).inflate(Math.max(be.reach(), be.shownGrow) + 0.1);
+        return new AABB(be.getBlockPos()).inflate(Math.max(Math.max(be.reach(), be.shownGrow), be.chamber() / 2.0) + 0.1);
     }
 
     @Override

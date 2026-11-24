@@ -46,6 +46,12 @@ public class SpinPadBlockEntity extends BlockEntity {
     private float sentSpeed = -1;
     private boolean sentOccupied;
     private int lastFe;
+    /** How its plate looks: 0 plain, 1 a disco floor, 2 a record on a turntable; whether its speed gauge floats over it. */
+    public static final String[] STYLES = {"plain", "disco", "vinyl"};
+    private int style;
+    private boolean gauge = true;
+    /** (The client: when it last let off a music note - a record.) */
+    public long clientNoteAt;
     /** Its cats (OIIA cat blocks, as items): one alone, side cubed as a big pad's master. */
     public final net.neoforged.neoforge.items.ItemStackHandler cats = new net.neoforged.neoforge.items.ItemStackHandler(1) {
         @Override
@@ -155,6 +161,32 @@ public class SpinPadBlockEntity extends BlockEntity {
 
     public int lastFe() {
         return lastFe;
+    }
+
+    public int style() {
+        return style;
+    }
+
+    public boolean gauge() {
+        return gauge;
+    }
+
+    /** Its next look (plain, disco, vinyl). */
+    public void cycleStyle() {
+        style = (style + 1) % STYLES.length;
+        syncLook();
+    }
+
+    public void toggleGauge() {
+        gauge = !gauge;
+        syncLook();
+    }
+
+    private void syncLook() {
+        setChanged();
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+        }
     }
 
     public String sky() {
@@ -398,6 +430,8 @@ public class SpinPadBlockEntity extends BlockEntity {
         }
         tag.putInt("cat_count", cats.getStackInSlot(0).getCount());
         tag.putInt("last_fe", lastFe);
+        tag.putInt("style", style);
+        tag.putBoolean("gauge", gauge);
     }
 
     @Override
@@ -417,6 +451,8 @@ public class SpinPadBlockEntity extends BlockEntity {
         master = tag.contains("master") ? BlockPos.of(tag.getLong("master")) : null;
         clientCats = tag.getInt("cat_count");
         lastFe = tag.getInt("last_fe");
+        style = Math.floorMod(tag.getInt("style"), STYLES.length);
+        gauge = !tag.contains("gauge") || tag.getBoolean("gauge");
         int n = Math.max(1, side);
         energy.resize(CAPACITY * n * n * n, PUSH * n * n * n);
         if (tag.contains("energy")) {

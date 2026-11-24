@@ -105,6 +105,8 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         }
         if (be.tank() > 0) {
             tank(be, looks, poseStack, buffers, light, seconds);
+        } else if (be.still() && layersSkin(be, looks, poseStack, buffers, 0.365F)) {
+            // (still: what it holds settled in layers inside its frame - StorageSkins)
         } else if (be.still()) {
             // (a plain tank: what it holds in layers inside its frame)
             layers(be, looks, poseStack, buffers.getBuffer(Types.POOL), light, seconds,
@@ -356,9 +358,52 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
 
     }
 
+    /**
+     * Still: what it holds settled in layers, drawn with the storage skins' shader - the heaviest at the bottom, gases
+     * hanging from the top, each its own picture, the lines between them moving gently, glowing ones glowing, fizz
+     * rising in them. (False without the shader: the plain layers instead.)
+     */
+    private static boolean layersSkin(WhirlpoolBlockEntity be, List<Look> looks, PoseStack poseStack, MultiBufferSource buffers, float half) {
+        if (!StorageSkins.ready() || looks.isEmpty()) {
+            return false;
+        }
+        int n = Math.min(10, Math.min(looks.size(), be.entries().size()));
+        Integer[] order = new Integer[n];
+        for (int i = 0; i < n; i++) {
+            order[i] = i;
+        }
+        // (liquids first, heaviest first - from the bottom up; then the gases, lightest first - from the top down)
+        java.util.Arrays.sort(order, (a, b) -> {
+            Look la = looks.get(a), lb = looks.get(b);
+            if (la.gas != lb.gas) {
+                return la.gas ? 1 : -1;
+            }
+            return la.gas ? Integer.compare(la.density, lb.density) : Integer.compare(lb.density, la.density);
+        });
+        int[] rgb = new int[n];
+        float[] shares = new float[n];
+        float[][] sprites = new float[n][];
+        int glow = 0, gas = 0;
+        for (int i = 0; i < n; i++) {
+            int k = order[i];
+            rgb[i] = StorageSkins.fluidColour(be.entries().get(k).fluid);
+            sprites[i] = StorageSkins.fluidSprite(be.entries().get(k).fluid);
+            shares[i] = looks.get(k).share;
+            glow |= looks.get(k).glows ? 1 << i : 0;
+            gas |= looks.get(k).gas ? 1 << i : 0;
+        }
+        StorageSkins.gasBits = gas;
+        StorageSkins.draw(poseStack, buffers, StorageSkins.LAYERS, Math.max(be.shownFull, 0.0F), be.tank() > 0, half, rgb, shares, glow, sprites);
+        StorageSkins.gasBits = 0;
+        return true;
+    }
+
     private static void tankInside(WhirlpoolBlockEntity be, List<Look> looks, PoseStack poseStack, MultiBufferSource buffers, int light, float t) {
         int r = (be.tank() - 1) / 2;
         float inset = 0.01F;
+        if (be.still() && layersSkin(be, looks, poseStack, buffers, r - 0.51F)) {
+            return;
+        }
         if (be.still()) {
             layers(be, looks, poseStack, buffers.getBuffer(Types.POOL), light, t,
                     -(r - 1) + inset, -(r - 1) + inset, r - inset, r - inset, false);

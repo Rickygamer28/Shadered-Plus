@@ -74,6 +74,8 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
     private int version;
     /** (Client: the kinds it holds most of, to show orbiting it; and the total.) */
     private final List<ItemStack> shown = new ArrayList<>();
+    /** (How many of each of those: a merged display wall shows them.) */
+    private final List<Long> shownCounts = new ArrayList<>();
     private int lastSignal = -1;
     /** (Server: a frame was put down near it - its chamber's frames looked at again at its next check; changes not yet sent.) */
     private boolean relink, syncPending;
@@ -338,6 +340,11 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
 
     public List<ItemStack> shown() {
         return shown;
+    }
+
+    /** (The client: how many of each of shown() it holds.) */
+    public List<Long> shownCounts() {
+        return shownCounts;
     }
 
     /** How full it is, 0..1 (on a log scale: it keeps growing as you fill it, without ever really being full). */
@@ -620,11 +627,16 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
             total = tag.getLong("total");
             kindsShown = tag.getInt("kinds");
             shown.clear();
+            shownCounts.clear();
+            long[] counts = tag.getLongArray("shownCounts");
+            int k = 0;
             for (Tag t : tag.getList("shown", Tag.TAG_COMPOUND)) {
                 ItemStack s = ItemStack.parseOptional(registries, (CompoundTag) t);
                 if (!s.isEmpty()) {
                     shown.add(s);
+                    shownCounts.add(k < counts.length ? counts[k] : 0L);
                 }
+                k++;
             }
         }
         destroy.clear();
@@ -655,10 +667,11 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
         saveLooks(tag);
         tag.putLong("total", total);
         tag.putInt("kinds", entries.size());
-        // (the kinds it holds most of: they're seen going round it - the top twelve picked out, not all its kinds sorted)
-        java.util.PriorityQueue<Entry> heap = new java.util.PriorityQueue<>(13, (a, b) -> Long.compare(a.count, b.count));
+        // (the kinds it holds most of: they're seen going round it, and on a display wall - the top 24 picked out, not
+        // all its kinds sorted)
+        java.util.PriorityQueue<Entry> heap = new java.util.PriorityQueue<>(25, (a, b) -> Long.compare(a.count, b.count));
         for (Entry e : entries) {
-            if (heap.size() < 12) {
+            if (heap.size() < 24) {
                 heap.add(e);
             } else if (e.count > heap.peek().count) {
                 heap.poll();
@@ -668,10 +681,13 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
         List<Entry> top = new ArrayList<>(heap);
         top.sort((a, b) -> Long.compare(b.count, a.count));
         ListTag list = new ListTag();
-        for (Entry e : top) {
-            list.add(e.item.save(registries));
+        long[] counts = new long[top.size()];
+        for (int i = 0; i < top.size(); i++) {
+            list.add(top.get(i).item.save(registries));
+            counts[i] = top.get(i).count;
         }
         tag.put("shown", list);
+        tag.putLongArray("shownCounts", counts);
         return tag;
     }
 

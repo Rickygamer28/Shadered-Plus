@@ -195,6 +195,7 @@ public class SkyBlocksMod {
                 .playToClient(SunJar.Payload.TYPE, SunJar.Payload.STREAM_CODEC, SunJar.Payload::handle)
                 .playToServer(SingularityPayloads.Action.TYPE, SingularityPayloads.Action.STREAM_CODEC, SingularityPayloads.Action::handle)
                 .playToClient(SingularityPayloads.Contents.TYPE, SingularityPayloads.Contents.STREAM_CODEC, SingularityPayloads.Contents::handle)
+                .playToClient(SingularityPayloads.Stream.TYPE, SingularityPayloads.Stream.STREAM_CODEC, SingularityPayloads.Stream::handle)
                 .playToClient(TeleportPadPayloads.Menu.TYPE, TeleportPadPayloads.Menu.STREAM_CODEC, TeleportPadPayloads.Menu::handle)
                 .playToServer(TeleportPadPayloads.Action.TYPE, TeleportPadPayloads.Action.STREAM_CODEC, TeleportPadPayloads.Action::handle)
                 .playToClient(PortalListPayload.TYPE, PortalListPayload.STREAM_CODEC, PortalListPayload::handle)

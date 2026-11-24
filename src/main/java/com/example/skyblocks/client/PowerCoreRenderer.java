@@ -120,6 +120,16 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
         VertexConsumer vc = late ? null : buffers.getBuffer(Types.CORE);
         org.joml.Vector3f at = new org.joml.Vector3f();
         int r = skin & 255, g = Math.round(full * 255), b = chamber > 0 ? 255 : 0;
+        // its containment rings (in a chamber, in the shader): turning faster the more comes in
+        long nowMs = System.currentTimeMillis();
+        float dt = be.ringAt == 0 ? 0.0F : Math.min(0.25F, (nowMs - be.ringAt) / 1000.0F);
+        be.ringAt = nowMs;
+        float speed = 0.25F + 2.2F * Mth.clamp((float) Math.log10(1.0 + be.rateIn()) / 5.5F, 0.0F, 1.0F);
+        be.ringAngle = (float) ((be.ringAngle + dt * speed) % (Math.PI * 2));
+        float phase = be.ringAngle / (float) (Math.PI * 2) * 0.45F;
+        if (chamber > 0) {
+            veins(be, pose, buffers, chamber);
+        }
         // each face of the box turned away from the eye - its far side (from inside: all of them): the near side would be
         // cut off by the screen's near plane as you came close (and the ray's traced from the eye in any case) - its
         // corners numbered x + 2y + 4z
@@ -132,12 +142,74 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
             for (int c : faces[f]) {
                 float x = ((c & 1) * 2 - 1) * half, y = (((c >> 1) & 1) * 2 - 1) * half, z = (((c >> 2) & 1) * 2 - 1) * half;
                 if (vc != null) {
-                    vc.addVertex(m, 0.5F + x, 0.5F + y, 0.5F + z).setColor(r, g, b, 255).setUv(c, half);
+                    vc.addVertex(m, 0.5F + x, 0.5F + y, 0.5F + z).setColor(r, g, b, 255).setUv(c + phase, half);
                 } else if (VERTS.size() < 65536) {
                     m.transformPosition(0.5F + x, 0.5F + y, 0.5F + z, at);
-                    VERTS.add(new float[] {at.x, at.y, at.z, c, half, r, g, b});
+                    VERTS.add(new float[] {at.x, at.y, at.z, c + phase, half, r, g, b});
                 }
             }
+        }
+    }
+
+    /**
+     * Its energy veins: light pulsing along the outside of its chamber's frame edges - in from the corners towards the
+     * middle of each edge while it's charging, out from the middles to the corners while it's giving out, faster the
+     * more flows; still and dim with nothing flowing.
+     */
+    private static void veins(PowerCoreBlockEntity be, PoseStack pose, MultiBufferSource buffers, int chamber) {
+        long in = be.rateIn(), out = be.rateOut(), net = in - out;
+        boolean flowing = in > 0 || out > 0;
+        boolean charging = net >= 0;
+        float t = (float) LavaLampRenderer.seconds();
+        float speed = 0.5F + 2.5F * Mth.clamp((float) Math.log10(1.0 + Math.abs(net) + Math.max(in, out) * 0.2) / 5.0F, 0.0F, 1.0F);
+        int rgb = LIGHT[Math.floorMod(be.skin(), LIGHT.length)];
+        float cr = (rgb >> 16 & 255) / 255.0F, cg = (rgb >> 8 & 255) / 255.0F, cb = (rgb & 255) / 255.0F;
+        VertexConsumer v = buffers.getBuffer(RenderType.lightning());
+        Matrix4f m = pose.last().pose();
+        float e = (chamber - 1) / 2.0F, len = e + 0.5F;
+        float[] signs = {-1.0F, 1.0F};
+        for (int axis = 0; axis < 3; axis++) {
+            int b1 = (axis + 1) % 3, b2 = (axis + 2) % 3;
+            for (float s1 : signs) {
+                for (float s2 : signs) {
+                    // the edge along this axis at (s1 e, s2 e): a strip on each of its two outer faces
+                    for (int face = 0; face < 2; face++) {
+                        int nAxis = face == 0 ? b1 : b2, cAxis = face == 0 ? b2 : b1;
+                        float nOff = (face == 0 ? s1 : s2) * (e + 0.503F), cOff = (face == 0 ? s2 : s1) * e;
+                        // (dim, all along it)
+                        strip(v, m, axis, nAxis, cAxis, nOff, cOff, -len, len, 0.05F, cr, cg, cb, flowing ? 0.18F : 0.1F);
+                        if (!flowing) {
+                            continue;
+                        }
+                        for (int k = 0; k < 3; k++) {
+                            float u = (t * speed / len + k / 3.0F) % 1.0F;
+                            float from = charging ? u : 1.0F - u; // (0 at the corners, 1 at the middle)
+                            float fade = Mth.sin((float) Math.PI * u);
+                            for (float half : signs) {
+                                float c = half * (1.0F - from) * len;
+                                strip(v, m, axis, nAxis, cAxis, nOff, cOff, c - 0.22F, c + 0.22F, 0.09F, cr, cg, cb, 0.9F * fade);
+                                strip(v, m, axis, nAxis, cAxis, nOff, cOff, c - 0.4F, c + 0.4F, 0.2F, cr, cg, cb, 0.25F * fade);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /** A glowing strip on a face: along {@code axis} from a to b, {@code w} wide across {@code cAxis}, at nOff out along nAxis. */
+    private static void strip(VertexConsumer v, Matrix4f m, int axis, int nAxis, int cAxis, float nOff, float cOff, float a, float b, float w,
+                              float r, float g, float bl, float alpha) {
+        float[][] p = new float[4][3];
+        float[] along = {a, b, b, a}, across = {-w, -w, w, w};
+        for (int i = 0; i < 4; i++) {
+            p[i][axis] = along[i];
+            p[i][cAxis] = cOff + across[i];
+            p[i][nAxis] = nOff;
+        }
+        int[] order = {0, 1, 2, 3, 3, 2, 1, 0}; // (both ways round: seen from either side)
+        for (int i : order) {
+            v.addVertex(m, 0.5F + p[i][0], 0.5F + p[i][1], 0.5F + p[i][2]).setColor(r, g, bl, alpha);
         }
     }
 

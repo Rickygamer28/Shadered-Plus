@@ -19,6 +19,7 @@ flat in int skin;
 flat in float full;
 flat in float big;
 flat in float strength;
+flat in float ringPhase;
 
 out vec4 fragColor;
 
@@ -481,6 +482,80 @@ vec4 atom(vec3 ro, vec3 rd, float t0, float t1, float t) {
     return vec4(col, alpha);
 }
 
+// ---- its containment rings (in a chamber): three metal rings round it, each turning its own way, a band of lights
+// round each, lit by the core ----
+
+mat3 rotXm(float a) {
+    float c = cos(a), s = sin(a);
+    return mat3(1.0, 0.0, 0.0, 0.0, c, s, 0.0, -s, c);
+}
+
+mat3 rotYm(float a) {
+    float c = cos(a), s = sin(a);
+    return mat3(c, 0.0, -s, 0.0, 1.0, 0.0, s, 0.0, c);
+}
+
+mat3 ringTurn(int k) {
+    float ph = ringPhase;
+    if (k == 0) return rotYm(ph) * rotXm(0.45);
+    if (k == 1) return rotXm(-2.0 * ph) * rotYm(1.1) * rotXm(1.35);
+    return rotYm(-3.0 * ph) * rotXm(2.3);
+}
+
+float ringR(int k) {
+    return 0.9 - 0.12 * float(k);
+}
+
+// how far from the nearest ring (x), and which (y)
+vec2 ringsAt(vec3 p) {
+    vec2 best = vec2(1e9, 0.0);
+    for (int k = 0; k < 3; k++) {
+        vec3 q = transpose(ringTurn(k)) * p;
+        float d = length(vec2(length(q.xz) - ringR(k), q.y)) - 0.026;
+        if (d < best.x) best = vec2(d, float(k));
+    }
+    return best;
+}
+
+vec3 coreGlow() {
+    if (skin == 1) return vec3(0.6, 0.62, 1.0);
+    if (skin == 2) return vec3(0.78, 0.45, 1.0);
+    if (skin == 3) return vec3(0.38, 0.78, 1.0);
+    return vec3(1.0, 0.62, 0.25);
+}
+
+// the rings along the ray: (how far along it, or -1) and their colour
+float rings(vec3 ro, vec3 rd, float t0, float t1, out vec3 col) {
+    col = vec3(0.0);
+    vec2 sh = vec2(-dot(ro, rd), 0.0);
+    float tt = t0;
+    for (int i = 0; i < 48; i++) {
+        vec3 p = ro + rd * tt;
+        vec2 h = ringsAt(p);
+        if (h.x < 0.0015) {
+            int k = int(h.y + 0.5);
+            mat3 M = ringTurn(k);
+            vec3 q = transpose(M) * p;
+            vec3 radial = normalize(vec3(q.x, 0.0, q.z));
+            vec3 n = M * normalize(q - radial * ringR(k));
+            vec3 L = normalize(vec3(0.4, 0.8, 0.3));
+            float dif = max(dot(n, L), 0.0);
+            float spec = pow(max(dot(reflect(rd, n), L), 0.0), 40.0);
+            vec3 glow = coreGlow();
+            float fromCore = max(dot(n, -normalize(p)), 0.0); // (lit by the core inside them)
+            col = vec3(0.3, 0.32, 0.38) * (0.3 + 0.6 * dif) + vec3(spec * 0.8) + glow * fromCore * (0.35 + 0.45 * full);
+            // a band of little lights round its outside
+            float a = atan(q.z, q.x);
+            float stud = smoothstep(0.2, 0.08, abs(fract(a / TAU * 14.0) - 0.5)) * smoothstep(0.2, 0.7, dot(M * radial, n));
+            col = mix(col, glow * (1.1 + 0.4 * full) + 0.15, stud);
+            return tt;
+        }
+        tt += max(h.x, 0.004);
+        if (tt > t1) break;
+    }
+    return -1.0;
+}
+
 void main() {
     float t = GameTime * 1200.0;
     // the ray, in the box's own units: from the eye (or, outside it, from where it enters the box) to where it leaves
@@ -502,6 +577,15 @@ void main() {
         c = atom(ro, rd, t0, t1, t);
     } else {
         c = star(ro, rd, t0, t1, t);
+    }
+    if (big > 0.5) {
+        // (its rings: in front of what's in the middle, or behind it - judged by its middle along the ray)
+        vec3 rc;
+        float th = rings(ro, rd, t0, t1, rc);
+        if (th > 0.0) {
+            float mid = max(-dot(ro, rd), t0);
+            c = th < mid ? vec4(rc, 1.0) : vec4(c.rgb * c.a + rc * (1.0 - c.a), 1.0);
+        }
     }
     c.a *= strength;
     if (c.a < 0.004) {

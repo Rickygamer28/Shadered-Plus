@@ -47,6 +47,9 @@ public class PowerCoreBlockEntity extends BlockEntity {
     private long rateIn, rateOut;
     /** (Client: how full it looks, easing towards what it is.) */
     public float shownFull = -1.0F;
+    /** (The client: how far its containment rings have turned, and when that was last moved on.) */
+    public float ringAngle;
+    public long ringAt;
 
     public PowerCoreBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.POWER_CORE.get(), pos, state);

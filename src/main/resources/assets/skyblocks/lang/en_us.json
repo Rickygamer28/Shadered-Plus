@@ -1365,5 +1365,10 @@
   "screen.skyblocks.whirlpool.skin.whirlpool": "Whirlpool",
   "screen.skyblocks.whirlpool.skin.planet": "Water planet",
   "screen.skyblocks.whirlpool.skin.bubbles": "Bubbles",
-  "screen.skyblocks.whirlpool.skin.helix": "Fluid helix"
+  "screen.skyblocks.whirlpool.skin.helix": "Fluid helix",
+  "screen.skyblocks.spin_pad.style.plain": "Look: plain",
+  "screen.skyblocks.spin_pad.style.disco": "Look: disco",
+  "screen.skyblocks.spin_pad.style.vinyl": "Look: vinyl",
+  "screen.skyblocks.spin_pad.gauge_on": "Gauge: on",
+  "screen.skyblocks.spin_pad.gauge_off": "Gauge: off"
 }

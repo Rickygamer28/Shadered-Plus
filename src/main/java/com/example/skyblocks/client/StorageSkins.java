@@ -33,13 +33,15 @@ import org.joml.Matrix4f;
  * hold (each item's or fluid's picture, averaged), drawn at once with them handed to the shader.
  */
 public final class StorageSkins {
-    public static final int DYSON = 0, TESSERACT = 1, GALAXY = 2, PLANET = 3, BUBBLES = 4, HELIX = 5;
+    public static final int DYSON = 0, TESSERACT = 1, GALAXY = 2, PLANET = 3, BUBBLES = 4, HELIX = 5, LAYERS = 6;
     static ShaderInstance shader;
     private static final float[][] COLS = new float[10][4];
     /** (the item galaxy's items: where each one's picture is on the block atlas - u0 v0 u1 v1; none: all 0) */
     private static final float[][] SPRITES = new float[10][4];
     private static final float[][] TOPS = new float[10][4]; // (a block's top: its item drawn as a little cube)
     private static int count, glowBits;
+    /** (The layers: which of the fluids are gases, hanging from the top - a bit each; set just before drawing them.) */
+    public static int gasBits;
 
     private StorageSkins() {}
 
@@ -81,7 +83,7 @@ public final class StorageSkins {
             shader.safeGetUniform("U" + i).set(SPRITES[i][0], SPRITES[i][1], SPRITES[i][2], SPRITES[i][3]);
             shader.safeGetUniform("V" + i).set(TOPS[i][0], TOPS[i][1], TOPS[i][2], TOPS[i][3]);
         }
-        shader.safeGetUniform("Info").set((float) count, (float) glowBits, 0.0F, 0.0F);
+        shader.safeGetUniform("Info").set((float) count, (float) glowBits, (float) gasBits, 0.0F);
     }
 
     public static boolean ready() {

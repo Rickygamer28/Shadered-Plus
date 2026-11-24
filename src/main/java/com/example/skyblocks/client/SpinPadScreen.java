@@ -24,6 +24,50 @@ public class SpinPadScreen extends AbstractContainerScreen<SpinPadMenu> {
         inventoryLabelY = SpinPadMenu.INVENTORY_Y - 11;
     }
 
+    private net.minecraft.client.gui.components.Button styleButton, gaugeButton;
+
+    /** (The pad that draws it: a big pad's middle one.) */
+    @org.jetbrains.annotations.Nullable
+    private SpinPadBlockEntity drawer() {
+        SpinPadBlockEntity pad = menu.pad();
+        if (pad != null && pad.master() != null && pad.getLevel() != null && pad.getLevel().getBlockEntity(pad.master()) instanceof SpinPadBlockEntity m) {
+            return m;
+        }
+        return pad;
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+        // its look and its gauge: two buttons at its right edge
+        styleButton = addRenderableWidget(net.minecraft.client.gui.components.Button.builder(Component.empty(), b -> press(0))
+                .bounds(leftPos + imageWidth + 4, topPos + 4, 70, 16).build());
+        gaugeButton = addRenderableWidget(net.minecraft.client.gui.components.Button.builder(Component.empty(), b -> press(1))
+                .bounds(leftPos + imageWidth + 4, topPos + 22, 70, 16).build());
+        labels();
+    }
+
+    private void press(int id) {
+        if (minecraft != null && minecraft.gameMode != null) {
+            minecraft.gameMode.handleInventoryButtonClick(menu.containerId, id);
+        }
+    }
+
+    private void labels() {
+        SpinPadBlockEntity pad = drawer();
+        if (pad == null || styleButton == null) {
+            return;
+        }
+        styleButton.setMessage(Component.translatable("screen.skyblocks.spin_pad.style." + SpinPadBlockEntity.STYLES[pad.style()]));
+        gaugeButton.setMessage(Component.translatable(pad.gauge() ? "screen.skyblocks.spin_pad.gauge_on" : "screen.skyblocks.spin_pad.gauge_off"));
+    }
+
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        labels();
+    }
+
     @Override
     protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
         int x = leftPos, y = topPos;

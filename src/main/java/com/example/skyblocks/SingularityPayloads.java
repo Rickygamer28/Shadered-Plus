@@ -18,6 +18,29 @@ public final class SingularityPayloads {
      * What it holds (each kind, count 1, and how many), what's marked to be destroyed, vacuum mode - in pages (tens of
      * thousands of kinds don't fit one packet): kinds from {@code start}, {@code total} in all.
      */
+    /**
+     * A port moved a stack: the clients near draw a copy of it flying between the port and the core (into the core, or
+     * out of it to the port) - see client/ItemStreams.
+     */
+    public record Stream(net.minecraft.core.BlockPos port, net.minecraft.core.BlockPos core, ItemStack item, boolean out) implements CustomPacketPayload {
+        public static final Type<Stream> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "singularity_stream"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, Stream> STREAM_CODEC = StreamCodec.of((buf, p) -> {
+            buf.writeBlockPos(p.port);
+            buf.writeBlockPos(p.core);
+            ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, p.item);
+            buf.writeBoolean(p.out);
+        }, buf -> new Stream(buf.readBlockPos(), buf.readBlockPos(), ItemStack.OPTIONAL_STREAM_CODEC.decode(buf), buf.readBoolean()));
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+
+        public static void handle(Stream p, IPayloadContext context) {
+            context.enqueueWork(() -> com.example.skyblocks.client.ItemStreams.add(p.port, p.core, p.item, p.out));
+        }
+    }
+
     public record Contents(int containerId, int start, int total, List<ItemStack> items, List<Long> counts, List<String> destroyed, List<String> tags, boolean vacuum)
             implements CustomPacketPayload {
         public static final Type<Contents> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "singularity_contents"));

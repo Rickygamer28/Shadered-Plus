@@ -57,6 +57,26 @@ public class SpinPadMenu extends AbstractContainerMenu {
         return player.level().getBlockEntity(pos) instanceof SpinPadBlockEntity p ? p : null;
     }
 
+    /** Its screen's buttons: 0 its next look (on a big pad's middle pad: the one that draws it), 1 its gauge on or off. */
+    @Override
+    public boolean clickMenuButton(Player player, int id) {
+        SpinPadBlockEntity pad = pad();
+        if (pad == null) {
+            return false;
+        }
+        if (pad.master() != null && player.level().getBlockEntity(pad.master()) instanceof SpinPadBlockEntity m) {
+            pad = m;
+        }
+        if (id == 0) {
+            pad.cycleStyle();
+        } else if (id == 1) {
+            pad.toggleGauge();
+        } else {
+            return false;
+        }
+        return true;
+    }
+
     @Override
     public boolean stillValid(Player player) {
         return pad() != null && player.distanceToSqr(pos.getCenter()) <= 10.0 * 10.0;

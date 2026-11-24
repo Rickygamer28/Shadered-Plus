@@ -837,6 +837,125 @@ vec4 helix(vec3 ro, vec3 rd, float t0, float t1, float t) {
     return pool;
 }
 
+// ---- 6: layers (a still tank: its fluids settled, the heaviest at the bottom, gases hanging from the top) ----
+
+bool isGas(int i) {
+    return mod(floor(Info.z / pow(2.0, float(i))), 2.0) > 0.5;
+}
+
+// the line between two layers, moving gently (a little more on the liquids' top)
+float layerWave(vec2 q, float t, float i, float k) {
+    return k * (sin(q.x * 3.7 + t * 1.2 + i * 1.7) * cos(q.y * 3.1 - t * 0.9 + i) * 0.7 + 0.3 * sin((q.x - q.y) * 7.0 - t * 2.1 + i * 3.0));
+}
+
+// which layer a point is in (-1: none), how far to the nearest line between two layers, and the index of the liquids'
+// top layer (-1: no liquids)
+int layerAt(vec3 p, float t, out float edge, out int topL) {
+    int n = count();
+    edge = 1e9;
+    topL = -1;
+    int found = -1;
+    float base = -1.0, below = -1.0;
+    int lastLiquid = -1;
+    for (int i = 0; i < 10; i++) {
+        if (i >= n) break;
+        if (!isGas(i)) lastLiquid = i;
+    }
+    topL = lastLiquid;
+    for (int i = 0; i < 10; i++) {
+        if (i >= n) break;
+        if (isGas(i)) continue;
+        float h = 2.0 * full * pal(i).a;
+        base += h;
+        bool last = i == lastLiquid;
+        float top = base + layerWave(p.xz, t, float(i), last ? 0.03 : 0.018 * min(1.0, h * 8.0));
+        if (found < 0 && p.y >= below && p.y < top) found = i;
+        if (!last) edge = min(edge, abs(p.y - top));
+        below = top;
+    }
+    float ceil_ = 1.0;
+    for (int i = 0; i < 10; i++) {
+        if (i >= n) break;
+        if (!isGas(i)) continue;
+        float h = 2.0 * full * pal(i).a;
+        float bot = ceil_ - h + layerWave(p.xz, t * 0.6, float(i) + 5.0, 0.025);
+        if (found < 0 && p.y <= ceil_ && p.y > bot) found = i;
+        ceil_ = bot;
+    }
+    return found;
+}
+
+vec4 layers(vec3 ro, vec3 rd, float t0, float t1, float t) {
+    const int STEPS = 56;
+    float dt = (t1 - t0) / float(STEPS);
+    float jitter = hash3(vec3(gl_FragCoord.xy, 3.0));
+    vec3 col = vec3(0.0);
+    float a = 0.0;
+    vec3 L = normalize(vec3(0.4, 0.8, 0.3));
+    // where the ray comes in, on the glass: the lines between the layers
+    float e0;
+    int topL;
+    int l0 = layerAt(ro + rd * (t0 + 0.002), t, e0, topL);
+    int prev = l0;
+    int detL = -1;
+    float det = 1.0;
+    for (int i = 0; i < STEPS; i++) {
+        float tt = t0 + (float(i) + jitter) * dt;
+        vec3 p = ro + rd * tt;
+        float e;
+        int tl;
+        int Ly = layerAt(p, t, e, tl);
+        if (Ly < 0) {
+            prev = -1;
+            continue;
+        }
+        bool gas = isGas(Ly), gl = glows(Ly);
+        // its own picture, about once a block, drifting slowly - taken where the ray comes into this layer (on the
+        // glass, its top, or the line from the layer before), not all through it: no streaks
+        if (Ly != detL) {
+            vec3 q = p * half_;
+            vec2 uv = abs(rd.y) > 0.7 && prev == -1 ? q.xz : vec2(q.x + q.z, q.y);
+            det = fluidDetail(Ly, uv + vec2(t * 0.01, -t * 0.015));
+            detL = Ly;
+        }
+        vec3 c = pal(Ly).rgb * det;
+        // fizz rising through it (slowly in gases), glowing ones flickering
+        float fizz = smoothstep(0.86, 0.97, noise(p * vec3(16.0, 8.0, 16.0) * max(half_, 0.5) + vec3(0.0, -t * (gas ? 0.5 : 1.6), 0.0)));
+        if (gl) {
+            c *= 1.2 + 0.25 * noise(p * 5.0 + vec3(0.0, t * 0.4, 0.0));
+        } else {
+            c *= 0.75 + 0.25 * clamp(p.y * 0.5 + 0.5, 0.0, 1.0); // (darker deeper down)
+        }
+        c += vec3(0.9) * fizz * (gl ? 0.5 : 0.4);
+        // coming down onto the liquids' top from above: its shine
+        if (prev == -1 && !gas && Ly == topL && rd.y < 0.0) {
+            float ex = 0.01;
+            float hx = layerWave(p.xz + vec2(ex, 0.0), t, float(Ly), 0.03) - layerWave(p.xz - vec2(ex, 0.0), t, float(Ly), 0.03);
+            float hz = layerWave(p.xz + vec2(0.0, ex), t, float(Ly), 0.03) - layerWave(p.xz - vec2(0.0, ex), t, float(Ly), 0.03);
+            vec3 nrm = normalize(vec3(-hx / (2.0 * ex), 1.0, -hz / (2.0 * ex)));
+            float spec = pow(max(dot(reflect(rd, nrm), L), 0.0), 60.0);
+            float fres = pow(1.0 - max(dot(nrm, -rd), 0.0), 4.0);
+            float sheen = clamp(spec * 0.9 + fres * 0.35, 0.0, 1.0);
+            col += (1.0 - a) * sheen * mix(vec3(1.0), c, 0.3);
+            a += (1.0 - a) * sheen * 0.6;
+        }
+        float dens = gas ? 0.9 : (gl ? 7.0 : 2.8);
+        dens += fizz * 5.0;
+        float da = 1.0 - exp(-dens * dt);
+        col += (1.0 - a) * da * c;
+        a += (1.0 - a) * da;
+        prev = Ly;
+        if (a > 0.985) break;
+    }
+    // (the lines between the layers on the glass: a bright thin edge)
+    if (l0 >= 0) {
+        float line = smoothstep(0.022, 0.0, e0);
+        col = mix(col, vec3(1.0) * max(a, 0.5), line * 0.45);
+        a = max(a, line * 0.7);
+    }
+    return vec4(col / max(a, 1e-4), a);
+}
+
 void main() {
     float t = GameTime * 1200.0;
     vec3 ro = eye / half_;
@@ -865,6 +984,8 @@ void main() {
         c = bubbles(ro, rd, t);
     } else if (skin == 5) {
         c = helix(ro, rd, t0, t1, t);
+    } else if (skin == 6) {
+        c = layers(ro, rd, t0, t1, t);
     } else {
         c = dyson(ro, rd, t);
     }

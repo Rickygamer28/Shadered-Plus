@@ -98,9 +98,21 @@ public class SpecialFrameBlockEntity extends ContainmentFrameBlockEntity {
                 continue;
             }
             if (out ? be.pushInto(s, other) : be.pullFrom(s, other)) {
+                be.stream(s, out);
                 return; // (one stack a turn)
             }
         }
+    }
+
+    /** (What the last turn moved: the clients near draw it flying - see SingularityPayloads.Stream.) */
+    private ItemStack moved = ItemStack.EMPTY;
+
+    private void stream(SingularityBlockEntity s, boolean out) {
+        if (level instanceof net.minecraft.server.level.ServerLevel sl && !moved.isEmpty()) {
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingChunk(sl, new net.minecraft.world.level.ChunkPos(worldPosition),
+                    new SingularityPayloads.Stream(worldPosition, s.getBlockPos(), moved.copyWithCount(1), out));
+        }
+        moved = ItemStack.EMPTY;
     }
 
     /** One stack (of the filter's item, or the next kind) from the singularity into {@code to}. */
@@ -129,6 +141,7 @@ public class SpecialFrameBlockEntity extends ContainmentFrameBlockEntity {
                 continue;
             }
             ItemStack taken = s.extract(like, moved, false);
+            this.moved = taken.copy();
             ItemStack rest = ItemHandlerHelper.insertItemStacked(to, taken, false);
             if (!rest.isEmpty()) {
                 s.insert(rest, false); // (it changed its mind: back in)
@@ -149,6 +162,7 @@ public class SpecialFrameBlockEntity extends ContainmentFrameBlockEntity {
             if (got.isEmpty()) {
                 continue;
             }
+            this.moved = got.copy();
             ItemStack left = s.insert(got, false);
             if (!left.isEmpty()) {
                 ItemStack back = from.insertItem(slot, left, false);
