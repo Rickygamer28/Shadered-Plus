@@ -255,13 +255,14 @@ public class SpinPadRenderer implements BlockEntityRenderer<SpinPadBlockEntity> 
                         {c + Mth.cos(a1) * rr, y, c + Mth.sin(a1) * rr}, {c + Mth.cos(a0) * rr, y, c + Mth.sin(a0) * rr}}, 0xFFFFFF, alpha, alpha);
             }
         }
-        // the tonearm: a post at the pad's corner, its arm reaching onto the record, its head on a groove
+        // the tonearm: a post at the pad's corner, its arm reaching onto the record, its head on a groove near its edge
+        // (clear of the cat)
         VertexConsumer metal = buffers.getBuffer(RenderType.entitySolid(METAL));
         float k = Math.max(1.0F, n * 0.8F);
-        float px = c + r * 0.86F, pz = c - r * 0.86F;
-        float post = 0.07F * k, top = PLATE_Y + 0.17F * k;
+        float px = c + r * 0.86F, pz = c + r * 0.86F;
+        float post = 0.06F * k, top = PLATE_Y + 0.2F * k;
         cuboid(metal, pose.last(), px - post, PLATE_Y - 0.02F, pz - post, px + post, top, pz + post, light, 0xFF9A9EAA);
-        float hx = c + r * 0.2F, hz = c + r * 0.12F, hy = PLATE_Y + 0.035F * k;
+        float hx = c + r * 0.72F, hz = c + r * 0.05F, hy = PLATE_Y + 0.035F * k;
         float dx = hx - px, dz = hz - pz, len = Mth.sqrt(dx * dx + dz * dz);
         pose.pushPose();
         pose.translate(px, top - 0.02F * k, pz);

@@ -177,7 +177,7 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
                         int nAxis = face == 0 ? b1 : b2, cAxis = face == 0 ? b2 : b1;
                         float nOff = (face == 0 ? s1 : s2) * (e + 0.503F), cOff = (face == 0 ? s2 : s1) * e;
                         // (dim, all along it)
-                        strip(v, m, axis, nAxis, cAxis, nOff, cOff, -len, len, 0.05F, cr, cg, cb, flowing ? 0.18F : 0.1F);
+                        strip(v, m, axis, nAxis, cAxis, nOff, cOff, -len, len, 0.05F, cr, cg, cb, flowing ? 0.25F : 0.14F);
                         if (!flowing) {
                             continue;
                         }
