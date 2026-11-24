@@ -41,6 +41,38 @@ float fbm(vec2 p) {
     return 0.5 * vnoise(p) + 0.3 * vnoise(p * 2.1 + 3.7) + 0.2 * vnoise(p * 4.3 + 9.1);
 }
 
+float hash13(vec3 p) {
+    return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453);
+}
+
+float vnoise3(vec3 p) {
+    vec3 i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(mix(hash13(i), hash13(i + vec3(1, 0, 0)), f.x), mix(hash13(i + vec3(0, 1, 0)), hash13(i + vec3(1, 1, 0)), f.x), f.y),
+               mix(mix(hash13(i + vec3(0, 0, 1)), hash13(i + vec3(1, 0, 1)), f.x), mix(hash13(i + vec3(0, 1, 1)), hash13(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+}
+
+// the disk's gas at an angle round it and a way across it (u: 0 its inner edge .. 1 its outer): streaks and fine lanes
+// wound round by its turning - faster inside. Turning like that would wind them tighter and tighter for ever, so two
+// copies take turns, each fading in, turning a while and fading out while the other takes over. (Made round the
+// circle, not along the angle: no seam where the angle starts again.)
+float diskGas(float ang, float u, float hr, float rs, float t) {
+    float v = 0.0;
+    for (int i = 0; i < 2; i++) {
+        float ph = fract(t / 9.0 + 0.5 * float(i));
+        float w = 1.0 - abs(2.0 * ph - 1.0);
+        float tl = ph * 9.0 + float(i) * 37.0;
+        float a = ang + tl * 1.4 / pow(hr / rs, 1.5);
+        vec3 p = vec3(cos(a), sin(a), 0.0);
+        float n = vnoise3(p * 2.2 + vec3(0.0, 0.0, u * 5.0 + float(i) * 11.0)) * 0.5
+                + vnoise3(p * 5.0 + vec3(0.0, 0.0, u * 14.0 + float(i) * 5.0)) * 0.3
+                + vnoise3(p * 11.0 + vec3(0.0, 0.0, u * 34.0)) * 0.2;
+        float lanes = 0.65 + 0.35 * sin(u * 95.0 + n * 9.0);
+        v += w * n * lanes;
+    }
+    return v;
+}
+
 vec3 blackbody(float k) { // (0 cool red .. 1 white-hot)
     return mix(mix(vec3(0.6, 0.1, 0.02), vec3(1.0, 0.55, 0.15), smoothstep(0.0, 0.5, k)), vec3(1.0, 0.95, 0.85), smoothstep(0.5, 1.0, k));
 }
@@ -190,17 +222,42 @@ void main() {
                 float u = (hr - rin) / (rout - rin);
                 vec3 e1 = normalize(cross(dn, vec3(0.0, 0.0, 1.0))), e2 = cross(dn, e1);
                 float ang = atan(dot(hq, e2), dot(hq, e1));
-                float spin = t * 1.2 / pow(hr / rs, 1.5); // (faster inside)
-                float streak = fbm(vec2((ang + spin) * 3.0, hr * 9.0)) * 0.7 + 0.3 * fbm(vec2((ang + spin) * 9.0, hr * 30.0));
-                float dens = smoothstep(0.0, 0.08, u) * smoothstep(1.0, 0.55, u) * (0.45 + 0.75 * streak);
-                // the side turning towards you is brighter and hotter
+                float gas = diskGas(ang, u, hr, rs, t);
+                float dens = smoothstep(0.0, 0.025, u) * smoothstep(1.0, 0.6, u) * (0.35 + 1.5 * gas * gas);
+                // the side turning towards you brighter and bluer, the side turning away dimmer and redder
                 vec3 vel = normalize(cross(dn, hq));
-                float dop = 1.0 + 0.75 * dot(vel, -dir);
-                vec3 col = blackbody(clamp((1.0 - u) * 0.95 * dop - 0.05, 0.0, 1.0)) * (1.6 - u) * dop * dop * 1.3 * vColor.rgb / max(max(vColor.r, vColor.g), max(vColor.b, 0.001));
-                float a = clamp(dens * 0.9, 0.0, 1.0);
+                float dop = 1.0 + 0.6 * dot(vel, -dir);
+                float heat = clamp((0.22 + 0.78 * pow(1.0 - u, 0.9)) * (0.55 + 0.5 * dop), 0.0, 1.15);
+                vec3 tint = vColor.rgb / max(max(vColor.r, vColor.g), max(vColor.b, 0.001));
+                vec3 col = blackbody(heat) * (1.1 + 1.6 * pow(1.0 - u, 1.6)) * dop * dop * 1.6 * tint;
+                col += vec3(1.0, 0.95, 0.9) * exp(-u * 40.0) * 1.2 * dop * tint; // (its blazing inner edge)
+                float a = clamp(dens * 0.95, 0.0, 1.0);
                 acc += trans * col * a;
                 // (the dim outer rim and the dim side glow, they don't hide much: no dark smudge beyond the disk)
                 trans *= 1.0 - a * clamp(max(col.r, max(col.g, col.b)), 0.0, 1.0) * (1.0 - smoothstep(0.55, 1.0, u));
+            }
+        }
+        if (big) {
+            vec3 q2 = pn - C;
+            float hgt = dot(q2, dn);
+            float rr = length(q2 - dn * hgt);
+            float fadeR = 1.0 - smoothstep(reach * 0.55, reach * 0.95, length(q2));
+            // the disk's glow, thick: hot gas a little above and below it
+            if (rr > rs * 1.8 && rr < reach * 0.9) {
+                float u = (rr - rs * 1.8) / (reach * 0.9 - rs * 1.8);
+                float th = 0.035 + 0.06 * rr;
+                float haze = exp(-pow(hgt / th, 2.0)) * smoothstep(0.0, 0.08, u) * (1.0 - u) * fadeR;
+                acc += trans * blackbody(clamp((1.0 - u) * 0.8, 0.0, 1.0)) * haze * dt * 2.4
+                     * vColor.rgb / max(max(vColor.r, vColor.g), max(vColor.b, 0.001));
+            }
+            // two thin jets out of its poles, flickering as they stream away
+            float along = abs(hgt);
+            float jw = 0.012 + 0.07 * along;
+            float jet = exp(-pow(rr / jw, 2.0)) * smoothstep(rs * 1.2, rs * 3.0, along) * fadeR * (kind > 1.5 ? vColor.a : 1.0);
+            if (jet > 0.001) {
+                float knots = 0.55 + 0.45 * sin(along * 30.0 - t * 9.0) * vnoise3(vec3(along * 6.0 - t * 3.0, sign(hgt) * 5.0, 0.0));
+                vec3 jc = mix(vec3(0.55, 0.75, 1.0), vColor.rgb, kind > 1.5 ? 0.6 : 0.0);
+                acc += trans * jc * jet * knots * dt * 3.5 / (0.4 + along * 2.0);
             }
         }
         if (!big && r > rs * 1.15 && r < reach * 0.8) { // the small one's swirl of glowing dust
@@ -210,7 +267,7 @@ void main() {
             float ang = atan(dot(q, e2), dot(q, e1));
             float arms = 0.5 + 0.5 * sin(ang * 2.0 + log(rr / rs) * 5.0 - t * 2.5);
             float swirl = fbm(vec2(ang * 2.0 - t * 1.5 / (rr / rs), rr * 30.0));
-            float dens = exp(-pow(hgt / (0.12 * rr + 0.008), 2.0)) * smoothstep(reach * 0.8, reach * 0.35, rr) * smoothstep(rs * 1.15, rs * 2.2, rr)
+            float dens = exp(-pow(hgt / (0.2 * rr + 0.018), 2.0)) * smoothstep(reach * 0.8, reach * 0.35, rr) * smoothstep(rs * 1.15, rs * 2.2, rr)
                        * (0.25 + 0.75 * arms * swirl);
             float a = clamp(dens * dt * 45.0, 0.0, 1.0);
             vec3 col = mix(vColor.rgb, vec3(1.0), smoothstep(rs * 3.5, rs * 1.3, rr) * 0.6) * (1.4 + 2.0 * smoothstep(rs * 3.0, rs * 1.2, rr));
@@ -310,10 +367,11 @@ void main() {
         }
     }
     // the photon ring: a thin bright line where light can just circle the hole
-    float ring = exp(-pow((minR - rs * 1.25) / (rs * 0.09), 2.0)) * (swallowed ? 0.0 : 1.0);
+    float ring = (exp(-pow((minR - rs * 1.2) / (rs * 0.045), 2.0)) + 0.3 * exp(-pow((minR - rs * 1.2) / (rs * 0.2), 2.0))) * (swallowed ? 0.0 : 1.0);
     vec3 ringCol = kind > 1.5 ? mix(vColor.rgb, vec3(1.0), 0.6) : big ? vec3(1.0, 0.85, 0.6) : mix(vColor.rgb, vec3(1.0), 0.5);
     acc += trans * ringCol * ring * (big ? 0.9 : 0.6);
 
+    acc = 1.0 - exp(-acc * 1.15); // (soft on its brightest: what would burn white keeps its colour)
     vec3 col = acc + trans * bg * bgA;
     float alpha = clamp(1.0 - trans * (1.0 - bgA) + (swallowed ? 1.0 : 0.0), 0.0, 1.0);
     if (ItemMode > 0.5 && alpha < 0.02) {

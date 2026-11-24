@@ -322,7 +322,7 @@ vec4 galaxy(vec3 ro, vec3 rd, float t) {
                 // (dust in the arms)
                 c = vec4(mix(vec3(0.35, 0.3, 0.7), C0.rgb, 0.4), dens * 0.25 * (0.4 + 0.6 * full));
                 // the stars: the items held, their own pictures (or, for want of one, a square of its colour)
-                float cells = 7.0 + 4.0 * full;
+                float cells = (7.0 + 4.0 * full) * (big > 0.5 ? 0.62 : 1.0);
                 vec2 rq = vec2(cos(-t * 0.08) * q.x - sin(-t * 0.08) * q.y, sin(-t * 0.08) * q.x + cos(-t * 0.08) * q.y) * cells;
                 vec2 cell = floor(rq), f = fract(rq) - 0.5;
                 float h = hash2(cell);

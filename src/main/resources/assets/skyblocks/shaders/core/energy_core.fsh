@@ -83,31 +83,110 @@ vec2 rayPoint(vec3 ro, vec3 rd, float t0, float t1, vec3 p) {
 }
 
 // ---- 0: the pocket star ----
-vec4 star(vec3 ro, vec3 rd, float t0, float t1, float t) {
-    float R = 0.32 + 0.4 * sqrt(full);
-    vec3 hot = mix(vec3(1.0, 0.42, 0.12), vec3(1.0, 0.97, 0.88), full);
-    vec3 rim = mix(vec3(0.55, 0.05, 0.02), vec3(1.0, 0.38, 0.06), full);
-    vec2 hit = ball(ro, rd, vec3(0.0), R);
-    // the corona round it: how close the ray comes, the flares from where that is
-    vec2 near = rayPoint(ro, rd, t0, t1, vec3(0.0));
-    vec3 dirN = normalize(ro + rd * near.y + vec3(1e-4));
-    float out_ = max(near.x - R, 0.0) / max(1.0 - R, 0.05);
-    float tongues = fbm(rotY(dirN, t * 0.05) * 2.5 + vec3(0.0, t * 0.3, 0.0) - out_ * 1.5);
-    float flare = smoothstep(0.45, 0.85, tongues) * exp(-out_ * (4.0 + 5.0 * (1.0 - tongues))) * (0.5 + full);
-    float glow = exp(-out_ * (6.0 - 2.5 * full)) * (0.4 + 0.5 * full);
-    vec4 corona = vec4(mix(rim, hot, flare * 0.5), clamp(glow + flare, 0.0, 1.0));
-    if (hit.y < hit.x || hit.x > t1 || hit.y < t0) {
-        return corona;
+vec3 hash33(vec3 p) {
+    p = vec3(dot(p, vec3(127.1, 311.7, 74.7)), dot(p, vec3(269.5, 183.3, 246.1)), dot(p, vec3(113.5, 271.9, 124.6)));
+    return fract(sin(p) * 43758.5453);
+}
+
+// cells (granules): the distances to the nearest two cell middles
+vec2 cells(vec3 p) {
+    vec3 i = floor(p), f = fract(p);
+    float d1 = 8.0, d2 = 8.0;
+    for (int z = -1; z <= 1; z++) for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
+        vec3 o = vec3(x, y, z);
+        vec3 r = o + hash33(i + o) - f;
+        float d = dot(r, r);
+        if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) { d2 = d; }
     }
-    vec3 p = ro + rd * max(hit.x, t0);
+    return sqrt(vec2(d1, d2));
+}
+
+// its colour by how hot (0 dull red .. 1 white): ember, orange, yellow, white
+vec3 fire(float k) {
+    k = clamp(k, 0.0, 1.2);
+    vec3 c = mix(vec3(0.45, 0.04, 0.01), vec3(1.0, 0.32, 0.05), smoothstep(0.0, 0.35, k));
+    c = mix(c, vec3(1.0, 0.72, 0.25), smoothstep(0.3, 0.65, k));
+    c = mix(c, vec3(1.0, 0.97, 0.9), smoothstep(0.6, 1.0, k));
+    return c * (0.6 + 0.6 * k);
+}
+
+// a loop of glowing gas rising off the star and back down (a prominence): how close the ray comes, and where along it
+vec2 loopDist(vec3 ro, vec3 rd, float t0, float t1, float fi, float R, float t) {
+    vec3 b = normalize(hash33(vec3(fi * 7.3, 1.0, 3.0)) - 0.5);
+    b = rotY(b, t * 0.05);
+    vec3 side = normalize(cross(b, vec3(0.2, 1.0, 0.1)));
+    float w = 0.28 + 0.12 * hash1(fi * 3.0);
+    float life = fract(t * 0.06 + hash1(fi * 11.0));
+    float H = (0.12 + 0.35 * full) * sin(3.14159 * life) * (0.7 + 0.6 * hash1(fi));
+    vec3 A = normalize(b - side * w), B = normalize(b + side * w);
+    vec2 best = vec2(1e9, 0.0);
+    vec3 prev = A * R;
+    for (int k = 1; k <= 7; k++) {
+        float s = float(k) / 7.0;
+        float wob = 0.03 * sin(s * 9.0 + t * 1.3 + fi);
+        vec3 next = normalize(mix(A, B, s)) * R * (1.0 + H * sin(3.14159 * s) + wob * H);
+        vec2 d = raySeg(ro, rd, t0, t1, prev, next);
+        if (d.x < best.x) best = d;
+        prev = next;
+    }
+    return best;
+}
+
+vec4 star(vec3 ro, vec3 rd, float t0, float t1, float t) {
+    float R = 0.3 + 0.34 * sqrt(full);
+    float heatAll = 0.35 + 0.65 * full; // (an ember empty, white-hot full)
+    vec2 hit = ball(ro, rd, vec3(0.0), R);
+    bool onStar = !(hit.y < hit.x || hit.x > t1 || hit.y < t0);
+    float front = onStar ? max(hit.x, t0) : 1e9;
+
+    // the corona round it: streamers reaching out, by the way the ray passes it
+    vec2 near = rayPoint(ro, rd, t0, min(t1, front), vec3(0.0));
+    vec3 dirN = normalize(ro + rd * near.y + vec3(1e-4));
+    float out_ = max(near.x - R, 0.0) / R;
+    vec3 qd = rotY(dirN, t * 0.03);
+    float streak = fbm(qd * 3.0 + vec3(0.0, t * 0.05, 0.0) - out_ * 0.6);
+    float streamers = pow(smoothstep(0.35, 0.8, streak), 1.5);
+    float glow = exp(-out_ * 3.2) * (0.35 + 0.35 * full) + streamers * exp(-out_ * 1.6) * (0.35 + 0.5 * full);
+    float chromo = onStar ? 0.0 : exp(-pow((near.x - R) / (0.018 + 0.01 * full), 2.0));
+    glow *= smoothstep(0.98, 0.72, near.x); // (none at the box's edge)
+    vec3 col = fire(heatAll * 0.75) * glow + vec3(1.0, 0.45, 0.35) * chromo * (0.7 + 0.5 * full);
+    float a = clamp(glow * 0.9 + chromo, 0.0, 1.0);
+
+    // the prominences: loops of fire standing off its edge (in front of its face, dark threads against it)
+    for (int i = 0; i < 4; i++) {
+        float fi = float(i);
+        if (fi >= 2.0 + full * 2.0) break;
+        vec2 d = loopDist(ro, rd, t0, t1, fi, R, t);
+        float thick = 0.008 + 0.008 * full;
+        float g = exp(-pow(d.x / thick, 2.0)) * 0.8 + exp(-d.x / (thick * 4.0)) * 0.3;
+        if (onStar && d.y > front) continue; // (behind it)
+        vec3 pc = mix(vec3(1.0, 0.22, 0.12), vec3(1.0, 0.55, 0.4), full);
+        col += pc * g * 1.1;
+        a = max(a, clamp(g, 0.0, 1.0));
+    }
+    if (!onStar) {
+        return vec4(min(col, vec3(1.2)), a);
+    }
+
+    // its face: boiling granules (bright cells with dark lanes between), big slow swirls, dark spots with paler
+    // edges, bright patches by its edge, and darker, redder towards its edge
+    vec3 p = ro + rd * front;
     vec3 n = normalize(p);
     vec3 q = rotY(n, t * 0.05);
-    float granules = fbm(q * 7.0 + vec3(0.0, t * 0.3, 0.0));
-    float spots = smoothstep(0.8, 0.88, noise(q * 4.5 + vec3(t * 0.02))) * (1.0 - full * 0.7);
-    float heat = 0.78 + 0.35 * granules - 0.3 * spots;
-    float limb = pow(max(dot(n, -rd), 0.0), 0.45);
-    vec3 col = mix(rim, hot, limb) * heat * (0.75 + 0.45 * limb);
-    return vec4(min(col, vec3(1.0)), 1.0);
+    vec2 v = cells(q * (16.0 + 4.0 * full) + vec3(0.0, t * 0.08, t * 0.05));
+    float gran = smoothstep(0.0, 0.25, v.y - v.x) * (0.6 + 0.4 * noise(q * 30.0));
+    float swirl = fbm(q * 2.5 + vec3(t * 0.04, 0.0, -t * 0.03));
+    float sp = noise(q * 3.2 + vec3(5.0, t * 0.015, 1.0));
+    float pen = smoothstep(0.68, 0.76, sp) * (1.0 - full * 0.6);
+    float umbra = smoothstep(0.78, 0.84, sp) * (1.0 - full * 0.6);
+    float mu = max(dot(n, -rd), 0.0);
+    float fac = smoothstep(0.55, 0.75, fbm(q * 7.0 + 11.0)) * pow(1.0 - mu, 1.5);
+    float k = heatAll * (0.78 + 0.18 * gran + 0.3 * (swirl - 0.5)) - 0.25 * pen - 0.4 * umbra + 0.25 * fac;
+    k *= 0.55 + 0.45 * pow(mu, 0.4);
+    vec3 face = fire(k * 0.92 + 0.04);
+    face += fire(heatAll) * pow(1.0 - mu, 4.0) * 0.35; // (the glow of its edge)
+    // a prominence in front of its face: a darker, redder thread
+    return vec4(min(face + col * 0.25, vec3(1.2)), 1.0);
 }
 
 // ---- 1: the storm ----
@@ -121,36 +200,49 @@ float fbm5(vec3 p) {
     return v;
 }
 
-// the thundercloud: billowing lobes heaped over a flat base, eaten away at the edges by churning noise
-float cloudDensity(vec3 p, float t) {
-    float shape = 0.0;
-    shape = max(shape, 1.0 - length((p - vec3(0.0, 0.42, 0.0)) / vec3(0.62, 0.36, 0.62)));
-    shape = max(shape, 1.0 - length(p - vec3(0.42, 0.40, 0.18)) / 0.36);
-    shape = max(shape, 1.0 - length(p - vec3(-0.38, 0.42, -0.22)) / 0.38);
-    shape = max(shape, 1.0 - length(p - vec3(0.12, 0.62, -0.30)) / 0.34);
-    shape = max(shape, 1.0 - length(p - vec3(-0.22, 0.64, 0.30)) / 0.32);
-    shape = max(shape, 1.0 - length(p - vec3(0.40, 0.52, -0.40)) / 0.28);
-    shape = max(shape, 1.0 - length(p - vec3(-0.45, 0.50, 0.40)) / 0.28);
-    shape *= smoothstep(0.1, 0.24, p.y); // (its flat, dark base)
-    vec3 q = rotY(p, t * 0.04) * 3.4 + vec3(0.0, -t * 0.06, t * 0.04);
-    float churn = fbm5(q);
-    return clamp(shape * 1.8 + (churn - 0.52) * 1.05, 0.0, 1.0);
+// the cloud's shape: billowing lobes heaped over a flat base (0 outside them)
+float cloudShape(vec3 p) {
+    float s = 0.0;
+    s = max(s, 1.0 - length((p - vec3(0.0, 0.40, 0.0)) / vec3(0.66, 0.30, 0.62)));
+    s = max(s, 1.0 - length(p - vec3(0.40, 0.42, 0.16)) / 0.34);
+    s = max(s, 1.0 - length(p - vec3(-0.38, 0.44, -0.20)) / 0.36);
+    s = max(s, 1.0 - length(p - vec3(0.10, 0.64, -0.26)) / 0.32);
+    s = max(s, 1.0 - length(p - vec3(-0.20, 0.66, 0.28)) / 0.30);
+    s = max(s, 1.0 - length(p - vec3(0.36, 0.56, -0.38)) / 0.26);
+    s = max(s, 1.0 - length(p - vec3(-0.42, 0.52, 0.38)) / 0.26);
+    s = max(s, 1.0 - length(p - vec3(0.05, 0.78, 0.05)) / 0.22);
+    return s * smoothstep(0.1, 0.22, p.y);
 }
 
+// the thundercloud: its shape, its edges eaten into curls by churning noise (none outside it: no haze in the box)
+float cloudDensity(vec3 p, float t) {
+    float s = cloudShape(p);
+    if (s <= 0.0) return 0.0;
+    vec3 q = rotY(p, t * 0.04) * 3.6 + vec3(0.0, -t * 0.06, t * 0.04);
+    float churn = fbm5(q);
+    float billow = 1.0 - abs(noise(q * 2.6 + 7.0) * 2.0 - 1.0); // (puffs, cauliflower-like, on its edges)
+    return clamp(s * 2.4 - (1.0 - churn) * 0.95 - (1.0 - billow) * 0.45, 0.0, 1.0);
+}
+
+// a bolt's bend points: wandering down from the cloud's base to the floor
 vec3 boltPoint(float seed, int k) {
-    vec3 start = vec3((hash1(seed) - 0.5) * 0.9, 0.22, (hash1(seed + 5.0) - 0.5) * 0.9);
-    if (k == 0) return start;
-    float fk = float(k);
-    return vec3(start.x + (hash1(seed + fk * 3.3) - 0.5) * 0.22 * fk, 0.22 - fk * 0.2, start.z + (hash1(seed + fk * 7.7) - 0.5) * 0.22 * fk);
+    vec3 at = vec3((hash1(seed) - 0.5) * 0.8, 0.2, (hash1(seed + 5.0) - 0.5) * 0.8);
+    for (int j = 1; j <= 8; j++) {
+        if (j > k) break;
+        float fj = float(j);
+        at += vec3((hash1(seed + fj * 3.3) - 0.5) * 0.2, -0.15, (hash1(seed + fj * 7.7) - 0.5) * 0.2);
+    }
+    return at;
 }
 
 vec4 storm(vec3 ro, vec3 rd, float t0, float t1, float t) {
     // lightning: bolts forking down out of the cloud, each flashing (flickering) for a moment - more of them, more often,
     // the fuller it is - and flickers inside the cloud between them
-    float light = 0.0;
+    float light = 0.0, halo = 0.0;
     float boltT = 1e9;
     vec3 flashAt[5];
     float flashOf[5];
+    float flashAll = 0.0;
     int bolts = 1 + int(full * 4.0 + 0.5);
     float every = mix(3.2, 0.55, full);
     for (int i = 0; i < 5; i++) {
@@ -163,35 +255,41 @@ vec4 storm(vec3 ro, vec3 rd, float t0, float t1, float t) {
         float k = fract(phase);
         float seed = strike * 13.7 + fi * 3.1;
         float flash = k < 0.14 ? (1.0 - k / 0.14) * (0.55 + 0.45 * step(0.45, fract(k * 37.0))) : 0.0;
-        flashAt[i] = boltPoint(seed, 0) + vec3(0.0, 0.18, 0.0);
+        flashAt[i] = boltPoint(seed, 0) + vec3(0.0, 0.2, 0.0);
         if (hash1(seed + 4.0) < 0.35) {
-            // (this one stays in the cloud: a flicker lighting it from inside)
-            flashOf[i] = flash * 1.3;
+            flashOf[i] = flash * 1.3; // (this one stays in the cloud: a flicker lighting it from inside)
+            flashAll += flash * 0.5;
             continue;
         }
         flashOf[i] = flash;
+        flashAll += flash;
         if (flash <= 0.0) continue;
-        int segs = 5 + int(hash1(seed + 2.0) * 2.0);
-        for (int sgi = 0; sgi < 7; sgi++) {
-            if (sgi >= segs) break;
+        for (int sgi = 0; sgi < 8; sgi++) {
             vec2 d = raySeg(ro, rd, t0, t1, boltPoint(seed, sgi), boltPoint(seed, sgi + 1));
-            light += (exp(-d.x * 110.0) * 1.4 + exp(-d.x * 14.0) * 0.45) * flash;
-            if (d.x < 0.015) boltT = min(boltT, d.y);
+            light += exp(-d.x * 140.0) * 1.6 * flash;
+            halo += exp(-d.x * 12.0) * 0.12 * flash;
+            if (d.x < 0.012) boltT = min(boltT, d.y);
         }
-        // a branch off it
-        vec3 fork0 = boltPoint(seed, 2);
-        vec3 fork1 = fork0 + vec3((hash1(seed + 8.0) - 0.5) * 0.5, -0.32, (hash1(seed + 9.0) - 0.5) * 0.5);
-        vec2 fd = raySeg(ro, rd, t0, t1, fork0, fork1);
-        light += (exp(-fd.x * 150.0) + exp(-fd.x * 20.0) * 0.25) * flash * 0.8;
+        // two branches off it, thinner
+        for (int b = 0; b < 2; b++) {
+            float fb = float(b);
+            vec3 f0 = boltPoint(seed, 2 + b * 2);
+            vec3 f1 = f0 + vec3((hash1(seed + 8.0 + fb) - 0.5) * 0.4, -0.2, (hash1(seed + 9.0 + fb) - 0.5) * 0.4);
+            vec3 f2 = f1 + vec3((hash1(seed + 12.0 + fb) - 0.5) * 0.25, -0.16, (hash1(seed + 13.0 + fb) - 0.5) * 0.25);
+            vec2 d1 = raySeg(ro, rd, t0, t1, f0, f1), d2 = raySeg(ro, rd, t0, t1, f1, f2);
+            light += (exp(-d1.x * 200.0) + exp(-d2.x * 240.0) * 0.7) * flash * 0.9;
+        }
     }
-    // the cloud, marched front to back: lit from above (darker where more cloud lies over it), its base dark and heavy,
-    // its tops silvery; the lightning lights it from inside; under it, sheets of rain falling
+    // the cloud, marched front to back, lit from above (a few steps towards the light: darker where more cloud lies
+    // over it, its edges catching the light), its base dark and heavy; the lightning lights it from inside; under it,
+    // rain falling, lit by the flashes
+    vec3 L = normalize(vec3(0.35, 1.0, 0.2));
     vec3 col = vec3(0.0);
     float a = 0.0;
-    const int STEPS = 44;
+    const int STEPS = 48;
     float dt = (t1 - t0) / float(STEPS);
     float jitter = hash3(vec3(gl_FragCoord.xy, 0.0));
-    float gloom = 1.0 - 0.45 * full;
+    float gloom = 1.0 - 0.55 * full;
     for (int i = 0; i < STEPS; i++) {
         float tt = t0 + (float(i) + jitter) * dt;
         if (tt > boltT) break;
@@ -201,44 +299,52 @@ vec4 storm(vec3 ro, vec3 rd, float t0, float t1, float t) {
         if (p.y > 0.08) {
             dens = cloudDensity(p, t);
             if (dens > 0.002) {
-                float over = cloudDensity(p + vec3(0.04, 0.14, 0.02), t);
-                float sun = exp(-over * 3.2);
-                vec3 base = vec3(0.16, 0.17, 0.23), top = vec3(0.86, 0.88, 0.96);
-                c = mix(base, top, sun) * gloom * (0.55 + 0.45 * smoothstep(0.15, 0.7, p.y));
+                float over = cloudDensity(p + L * 0.06, t) + cloudDensity(p + L * 0.16, t) * 0.8;
+                float sun = exp(-over * 0.8);
+                float powder = 0.55 + 0.45 * (1.0 - exp(-dens * 5.0));
+                vec3 base = vec3(0.13, 0.14, 0.2), top = vec3(1.0, 1.0, 1.04);
+                float h = smoothstep(0.15, 0.8, p.y);
+                c = mix(base, top, sun * powder) * gloom * (0.8 + 0.2 * sun) * (0.55 + 0.45 * h) + vec3(0.06, 0.07, 0.1) * (1.0 - h);
                 for (int k = 0; k < 5; k++) {
                     float f = flashOf[k];
                     if (f > 0.0) {
-                        c += vec3(0.75, 0.72, 1.0) * f * exp(-length(p - flashAt[k]) * 4.0) * 1.6;
+                        c += vec3(0.7, 0.72, 1.0) * f * exp(-length(p - flashAt[k]) * 3.5) * 1.8;
                     }
                 }
             }
         } else if (p.y > -1.0) {
-            // the rain: streaks falling (thin in x and z, long in y), under the cloud's footprint, fading as it nears the floor
-            float under = smoothstep(0.85, 0.35, length(p.xz)) * smoothstep(-1.0, -0.55, p.y);
+            // the rain: streaks falling (thin across, long down), under the cloud, slanting a little, fading near the floor
+            float under = smoothstep(0.8, 0.3, length(p.xz + vec2(0.0, 0.0))) * smoothstep(-1.0, -0.6, p.y);
             if (under <= 0.0) continue; // (none falls outside its footprint)
-            float n = noise(vec3(p.x * 34.0, p.y * 2.2 + t * 7.5, p.z * 34.0));
-            dens = smoothstep(0.74, 0.9, n) * under * (0.25 + 0.45 * full) * 0.6;
-            c = vec3(0.55, 0.62, 0.78) * (0.6 + 0.4 * gloom);
+            vec3 rp = p + vec3(0.06 * p.y, 0.0, 0.0);
+            float n = noise(vec3(rp.x * 40.0, rp.y * 2.0 + t * 8.0, rp.z * 40.0));
+            float sheet = 0.6 + 0.6 * noise(vec3(p.x * 3.0 - t * 0.3, p.y, p.z * 3.0));
+            dens = smoothstep(0.76, 0.92, n) * under * sheet * (0.35 + 0.5 * full) * 0.9;
+            c = vec3(0.55, 0.62, 0.78) * (0.6 + 0.4 * gloom) + vec3(0.6, 0.6, 0.9) * min(flashAll, 1.0);
         }
         if (dens <= 0.002) continue;
-        float da = 1.0 - exp(-dens * dt * 10.0);
+        float da = 1.0 - exp(-dens * dt * 12.0);
         col += (1.0 - a) * da * c;
         a += (1.0 - a) * da;
         if (a > 0.985) break;
     }
-    vec3 bolt = vec3(0.9, 0.88, 1.0) * light;
-    return vec4(col + bolt * (1.0 - a * 0.6), clamp(max(a, min(light, 1.0)), 0.0, 1.0));
+    vec3 bolt = vec3(0.92, 0.9, 1.0) * light + vec3(0.55, 0.55, 1.0) * halo;
+    return vec4(col + bolt * (1.0 - a * 0.5), clamp(max(a, min(light + halo, 1.0)), 0.0, 1.0));
 }
 
 // ---- 2: the plasma globe ----
-vec3 tendrilPoint(float fi, float s, float t) {
+// a tendril's bend points: from the little glass ball in the middle out to the big one, wandering, crackling
+vec3 tendrilPoint(float fi, float s, float t, float R) {
     vec3 base = normalize(vec3(hash1(fi * 3.7) - 0.5, hash1(fi * 5.3) - 0.5, hash1(fi * 9.1) - 0.5) + vec3(0.0, 0.001, 0.0));
-    base = normalize(base + 0.45 * vec3(sin(t * 0.5 + fi), sin(t * 0.43 + fi * 2.0), cos(t * 0.47 + fi * 3.0)));
+    base = normalize(base + 0.55 * vec3(sin(t * 0.5 + fi), sin(t * 0.43 + fi * 2.0), cos(t * 0.47 + fi * 3.0)));
     vec3 side = normalize(cross(base, vec3(0.3, 1.0, 0.2)));
     vec3 up = cross(base, side);
-    float bend = sin(s * 5.0 + t * 1.7 + fi * 2.3) * 0.25 * s;
-    float bend2 = cos(s * 4.0 + t * 1.3 + fi) * 0.18 * s;
-    return normalize(base + side * bend + up * bend2) * s * 0.86;
+    float bend = sin(s * 5.0 + t * 1.7 + fi * 2.3) * 0.22 * s;
+    float bend2 = cos(s * 4.0 + t * 1.3 + fi) * 0.16 * s;
+    float tick = floor(t * 14.0);
+    float crackle = s * (1.0 - s) * 0.16;
+    vec3 jit = (vec3(hash1(fi + s * 17.0 + tick), hash1(fi * 2.0 + s * 23.0 + tick), hash1(fi * 3.0 + s * 29.0 + tick)) - 0.5) * crackle;
+    return normalize(base + side * bend + up * bend2 + jit) * mix(0.13, R * 0.985, s);
 }
 
 vec4 plasma(vec3 ro, vec3 rd, float t0, float t1, float t) {
@@ -248,48 +354,84 @@ vec4 plasma(vec3 ro, vec3 rd, float t0, float t1, float t) {
         return vec4(0.0);
     }
     float a0 = max(hit.x, t0), a1 = min(hit.y, t1);
-    float tendrils = 0.0, tips = 0.0;
+    // the little ball in the middle (they reach out from it): hides what's behind it
+    vec2 eh = ball(ro, rd, vec3(0.0), 0.13);
+    bool onCore = eh.y >= eh.x && eh.x > a0;
+    if (onCore) a1 = min(a1, eh.x);
+    vec3 c = mix(vec3(0.85, 0.3, 1.0), vec3(0.3, 0.55, 1.0), full);
+    vec3 tip = mix(vec3(1.0, 0.45, 0.85), vec3(0.55, 0.9, 1.0), full);
+    vec3 col = vec3(0.0);
+    float lit = 0.0;
     int count = 3 + int(full * 9.0 + 0.5);
     for (int i = 0; i < 12; i++) {
         if (i >= count) break;
         float fi = float(i);
-        float flicker = 0.75 + 0.25 * sin(t * 13.0 + fi * 5.0);
-        vec3 prev = vec3(0.0);
-        for (int k = 1; k <= 5; k++) {
-            vec3 next = tendrilPoint(fi, float(k) / 5.0, t);
+        float flicker = 0.7 + 0.3 * sin(t * 13.0 + fi * 5.0);
+        vec3 prev = tendrilPoint(fi, 0.0, t, R);
+        for (int k = 1; k <= 7; k++) {
+            float s = float(k) / 7.0;
+            vec3 next = tendrilPoint(fi, s, t, R);
             vec2 d = raySeg(ro, rd, a0, a1, prev, next);
-            tendrils += (exp(-d.x * 160.0) + exp(-d.x * 30.0) * 0.25) * flicker;
+            float w = (0.006 + 0.004 * (1.0 - s));
+            float core = exp(-pow(d.x / w, 2.0));
+            float glow = exp(-d.x / (w * 6.0)) * 0.35 + exp(-d.x * 9.0) * 0.04;
+            col += (vec3(1.0, 0.95, 1.0) * core + mix(c, tip, s) * glow) * flicker;
+            lit += (core + glow) * flicker;
             prev = next;
         }
-        tips += exp(-rayPoint(ro, rd, a0, a1, prev).x * 45.0) * flicker;
+        // where it touches the glass: a bright spot spreading on it
+        vec2 dt = rayPoint(ro, rd, t0, t1, prev);
+        float spot = exp(-dt.x / 0.035) * 0.7 + exp(-pow(dt.x / 0.012, 2.0)) * 0.8;
+        col += tip * spot * flicker;
+        lit += spot * flicker;
     }
-    vec3 c = mix(vec3(0.85, 0.35, 1.0), vec3(0.35, 0.6, 1.0), full);
-    float core = exp(-rayPoint(ro, rd, a0, a1, vec3(0.0)).x * 18.0) * 1.6;
+    // the glowing gas filling it, brighter towards the middle
+    float mid = rayPoint(ro, rd, a0, a1, vec3(0.0)).x;
+    float gas = (a1 - a0) * 0.06 + exp(-mid * 5.0) * 0.35;
+    col += c * gas;
+    // the little ball: lit from inside, a white heart
+    if (onCore) {
+        vec3 n = normalize(ro + rd * eh.x);
+        float f = pow(1.0 - max(dot(n, -rd), 0.0), 2.0);
+        col += mix(vec3(1.0, 0.95, 1.0), c, f) * (1.2 - f * 0.6);
+        lit += 1.0;
+    }
+    // the glass: its edge, a window's shine on it, faintly tinted
     vec3 n = normalize(ro + rd * hit.x);
     float fres = pow(1.0 - abs(dot(n, rd)), 3.0);
-    vec3 col = c * tendrils * 1.3 + vec3(1.0, 0.9, 1.0) * (core + tips * 0.9) + vec3(0.7, 0.8, 1.0) * fres * 0.8 + c * 0.05;
-    float a = clamp(max(max(tendrils, core + tips), fres * 0.9) + 0.14, 0.0, 1.0);
+    vec3 refl = reflect(rd, n);
+    float shine = pow(max(dot(refl, normalize(vec3(-0.5, 0.75, 0.4))), 0.0), 90.0) * 1.2
+                + pow(max(dot(refl, normalize(vec3(0.6, 0.35, -0.7))), 0.0), 30.0) * 0.25;
+    col += vec3(0.75, 0.82, 1.0) * (fres * 0.7 + shine);
+    float a = clamp(max(lit, fres * 0.9 + shine) + 0.12 + gas * 0.5, 0.0, 1.0);
     return vec4(col, a);
 }
 
 // ---- 3: the atom ----
 vec4 atom(vec3 ro, vec3 rd, float t0, float t1, float t) {
-    // the nucleus: little red and blue balls, the nearest one hit
+    // the nucleus: red and blue balls packed together, shaded, shining, glowing round
     float nucT = 1e9;
     vec3 nucCol = vec3(0.0);
-    for (int i = 0; i < 9; i++) {
+    int balls = 6 + int(full * 8.0);
+    for (int i = 0; i < 14; i++) {
+        if (i >= balls) break;
         float fi = float(i);
-        vec3 c = (vec3(hash1(fi), hash1(fi + 9.0), hash1(fi + 17.0)) - 0.5) * 0.2
-               + 0.008 * vec3(sin(t * 7.0 + fi), cos(t * 6.0 + fi * 2.0), sin(t * 5.0 + fi * 3.0));
-        vec2 h = ball(ro, rd, c, 0.075);
+        vec3 dir = normalize(hash33(vec3(fi, 3.0, 7.0)) - 0.5);
+        float rr = 0.055 + 0.04 * sqrt(fi / 14.0);
+        vec3 c = dir * (i == 0 ? 0.0 : rr) + 0.006 * vec3(sin(t * 7.0 + fi), cos(t * 6.0 + fi * 2.0), sin(t * 5.0 + fi * 3.0));
+        vec2 h = ball(ro, rd, c, 0.062);
         if (h.y >= h.x && h.x > t0 && h.x < nucT) {
             nucT = h.x;
             vec3 n = normalize(ro + rd * h.x - c);
-            float lit = 0.35 + 0.75 * max(dot(n, normalize(vec3(0.4, 0.8, 0.3))), 0.0);
-            nucCol = (mod(fi, 2.0) < 0.5 ? vec3(1.0, 0.35, 0.3) : vec3(0.4, 0.55, 1.0)) * lit;
+            vec3 Ld = normalize(vec3(0.4, 0.8, 0.3));
+            float dif = max(dot(n, Ld), 0.0);
+            float spec = pow(max(dot(reflect(rd, n), Ld), 0.0), 24.0);
+            float rim = pow(1.0 - max(dot(n, -rd), 0.0), 3.0);
+            vec3 base = mod(fi, 2.0) < 0.5 ? vec3(1.0, 0.3, 0.25) : vec3(0.35, 0.5, 1.0);
+            nucCol = base * (0.25 + 0.8 * dif) + vec3(1.0) * spec * 0.7 + vec3(0.6, 0.85, 1.0) * rim * 0.5;
         }
     }
-    float glow = 0.0, electrons = 0.0;
+    float glow = 0.0, electrons = 0.0, haze = 0.0;
     float shells = 1.0 + floor(full * 3.999);
     for (int k = 0; k < 4; k++) {
         float fk = float(k);
@@ -300,29 +442,40 @@ vec4 atom(vec3 ro, vec3 rd, float t0, float t1, float t) {
         vec3 nrm = normalize(vec3(sin(b) * cos(a), cos(b), sin(b) * sin(a)));
         vec3 u = normalize(cross(nrm, vec3(0.0, 0.0, 1.0) + vec3(0.001)));
         vec3 v = cross(nrm, u);
-        float r = 0.45 + 0.15 * fk;
-        // where the ray crosses its plane: how far from the ring
+        float r = 0.42 + 0.16 * fk;
+        float speed = 1.6 + 0.5 * fk;
+        // where the ray crosses its plane: how far from the ring - and how far behind an electron (its trail)
         float denom = dot(rd, nrm);
         if (abs(denom) > 1e-4) {
             float tp = -dot(ro, nrm) / denom;
             if (tp > t0 && tp < t1 && tp < nucT) {
                 vec3 p = ro + rd * tp;
                 float d = abs(length(p) - r);
-                glow += exp(-pow(d / 0.012, 2.0)) * 0.6 + exp(-pow(d / 0.05, 2.0)) * 0.12;
+                float ang = atan(dot(p, v), dot(p, u));
+                float trail = 0.0;
+                for (int j = 0; j < 2; j++) {
+                    float ph = t * speed + float(j) * 3.14159 + fk;
+                    float behind = mod(ph - ang, TAU);
+                    trail += exp(-behind * 2.2);
+                }
+                float line = exp(-pow(d / 0.008, 2.0));
+                glow += line * (0.35 + 1.4 * trail) + exp(-pow(d / 0.04, 2.0)) * (0.08 + 0.35 * trail);
+                haze += exp(-pow(d / 0.14, 2.0)) * 0.05;
             }
         }
         for (int j = 0; j < 2; j++) {
-            float ph = t * (1.6 + 0.5 * fk) + float(j) * 3.14159 + fk;
+            float ph = t * speed + float(j) * 3.14159 + fk;
             vec3 at = (u * cos(ph) + v * sin(ph)) * r;
             vec2 d = rayPoint(ro, rd, t0, min(t1, nucT), at);
-            electrons += exp(-pow(d.x / 0.035, 2.0)) * 1.8 + exp(-d.x / 0.08) * 0.3;
+            electrons += exp(-pow(d.x / 0.026, 2.0)) * 2.0 + exp(-d.x / 0.05) * 0.35;
         }
     }
-    float halo = exp(-rayPoint(ro, rd, t0, min(t1, nucT), vec3(0.0)).x / 0.16) * (0.3 + 0.4 * full);
-    vec3 col = vec3(0.45, 0.8, 1.0) * glow + vec3(0.9, 0.97, 1.0) * electrons + vec3(0.8, 0.85, 1.0) * halo;
-    float alpha = clamp(max(max(glow, electrons), halo), 0.0, 1.0);
+    float pulse = 0.85 + 0.15 * sin(t * 3.0);
+    float halo = exp(-rayPoint(ro, rd, t0, min(t1, nucT), vec3(0.0)).x / 0.17) * (0.3 + 0.45 * full) * pulse;
+    vec3 col = vec3(0.4, 0.78, 1.0) * glow + vec3(0.92, 0.98, 1.0) * electrons + vec3(1.0, 0.75, 0.9) * halo + vec3(0.3, 0.6, 1.0) * haze;
+    float alpha = clamp(max(max(glow, electrons), halo + haze), 0.0, 1.0);
     if (nucT < 1e8) {
-        col = col + nucCol * (1.0 - alpha * 0.5);
+        col = col * 0.6 + nucCol;
         alpha = 1.0;
     }
     return vec4(col, alpha);

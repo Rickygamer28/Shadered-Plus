@@ -57,6 +57,33 @@ float noise(vec2 p) {
     return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
 }
 
+float hash3(vec3 p) {
+    return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453);
+}
+
+float noise3(vec3 p) {
+    vec3 i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(mix(hash3(i), hash3(i + vec3(1, 0, 0)), f.x), mix(hash3(i + vec3(0, 1, 0)), hash3(i + vec3(1, 1, 0)), f.x), f.y),
+               mix(mix(hash3(i + vec3(0, 0, 1)), hash3(i + vec3(1, 0, 1)), f.x), mix(hash3(i + vec3(0, 1, 1)), hash3(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+}
+
+// what rides on the flowing surface, at a way round it (swirl) and a way in (inward), deep (0 its rim .. 1 its throat):
+// x thin threads of foam drawn out along the spiral, y glints of light twinkling on it. (Made round the circle, not
+// along the angle: no seam where the way round starts again.)
+vec2 surface(float swirl, float inward, float deep) {
+    float sw = swirl + 2.5 * inward; // (wound a little tighter than the arms: drawn out along the flow)
+    vec3 c = vec3(cos(sw), sin(sw), 0.0);
+    float n = noise3(c * 6.0 + vec3(0.0, 0.0, inward * 1.6 - Time * 0.8));
+    float n2 = noise3(c * 13.0 + vec3(5.0, 0.0, inward * 3.0 - Time * 1.1));
+    float ridge = 1.0 - abs(2.0 * mix(n, n2, 0.35) - 1.0);
+    float threads = pow(ridge, 12.0) * 0.85 * (1.0 - smoothstep(0.25, 0.85, deep)) * smoothstep(0.35, 0.65, noise3(c * 2.0 + vec3(0.0, 0.0, inward - Time * 0.3)));
+    vec3 c2 = vec3(cos(swirl), sin(swirl), 0.0);
+    float gl = noise3(c2 * 34.0 + vec3(0.0, Time * 3.0, inward * 45.0 - Time * 5.0));
+    float glints = pow(smoothstep(0.8, 1.0, gl), 3.0) * (1.0 - smoothstep(0.4, 0.9, deep));
+    return vec2(threads, glints);
+}
+
 // one band's fluid at this point of its picture (wrapped inside its rectangle), lit - its mipmap level chosen from how
 // fast the unwrapped picture moves across the screen (dx, dy), not the wrapped one (no line of blurred texture where it
 // wraps)
@@ -124,11 +151,21 @@ void alone() {
     // lighter arms winding down it, and dark in its throat
     col *= 0.88 + 0.22 * max(0.0, sin(3.0 * swirl));
     col *= mix(1.0, 0.2, smoothstep(0.82, 1.0, s));
-    // foam where it pours over its rim, white, churning
-    float churn = noise(vec2(cos(swirl), sin(swirl)) * 6.0 + vec2(Time * 1.7, -Time * 1.3));
-    float foam = smoothstep(0.09, 0.0, abs(s)) * smoothstep(0.3, 0.7, churn + 0.25);
-    col = mix(col, foamColour(), foam * 0.85);
-    fragColor = vec4(col * vertexColor.rgb, vertexColor.a);
+    // a glowing fluid glows in its throat, where it's squeezed together
+    float glowing = tintOf(band).a;
+    vec3 throatGlow = fluid(band, local * 0.5, dFdx(local), dFdy(local)) * glowing * smoothstep(0.7, 1.0, s) * 1.2;
+    // foam where it pours over its rim, white, churning, broken into bubbles; threads of it drawn down the spiral;
+    // glints of light on it
+    vec3 c2 = vec3(cos(swirl), sin(swirl), 0.0);
+    float churn = noise3(c2 * 6.0 + vec3(Time * 1.7, -Time * 1.3, s * 4.0));
+    float bubbles = noise3(c2 * 26.0 + vec3(0.0, Time * 2.0, s * 40.0));
+    float foam = smoothstep(0.1, 0.0, abs(s)) * smoothstep(0.3, 0.7, churn + 0.25) * (0.75 + 0.25 * bubbles)
+               + smoothstep(0.18, 0.06, s) * smoothstep(0.78, 0.9, bubbles) * 0.8;
+    vec2 sf = surface(swirl, inward, s);
+    col = mix(col, foamColour(), clamp(foam * 0.85 + sf.x * 0.55, 0.0, 1.0));
+    col = col * vertexColor.rgb + throatGlow;
+    col += foamColour() * sf.y * 0.7;
+    fragColor = vec4(col, vertexColor.a);
 }
 
 // In a tank: the pool's surface, the funnel, the spout and its crown of foam, all one picture. UV0: x round it (0..1),
@@ -183,7 +220,11 @@ void tank() {
     float churn = noise(vec2(cos(swirl), sin(swirl)) * 7.0 + vec2(xi * 2.0 + Time * 1.7, -Time * 1.3));
     float foam = crown ? smoothstep(0.13, 0.02, sRaw - 2.0) * smoothstep(0.1, 0.5, churn + 0.35)
             : smoothstep(0.09, 0.0, abs(s)) * smoothstep(0.3, 0.7, churn + 0.25);
-    col = mix(col * shade, foamColour(), foam * 0.85);
+    vec2 sf = surface(swirl, xi * 0.6, clamp(s, 0.0, 1.0));
+    float bubbles = noise3(vec3(cos(swirl), sin(swirl), 0.0) * 26.0 + vec3(0.0, Time * 2.0, xi * 20.0));
+    foam *= 0.75 + 0.25 * bubbles;
+    col = mix(col * shade, foamColour(), clamp(foam * 0.85 + sf.x * 0.45 * (crown ? 0.0 : 1.0), 0.0, 1.0));
+    col += foamColour() * sf.y * 0.6 * (crown ? 0.0 : 1.0);
     fragColor = vec4(col, vertexColor.a);
 }
 
