@@ -89,10 +89,10 @@ public final class MachineRenderers {
             VertexConsumer metal = buffers.getBuffer(RenderType.entityCutoutNoCull(METAL));
             PoseStack.Pose mp = pose.last();
             float cw = 0.09F;
-            box(metal, mp, 0.5F - cw, 0.0F, 1.0F, 0.5F + cw, 0.07F, r - 0.05F, light);
-            box(metal, mp, 0.5F - cw, 0.0F, 1.0F - r + 0.05F, 0.5F + cw, 0.07F, 0.0F, light);
-            box(metal, mp, 1.0F, 0.0F, 0.5F - cw, r - 0.05F, 0.07F, 0.5F + cw, light);
-            box(metal, mp, 1.0F - r + 0.05F, 0.0F, 0.5F - cw, 0.0F, 0.07F, 0.5F + cw, light);
+            Weather.box(metal, mp, 0.5F - cw, 0.0F, 1.0F, 0.5F + cw, 0.07F, r - 0.05F, light);
+            Weather.box(metal, mp, 0.5F - cw, 0.0F, 1.0F - r + 0.05F, 0.5F + cw, 0.07F, 0.0F, light);
+            Weather.box(metal, mp, 1.0F, 0.0F, 0.5F - cw, r - 0.05F, 0.07F, 0.5F + cw, light);
+            Weather.box(metal, mp, 1.0F - r + 0.05F, 0.0F, 0.5F - cw, 0.0F, 0.07F, 0.5F + cw, light);
             Vector3f[] cam = camera();
             VertexConsumer v = glows(buffers);
             Matrix4f m = pose.last().pose();
@@ -544,11 +544,11 @@ public final class MachineRenderers {
          */
         private static void dressing(StarForgeBlockEntity be, PoseStack pose, MultiBufferSource buffers, int r, float full) {
             float floor = -r + 9.0F / 16.0F + 0.5F; // (just over the bottom panels)
-            VertexConsumer metal = buffers.getBuffer(RenderType.entityCutoutNoCull(METAL));
+            VertexConsumer metal = buffers.getBuffer(RenderType.entityCutoutNoCull(Accelerator.METAL));
             PoseStack.Pose p = pose.last();
             int lt = net.minecraft.client.renderer.LightTexture.FULL_BRIGHT;
-            box(metal, p, 0.12F, floor, 0.12F, 0.88F, floor + 0.22F, 0.88F, lt);
-            box(metal, p, 0.04F, floor + 0.22F, 0.04F, 0.96F, floor + 0.4F, 0.96F, lt);
+            Weather.box(metal, p, 0.12F, floor, 0.12F, 0.88F, floor + 0.22F, 0.88F, lt);
+            Weather.box(metal, p, 0.04F, floor + 0.22F, 0.04F, 0.96F, floor + 0.4F, 0.96F, lt);
             float[] c = TINT[Mth.clamp(be.colour(), 0, 3)];
             boolean lit = be.lit();
             float k = lit ? 0.6F + 0.4F * full : 0.12F;
