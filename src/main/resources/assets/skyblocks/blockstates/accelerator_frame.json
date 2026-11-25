@@ -1,10 +1,16 @@
 {
   "variants": {
-    "formed=false": {
+    "formed=false,hidden=false": {
       "model": "skyblocks:block/accelerator_frame"
     },
-    "formed=true": {
+    "formed=true,hidden=false": {
       "model": "skyblocks:block/accelerator_frame_formed"
+    },
+    "formed=false,hidden=true": {
+      "model": "skyblocks:block/accelerator_frame"
+    },
+    "formed=true,hidden=true": {
+      "model": "skyblocks:block/accelerator_frame_hidden"
     }
   }
 }

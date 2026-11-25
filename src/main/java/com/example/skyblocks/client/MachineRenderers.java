@@ -83,6 +83,7 @@ public final class MachineRenderers {
             float s = Mth.clamp(be.clientSpeed, 0.0F, 1.0F);
             float per = Mth.TWO_PI * r;
             be.clientTrack = (be.clientTrack + dt * (1.0F + 8.0F * s + 50.0F * s * s)) % per;
+            tube(be, pose, buffers, r, s);
             Vector3f[] cam = camera();
             VertexConsumer v = glows(buffers);
             Matrix4f m = pose.last().pose();
@@ -111,6 +112,88 @@ public final class MachineRenderers {
                         }
                     }
                 }
+            }
+        }
+
+        private static final ResourceLocation METAL = ResourceLocation.fromNamespaceAndPath(com.example.skyblocks.SkyBlocksMod.MOD_ID,
+                "textures/block/accelerator_frame_edge.png");
+        private static final float BEAM_Y = 0.55F, TUBE = 0.34F;
+
+        /**
+         * The ring, formed: one round tube (its frames' own models hidden - but for the four ports, due north, east, south
+         * and west): a metal channel open along its top, the beams racing round in it, bands round it every so often,
+         * posts holding it up, a glowing strip along its floor (brighter as the beams speed up).
+         */
+        private static void tube(ParticleAcceleratorBlockEntity be, PoseStack pose, MultiBufferSource buffers, int r, float s) {
+            var level = be.getLevel();
+            if (level == null) {
+                return;
+            }
+            VertexConsumer v = buffers.getBuffer(RenderType.entityCutoutNoCull(METAL));
+            PoseStack.Pose p = pose.last();
+            int segs = Math.max(48, 16 * r);
+            int bandEvery = Math.max(2, segs / (4 * r));
+            net.minecraft.core.BlockPos base = be.getBlockPos();
+            int[] light = new int[segs + 1];
+            for (int i = 0; i <= segs; i++) {
+                float a = i * Mth.TWO_PI / segs;
+                light[i] = LevelRenderer.getLightColor(level, base.offset(Math.round(Mth.cos(a) * r), 0, Math.round(Mth.sin(a) * r)));
+            }
+            // the channel: round from its inner top edge, down under, up to its outer top edge (open along the top)
+            int steps = 10;
+            float phiFrom = Mth.PI * 0.62F, phiTo = Mth.PI * 2.38F;
+            for (int i = 0; i < segs; i++) {
+                float a0 = i * Mth.TWO_PI / segs, a1 = (i + 1) * Mth.TWO_PI / segs;
+                for (int j = 0; j < steps; j++) {
+                    float f0 = Mth.lerp(j / (float) steps, phiFrom, phiTo), f1 = Mth.lerp((j + 1) / (float) steps, phiFrom, phiTo);
+                    ring(v, p, r, TUBE, a0, a1, f0, f1, light[i], light[i + 1], 0xFFC8D4DC, j / (float) steps, (j + 1) / (float) steps);
+                }
+                // a band round it, now and then: the whole way round, a little proud
+                if (i % bandEvery == 0) {
+                    float w = 0.06F / r;
+                    for (int j = 0; j < 12; j++) {
+                        float f0 = j * Mth.TWO_PI / 12, f1 = (j + 1) * Mth.TWO_PI / 12;
+                        ring(v, p, r, TUBE + 0.04F, a0 - w, a0 + w, f0, f1, light[i], light[i], 0xFF8A98A8, 0, 1);
+                    }
+                    // and every other one, a post down to the ground
+                    if ((i / bandEvery) % 2 == 0) {
+                        float cx = 0.5F + Mth.cos(a0) * r, cz = 0.5F + Mth.sin(a0) * r, k = 0.07F;
+                        Weather.box(v, p, cx - k, 0.0F, cz - k, cx + k, BEAM_Y - TUBE + 0.02F, cz + k, light[i]);
+                    }
+                }
+            }
+            // the glowing strip along its floor
+            VertexConsumer g = glows(buffers);
+            Matrix4f m = p.pose();
+            float bright = 0.25F + 0.75F * s, y = BEAM_Y - TUBE + 0.05F, w = 0.1F;
+            for (int i = 0; i < segs; i++) {
+                float a0 = i * Mth.TWO_PI / segs, a1 = (i + 1) * Mth.TWO_PI / segs;
+                float[][] q = {{0.5F + Mth.cos(a0) * (r - w), y, 0.5F + Mth.sin(a0) * (r - w)}, {0.5F + Mth.cos(a1) * (r - w), y, 0.5F + Mth.sin(a1) * (r - w)},
+                        {0.5F + Mth.cos(a1) * (r + w), y, 0.5F + Mth.sin(a1) * (r + w)}, {0.5F + Mth.cos(a0) * (r + w), y, 0.5F + Mth.sin(a0) * (r + w)}};
+                float[][] uv = {{0.5F, 0.0F}, {0.5F, 0.0F}, {0.5F, 1.0F}, {0.5F, 1.0F}};
+                for (int k = 0; k < 4; k++) {
+                    g.addVertex(m, q[k][0], q[k][1], q[k][2]).setColor(0.25F * bright, 0.85F * bright, 0.95F * bright, 1.0F).setUv(uv[k][0], uv[k][1])
+                            .setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(0, 1, 0);
+                }
+            }
+        }
+
+        /** A piece of a torus round the ring: between angles a0, a1 round the ring, f0, f1 round the tube (0 outward, up, in, down). */
+        private static void ring(VertexConsumer v, PoseStack.Pose p, int r, float tube, float a0, float a1, float f0, float f1, int l0, int l1, int argb,
+                                 float v0, float v1) {
+            float[][] pts = new float[4][];
+            float[][] nrm = new float[4][];
+            float[] as = {a0, a1, a1, a0}, fs = {f0, f0, f1, f1};
+            for (int k = 0; k < 4; k++) {
+                float ca = Mth.cos(as[k]), sa = Mth.sin(as[k]), cf = Mth.cos(fs[k]), sf = Mth.sin(fs[k]);
+                nrm[k] = new float[] {cf * ca, sf, cf * sa};
+                pts[k] = new float[] {0.5F + ca * (r + tube * cf), BEAM_Y + tube * sf, 0.5F + sa * (r + tube * cf)};
+            }
+            float[] us = {0, 1, 1, 0}, vs = {v0, v0, v1, v1};
+            int[] ls = {l0, l1, l1, l0};
+            for (int k = 0; k < 4; k++) {
+                v.addVertex(p, pts[k][0], pts[k][1], pts[k][2]).setColor(argb).setUv(us[k], vs[k]).setOverlay(OverlayTexture.NO_OVERLAY).setLight(ls[k])
+                        .setNormal(p, nrm[k][0], nrm[k][1], nrm[k][2]);
             }
         }
 
@@ -252,7 +335,7 @@ public final class MachineRenderers {
             box(v, p, -0.06F, y1 - 0.06F, -0.06F, 0.06F, y1 + 0.06F, 0.06F, light);
         }
 
-        private static void box(VertexConsumer v, PoseStack.Pose p, float x0, float y0, float z0, float x1, float y1, float z1, int light) {
+        static void box(VertexConsumer v, PoseStack.Pose p, float x0, float y0, float z0, float x1, float y1, float z1, int light) {
             float[][][] faces = {
                     {{x0, y1, z0}, {x0, y1, z1}, {x1, y1, z1}, {x1, y1, z0}, {0, 1, 0}},
                     {{x0, y0, z0}, {x1, y0, z0}, {x1, y0, z1}, {x0, y0, z1}, {0, -1, 0}},

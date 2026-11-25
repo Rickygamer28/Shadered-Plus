@@ -1,9 +1,15 @@
 {
   "variants": {
-    "formed=false": {
+    "formed=false,hidden=false": {
       "model": "skyblocks:block/weather_mast"
     },
-    "formed=true": {
+    "formed=true,hidden=false": {
+      "model": "skyblocks:block/weather_mast_formed"
+    },
+    "formed=false,hidden=true": {
+      "model": "skyblocks:block/weather_mast"
+    },
+    "formed=true,hidden=true": {
       "model": "skyblocks:block/weather_mast_formed"
     }
   }

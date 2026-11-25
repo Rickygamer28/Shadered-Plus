@@ -28,6 +28,8 @@ import net.minecraft.world.phys.BlockHitResult;
  */
 public class MachineFrameBlock extends BaseEntityBlock {
     public static final BooleanProperty FORMED = BooleanProperty.create("formed");
+    /** Formed into something drawn whole (the particle accelerator's round tube): its own model hidden. */
+    public static final BooleanProperty HIDDEN = BooleanProperty.create("hidden");
 
     /** Which machine it's a frame of. */
     public enum Kind {
@@ -39,7 +41,7 @@ public class MachineFrameBlock extends BaseEntityBlock {
     public MachineFrameBlock(Kind kind, Properties properties) {
         super(properties);
         this.kind = kind;
-        registerDefaultState(stateDefinition.any().setValue(FORMED, false));
+        registerDefaultState(stateDefinition.any().setValue(FORMED, false).setValue(HIDDEN, false));
     }
 
     public Kind kind() {
@@ -53,7 +55,7 @@ public class MachineFrameBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FORMED);
+        builder.add(FORMED, HIDDEN);
     }
 
     /** Put down: the machines near it look at their frames again. */

@@ -185,6 +185,18 @@ public class ParticleAcceleratorBlockEntity extends MachineBlockEntity {
         return null;
     }
 
+    /** Formed, the ring's drawn as one round tube: its frames hidden, but for the four due north, east, south and west of it -
+     * left as they are, for pipes and cables. */
+    @Override
+    protected boolean hiddenWhenFormed(BlockPos frame) {
+        return frame.getX() != worldPosition.getX() && frame.getZ() != worldPosition.getZ();
+    }
+
+    /** Whether a frame's one of its four ports (due north, east, south or west). */
+    public boolean isPort(BlockPos frame) {
+        return frame.getX() == worldPosition.getX() || frame.getZ() == worldPosition.getZ();
+    }
+
     @Override
     protected void formedChanged() {
         speed = 0;

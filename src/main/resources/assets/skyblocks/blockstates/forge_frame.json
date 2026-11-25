@@ -1,9 +1,15 @@
 {
   "variants": {
-    "formed=false": {
+    "formed=false,hidden=false": {
       "model": "skyblocks:block/forge_frame"
     },
-    "formed=true": {
+    "formed=true,hidden=false": {
+      "model": "skyblocks:block/forge_frame_formed"
+    },
+    "formed=false,hidden=true": {
+      "model": "skyblocks:block/forge_frame"
+    },
+    "formed=true,hidden=true": {
       "model": "skyblocks:block/forge_frame_formed"
     }
   }

@@ -242,9 +242,15 @@ public abstract class MachineBlockEntity extends BlockEntity {
         } else {
             return;
         }
-        if (s.getValue(MachineFrameBlock.FORMED) != formed) {
-            level.setBlock(p, s.setValue(MachineFrameBlock.FORMED, formed), Block.UPDATE_CLIENTS);
+        BlockState next = s.setValue(MachineFrameBlock.FORMED, formed).setValue(MachineFrameBlock.HIDDEN, formed && hiddenWhenFormed(p));
+        if (next != s) {
+            level.setBlock(p, next, Block.UPDATE_CLIENTS);
         }
+    }
+
+    /** Whether a frame of its, formed, hides its own model (it's drawn as part of the whole: the accelerator's tube). */
+    protected boolean hiddenWhenFormed(BlockPos frame) {
+        return false;
     }
 
     public void unform() {
