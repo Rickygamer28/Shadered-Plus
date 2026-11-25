@@ -63,20 +63,10 @@ public final class MachineRenderers {
     public static class Accelerator implements BlockEntityRenderer<ParticleAcceleratorBlockEntity> {
         public Accelerator(BlockEntityRendererProvider.Context context) {}
 
-        /** Where a point {@code p} blocks round the ring is (its blocks' middles, at the beam's height). */
+        /** Where a point {@code p} blocks round the ring is (round its circle, through its blocks, at the beam's height). */
         private static Vector3f at(float p, int r) {
-            float per = 8.0F * r;
-            p = ((p % per) + per) % per;
-            int side = Math.min(3, (int) (p / (2 * r)));
-            float off = p - side * 2 * r;
-            float x, z;
-            switch (side) {
-                case 0 -> { x = -r + off; z = -r; }
-                case 1 -> { x = r; z = -r + off; }
-                case 2 -> { x = r - off; z = r; }
-                default -> { x = -r; z = r - off; }
-            }
-            return new Vector3f(0.5F + x, 0.55F, 0.5F + z);
+            float a = p / r;
+            return new Vector3f(0.5F + Mth.cos(a) * r, 0.55F, 0.5F + Mth.sin(a) * r);
         }
 
         @Override
@@ -91,7 +81,7 @@ public final class MachineRenderers {
             be.clientAt = now;
             be.clientSpeed += (be.speed() - be.clientSpeed) * Math.min(1.0F, dt * 4.0F);
             float s = Mth.clamp(be.clientSpeed, 0.0F, 1.0F);
-            float per = 8.0F * r;
+            float per = Mth.TWO_PI * r;
             be.clientTrack = (be.clientTrack + dt * (1.0F + 8.0F * s + 50.0F * s * s)) % per;
             Vector3f[] cam = camera();
             VertexConsumer v = glows(buffers);

@@ -72,9 +72,9 @@ public final class Structures {
 
     private static Structure accelerator(int r) {
         Map<BlockPos, BlockState> map = new LinkedHashMap<>();
-        for (int x = -r; x <= r; x++) {
-            for (int z = -r; z <= r; z++) {
-                if (Math.max(Math.abs(x), Math.abs(z)) == r) {
+        for (int x = -r - 1; x <= r + 1; x++) {
+            for (int z = -r - 1; z <= r + 1; z++) {
+                if (ParticleAcceleratorBlockEntity.onRing(x, z, r)) {
                     map.put(new BlockPos(x + r, 0, z + r), ModBlocks.ACCELERATOR_FRAME.get().defaultBlockState());
                 }
             }

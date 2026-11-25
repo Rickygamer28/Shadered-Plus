@@ -18,7 +18,7 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.items.IItemHandler;
 
 /**
- * The particle accelerator: a ring of accelerator frames (7, 11 or 15 across, flat, round its collider) - give it energy
+ * The particle accelerator: a round ring of accelerator frames (7, 11 or 15 across, flat, round its collider) - give it energy
  * and something to smash, and two beams race round the ring, faster and faster; at full speed they collide in the middle,
  * the item's gone, and what comes of it lands in its output: rare things, rarer the bigger the ring. Run short of energy
  * with the beams going fast and it misfires: a flash, and the item's lost.
@@ -151,7 +151,13 @@ public class ParticleAcceleratorBlockEntity extends MachineBlockEntity {
         return size == 0 ? 0 : (int) (DRIVE[size] * (0.35F + speed));
     }
 
-    /** The ring: every block flat round it at its size's half-width (the largest that's all accelerator frames). */
+    /** Whether a block (dx, dz from the middle) is on the round ring of radius r: its middle within half a block of the circle. */
+    public static boolean onRing(int dx, int dz, int r) {
+        double d = Math.sqrt(dx * dx + dz * dz);
+        return d >= r - 0.5 && d < r + 0.5;
+    }
+
+    /** The ring: a circle of blocks flat round it, its radius by its size (the largest that's all accelerator frames). */
     @Nullable
     @Override
     protected Found detect() {
@@ -159,9 +165,9 @@ public class ParticleAcceleratorBlockEntity extends MachineBlockEntity {
             int r = RADIUS[s];
             List<BlockPos> ring = new ArrayList<>();
             boolean ok = true;
-            for (int dx = -r; dx <= r && ok; dx++) {
-                for (int dz = -r; dz <= r; dz++) {
-                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) {
+            for (int dx = -r - 1; dx <= r + 1 && ok; dx++) {
+                for (int dz = -r - 1; dz <= r + 1; dz++) {
+                    if (!onRing(dx, dz, r)) {
                         continue;
                     }
                     BlockPos p = worldPosition.offset(dx, 0, dz);
