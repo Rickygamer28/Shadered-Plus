@@ -1004,7 +1004,7 @@
   "screen.skyblocks.power_core.empty_in": "Empty in %s",
   "screen.skyblocks.power_core.steady": "Holding steady",
   "screen.skyblocks.power_core.look": "Look",
-  "screen.skyblocks.power_core.hint": "Energy links: take from or give to blocks up to 5 away.",
+  "screen.skyblocks.power_core.hint": "Links: take from or give to blocks nearby",
   "screen.skyblocks.power_core.skin.star": "Star",
   "screen.skyblocks.power_core.skin.storm": "Storm",
   "screen.skyblocks.power_core.skin.plasma": "Plasma",
