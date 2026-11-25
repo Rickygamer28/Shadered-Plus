@@ -165,8 +165,8 @@ final class PlainTank {
                 }
             }
         }
-        // ---- looked at: each layer's name and amount, floating beside it (last: text ends the buffers above)
-        labels(be, poseStack, buffers, layers, gasLayers, lo, hi, r, dt);
+        // ---- a label plate for each layer on its glass (last: text ends the buffers above)
+        labels(be, poseStack, buffers, layers, gasLayers, lo, hi, r, light);
     }
 
     /** The top layer's surface: its own picture, moving gently. */
@@ -354,51 +354,66 @@ final class PlainTank {
         }
     }
 
-    /** Looked at (the crosshair on any block of it): each layer's name and amount fading in beside it, on the side towards you. */
+    /**
+     * A label plate for each layer on the glass of each of its four sides: a small dark plate in a brass rim, stuck to the
+     * glass at the layer's height, a stripe of its colour, its name and amount printed on it.
+     */
     private static void labels(WhirlpoolBlockEntity be, PoseStack poseStack, MultiBufferSource buffers, List<Layer> layers, List<Layer> gases, float lo,
-                               float hi, int r, float dt) {
+                               float hi, int r, int light) {
         Minecraft mc = Minecraft.getInstance();
-        BlockPos bp = be.getBlockPos();
-        boolean looking = mc.hitResult instanceof BlockHitResult bh && Math.abs(bh.getBlockPos().getX() - bp.getX()) <= r
-                && Math.abs(bh.getBlockPos().getY() - bp.getY()) <= r && Math.abs(bh.getBlockPos().getZ() - bp.getZ()) <= r;
-        be.labelFade = Mth.clamp(be.labelFade + (looking ? dt * 4.0F : -dt * 3.0F), 0.0F, 1.0F);
-        if (be.labelFade < 0.05F) {
-            return;
-        }
-        Vec3 cam = mc.gameRenderer.getMainCamera().getPosition().subtract(bp.getX() + 0.5, bp.getY(), bp.getZ() + 0.5);
-        // (the side towards you, just outside its frame)
-        boolean alongX = Math.abs(cam.x) > Math.abs(cam.z);
-        float out = r + 0.75F;
-        float fx = alongX ? 0.5F + (float) Math.signum(cam.x) * out : 0.5F, fz = alongX ? 0.5F : 0.5F + (float) Math.signum(cam.z) * out;
         List<Layer> all = new ArrayList<>(layers);
         all.addAll(gases);
         all.sort(Comparator.comparingDouble(l -> l.y0));
         Font font = mc.font;
+        float scale = 0.0105F;
+        // (spaced so they don't overlap, kept inside the tank's height)
+        float[] ys = new float[all.size()];
         float last = -999;
-        int alpha = (int) (be.labelFade * 255);
-        for (Layer layer : all) {
-            float y = Math.max((layer.y0 + layer.y1) / 2.0F, last + 0.32F);
-            last = y;
-            Component text = Component.literal(layer.look.stack().getHoverName().getString() + "  ")
-                    .append(Component.literal(WhirlpoolBlock.buckets(layer.look.amount())).withStyle(s -> s.withColor(0xAAB4C8)));
-            poseStack.pushPose();
-            poseStack.translate(fx, y, fz);
-            poseStack.mulPose(mc.getEntityRenderDispatcher().cameraOrientation());
-            poseStack.scale(0.02F, -0.02F, 0.02F);
-            int c = layer.look.mean();
-            float wdt = font.width(text);
-            Matrix4f m = poseStack.last().pose();
-            font.drawInBatch(text, -wdt / 2.0F, -4, (alpha << 24) | 0xE6EDF7, false, m, buffers, Font.DisplayMode.POLYGON_OFFSET,
-                    ((int) (be.labelFade * 0xCC) << 24) | 0x101420, LightTexture.FULL_BRIGHT);
-            // (a bar of its colour at its left)
-            VertexConsumer bar = buffers.getBuffer(RenderType.textBackground());
-            float x0 = -wdt / 2.0F - 4, x1 = x0 + 2;
-            int col = (alpha << 24) | (c & 0xFFFFFF);
-            bar.addVertex(m, x0, -5, 0).setColor(col).setLight(LightTexture.FULL_BRIGHT);
-            bar.addVertex(m, x0, 5, 0).setColor(col).setLight(LightTexture.FULL_BRIGHT);
-            bar.addVertex(m, x1, 5, 0).setColor(col).setLight(LightTexture.FULL_BRIGHT);
-            bar.addVertex(m, x1, -5, 0).setColor(col).setLight(LightTexture.FULL_BRIGHT);
-            poseStack.popPose();
+        for (int i = 0; i < all.size(); i++) {
+            ys[i] = Math.max((all.get(i).y0 + all.get(i).y1) / 2.0F, last + 0.16F);
+            last = ys[i];
         }
+        float over = last - (hi - 0.1F);
+        if (over > 0) {
+            for (int i = 0; i < ys.length; i++) {
+                ys[i] -= over;
+            }
+        }
+        for (int side = 0; side < 4; side++) {
+            for (int i = 0; i < all.size(); i++) {
+                Layer layer = all.get(i);
+                String name = layer.look.stack().getHoverName().getString(), amount = WhirlpoolBlock.buckets(layer.look.amount());
+                int tw = font.width(name) + 6 + font.width(amount);
+                float pw = tw + 12, ph = 12;
+                poseStack.pushPose();
+                // (out on the glass of that side, its middle)
+                poseStack.translate(0.5F, ys[i], 0.5F);
+                poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(side * 90.0F));
+                poseStack.translate(0.0F, 0.0F, r + 0.5F + 0.012F);
+                poseStack.scale(scale, -scale, scale);
+                Matrix4f m = poseStack.last().pose();
+                VertexConsumer bg = buffers.getBuffer(RenderType.textBackground());
+                float x0 = -pw / 2.0F, x1 = pw / 2.0F, y0 = -ph / 2.0F, y1 = ph / 2.0F;
+                rect(bg, m, x0 - 1, y0 - 1, x1 + 1, y1 + 1, -0.4F, BRASS_DARK, light);
+                rect(bg, m, x0, y0, x1, y1, -0.3F, BRASS, light);
+                rect(bg, m, x0 + 1, y0 + 1, x1 - 1, y1 - 1, -0.2F, 0xFF161A24, light);
+                rect(bg, m, x0 + 1, y0 + 1, x0 + 3, y1 - 1, -0.1F, 0xFF000000 | layer.look.mean(), light);
+                font.drawInBatch(name, x0 + 6, -4, 0xFFE6EDF7, false, m, buffers, Font.DisplayMode.POLYGON_OFFSET, 0, light);
+                font.drawInBatch(amount, x1 - 4 - font.width(amount), -4, 0xFFAAB4C8, false, m, buffers, Font.DisplayMode.POLYGON_OFFSET, 0, light);
+                poseStack.popPose();
+            }
+        }
+    }
+
+    /** A flat coloured rectangle (a label's plate) at depth z (more negative: nearer the glass), seen from both sides. */
+    private static void rect(VertexConsumer v, Matrix4f m, float x0, float y0, float x1, float y1, float z, int argb, int light) {
+        v.addVertex(m, x0, y0, z).setColor(argb).setLight(light);
+        v.addVertex(m, x0, y1, z).setColor(argb).setLight(light);
+        v.addVertex(m, x1, y1, z).setColor(argb).setLight(light);
+        v.addVertex(m, x1, y0, z).setColor(argb).setLight(light);
+        v.addVertex(m, x1, y0, z).setColor(argb).setLight(light);
+        v.addVertex(m, x1, y1, z).setColor(argb).setLight(light);
+        v.addVertex(m, x0, y1, z).setColor(argb).setLight(light);
+        v.addVertex(m, x0, y0, z).setColor(argb).setLight(light);
     }
 }
