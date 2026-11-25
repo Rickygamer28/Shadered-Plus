@@ -401,12 +401,8 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
     private static void tankInside(WhirlpoolBlockEntity be, List<Look> looks, PoseStack poseStack, MultiBufferSource buffers, int light, float t) {
         int r = (be.tank() - 1) / 2;
         float inset = 0.01F;
-        if (be.still() && layersSkin(be, looks, poseStack, buffers, r - 0.51F)) {
-            return;
-        }
         if (be.still()) {
-            layers(be, looks, poseStack, buffers.getBuffer(Types.POOL), light, t,
-                    -(r - 1) + inset, -(r - 1) + inset, r - inset, r - inset, false);
+            stillLayers(be, looks, poseStack.last(), buffers.getBuffer(Types.POOL), light, t, -(r - 1) + inset, r - inset);
             return;
         }
         float lo = -(r - 1) + inset, hi = r - inset;
@@ -552,6 +548,102 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
             column(v, pose, l, b, hi, a, hi, lo, surface - 0.035F, detail, lit);
             column(v, pose, l, lo, b, lo, a, lo, surface - 0.035F, detail, lit);
             column(v, pose, l, hi, a, hi, b, lo, surface - 0.035F, detail, lit);
+        }
+    }
+
+    /**
+     * The plain tank: what it holds settled in clean layers - each liquid its own colour, deepening towards the bottom,
+     * its picture faint over it and a bright line where it meets the next; the top one's surface its own picture, gently
+     * moving; gases hanging from the roof, thin and see-through; the floor dim under it all.
+     */
+    private static void stillLayers(WhirlpoolBlockEntity be, List<Look> looks, PoseStack.Pose pose, VertexConsumer v, int light, float t, float lo, float hi) {
+        if (looks.isEmpty()) {
+            return;
+        }
+        TextureAtlasSprite white = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(WHITE);
+        float filled = (hi - lo) * Math.min(1.0F, Math.max(be.shownFull, 0.0F));
+        List<Look> liquids = new ArrayList<>(), gases = new ArrayList<>();
+        for (Look l : looks) {
+            (l.gas ? gases : liquids).add(l);
+        }
+        liquids.sort((a, b) -> Integer.compare(b.density, a.density));
+        gases.sort((a, b) -> Integer.compare(a.density, b.density));
+        float[][] sides = {{lo, lo, hi, lo}, {hi, hi, lo, hi}, {lo, hi, lo, lo}, {hi, lo, hi, hi}};
+        float since = (System.currentTimeMillis() - be.rippleAt) / 1000.0F;
+        float ripple = (0.012F + 0.05F * Math.max(0.0F, 1.0F - since / 2.5F)) * Math.min(1.0F, (hi - lo) / 3.0F);
+        if (!liquids.isEmpty()) {
+            Look bottom = liquids.get(0);
+            int lit = bottom.glows ? LightTexture.FULL_BRIGHT : light, floor = tone(bottom.mean, 0.42F, 0.85F);
+            vertex(v, pose, lo, lo + 0.003F, lo, white, 0.5F, 0.5F, floor, lit);
+            vertex(v, pose, hi, lo + 0.003F, lo, white, 0.5F, 0.5F, floor, lit);
+            vertex(v, pose, hi, lo + 0.003F, hi, white, 0.5F, 0.5F, floor, lit);
+            vertex(v, pose, lo, lo + 0.003F, hi, white, 0.5F, 0.5F, floor, lit);
+        }
+        float y = lo;
+        for (int i = 0; i < liquids.size(); i++) {
+            Look l = liquids.get(i);
+            float top = y + filled * l.share;
+            if (top - y < 0.004F) {
+                continue;
+            }
+            int lit = l.glows ? LightTexture.FULL_BRIGHT : light;
+            float depthK = 1.0F - 0.25F * (1.0F - (y - lo) / Math.max(0.01F, hi - lo)); // (deeper: darker)
+            int foot = tone(l.mean, 0.6F * depthK, 0.86F), head = tone(l.mean, 0.95F, 0.72F), line = tone(l.mean, 1.6F, 0.9F);
+            int detail = (l.argb & 0x00FFFFFF) | (54 << 24);
+            boolean topmost = i == liquids.size() - 1;
+            float edge = Math.min(0.035F, (top - y) * 0.4F);
+            for (float[] s : sides) {
+                flat(v, pose, white, s[0], s[1], s[2], s[3], y, top - edge, foot, head, lit);
+                flat(v, pose, white, s[0], s[1], s[2], s[3], top - edge, top, line, line, lit);
+            }
+            for (float a = lo; a < hi - 0.001F; a = Math.min(hi, (float) Math.floor(a) + 1)) {
+                float b = Math.min(hi, (float) Math.floor(a) + 1);
+                column(v, pose, l, a, lo, b, lo, y, top - edge, detail, lit);
+                column(v, pose, l, b, hi, a, hi, y, top - edge, detail, lit);
+                column(v, pose, l, lo, b, lo, a, y, top - edge, detail, lit);
+                column(v, pose, l, hi, a, hi, b, y, top - edge, detail, lit);
+            }
+            if (topmost) { // its surface: its own picture, moving gently
+                int argb = (l.argb & 0x00FFFFFF) | (0xD8 << 24);
+                for (float a = lo; a < hi - 0.001F; a = Math.min(hi, (float) Math.floor(a * 2) / 2 + 0.5F)) {
+                    float b = Math.min(hi, (float) Math.floor(a * 2) / 2 + 0.5F);
+                    for (float c = lo; c < hi - 0.001F; c = Math.min(hi, (float) Math.floor(c * 2) / 2 + 0.5F)) {
+                        float d = Math.min(hi, (float) Math.floor(c * 2) / 2 + 0.5F);
+                        float u0 = frac(a), u1 = u0 + (b - a), v0 = frac(c), v1 = v0 + (d - c);
+                        vertex(v, pose, a, top + wave(a, c, t, ripple), c, l.sprite, u0, v0, argb, lit);
+                        vertex(v, pose, a, top + wave(a, d, t, ripple), d, l.sprite, u0, v1, argb, lit);
+                        vertex(v, pose, b, top + wave(b, d, t, ripple), d, l.sprite, u1, v1, argb, lit);
+                        vertex(v, pose, b, top + wave(b, c, t, ripple), c, l.sprite, u1, v0, argb, lit);
+                    }
+                }
+            }
+            y = top;
+        }
+        // gases from the roof down: thin, thinner further from the roof
+        float roof = hi;
+        for (Look l : gases) {
+            float under = roof - filled * l.share;
+            if (roof - under < 0.004F) {
+                continue;
+            }
+            int lit = l.glows ? LightTexture.FULL_BRIGHT : light;
+            int up = tone(l.mean, 1.0F, 0.45F), down = tone(l.mean, 1.1F, 0.16F), detail = (l.argb & 0x00FFFFFF) | (30 << 24);
+            for (float[] s : sides) {
+                flat(v, pose, white, s[0], s[1], s[2], s[3], under, roof, down, up, lit);
+            }
+            for (float a = lo; a < hi - 0.001F; a = Math.min(hi, (float) Math.floor(a) + 1)) {
+                float b = Math.min(hi, (float) Math.floor(a) + 1);
+                column(v, pose, l, a, lo, b, lo, under, roof, detail, lit);
+                column(v, pose, l, b, hi, a, hi, under, roof, detail, lit);
+                column(v, pose, l, lo, b, lo, a, under, roof, detail, lit);
+                column(v, pose, l, hi, a, hi, b, under, roof, detail, lit);
+            }
+            int base = tone(l.mean, 1.1F, 0.22F);
+            vertex(v, pose, lo, under, lo, white, 0.5F, 0.5F, base, lit);
+            vertex(v, pose, hi, under, lo, white, 0.5F, 0.5F, base, lit);
+            vertex(v, pose, hi, under, hi, white, 0.5F, 0.5F, base, lit);
+            vertex(v, pose, lo, under, hi, white, 0.5F, 0.5F, base, lit);
+            roof = under;
         }
     }
 

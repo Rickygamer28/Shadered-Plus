@@ -26,7 +26,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * is gone from then on), drain mode, and the void filter (fluids and fluid tags; click one to take it out).
  */
 public class WhirlpoolScreen extends Screen {
-    private static final int W = 250, H = 238, ROW = 20, ROWS = 5, ACCENT = 0xFF3FA0F0;
+    private static final int W = 262, H = 238, ROW = 20, ROWS = 5, ACCENT = 0xFF3FA0F0;
     private final BlockPos pos;
     private int left, top, scroll;
     private EditBox tagBox;
@@ -98,7 +98,7 @@ public class WhirlpoolScreen extends Screen {
         if (be == null) {
             return;
         }
-        MachineUi.header(g, font, title, be.tank() > 0 ? Component.translatable("screen.skyblocks.whirlpool.tank", be.tank()) : null, left, top, W, ACCENT);
+        MachineUi.header(g, font, title, be.tank() > 0 ? Component.translatable("screen.skyblocks.whirlpool.tank_status", be.tank()) : null, left, top, W, ACCENT);
         // how full: kinds held out of the most it can hold
         g.drawString(font, Component.translatable("screen.skyblocks.whirlpool.each", WhirlpoolBlock.buckets(be.capacity())), left + 8, top + 25, MachineUi.TEXT, false);
         Component kinds = Component.translatable("screen.skyblocks.whirlpool.kinds", be.entries().size() + " / " + be.maxKinds());
@@ -133,7 +133,8 @@ public class WhirlpoolScreen extends Screen {
             String page = (scroll + 1) + "-" + Math.min(list.size(), scroll + ROWS) + " / " + list.size();
             g.drawString(font, page, left + W - 8 - font.width(page), y0 + ROWS * ROW + 1, MachineUi.FAINT, false);
         }
-        g.drawString(font, MachineUi.fit(font, Component.translatable("screen.skyblocks.whirlpool.hint").getString(), W - 70), left + 8, y0 + ROWS * ROW + 1,
+        g.drawString(font, MachineUi.fit(font, Component.translatable("screen.skyblocks.whirlpool.hint").getString(), list.size() > ROWS ? W - 70 : W - 16), left + 8,
+                y0 + ROWS * ROW + 1,
                 MachineUi.FAINT, false);
         // the void filter: fluids and tags, click to take out
         chipBoxes.clear();
