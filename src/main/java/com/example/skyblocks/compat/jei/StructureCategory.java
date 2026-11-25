@@ -63,7 +63,9 @@ public class StructureCategory implements IRecipeCategory<Structures.Structure> 
     @Override
     public void draw(Structures.Structure s, IRecipeSlotsView slots, GuiGraphics g, double mouseX, double mouseY) {
         Font font = Minecraft.getInstance().font;
-        g.drawString(font, Component.translatable("guide.skyblocks.structure." + s.id() + ".name").append(" (" + s.size() + "x" + s.size() + "x" + s.size() + ")"),
+        String dims = s.id().equals("particle_accelerator") ? s.size() + " across" : s.id().equals("weather_machine") ? (s.size() - 1) + " masts"
+                : s.size() + "x" + s.size() + "x" + s.size();
+        g.drawString(font, Component.translatable("guide.skyblocks.structure." + s.id() + ".name").append(" (" + dims + ")"),
                 0, 0, 0xFF404040, false);
         g.fill(0, 11, VIEW, HEIGHT, 0x30000000);
         float yaw = (System.currentTimeMillis() % 20000L) / 20000.0F * 360.0F;

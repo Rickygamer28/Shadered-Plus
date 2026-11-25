@@ -375,6 +375,21 @@ public class ParticleAcceleratorBlockEntity extends MachineBlockEntity {
         return new ItemStack(Items.GLOWSTONE_DUST);
     }
 
+    /** Every drop at a size with its chance (0..1), for JEI (a music disc: any of them, shown as one). */
+    public static List<java.util.Map.Entry<ItemStack, Float>> chances(int size) {
+        List<Drop> table = TABLES.get(size);
+        int total = 0;
+        for (Drop d : table) {
+            total += d.weight;
+        }
+        List<java.util.Map.Entry<ItemStack, Float>> out = new ArrayList<>();
+        for (Drop d : table) {
+            ItemStack s = new ItemStack(d.item == Items.AIR ? Items.MUSIC_DISC_CAT : d.item, d.max);
+            out.add(java.util.Map.entry(s, d.weight / (float) total));
+        }
+        return out;
+    }
+
     /** Every drop at a size, for the guide and its screen's list (a music disc for any). */
     public static List<ItemStack> drops(int size) {
         List<ItemStack> out = new ArrayList<>();

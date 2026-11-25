@@ -25,11 +25,13 @@ public class ShaderedJeiPlugin implements IModPlugin {
     @Override
     public void registerCategories(IRecipeCategoryRegistration registration) {
         registration.addRecipeCategories(new StructureCategory(registration.getJeiHelpers().getGuiHelper()));
+        registration.addRecipeCategories(new AcceleratorCategory(registration.getJeiHelpers().getGuiHelper()));
     }
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
         registration.addRecipes(STRUCTURES, Structures.everySize());
+        registration.addRecipes(AcceleratorCategory.TYPE, AcceleratorCategory.pages());
     }
 
     @Override
@@ -47,5 +49,7 @@ public class ShaderedJeiPlugin implements IModPlugin {
     @Override
     public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
         registration.addRecipeCatalyst(new ItemStack(ModItems.GUIDE_BOOK.get()), STRUCTURES);
+        registration.addRecipeCatalyst(new ItemStack(ModItems.PARTICLE_ACCELERATOR.get()), AcceleratorCategory.TYPE);
+        registration.addRecipeCatalyst(new ItemStack(ModItems.ACCELERATOR_FRAME.get()), AcceleratorCategory.TYPE);
     }
 }

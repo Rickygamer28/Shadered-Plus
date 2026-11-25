@@ -1446,5 +1446,12 @@
   "screen.skyblocks.particle_accelerator.recipe": "Makes: %s",
   "message.skyblocks.accelerator.built": "Built a %s ring (%s frames placed)",
   "message.skyblocks.accelerator.need": "Not enough accelerator frames: need %s more, have %s",
-  "message.skyblocks.accelerator.blocked": "Something's in the ring's way at %s %s %s"
+  "message.skyblocks.accelerator.blocked": "Something's in the ring's way at %s %s %s",
+  "jei.skyblocks.accelerator.smash": "Smash in the particle accelerator",
+  "jei.skyblocks.accelerator.ring": "Ring: %s or bigger",
+  "jei.skyblocks.accelerator.random": "Anything else, in a %s ring:",
+  "jei.skyblocks.accelerator.rolls_one": "One of these each collision",
+  "jei.skyblocks.accelerator.rolls_some": "One (sometimes two) each collision",
+  "jei.skyblocks.accelerator.rolls_two": "Two of these each collision",
+  "jei.skyblocks.accelerator.chance": "%s%% chance"
 }
