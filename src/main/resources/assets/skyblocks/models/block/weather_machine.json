@@ -1,7 +1,7 @@
 {
  "parent": "minecraft:block/block",
  "textures": {
-  "stone": "minecraft:block/smooth_quartz",
+  "stone": "minecraft:block/quartz_block_bottom",
   "pillar": "minecraft:block/quartz_pillar",
   "rim": "minecraft:block/quartz_bricks",
   "glow": "minecraft:block/pearlescent_froglight_side",
