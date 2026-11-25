@@ -28,7 +28,7 @@ public class SingularityMenu extends AbstractContainerMenu {
             () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create((id, inv, buf) -> new SingularityMenu(id, inv, buf.readBlockPos())));
 
     /** Where your inventory starts in the menu (pixels; client/SingularityScreen draws round it). */
-    public static final int INVENTORY_Y = 140;
+    public static final int INVENTORY_Y = 148;
 
     public final BlockPos pos;
     private final Player player;

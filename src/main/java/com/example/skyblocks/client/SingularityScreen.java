@@ -25,14 +25,14 @@ import org.lwjgl.glfw.GLFW;
  * tags, one after another, into the tag box). Vacuum: pull in dropped items from round it.
  */
 public class SingularityScreen extends AbstractContainerScreen<SingularityMenu> {
-    private static final int COLS = 9, ROWS = 5, GRID_X = 8, GRID_Y = 20, CELL = 18;
+    private static final int COLS = 9, ROWS = 5, GRID_X = 8, GRID_Y = 24, CELL = 18, ACCENT = 0xFF9A6BFF, RED = 0xFFFF6A7A;
     private EditBox search;
     private Button vacuumButton, destroyButton, addTagButton, skinButton;
     private EditBox tagBox;
     /** The destroy filter's page (instead of what it holds). */
     private boolean filterView;
     private int filterScroll, tagScroll, tagCycle;
-    private static final int FILTER_Y = GRID_Y + 10, FILTER_ROWS = 2, TAG_Y = FILTER_Y + FILTER_ROWS * CELL + 14, TAG_LIST_Y = TAG_Y + 15;
+    private static final int FILTER_Y = GRID_Y + 10, FILTER_ROWS = 2, TAG_Y = FILTER_Y + FILTER_ROWS * CELL + 11, TAG_LIST_Y = TAG_Y + 15;
     /** Where each tag's chip was drawn (x, y, w; relative to the panel), for clicking. */
     private final List<int[]> tagChips = new ArrayList<>();
     private int scroll;
@@ -44,30 +44,33 @@ public class SingularityScreen extends AbstractContainerScreen<SingularityMenu> 
     public SingularityScreen(SingularityMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
         imageWidth = 194;
-        imageHeight = 222;
-        inventoryLabelY = SingularityMenu.INVENTORY_Y - 11;
+        imageHeight = SingularityMenu.INVENTORY_Y + 82;
+        inventoryLabelY = SingularityMenu.INVENTORY_Y - 10;
     }
 
     @Override
     protected void init() {
         super.init();
-        search = new EditBox(font, leftPos + 96, topPos + 5, 88, 11, Component.translatable("gui.skyblocks.singularity.search"));
-        search.setHint(Component.translatable("gui.skyblocks.singularity.search").withStyle(ChatFormatting.DARK_GRAY));
-        search.setBordered(true);
+        search = new EditBox(font, leftPos + 100, topPos + 5, 82, 10, Component.translatable("gui.skyblocks.singularity.search"));
+        search.setHint(Component.translatable("gui.skyblocks.singularity.search").withStyle(st -> st.withColor(MachineUi.FAINT & 0xFFFFFF)));
+        search.setBordered(false);
+        search.setTextColor(MachineUi.TEXT);
         search.setMaxLength(50);
         addRenderableWidget(search);
-        vacuumButton = addRenderableWidget(Button.builder(Component.empty(), b -> send(SingularityMenu.VACUUM, ItemStack.EMPTY, 0))
-                .bounds(leftPos + 8, topPos + GRID_Y + ROWS * CELL + 3, 58, 12).build());
-        destroyButton = addRenderableWidget(Button.builder(Component.empty(), b -> setFilterView(!filterView))
-                .bounds(leftPos + 68, topPos + GRID_Y + ROWS * CELL + 3, 62, 12).build());
-        skinButton = addRenderableWidget(Button.builder(Component.empty(), b -> send(SingularityMenu.SKIN, ItemStack.EMPTY, 0))
-                .bounds(leftPos + 132, topPos + GRID_Y + ROWS * CELL + 3, 54, 12).build());
-        tagBox = new EditBox(font, leftPos + GRID_X, topPos + TAG_Y, 124, 12, Component.translatable("gui.skyblocks.singularity.tag_hint"));
-        tagBox.setHint(Component.translatable("gui.skyblocks.singularity.tag_hint").withStyle(ChatFormatting.DARK_GRAY));
+        int by = topPos + GRID_Y + ROWS * CELL + 4;
+        vacuumButton = addRenderableWidget(MachineUi.button(leftPos + 8, by, 50, 14, Component.empty(), b -> send(SingularityMenu.VACUUM, ItemStack.EMPTY, 0),
+                () -> ACCENT));
+        destroyButton = addRenderableWidget(MachineUi.button(leftPos + 62, by, 56, 14, Component.empty(), b -> setFilterView(!filterView), () -> RED));
+        skinButton = addRenderableWidget(MachineUi.button(leftPos + 122, by, 64, 14, Component.empty(), b -> send(SingularityMenu.SKIN, ItemStack.EMPTY, 0),
+                () -> ACCENT));
+        tagBox = new EditBox(font, leftPos + GRID_X + 4, topPos + TAG_Y + 2, 118, 10, Component.translatable("gui.skyblocks.singularity.tag_hint"));
+        tagBox.setBordered(false);
+        tagBox.setTextColor(MachineUi.TEXT);
+        tagBox.setHint(Component.translatable("gui.skyblocks.singularity.tag_hint").withStyle(st -> st.withColor(MachineUi.FAINT & 0xFFFFFF)));
         tagBox.setMaxLength(120);
         addRenderableWidget(tagBox);
-        addTagButton = addRenderableWidget(Button.builder(Component.translatable("gui.skyblocks.singularity.add_tag"), b -> addTag())
-                .bounds(leftPos + GRID_X + 128, topPos + TAG_Y, 34, 12).build());
+        addTagButton = addRenderableWidget(MachineUi.button(leftPos + GRID_X + 128, topPos + TAG_Y, 34, 14,
+                Component.translatable("gui.skyblocks.singularity.add_tag"), b -> addTag(), () -> RED));
         setFilterView(filterView);
     }
 
@@ -176,30 +179,30 @@ public class SingularityScreen extends AbstractContainerScreen<SingularityMenu> 
     @Override
     protected void containerTick() {
         super.containerTick();
-        vacuumButton.setMessage(Component.translatable(menu.vacuum ? "gui.skyblocks.singularity.vacuum_on" : "gui.skyblocks.singularity.vacuum_off"));
+        vacuumButton.setMessage(Component.translatable("gui.skyblocks.singularity.vacuum"));
+        ((MachineUi.Flat) vacuumButton).lit = menu.vacuum;
+        vacuumButton.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable(menu.vacuum ? "gui.skyblocks.singularity.vacuum_on"
+                : "gui.skyblocks.singularity.vacuum_off")));
         if (minecraft != null && minecraft.level != null && minecraft.level.getBlockEntity(menu.pos) instanceof com.example.skyblocks.SingularityBlockEntity be) {
             String skin = com.example.skyblocks.SingularityBlockEntity.SKINS[Math.floorMod(be.skin(), com.example.skyblocks.SingularityBlockEntity.SKINS.length)];
             skinButton.setMessage(Component.translatable("gui.skyblocks.singularity.skin." + skin));
             skinButton.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("gui.skyblocks.singularity.skin",
                     Component.translatable("gui.skyblocks.singularity.skin." + skin))));
         }
-        destroyButton.setMessage(Component.translatable(filterView ? "gui.skyblocks.singularity.back" : "gui.skyblocks.singularity.filter")
-                .withStyle(filterView ? ChatFormatting.WHITE : ChatFormatting.RED));
+        destroyButton.setMessage(Component.translatable(filterView ? "gui.skyblocks.singularity.back" : "gui.skyblocks.singularity.filter"));
+        ((MachineUi.Flat) destroyButton).lit = filterView;
     }
 
     @Override
     protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
         rebuild();
         int x0 = leftPos, y0 = topPos;
-        // the panel: deep space, a purple rim
-        g.fill(x0, y0, x0 + imageWidth, y0 + imageHeight, 0xFF2A1840);
-        g.fill(x0 + 2, y0 + 2, x0 + imageWidth - 2, y0 + imageHeight - 2, 0xFF0D0716);
-        // your inventory's slots
-        for (int i = 0; i < 36; i++) {
-            int sx = x0 + 7 + (i % 9) * 18, sy = y0 + SingularityMenu.INVENTORY_Y - 1 + (i < 27 ? (i / 9) * 18 : 58);
-            g.fill(sx, sy, sx + 18, sy + 18, 0xFF231533);
-            g.fill(sx + 1, sy + 1, sx + 17, sy + 17, 0xFF140B20);
-        }
+        MachineUi.panel(g, x0, y0, imageWidth, imageHeight, ACCENT);
+        // (the search field's bed, on the header band)
+        g.fill(x0 + 96, y0 + 3, x0 + imageWidth - 8, y0 + 15, MachineUi.SLOT_EDGE);
+        g.fill(x0 + 97, y0 + 4, x0 + imageWidth - 9, y0 + 14, MachineUi.TRACK);
+        MachineUi.slots(g, menu, x0, y0);
+        MachineUi.divider(g, x0 + 8, y0 + SingularityMenu.INVENTORY_Y - 13, imageWidth - 16);
         if (filterView) {
             renderFilter(g, mouseX, mouseY);
             return;
@@ -207,18 +210,16 @@ public class SingularityScreen extends AbstractContainerScreen<SingularityMenu> 
         // the grid
         for (int r = 0; r < ROWS; r++) {
             for (int c = 0; c < COLS; c++) {
-                int cx = x0 + GRID_X + c * CELL, cy = y0 + GRID_Y + r * CELL;
-                g.fill(cx, cy, cx + 17, cy + 17, 0xFF231533);
-                g.fill(cx + 1, cy + 1, cx + 17, cy + 17, 0xFF140B20);
+                MachineUi.slot(g, x0 + GRID_X + c * CELL + 1, y0 + GRID_Y + r * CELL + 1);
             }
         }
         // the scroll bar
         int bx = x0 + GRID_X + COLS * CELL + 4, by = y0 + GRID_Y, bh = ROWS * CELL - 1;
-        g.fill(bx, by, bx + 6, by + bh, 0xFF140B20);
+        g.fill(bx, by, bx + 4, by + bh, MachineUi.TRACK);
         int max = maxScroll();
         int knob = Math.max(10, bh / Math.max(1, max + 1));
         int ky = by + (max == 0 ? 0 : (bh - knob) * scroll / max);
-        g.fill(bx, ky, bx + 6, ky + knob, max == 0 ? 0xFF3A2A50 : 0xFF9A6BFF);
+        g.fill(bx, ky, bx + 4, ky + knob, max == 0 ? MachineUi.SLOT_EDGE : ACCENT);
         // the kinds it holds, with how many
         for (int r = 0; r < ROWS; r++) {
             for (int c = 0; c < COLS; c++) {
@@ -252,21 +253,22 @@ public class SingularityScreen extends AbstractContainerScreen<SingularityMenu> 
     /** The destroy filter's page: the marked kinds' slots, the tag box, the tags marked (click one to take it out). */
     private void renderFilter(GuiGraphics g, int mouseX, int mouseY) {
         int x0 = leftPos, y0 = topPos;
-        g.drawString(font, Component.translatable("gui.skyblocks.singularity.filter_items"), x0 + GRID_X, y0 + GRID_Y, 0xFFFF8080, false);
+        g.drawString(font, Component.translatable("gui.skyblocks.singularity.filter_items"), x0 + GRID_X, y0 + GRID_Y, 0xFFFF9AA6, false);
         List<ItemStack> items = filterItems();
         filterScroll = Math.max(0, Math.min(filterScroll, Math.max(0, (items.size() + COLS) / COLS - FILTER_ROWS)));
         for (int r = 0; r < FILTER_ROWS; r++) {
             for (int c = 0; c < COLS; c++) {
                 int cx = x0 + GRID_X + c * CELL, cy = y0 + FILTER_Y + r * CELL;
-                g.fill(cx, cy, cx + 17, cy + 17, 0xFF3A1820);
-                g.fill(cx + 1, cy + 1, cx + 17, cy + 17, 0xFF1A0A10);
+                MachineUi.slot(g, cx + 1, cy + 1);
                 int i = (r + filterScroll) * COLS + c;
                 if (i < items.size()) {
                     g.renderItem(items.get(i), cx + 1, cy + 1);
                 }
             }
         }
-        g.drawString(font, Component.translatable("gui.skyblocks.singularity.filter_tags"), x0 + GRID_X, y0 + TAG_Y - 10, 0xFFFF8080, false);
+        g.drawString(font, Component.translatable("gui.skyblocks.singularity.filter_tags"), x0 + GRID_X, y0 + TAG_Y - 10, 0xFFFF9AA6, false);
+        g.fill(x0 + GRID_X, y0 + TAG_Y, x0 + GRID_X + 124, y0 + TAG_Y + 14, MachineUi.SLOT_EDGE);
+        g.fill(x0 + GRID_X + 1, y0 + TAG_Y + 1, x0 + GRID_X + 123, y0 + TAG_Y + 13, MachineUi.TRACK);
         // the tags: chips, wrapping, two lines (the mouse wheel scrolls them)
         tagChips.clear();
         int x = GRID_X, line = 0;
@@ -281,29 +283,30 @@ public class SingularityScreen extends AbstractContainerScreen<SingularityMenu> 
             }
             int shownLine = line - tagScroll;
             if (shownLine >= 0 && shownLine < 2) {
-                int cy = TAG_LIST_Y + shownLine * 12;
-                boolean hover = mouseX >= x0 + x && mouseX < x0 + x + w && mouseY >= y0 + cy && mouseY < y0 + cy + 11;
-                g.fill(x0 + x, y0 + cy, x0 + x + w, y0 + cy + 11, hover ? 0xFF7A2030 : 0xFF4A1828);
-                g.drawString(font, font.plainSubstrByWidth(label, w - 6), x0 + x + 3, y0 + cy + 2, 0xFFFFC0C8, false);
+                int cy = TAG_LIST_Y + shownLine * 11;
+                boolean hover = mouseX >= x0 + x && mouseX < x0 + x + w && mouseY >= y0 + cy && mouseY < y0 + cy + 10;
+                g.fill(x0 + x, y0 + cy, x0 + x + w, y0 + cy + 10, hover ? 0xFF552433 : 0xFF3A1A24);
+                g.fill(x0 + x, y0 + cy + 9, x0 + x + w, y0 + cy + 10, RED);
+                g.drawString(font, font.plainSubstrByWidth(label, w - 6), x0 + x + 3, y0 + cy + 1, 0xFFFFC0CC, false);
                 tagChips.add(new int[] {x, cy, w, i});
             }
             x += w + 3;
         }
         if (tags.isEmpty()) {
-            g.drawString(font, Component.translatable("gui.skyblocks.singularity.no_tags"), x0 + GRID_X, y0 + TAG_LIST_Y + 2, 0xFF6F5A80, false);
+            g.drawString(font, Component.translatable("gui.skyblocks.singularity.no_tags"), x0 + GRID_X, y0 + TAG_LIST_Y + 2, MachineUi.FAINT, false);
         }
     }
 
     @Override
     protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-        g.drawString(font, title, 8, 6, 0xFFD9C2FF, false);
-        g.drawString(font, playerInventoryTitle, 8, inventoryLabelY, 0xFFB9A2DF, false);
+        MachineUi.header(g, font, title, null, 0, 0, imageWidth, ACCENT);
+        MachineUi.label(g, font, playerInventoryTitle, 8, inventoryLabelY);
         long total = 0;
         for (long c : menu.counts) {
             total += c;
         }
         Component info = Component.translatable("gui.skyblocks.singularity.info", SingularityMenu.amount(total), menu.items.size());
-        g.drawString(font, info, imageWidth - 8 - font.width(info), inventoryLabelY, 0xFF8F7AAF, false);
+        g.drawString(font, info, imageWidth - 8 - font.width(info), inventoryLabelY, ACCENT, false);
     }
 
     @Override

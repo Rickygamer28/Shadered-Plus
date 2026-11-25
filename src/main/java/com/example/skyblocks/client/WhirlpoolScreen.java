@@ -26,7 +26,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * is gone from then on), drain mode, and the void filter (fluids and fluid tags; click one to take it out).
  */
 public class WhirlpoolScreen extends Screen {
-    private static final int W = 260, H = 236, ROW = 20, ROWS = 5;
+    private static final int W = 250, H = 238, ROW = 20, ROWS = 5, ACCENT = 0xFF3FA0F0;
     private final BlockPos pos;
     private int left, top, scroll;
     private EditBox tagBox;
@@ -57,21 +57,23 @@ public class WhirlpoolScreen extends Screen {
     protected void init() {
         left = (width - W) / 2;
         top = (height - H) / 2;
-        drainButton = addRenderableWidget(Button.builder(Component.empty(), b -> send(WhirlpoolPayload.DRAIN, ""))
-                .bounds(left + W - 98, top + 6, 90, 18).build());
-        viewButton = addRenderableWidget(Button.builder(Component.empty(), b -> send(WhirlpoolPayload.STILL, ""))
-                .bounds(left + 8, top + H - 24, 130, 18).build());
-        skinButton = addRenderableWidget(Button.builder(Component.empty(), b -> send(WhirlpoolPayload.SKIN, ""))
-                .bounds(left + 142, top + H - 24, 110, 18).build());
-        tagBox = addRenderableWidget(new EditBox(font, left + 8, top + 168, W - 70, 16, Component.translatable("screen.skyblocks.whirlpool.tag")));
+        int bw = (W - 16 - 2 * 4) / 3;
+        drainButton = addRenderableWidget(MachineUi.button(left + 8, top + H - 20, bw, 14, Component.empty(), b -> send(WhirlpoolPayload.DRAIN, ""), () -> ACCENT));
+        viewButton = addRenderableWidget(MachineUi.button(left + 8 + bw + 4, top + H - 20, bw, 14, Component.empty(), b -> send(WhirlpoolPayload.STILL, ""),
+                () -> ACCENT));
+        skinButton = addRenderableWidget(MachineUi.button(left + 8 + 2 * (bw + 4), top + H - 20, bw, 14, Component.empty(), b -> send(WhirlpoolPayload.SKIN, ""),
+                () -> ACCENT));
+        tagBox = addRenderableWidget(new EditBox(font, left + 12, top + 172, W - 82, 10, Component.translatable("screen.skyblocks.whirlpool.tag")));
+        tagBox.setBordered(false);
         tagBox.setMaxLength(120);
-        tagBox.setHint(Component.translatable("screen.skyblocks.whirlpool.tag_hint"));
-        addRenderableWidget(Button.builder(Component.translatable("screen.skyblocks.whirlpool.add"), b -> {
+        tagBox.setTextColor(MachineUi.TEXT);
+        tagBox.setHint(Component.translatable("screen.skyblocks.whirlpool.tag_hint").withStyle(st -> st.withColor(MachineUi.FAINT & 0xFFFFFF)));
+        addRenderableWidget(MachineUi.button(left + W - 62, top + 168, 54, 14, Component.translatable("screen.skyblocks.whirlpool.add"), b -> {
             if (!tagBox.getValue().isBlank()) {
                 send(WhirlpoolPayload.VOID_TAG, tagBox.getValue());
                 tagBox.setValue("");
             }
-        }).bounds(left + W - 58, top + 167, 50, 18).build());
+        }, () -> 0xFFFF6A7A));
     }
 
     @Override
@@ -81,6 +83,7 @@ public class WhirlpoolScreen extends Screen {
             onClose();
             return;
         }
+        ((MachineUi.Flat) drainButton).lit = be.drain();
         drainButton.setMessage(Component.translatable(be.drain() ? "screen.skyblocks.whirlpool.drain_on" : "screen.skyblocks.whirlpool.drain_off"));
         viewButton.setMessage(Component.translatable(be.still() ? "screen.skyblocks.whirlpool.view_tank" : "screen.skyblocks.whirlpool.view_whirlpool"));
         skinButton.setMessage(Component.translatable("screen.skyblocks.whirlpool.skin",
@@ -95,48 +98,47 @@ public class WhirlpoolScreen extends Screen {
         if (be == null) {
             return;
         }
-        g.drawString(font, title, left + 8, top + 8, 0xFFE6F4FF, false);
-        if (be.tank() > 0) {
-            g.drawString(font, Component.translatable("screen.skyblocks.whirlpool.tank", be.tank()), left + 8, top + 18, 0xFF7FD4FF, false);
-        }
-        // how full
-        g.drawString(font, Component.translatable("screen.skyblocks.whirlpool.each", WhirlpoolBlock.buckets(be.capacity())), left + 8, top + 32, 0xFFCFE0EE, false);
-        String kinds = be.entries().size() + " / " + be.maxKinds();
-        g.drawString(font, Component.translatable("screen.skyblocks.whirlpool.kinds", kinds), left + W - 8 - font.width(Component.translatable("screen.skyblocks.whirlpool.kinds", kinds)), top + 32, 0xFFCFE0EE, false);
-        // (kinds used out of the most it can hold)
-        g.fill(left + 8, top + 44, left + W - 8, top + 50, 0xFF1A2A3A);
-        g.fill(left + 8, top + 44, left + 8 + (int) ((W - 16) * Math.min(1.0F, (float) be.entries().size() / be.maxKinds())), top + 50, 0xFF2F8FE0);
+        MachineUi.header(g, font, title, be.tank() > 0 ? Component.translatable("screen.skyblocks.whirlpool.tank", be.tank()) : null, left, top, W, ACCENT);
+        // how full: kinds held out of the most it can hold
+        g.drawString(font, Component.translatable("screen.skyblocks.whirlpool.each", WhirlpoolBlock.buckets(be.capacity())), left + 8, top + 25, MachineUi.TEXT, false);
+        Component kinds = Component.translatable("screen.skyblocks.whirlpool.kinds", be.entries().size() + " / " + be.maxKinds());
+        g.drawString(font, kinds, left + W - 8 - font.width(kinds), top + 25, MachineUi.DIM, false);
+        MachineUi.bar(g, left + 8, top + 37, W - 16, 3, Math.min(1.0F, (float) be.entries().size() / be.maxKinds()), ACCENT);
         // the fluids
         List<WhirlpoolBlockEntity.Entry> list = be.entries();
         scroll = Math.max(0, Math.min(scroll, list.size() - ROWS));
-        int y0 = top + 56;
+        int y0 = top + 46;
         if (list.isEmpty()) {
-            g.drawCenteredString(font, Component.translatable("screen.skyblocks.whirlpool.empty"), left + W / 2, y0 + 40, 0xFF7A8FA3);
+            g.drawCenteredString(font, Component.translatable("screen.skyblocks.whirlpool.empty"), left + W / 2, y0 + 42, MachineUi.DIM);
         }
         for (int i = 0; i < ROWS && scroll + i < list.size(); i++) {
             WhirlpoolBlockEntity.Entry e = list.get(scroll + i);
             int y = y0 + i * ROW;
-            boolean hover = mouseX >= left + 6 && mouseX < left + W - 6 && mouseY >= y && mouseY < y + ROW - 2;
-            g.fill(left + 6, y, left + W - 6, y + ROW - 2, hover ? 0xFF233B52 : 0xFF16232F);
+            boolean hover = mouseX >= left + 8 && mouseX < left + W - 8 && mouseY >= y && mouseY < y + ROW - 2;
+            g.fill(left + 8, y, left + W - 8, y + ROW - 2, hover ? 0xFF222C3E : 0xFF182030);
             // (how full this fluid is, of its own limit)
-            g.fill(left + 6, y + ROW - 4, left + 6 + (int) ((W - 12) * Math.min(1.0, (double) e.amount / be.capacity())), y + ROW - 2, 0xFF2F8FE0);
-            drawFluid(g, e.fluid, left + 9, y + 1);
+            g.fill(left + 8, y + ROW - 3, left + 8 + (int) ((W - 16) * Math.min(1.0, (double) e.amount / be.capacity())), y + ROW - 2, ACCENT);
+            drawFluid(g, e.fluid, left + 10, y + 1);
             boolean voided = be.voids(e.fluid);
-            g.drawString(font, e.fluid.getHoverName(), left + 30, y + 5, voided ? 0xFFFF8A8A : 0xFFE6F4FF, false);
             String amount = WhirlpoolBlock.buckets(e.amount) + " / " + WhirlpoolBlock.buckets(be.capacity());
-            g.drawString(font, amount, left + W - 10 - font.width(amount), y + 5, 0xFFA9BFD2, false);
+            int room = W - 52 - font.width(amount) - (voided ? 40 : 0);
+            g.drawString(font, MachineUi.fit(font, e.fluid.getHoverName().getString(), room), left + 31, y + 5, voided ? MachineUi.BAD : MachineUi.TEXT, false);
+            g.drawString(font, amount, left + W - 12 - font.width(amount), y + 5, MachineUi.DIM, false);
             if (voided) {
-                g.drawString(font, Component.translatable("screen.skyblocks.whirlpool.void"), left + W - 70 - font.width(amount), y + 5, 0xFFFF6A6A, false);
+                Component v = Component.translatable("screen.skyblocks.whirlpool.void");
+                g.drawString(font, v, left + W - 18 - font.width(amount) - font.width(v), y + 5, 0xFFFF6A6A, false);
             }
         }
         if (list.size() > ROWS) {
-            g.drawString(font, (scroll + 1) + "-" + Math.min(list.size(), scroll + ROWS) + " / " + list.size(), left + 8, y0 + ROWS * ROW, 0xFF7A8FA3, false);
+            String page = (scroll + 1) + "-" + Math.min(list.size(), scroll + ROWS) + " / " + list.size();
+            g.drawString(font, page, left + W - 8 - font.width(page), y0 + ROWS * ROW + 1, MachineUi.FAINT, false);
         }
-        g.drawString(font, Component.translatable("screen.skyblocks.whirlpool.hint"), left + 8, top + 156, 0xFF7A8FA3, false);
+        g.drawString(font, MachineUi.fit(font, Component.translatable("screen.skyblocks.whirlpool.hint").getString(), W - 70), left + 8, y0 + ROWS * ROW + 1,
+                MachineUi.FAINT, false);
         // the void filter: fluids and tags, click to take out
         chipBoxes.clear();
         chipWhat.clear();
-        int x = left + 8, y = top + 190;
+        int x = left + 8, y = top + 186;
         for (Fluid f : be.voided()) {
             String id = BuiltInRegistries.FLUID.getKey(f).toString();
             int[] at = chip(g, new FluidStack(f, 1).getHoverName().getString(), x, y, mouseX, mouseY);
@@ -163,8 +165,9 @@ public class WhirlpoolScreen extends Screen {
     private int[] chip(GuiGraphics g, String text, int x, int y, int mouseX, int mouseY) {
         int w = font.width(text) + 10;
         boolean hover = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + 12;
-        g.fill(x, y, x + w, y + 12, hover ? 0xFF5A2030 : 0xFF3A1420);
-        g.drawString(font, text, x + 5, y + 2, 0xFFFFC0D0, false);
+        g.fill(x, y, x + w, y + 12, hover ? 0xFF552433 : 0xFF3A1A24);
+        g.fill(x, y + 11, x + w, y + 12, 0xFFFF6A7A);
+        g.drawString(font, text, x + 5, y + 2, 0xFFFFC0CC, false);
         return new int[] {x, y, w};
     }
 
@@ -179,15 +182,19 @@ public class WhirlpoolScreen extends Screen {
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.renderBackground(g, mouseX, mouseY, partialTick);
-        g.fill(left - 1, top - 1, left + W + 1, top + H + 1, 0xFF2F8FE0);
-        g.fill(left, top, left + W, top + H, 0xF00D1621);
+        MachineUi.panel(g, left, top, W, H, ACCENT);
+        MachineUi.divider(g, left + 8, top + 160, W - 16);
+        // (the tag field's bed)
+        g.fill(left + 8, top + 168, left + W - 66, top + 182, MachineUi.SLOT_EDGE);
+        g.fill(left + 9, top + 169, left + W - 67, top + 181, MachineUi.TRACK);
+        MachineUi.divider(g, left + 8, top + H - 25, W - 16);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         WhirlpoolBlockEntity be = be();
         if (be != null && button == 0) {
-            int y0 = top + 56;
+            int y0 = top + 46;
             List<WhirlpoolBlockEntity.Entry> list = be.entries();
             for (int i = 0; i < ROWS && scroll + i < list.size(); i++) {
                 int y = y0 + i * ROW;

@@ -21,9 +21,9 @@ import net.neoforged.neoforge.items.SlotItemHandler;
 public class MachineMenu extends AbstractContainerMenu {
     public static final DeferredHolder<MenuType<?>, MenuType<MachineMenu>> TYPE = SingularityMenu.MENUS.register("machine",
             () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create((id, inv, buf) -> new MachineMenu(id, inv, buf.readBlockPos())));
-    public static final int INVENTORY_Y = 128;
+    public static final int INVENTORY_Y = 134;
     /** Where each kind's slots are: (x, y) for each, in order. */
-    public static final int[][] ACCELERATOR = slots(new int[] {35, 44}, 98, 26);
+    public static final int[][] ACCELERATOR = slots(new int[] {35, 40}, 98, 34);
     public static final int[][] FORGE = forge();
 
     public final BlockPos pos;
@@ -41,10 +41,10 @@ public class MachineMenu extends AbstractContainerMenu {
 
     private static int[][] forge() {
         int[][] out = new int[19][];
-        out[0] = new int[] {12, 62};
+        out[0] = new int[] {12, 70};
         for (int i = 0; i < 9; i++) {
-            out[1 + i] = new int[] {38 + (i % 3) * 18, 26 + (i / 3) * 18};
-            out[10 + i] = new int[] {114 + (i % 3) * 18, 26 + (i / 3) * 18};
+            out[1 + i] = new int[] {38 + (i % 3) * 18, 34 + (i / 3) * 18};
+            out[10 + i] = new int[] {114 + (i % 3) * 18, 34 + (i / 3) * 18};
         }
         return out;
     }
