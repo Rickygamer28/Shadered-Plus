@@ -102,7 +102,7 @@ public final class MachineRenderers {
                 riding(be, pose, buffers, in, at(be.clientTrack, r), t, s);
                 riding(be, pose, buffers, in, at(per - be.clientTrack + r, r), t + 1.3F, s);
             }
-            float age = (now - be.flashAt) / 1000.0F;
+            float age = testAge >= 0 ? testAge : (now - be.flashAt) / 1000.0F;
             if (be.flashAt > 0 && age < 2.0F) {
                 if (be.flashKind == 1) {
                     collision(be, pose, buffers, cam, r, age);
@@ -112,6 +112,9 @@ public final class MachineRenderers {
                 }
             }
         }
+
+        /** (The render test: a collision held at this many seconds in, to be seen; -1 normally.) */
+        public static float testAge = -1;
 
         /** What it's smashing, riding a beam's head: small, spinning, glowing. */
         private static void riding(ParticleAcceleratorBlockEntity be, PoseStack pose, MultiBufferSource buffers, ItemStack item, Vector3f at, float t, float s) {
