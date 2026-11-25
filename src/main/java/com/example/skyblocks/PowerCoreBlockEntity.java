@@ -329,6 +329,8 @@ public class PowerCoreBlockEntity extends BlockEntity {
         if (!outletsKnown) {
             findOutlets();
         }
+        int caps = 0;
+        long gave = 0;
         for (int i = 0; i < outlets.size() && energy > 0; i++) {
             BlockPos n = outlets.get(i);
             if (!level.isLoaded(n)) {
@@ -342,13 +344,22 @@ public class PowerCoreBlockEntity extends BlockEntity {
             if (other == null || !other.canReceive()) {
                 continue;
             }
+            caps++;
             int offer = (int) Math.min(energy, Integer.MAX_VALUE);
             int took = other.receiveEnergy(offer, false);
+            gave += took;
             if (took > 0) {
                 energy -= took;
                 outCount += took;
                 changed(false);
             }
+        }
+        debugPush(caps, gave);
+    }
+
+    private void debugPush(int caps, long gave) {
+        if (level.getGameTime() % 100 == 0) {
+            SkyBlocksMod.LOGGER.info("[core push] {} chamber {} outlets {} receivers {} gave {}", worldPosition, chamber, outlets.size(), caps, gave);
         }
     }
 
