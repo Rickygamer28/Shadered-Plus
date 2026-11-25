@@ -1478,5 +1478,7 @@
   "screen.skyblocks.particle_accelerator.makes": "Makes",
   "screen.skyblocks.machine.not_built": "Not built",
   "gui.skyblocks.singularity.vacuum": "Vacuum",
-  "screen.skyblocks.whirlpool.tank_status": "%s-wide tank"
+  "screen.skyblocks.whirlpool.tank_status": "%s-wide tank",
+  "screen.skyblocks.power_core.push_on_n": "Push mode: ON - into %s receivers",
+  "screen.skyblocks.power_core.push_on_none": "Push mode: ON - no receivers found"
 }

@@ -68,7 +68,8 @@ public class PowerCoreScreen extends Screen {
             skinButtons[i].active = be.skin() != i; // (the one it's showing: lit)
         }
         pushButton.lit = be.push();
-        pushButton.setMessage(Component.translatable(be.push() ? "screen.skyblocks.power_core.push_on" : "screen.skyblocks.power_core.push_off"));
+        pushButton.setMessage(be.push() ? (be.pushTargets() > 0 ? Component.translatable("screen.skyblocks.power_core.push_on_n", be.pushTargets())
+                : Component.translatable("screen.skyblocks.power_core.push_on_none")) : Component.translatable("screen.skyblocks.power_core.push_off"));
     }
 
     @Override

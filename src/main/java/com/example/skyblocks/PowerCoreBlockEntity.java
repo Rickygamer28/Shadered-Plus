@@ -345,8 +345,16 @@ public class PowerCoreBlockEntity extends BlockEntity {
                 continue;
             }
             caps++;
-            int offer = (int) Math.min(energy, Integer.MAX_VALUE);
-            int took = other.receiveEnergy(offer, false);
+            // (a sane offer, asked first: some take a huge one badly - adding it to what they hold overflows, and they refuse
+            // or lose it)
+            int room = Math.max(0, other.getMaxEnergyStored() - other.getEnergyStored());
+            int offer = (int) Math.min(energy, Math.max(room, PUSH_CHUNK) > 0 ? Math.min(Math.max(room, PUSH_CHUNK), PUSH_MAX) : PUSH_CHUNK);
+            int can = other.receiveEnergy(offer, true);
+            int took = can > 0 ? other.receiveEnergy(Math.min(can, offer), false) : 0;
+            if (took <= 0 && offer > PUSH_CHUNK) { // (and if it wouldn't take that, a small one)
+                can = other.receiveEnergy((int) Math.min(energy, PUSH_CHUNK), true);
+                took = can > 0 ? other.receiveEnergy(can, false) : 0;
+            }
             gave += took;
             if (took > 0) {
                 energy -= took;
@@ -357,9 +365,19 @@ public class PowerCoreBlockEntity extends BlockEntity {
         debugPush(caps, gave);
     }
 
+    private static final int PUSH_CHUNK = 1_000_000, PUSH_MAX = 1 << 30;
+
+    /** (How many things beside it take energy - shown on its screen, so you can see push mode has found them.) */
+    private int pushTargets;
+
+    public int pushTargets() {
+        return pushTargets;
+    }
+
     private void debugPush(int caps, long gave) {
-        if (level.getGameTime() % 100 == 0) {
-            SkyBlocksMod.LOGGER.info("[core push] {} chamber {} outlets {} receivers {} gave {}", worldPosition, chamber, outlets.size(), caps, gave);
+        if (caps != pushTargets) {
+            pushTargets = caps;
+            syncPending = true;
         }
     }
 
@@ -382,6 +400,9 @@ public class PowerCoreBlockEntity extends BlockEntity {
         }
         if (be.push && be.energy > 0) {
             be.pushOut();
+        } else if (be.pushTargets != 0) {
+            be.pushTargets = 0;
+            be.syncPending = true;
         }
     }
 
@@ -397,6 +418,7 @@ public class PowerCoreBlockEntity extends BlockEntity {
         tag.putLong("energy", energy);
         tag.putInt("skin", skin);
         tag.putBoolean("push", push);
+        tag.putInt("push_targets", pushTargets);
         tag.putInt("chamber", chamber);
     }
 
@@ -406,6 +428,7 @@ public class PowerCoreBlockEntity extends BlockEntity {
         energy = Math.max(0, tag.getLong("energy"));
         skin = Math.floorMod(tag.getInt("skin"), SKINS.length);
         push = tag.getBoolean("push");
+        pushTargets = tag.getInt("push_targets");
         chamber = tag.getInt("chamber");
         rateIn = tag.getLong("rate_in");
         rateOut = tag.getLong("rate_out");
