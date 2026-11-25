@@ -84,6 +84,12 @@ public class WhirlpoolBlockEntity extends BlockEntity {
     /** (Client: when what it holds last changed - its surface ripples; how full it looks now, easing.) */
     public long rippleAt;
     public float shownFull = -1.0F;
+    /** (Client, the plain tank: when each fluid was last seen coming in - poured in from the top - and each layer's height as shown, sliding.) */
+    public final java.util.Map<net.minecraft.world.level.material.Fluid, Long> pouredAt = new java.util.HashMap<>();
+    public final java.util.Map<net.minecraft.world.level.material.Fluid, Float> shownShare = new java.util.HashMap<>();
+    public float labelFade;
+    public long lastFrame;
+    private boolean seenOnce;
 
     public WhirlpoolBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.WHIRLPOOL.get(), pos, state);
@@ -539,6 +545,10 @@ public class WhirlpoolBlockEntity extends BlockEntity {
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         long before = total;
+        java.util.Map<net.minecraft.world.level.material.Fluid, Long> had = new java.util.HashMap<>();
+        for (Entry e : entries) {
+            had.merge(e.fluid.getFluid(), e.amount, Long::sum);
+        }
         entries.clear();
         total = 0;
         for (Tag t : tag.getList("fluids", Tag.TAG_COMPOUND)) {
@@ -552,6 +562,17 @@ public class WhirlpoolBlockEntity extends BlockEntity {
         }
         if (total != before) {
             rippleAt = System.currentTimeMillis();
+        }
+        if (level != null && level.isClientSide) {
+            if (seenOnce) { // (more of a fluid than before: it's being poured in)
+                long now = System.currentTimeMillis();
+                for (Entry e : entries) {
+                    if (e.amount > had.getOrDefault(e.fluid.getFluid(), 0L)) {
+                        pouredAt.put(e.fluid.getFluid(), now);
+                    }
+                }
+            }
+            seenOnce = true;
         }
         voided.clear();
         for (Tag t : tag.getList("void", Tag.TAG_STRING)) {

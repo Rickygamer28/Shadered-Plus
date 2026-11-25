@@ -53,7 +53,8 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
     public WhirlpoolRenderer(BlockEntityRendererProvider.Context context) {}
 
     /** One fluid as it's drawn: its picture, tint, brightness, how much of the whole. */
-    private record Look(TextureAtlasSprite sprite, int argb, boolean glows, float share, boolean gas, int density, int mean) {}
+    record Look(TextureAtlasSprite sprite, int argb, boolean glows, float share, boolean gas, int density, int mean, FluidStack stack, long amount,
+                        boolean hot, int viscosity) {}
 
     private static Look look(FluidStack fluid, long amount, long total) {
         IClientFluidTypeExtensions ext = IClientFluidTypeExtensions.of(fluid.getFluid());
@@ -61,7 +62,8 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         int tint = ext.getTintColor(fluid);
         net.neoforged.neoforge.fluids.FluidType type = fluid.getFluid().getFluidType();
         return new Look(sprite, tint | 0xFF000000, type.getLightLevel(fluid) > 0, total <= 0 ? 0 : (float) amount / total,
-                type.isLighterThanAir(), type.getDensity(fluid), StorageSkins.fluidColour(fluid));
+                type.isLighterThanAir(), type.getDensity(fluid), StorageSkins.fluidColour(fluid), fluid, amount, type.getTemperature(fluid) >= 1000,
+                type.getViscosity(fluid));
     }
 
     @Override
@@ -402,7 +404,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         int r = (be.tank() - 1) / 2;
         float inset = 0.01F;
         if (be.still()) {
-            stillLayers(be, looks, poseStack.last(), buffers.getBuffer(Types.POOL), light, t, -(r - 1) + inset, r - inset);
+            PlainTank.draw(be, looks, poseStack, buffers, light, t, -(r - 1) + inset, r - inset, r);
             return;
         }
         float lo = -(r - 1) + inset, hi = r - inset;
@@ -521,7 +523,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         source.endBatch(Types.POOL); // (right after the whirlpool, over it)
     }
 
-    private static final ResourceLocation WHITE = ResourceLocation.fromNamespaceAndPath(com.example.skyblocks.SkyBlocksMod.MOD_ID, "block/fm_glow_white");
+    static final ResourceLocation WHITE = ResourceLocation.fromNamespaceAndPath(com.example.skyblocks.SkyBlocksMod.MOD_ID, "block/fm_glow_white");
 
     /**
      * The pool against the glass: its colour deepening and thickening towards the floor, its own picture faintly over
@@ -551,73 +553,8 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         }
     }
 
-    /**
-     * The plain tank: what it holds settled in clean layers - each liquid its own colour, deepening towards the bottom,
-     * its picture faint over it and a bright line where it meets the next; the top one's surface its own picture, gently
-     * moving; gases hanging from the roof, thin and see-through; the floor dim under it all.
-     */
-    private static void stillLayers(WhirlpoolBlockEntity be, List<Look> looks, PoseStack.Pose pose, VertexConsumer v, int light, float t, float lo, float hi) {
-        if (looks.isEmpty()) {
-            return;
-        }
-        float filled = (hi - lo) * Math.min(1.0F, Math.max(be.shownFull, 0.0F));
-        List<Look> liquids = new ArrayList<>(), gases = new ArrayList<>();
-        for (Look l : looks) {
-            (l.gas ? gases : liquids).add(l);
-        }
-        liquids.sort((a, b) -> Integer.compare(b.density, a.density));
-        gases.sort((a, b) -> Integer.compare(a.density, b.density));
-        float since = (System.currentTimeMillis() - be.rippleAt) / 1000.0F;
-        float ripple = (0.012F + 0.05F * Math.max(0.0F, 1.0F - since / 2.5F)) * Math.min(1.0F, (hi - lo) / 3.0F);
-        float y = lo;
-        for (int i = 0; i < liquids.size(); i++) {
-            Look l = liquids.get(i);
-            float top = y + filled * l.share;
-            if (top - y < 0.004F) {
-                continue;
-            }
-            int lit = l.glows ? LightTexture.FULL_BRIGHT : light;
-            // (its own picture, nearly solid; a little darker the deeper it lies)
-            float k = 0.78F + 0.22F * (top - lo) / Math.max(0.01F, hi - lo);
-            int argb = shade((l.argb & 0x00FFFFFF) | (0xEE << 24), k);
-            if (i == 0) {
-                floorQuad(v, pose, l, lo, hi, shade(argb, 0.7F), lit);
-            }
-            sides(v, pose, l, lo, hi, y, top, argb, lit);
-            if (i < liquids.size() - 1) { // (a dark seam where it meets the next)
-                sides(v, pose, l, lo - 0.001F, hi + 0.001F, top - 0.02F, top, shade(argb, 0.55F), lit);
-            } else { // its surface: its own picture, moving gently
-                for (float a = lo; a < hi - 0.001F; a = Math.min(hi, (float) Math.floor(a * 2) / 2 + 0.5F)) {
-                    float b = Math.min(hi, (float) Math.floor(a * 2) / 2 + 0.5F);
-                    for (float c = lo; c < hi - 0.001F; c = Math.min(hi, (float) Math.floor(c * 2) / 2 + 0.5F)) {
-                        float d = Math.min(hi, (float) Math.floor(c * 2) / 2 + 0.5F);
-                        float u0 = frac(a), u1 = u0 + (b - a), v0 = frac(c), v1 = v0 + (d - c);
-                        int sa = (argb & 0x00FFFFFF) | (0xE6 << 24);
-                        vertex(v, pose, a, top + wave(a, c, t, ripple), c, l.sprite, u0, v0, sa, lit);
-                        vertex(v, pose, a, top + wave(a, d, t, ripple), d, l.sprite, u0, v1, sa, lit);
-                        vertex(v, pose, b, top + wave(b, d, t, ripple), d, l.sprite, u1, v1, sa, lit);
-                        vertex(v, pose, b, top + wave(b, c, t, ripple), c, l.sprite, u1, v0, sa, lit);
-                    }
-                }
-            }
-            y = top;
-        }
-        // gases from the roof down: their picture, thin
-        float roof = hi;
-        for (Look l : gases) {
-            float under = roof - filled * l.share;
-            if (roof - under < 0.004F) {
-                continue;
-            }
-            int lit = l.glows ? LightTexture.FULL_BRIGHT : light;
-            sides(v, pose, l, lo, hi, under, roof, (l.argb & 0x00FFFFFF) | (0x66 << 24), lit);
-            floorQuad(v, pose, l, lo, hi, under, (l.argb & 0x00FFFFFF) | (0x50 << 24), lit);
-            roof = under;
-        }
-    }
-
     /** A fluid's four sides from y0 to y1, its picture a block at a time. */
-    private static void sides(VertexConsumer v, PoseStack.Pose pose, Look l, float lo, float hi, float y0, float y1, int argb, int lit) {
+    static void sides(VertexConsumer v, PoseStack.Pose pose, Look l, float lo, float hi, float y0, float y1, int argb, int lit) {
         for (float a = lo; a < hi - 0.001F; a = Math.min(hi, (float) Math.floor(a) + 1)) {
             float b = Math.min(hi, (float) Math.floor(a) + 1);
             column(v, pose, l, a, lo, b, lo, y0, y1, argb, lit);
@@ -627,12 +564,12 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         }
     }
 
-    private static void floorQuad(VertexConsumer v, PoseStack.Pose pose, Look l, float lo, float hi, int argb, int lit) {
+    static void floorQuad(VertexConsumer v, PoseStack.Pose pose, Look l, float lo, float hi, int argb, int lit) {
         floorQuad(v, pose, l, lo, hi, lo + 0.003F, argb, lit);
     }
 
     /** A fluid's flat face at height y, its picture a block at a time. */
-    private static void floorQuad(VertexConsumer v, PoseStack.Pose pose, Look l, float lo, float hi, float y, int argb, int lit) {
+    static void floorQuad(VertexConsumer v, PoseStack.Pose pose, Look l, float lo, float hi, float y, int argb, int lit) {
         for (float a = lo; a < hi - 0.001F; a = Math.min(hi, (float) Math.floor(a) + 1)) {
             float b = Math.min(hi, (float) Math.floor(a) + 1);
             for (float c = lo; c < hi - 0.001F; c = Math.min(hi, (float) Math.floor(c) + 1)) {
@@ -810,7 +747,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
     }
 
     /** One side's column (from (xa, za) to (xb, zb)), cut into blocks up its height. */
-    private static void column(VertexConsumer v, PoseStack.Pose pose, Look l, float xa, float za, float xb, float zb, float y0, float y1, int argb, int lit) {
+    static void column(VertexConsumer v, PoseStack.Pose pose, Look l, float xa, float za, float xb, float zb, float y0, float y1, int argb, int lit) {
         float w = Math.abs(xb - xa) + Math.abs(zb - za);
         for (float a = y0; a < y1 - 0.001F; a = Math.min(y1, (float) Math.floor(a) + 1)) {
             float b = Math.min(y1, (float) Math.floor(a) + 1);
@@ -822,20 +759,20 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         }
     }
 
-    private static float wave(float x, float z, float t, float amount) {
+    static float wave(float x, float z, float t, float amount) {
         return amount * (float) (Math.sin(x * 2.3 + t * 2.1) * 0.6 + Math.sin(z * 1.9 - t * 1.7) * 0.4) - amount;
     }
 
-    private static float frac(float a) {
+    static float frac(float a) {
         return a - (float) Math.floor(a);
     }
 
-    private static int shade(int argb, float k) {
+    static int shade(int argb, float k) {
         int r = (int) (((argb >> 16) & 0xFF) * k), g = (int) (((argb >> 8) & 0xFF) * k), b = (int) ((argb & 0xFF) * k);
         return (argb & 0xFF000000) | (r << 16) | (g << 8) | b;
     }
 
-    private static void vertex(VertexConsumer v, PoseStack.Pose pose, float x, float y, float z, TextureAtlasSprite sprite, float u, float w,
+    static void vertex(VertexConsumer v, PoseStack.Pose pose, float x, float y, float z, TextureAtlasSprite sprite, float u, float w,
                                int argb, int light) {
         v.addVertex(pose, x, y, z).setColor(argb).setUv(sprite.getU(Math.min(1.0F, u)), sprite.getV(Math.min(1.0F, w)))
                 .setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0.0F, 1.0F, 0.0F);
@@ -843,7 +780,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
 
     @Override
     public AABB getRenderBoundingBox(WhirlpoolBlockEntity be) {
-        return new AABB(be.getBlockPos()).inflate(be.tank() > 0 ? be.tank() / 2.0 + 0.5 : 0.1);
+        return new AABB(be.getBlockPos()).inflate(be.tank() > 0 ? be.tank() / 2.0 + 2.0 : 0.1); // (its labels float beside it)
     }
 
     @Override
