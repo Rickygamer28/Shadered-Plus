@@ -75,7 +75,106 @@ public class MachineBlock extends BaseEntityBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        if (kind == MachineFrameBlock.Kind.ACCELERATOR && !state.getValue(FORMED) && hasFrames(player)) {
+            return build(level, pos, player);
+        }
         return open(level, pos, player);
+    }
+
+    /** Holding accelerator frames, not built yet: it builds its ring (not a frame put down against it). */
+    @Override
+    protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
+                                                                  net.minecraft.world.InteractionHand hand, BlockHitResult hit) {
+        if (kind == MachineFrameBlock.Kind.ACCELERATOR && !state.getValue(FORMED) && stack.is(ModItems.ACCELERATOR_FRAME.get())) {
+            build(level, pos, player);
+            return net.minecraft.world.ItemInteractionResult.sidedSuccess(level.isClientSide);
+        }
+        return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
+    private static boolean hasFrames(Player player) {
+        return player.getAbilities().instabuild || player.getInventory().countItem(ModItems.ACCELERATOR_FRAME.get()) > 0;
+    }
+
+    /**
+     * Builds the particle accelerator's ring round it from the frames you have: the biggest ring you've enough for
+     * (sneaking: the smallest) - in creative, the large one (sneaking: the small one). Frames already there count;
+     * anything else in the ring's way stops it (and says where).
+     */
+    private static InteractionResult build(Level level, BlockPos pos, Player player) {
+        if (level.isClientSide) {
+            return InteractionResult.SUCCESS;
+        }
+        boolean creative = player.getAbilities().instabuild, small = player.isShiftKeyDown();
+        int have = creative ? Integer.MAX_VALUE : player.getInventory().countItem(ModItems.ACCELERATOR_FRAME.get());
+        net.minecraft.world.level.block.state.BlockState frame = ModBlocks.ACCELERATOR_FRAME.get().defaultBlockState();
+        java.util.List<BlockPos> chosen = null;
+        int chosenSize = 0, need = 0;
+        BlockPos blocked = null;
+        for (int i = 0; i < 3; i++) {
+            int size = small ? 1 + i : 3 - i;
+            int r = ParticleAcceleratorBlockEntity.RADIUS[size];
+            java.util.List<BlockPos> missing = new java.util.ArrayList<>();
+            BlockPos inWay = null;
+            for (int dx = -r - 1; dx <= r + 1 && inWay == null; dx++) {
+                for (int dz = -r - 1; dz <= r + 1; dz++) {
+                    if (!ParticleAcceleratorBlockEntity.onRing(dx, dz, r)) {
+                        continue;
+                    }
+                    BlockPos p = pos.offset(dx, 0, dz);
+                    BlockState there = level.getBlockState(p);
+                    if (there.is(ModBlocks.ACCELERATOR_FRAME.get())) {
+                        continue;
+                    }
+                    if (!there.canBeReplaced()) {
+                        inWay = p;
+                        break;
+                    }
+                    missing.add(p);
+                }
+            }
+            if (inWay != null) {
+                blocked = blocked == null ? inWay : blocked;
+                continue;
+            }
+            if (missing.size() <= have) {
+                chosen = missing;
+                chosenSize = size;
+                break;
+            }
+            need = need == 0 ? missing.size() - have : Math.min(need, missing.size() - have); // (how many more it needs)
+        }
+        if (chosen == null) {
+            if (blocked != null && need == 0) {
+                player.displayClientMessage(Component.translatable("message.skyblocks.accelerator.blocked", blocked.getX(), blocked.getY(), blocked.getZ())
+                        .withStyle(ChatFormatting.RED), true);
+            } else {
+                player.displayClientMessage(Component.translatable("message.skyblocks.accelerator.need", need, have).withStyle(ChatFormatting.RED), true);
+            }
+            return InteractionResult.CONSUME;
+        }
+        for (BlockPos p : chosen) {
+            level.setBlock(p, frame, Block.UPDATE_ALL);
+        }
+        if (!creative) {
+            int left = chosen.size();
+            var inv = player.getInventory();
+            for (int i = 0; i < inv.getContainerSize() && left > 0; i++) {
+                ItemStack s = inv.getItem(i);
+                if (s.is(ModItems.ACCELERATOR_FRAME.get())) {
+                    int n = Math.min(left, s.getCount());
+                    s.shrink(n);
+                    left -= n;
+                }
+            }
+        }
+        level.playSound(null, pos, net.minecraft.sounds.SoundEvents.NETHERITE_BLOCK_PLACE, net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 0.9F);
+        if (level.getBlockEntity(pos) instanceof MachineBlockEntity be) {
+            be.relinkSoon();
+        }
+        player.displayClientMessage(Component.translatable("message.skyblocks.accelerator.built",
+                Component.translatable("screen.skyblocks.machine.size." + new String[] {"none", "small", "medium", "large"}[chosenSize]), chosen.size()), true);
+        return InteractionResult.CONSUME;
     }
 
     /** Its screen (from here, or from one of its frames). */
