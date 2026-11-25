@@ -379,7 +379,14 @@ final class PlainTank {
                 ys[i] -= over;
             }
         }
+        // (only the sides you're outside of: a plate's back, through the glass across, would just clutter it)
+        BlockPos bp = be.getBlockPos();
+        Vec3 cam = mc.gameRenderer.getMainCamera().getPosition().subtract(bp.getX() + 0.5, bp.getY(), bp.getZ() + 0.5);
+        double[] facing = {cam.z, cam.x, -cam.z, -cam.x};
         for (int side = 0; side < 4; side++) {
+            if (facing[side] < r + 0.5) {
+                continue;
+            }
             for (int i = 0; i < all.size(); i++) {
                 Layer layer = all.get(i);
                 String name = layer.look.stack().getHoverName().getString(), amount = WhirlpoolBlock.buckets(layer.look.amount());
