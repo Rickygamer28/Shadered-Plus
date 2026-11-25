@@ -388,10 +388,10 @@ final class PlainTank {
             int c = layer.look.mean();
             float wdt = font.width(text);
             Matrix4f m = poseStack.last().pose();
-            font.drawInBatch(text, -wdt / 2.0F, -4, (alpha << 24) | 0xE6EDF7, false, m, buffers, Font.DisplayMode.SEE_THROUGH,
+            font.drawInBatch(text, -wdt / 2.0F, -4, (alpha << 24) | 0xE6EDF7, false, m, buffers, Font.DisplayMode.POLYGON_OFFSET,
                     ((int) (be.labelFade * 0xCC) << 24) | 0x101420, LightTexture.FULL_BRIGHT);
             // (a bar of its colour at its left)
-            VertexConsumer bar = buffers.getBuffer(RenderType.textBackgroundSeeThrough());
+            VertexConsumer bar = buffers.getBuffer(RenderType.textBackground());
             float x0 = -wdt / 2.0F - 4, x1 = x0 + 2;
             int col = (alpha << 24) | (c & 0xFFFFFF);
             bar.addVertex(m, x0, -5, 0).setColor(col).setLight(LightTexture.FULL_BRIGHT);
