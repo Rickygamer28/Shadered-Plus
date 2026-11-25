@@ -248,10 +248,7 @@ public class ParticleAcceleratorBlockEntity extends MachineBlockEntity {
         for (int i = 0; i < rolls; i++) {
             ItemStack got = recipe != null ? new ItemStack(recipe.out(), recipe.count()) : roll(size, r);
             last = got.copy();
-            ItemStack left = got;
-            for (int k = 1; k <= OUTPUTS && !left.isEmpty(); k++) {
-                left = items.insertItem(k, left, false);
-            }
+            ItemStack left = put(got);
             if (!left.isEmpty()) {
                 net.minecraft.world.Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 1.2, worldPosition.getZ() + 0.5, left);
             }
@@ -261,6 +258,29 @@ public class ParticleAcceleratorBlockEntity extends MachineBlockEntity {
         level.playSound(null, worldPosition, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 1.2F, 1.4F);
         setChanged();
         sync();
+    }
+
+    /** Into its output (its slots won't take things put in from outside - so straight in): what didn't fit. */
+    private ItemStack put(ItemStack stack) {
+        ItemStack left = stack.copy();
+        for (int k = 1; k <= OUTPUTS && !left.isEmpty(); k++) {
+            ItemStack there = items.getStackInSlot(k);
+            if (!there.isEmpty() && ItemStack.isSameItemSameComponents(there, left)) {
+                int n = Math.min(left.getCount(), there.getMaxStackSize() - there.getCount());
+                if (n > 0) {
+                    items.setStackInSlot(k, there.copyWithCount(there.getCount() + n));
+                    left.shrink(n);
+                }
+            }
+        }
+        for (int k = 1; k <= OUTPUTS && !left.isEmpty(); k++) {
+            if (items.getStackInSlot(k).isEmpty()) {
+                int n = Math.min(left.getCount(), left.getMaxStackSize());
+                items.setStackInSlot(k, left.copyWithCount(n));
+                left.shrink(n);
+            }
+        }
+        return left;
     }
 
     private void misfire(ServerLevel level, ItemStack in) {

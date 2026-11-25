@@ -141,19 +141,20 @@ public final class MachineRenderers {
             }
             // the channel: round from its inner top edge, down under, up to its outer top edge (open along the top)
             int steps = 10;
+            float len = Mth.TWO_PI * r / segs; // (its picture's width to a block along it: not squeezed into each piece)
             float phiFrom = Mth.PI * 0.62F, phiTo = Mth.PI * 2.38F;
             for (int i = 0; i < segs; i++) {
                 float a0 = i * Mth.TWO_PI / segs, a1 = (i + 1) * Mth.TWO_PI / segs;
                 for (int j = 0; j < steps; j++) {
                     float f0 = Mth.lerp(j / (float) steps, phiFrom, phiTo), f1 = Mth.lerp((j + 1) / (float) steps, phiFrom, phiTo);
-                    ring(v, p, r, TUBE, a0, a1, f0, f1, light[i], light[i + 1], 0xFFC8D4DC, j / (float) steps, (j + 1) / (float) steps);
+                    ring(v, p, r, TUBE, a0, a1, f0, f1, light[i], light[i + 1], 0xFFC8D4DC, j / (float) steps, (j + 1) / (float) steps, len);
                 }
                 // a band round it, now and then: the whole way round, a little proud
                 if (i % bandEvery == 0) {
                     float w = 0.06F / r;
                     for (int j = 0; j < 12; j++) {
                         float f0 = j * Mth.TWO_PI / 12, f1 = (j + 1) * Mth.TWO_PI / 12;
-                        ring(v, p, r, TUBE + 0.04F, a0 - w, a0 + w, f0, f1, light[i], light[i], 0xFF8A98A8, 0, 1);
+                        ring(v, p, r, TUBE + 0.04F, a0 - w, a0 + w, f0, f1, light[i], light[i], 0xFF8A98A8, 0, 1, 0.1F);
                     }
                     // and every other one, a post down to the ground
                     if ((i / bandEvery) % 2 == 0) {
@@ -180,7 +181,7 @@ public final class MachineRenderers {
 
         /** A piece of a torus round the ring: between angles a0, a1 round the ring, f0, f1 round the tube (0 outward, up, in, down). */
         private static void ring(VertexConsumer v, PoseStack.Pose p, int r, float tube, float a0, float a1, float f0, float f1, int l0, int l1, int argb,
-                                 float v0, float v1) {
+                                 float v0, float v1, float u1) {
             float[][] pts = new float[4][];
             float[][] nrm = new float[4][];
             float[] as = {a0, a1, a1, a0}, fs = {f0, f0, f1, f1};
@@ -189,7 +190,7 @@ public final class MachineRenderers {
                 nrm[k] = new float[] {cf * ca, sf, cf * sa};
                 pts[k] = new float[] {0.5F + ca * (r + tube * cf), BEAM_Y + tube * sf, 0.5F + sa * (r + tube * cf)};
             }
-            float[] us = {0, 1, 1, 0}, vs = {v0, v0, v1, v1};
+            float[] us = {0, u1, u1, 0}, vs = {v0, v0, v1, v1};
             int[] ls = {l0, l1, l1, l0};
             for (int k = 0; k < 4; k++) {
                 v.addVertex(p, pts[k][0], pts[k][1], pts[k][2]).setColor(argb).setUv(us[k], vs[k]).setOverlay(OverlayTexture.NO_OVERLAY).setLight(ls[k])
