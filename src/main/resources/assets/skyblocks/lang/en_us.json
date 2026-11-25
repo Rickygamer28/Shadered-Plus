@@ -480,7 +480,7 @@
   "guide.skyblocks.chapter.structures": "Structures",
   "guide.skyblocks.intro": "Shadered+ fills your world with things that move and glow: shader effects, lava lamps, aquariums full of fish, koi ponds, black holes, working solar systems, mirrors that really reflect, portals and whole skies.\n\nMany of them react to music - play a jukebox nearby and watch the dance floors, lasers, visualizers and even the fish move to it.",
   "guide.skyblocks.howto.title": "Using this book",
-  "guide.skyblocks.howto": "The tabs along the top are the chapters, the same groups as the creative tab.\n\nPick a block on the left page to read about it on the right: what it does, how to use it and how to craft it.\n\nClick an item in a recipe to go to its page. Scroll a page with the mouse wheel; the arrow keys turn pages too.\n\nThe last tab shows the structures: things you build out of several blocks.",
+  "guide.skyblocks.howto": "The chapters are down the left, the same groups as the creative tab; a chapter's entries are in the middle, and the one you pick opens on the right: what it does, how to use it and how to make it.\n\nSearch the whole guide from the box at the top of the middle column.\n\nClick an item in a recipe to go to its page. Scroll any column with the mouse; Up and Down step through the entries, Left and Right through the chapters, and Prev and Next at the foot of a page turn it.",
   "guide.skyblocks.use": "How to use",
   "guide.skyblocks.recipe": "Crafting",
   "guide.skyblocks.needs": "You need",
@@ -1463,5 +1463,12 @@
   "jei.skyblocks.forge.smelting": "Star forge: smelting",
   "jei.skyblocks.forge.smelting_note": "Any furnace recipe - a whole stack at once",
   "screen.skyblocks.star_forge.star_powered": "%s star (powered) - uses %s FE/t",
-  "screen.skyblocks.star_forge.power_tip": "With no fuel burning, energy piped into its frames keeps its star lit as a %s star, using %s FE/t (it makes no energy then). Click to change the colour."
+  "screen.skyblocks.star_forge.power_tip": "With no fuel burning, energy piped into its frames keeps its star lit as a %s star, using %s FE/t (it makes no energy then). Click to change the colour.",
+  "guide.skyblocks.search": "Search the guide",
+  "guide.skyblocks.results": "%s found",
+  "guide.skyblocks.nothing": "Nothing found",
+  "guide.skyblocks.start_tip": "Pick a chapter on the left, or search for anything above.\n\nNew to Shadered+? Start with Machines: the Star Forge comes first.",
+  "guide.skyblocks.build": "How to build",
+  "guide.skyblocks.prev": "Prev",
+  "guide.skyblocks.next": "Next"
 }
