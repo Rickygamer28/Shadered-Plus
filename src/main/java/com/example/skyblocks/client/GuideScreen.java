@@ -300,7 +300,10 @@ public class GuideScreen extends Screen {
         super.render(g, mx, my, partialTick);
         shown.clear();
         Component hoverChapter = drawChapters(g, mx, my);
-        drawList(g, mx, my);
+        Component hoverEntry = drawList(g, mx, my);
+        if (hoverChapter == null) {
+            hoverChapter = hoverEntry;
+        }
         drawPage(g, mx, my);
         if (hoverChapter != null) {
             g.renderTooltip(font, hoverChapter, mx, my);
@@ -351,7 +354,8 @@ public class GuideScreen extends Screen {
             Component name = Component.translatable("guide.skyblocks.chapter." + tabs.get(i).id);
             if (!compact) {
                 g.drawString(font, fit(name, sideW - 28), px + 24, y + 5, i == tab ? INK : SOFT, false);
-            } else if (hover) {
+            }
+            if (hover && (compact || font.width(name) > sideW - 28)) { // (its whole name, if cut short)
                 hovered = name;
             }
         }
@@ -360,7 +364,8 @@ public class GuideScreen extends Screen {
         return hovered;
     }
 
-    private void drawList(GuiGraphics g, int mx, int my) {
+    private Component drawList(GuiGraphics g, int mx, int my) {
+        Component hovered = null;
         int x = listX + 4, top = py + HEAD + 2, bottom = py + h - 4;
         if (tabs.get(tab).kind == Kind.START && search.getValue().isEmpty()) {
             // (the first chapter has no entries: a word on where to start)
@@ -369,7 +374,7 @@ public class GuideScreen extends Screen {
                 g.drawString(font, line, x + 2, y, SOFT, false);
                 y += 10;
             }
-            return;
+            return null;
         }
         if (!search.getValue().isEmpty()) {
             g.drawString(font, Component.translatable("guide.skyblocks.results", list.size()), x + 2, top, FAINT, false);
@@ -393,12 +398,16 @@ public class GuideScreen extends Screen {
             }
             g.renderItem(r.stack, x, y + 1);
             g.drawString(font, fit(r.name, listW - 30), x + 20, y + 5, picked ? 0xFF7A3A10 : INK, false);
+            if (hover && font.width(r.name) > listW - 30) {
+                hovered = r.name;
+            }
         }
         g.disableScissor();
         if (list.isEmpty()) {
             g.drawString(font, Component.translatable("guide.skyblocks.nothing"), x + 2, top + 4, FAINT, false);
         }
         scrollbar(g, pageX - 3, top, bottom, total, listScroll);
+        return hovered;
     }
 
     private static void scrollbar(GuiGraphics g, int x, int top, int bottom, int total, double scroll) {
