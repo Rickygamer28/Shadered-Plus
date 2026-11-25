@@ -23,7 +23,7 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
     private static final int PANEL = 0xF0101420, SLOT = 0xFF20283A, SLOT_EDGE = 0xFF3C4A60, TEXT = 0xFFE4ECF6, DIM = 0xFF8C98AC;
     private static final String[] SIZES = {"none", "small", "medium", "large"};
     private final Button[] modes = new Button[4];
-    private Button forgeMode;
+    private Button forgeMode, forgePower;
 
     public MachineScreen(MachineMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -52,7 +52,8 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
                         b -> press(id)).bounds(leftPos + 8 + i * 40, topPos + 20, 38, 16).build());
             }
         } else if (m instanceof StarForgeBlockEntity) {
-            forgeMode = addRenderableWidget(Button.builder(Component.empty(), b -> press(10)).bounds(leftPos + imageWidth - 78, topPos + 4, 72, 14).build());
+            forgeMode = addRenderableWidget(Button.builder(Component.empty(), b -> press(10)).bounds(leftPos + imageWidth - 62, topPos + 4, 56, 14).build());
+            forgePower = addRenderableWidget(Button.builder(Component.empty(), b -> press(11)).bounds(leftPos + imageWidth - 112, topPos + 4, 48, 14).build());
         }
         labels();
     }
@@ -74,6 +75,12 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
         }
         if (m instanceof StarForgeBlockEntity f && forgeMode != null) {
             forgeMode.setMessage(Component.translatable(f.mode() == 0 ? "screen.skyblocks.star_forge.smelting" : "screen.skyblocks.star_forge.forging"));
+            if (forgePower != null) {
+                Component c = Component.translatable("screen.skyblocks.star_forge.colour." + StarForgeBlockEntity.CLASSES[f.powerColour()]);
+                forgePower.setMessage(Component.literal("\u26A1 ").append(c));
+                forgePower.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
+                        Component.translatable("screen.skyblocks.star_forge.power_tip", c, String.format("%,d", f.powerCost()))));
+            }
         }
     }
 
@@ -202,9 +209,10 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
         g.drawString(font, Component.translatable("screen.skyblocks.star_forge.fuel"), 6, 16, DIM, false);
         g.drawString(font, Component.translatable("screen.skyblocks.star_forge.in"), 38, 16, DIM, false);
         g.drawString(font, Component.translatable("screen.skyblocks.star_forge.out"), 114, 16, DIM, false);
-        Component star = f.lit() ? Component.translatable("screen.skyblocks.star_forge.star",
-                Component.translatable("screen.skyblocks.star_forge.colour." + StarForgeBlockEntity.CLASSES[f.colour()]), String.format("%,d", f.makes()))
-                : Component.translatable("screen.skyblocks.star_forge.out_of_fuel");
+        Component colour = Component.translatable("screen.skyblocks.star_forge.colour." + StarForgeBlockEntity.CLASSES[f.colour()]);
+        Component star = f.powered() ? Component.translatable("screen.skyblocks.star_forge.star_powered", colour, String.format("%,d", f.powerCost()))
+                : f.lit() ? Component.translatable("screen.skyblocks.star_forge.star", colour, String.format("%,d", f.makes()))
+                : Component.translatable("screen.skyblocks.star_forge.out_of_fuel", String.format("%,d", f.powerCost()));
         g.drawString(font, star, 8, 84, f.lit() ? accent() : 0xFFFF8A7A, false);
         Component work = f.progress() > 0 ? Component.translatable("screen.skyblocks.star_forge.working", Math.round(f.progress() * 100))
                 : Component.translatable(f.mode() == 0 ? "screen.skyblocks.star_forge.idle_smelt" : "screen.skyblocks.star_forge.idle_forge");

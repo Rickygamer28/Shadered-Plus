@@ -292,7 +292,10 @@ public class WeatherMachineBlockEntity extends MachineBlockEntity {
 
     @Override
     public boolean triggerEvent(int id, int param) {
-        if (level != null && level.isClientSide && (id == 3 || id == 4)) {
+        if (id == 3 || id == 4) {
+            if (level == null || !level.isClientSide) {
+                return true;
+            }
             clientStruckAt = System.currentTimeMillis();
             return true;
         }

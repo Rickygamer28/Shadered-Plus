@@ -304,7 +304,11 @@ public class ParticleAcceleratorBlockEntity extends MachineBlockEntity {
 
     @Override
     public boolean triggerEvent(int id, int param) {
-        if (level != null && level.isClientSide && (id == 1 || id == 2)) {
+        if (id == 1 || id == 2) {
+            // (the server answers yes too: only then is the event sent on to the players watching)
+            if (level == null || !level.isClientSide) {
+                return true;
+            }
             flashAt = System.currentTimeMillis();
             flashKind = id;
             clientSparked = false;

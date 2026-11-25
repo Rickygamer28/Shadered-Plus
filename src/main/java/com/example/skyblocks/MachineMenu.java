@@ -100,6 +100,10 @@ public class MachineMenu extends AbstractContainerMenu {
             f.toggleMode();
             return true;
         }
+        if (m instanceof StarForgeBlockEntity f && id == 11) {
+            f.cyclePowerColour();
+            return true;
+        }
         return false;
     }
 

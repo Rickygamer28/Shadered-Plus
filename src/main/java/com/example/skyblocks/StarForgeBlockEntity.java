@@ -64,6 +64,12 @@ public class StarForgeBlockEntity extends MachineBlockEntity {
             new Transmute(Items.IRON_INGOT, 2, Items.GOLD_INGOT, 3), new Transmute(Items.COAL_BLOCK, 9, Items.DIAMOND, 3));
 
     private int burn, burnTotal, colour, mode;
+    /** Powered: with no fuel burning, energy piped in keeps its star lit - the colour picked on its screen, at this much FE/t (x its size). */
+    public static final int[] COST = {200, 500, 1250, 3000};
+    private static final int POWER_CAP = 600_000;
+    private final Battery power = new Battery(POWER_CAP, () -> {});
+    private int powerColour;
+    private boolean powered;
     /** (The client: how big its star's shown, easing.) */
     public float clientFull;
     private int progress, time;
@@ -112,7 +118,7 @@ public class StarForgeBlockEntity extends MachineBlockEntity {
     private final IEnergyStorage output = new IEnergyStorage() {
         @Override
         public int receiveEnergy(int amount, boolean simulate) {
-            return 0;
+            return size == 0 ? 0 : power.receiveEnergy(amount, simulate);
         }
 
         @Override
@@ -137,7 +143,7 @@ public class StarForgeBlockEntity extends MachineBlockEntity {
 
         @Override
         public boolean canReceive() {
-            return false;
+            return size > 0;
         }
     };
 
@@ -171,7 +177,27 @@ public class StarForgeBlockEntity extends MachineBlockEntity {
     }
 
     public boolean lit() {
-        return burn > 0;
+        return burn > 0 || powered;
+    }
+
+    /** Burning on power, not fuel. */
+    public boolean powered() {
+        return powered;
+    }
+
+    public int powerColour() {
+        return powerColour;
+    }
+
+    /** What its powered star (the colour picked) uses, FE/t. */
+    public int powerCost() {
+        return COST[powerColour] * Math.max(1, size);
+    }
+
+    public void cyclePowerColour() {
+        powerColour = (powerColour + 1) % COST.length;
+        setChanged();
+        sync();
     }
 
     public int colour() {
@@ -184,6 +210,9 @@ public class StarForgeBlockEntity extends MachineBlockEntity {
 
     /** How much of its fuel's left (0..1). */
     public float fuelLeft() {
+        if (powered) {
+            return (float) power.getEnergyStored() / POWER_CAP;
+        }
         return burnTotal <= 0 ? 0.0F : (float) burn / burnTotal;
     }
 
@@ -192,7 +221,7 @@ public class StarForgeBlockEntity extends MachineBlockEntity {
     }
 
     public int makes() {
-        return lit() ? MAKES[colour] * Math.max(1, size) : 0;
+        return burn > 0 ? MAKES[colour] * Math.max(1, size) : 0;
     }
 
     public int stored() {
@@ -272,6 +301,20 @@ public class StarForgeBlockEntity extends MachineBlockEntity {
                 sync();
             }
         }
+        // no fuel burning: power piped in keeps it lit, as the colour picked (making no energy of its own)
+        boolean was = powered;
+        powered = burn <= 0 && power.getEnergyStored() >= powerCost();
+        if (powered) {
+            power.take(powerCost());
+            if (colour != powerColour) {
+                colour = powerColour;
+                level.playSound(null, worldPosition, SoundEvents.BEACON_POWER_SELECT, SoundSource.BLOCKS, 0.6F, 0.8F + 0.2F * colour);
+                sync();
+            }
+        }
+        if (powered != was) {
+            sync();
+        }
         if (burn > 0) {
             burn--;
             made.add(MAKES[colour] * size);
@@ -292,10 +335,10 @@ public class StarForgeBlockEntity extends MachineBlockEntity {
         }
         // its work
         if (time == 0) {
-            if (burn > 0) {
+            if (lit()) {
                 start(level);
             }
-        } else if (burn > 0) {
+        } else if (lit()) {
             progress++;
             if (progress % 20 == 0) {
                 sync();
@@ -514,7 +557,7 @@ public class StarForgeBlockEntity extends MachineBlockEntity {
             for (int k = IN; k < IN + SLOTS; k++) {
                 empty &= items.getStackInSlot(k).isEmpty();
             }
-            if (empty && burn > 0) {
+            if (empty && lit()) {
                 for (int j = 0; j < Math.min(h.getSlots(), 128); j++) {
                     ItemStack s = h.getStackInSlot(j);
                     if (!s.isEmpty() && workable(level, s)) {
@@ -541,6 +584,9 @@ public class StarForgeBlockEntity extends MachineBlockEntity {
     @Override
     protected void saveMore(CompoundTag tag, HolderLookup.Provider registries) {
         tag.putInt("burn", burn);
+        tag.putInt("power", power.getEnergyStored());
+        tag.putInt("power_colour", powerColour);
+        tag.putBoolean("powered", powered);
         tag.putInt("burn_total", burnTotal);
         tag.putInt("colour", colour);
         tag.putInt("mode", mode);
@@ -564,6 +610,9 @@ public class StarForgeBlockEntity extends MachineBlockEntity {
     @Override
     protected void loadMore(CompoundTag tag, HolderLookup.Provider registries) {
         burn = tag.getInt("burn");
+        power.set(Math.min(POWER_CAP, tag.getInt("power")));
+        powerColour = Math.floorMod(tag.getInt("power_colour"), COST.length);
+        powered = tag.getBoolean("powered");
         burnTotal = tag.getInt("burn_total");
         colour = Math.floorMod(tag.getInt("colour"), CLASSES.length);
         mode = tag.getInt("mode") & 1;
