@@ -147,10 +147,10 @@ public final class MachineRenderers {
                 for (int side = 0; side < 2; side++) {
                     float a = side * Mth.PI + 0.4F;
                     float sx = 0.5F + Mth.cos(a) * r, sz = 0.5F + Mth.sin(a) * r;
-                    float x = Mth.lerp(e, sx, 0.5F), y = Mth.lerp(e, 0.55F, cy), z = Mth.lerp(e, sz, 0.5F);
+                    float x = Mth.lerp(e, sx, 0.5F), y = Mth.lerp(e, 0.55F, cy) + 0.9F * Mth.sin(Mth.PI * f), z = Mth.lerp(e, sz, 0.5F);
                     for (int k = 1; k <= 10; k++) {
-                        float g = Math.max(0, e - k * 0.035F);
-                        sprite(v, m, cam[0], cam[1], Mth.lerp(g, sx, 0.5F), Mth.lerp(g, 0.55F, cy), Mth.lerp(g, sz, 0.5F), 0.22F * (1 - k / 11.0F),
+                        float g = Math.max(0, e - k * 0.035F), gf = Mth.sqrt(g);
+                        sprite(v, m, cam[0], cam[1], Mth.lerp(g, sx, 0.5F), Mth.lerp(g, 0.55F, cy) + 0.9F * Mth.sin(Mth.PI * gf), Mth.lerp(g, sz, 0.5F), 0.22F * (1 - k / 11.0F),
                                 side == 0 ? 0.35F : 1.0F, side == 0 ? 0.95F : 0.4F, side == 0 ? 1.0F : 0.9F, 0.8F * (1 - k / 11.0F));
                     }
                     glow(v, m, cam[0], cam[1], x, y, z, 0.8F, side == 0 ? 0.35F : 1.0F, side == 0 ? 0.95F : 0.4F, side == 0 ? 1.0F : 0.9F, 0.9F);
@@ -158,7 +158,7 @@ public final class MachineRenderers {
                         pose.pushPose();
                         pose.translate(x, y - 0.1F, z);
                         pose.mulPose(Axis.YP.rotationDegrees(age * 900.0F + side * 180));
-                        pose.scale(0.45F, 0.45F, 0.45F);
+                        pose.scale(0.6F, 0.6F, 0.6F);
                         mc.getItemRenderer().renderStatic(smashed, net.minecraft.world.item.ItemDisplayContext.GROUND, 0xF000F0, OverlayTexture.NO_OVERLAY,
                                 pose, buffers, be.getLevel(), side);
                         pose.popPose();
@@ -169,7 +169,7 @@ public final class MachineRenderers {
             }
             float since = age - hit;
             // the burst: a flash, white to its colours, fading
-            float k = Math.max(0.0F, 1.0F - since / 0.8F);
+            float k = Math.max(0.0F, 1.0F - since / 0.6F);
             glow(v, m, cam[0], cam[1], 0.5F, cy, 0.5F, 1.2F + 4.5F * (1.0F - k), 0.9F, 0.95F, 1.0F, k);
             glow(v, m, cam[0], cam[1], 0.5F, cy, 0.5F, 0.6F + 1.5F * (1.0F - k), 1.0F, 0.6F, 0.95F, k * 0.8F);
             // the shockwave: a ring of light sweeping out over the ring, low, fading as it goes
@@ -204,14 +204,14 @@ public final class MachineRenderers {
             ItemStack made = be.clientMade;
             if (!made.isEmpty() && since > 0.15F) {
                 float u = Math.min(1.0F, (since - 0.15F) / 1.3F);
-                float rise = cy + 0.9F * (1.0F - (1.0F - u) * (1.0F - u));
+                float rise = cy + 0.4F + 1.4F * (1.0F - (1.0F - u) * (1.0F - u));
                 float pop = u < 0.15F ? u / 0.15F * 1.2F : u < 0.25F ? 1.2F - (u - 0.15F) * 2.0F : 1.0F;
                 float fade = u > 0.8F ? (1.0F - u) / 0.2F : 1.0F;
                 glow(v, m, cam[0], cam[1], 0.5F, rise, 0.5F, 1.1F * pop, 1.0F, 0.9F, 0.55F, 0.7F * fade);
                 pose.pushPose();
                 pose.translate(0.5F, rise - 0.15F, 0.5F);
                 pose.mulPose(Axis.YP.rotationDegrees(since * 300.0F));
-                float sc = 0.7F * pop * (0.4F + 0.6F * fade);
+                float sc = 1.0F * pop * (0.4F + 0.6F * fade);
                 pose.scale(sc, sc, sc);
                 mc.getItemRenderer().renderStatic(made, net.minecraft.world.item.ItemDisplayContext.GROUND, 0xF000F0, OverlayTexture.NO_OVERLAY, pose, buffers,
                         be.getLevel(), 7);
