@@ -53,7 +53,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
     public WhirlpoolRenderer(BlockEntityRendererProvider.Context context) {}
 
     /** One fluid as it's drawn: its picture, tint, brightness, how much of the whole. */
-    private record Look(TextureAtlasSprite sprite, int argb, boolean glows, float share, boolean gas, int density) {}
+    private record Look(TextureAtlasSprite sprite, int argb, boolean glows, float share, boolean gas, int density, int mean) {}
 
     private static Look look(FluidStack fluid, long amount, long total) {
         IClientFluidTypeExtensions ext = IClientFluidTypeExtensions.of(fluid.getFluid());
@@ -61,7 +61,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         int tint = ext.getTintColor(fluid);
         net.neoforged.neoforge.fluids.FluidType type = fluid.getFluid().getFluidType();
         return new Look(sprite, tint | 0xFF000000, type.getLightLevel(fluid) > 0, total <= 0 ? 0 : (float) amount / total,
-                type.isLighterThanAir(), type.getDensity(fluid));
+                type.isLighterThanAir(), type.getDensity(fluid), StorageSkins.fluidColour(fluid));
     }
 
     @Override
@@ -519,9 +519,62 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         source.endBatch(Types.FUNNEL);
         // the pool's sides against the glass and its floor (the outermost fluid), see-through - drawn after the funnel, so
         // from the side the funnel is seen through the water, not hidden behind it
-        box(source.getBuffer(Types.POOL), pose, bands.get(0), lo, lo, lo, hi, surface, hi,
-                true, -1.0F, 0.0F, light, 0.0F, 0.42F);
+        poolWalls(source.getBuffer(Types.POOL), pose, bands.get(0), lo, hi, surface, light);
         source.endBatch(Types.POOL); // (right after the whirlpool, over it)
+    }
+
+    private static final ResourceLocation WHITE = ResourceLocation.fromNamespaceAndPath(com.example.skyblocks.SkyBlocksMod.MOD_ID, "block/fm_glow_white");
+
+    /**
+     * The pool against the glass: its colour deepening and thickening towards the floor, its own picture faintly over
+     * that (so it reads as that fluid, not a wall of noise), a bright line where its surface meets the glass, and its
+     * floor dim under it.
+     */
+    private static void poolWalls(VertexConsumer v, PoseStack.Pose pose, Look l, float lo, float hi, float surface, int light) {
+        if (surface - lo < 0.01F) {
+            return;
+        }
+        TextureAtlasSprite white = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(WHITE);
+        int lit = l.glows ? LightTexture.FULL_BRIGHT : light;
+        int deep = tone(l.mean, 0.55F, 0.72F), top = tone(l.mean, 1.0F, 0.36F), line = tone(l.mean, 1.55F, 0.85F), floor = tone(l.mean, 0.45F, 0.8F);
+        int detail = (l.argb & 0x00FFFFFF) | (46 << 24);
+        float[][] sides = {{lo, lo, hi, lo}, {hi, hi, lo, hi}, {lo, hi, lo, lo}, {hi, lo, hi, hi}};
+        for (float[] s : sides) {
+            flat(v, pose, white, s[0], s[1], s[2], s[3], lo, surface, deep, top, lit);
+            flat(v, pose, white, s[0], s[1], s[2], s[3], surface - 0.035F, surface, line, line, lit);
+        }
+        // (its picture, faintly, a block at a time)
+        for (float a = lo; a < hi - 0.001F; a = Math.min(hi, (float) Math.floor(a) + 1)) {
+            float b = Math.min(hi, (float) Math.floor(a) + 1);
+            column(v, pose, l, a, lo, b, lo, lo, surface - 0.035F, detail, lit);
+            column(v, pose, l, b, hi, a, hi, lo, surface - 0.035F, detail, lit);
+            column(v, pose, l, lo, b, lo, a, lo, surface - 0.035F, detail, lit);
+            column(v, pose, l, hi, a, hi, b, lo, surface - 0.035F, detail, lit);
+        }
+        float y = lo + 0.003F, u = 0.5F;
+        vertex(v, pose, lo, y, lo, white, u, u, floor, lit);
+        vertex(v, pose, hi, y, lo, white, u, u, floor, lit);
+        vertex(v, pose, hi, y, hi, white, u, u, floor, lit);
+        vertex(v, pose, lo, y, hi, white, u, u, floor, lit);
+    }
+
+    /** A flat-coloured upright quad from (xa, za) to (xb, zb), {@code c0} at its foot to {@code c1} at its top. */
+    private static void flat(VertexConsumer v, PoseStack.Pose pose, TextureAtlasSprite white, float xa, float za, float xb, float zb, float y0, float y1,
+                             int c0, int c1, int lit) {
+        float u = 0.5F;
+        vertex(v, pose, xa, y1, za, white, u, u, c1, lit);
+        vertex(v, pose, xa, y0, za, white, u, u, c0, lit);
+        vertex(v, pose, xb, y0, zb, white, u, u, c0, lit);
+        vertex(v, pose, xb, y1, zb, white, u, u, c1, lit);
+    }
+
+    /** A colour darkened (k < 1) or lightened towards white (k > 1), this see-through. */
+    private static int tone(int rgb, float k, float alpha) {
+        int[] c = {rgb >> 16 & 255, rgb >> 8 & 255, rgb & 255};
+        for (int i = 0; i < 3; i++) {
+            c[i] = k <= 1.0F ? Math.round(c[i] * k) : Math.min(255, Math.round(c[i] + (255 - c[i]) * (k - 1.0F)));
+        }
+        return Math.round(alpha * 255) << 24 | c[0] << 16 | c[1] << 8 | c[2];
     }
 
     /**
