@@ -1267,7 +1267,7 @@ public final class RenderTest {
                                     mc.player.getVehicle() instanceof com.example.skyblocks.ElevatorCabinEntity c
                                             ? String.format(java.util.Locale.ROOT, "%.3f", c.shownLanding(1.0F)) : "-");
                         }
-                        if (spot >= 353 && ticks == 80) { // (the guide: a machine's page; a structure; searching)
+                        if (spot >= 353 && spot <= 355 && ticks == 80) { // (the guide: a machine's page; a structure; searching)
                             mc.setScreen(spot == 353 ? GuideScreen.at("machines", 2, "") : spot == 354 ? GuideScreen.at("structures", 0, "")
                                     : GuideScreen.at("machines", 0, "core"));
                         }
