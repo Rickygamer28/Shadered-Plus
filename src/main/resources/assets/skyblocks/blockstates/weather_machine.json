@@ -4,7 +4,7 @@
       "model": "skyblocks:block/weather_machine"
     },
     "formed=true": {
-      "model": "skyblocks:block/weather_machine"
+      "model": "skyblocks:block/weather_machine_formed"
     }
   }
 }

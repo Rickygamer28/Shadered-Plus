@@ -1,0 +1,298 @@
+{
+ "parent": "minecraft:block/block",
+ "render_type": "minecraft:cutout",
+ "textures": {
+  "particle": "minecraft:block/quartz_bricks",
+  "plinth_side": "minecraft:block/quartz_bricks",
+  "plinth_top": "minecraft:block/quartz_block_bottom",
+  "column": "skyblocks:block/weather_mast_edge",
+  "glow": "minecraft:block/pearlescent_froglight_side",
+  "post": "minecraft:block/quartz_pillar"
+ },
+ "elements": [
+  {
+   "from": [
+    0,
+    0,
+    0
+   ],
+   "to": [
+    16,
+    5,
+    16
+   ],
+   "faces": {
+    "north": {
+     "texture": "#plinth_side"
+    },
+    "south": {
+     "texture": "#plinth_side"
+    },
+    "east": {
+     "texture": "#plinth_side"
+    },
+    "west": {
+     "texture": "#plinth_side"
+    },
+    "down": {
+     "texture": "#plinth_side"
+    }
+   }
+  },
+  {
+   "from": [
+    0,
+    0,
+    0
+   ],
+   "to": [
+    16,
+    5,
+    16
+   ],
+   "faces": {
+    "up": {
+     "texture": "#plinth_top"
+    }
+   }
+  },
+  {
+   "from": [
+    3,
+    5,
+    3
+   ],
+   "to": [
+    13,
+    14,
+    13
+   ],
+   "faces": {
+    "north": {
+     "texture": "#column"
+    },
+    "south": {
+     "texture": "#column"
+    },
+    "east": {
+     "texture": "#column"
+    },
+    "west": {
+     "texture": "#column"
+    },
+    "up": {
+     "texture": "#column"
+    },
+    "down": {
+     "texture": "#column"
+    }
+   }
+  },
+  {
+   "from": [
+    2.5,
+    8,
+    2.5
+   ],
+   "to": [
+    13.5,
+    10,
+    13.5
+   ],
+   "faces": {
+    "north": {
+     "texture": "#glow"
+    },
+    "south": {
+     "texture": "#glow"
+    },
+    "east": {
+     "texture": "#glow"
+    },
+    "west": {
+     "texture": "#glow"
+    },
+    "up": {
+     "texture": "#glow"
+    },
+    "down": {
+     "texture": "#glow"
+    }
+   }
+  },
+  {
+   "from": [
+    1,
+    14,
+    1
+   ],
+   "to": [
+    15,
+    16,
+    15
+   ],
+   "faces": {
+    "up": {
+     "texture": "#plinth_top"
+    }
+   }
+  },
+  {
+   "from": [
+    1,
+    14,
+    1
+   ],
+   "to": [
+    15,
+    16,
+    15
+   ],
+   "faces": {
+    "north": {
+     "texture": "#plinth_side"
+    },
+    "south": {
+     "texture": "#plinth_side"
+    },
+    "east": {
+     "texture": "#plinth_side"
+    },
+    "west": {
+     "texture": "#plinth_side"
+    },
+    "down": {
+     "texture": "#plinth_side"
+    }
+   }
+  },
+  {
+   "from": [
+    1,
+    5,
+    1
+   ],
+   "to": [
+    3,
+    14,
+    3
+   ],
+   "faces": {
+    "north": {
+     "texture": "#post"
+    },
+    "south": {
+     "texture": "#post"
+    },
+    "east": {
+     "texture": "#post"
+    },
+    "west": {
+     "texture": "#post"
+    },
+    "up": {
+     "texture": "#post"
+    },
+    "down": {
+     "texture": "#post"
+    }
+   }
+  },
+  {
+   "from": [
+    13,
+    5,
+    1
+   ],
+   "to": [
+    15,
+    14,
+    3
+   ],
+   "faces": {
+    "north": {
+     "texture": "#post"
+    },
+    "south": {
+     "texture": "#post"
+    },
+    "east": {
+     "texture": "#post"
+    },
+    "west": {
+     "texture": "#post"
+    },
+    "up": {
+     "texture": "#post"
+    },
+    "down": {
+     "texture": "#post"
+    }
+   }
+  },
+  {
+   "from": [
+    1,
+    5,
+    13
+   ],
+   "to": [
+    3,
+    14,
+    15
+   ],
+   "faces": {
+    "north": {
+     "texture": "#post"
+    },
+    "south": {
+     "texture": "#post"
+    },
+    "east": {
+     "texture": "#post"
+    },
+    "west": {
+     "texture": "#post"
+    },
+    "up": {
+     "texture": "#post"
+    },
+    "down": {
+     "texture": "#post"
+    }
+   }
+  },
+  {
+   "from": [
+    13,
+    5,
+    13
+   ],
+   "to": [
+    15,
+    14,
+    15
+   ],
+   "faces": {
+    "north": {
+     "texture": "#post"
+    },
+    "south": {
+     "texture": "#post"
+    },
+    "east": {
+     "texture": "#post"
+    },
+    "west": {
+     "texture": "#post"
+    },
+    "up": {
+     "texture": "#post"
+    },
+    "down": {
+     "texture": "#post"
+    }
+   }
+  }
+ ]
+}

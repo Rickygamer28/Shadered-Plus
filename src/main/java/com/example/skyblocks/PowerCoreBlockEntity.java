@@ -283,7 +283,7 @@ public class PowerCoreBlockEntity extends BlockEntity {
 
     // ---- push mode ----
 
-    /** Where it pushes to: beside it, and beside each of its chamber's frames (outside the chamber). */
+    /** Where it pushes to: beside it, and beside each of its chamber's frames - its edges, and any filling its sides (outside the chamber). */
     private void findOutlets() {
         outlets.clear();
         outletSides.clear();
@@ -301,10 +301,14 @@ public class PowerCoreBlockEntity extends BlockEntity {
             for (int dy = -r; dy <= r; dy++) {
                 for (int dz = -r; dz <= r; dz++) {
                     int rims = (Math.abs(dx) == r ? 1 : 0) + (Math.abs(dy) == r ? 1 : 0) + (Math.abs(dz) == r ? 1 : 0);
-                    if (rims < 2) {
+                    if (rims < 1) {
                         continue;
                     }
                     p.set(worldPosition.getX() + dx, worldPosition.getY() + dy, worldPosition.getZ() + dz);
+                    // (its edges; and frames filling its sides - beside those too, not only its edges)
+                    if (rims == 1 && !(level.getBlockState(p).getBlock() instanceof CoreFrameBlock)) {
+                        continue;
+                    }
                     for (Direction d : Direction.values()) {
                         BlockPos n = p.relative(d);
                         int ox = n.getX() - worldPosition.getX(), oy = n.getY() - worldPosition.getY(), oz = n.getZ() - worldPosition.getZ();

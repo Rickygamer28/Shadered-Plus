@@ -255,32 +255,31 @@ public final class MachineRenderers {
             VertexConsumer metal = buffers.getBuffer(RenderType.entityCutoutNoCull(METAL));
             PoseStack.Pose p = pose.last();
             post(metal, p, dishLight);
-            int segs = 20;
-            float rIn = 0.12F, rOut = 1.15F, yIn = 0.22F, yOut = 0.55F;
+            // the bowl: curved (deeper to its middle), a lip round its rim
+            int segs = 28;
+            float[] rr = {0.14F, 0.42F, 0.72F, 1.0F, 1.22F};
             for (int i = 0; i < segs; i++) {
                 float a0 = i * Mth.TWO_PI / segs, a1 = (i + 1) * Mth.TWO_PI / segs;
-                float[][] q = {{Mth.cos(a0) * rIn, yIn, Mth.sin(a0) * rIn}, {Mth.cos(a1) * rIn, yIn, Mth.sin(a1) * rIn},
-                        {Mth.cos(a1) * rOut, yOut, Mth.sin(a1) * rOut}, {Mth.cos(a0) * rOut, yOut, Mth.sin(a0) * rOut}};
-                float[] uv = {0.45F, 0.55F, 0.55F, 1.0F};
-                for (int k = 0; k < 4; k++) {
-                    float shade = k < 2 ? 0.7F : 1.0F;
-                    int c = (int) (255 * shade);
-                    metal.addVertex(p, q[k][0], q[k][1], q[k][2]).setColor(c, c, c, 255).setUv(uv[k] * (k == 1 || k == 2 ? 1 : 0.2F), k < 2 ? 0.1F : 0.9F)
-                            .setOverlay(OverlayTexture.NO_OVERLAY).setLight(dishLight).setNormal(p, 0, 1, 0);
+                for (int k = 0; k < rr.length - 1; k++) {
+                    float r0 = rr[k], r1 = rr[k + 1];
+                    float h0 = 0.24F + 0.36F * (r0 / 1.22F) * (r0 / 1.22F), h1 = 0.24F + 0.36F * (r1 / 1.22F) * (r1 / 1.22F);
+                    dishQuad(metal, p, a0, a1, r0, r1, h0, h1, dishLight, k % 2 == 0 ? 0xFFE6EAF0 : 0xFFD6DCE4);
                 }
+                dishQuad(metal, p, a0, a1, 1.22F, 1.28F, 0.6F, 0.66F, dishLight, 0xFF9AA4B4);
             }
-            // its feed arm over the dish
+            // its feed: three arms up from the bowl to a horn over its middle
             for (int k = 0; k < 3; k++) {
                 float a = k * Mth.TWO_PI / 3;
-                arm(metal, p, Mth.cos(a) * 0.95F, yOut + 0.02F, Mth.sin(a) * 0.95F, 0, 0.95F, 0, dishLight);
+                arm(metal, p, Mth.cos(a) * 1.0F, 0.6F, Mth.sin(a) * 1.0F, 0, 0.95F, 0, dishLight);
             }
+            box(metal, p, -0.07F, 0.88F, -0.07F, 0.07F, 1.05F, 0.07F, dishLight);
             pose.popPose();
             // its emitter: a glow over the dish in its weather's colour; a beam into the sky while turning it
             Matrix4f m = pose.last().pose();
             Vector3f[] cam = camera();
             float[] c = COLOURS[mode];
             float k = mode == 0 ? 0.25F : holding ? 0.9F + 0.1F * Mth.sin(t * 3) : 0.55F + 0.4F * Mth.sin(t * 9);
-            float ey = y0 + 0.97F;
+            float ey = y0 + 1.12F;
             VertexConsumer gl = glows(buffers);
             glow(gl, m, cam[0], cam[1], 0.5F, ey, 0.5F, 0.9F + (holding ? 0.4F : 0), c[0], c[1], c[2], k);
             // a strike (or the weather turned): a flash on the dish
@@ -316,6 +315,17 @@ public final class MachineRenderers {
                 level.addParticle(mode == 1 ? ParticleTypes.END_ROD : ParticleTypes.CLOUD, bp.getX() + 0.5 + Mth.cos(a) * rr,
                         bp.getY() + ey + 2.5 + level.random.nextFloat() * 2.0, bp.getZ() + 0.5 + Mth.sin(a) * rr,
                         -Mth.sin(a) * 0.12, 0.01, Mth.cos(a) * 0.12);
+            }
+        }
+
+        /** A piece of the bowl: between angles a0, a1 round it, radii r0..r1 out, heights h0..h1. */
+        private static void dishQuad(VertexConsumer v, PoseStack.Pose p, float a0, float a1, float r0, float r1, float h0, float h1, int light, int argb) {
+            float[][] q = {{Mth.cos(a0) * r0, h0, Mth.sin(a0) * r0}, {Mth.cos(a1) * r0, h0, Mth.sin(a1) * r0},
+                    {Mth.cos(a1) * r1, h1, Mth.sin(a1) * r1}, {Mth.cos(a0) * r1, h1, Mth.sin(a0) * r1}};
+            float[][] uv = {{0.0F, 0.0F}, {0.25F, 0.0F}, {0.25F, 0.25F}, {0.0F, 0.25F}};
+            for (int k = 0; k < 4; k++) {
+                v.addVertex(p, q[k][0], q[k][1], q[k][2]).setColor(argb).setUv(uv[k][0], uv[k][1]).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light)
+                        .setNormal(p, 0, 1, 0);
             }
         }
 
