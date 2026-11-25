@@ -8,9 +8,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-/** The power core's screen: its look chosen (value: which), push mode on / off. */
+/** The power core's screen: its look chosen (value: which); a block near it set to off / take / give (value: where, and which). */
 public record PowerCorePayload(BlockPos pos, int action, int value) implements CustomPacketPayload {
-    public static final int SKIN = 0, PUSH = 1;
+    public static final int SKIN = 0, LINK = 1;
     public static final Type<PowerCorePayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "power_core_action"));
     public static final StreamCodec<RegistryFriendlyByteBuf, PowerCorePayload> STREAM_CODEC = StreamCodec.of((buf, p) -> {
         buf.writeBlockPos(p.pos);
@@ -33,7 +33,11 @@ public record PowerCorePayload(BlockPos pos, int action, int value) implements C
             }
             switch (payload.action) {
                 case SKIN -> be.setSkin(payload.value);
-                case PUSH -> be.togglePush();
+                case LINK -> {
+                    int v = payload.value;
+                    BlockPos target = payload.pos.offset((v >> 2 & 63) - 32, (v >> 8 & 63) - 32, (v >> 14 & 63) - 32);
+                    be.setMode(target, v & 3);
+                }
                 default -> {}
             }
         });

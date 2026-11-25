@@ -33,15 +33,17 @@ public class PowerCoreBlockEntity extends BlockEntity {
 
     private long energy;
     private int skin;
-    private boolean push;
+    /** (Kept only to carry old push mode over to links: every receiver beside its frames set to give.) */
+    private boolean legacyPush;
     /** Its core chamber: how many blocks across (0: none). */
     private int chamber;
     private int lastSignal = -1;
     private boolean relink, syncPending;
-    /** (Server, push mode: where to push - beside it, and beside its chamber's frames - worked out when it's formed.) */
-    private final List<BlockPos> outlets = new ArrayList<>();
-    private final List<Direction> outletSides = new ArrayList<>();
-    private boolean outletsKnown;
+    /** What each block it's linked to is set to (only those not off); saved. */
+    private final java.util.Map<BlockPos, Integer> modes = new java.util.HashMap<>();
+    /** The blocks near it that hold energy, as last found (server: scanned now and then; client: as sent). */
+    private List<Link> links = new ArrayList<>();
+    private boolean scanSoon = true;
     /** Energy in and out: counted over a second, then shown as FE per tick (its screen). */
     private long inCount, outCount;
     private long rateIn, rateOut;
@@ -60,8 +62,13 @@ public class PowerCoreBlockEntity extends BlockEntity {
         return skin;
     }
 
-    public boolean push() {
-        return push;
+    /** A block near it that holds energy: where, what it's set to, whether it can give / take energy, how much it holds. */
+    public record Link(BlockPos pos, int mode, boolean canGive, boolean canTake, long stored, long cap) {}
+
+    public static final int OFF = 0, TAKE = 1, GIVE = 2, REACH = 5, MAX_LINKS = 48;
+
+    public List<Link> links() {
+        return links;
     }
 
     public int chamber() {
@@ -98,9 +105,26 @@ public class PowerCoreBlockEntity extends BlockEntity {
         changed(true);
     }
 
-    public void togglePush() {
-        push = !push;
-        changed(true);
+    /** A link set (from its screen): {@code target} to off, take (it draws energy from it) or give (it sends energy to it). */
+    public void setMode(BlockPos target, int mode) {
+        int r = reachRadius();
+        if (Math.abs(target.getX() - worldPosition.getX()) > r || Math.abs(target.getY() - worldPosition.getY()) > r
+                || Math.abs(target.getZ() - worldPosition.getZ()) > r || mode < OFF || mode > GIVE) {
+            return;
+        }
+        if (mode == OFF) {
+            modes.remove(target);
+        } else {
+            modes.put(target.immutable(), mode);
+        }
+        for (int i = 0; i < links.size(); i++) {
+            Link l = links.get(i);
+            if (l.pos.equals(target)) {
+                links.set(i, new Link(l.pos, mode, l.canGive, l.canTake, l.stored, l.cap));
+            }
+        }
+        setChanged();
+        syncPending = true;
     }
 
     public void relinkSoon() {
@@ -267,12 +291,12 @@ public class PowerCoreBlockEntity extends BlockEntity {
                 level.setBlock(worldPosition, s.setValue(PowerCoreBlock.IN_CHAMBER, chamber > 0), Block.UPDATE_CLIENTS);
             }
             level.playSound(null, worldPosition, grew ? SoundEvents.BEACON_ACTIVATE : SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 1.0F, 1.2F);
-            outletsKnown = false;
+            scanSoon = true;
             changed(true);
         } else if (chamber > 0 && relink) {
             relink = false;
             setFrames(chamber, true); // (frames put in since: linked too)
-            outletsKnown = false;
+            scanSoon = true;
         }
     }
 
@@ -283,101 +307,123 @@ public class PowerCoreBlockEntity extends BlockEntity {
         }
     }
 
-    // ---- push mode ----
+    // ---- links: the blocks near it it takes energy from or gives energy to ----
 
-    /** Where it pushes to: beside it, and beside each of its chamber's frames - its edges, and any filling its sides (outside the chamber). */
-    private void findOutlets() {
-        outlets.clear();
-        outletSides.clear();
-        outletsKnown = true;
-        int r = chamber > 0 ? (chamber - 1) / 2 : 0;
-        if (r == 0) {
-            for (Direction d : Direction.values()) {
-                outlets.add(worldPosition.relative(d));
-                outletSides.add(d.getOpposite());
-            }
-            return;
+    private int reachRadius() {
+        return (chamber > 0 ? (chamber - 1) / 2 : 0) + REACH;
+    }
+
+    private static final int CHUNK = 1_000_000, MOST = 1 << 30;
+
+    /** A block's energy, from whichever side shows it (inside first, then the side towards it, then any). */
+    @Nullable
+    private IEnergyStorage energyAt(BlockPos p) {
+        IEnergyStorage e = level.getCapability(Capabilities.EnergyStorage.BLOCK, p, null);
+        if (e != null) {
+            return e;
         }
+        Direction toward = Direction.getNearest(worldPosition.getX() - p.getX(), worldPosition.getY() - p.getY(), worldPosition.getZ() - p.getZ());
+        e = level.getCapability(Capabilities.EnergyStorage.BLOCK, p, toward);
+        if (e != null) {
+            return e;
+        }
+        for (Direction d : Direction.values()) {
+            e = level.getCapability(Capabilities.EnergyStorage.BLOCK, p, d);
+            if (e != null) {
+                return e;
+            }
+        }
+        return null;
+    }
+
+    /** Finds what's near it that holds energy (up to 5 blocks out from its chamber; a machine's frames as the machine). */
+    private void scan() {
+        int r = chamber > 0 ? (chamber - 1) / 2 : 0, reach = r + REACH;
+        List<Link> found = new ArrayList<>();
+        java.util.Set<BlockPos> seen = new java.util.HashSet<>();
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
-        for (int dx = -r; dx <= r; dx++) {
-            for (int dy = -r; dy <= r; dy++) {
-                for (int dz = -r; dz <= r; dz++) {
-                    int rims = (Math.abs(dx) == r ? 1 : 0) + (Math.abs(dy) == r ? 1 : 0) + (Math.abs(dz) == r ? 1 : 0);
-                    if (rims < 1) {
-                        continue;
+        for (int dx = -reach; dx <= reach; dx++) {
+            for (int dy = -reach; dy <= reach; dy++) {
+                for (int dz = -reach; dz <= reach; dz++) {
+                    if (Math.max(Math.abs(dx), Math.max(Math.abs(dy), Math.abs(dz))) <= r) {
+                        continue; // (itself, its chamber)
                     }
                     p.set(worldPosition.getX() + dx, worldPosition.getY() + dy, worldPosition.getZ() + dz);
-                    // (its edges; and frames filling its sides - beside those too, not only its edges)
-                    if (rims == 1 && !(level.getBlockState(p).getBlock() instanceof CoreFrameBlock)) {
+                    if (!level.isLoaded(p)) {
                         continue;
                     }
-                    for (Direction d : Direction.values()) {
-                        BlockPos n = p.relative(d);
-                        int ox = n.getX() - worldPosition.getX(), oy = n.getY() - worldPosition.getY(), oz = n.getZ() - worldPosition.getZ();
-                        if (Math.abs(ox) <= r && Math.abs(oy) <= r && Math.abs(oz) <= r) {
-                            continue; // (the chamber itself)
-                        }
-                        outlets.add(n.immutable());
-                        outletSides.add(d.getOpposite());
+                    BlockState s = level.getBlockState(p);
+                    if (!s.hasBlockEntity() || s.getBlock() instanceof CoreFrameBlock) {
+                        continue;
                     }
+                    BlockPos at = p.immutable();
+                    if (level.getBlockEntity(at) instanceof MachineFrameBlockEntity f && f.master() != null) {
+                        at = f.master(); // (a machine's frame: the machine itself, once)
+                    }
+                    if (!seen.add(at)) {
+                        continue;
+                    }
+                    IEnergyStorage e = energyAt(at);
+                    if (e == null || (!e.canExtract() && !e.canReceive())) {
+                        continue;
+                    }
+                    if (legacyPush && e.canReceive() && Math.max(Math.abs(dx), Math.max(Math.abs(dy), Math.abs(dz))) == r + 1) {
+                        modes.put(at, GIVE);
+                    }
+                    found.add(new Link(at, modes.getOrDefault(at, OFF), e.canExtract(), e.canReceive(), e.getEnergyStored(), e.getMaxEnergyStored()));
                 }
             }
         }
-    }
-
-    private void pushOut() {
-        if (!outletsKnown) {
-            findOutlets();
+        legacyPush = false;
+        // (linked ones first, then the nearest)
+        found.sort((x, y) -> x.mode != OFF && y.mode == OFF ? -1 : x.mode == OFF && y.mode != OFF ? 1
+                : Double.compare(x.pos.distSqr(worldPosition), y.pos.distSqr(worldPosition)));
+        if (found.size() > MAX_LINKS) {
+            found = new ArrayList<>(found.subList(0, MAX_LINKS));
         }
-        int caps = 0;
-        long gave = 0;
-        for (int i = 0; i < outlets.size() && energy > 0; i++) {
-            BlockPos n = outlets.get(i);
-            if (!level.isLoaded(n)) {
-                continue;
-            }
-            BlockState ns = level.getBlockState(n);
-            if (ns.getBlock() instanceof CoreFrameBlock || ns.getBlock() instanceof PowerCoreBlock) {
-                continue;
-            }
-            IEnergyStorage other = level.getCapability(Capabilities.EnergyStorage.BLOCK, n, outletSides.get(i));
-            if (other == null || !other.canReceive()) {
-                continue;
-            }
-            caps++;
-            // (a sane offer, asked first: some take a huge one badly - adding it to what they hold overflows, and they refuse
-            // or lose it)
-            int room = Math.max(0, other.getMaxEnergyStored() - other.getEnergyStored());
-            int offer = (int) Math.min(energy, Math.max(room, PUSH_CHUNK) > 0 ? Math.min(Math.max(room, PUSH_CHUNK), PUSH_MAX) : PUSH_CHUNK);
-            int can = other.receiveEnergy(offer, true);
-            int took = can > 0 ? other.receiveEnergy(Math.min(can, offer), false) : 0;
-            if (took <= 0 && offer > PUSH_CHUNK) { // (and if it wouldn't take that, a small one)
-                can = other.receiveEnergy((int) Math.min(energy, PUSH_CHUNK), true);
-                took = can > 0 ? other.receiveEnergy(can, false) : 0;
-            }
-            gave += took;
-            if (took > 0) {
-                energy -= took;
-                outCount += took;
-                changed(false);
-            }
+        // (a link to something gone: dropped)
+        java.util.Set<BlockPos> there = new java.util.HashSet<>();
+        for (Link l : found) {
+            there.add(l.pos);
         }
-        debugPush(caps, gave);
+        if (modes.keySet().removeIf(k -> !there.contains(k) && level.isLoaded(k))) {
+            setChanged();
+        }
+        links = found;
+        syncPending = true;
     }
 
-    private static final int PUSH_CHUNK = 1_000_000, PUSH_MAX = 1 << 30;
-
-    /** (How many things beside it take energy - shown on its screen, so you can see push mode has found them.) */
-    private int pushTargets;
-
-    public int pushTargets() {
-        return pushTargets;
-    }
-
-    private void debugPush(int caps, long gave) {
-        if (caps != pushTargets) {
-            pushTargets = caps;
-            syncPending = true;
+    /** Each tick: from what it takes from, energy in; to what it gives to, energy out. */
+    private void transfer() {
+        for (Link l : links) {
+            if (l.mode == OFF || !level.isLoaded(l.pos)) {
+                continue;
+            }
+            IEnergyStorage e = energyAt(l.pos);
+            if (e == null) {
+                continue;
+            }
+            if (l.mode == GIVE && energy > 0 && e.canReceive()) {
+                // (a sane offer, asked first: some take a huge one badly - adding it to what they hold overflows)
+                int room = Math.max(0, e.getMaxEnergyStored() - e.getEnergyStored());
+                int offer = (int) Math.min(energy, Math.min(Math.max(room, CHUNK), MOST));
+                int can = e.receiveEnergy(offer, true);
+                int took = can > 0 ? e.receiveEnergy(Math.min(can, offer), false) : 0;
+                if (took > 0) {
+                    energy -= took;
+                    outCount += took;
+                    changed(false);
+                }
+            } else if (l.mode == TAKE && e.canExtract() && energy < capacity()) {
+                int want = (int) Math.min(capacity() - energy, MOST);
+                int can = e.extractEnergy(want, true);
+                int got = can > 0 ? e.extractEnergy(Math.min(can, want), false) : 0;
+                if (got > 0) {
+                    energy += got;
+                    inCount += got;
+                    changed(false);
+                }
+            }
         }
     }
 
@@ -398,12 +444,11 @@ public class PowerCoreBlockEntity extends BlockEntity {
             be.inCount = 0;
             be.outCount = 0;
         }
-        if (be.push && be.energy > 0) {
-            be.pushOut();
-        } else if (be.pushTargets != 0) {
-            be.pushTargets = 0;
-            be.syncPending = true;
+        if (be.scanSoon || time % 40 == 0) {
+            be.scanSoon = false;
+            be.scan();
         }
+        be.transfer();
     }
 
     // ---- saving, and what the client sees ----
@@ -417,8 +462,14 @@ public class PowerCoreBlockEntity extends BlockEntity {
     private void save(CompoundTag tag) {
         tag.putLong("energy", energy);
         tag.putInt("skin", skin);
-        tag.putBoolean("push", push);
-        tag.putInt("push_targets", pushTargets);
+        net.minecraft.nbt.ListTag set = new net.minecraft.nbt.ListTag();
+        for (var e : modes.entrySet()) {
+            CompoundTag t = new CompoundTag();
+            t.putLong("p", e.getKey().asLong());
+            t.putByte("m", (byte) (int) e.getValue());
+            set.add(t);
+        }
+        tag.put("links", set);
         tag.putInt("chamber", chamber);
     }
 
@@ -427,12 +478,24 @@ public class PowerCoreBlockEntity extends BlockEntity {
         super.loadAdditional(tag, registries);
         energy = Math.max(0, tag.getLong("energy"));
         skin = Math.floorMod(tag.getInt("skin"), SKINS.length);
-        push = tag.getBoolean("push");
-        pushTargets = tag.getInt("push_targets");
+        legacyPush = tag.getBoolean("push");
+        modes.clear();
+        for (net.minecraft.nbt.Tag t : tag.getList("links", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+            CompoundTag c = (CompoundTag) t;
+            modes.put(BlockPos.of(c.getLong("p")), (int) c.getByte("m"));
+        }
+        if (tag.contains("found")) { // (the client: what's near it, as found)
+            List<Link> got = new ArrayList<>();
+            for (net.minecraft.nbt.Tag t : tag.getList("found", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+                CompoundTag c = (CompoundTag) t;
+                got.add(new Link(BlockPos.of(c.getLong("p")), c.getByte("m"), c.getBoolean("g"), c.getBoolean("t"), c.getLong("s"), c.getLong("c")));
+            }
+            links = got;
+        }
         chamber = tag.getInt("chamber");
         rateIn = tag.getLong("rate_in");
         rateOut = tag.getLong("rate_out");
-        outletsKnown = false;
+        scanSoon = true;
     }
 
     @Override
@@ -441,6 +504,18 @@ public class PowerCoreBlockEntity extends BlockEntity {
         save(tag);
         tag.putLong("rate_in", rateIn);
         tag.putLong("rate_out", rateOut);
+        net.minecraft.nbt.ListTag found = new net.minecraft.nbt.ListTag();
+        for (Link l : links) {
+            CompoundTag c = new CompoundTag();
+            c.putLong("p", l.pos.asLong());
+            c.putByte("m", (byte) l.mode);
+            c.putBoolean("g", l.canGive);
+            c.putBoolean("t", l.canTake);
+            c.putLong("s", l.stored);
+            c.putLong("c", l.cap);
+            found.add(c);
+        }
+        tag.put("found", found);
         return tag;
     }
 
@@ -453,16 +528,17 @@ public class PowerCoreBlockEntity extends BlockEntity {
     /** Itself as an item, keeping its energy and skin. */
     public ItemStack asItem(HolderLookup.Provider registries) {
         ItemStack stack = new ItemStack(ModItems.POWER_CORE.get());
-        if (energy > 0 || skin != 0 || push) {
+        if (energy > 0 || skin != 0) {
             CompoundTag tag = saveWithoutMetadata(registries);
             tag.remove("chamber");
+            tag.remove("links");
             net.minecraft.world.item.BlockItem.setBlockEntityData(stack, ModBlockEntities.POWER_CORE.get(), tag);
         }
         return stack;
     }
 
     public boolean isEmpty() {
-        return energy <= 0 && skin == 0 && !push;
+        return energy <= 0 && skin == 0;
     }
 
     /** An amount of energy for showing: "512 FE", "12.5 kFE", "3.20 GFE", "4.00 TFE". */

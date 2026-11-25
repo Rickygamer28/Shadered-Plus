@@ -5,6 +5,7 @@ import com.example.skyblocks.SkyBlocksMod;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.core.BlockPos;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -96,6 +97,7 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
 
     @Override
     public void render(PowerCoreBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
+        links(be, pose, buffers);
         if (shader == null) {
             return;
         }
@@ -239,6 +241,28 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Its links page open: each block near it that holds energy outlined in the world - green taking from, orange giving
+     * to, grey off - the one the mouse is on in the list pulsing, a little larger.
+     */
+    private static void links(PowerCoreBlockEntity be, PoseStack pose, MultiBufferSource buffers) {
+        if (!PowerCoreScreen.linksOpen(be.getBlockPos())) {
+            return;
+        }
+        VertexConsumer v = buffers.getBuffer(RenderType.lines());
+        BlockPos o = be.getBlockPos();
+        BlockPos hover = PowerCoreScreen.hoveredLink();
+        float t = (float) LavaLampRenderer.seconds();
+        for (PowerCoreBlockEntity.Link l : be.links()) {
+            int c = PowerCoreScreen.MODE_COLOUR[l.mode()];
+            boolean on = l.pos().equals(hover);
+            double grow = on ? 0.04 + 0.03 * Math.sin(t * 8) : 0.002;
+            net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(l.pos().subtract(o)).inflate(grow);
+            net.minecraft.client.renderer.LevelRenderer.renderLineBox(pose, v, box, (c >> 16 & 255) / 255.0F, (c >> 8 & 255) / 255.0F, (c & 255) / 255.0F,
+                    on ? 1.0F : 0.75F);
         }
     }
 
