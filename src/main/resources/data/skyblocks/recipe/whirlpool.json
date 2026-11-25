@@ -1,17 +1,17 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "misc",
+  "category": "building",
   "pattern": [
-    "PNP",
+    "PCP",
     "BHB",
-    "PNP"
+    "PCP"
   ],
   "key": {
     "P": {
       "item": "minecraft:dark_prismarine"
     },
-    "N": {
-      "item": "minecraft:netherite_ingot"
+    "C": {
+      "item": "minecraft:copper_block"
     },
     "B": {
       "item": "minecraft:bucket"

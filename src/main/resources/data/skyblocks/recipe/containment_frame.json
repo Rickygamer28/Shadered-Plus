@@ -2,13 +2,13 @@
   "type": "minecraft:crafting_shaped",
   "category": "building",
   "pattern": [
-    "ITI",
+    "NTN",
     "TAT",
-    "ITI"
+    "NTN"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
+    "N": {
+      "item": "skyblocks:nebula_steel_ingot"
     },
     "T": {
       "item": "minecraft:tinted_glass"

@@ -2,13 +2,13 @@
   "type": "minecraft:crafting_shaped",
   "category": "building",
   "pattern": [
-    "IGI",
+    "CGC",
     "GPG",
-    "IGI"
+    "CGC"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
+    "C": {
+      "item": "minecraft:copper_ingot"
     },
     "G": {
       "item": "minecraft:glass"

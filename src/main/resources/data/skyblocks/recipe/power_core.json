@@ -1,22 +1,19 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "misc",
+  "category": "building",
   "pattern": [
-    "GNG",
-    "RSR",
-    "GNG"
+    "SRS",
+    "RNR",
+    "SRS"
   ],
   "key": {
-    "G": {
-      "item": "minecraft:gilded_blackstone"
-    },
-    "N": {
-      "item": "minecraft:netherite_ingot"
+    "S": {
+      "item": "skyblocks:star_gold_ingot"
     },
     "R": {
       "item": "minecraft:redstone_block"
     },
-    "S": {
+    "N": {
       "item": "minecraft:nether_star"
     }
   },

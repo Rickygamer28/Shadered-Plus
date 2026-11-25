@@ -2,19 +2,22 @@
   "type": "minecraft:crafting_shaped",
   "category": "building",
   "pattern": [
-    "IRI",
-    "RGR",
-    "IRI"
+    "ICI",
+    "QRQ",
+    "ICI"
   ],
   "key": {
     "I": {
       "item": "minecraft:iron_ingot"
     },
+    "C": {
+      "item": "minecraft:copper_ingot"
+    },
+    "Q": {
+      "item": "minecraft:quartz"
+    },
     "R": {
       "item": "minecraft:redstone"
-    },
-    "G": {
-      "item": "minecraft:gold_ingot"
     }
   },
   "result": {

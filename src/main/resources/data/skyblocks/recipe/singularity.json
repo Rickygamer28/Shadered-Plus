@@ -1,17 +1,17 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "misc",
+  "category": "building",
   "pattern": [
-    "ONO",
+    "OSO",
     "EBE",
-    "ONO"
+    "OSO"
   ],
   "key": {
     "O": {
       "item": "minecraft:crying_obsidian"
     },
-    "N": {
-      "item": "minecraft:netherite_ingot"
+    "S": {
+      "item": "skyblocks:nebula_steel_ingot"
     },
     "E": {
       "item": "minecraft:ender_chest"
