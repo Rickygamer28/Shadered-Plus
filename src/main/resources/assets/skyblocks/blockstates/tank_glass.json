@@ -1,6 +1,6 @@
 {
   "variants": {
     "formed=false": {"model": "skyblocks:block/tank_glass"},
-    "formed=true": {"model": "skyblocks:block/tank_glass_formed"}
+    "formed=true": {"model": "skyblocks:block/tank_glass"}
   }
 }
