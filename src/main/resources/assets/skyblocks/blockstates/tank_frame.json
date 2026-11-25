@@ -219,16 +219,16 @@
    "y": 90
   },
   "formed=true,part=face_y,quad=0": {
-   "model": "skyblocks:block/tank_face"
+   "model": "skyblocks:block/tank_deck"
   },
   "formed=true,part=face_y,quad=1": {
-   "model": "skyblocks:block/tank_face"
+   "model": "skyblocks:block/tank_deck"
   },
   "formed=true,part=face_y,quad=2": {
-   "model": "skyblocks:block/tank_face"
+   "model": "skyblocks:block/tank_deck"
   },
   "formed=true,part=face_y,quad=3": {
-   "model": "skyblocks:block/tank_face"
+   "model": "skyblocks:block/tank_deck"
   },
   "formed=true,part=face_z,quad=0": {
    "model": "skyblocks:block/tank_face",

@@ -358,6 +358,12 @@ public class WhirlpoolBlockEntity extends BlockEntity {
                     }
                     p.set(worldPosition.getX() + dx, worldPosition.getY() + dy, worldPosition.getZ() + dz);
                     BlockState s = level.getBlockState(p);
+                    if (s.getBlock() instanceof TankGlassBlock) { // (its glass: seamless while formed)
+                        if (s.getValue(TankGlassBlock.FORMED) != formed) {
+                            level.setBlock(p, s.setValue(TankGlassBlock.FORMED, formed), Block.UPDATE_CLIENTS);
+                        }
+                        continue;
+                    }
                     if (!(s.getBlock() instanceof TankFrameBlock) || !(level.getBlockEntity(p) instanceof TankFrameBlockEntity f)) {
                         continue;
                     }

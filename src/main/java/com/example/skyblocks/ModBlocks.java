@@ -346,8 +346,8 @@ public final class ModBlocks {
     }
 
     /** Tank glass: clear glass without a border - a containment tank's sides of it read as one pane. */
-    public static final DeferredBlock<net.minecraft.world.level.block.TransparentBlock> TANK_GLASS = BLOCKS.registerBlock("tank_glass",
-            net.minecraft.world.level.block.TransparentBlock::new, BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS));
+    public static final DeferredBlock<TankGlassBlock> TANK_GLASS = BLOCKS.registerBlock("tank_glass",
+            TankGlassBlock::new, BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.GLASS));
 
     /** The special containment frames: a frame that does something more (SpecialFrameBlock). */
     public static final DeferredBlock<SpecialFrameBlock> PORT_FRAME = specialFrame("port_frame", SpecialFrameBlock.Kind.PORT);
