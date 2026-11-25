@@ -1400,7 +1400,7 @@
   "screen.skyblocks.particle_accelerator.made": "Made",
   "screen.skyblocks.particle_accelerator.last": "Last",
   "screen.skyblocks.particle_accelerator.waiting": "Waiting: give it something to smash",
-  "screen.skyblocks.particle_accelerator.accelerating": "Beams accelerating: %s%%",
+  "screen.skyblocks.particle_accelerator.accelerating": "Accelerating: %s%%",
   "screen.skyblocks.particle_accelerator.no_power": "Needs energy to drive its beams",
   "screen.skyblocks.particle_accelerator.ring": "Ring: %s (%sx%s) - %s collisions",
   "screen.skyblocks.weather_machine.mode.off": "Off",
