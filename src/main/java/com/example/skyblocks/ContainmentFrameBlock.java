@@ -32,7 +32,7 @@ public class ContainmentFrameBlock extends BaseEntityBlock {
 
     public ContainmentFrameBlock(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(FORMED, false));
+        registerDefaultState(stateDefinition.any().setValue(FORMED, false).setValue(FramePart.PART, FramePart.NONE).setValue(FramePart.QUAD, 0));
     }
 
     @Override
@@ -42,7 +42,7 @@ public class ContainmentFrameBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FORMED);
+        builder.add(FORMED, FramePart.PART, FramePart.QUAD);
     }
 
     /** Put down: a singularity near it looks at its chamber's frames again (a frame swapped in, a floor of them). */

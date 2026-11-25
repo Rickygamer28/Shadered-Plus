@@ -368,8 +368,10 @@ public class WhirlpoolBlockEntity extends BlockEntity {
                     } else {
                         continue;
                     }
-                    if (s.getValue(TankFrameBlock.FORMED) != formed) {
-                        level.setBlock(p, s.setValue(TankFrameBlock.FORMED, formed), Block.UPDATE_CLIENTS);
+                    // (formed, it's drawn as its part of the whole: a corner, an edge, a face)
+                    BlockState next = FramePart.shape(s.setValue(TankFrameBlock.FORMED, formed), dx, dy, dz, r, formed);
+                    if (next != s) {
+                        level.setBlock(p, next, Block.UPDATE_CLIENTS);
                     }
                 }
             }

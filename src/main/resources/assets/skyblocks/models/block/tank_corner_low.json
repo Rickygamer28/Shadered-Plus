@@ -1,0 +1,248 @@
+{
+ "parent": "minecraft:block/block",
+ "render_type": "minecraft:cutout",
+ "textures": {
+  "brass": "skyblocks:block/fm_brass",
+  "brass_dark": "skyblocks:block/fm_brass_dark",
+  "gauge": "skyblocks:block/fm_gauge",
+  "particle": "skyblocks:block/fm_brass"
+ },
+ "elements": [
+  {
+   "from": [
+    1,
+    0,
+    1
+   ],
+   "to": [
+    15,
+    15,
+    15
+   ],
+   "faces": {
+    "north": {
+     "texture": "#brass",
+     "uv": [
+      1,
+      1,
+      15,
+      16
+     ]
+    },
+    "south": {
+     "texture": "#brass",
+     "uv": [
+      1,
+      1,
+      15,
+      16
+     ]
+    },
+    "east": {
+     "texture": "#brass",
+     "uv": [
+      1,
+      1,
+      15,
+      16
+     ]
+    },
+    "west": {
+     "texture": "#brass",
+     "uv": [
+      1,
+      1,
+      15,
+      16
+     ]
+    },
+    "up": {
+     "texture": "#brass",
+     "uv": [
+      1,
+      1,
+      15,
+      15
+     ]
+    },
+    "down": {
+     "texture": "#brass",
+     "uv": [
+      1,
+      1,
+      15,
+      15
+     ]
+    }
+   }
+  },
+  {
+   "from": [
+    0.5,
+    0,
+    0.5
+   ],
+   "to": [
+    15.5,
+    2,
+    15.5
+   ],
+   "faces": {
+    "north": {
+     "texture": "#brass_dark",
+     "uv": [
+      0.5,
+      14,
+      15.5,
+      16
+     ]
+    },
+    "south": {
+     "texture": "#brass_dark",
+     "uv": [
+      0.5,
+      14,
+      15.5,
+      16
+     ]
+    },
+    "east": {
+     "texture": "#brass_dark",
+     "uv": [
+      0.5,
+      14,
+      15.5,
+      16
+     ]
+    },
+    "west": {
+     "texture": "#brass_dark",
+     "uv": [
+      0.5,
+      14,
+      15.5,
+      16
+     ]
+    },
+    "up": {
+     "texture": "#brass_dark",
+     "uv": [
+      0.5,
+      0.5,
+      15.5,
+      15.5
+     ]
+    },
+    "down": {
+     "texture": "#brass_dark",
+     "uv": [
+      0.5,
+      0.5,
+      15.5,
+      15.5
+     ]
+    }
+   }
+  },
+  {
+   "from": [
+    4,
+    5,
+    0.5
+   ],
+   "to": [
+    12,
+    13,
+    1
+   ],
+   "faces": {
+    "north": {
+     "texture": "#gauge",
+     "uv": [
+      4,
+      3,
+      12,
+      11
+     ]
+    },
+    "up": {
+     "texture": "#gauge",
+     "uv": [
+      4,
+      0.5,
+      12,
+      1.0
+     ]
+    },
+    "west": {
+     "texture": "#gauge",
+     "uv": [
+      0.5,
+      3,
+      1.0,
+      11
+     ]
+    },
+    "east": {
+     "texture": "#gauge",
+     "uv": [
+      0.5,
+      3,
+      1.0,
+      11
+     ]
+    }
+   }
+  },
+  {
+   "from": [
+    0.5,
+    5,
+    4
+   ],
+   "to": [
+    1,
+    13,
+    12
+   ],
+   "faces": {
+    "west": {
+     "texture": "#gauge",
+     "uv": [
+      4,
+      3,
+      12,
+      11
+     ]
+    },
+    "up": {
+     "texture": "#gauge",
+     "uv": [
+      0.5,
+      4,
+      1.0,
+      12
+     ]
+    },
+    "north": {
+     "texture": "#gauge",
+     "uv": [
+      0.5,
+      3,
+      1.0,
+      11
+     ]
+    },
+    "south": {
+     "texture": "#gauge",
+     "uv": [
+      0.5,
+      3,
+      1.0,
+      11
+     ]
+    }
+   }
+  }
+ ]
+}

@@ -243,9 +243,15 @@ public abstract class MachineBlockEntity extends BlockEntity {
             return;
         }
         BlockState next = s.setValue(MachineFrameBlock.FORMED, formed).setValue(MachineFrameBlock.HIDDEN, formed && hiddenWhenFormed(p));
+        next = formed ? shapeFrame(p, next) : next.setValue(FramePart.PART, FramePart.NONE).setValue(FramePart.QUAD, 0).setValue(MachineFrameBlock.GLOW, 0);
         if (next != s) {
             level.setBlock(p, next, Block.UPDATE_CLIENTS);
         }
+    }
+
+    /** A frame of its, formed: drawn as which part of the whole (as it is: none). */
+    protected BlockState shapeFrame(BlockPos frame, BlockState s) {
+        return s;
     }
 
     /** Whether a frame of its, formed, hides its own model (it's drawn as part of the whole: the accelerator's tube). */

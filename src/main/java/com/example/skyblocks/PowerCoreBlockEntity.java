@@ -231,8 +231,10 @@ public class PowerCoreBlockEntity extends BlockEntity {
                     } else {
                         continue;
                     }
-                    if (s.getValue(CoreFrameBlock.FORMED) != formed) {
-                        level.setBlock(p, s.setValue(CoreFrameBlock.FORMED, formed), Block.UPDATE_CLIENTS);
+                    // (formed, it's drawn as its part of the whole: a corner, an edge, a face)
+                    BlockState next = FramePart.shape(s.setValue(CoreFrameBlock.FORMED, formed), dx, dy, dz, r, formed);
+                    if (next != s) {
+                        level.setBlock(p, next, Block.UPDATE_CLIENTS);
                     }
                 }
             }

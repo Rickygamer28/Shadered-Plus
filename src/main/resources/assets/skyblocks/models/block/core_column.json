@@ -1,0 +1,147 @@
+{
+ "parent": "minecraft:block/block",
+ "render_type": "minecraft:cutout",
+ "textures": {
+  "band": "skyblocks:block/fm_band",
+  "copper": "skyblocks:block/fm_copper",
+  "particle": "skyblocks:block/fm_band"
+ },
+ "elements": [
+  {
+   "from": [
+    2,
+    0,
+    2
+   ],
+   "to": [
+    14,
+    16,
+    14
+   ],
+   "faces": {
+    "north": {
+     "texture": "#copper",
+     "uv": [
+      2,
+      0,
+      14,
+      16
+     ]
+    },
+    "south": {
+     "texture": "#copper",
+     "uv": [
+      2,
+      0,
+      14,
+      16
+     ]
+    },
+    "east": {
+     "texture": "#copper",
+     "uv": [
+      2,
+      0,
+      14,
+      16
+     ]
+    },
+    "west": {
+     "texture": "#copper",
+     "uv": [
+      2,
+      0,
+      14,
+      16
+     ]
+    },
+    "up": {
+     "texture": "#copper",
+     "uv": [
+      2,
+      2,
+      14,
+      14
+     ]
+    },
+    "down": {
+     "texture": "#copper",
+     "uv": [
+      2,
+      2,
+      14,
+      14
+     ]
+    }
+   }
+  },
+  {
+   "from": [
+    1.5,
+    7,
+    1.5
+   ],
+   "to": [
+    14.5,
+    9,
+    14.5
+   ],
+   "faces": {
+    "north": {
+     "texture": "#band",
+     "uv": [
+      1.5,
+      7,
+      14.5,
+      9
+     ]
+    },
+    "south": {
+     "texture": "#band",
+     "uv": [
+      1.5,
+      7,
+      14.5,
+      9
+     ]
+    },
+    "east": {
+     "texture": "#band",
+     "uv": [
+      1.5,
+      7,
+      14.5,
+      9
+     ]
+    },
+    "west": {
+     "texture": "#band",
+     "uv": [
+      1.5,
+      7,
+      14.5,
+      9
+     ]
+    },
+    "up": {
+     "texture": "#band",
+     "uv": [
+      1.5,
+      1.5,
+      14.5,
+      14.5
+     ]
+    },
+    "down": {
+     "texture": "#band",
+     "uv": [
+      1.5,
+      1.5,
+      14.5,
+      14.5
+     ]
+    }
+   }
+  }
+ ]
+}

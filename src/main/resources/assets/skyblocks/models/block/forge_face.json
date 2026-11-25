@@ -1,0 +1,78 @@
+{
+ "parent": "minecraft:block/block",
+ "render_type": "minecraft:cutout",
+ "textures": {
+  "solar": "skyblocks:block/fm_solar",
+  "particle": "skyblocks:block/fm_solar"
+ },
+ "elements": [
+  {
+   "from": [
+    0,
+    7.25,
+    0
+   ],
+   "to": [
+    16,
+    8.75,
+    16
+   ],
+   "faces": {
+    "north": {
+     "texture": "#solar",
+     "uv": [
+      0,
+      7.25,
+      16,
+      8.75
+     ]
+    },
+    "south": {
+     "texture": "#solar",
+     "uv": [
+      0,
+      7.25,
+      16,
+      8.75
+     ]
+    },
+    "east": {
+     "texture": "#solar",
+     "uv": [
+      0,
+      7.25,
+      16,
+      8.75
+     ]
+    },
+    "west": {
+     "texture": "#solar",
+     "uv": [
+      0,
+      7.25,
+      16,
+      8.75
+     ]
+    },
+    "up": {
+     "texture": "#solar",
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ]
+    },
+    "down": {
+     "texture": "#solar",
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ]
+    }
+   }
+  }
+ ]
+}

@@ -1,0 +1,206 @@
+{
+ "parent": "minecraft:block/block",
+ "render_type": "minecraft:cutout",
+ "textures": {
+  "bricks": "skyblocks:block/fm_bricks",
+  "glow_white": "skyblocks:block/fm_glow_white",
+  "steel": "skyblocks:block/fm_steel",
+  "particle": "skyblocks:block/fm_bricks"
+ },
+ "elements": [
+  {
+   "from": [
+    -0.5,
+    0,
+    -0.5
+   ],
+   "to": [
+    16.5,
+    15,
+    16.5
+   ],
+   "faces": {
+    "north": {
+     "texture": "#bricks",
+     "uv": [
+      0,
+      1,
+      16,
+      16
+     ]
+    },
+    "south": {
+     "texture": "#bricks",
+     "uv": [
+      0,
+      1,
+      16,
+      16
+     ]
+    },
+    "east": {
+     "texture": "#bricks",
+     "uv": [
+      0,
+      1,
+      16,
+      16
+     ]
+    },
+    "west": {
+     "texture": "#bricks",
+     "uv": [
+      0,
+      1,
+      16,
+      16
+     ]
+    },
+    "up": {
+     "texture": "#bricks",
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ]
+    },
+    "down": {
+     "texture": "#bricks",
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ]
+    }
+   }
+  },
+  {
+   "from": [
+    -1,
+    15,
+    -1
+   ],
+   "to": [
+    17,
+    16,
+    17
+   ],
+   "faces": {
+    "north": {
+     "texture": "#steel",
+     "uv": [
+      0,
+      0,
+      16,
+      1
+     ]
+    },
+    "south": {
+     "texture": "#steel",
+     "uv": [
+      0,
+      0,
+      16,
+      1
+     ]
+    },
+    "east": {
+     "texture": "#steel",
+     "uv": [
+      0,
+      0,
+      16,
+      1
+     ]
+    },
+    "west": {
+     "texture": "#steel",
+     "uv": [
+      0,
+      0,
+      16,
+      1
+     ]
+    },
+    "up": {
+     "texture": "#steel",
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ]
+    },
+    "down": {
+     "texture": "#steel",
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ]
+    }
+   }
+  },
+  {
+   "from": [
+    4,
+    6,
+    -0.6
+   ],
+   "to": [
+    12,
+    8,
+    -0.5
+   ],
+   "faces": {
+    "north": {
+     "texture": "#glow_white",
+     "uv": [
+      4,
+      8,
+      12,
+      10
+     ],
+     "neoforge_data": {
+      "block_light": 15,
+      "sky_light": 15
+     },
+     "tintindex": 0
+    }
+   },
+   "shade": false
+  },
+  {
+   "from": [
+    -0.6,
+    6,
+    4
+   ],
+   "to": [
+    -0.5,
+    8,
+    12
+   ],
+   "faces": {
+    "west": {
+     "texture": "#glow_white",
+     "uv": [
+      4,
+      8,
+      12,
+      10
+     ],
+     "neoforge_data": {
+      "block_light": 15,
+      "sky_light": 15
+     },
+     "tintindex": 0
+    }
+   },
+   "shade": false
+  }
+ ]
+}

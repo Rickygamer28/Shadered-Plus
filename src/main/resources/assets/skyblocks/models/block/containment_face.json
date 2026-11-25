@@ -1,0 +1,78 @@
+{
+ "parent": "minecraft:block/block",
+ "render_type": "minecraft:translucent",
+ "textures": {
+  "hex": "skyblocks:block/fm_hex",
+  "particle": "skyblocks:block/fm_hex"
+ },
+ "elements": [
+  {
+   "from": [
+    0,
+    7.5,
+    0
+   ],
+   "to": [
+    16,
+    8.5,
+    16
+   ],
+   "faces": {
+    "north": {
+     "texture": "#hex",
+     "uv": [
+      0,
+      7.5,
+      16,
+      8.5
+     ]
+    },
+    "south": {
+     "texture": "#hex",
+     "uv": [
+      0,
+      7.5,
+      16,
+      8.5
+     ]
+    },
+    "east": {
+     "texture": "#hex",
+     "uv": [
+      0,
+      7.5,
+      16,
+      8.5
+     ]
+    },
+    "west": {
+     "texture": "#hex",
+     "uv": [
+      0,
+      7.5,
+      16,
+      8.5
+     ]
+    },
+    "up": {
+     "texture": "#hex",
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ]
+    },
+    "down": {
+     "texture": "#hex",
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ]
+    }
+   }
+  }
+ ]
+}

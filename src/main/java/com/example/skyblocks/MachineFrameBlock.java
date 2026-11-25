@@ -30,6 +30,9 @@ public class MachineFrameBlock extends BaseEntityBlock {
     public static final BooleanProperty FORMED = BooleanProperty.create("formed");
     /** Formed into something drawn whole (the particle accelerator's round tube): its own model hidden. */
     public static final BooleanProperty HIDDEN = BooleanProperty.create("hidden");
+    /** A star forge's frames: its star's colour, lighting their veins (0 unlit; 1-4 red, yellow, blue, white). */
+    public static final net.minecraft.world.level.block.state.properties.IntegerProperty GLOW =
+            net.minecraft.world.level.block.state.properties.IntegerProperty.create("glow", 0, 4);
 
     /** Which machine it's a frame of. */
     public enum Kind {
@@ -41,7 +44,8 @@ public class MachineFrameBlock extends BaseEntityBlock {
     public MachineFrameBlock(Kind kind, Properties properties) {
         super(properties);
         this.kind = kind;
-        registerDefaultState(stateDefinition.any().setValue(FORMED, false).setValue(HIDDEN, false));
+        registerDefaultState(stateDefinition.any().setValue(FORMED, false).setValue(HIDDEN, false).setValue(FramePart.PART, FramePart.NONE)
+                .setValue(FramePart.QUAD, 0).setValue(GLOW, 0));
     }
 
     public Kind kind() {
@@ -55,7 +59,7 @@ public class MachineFrameBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FORMED, HIDDEN);
+        builder.add(FORMED, HIDDEN, FramePart.PART, FramePart.QUAD, GLOW);
     }
 
     /** Put down: the machines near it look at their frames again. */

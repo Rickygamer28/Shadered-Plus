@@ -1,0 +1,188 @@
+{
+ "parent": "minecraft:block/block",
+ "render_type": "minecraft:cutout",
+ "textures": {
+  "glow_orange": "skyblocks:block/fm_glow_orange",
+  "vent": "skyblocks:block/fm_vent",
+  "particle": "skyblocks:block/fm_vent"
+ },
+ "elements": [
+  {
+   "from": [
+    0,
+    6.5,
+    0
+   ],
+   "to": [
+    16,
+    7.5,
+    16
+   ],
+   "faces": {
+    "north": {
+     "texture": "#vent",
+     "uv": [
+      0,
+      8.5,
+      16,
+      9.5
+     ]
+    },
+    "south": {
+     "texture": "#vent",
+     "uv": [
+      0,
+      8.5,
+      16,
+      9.5
+     ]
+    },
+    "east": {
+     "texture": "#vent",
+     "uv": [
+      0,
+      8.5,
+      16,
+      9.5
+     ]
+    },
+    "west": {
+     "texture": "#vent",
+     "uv": [
+      0,
+      8.5,
+      16,
+      9.5
+     ]
+    },
+    "up": {
+     "texture": "#vent",
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ]
+    },
+    "down": {
+     "texture": "#vent",
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ]
+    }
+   }
+  },
+  {
+   "from": [
+    0,
+    8.5,
+    0
+   ],
+   "to": [
+    16,
+    9.5,
+    16
+   ],
+   "faces": {
+    "north": {
+     "texture": "#vent",
+     "uv": [
+      0,
+      6.5,
+      16,
+      7.5
+     ]
+    },
+    "south": {
+     "texture": "#vent",
+     "uv": [
+      0,
+      6.5,
+      16,
+      7.5
+     ]
+    },
+    "east": {
+     "texture": "#vent",
+     "uv": [
+      0,
+      6.5,
+      16,
+      7.5
+     ]
+    },
+    "west": {
+     "texture": "#vent",
+     "uv": [
+      0,
+      6.5,
+      16,
+      7.5
+     ]
+    },
+    "up": {
+     "texture": "#vent",
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ]
+    },
+    "down": {
+     "texture": "#vent",
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ]
+    }
+   }
+  },
+  {
+   "from": [
+    0.5,
+    7.9,
+    0.5
+   ],
+   "to": [
+    15.5,
+    8.1,
+    15.5
+   ],
+   "faces": {
+    "up": {
+     "texture": "#glow_orange",
+     "uv": [
+      0.5,
+      0.5,
+      15.5,
+      15.5
+     ],
+     "neoforge_data": {
+      "block_light": 15,
+      "sky_light": 15
+     }
+    },
+    "down": {
+     "texture": "#glow_orange",
+     "uv": [
+      0.5,
+      0.5,
+      15.5,
+      15.5
+     ],
+     "neoforge_data": {
+      "block_light": 15,
+      "sky_light": 15
+     }
+    }
+   },
+   "shade": false
+  }
+ ]
+}

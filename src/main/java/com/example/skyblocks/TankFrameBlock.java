@@ -34,7 +34,7 @@ public class TankFrameBlock extends BaseEntityBlock {
 
     public TankFrameBlock(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(FORMED, false));
+        registerDefaultState(stateDefinition.any().setValue(FORMED, false).setValue(FramePart.PART, FramePart.NONE).setValue(FramePart.QUAD, 0));
     }
 
     @Override
@@ -44,7 +44,7 @@ public class TankFrameBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FORMED);
+        builder.add(FORMED, FramePart.PART, FramePart.QUAD);
     }
 
     /** Put down: a whirlpool near it looks at its tank's frames again. */

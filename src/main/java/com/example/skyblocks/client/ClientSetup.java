@@ -494,6 +494,14 @@ public final class ClientSetup {
         }
     }
 
+    /** A star forge's frames: their veins, vents and chimney tops in its star's colour (a dull ember when it's out). */
+    @SubscribeEvent
+    public static void forgeFrameColours(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Block event) {
+        int[] glow = {0x5A3A2A, 0xFF5A36, 0xFFB43A, 0x5AA8FF, 0xEEF4FF};
+        event.register((state, level, pos, tint) -> state.hasProperty(com.example.skyblocks.MachineFrameBlock.GLOW)
+                ? glow[state.getValue(com.example.skyblocks.MachineFrameBlock.GLOW)] : -1, com.example.skyblocks.ModBlocks.FORGE_FRAME.get());
+    }
+
     /** The cat flap's faces in its block's own tint (grass, leaves...). */
     @SubscribeEvent
     public static void catFlapColours(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Block event) {

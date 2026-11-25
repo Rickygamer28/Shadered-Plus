@@ -70,6 +70,7 @@ public class StarForgeBlockEntity extends MachineBlockEntity {
     private final Battery power = new Battery(POWER_CAP, () -> {});
     private int powerColour;
     private boolean powered;
+    private int shownGlow = -1;
     /** (The client: how big its star's shown, easing.) */
     public float clientFull;
     private int progress, time;
@@ -232,6 +233,29 @@ public class StarForgeBlockEntity extends MachineBlockEntity {
         return making;
     }
 
+    /** Its frames: girders, plinths and chimneys, solar walls - their veins lit in its star's colour. */
+    @Override
+    protected BlockState shapeFrame(BlockPos frame, BlockState s) {
+        int dx = frame.getX() - worldPosition.getX(), dy = frame.getY() - worldPosition.getY(), dz = frame.getZ() - worldPosition.getZ();
+        int r = Math.max(Math.abs(dx), Math.max(Math.abs(dy), Math.abs(dz)));
+        return FramePart.shape(s, dx, dy, dz, r, true).setValue(MachineFrameBlock.GLOW, glowNow());
+    }
+
+    private int glowNow() {
+        return lit() ? colour + 1 : 0;
+    }
+
+    /** Its star changed (lit, out, another colour): its frames' veins follow. */
+    private void relight(net.minecraft.server.level.ServerLevel level) {
+        int g = glowNow();
+        for (BlockPos p : frames()) {
+            BlockState s = level.getBlockState(p);
+            if (s.getBlock() instanceof MachineFrameBlock && s.getValue(MachineFrameBlock.FORMED) && s.getValue(MachineFrameBlock.GLOW) != g) {
+                level.setBlock(p, s.setValue(MachineFrameBlock.GLOW, g), net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+            }
+        }
+    }
+
     public void toggleMode() {
         mode = 1 - mode;
         setChanged();
@@ -332,6 +356,10 @@ public class StarForgeBlockEntity extends MachineBlockEntity {
         if (--feedIn <= 0) {
             feedIn = 20;
             singularity(level);
+        }
+        if (glowNow() != shownGlow) {
+            shownGlow = glowNow();
+            relight(level);
         }
         // its work
         if (time == 0) {

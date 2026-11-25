@@ -1,0 +1,215 @@
+{
+ "parent": "minecraft:block/block",
+ "render_type": "minecraft:cutout",
+ "textures": {
+  "steel": "skyblocks:block/fm_steel",
+  "steel_rivet": "skyblocks:block/fm_steel_rivet",
+  "particle": "skyblocks:block/fm_steel"
+ },
+ "elements": [
+  {
+   "from": [
+    4,
+    0,
+    4
+   ],
+   "to": [
+    12,
+    16,
+    12
+   ],
+   "faces": {
+    "north": {
+     "texture": "#steel_rivet",
+     "uv": [
+      4,
+      0,
+      12,
+      16
+     ]
+    },
+    "south": {
+     "texture": "#steel_rivet",
+     "uv": [
+      4,
+      0,
+      12,
+      16
+     ]
+    },
+    "east": {
+     "texture": "#steel_rivet",
+     "uv": [
+      4,
+      0,
+      12,
+      16
+     ]
+    },
+    "west": {
+     "texture": "#steel_rivet",
+     "uv": [
+      4,
+      0,
+      12,
+      16
+     ]
+    },
+    "up": {
+     "texture": "#steel_rivet",
+     "uv": [
+      4,
+      4,
+      12,
+      12
+     ]
+    },
+    "down": {
+     "texture": "#steel_rivet",
+     "uv": [
+      4,
+      4,
+      12,
+      12
+     ]
+    }
+   }
+  },
+  {
+   "from": [
+    3,
+    0,
+    3
+   ],
+   "to": [
+    13,
+    1,
+    13
+   ],
+   "faces": {
+    "north": {
+     "texture": "#steel",
+     "uv": [
+      3,
+      15,
+      13,
+      16
+     ]
+    },
+    "south": {
+     "texture": "#steel",
+     "uv": [
+      3,
+      15,
+      13,
+      16
+     ]
+    },
+    "east": {
+     "texture": "#steel",
+     "uv": [
+      3,
+      15,
+      13,
+      16
+     ]
+    },
+    "west": {
+     "texture": "#steel",
+     "uv": [
+      3,
+      15,
+      13,
+      16
+     ]
+    },
+    "up": {
+     "texture": "#steel",
+     "uv": [
+      3,
+      3,
+      13,
+      13
+     ]
+    },
+    "down": {
+     "texture": "#steel",
+     "uv": [
+      3,
+      3,
+      13,
+      13
+     ]
+    }
+   }
+  },
+  {
+   "from": [
+    3,
+    15,
+    3
+   ],
+   "to": [
+    13,
+    16,
+    13
+   ],
+   "faces": {
+    "north": {
+     "texture": "#steel",
+     "uv": [
+      3,
+      0,
+      13,
+      1
+     ]
+    },
+    "south": {
+     "texture": "#steel",
+     "uv": [
+      3,
+      0,
+      13,
+      1
+     ]
+    },
+    "east": {
+     "texture": "#steel",
+     "uv": [
+      3,
+      0,
+      13,
+      1
+     ]
+    },
+    "west": {
+     "texture": "#steel",
+     "uv": [
+      3,
+      0,
+      13,
+      1
+     ]
+    },
+    "up": {
+     "texture": "#steel",
+     "uv": [
+      3,
+      3,
+      13,
+      13
+     ]
+    },
+    "down": {
+     "texture": "#steel",
+     "uv": [
+      3,
+      3,
+      13,
+      13
+     ]
+    }
+   }
+  }
+ ]
+}

@@ -115,6 +115,7 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
         drawBox(pose, buffers, half, r, g, b);
         if (chamber > 0) {
             veins(be, pose, buffers, chamber); // (after the box: getting another buffer would end its one)
+            bands(be, pose, buffers, chamber);
         }
     }
 
@@ -180,7 +181,8 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
                     // the edge along this axis at (s1 e, s2 e): a strip on each of its two outer faces
                     for (int face = 0; face < 2; face++) {
                         int nAxis = face == 0 ? b1 : b2, cAxis = face == 0 ? b2 : b1;
-                        float nOff = (face == 0 ? s1 : s2) * (e + 0.503F), cOff = (face == 0 ? s2 : s1) * e;
+                        // (on the formed frames' surfaces: the capacitor columns up its sides, the girders across)
+                        float nOff = (face == 0 ? s1 : s2) * (e + (axis == 1 ? 0.381F : 0.256F)), cOff = (face == 0 ? s2 : s1) * e;
                         // (dim, all along it)
                         strip(v, m, axis, nAxis, cAxis, nOff, cOff, -len, len, 0.05F, cr, cg, cb, flowing ? 0.25F : 0.14F);
                         if (!flowing) {
@@ -196,6 +198,44 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
                                 strip(v, m, axis, nAxis, cAxis, nOff, cOff, c - 0.4F, c + 0.4F, 0.2F, cr, cg, cb, 0.25F * fade);
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Its capacitor columns' bands (one round each column block up its four upright edges): lit from the bottom up as it
+     * fills - the top one lit means it's full - the last lit one breathing while it charges.
+     */
+    private static void bands(PowerCoreBlockEntity be, PoseStack pose, MultiBufferSource buffers, int chamber) {
+        int e = (chamber - 1) / 2, n = chamber - 2;
+        if (n <= 0) {
+            return;
+        }
+        double fill = be.capacity() <= 0 ? 0.0 : (double) be.energy() / be.capacity();
+        int lit = (int) Math.ceil(fill * n - 1.0E-6);
+        int rgb = LIGHT[Math.floorMod(be.skin(), LIGHT.length)];
+        float cr = (rgb >> 16 & 255) / 255.0F, cg = (rgb >> 8 & 255) / 255.0F, cb = (rgb & 255) / 255.0F;
+        float t = (float) LavaLampRenderer.seconds();
+        boolean charging = be.rateIn() > be.rateOut();
+        VertexConsumer v = buffers.getBuffer(RenderType.lightning());
+        Matrix4f m = pose.last().pose();
+        float w = 0.41F, h = 1.0F / 16.0F;
+        for (int sx = -1; sx <= 1; sx += 2) {
+            for (int sz = -1; sz <= 1; sz += 2) {
+                for (int i = 0; i < n; i++) {
+                    float y = -e + 1 + i;
+                    boolean on = i < lit;
+                    float a = on ? (charging && i == lit - 1 ? 0.55F + 0.4F * Mth.sin(t * 4.0F) : 0.9F) : 0.0F;
+                    if (a <= 0.0F) {
+                        continue;
+                    }
+                    float x = sx * e, z = sz * e;
+                    for (int side = 0; side < 4; side++) {
+                        int nAxis = side < 2 ? 0 : 2, cAxis = side < 2 ? 2 : 0;
+                        float nOff = (side < 2 ? x : z) + (side % 2 == 0 ? -w : w), cOff = side < 2 ? z : x;
+                        strip(v, m, 1, nAxis, cAxis, nOff, cOff, y - h, y + h, w, cr, cg, cb, a);
                     }
                 }
             }

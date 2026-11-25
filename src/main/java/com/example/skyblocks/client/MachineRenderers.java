@@ -85,10 +85,34 @@ public final class MachineRenderers {
             float per = Mth.TWO_PI * r;
             be.clientTrack = (be.clientTrack + dt * (1.0F + 8.0F * s + 50.0F * s * s)) % per;
             tube(be, pose, buffers, r, s);
+            // cables along the floor from the detector out to its four junction boxes
+            VertexConsumer metal = buffers.getBuffer(RenderType.entityCutoutNoCull(METAL));
+            PoseStack.Pose mp = pose.last();
+            float cw = 0.09F;
+            box(metal, mp, 0.5F - cw, 0.0F, 1.0F, 0.5F + cw, 0.07F, r - 0.05F, light);
+            box(metal, mp, 0.5F - cw, 0.0F, 1.0F - r + 0.05F, 0.5F + cw, 0.07F, 0.0F, light);
+            box(metal, mp, 1.0F, 0.0F, 0.5F - cw, r - 0.05F, 0.07F, 0.5F + cw, light);
+            box(metal, mp, 1.0F - r + 0.05F, 0.0F, 0.5F - cw, 0.0F, 0.07F, 0.5F + cw, light);
             Vector3f[] cam = camera();
             VertexConsumer v = glows(buffers);
             Matrix4f m = pose.last().pose();
             float t = (float) LavaLampRenderer.seconds();
+            // the junction boxes' lights: green idle, cyan running, red just after a misfire; power pulsing out the cables
+            boolean misfired = be.flashKind == 2 && now - be.flashAt < 3000;
+            float lr = misfired ? 1.0F : 0.3F, lg = misfired ? 0.3F : s > 0.01F ? 0.9F : 1.0F, lb = misfired ? 0.25F : s > 0.01F ? 1.0F : 0.45F;
+            float blink = misfired ? (Mth.sin(t * 12) > 0 ? 1.0F : 0.3F) : 0.85F + 0.15F * Mth.sin(t * 3);
+            for (int q = 0; q < 4; q++) {
+                int dx = q == 0 ? r : q == 2 ? -r : 0, dz = q == 1 ? r : q == 3 ? -r : 0;
+                glow(v, m, cam[0], cam[1], 0.5F + dx, 1.0F, 0.5F + dz, 0.35F, lr, lg, lb, blink);
+                if (s > 0.01F) {
+                    for (int j = 0; j < 3; j++) {
+                        float f = ((t * (0.4F + s) + j / 3.0F) % 1.0F);
+                        float d = Mth.lerp(f, 0.55F, r - 0.6F);
+                        sprite(v, m, cam[0], cam[1], 0.5F + Integer.signum(dx) * d, 0.09F, 0.5F + Integer.signum(dz) * d, 0.12F, 0.35F, 0.95F, 1.0F,
+                                0.8F * Mth.sin(f * Mth.PI));
+                    }
+                }
+            }
             // the collider's glow over it: brighter as the beams speed up
             glow(v, m, cam[0], cam[1], 0.5F, 1.15F, 0.5F, 0.5F + 0.9F * s, 0.4F, 0.95F, 1.0F, 0.35F + 0.65F * s * (0.85F + 0.15F * Mth.sin(t * 20)));
             if (s > 0.01F) {
@@ -508,11 +532,69 @@ public final class MachineRenderers {
             }
             ItemStreams.render(be.getBlockPos(), pose, buffers); // (what it's working, flying in; what it made, out)
             PowerCoreRenderer.drawBox(pose, buffers, half, 4 + colour, Math.round(full * 255), 255);
+            dressing(be, pose, buffers, (chamber - 1) / 2, full); // (after the box: getting another buffer ends its one)
+        }
+
+        private static final float[][] TINT = {{1.0F, 0.35F, 0.21F}, {1.0F, 0.7F, 0.23F}, {0.35F, 0.66F, 1.0F}, {0.93F, 0.96F, 1.0F}};
+
+        /**
+         * Its formed chamber's dressing: a crucible on its floor under the star, a rune circle round it, and - lit - beams
+         * of light from the four chimneys' feet holding the star, the runes glowing, and smoke from the chimneys' tops; all
+         * in its star's colour.
+         */
+        private static void dressing(StarForgeBlockEntity be, PoseStack pose, MultiBufferSource buffers, int r, float full) {
+            float floor = -r + 9.0F / 16.0F + 0.5F; // (just over the bottom panels)
+            VertexConsumer metal = buffers.getBuffer(RenderType.entityCutoutNoCull(METAL));
+            PoseStack.Pose p = pose.last();
+            int lt = net.minecraft.client.renderer.LightTexture.FULL_BRIGHT;
+            box(metal, p, 0.12F, floor, 0.12F, 0.88F, floor + 0.22F, 0.88F, lt);
+            box(metal, p, 0.04F, floor + 0.22F, 0.04F, 0.96F, floor + 0.4F, 0.96F, lt);
+            float[] c = TINT[Mth.clamp(be.colour(), 0, 3)];
+            boolean lit = be.lit();
+            float k = lit ? 0.6F + 0.4F * full : 0.12F;
+            float t = (float) LavaLampRenderer.seconds();
+            Vector3f[] cam = camera();
+            VertexConsumer v = glows(buffers);
+            Matrix4f m = pose.last().pose();
+            // the crucible's molten top
+            glow(v, m, cam[0], cam[1], 0.5F, floor + 0.42F, 0.5F, 0.7F, 1.0F, 0.55F, 0.2F, lit ? 0.9F : 0.25F);
+            // the rune circle: a ring of marks round the crucible, pulsing
+            float rr = r - 1.1F;
+            int n = 10 + 4 * r;
+            for (int i = 0; i < n; i++) {
+                float a = i * Mth.TWO_PI / n;
+                float pulse = 0.55F + 0.45F * Mth.sin(t * 2.0F + i * 0.9F);
+                sprite(v, m, cam[0], cam[1], 0.5F + Mth.cos(a) * rr, floor + 0.03F, 0.5F + Mth.sin(a) * rr, i % 2 == 0 ? 0.2F : 0.12F,
+                        c[0], c[1], c[2], k * pulse * 0.8F);
+            }
+            if (!lit) {
+                return;
+            }
+            // the beams: from each chimney's foot in to the star, a shimmer running along them
+            for (int q = 0; q < 4; q++) {
+                float sx = (q == 0 || q == 3) ? -1 : 1, sz = q < 2 ? -1 : 1;
+                float x0 = 0.5F + sx * (r - 0.45F), y0 = 0.5F + r - 0.2F, z0 = 0.5F + sz * (r - 0.45F);
+                for (int j = 0; j <= 16; j++) {
+                    float f = j / 16.0F;
+                    float shimmer = 0.6F + 0.4F * Mth.sin(t * 6.0F - f * 9.0F + q);
+                    sprite(v, m, cam[0], cam[1], Mth.lerp(f, x0, 0.5F), Mth.lerp(f, y0, 0.5F), Mth.lerp(f, z0, 0.5F), 0.16F, c[0], c[1], c[2],
+                            0.45F * k * shimmer * (1.0F - 0.5F * f));
+                }
+            }
+            // smoke from the chimneys now and then
+            var level = be.getLevel();
+            if (level != null && level.random.nextFloat() < 0.06F) {
+                int q = level.random.nextInt(4);
+                float sx = (q == 0 || q == 3) ? -1 : 1, sz = q < 2 ? -1 : 1;
+                var bp = be.getBlockPos();
+                level.addParticle(net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE, bp.getX() + 0.5 + sx * r, bp.getY() + r + 1.95,
+                        bp.getZ() + 0.5 + sz * r, 0.0, 0.04, 0.0);
+            }
         }
 
         @Override
         public AABB getRenderBoundingBox(StarForgeBlockEntity be) {
-            return new AABB(be.getBlockPos()).inflate(4.5);
+            return new AABB(be.getBlockPos()).inflate(6.0); // (its chimneys stand over it)
         }
 
         @Override

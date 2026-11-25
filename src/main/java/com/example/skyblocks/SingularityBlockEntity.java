@@ -212,8 +212,10 @@ public class SingularityBlockEntity extends net.minecraft.world.level.block.enti
                     } else {
                         continue;
                     }
-                    if (s.getValue(ContainmentFrameBlock.FORMED) != formed) {
-                        level.setBlock(p, s.setValue(ContainmentFrameBlock.FORMED, formed), Block.UPDATE_CLIENTS);
+                    // (formed, it's drawn as its part of the whole: a corner, an edge, a face)
+                    BlockState next = FramePart.shape(s.setValue(ContainmentFrameBlock.FORMED, formed), dx, dy, dz, r, formed);
+                    if (next != s) {
+                        level.setBlock(p, next, Block.UPDATE_CLIENTS);
                     }
                 }
             }

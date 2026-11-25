@@ -1,10 +1,250 @@
 {
-  "variants": {
-    "formed=false": {
-      "model": "skyblocks:block/core_frame"
-    },
-    "formed=true": {
-      "model": "skyblocks:block/core_frame_formed"
-    }
+ "variants": {
+  "formed=false,part=none,quad=0": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=none,quad=1": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=none,quad=2": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=none,quad=3": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=corner_low,quad=0": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=corner_low,quad=1": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=corner_low,quad=2": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=corner_low,quad=3": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=corner_high,quad=0": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=corner_high,quad=1": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=corner_high,quad=2": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=corner_high,quad=3": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=edge_x,quad=0": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=edge_x,quad=1": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=edge_x,quad=2": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=edge_x,quad=3": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=edge_y,quad=0": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=edge_y,quad=1": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=edge_y,quad=2": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=edge_y,quad=3": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=edge_z,quad=0": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=edge_z,quad=1": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=edge_z,quad=2": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=edge_z,quad=3": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=face_x,quad=0": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=face_x,quad=1": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=face_x,quad=2": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=face_x,quad=3": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=face_y,quad=0": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=face_y,quad=1": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=face_y,quad=2": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=face_y,quad=3": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=face_z,quad=0": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=face_z,quad=1": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=face_z,quad=2": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=false,part=face_z,quad=3": {
+   "model": "skyblocks:block/core_frame"
+  },
+  "formed=true,part=none,quad=0": {
+   "model": "skyblocks:block/core_frame_formed"
+  },
+  "formed=true,part=none,quad=1": {
+   "model": "skyblocks:block/core_frame_formed"
+  },
+  "formed=true,part=none,quad=2": {
+   "model": "skyblocks:block/core_frame_formed"
+  },
+  "formed=true,part=none,quad=3": {
+   "model": "skyblocks:block/core_frame_formed"
+  },
+  "formed=true,part=corner_low,quad=0": {
+   "model": "skyblocks:block/core_corner_low"
+  },
+  "formed=true,part=corner_low,quad=1": {
+   "model": "skyblocks:block/core_corner_low",
+   "y": 90
+  },
+  "formed=true,part=corner_low,quad=2": {
+   "model": "skyblocks:block/core_corner_low",
+   "y": 180
+  },
+  "formed=true,part=corner_low,quad=3": {
+   "model": "skyblocks:block/core_corner_low",
+   "y": 270
+  },
+  "formed=true,part=corner_high,quad=0": {
+   "model": "skyblocks:block/core_corner_high"
+  },
+  "formed=true,part=corner_high,quad=1": {
+   "model": "skyblocks:block/core_corner_high",
+   "y": 90
+  },
+  "formed=true,part=corner_high,quad=2": {
+   "model": "skyblocks:block/core_corner_high",
+   "y": 180
+  },
+  "formed=true,part=corner_high,quad=3": {
+   "model": "skyblocks:block/core_corner_high",
+   "y": 270
+  },
+  "formed=true,part=edge_x,quad=0": {
+   "model": "skyblocks:block/core_girder",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,part=edge_x,quad=1": {
+   "model": "skyblocks:block/core_girder",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,part=edge_x,quad=2": {
+   "model": "skyblocks:block/core_girder",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,part=edge_x,quad=3": {
+   "model": "skyblocks:block/core_girder",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,part=edge_y,quad=0": {
+   "model": "skyblocks:block/core_column"
+  },
+  "formed=true,part=edge_y,quad=1": {
+   "model": "skyblocks:block/core_column"
+  },
+  "formed=true,part=edge_y,quad=2": {
+   "model": "skyblocks:block/core_column"
+  },
+  "formed=true,part=edge_y,quad=3": {
+   "model": "skyblocks:block/core_column"
+  },
+  "formed=true,part=edge_z,quad=0": {
+   "model": "skyblocks:block/core_girder",
+   "x": 90
+  },
+  "formed=true,part=edge_z,quad=1": {
+   "model": "skyblocks:block/core_girder",
+   "x": 90
+  },
+  "formed=true,part=edge_z,quad=2": {
+   "model": "skyblocks:block/core_girder",
+   "x": 90
+  },
+  "formed=true,part=edge_z,quad=3": {
+   "model": "skyblocks:block/core_girder",
+   "x": 90
+  },
+  "formed=true,part=face_x,quad=0": {
+   "model": "skyblocks:block/core_face",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,part=face_x,quad=1": {
+   "model": "skyblocks:block/core_face",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,part=face_x,quad=2": {
+   "model": "skyblocks:block/core_face",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,part=face_x,quad=3": {
+   "model": "skyblocks:block/core_face",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,part=face_y,quad=0": {
+   "model": "skyblocks:block/core_face"
+  },
+  "formed=true,part=face_y,quad=1": {
+   "model": "skyblocks:block/core_face"
+  },
+  "formed=true,part=face_y,quad=2": {
+   "model": "skyblocks:block/core_face"
+  },
+  "formed=true,part=face_y,quad=3": {
+   "model": "skyblocks:block/core_face"
+  },
+  "formed=true,part=face_z,quad=0": {
+   "model": "skyblocks:block/core_face",
+   "x": 90
+  },
+  "formed=true,part=face_z,quad=1": {
+   "model": "skyblocks:block/core_face",
+   "x": 90
+  },
+  "formed=true,part=face_z,quad=2": {
+   "model": "skyblocks:block/core_face",
+   "x": 90
+  },
+  "formed=true,part=face_z,quad=3": {
+   "model": "skyblocks:block/core_face",
+   "x": 90
   }
+ }
 }
