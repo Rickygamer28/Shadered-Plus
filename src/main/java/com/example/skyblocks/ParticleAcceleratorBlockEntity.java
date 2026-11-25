@@ -40,6 +40,10 @@ public class ParticleAcceleratorBlockEntity extends MachineBlockEntity {
     public float clientTrack, clientSpeed;
     public long clientAt, flashAt;
     public int flashKind;
+    /** (The client: what was smashed in the last collision - seen crashing together - and whether its sparks have flown.) */
+    public ItemStack clientSmashed = ItemStack.EMPTY;
+    public ItemStack clientMade = ItemStack.EMPTY;
+    public boolean clientSparked;
 
     private final IItemHandler automation = new IItemHandler() {
         @Override
@@ -239,6 +243,7 @@ public class ParticleAcceleratorBlockEntity extends MachineBlockEntity {
 
     private void collide(ServerLevel level, ItemStack in) {
         Smash recipe = smash(in, size);
+        int smashed = net.minecraft.core.registries.BuiltInRegistries.ITEM.getId(in.getItem());
         in.shrink(1);
         items.setStackInSlot(INPUT, in);
         speed = 0.55F;
@@ -253,7 +258,9 @@ public class ParticleAcceleratorBlockEntity extends MachineBlockEntity {
                 net.minecraft.world.Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 1.2, worldPosition.getZ() + 0.5, left);
             }
         }
-        level.blockEvent(worldPosition, getBlockState().getBlock(), 1, 0);
+        // (what was smashed and what came of it go with the event - the client sees them crash together and what comes out)
+        int made = net.minecraft.core.registries.BuiltInRegistries.ITEM.getId(last.getItem());
+        level.blockEvent(worldPosition, getBlockState().getBlock(), 1, (smashed < 0x8000 ? smashed : 0) << 16 | (made < 0x10000 ? made : 0));
         level.playSound(null, worldPosition, SoundEvents.FIREWORK_ROCKET_LARGE_BLAST, SoundSource.BLOCKS, 1.4F, 0.8F);
         level.playSound(null, worldPosition, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 1.2F, 1.4F);
         setChanged();
@@ -300,6 +307,14 @@ public class ParticleAcceleratorBlockEntity extends MachineBlockEntity {
         if (level != null && level.isClientSide && (id == 1 || id == 2)) {
             flashAt = System.currentTimeMillis();
             flashKind = id;
+            clientSparked = false;
+            clientSmashed = ItemStack.EMPTY;
+            if (id == 1) {
+                var reg = net.minecraft.core.registries.BuiltInRegistries.ITEM;
+                int a = param >>> 16, b = param & 0xFFFF;
+                clientSmashed = a > 0 ? new ItemStack(reg.byId(a)) : items.getStackInSlot(INPUT).copyWithCount(1);
+                clientMade = b > 0 ? new ItemStack(reg.byId(b)) : last;
+            }
             return true;
         }
         return super.triggerEvent(id, param);

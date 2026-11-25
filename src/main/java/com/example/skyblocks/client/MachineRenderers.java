@@ -17,6 +17,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
@@ -95,23 +96,123 @@ public final class MachineRenderers {
                 beam(v, m, cam, be.clientTrack, r, s, 1, 0.35F, 0.95F, 1.0F);
                 beam(v, m, cam, per - be.clientTrack + r, r, s, -1, 1.0F, 0.4F, 0.9F);
             }
-            // a collision: a flash in the middle, beams of light from the ring in to it; a misfire: a red flash
+            // at speed, what it's smashing rides the beams' heads, spinning
+            ItemStack in = be.items.getStackInSlot(ParticleAcceleratorBlockEntity.INPUT);
+            if (s > 0.6F && !in.isEmpty()) {
+                riding(be, pose, buffers, in, at(be.clientTrack, r), t, s);
+                riding(be, pose, buffers, in, at(per - be.clientTrack + r, r), t + 1.3F, s);
+            }
             float age = (now - be.flashAt) / 1000.0F;
-            if (be.flashAt > 0 && age < 0.9F) {
-                float k = 1.0F - age / 0.9F;
-                boolean hit = be.flashKind == 1;
-                float cr = hit ? 0.85F : 1.0F, cg = hit ? 0.95F : 0.25F, cb = hit ? 1.0F : 0.15F;
-                glow(v, m, cam[0], cam[1], 0.5F, 1.3F, 0.5F, 1.5F + 5.0F * (1.0F - k), cr, cg, cb, k);
-                if (hit) {
-                    for (int i = 0; i < 4; i++) {
-                        float a = i * Mth.HALF_PI;
-                        float sx = 0.5F + Mth.cos(a) * r, sz = 0.5F + Mth.sin(a) * r;
-                        for (int j = 0; j <= 12; j++) {
-                            float f = j / 12.0F;
-                            glow(v, m, cam[0], cam[1], Mth.lerp(f, sx, 0.5F), Mth.lerp(f, 0.55F, 1.3F), Mth.lerp(f, sz, 0.5F), 0.5F, cr, cg, cb, k * 0.8F);
-                        }
+            if (be.flashAt > 0 && age < 2.0F) {
+                if (be.flashKind == 1) {
+                    collision(be, pose, buffers, cam, r, age);
+                } else if (age < 0.9F) {
+                    float k = 1.0F - age / 0.9F;
+                    glow(glows(buffers), m, cam[0], cam[1], 0.5F, 1.3F, 0.5F, 1.5F + 5.0F * (1.0F - k), 1.0F, 0.25F, 0.15F, k);
+                }
+            }
+        }
+
+        /** What it's smashing, riding a beam's head: small, spinning, glowing. */
+        private static void riding(ParticleAcceleratorBlockEntity be, PoseStack pose, MultiBufferSource buffers, ItemStack item, Vector3f at, float t, float s) {
+            pose.pushPose();
+            pose.translate(at.x, at.y, at.z);
+            pose.mulPose(Axis.YP.rotationDegrees(t * 720.0F));
+            pose.mulPose(Axis.XP.rotationDegrees(t * 400.0F));
+            float k = 0.25F + 0.15F * s;
+            pose.scale(k, k, k);
+            Minecraft.getInstance().getItemRenderer().renderStatic(item, net.minecraft.world.item.ItemDisplayContext.GROUND, 0xF000F0, OverlayTexture.NO_OVERLAY,
+                    pose, buffers, be.getLevel(), 0);
+            pose.popPose();
+        }
+
+        /**
+         * A collision: two of what it smashed dive in from the ring's sides and crash together over its middle - a flash, a
+         * shockwave sweeping out over the ring, sparks flying - and what came of it rises out of the burst, spinning,
+         * glowing, and fades.
+         */
+        private static void collision(ParticleAcceleratorBlockEntity be, PoseStack pose, MultiBufferSource buffers, Vector3f[] cam, int r, float age) {
+            float hit = 0.4F;
+            ItemStack smashed = be.clientSmashed;
+            Minecraft mc = Minecraft.getInstance();
+            VertexConsumer v = glows(buffers);
+            Matrix4f m = pose.last().pose();
+            float cy = 1.3F;
+            if (age < hit) {
+                // the two diving in: from opposite sides of the ring, faster as they near, trails behind
+                float f = age / hit, e = f * f;
+                for (int side = 0; side < 2; side++) {
+                    float a = side * Mth.PI + 0.4F;
+                    float sx = 0.5F + Mth.cos(a) * r, sz = 0.5F + Mth.sin(a) * r;
+                    float x = Mth.lerp(e, sx, 0.5F), y = Mth.lerp(e, 0.55F, cy), z = Mth.lerp(e, sz, 0.5F);
+                    for (int k = 1; k <= 10; k++) {
+                        float g = Math.max(0, e - k * 0.035F);
+                        sprite(v, m, cam[0], cam[1], Mth.lerp(g, sx, 0.5F), Mth.lerp(g, 0.55F, cy), Mth.lerp(g, sz, 0.5F), 0.22F * (1 - k / 11.0F),
+                                side == 0 ? 0.35F : 1.0F, side == 0 ? 0.95F : 0.4F, side == 0 ? 1.0F : 0.9F, 0.8F * (1 - k / 11.0F));
+                    }
+                    glow(v, m, cam[0], cam[1], x, y, z, 0.8F, side == 0 ? 0.35F : 1.0F, side == 0 ? 0.95F : 0.4F, side == 0 ? 1.0F : 0.9F, 0.9F);
+                    if (!smashed.isEmpty()) {
+                        pose.pushPose();
+                        pose.translate(x, y - 0.1F, z);
+                        pose.mulPose(Axis.YP.rotationDegrees(age * 900.0F + side * 180));
+                        pose.scale(0.45F, 0.45F, 0.45F);
+                        mc.getItemRenderer().renderStatic(smashed, net.minecraft.world.item.ItemDisplayContext.GROUND, 0xF000F0, OverlayTexture.NO_OVERLAY,
+                                pose, buffers, be.getLevel(), side);
+                        pose.popPose();
+                    }
+                    v = glows(buffers);
+                }
+                return;
+            }
+            float since = age - hit;
+            // the burst: a flash, white to its colours, fading
+            float k = Math.max(0.0F, 1.0F - since / 0.8F);
+            glow(v, m, cam[0], cam[1], 0.5F, cy, 0.5F, 1.2F + 4.5F * (1.0F - k), 0.9F, 0.95F, 1.0F, k);
+            glow(v, m, cam[0], cam[1], 0.5F, cy, 0.5F, 0.6F + 1.5F * (1.0F - k), 1.0F, 0.6F, 0.95F, k * 0.8F);
+            // the shockwave: a ring of light sweeping out over the ring, low, fading as it goes
+            float wave = Math.min(1.0F, since / 0.7F), wr = 0.3F + (r + 1.0F) * wave;
+            if (wave < 1.0F) {
+                int n = 24 + 6 * r;
+                for (int i = 0; i < n; i++) {
+                    float a = i * Mth.TWO_PI / n;
+                    sprite(v, m, cam[0], cam[1], 0.5F + Mth.cos(a) * wr, 0.7F + 0.6F * (1 - wave), 0.5F + Mth.sin(a) * wr, 0.35F, 0.5F, 0.9F, 1.0F,
+                            0.7F * (1.0F - wave));
+                }
+            }
+            // sparks: once, flying out of the burst
+            if (!be.clientSparked && be.getLevel() != null) {
+                be.clientSparked = true;
+                var level = be.getLevel();
+                var bp = be.getBlockPos();
+                for (int i = 0; i < 40; i++) {
+                    double a = level.random.nextDouble() * Math.PI * 2, up = level.random.nextDouble() * 0.5 - 0.1, sp = 0.15 + level.random.nextDouble() * 0.35;
+                    level.addParticle(i % 3 == 0 ? net.minecraft.core.particles.ParticleTypes.END_ROD : net.minecraft.core.particles.ParticleTypes.ELECTRIC_SPARK,
+                            bp.getX() + 0.5, bp.getY() + cy, bp.getZ() + 0.5, Math.cos(a) * sp, up, Math.sin(a) * sp);
+                }
+                if (!smashed.isEmpty()) {
+                    for (int i = 0; i < 12; i++) {
+                        level.addParticle(new net.minecraft.core.particles.ItemParticleOption(net.minecraft.core.particles.ParticleTypes.ITEM, smashed),
+                                bp.getX() + 0.5, bp.getY() + cy, bp.getZ() + 0.5, (level.random.nextDouble() - 0.5) * 0.4, level.random.nextDouble() * 0.3,
+                                (level.random.nextDouble() - 0.5) * 0.4);
                     }
                 }
+            }
+            // what came of it: rising out of the burst, spinning, a glow behind it, fading at the end
+            ItemStack made = be.clientMade;
+            if (!made.isEmpty() && since > 0.15F) {
+                float u = Math.min(1.0F, (since - 0.15F) / 1.3F);
+                float rise = cy + 0.9F * (1.0F - (1.0F - u) * (1.0F - u));
+                float pop = u < 0.15F ? u / 0.15F * 1.2F : u < 0.25F ? 1.2F - (u - 0.15F) * 2.0F : 1.0F;
+                float fade = u > 0.8F ? (1.0F - u) / 0.2F : 1.0F;
+                glow(v, m, cam[0], cam[1], 0.5F, rise, 0.5F, 1.1F * pop, 1.0F, 0.9F, 0.55F, 0.7F * fade);
+                pose.pushPose();
+                pose.translate(0.5F, rise - 0.15F, 0.5F);
+                pose.mulPose(Axis.YP.rotationDegrees(since * 300.0F));
+                float sc = 0.7F * pop * (0.4F + 0.6F * fade);
+                pose.scale(sc, sc, sc);
+                mc.getItemRenderer().renderStatic(made, net.minecraft.world.item.ItemDisplayContext.GROUND, 0xF000F0, OverlayTexture.NO_OVERLAY, pose, buffers,
+                        be.getLevel(), 7);
+                pose.popPose();
             }
         }
 
@@ -311,9 +412,9 @@ public final class MachineRenderers {
                 be.clientCloudAt = now;
                 var level = be.getLevel();
                 var bp = be.getBlockPos();
-                float a = level.random.nextFloat() * Mth.TWO_PI, rr = 1.5F + level.random.nextFloat() * 2.5F;
-                level.addParticle(mode == 1 ? ParticleTypes.END_ROD : ParticleTypes.CLOUD, bp.getX() + 0.5 + Mth.cos(a) * rr,
-                        bp.getY() + ey + 2.5 + level.random.nextFloat() * 2.0, bp.getZ() + 0.5 + Mth.sin(a) * rr,
+                float a = level.random.nextFloat() * Mth.TWO_PI, cr = 1.5F + level.random.nextFloat() * 2.5F;
+                level.addParticle(mode == 1 ? ParticleTypes.END_ROD : ParticleTypes.CLOUD, bp.getX() + 0.5 + Mth.cos(a) * cr,
+                        bp.getY() + ey + 2.5 + level.random.nextFloat() * 2.0, bp.getZ() + 0.5 + Mth.sin(a) * cr,
                         -Mth.sin(a) * 0.12, 0.01, Mth.cos(a) * 0.12);
             }
         }

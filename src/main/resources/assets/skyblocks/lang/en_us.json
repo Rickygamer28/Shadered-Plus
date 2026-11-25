@@ -1453,5 +1453,13 @@
   "jei.skyblocks.accelerator.rolls_one": "One of these each collision",
   "jei.skyblocks.accelerator.rolls_some": "One (sometimes two) each collision",
   "jei.skyblocks.accelerator.rolls_two": "Two of these each collision",
-  "jei.skyblocks.accelerator.chance": "%s%% chance"
+  "jei.skyblocks.accelerator.chance": "%s%% chance",
+  "jei.skyblocks.forge.fuel": "Star forge fuel",
+  "jei.skyblocks.forge.burns": "Burns %s",
+  "jei.skyblocks.forge.time": "%ss - %s FE/t (x2 in a 7 chamber)",
+  "jei.skyblocks.forge.alloy": "Star forge: forging (alloy)",
+  "jei.skyblocks.forge.transmute": "Star forge: forging (transmute)",
+  "jei.skyblocks.forge.needs": "Star: %s or hotter",
+  "jei.skyblocks.forge.smelting": "Star forge: smelting",
+  "jei.skyblocks.forge.smelting_note": "Any furnace recipe - a whole stack at once"
 }

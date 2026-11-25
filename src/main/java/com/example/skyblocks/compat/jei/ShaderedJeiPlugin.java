@@ -26,12 +26,16 @@ public class ShaderedJeiPlugin implements IModPlugin {
     public void registerCategories(IRecipeCategoryRegistration registration) {
         registration.addRecipeCategories(new StructureCategory(registration.getJeiHelpers().getGuiHelper()));
         registration.addRecipeCategories(new AcceleratorCategory(registration.getJeiHelpers().getGuiHelper()));
+        registration.addRecipeCategories(new StarForgeCategory(registration.getJeiHelpers().getGuiHelper()));
     }
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
         registration.addRecipes(STRUCTURES, Structures.everySize());
         registration.addRecipes(AcceleratorCategory.TYPE, AcceleratorCategory.pages());
+        registration.addRecipes(StarForgeCategory.TYPE, StarForgeCategory.pages());
+        // (the crafting recipes made in code, written out for each sky)
+        registration.addRecipes(mezz.jei.api.constants.RecipeTypes.CRAFTING, SkyCraftingExamples.all());
     }
 
     @Override
@@ -51,5 +55,7 @@ public class ShaderedJeiPlugin implements IModPlugin {
         registration.addRecipeCatalyst(new ItemStack(ModItems.GUIDE_BOOK.get()), STRUCTURES);
         registration.addRecipeCatalyst(new ItemStack(ModItems.PARTICLE_ACCELERATOR.get()), AcceleratorCategory.TYPE);
         registration.addRecipeCatalyst(new ItemStack(ModItems.ACCELERATOR_FRAME.get()), AcceleratorCategory.TYPE);
+        registration.addRecipeCatalyst(new ItemStack(ModItems.STAR_FORGE.get()), StarForgeCategory.TYPE);
+        registration.addRecipeCatalyst(new ItemStack(ModItems.FORGE_FRAME.get()), StarForgeCategory.TYPE);
     }
 }
