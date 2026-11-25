@@ -444,6 +444,8 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         SHAPE[1] = 0.0F;
         SHAPE[2] = 1.0F;
         SHAPE[3] = far;
+        poolFloor(source.getBuffer(Types.POOL), pose, bands.get(0), lo, hi, light);
+        source.endBatch(Types.POOL);
         VertexConsumer v = source.getBuffer(Types.FUNNEL);
         // its surface: from the walls (s -1) in to the funnel's lip (s 0), round it - flat, so how far in (xi) is
         // log(lip / how far out)
@@ -536,7 +538,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         }
         TextureAtlasSprite white = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(WHITE);
         int lit = l.glows ? LightTexture.FULL_BRIGHT : light;
-        int deep = tone(l.mean, 0.55F, 0.72F), top = tone(l.mean, 1.0F, 0.36F), line = tone(l.mean, 1.55F, 0.85F), floor = tone(l.mean, 0.45F, 0.8F);
+        int deep = tone(l.mean, 0.55F, 0.72F), top = tone(l.mean, 1.0F, 0.36F), line = tone(l.mean, 1.55F, 0.85F);
         int detail = (l.argb & 0x00FFFFFF) | (46 << 24);
         float[][] sides = {{lo, lo, hi, lo}, {hi, hi, lo, hi}, {lo, hi, lo, lo}, {hi, lo, hi, hi}};
         for (float[] s : sides) {
@@ -551,6 +553,12 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
             column(v, pose, l, lo, b, lo, a, lo, surface - 0.035F, detail, lit);
             column(v, pose, l, hi, a, hi, b, lo, surface - 0.035F, detail, lit);
         }
+    }
+
+    /** The pool's floor, dim under it (drawn before the funnel: the foam where the spout lands lies over it). */
+    private static void poolFloor(VertexConsumer v, PoseStack.Pose pose, Look l, float lo, float hi, int light) {
+        TextureAtlasSprite white = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(WHITE);
+        int lit = l.glows ? LightTexture.FULL_BRIGHT : light, floor = tone(l.mean, 0.45F, 0.8F);
         float y = lo + 0.003F, u = 0.5F;
         vertex(v, pose, lo, y, lo, white, u, u, floor, lit);
         vertex(v, pose, hi, y, lo, white, u, u, floor, lit);
