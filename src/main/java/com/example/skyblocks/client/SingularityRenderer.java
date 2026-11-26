@@ -56,7 +56,7 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
             float[][] sprites = null;
             if (skin == StorageSkins.GALAXY) {
                 rgb = StorageSkins.itemColours(be.shown());
-                sprites = new float[][] {{-1, -1, -1, -1}}; // (the shader draws only its dust and heart: the items, as themselves, below)
+                sprites = new float[][] {{-1, -1, -1, -1, -1, -1, -1, -1}}; // (V0 -1, read by the shader: it draws only its dust and heart - the shader draws only its dust and heart: the items, as themselves, below)
                 if (rgb.length == 0) {
                     rgb = new int[] {be.colour()};
                 }
