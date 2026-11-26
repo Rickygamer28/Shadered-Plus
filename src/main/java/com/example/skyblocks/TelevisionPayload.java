@@ -12,7 +12,12 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /** Television window -> server: what to play, play/pause, stop, go to, volume, repeat. */
 public record TelevisionPayload(BlockPos pos, int action, String text, long value) implements CustomPacketPayload {
-    public static final int CHOOSE = 0, PLAY = 1, PAUSE = 2, STOP = 3, SEEK = 4, VOLUME = 5, LOOP = 6;
+    public static final int CHOOSE = 0, PLAY = 1, PAUSE = 2, STOP = 3, SEEK = 4, VOLUME = 5, LOOP = 6, GOTO = 7;
+
+    /** GOTO's value: from one of its playlist's videos to another. */
+    public static long fromTo(int from, int to) {
+        return ((long) from << 32) | (to & 0xFFFFFFFFL);
+    }
 
     public static final Type<TelevisionPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "television"));
 
@@ -31,7 +36,7 @@ public record TelevisionPayload(BlockPos pos, int action, String text, long valu
     public static void handle(TelevisionPayload p, IPayloadContext context) {
         context.enqueueWork(() -> {
             Player player = context.player();
-            if (!(player.level() instanceof ServerLevel level) || !level.isLoaded(p.pos()) || player.distanceToSqr(p.pos().getCenter()) > 24 * 24) {
+            if (!(player.level() instanceof ServerLevel level) || !level.isLoaded(p.pos()) || player.distanceToSqr(p.pos().getCenter()) > (p.action() == GOTO ? 96 * 96 : 24 * 24)) {
                 return;
             }
             BlockPos at = TelevisionBlock.anchor(level, p.pos());
@@ -46,6 +51,7 @@ public record TelevisionPayload(BlockPos pos, int action, String text, long valu
                 case SEEK -> tv.seek(p.value());
                 case VOLUME -> tv.setVolume((int) p.value());
                 case LOOP -> tv.setLoop(p.value() != 0);
+                case GOTO -> tv.goTo((int) (p.value() >> 32), (int) p.value());
                 default -> { }
             }
         });

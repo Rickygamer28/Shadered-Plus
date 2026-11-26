@@ -23,7 +23,7 @@ public class TelevisionScreen extends Screen {
     private static final int W = 300, H = 178, ACCENT = 0xFF4FB3FF;
     private final BlockPos pos;
     private EditBox link;
-    private MachineUi.Flat pauseButton, loopButton;
+    private MachineUi.Flat pauseButton, loopButton, prevButton, nextButton;
     private VolumeSlider volume;
     private long dropFlash;
     private String dropError = "";
@@ -55,8 +55,8 @@ public class TelevisionScreen extends Screen {
         TelevisionBlockEntity tv = tv();
         link = new EditBox(font, x + 10, y + 34, W - 78, 18, Component.literal("link"));
         link.setMaxLength(TelevisionBlockEntity.MAX_SOURCE);
-        link.setHint(Component.literal("Paste a YouTube or video link").withColor(0xFF5A6578));
-        if (tv != null && !tv.source().startsWith("file:")) {
+        link.setHint(Component.literal("Paste a YouTube video or playlist link, or a video link").withColor(0xFF5A6578));
+        if (tv != null && !tv.source().startsWith("file")) {
             link.setValue(tv.source());
         }
         addRenderableWidget(link);
@@ -64,17 +64,19 @@ public class TelevisionScreen extends Screen {
         addRenderableWidget(MachineUi.button(x + W - 64, y + 34, 54, 18, Component.literal("Play"), b -> choose(link.getValue()), () -> ACCENT));
 
         int by = y + 128;
-        pauseButton = (MachineUi.Flat) addRenderableWidget(MachineUi.button(x + 10, by, 58, 18, Component.literal("Pause"), b -> {
+        prevButton = (MachineUi.Flat) addRenderableWidget(MachineUi.button(x + 10, by, 22, 18, Component.literal("|<"), b -> step(-1), () -> ACCENT));
+        pauseButton = (MachineUi.Flat) addRenderableWidget(MachineUi.button(x + 36, by, 50, 18, Component.literal("Pause"), b -> {
             TelevisionBlockEntity t = tv();
             if (t != null) send(t.paused() ? TelevisionPayload.PLAY : TelevisionPayload.PAUSE, "", 0);
         }, () -> ACCENT));
-        addRenderableWidget(MachineUi.button(x + 72, by, 40, 18, Component.literal("-10s"), b -> skip(-10_000), () -> ACCENT));
-        addRenderableWidget(MachineUi.button(x + 116, by, 40, 18, Component.literal("+10s"), b -> skip(10_000), () -> ACCENT));
-        loopButton = (MachineUi.Flat) addRenderableWidget(MachineUi.button(x + 160, by, 58, 18, Component.literal("Repeat"), b -> {
+        nextButton = (MachineUi.Flat) addRenderableWidget(MachineUi.button(x + 90, by, 22, 18, Component.literal(">|"), b -> step(1), () -> ACCENT));
+        addRenderableWidget(MachineUi.button(x + 116, by, 34, 18, Component.literal("-10s"), b -> skip(-10_000), () -> ACCENT));
+        addRenderableWidget(MachineUi.button(x + 154, by, 34, 18, Component.literal("+10s"), b -> skip(10_000), () -> ACCENT));
+        loopButton = (MachineUi.Flat) addRenderableWidget(MachineUi.button(x + 192, by, 52, 18, Component.literal("Repeat"), b -> {
             TelevisionBlockEntity t = tv();
             if (t != null) send(TelevisionPayload.LOOP, "", t.loop() ? 0 : 1);
         }, () -> ACCENT));
-        addRenderableWidget(MachineUi.button(x + 222, by, 68, 18, Component.literal("Turn off"), b -> {
+        addRenderableWidget(MachineUi.button(x + 248, by, 42, 18, Component.literal("Off"), b -> {
             send(TelevisionPayload.STOP, "", 0);
             link.setValue("");
         }, () -> 0xFFFF8A7A));
@@ -85,6 +87,14 @@ public class TelevisionScreen extends Screen {
         s = s.trim();
         if (!s.isEmpty()) {
             send(TelevisionPayload.CHOOSE, s, 0);
+        }
+    }
+
+    /** Back or on along its playlist. */
+    private void step(int by) {
+        TelevisionBlockEntity t = tv();
+        if (t != null) {
+            send(TelevisionPayload.GOTO, "", TelevisionPayload.fromTo(t.item(), t.item() + by));
         }
     }
 
@@ -101,16 +111,27 @@ public class TelevisionScreen extends Screen {
     /** A video file dragged onto the window from the computer: played (from where it is on this computer). */
     @Override
     public void onFilesDrop(List<Path> files) {
+        List<String> paths = new java.util.ArrayList<>();
         for (Path f : files) {
             if (Files.isRegularFile(f)) {
-                send(TelevisionPayload.CHOOSE, "file:" + f.toAbsolutePath(), 0);
-                link.setValue("");
-                dropFlash = System.currentTimeMillis();
-                dropError = "";
-                return;
+                paths.add(f.toAbsolutePath().toString());
             }
         }
-        dropError = "That isn't a file";
+        if (paths.isEmpty()) {
+            dropError = "That isn't a file";
+            return;
+        }
+        // (several at once: a playlist of them, in name order)
+        paths.sort(String.CASE_INSENSITIVE_ORDER);
+        String src = paths.size() == 1 ? "file:" + paths.get(0) : "files:" + String.join("\n", paths);
+        if (src.length() > TelevisionBlockEntity.MAX_SOURCE) {
+            dropError = "Too many files at once";
+            return;
+        }
+        send(TelevisionPayload.CHOOSE, src, 0);
+        link.setValue("");
+        dropFlash = System.currentTimeMillis();
+        dropError = "";
     }
 
     @Override
@@ -144,6 +165,10 @@ public class TelevisionScreen extends Screen {
         }
         pauseButton.setMessage(Component.literal(tv.paused() ? "Play" : "Pause"));
         pauseButton.active = !tv.source().isEmpty();
+        VideoPlayer p = TvPlayers.existing(pos);
+        boolean list = p != null && p.listSize() > 1;
+        prevButton.active = list;
+        nextButton.active = list;
         loopButton.lit = tv.loop();
     }
 
@@ -183,7 +208,7 @@ public class TelevisionScreen extends Screen {
         }
         g.fill(x + 10, dy, x + 11, dy + 22, edge);
         g.fill(x + W - 11, dy, x + W - 10, dy + 22, edge);
-        String hint = !dropError.isEmpty() ? dropError : "...or drag a video file onto this window";
+        String hint = !dropError.isEmpty() ? dropError : "...or drag video files onto this window";
         g.drawString(font, MachineUi.fit(font, hint, W - 30), x + 16, dy + 7, dropError.isEmpty() ? MachineUi.FAINT : MachineUi.BAD, false);
         // what's on
         MachineUi.divider(g, x + 10, y + 86, W - 20);
@@ -196,7 +221,10 @@ public class TelevisionScreen extends Screen {
             now = p.title();
         } else {
             String s = tv.source();
-            now = s.startsWith("file:") ? Path.of(s.substring(5)).getFileName().toString() : s;
+            now = s.startsWith("file:") ? Path.of(s.substring(5)).getFileName().toString() : s.startsWith("files:") ? "Files" : s;
+        }
+        if (p != null && p.listSize() > 0) {
+            now = (p.listIndex() + 1) + "/" + p.listSize() + "  " + now;
         }
         g.drawString(font, MachineUi.fit(font, now, W - 110), x + 10, y + 93, p != null && p.state() == VideoPlayer.State.ERROR ? MachineUi.BAD : MachineUi.TEXT, false);
         String time = "";
@@ -213,7 +241,7 @@ public class TelevisionScreen extends Screen {
         MachineUi.bar(g, x + 10, y + 108, W - 20, 5, f, ACCENT);
         if (p != null && !p.soundProblem().isEmpty()) {
             g.drawString(font, MachineUi.fit(font, "No sound: " + p.soundProblem(), W - 20), x + 10, y + 117, MachineUi.BAD, false);
-        } else if (tv != null && tv.source().startsWith("file:") && !tv.chosenBy().isEmpty()) {
+        } else if (tv != null && tv.source().startsWith("file") && !tv.chosenBy().isEmpty()) {
             g.drawString(font, MachineUi.fit(font, "A file from " + tv.chosenBy() + "'s computer: only plays where that file is", W - 20), x + 10, y + 117,
                     MachineUi.FAINT, false);
         }

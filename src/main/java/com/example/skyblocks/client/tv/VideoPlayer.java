@@ -25,6 +25,11 @@ public final class VideoPlayer {
     private final VideoTexture texture = new VideoTexture();
     private final AudioOut audio = new AudioOut();
     private String source = "";
+    /** Which of its playlist's videos (as the television counts them), how many there are and which one that is. */
+    private int item;
+    private volatile int listSize, listIndex;
+    private boolean askedNext;
+    private long errorAt;
     private volatile Decoder picture, sound;
     private volatile String error = "", title = "";
     private volatile boolean live;
@@ -101,6 +106,11 @@ public final class VideoPlayer {
     private void start(TelevisionBlockEntity be, long atUs) {
         stopDecoders();
         source = be.source();
+        item = be.item();
+        askedNext = false;
+        errorAt = 0;
+        listSize = 0;
+        listIndex = 0;
         error = "";
         title = "";
         live = false;
@@ -108,8 +118,9 @@ public final class VideoPlayer {
         placed = false;
         current = null;
         state = State.LOADING;
-        String src = source.trim();
+        String whole = source.trim();
         String by = be.chosenBy();
+        int at = item;
         resolving = true;
         Thread t = new Thread(() -> {
             try {
@@ -121,10 +132,22 @@ public final class VideoPlayer {
                 opts.put("rw_timeout", "15000000");
                 opts.put("icy", "0");
                 java.util.List<String> videoUrl, audioUrl;
+                String src = whole;
+                if (Playlist.is(whole)) {
+                    Playlist.List2 list = Playlist.resolve(whole);
+                    int n = list.entries().size();
+                    int i = Math.floorMod(list.first() + at, n);
+                    listSize = n;
+                    listIndex = i;
+                    src = list.entries().get(i).source();
+                    title = list.entries().get(i).title();
+                }
                 String id = YouTube.id(src);
                 if (id != null) {
                     YouTube.Streams s = YouTube.resolve(id);
-                    title = s.title();
+                    if (!s.title().isEmpty()) {
+                        title = s.title();
+                    }
                     live = s.live();
                     opts.put("user_agent", s.userAgent());
                     videoUrl = s.video();
@@ -146,7 +169,7 @@ public final class VideoPlayer {
                     throw new Exception("that isn't a link to a video");
                 }
                 synchronized (this) {
-                    if (!src.equals(source.trim()) || released) {
+                    if (!whole.equals(source.trim()) || at != item || released) {
                         return;
                     }
                     Decoder p = new Decoder(videoUrl, opts, true), s = new Decoder(audioUrl, opts, false);
@@ -179,7 +202,7 @@ public final class VideoPlayer {
     void update(TelevisionBlockEntity be, Vec3 centre, float range, float partialTick) {
         Minecraft mc = Minecraft.getInstance();
         long target = be.position(partialTick) * 1000L;
-        if (!be.source().equals(source)) {
+        if (!be.source().equals(source) || be.item() != item) {
             start(be, target);
         }
         Decoder p = picture, s = sound;
@@ -190,6 +213,11 @@ public final class VideoPlayer {
             }
             state = State.ERROR;
             audio.flush();
+            if (errorAt == 0) {
+                errorAt = System.currentTimeMillis();
+            } else if (System.currentTimeMillis() - errorAt > 3000) {
+                askNext(be); // (a playlist's video that won't play: on to the next)
+            }
             return;
         }
         if (p == null || s == null || !p.open && !p.failed || !s.open && !s.failed) {
@@ -201,6 +229,13 @@ public final class VideoPlayer {
         boolean ended = false;
         if (live) {
             target = (System.nanoTime() - liveStart) / 1000L;
+        } else if (dur > 0 && listSize > 0) {
+            // (in a playlist: at its end, on to the next - repeating the whole list, or stopping after its last)
+            if (target >= dur) {
+                target = dur;
+                ended = true;
+                askNext(be);
+            }
         } else if (dur > 0) {
             if (be.loop()) {
                 target %= dur;
@@ -279,6 +314,25 @@ public final class VideoPlayer {
             }
         }
         state = ended ? State.ENDED : pause ? State.PAUSED : !shown && hasPicture || hasSound && clock < 0 && !pause ? State.LOADING : State.PLAYING;
+    }
+
+    /** Asks for its playlist's next video (once; everyone watching asks - the television takes the first). */
+    private void askNext(TelevisionBlockEntity be) {
+        if (askedNext || listSize == 0 || !be.loop() && listIndex + 1 >= listSize) {
+            return;
+        }
+        askedNext = true;
+        net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.example.skyblocks.TelevisionPayload(pos,
+                com.example.skyblocks.TelevisionPayload.GOTO, "", com.example.skyblocks.TelevisionPayload.fromTo(item, item + 1)));
+    }
+
+    /** Which of its playlist's videos it is (from 0), and how many; 0 not a playlist. */
+    public int listIndex() {
+        return listIndex;
+    }
+
+    public int listSize() {
+        return listSize;
     }
 
     private void seek(long us) {

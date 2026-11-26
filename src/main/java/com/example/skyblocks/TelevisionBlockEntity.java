@@ -15,8 +15,11 @@ import org.jetbrains.annotations.Nullable;
  * was paused. The clients play it themselves (client/tv/VideoPlayer).
  */
 public class TelevisionBlockEntity extends BlockEntity {
-    public static final int MAX_SOURCE = 2048;
-    /** A YouTube link, a link to a video, or "file:" and a path on the computer of whoever chose it. */
+    public static final int MAX_SOURCE = 8192;
+    /**
+     * A YouTube link (a video or a playlist), a link to a video, "file:" and a path on the computer of whoever chose it,
+     * or "files:" and several paths (one a line: played in turn).
+     */
     private String source = "";
     /** Who chose it (for a file: only their computer has it). */
     private String chosenBy = "";
@@ -25,6 +28,8 @@ public class TelevisionBlockEntity extends BlockEntity {
     private boolean paused;
     private long pausedAt;
     private int volume = 70;
+    /** Which of a playlist's videos it's at (counted on from where it started; the clients wrap it round). */
+    private int item;
     private boolean loop = true;
     /** Bumped on every change: clients seeing it change resync. */
     private int revision;
@@ -49,6 +54,22 @@ public class TelevisionBlockEntity extends BlockEntity {
         return volume;
     }
 
+    public int item() {
+        return item;
+    }
+
+    /** On to another of its playlist's videos (only if it's still at {@code from}: everyone watching asks at the end). */
+    public void goTo(int from, int to) {
+        if (from != item || source.isEmpty()) {
+            return;
+        }
+        item = to;
+        paused = false;
+        pausedAt = 0;
+        startTick = level == null ? 0 : level.getGameTime();
+        changed();
+    }
+
     public boolean loop() {
         return loop;
     }
@@ -68,6 +89,7 @@ public class TelevisionBlockEntity extends BlockEntity {
     public void choose(String src, String by) {
         source = src.length() > MAX_SOURCE ? src.substring(0, MAX_SOURCE) : src;
         chosenBy = by;
+        item = 0;
         paused = false;
         pausedAt = 0;
         startTick = level == null ? 0 : level.getGameTime();
@@ -122,6 +144,7 @@ public class TelevisionBlockEntity extends BlockEntity {
         pausedAt = o.pausedAt;
         volume = o.volume;
         loop = o.loop;
+        item = o.item;
         changed();
     }
 
@@ -144,6 +167,7 @@ public class TelevisionBlockEntity extends BlockEntity {
         tag.putInt("volume", volume);
         tag.putBoolean("loop", loop);
         tag.putInt("rev", revision);
+        tag.putInt("item", item);
     }
 
     @Override
@@ -157,6 +181,7 @@ public class TelevisionBlockEntity extends BlockEntity {
         volume = tag.contains("volume") ? Math.max(0, Math.min(100, tag.getInt("volume"))) : 70;
         loop = !tag.contains("loop") || tag.getBoolean("loop");
         revision = tag.getInt("rev");
+        item = tag.getInt("item");
     }
 
     @Override
