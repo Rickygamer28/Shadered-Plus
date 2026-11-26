@@ -51,11 +51,26 @@ final class HttpSource {
         if (length >= 0 && pos >= length) {
             return -1;
         }
-        for (int attempt = 0; attempt < 3; attempt++) {
-            if (in == null || inPos != pos || pos >= inEnd) {
-                open();
+        IOException last = null;
+        for (int attempt = 0; attempt < 6; attempt++) {
+            int r;
+            try {
+                if (in == null || inPos != pos || pos >= inEnd) {
+                    open();
+                }
+                r = in.read(b, 0, n);
+            } catch (IOException e) {
+                // (a dropped connection, or YouTube's server busy: again, a little later)
+                last = e;
+                closeStream();
+                try {
+                    Thread.sleep(250L << Math.min(attempt, 3));
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw e;
+                }
+                continue;
             }
-            int r = in.read(b, 0, n);
             if (r > 0) {
                 pos += r;
                 inPos = pos;
@@ -68,6 +83,9 @@ final class HttpSource {
             if (length < 0 && r < 0 && pos < inEnd) {
                 return -1; // (its end, its length unknown)
             }
+        }
+        if (last != null) {
+            throw last;
         }
         return -1;
     }

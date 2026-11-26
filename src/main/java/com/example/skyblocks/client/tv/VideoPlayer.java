@@ -316,6 +316,12 @@ public final class VideoPlayer {
                 settling = true;
             }
         }
+        // (its sound ran out before its end - the link dropped: it goes on from where it should be)
+        if (!live && !settling && hasSound && s.ended && s.sounds.isEmpty() && dur > 0 && target < dur - 2_000_000L && !pause
+                && !audio.playing()) {
+            seek(target);
+            settling = true;
+        }
         if (!live && !settling && hasPicture && current == null && p.ended && p.pictures.isEmpty()) {
             seek(target); // (ran out with nothing to show: back to where it should be)
             settling = true;

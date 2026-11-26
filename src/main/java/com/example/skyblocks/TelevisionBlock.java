@@ -95,13 +95,17 @@ public class TelevisionBlock extends BaseEntityBlock {
         return facing.getCounterClockWise();
     }
 
-    /** The bottom left one of the wall it's in (as you look at it). */
+    /**
+     * The bottom left one of the wall it's in (as you look at it). A wall is a full rectangle of them: one standing out
+     * of it (on top of a square, say) isn't part of it - it's a television of its own (with any beside it in its row).
+     */
     public static BlockPos anchor(BlockGetter level, BlockPos pos) {
         BlockState st = level.getBlockState(pos);
         if (!(st.getBlock() instanceof TelevisionBlock)) {
             return pos;
         }
         Direction facing = st.getValue(FACING), left = right(facing).getOpposite();
+        // (the furthest down and left it reaches, then just along its own row: the first whose wall has it in it)
         BlockPos p = pos;
         for (int i = 0; i < MAX_W + MAX_H; i++) {
             if (same(level, p.relative(left), facing)) {
@@ -112,22 +116,56 @@ public class TelevisionBlock extends BaseEntityBlock {
                 break;
             }
         }
-        return p;
+        if (contains(level, p, facing, pos)) {
+            return p;
+        }
+        BlockPos row = pos;
+        for (int i = 0; i < MAX_W && same(level, row.relative(left), facing); i++) {
+            row = row.relative(left);
+        }
+        while (!row.equals(pos)) {
+            if (contains(level, row, facing, pos)) {
+                return row;
+            }
+            row = row.relative(right(facing));
+        }
+        return pos;
     }
 
-    /** How wide and tall the wall from its bottom left one is (blocks). */
+    private static boolean contains(BlockGetter level, BlockPos anchor, Direction facing, BlockPos pos) {
+        int[] size = size(level, anchor, facing);
+        Direction right = right(facing);
+        int dx = (pos.getX() - anchor.getX()) * right.getStepX() + (pos.getZ() - anchor.getZ()) * right.getStepZ(), dy = pos.getY() - anchor.getY();
+        boolean inPlane = right.getAxis() == Direction.Axis.X ? pos.getZ() == anchor.getZ() : pos.getX() == anchor.getX();
+        return inPlane && dx >= 0 && dx < size[0] && dy >= 0 && dy < size[1];
+    }
+
+    /**
+     * How wide and tall the wall from its bottom left one is (blocks): the biggest full rectangle of them going right
+     * and up from it (rows narrower than the one below cut it down: the most screen wins).
+     */
     public static int[] size(BlockGetter level, BlockPos anchor, Direction facing) {
         Direction right = right(facing);
-        int w = 1, h = 1;
-        while (w < MAX_W && same(level, anchor.relative(right, w), facing)) w++;
-        while (h < MAX_H && same(level, anchor.above(h), facing)) h++;
-        return new int[] {w, h};
+        int bestW = 1, bestH = 1, minW = MAX_W;
+        for (int y = 0; y < MAX_H; y++) {
+            BlockPos rowStart = anchor.above(y);
+            if (!same(level, rowStart, facing)) {
+                break;
+            }
+            int w = 1;
+            while (w < minW && same(level, rowStart.relative(right, w), facing)) w++;
+            minW = Math.min(minW, w);
+            if (minW * (y + 1) > bestW * bestH) {
+                bestW = minW;
+                bestH = y + 1;
+            }
+        }
+        return new int[] {bestW, bestH};
     }
 
     /** Whether it's the bottom left one of its wall (the one that keeps what it plays, and draws the picture). */
     public static boolean isAnchor(BlockGetter level, BlockPos pos, Direction facing) {
-        Direction left = right(facing).getOpposite();
-        return !same(level, pos.relative(left), facing) && !same(level, pos.below(), facing);
+        return anchor(level, pos).equals(pos);
     }
 
     @Override
