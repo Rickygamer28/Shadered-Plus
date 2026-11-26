@@ -211,7 +211,9 @@ public class TelevisionScreen extends Screen {
         }
         g.drawString(font, time, x + W - 10 - font.width(time), y + 93, MachineUi.SOFT, false);
         MachineUi.bar(g, x + 10, y + 108, W - 20, 5, f, ACCENT);
-        if (tv != null && tv.source().startsWith("file:") && !tv.chosenBy().isEmpty()) {
+        if (p != null && !p.soundProblem().isEmpty()) {
+            g.drawString(font, MachineUi.fit(font, "No sound: " + p.soundProblem(), W - 20), x + 10, y + 117, MachineUi.BAD, false);
+        } else if (tv != null && tv.source().startsWith("file:") && !tv.chosenBy().isEmpty()) {
             g.drawString(font, MachineUi.fit(font, "A file from " + tv.chosenBy() + "'s computer: only plays where that file is", W - 20), x + 10, y + 117,
                     MachineUi.FAINT, false);
         }

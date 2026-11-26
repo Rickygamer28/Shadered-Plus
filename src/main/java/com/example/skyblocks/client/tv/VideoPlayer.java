@@ -57,6 +57,12 @@ public final class VideoPlayer {
         return error;
     }
 
+    /** Why there's no sound, if its sound couldn't play (the picture still can). */
+    public String soundProblem() {
+        Decoder s = sound;
+        return s != null && s.failed && !s.missing ? s.error : "";
+    }
+
     public String title() {
         return title;
     }
@@ -207,7 +213,7 @@ public final class VideoPlayer {
         float gain = be.volume() / 100.0F * mc.options.getSoundSourceVolume(SoundSource.RECORDS);
         audio.place(centre.x, centre.y, centre.z, range, gain);
         if (hasSound) {
-            audio.pump(s, soundGen, pause);
+            audio.pump(s, soundGen, pause, live ? -1 : target);
         }
         long clock = hasSound ? audio.clock() : -1;
         long now;
@@ -225,9 +231,9 @@ public final class VideoPlayer {
         }
         if (!live) {
             // drifted from where everyone is (or gone somewhere): everything goes there
-            long ref = clock >= 0 && !pause ? clock : -1;
+            long ref = clock >= 0 && !pause && audio.playing() ? clock : -1;
             long head = current != null ? current.us() : -1;
-            boolean off = ref >= 0 && Math.abs(ref - target) > 400_000L
+            boolean off = ref >= 0 && Math.abs(ref - target) > 900_000L
                     || !hasSound && head >= 0 && Math.abs(head - target) > 1_500_000L
                     || pause && head >= 0 && Math.abs(head - target) > 250_000L && !settling;
             if (off && !settling) {
@@ -235,7 +241,7 @@ public final class VideoPlayer {
                 clock = -1;
             }
         }
-        now = clock >= 0 && !pause ? clock : target;
+        now = clock >= 0 && !pause && audio.playing() ? clock : target;
         lastPosition = live ? now : Math.min(now, dur > 0 ? dur : now);
         // the picture that goes with it
         if (hasPicture) {

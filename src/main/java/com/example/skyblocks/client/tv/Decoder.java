@@ -314,6 +314,7 @@ final class Decoder {
     }
 
     private void fail(String why) {
+        SkyBlocksMod.LOGGER.warn("Shadered+ television: its {} can't play: {}", video ? "picture" : "sound", why);
         error = why;
         failed = true;
     }

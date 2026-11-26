@@ -19,7 +19,7 @@ final class AudioOut {
     /** What's queued, oldest first: buffer, its start (us), its samples. */
     private final ArrayDeque<long[]> queued = new ArrayDeque<>();
     private ShortBuffer scratch;
-    private boolean paused;
+    private boolean paused, started;
 
     /** No sound here (no device: the game's sound never started). */
     private static boolean none;
@@ -72,7 +72,7 @@ final class AudioOut {
     }
 
     /** Hands back what has played, queues what's waiting (of this seek or later), and plays unless paused. */
-    void pump(Decoder d, int wantGen, boolean pause) {
+    void pump(Decoder d, int wantGen, boolean pause, long target) {
         if (!ready()) {
             return;
         }
@@ -90,6 +90,10 @@ final class AudioOut {
             if (s.gen() < wantGen) {
                 continue;
             }
+            // (starting, behind where everyone is: what's already past is skipped, not played late)
+            if (queued.isEmpty() && target >= 0 && s.us() + s.samples().length * 1_000_000L / Decoder.RATE < target - 30_000) {
+                continue;
+            }
             int n = Math.min(s.samples().length, scratch.capacity());
             scratch.clear();
             scratch.put(s.samples(), 0, n).flip();
@@ -105,6 +109,10 @@ final class AudioOut {
             }
         } else if (state != AL10.AL_PLAYING && queued.size() >= (paused || state == AL10.AL_PAUSED ? 1 : 3)) {
             AL10.alSourcePlay(source);
+            if (!started) {
+                started = true;
+                com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+ television: sound started");
+            }
         }
         paused = pause;
         AL10.alGetError();
