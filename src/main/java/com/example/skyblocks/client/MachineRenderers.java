@@ -407,6 +407,7 @@ public final class MachineRenderers {
     public static class Weather implements BlockEntityRenderer<WeatherMachineBlockEntity> {
         /** (The render test: a weather to show over its dish, -1 normally.) */
         public static int testCloud = -1;
+        private static final ResourceLocation PUFF = ResourceLocation.fromNamespaceAndPath(com.example.skyblocks.SkyBlocksMod.MOD_ID, "textures/misc/cloud_puff.png");
         /**
          * A little weather of its own over its dish: a cloud gathering while it turns the weather (as far as it's got), and
          * held there in rain (raining on the dish) or thunder (darker, small bolts down to the dish now and then).
@@ -418,7 +419,7 @@ public final class MachineRenderers {
                 return;
             }
             boolean thunder = mode == 3, rain = holding && mode >= 2;
-            float cy = y0 + 3.0F;
+            float cy = y0 + 3.4F;
             long window = (long) (t / 2.7F);
             float sinceBolt = t - window * 2.7F;
             boolean bolt = thunder && holding && (testCloud == 3 || new java.util.Random(window * 7919L).nextFloat() < 0.7F && sinceBolt < 0.18F);
@@ -427,7 +428,7 @@ public final class MachineRenderers {
                 shade = 1.0F;
             }
             Vector3f[] cam = camera();
-            VertexConsumer v = buffers.getBuffer(RenderType.entityTranslucent(GLOW));
+            VertexConsumer v = buffers.getBuffer(RenderType.entityTranslucent(PUFF));
             PoseStack.Pose p = pose.last();
             int light = net.minecraft.client.renderer.LightTexture.FULL_BRIGHT;
             java.util.Random rnd = new java.util.Random(be.getBlockPos().asLong());
@@ -697,17 +698,18 @@ public final class MachineRenderers {
                 be.hotItem = ItemStack.EMPTY;
                 return;
             }
-            float heat = 1.0F - age / life, rise = Math.min(1.0F, age * 2.5F);
-            float y = -r + 9.0F / 16.0F + 0.5F + 0.42F + 0.28F * rise;
+            float heat = 1.0F - age / life;
+            // (set down on the chamber's floor in front of the crucible, under its star)
+            float y = -r + 9.0F / 16.0F + 0.5F + 0.16F, z = 0.5F + 0.8F;
             Vector3f[] cam = camera();
             VertexConsumer v = glows(buffers);
             Matrix4f m = pose.last().pose();
             // (the heat: white-orange to deep red as it cools)
             float g = 0.25F + 0.5F * heat * heat, b = 0.1F * heat * heat;
-            glow(v, m, cam[0], cam[1], 0.5F, y + 0.12F, 0.5F, 0.55F + 0.35F * heat, 1.0F, g, b, 0.85F * heat);
-            glow(v, m, cam[0], cam[1], 0.5F, y + 0.12F, 0.5F, 0.25F, 1.0F, 0.6F + 0.3F * heat, 0.3F * heat, heat);
+            glow(v, m, cam[0], cam[1], 0.5F, y + 0.1F, z, 0.5F + 0.3F * heat, 1.0F, g, b, 0.85F * heat);
+            glow(v, m, cam[0], cam[1], 0.5F, y + 0.1F, z, 0.22F, 1.0F, 0.6F + 0.3F * heat, 0.3F * heat, heat);
             pose.pushPose();
-            pose.translate(0.5F, y, 0.5F);
+            pose.translate(0.5F, y, z);
             pose.mulPose(Axis.YP.rotationDegrees(age * 40.0F));
             pose.scale(0.55F, 0.55F, 0.55F);
             Minecraft.getInstance().getItemRenderer().renderStatic(be.hotItem, net.minecraft.world.item.ItemDisplayContext.GROUND,
@@ -716,7 +718,7 @@ public final class MachineRenderers {
             var level = be.getLevel();
             if (level != null && heat > 0.25F && level.random.nextFloat() < 0.08F) {
                 var bp = be.getBlockPos();
-                level.addParticle(net.minecraft.core.particles.ParticleTypes.SMOKE, bp.getX() + 0.5, bp.getY() + y + 0.3, bp.getZ() + 0.5, 0, 0.03, 0);
+                level.addParticle(net.minecraft.core.particles.ParticleTypes.SMOKE, bp.getX() + 0.5, bp.getY() + y + 0.3, bp.getZ() + z, 0, 0.03, 0);
             }
         }
 
