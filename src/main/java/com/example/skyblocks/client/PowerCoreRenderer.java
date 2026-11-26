@@ -273,7 +273,7 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
             float sx = 0.5F + Mth.clamp(tx - 0.5F, -edge, edge), sy = 0.5F + Mth.clamp(ty - 0.5F, -edge, edge), sz = 0.5F + Mth.clamp(tz - 0.5F, -edge, edge);
             int c = PowerCoreScreen.MODE_COLOUR[testArcs && l.mode() == 0 ? (l.canTake() ? 2 : 1) : l.mode()];
             float cr = (c >> 16 & 255) / 255.0F, cg = (c >> 8 & 255) / 255.0F, cb = (c & 255) / 255.0F;
-            float width = 0.025F + 0.035F * Math.min(1.0F, (float) Math.log10(1 + l.flow()) / 7.0F);
+            float width = 0.04F + 0.04F * Math.min(1.0F, (float) Math.log10(1 + l.flow()) / 7.0F);
             java.util.Random rnd = new java.util.Random(l.pos().asLong() * 31 + tick);
             float dx = tx - sx, dy = ty - sy, dz = tz - sz, len = Mth.sqrt(dx * dx + dy * dy + dz * dz);
             int n = Math.max(3, (int) (len * 4));
@@ -281,7 +281,7 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
             for (int i = 1; i <= n; i++) {
                 float f = i / (float) n, j = i == n ? 0.0F : 0.22F * Mth.sin(f * Mth.PI);
                 float qx = sx + dx * f + (rnd.nextFloat() - 0.5F) * j, qy = sy + dy * f + (rnd.nextFloat() - 0.5F) * j, qz = sz + dz * f + (rnd.nextFloat() - 0.5F) * j;
-                ribbon(v, m, cam, px, py, pz, qx, qy, qz, width * 3.0F, cr, cg, cb, 0.18F);
+                ribbon(v, m, cam, px, py, pz, qx, qy, qz, width * 3.5F, cr, cg, cb, 0.3F);
                 ribbon(v, m, cam, px, py, pz, qx, qy, qz, width, Math.min(1, cr + 0.4F), Math.min(1, cg + 0.4F), Math.min(1, cb + 0.4F), 0.85F);
                 px = qx;
                 py = qy;
@@ -333,7 +333,7 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
         int rateColour = flow > 0 ? 0xFF8FEFA0 : flow < 0 ? 0xFFFF8A7A : 0xFF8A96AA;
         int accent = LIGHT[Math.floorMod(be.skin(), LIGHT.length)] | 0xFF000000;
         net.minecraft.client.gui.Font font = mc.font;
-        float pw = 96, ph = 24, scale = 0.0105F;
+        float pw = 96, ph = 24, scale = 0.016F;
         for (int side = 0; side < 4; side++) {
             if (facing[side] < r + 0.5) {
                 continue;

@@ -432,22 +432,22 @@ public final class MachineRenderers {
             PoseStack.Pose p = pose.last();
             int light = net.minecraft.client.renderer.LightTexture.FULL_BRIGHT;
             java.util.Random rnd = new java.util.Random(be.getBlockPos().asLong());
-            int puffs = 28;
+            int puffs = 44;
             for (int i = 0; i < puffs; i++) {
-                float a = rnd.nextFloat() * Mth.TWO_PI + t * 0.05F, d = (float) Math.sqrt(rnd.nextFloat()) * 1.55F;
-                float px = 0.5F + Mth.cos(a) * d, pz = 0.5F + Mth.sin(a) * d * 0.85F, py = cy + (rnd.nextFloat() - 0.35F) * 0.6F * (1.0F - d / 2.2F)
+                float a = rnd.nextFloat() * Mth.TWO_PI + t * 0.05F, d = (float) Math.sqrt(rnd.nextFloat()) * 2.2F;
+                float px = 0.5F + Mth.cos(a) * d, pz = 0.5F + Mth.sin(a) * d * 0.85F, py = cy + (rnd.nextFloat() - 0.35F) * 0.9F * (1.0F - d / 3.0F)
                         + 0.04F * Mth.sin(t * 0.7F + i);
-                float size = (0.55F + rnd.nextFloat() * 0.5F) * (0.5F + 0.5F * amount);
+                float size = (0.85F + rnd.nextFloat() * 0.75F) * (0.5F + 0.5F * amount);
                 float k = shade * (0.85F + 0.15F * rnd.nextFloat()) * (py > cy ? 1.0F : 0.85F); // (darker underneath)
-                billboard(v, p, cam, px, py, pz, size, k, k, Math.min(1.0F, k * 1.04F), 0.55F * amount, light);
+                billboard(v, p, cam, px, py, pz, size, k, k, Math.min(1.0F, k * 1.04F), 0.6F * amount, light);
             }
             if (rain) { // rain: streaks falling from it onto the dish
                 float top = cy - 0.3F, bottom = y0 + 0.7F, h = top - bottom;
                 for (int i = 0; i < 36; i++) {
-                    float a = rnd.nextFloat() * Mth.TWO_PI, d = (float) Math.sqrt(rnd.nextFloat()) * 1.2F;
+                    float a = rnd.nextFloat() * Mth.TWO_PI, d = (float) Math.sqrt(rnd.nextFloat()) * 1.5F;
                     float f = (rnd.nextFloat() + t * 1.6F) % 1.0F;
                     float x = 0.5F + Mth.cos(a) * d, z = 0.5F + Mth.sin(a) * d, y = top - f * h;
-                    streak(v, p, cam, x, y, z, 0.012F, 0.28F, 0.72F, 0.82F, 1.0F, 0.6F, light);
+                    streak(v, p, cam, x, y, z, 0.03F, 0.4F, 0.7F, 0.8F, 1.0F, 0.75F, light);
                 }
             }
             if (bolt) { // (thunder: a small bolt down to the dish)
