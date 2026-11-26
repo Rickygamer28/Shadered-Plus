@@ -125,25 +125,40 @@ final class Decoder {
                 }
             };
             int r = -1;
+            String javaAgent = options.get(JAVA_HTTP);
             for (int u = 0; u < urls.size() && !closed; u++) {
                 fmt = avformat_alloc_context();
                 fmt.interrupt_callback().callback(abort);
                 AVDictionary opts = new AVDictionary(null);
                 for (Map.Entry<String, String> e : options.entrySet()) {
-                    av_dict_set(opts, e.getKey(), e.getValue(), 0);
+                    if (!e.getKey().equals(JAVA_HTTP)) {
+                        av_dict_set(opts, e.getKey(), e.getValue(), 0);
+                    }
                 }
-                r = avformat_open_input(fmt, urls.get(u), (AVInputFormat) null, opts);
+                String url = urls.get(u);
+                if (javaAgent != null && url.contains("googlevideo.com/videoplayback")) {
+                    // (read by Java, given to FFmpeg as it asks)
+                    closeSource();
+                    source = new HttpSource(url, javaAgent);
+                    BytePointer ioBuf = new BytePointer(av_malloc(IO_BUF));
+                    io = avio_alloc_context(ioBuf, IO_BUF, 0, null, reader(), null, seeker());
+                    fmt.pb(io);
+                    fmt.flags(fmt.flags() | AVFMT_FLAG_CUSTOM_IO);
+                    url = "";
+                }
+                r = avformat_open_input(fmt, url, (AVInputFormat) null, opts);
                 av_dict_free(opts);
                 if (r >= 0) {
                     break;
                 }
                 fmt = null; // (freed by FFmpeg when opening fails)
+                freeIo();
                 if (u + 1 < urls.size()) {
                     SkyBlocksMod.LOGGER.info("Shadered+ television: its {} wouldn't open ({}), trying another copy", video ? "picture" : "sound", err(r));
                 }
             }
             if (r < 0 || fmt == null) {
-                fail("couldn't open it (" + err(r) + ")");
+                fail("couldn't open it (" + (error.isEmpty() ? err(r) : error) + ")");
                 return;
             }
             if ((r = avformat_find_stream_info(fmt, (PointerPointer) null)) < 0) {
@@ -323,9 +338,98 @@ final class Decoder {
             if (fmt != null) {
                 avformat_close_input(fmt);
             }
+            freeIo();
+            closeSource();
             if (abort != null) {
                 abort.close();
             }
+            if (readCb != null) {
+                readCb.close();
+            }
+            if (seekCb != null) {
+                seekCb.close();
+            }
+        }
+    }
+
+    /** Options' key: read http links by Java with this user agent (YouTube's). */
+    static final String JAVA_HTTP = "shadered_java_http";
+    private static final int IO_BUF = 64 * 1024;
+    private HttpSource source;
+    private org.bytedeco.ffmpeg.avformat.AVIOContext io;
+    private org.bytedeco.ffmpeg.avformat.Read_packet_Pointer_BytePointer_int readCb;
+    private org.bytedeco.ffmpeg.avformat.Seek_Pointer_long_int seekCb;
+    private byte[] ioBytes = new byte[IO_BUF];
+
+    private org.bytedeco.ffmpeg.avformat.Read_packet_Pointer_BytePointer_int reader() {
+        if (readCb == null) {
+            readCb = new org.bytedeco.ffmpeg.avformat.Read_packet_Pointer_BytePointer_int() {
+                @Override
+                public int call(Pointer opaque, BytePointer buf, int size) {
+                    if (closed || source == null) {
+                        return AVERROR_EXIT;
+                    }
+                    try {
+                        if (ioBytes.length < size) {
+                            ioBytes = new byte[size];
+                        }
+                        int r = source.read(ioBytes, size);
+                        if (r <= 0) {
+                            return AVERROR_EOF;
+                        }
+                        buf.position(0).capacity(size).limit(size).put(ioBytes, 0, r);
+                        return r;
+                    } catch (Exception e) {
+                        error = e.getMessage() == null ? e.toString() : e.getMessage();
+                        return AVERROR_EOF;
+                    }
+                }
+            };
+        }
+        return readCb;
+    }
+
+    private org.bytedeco.ffmpeg.avformat.Seek_Pointer_long_int seeker() {
+        if (seekCb == null) {
+            seekCb = new org.bytedeco.ffmpeg.avformat.Seek_Pointer_long_int() {
+                @Override
+                public long call(Pointer opaque, long offset, int whence) {
+                    if (source == null) {
+                        return -1;
+                    }
+                    if ((whence & AVSEEK_SIZE) != 0) {
+                        return source.length();
+                    }
+                    long to = switch (whence & 3) {
+                        case 1 -> source.position() + offset;
+                        case 2 -> source.length() < 0 ? -1 : source.length() + offset;
+                        default -> offset;
+                    };
+                    if (to < 0) {
+                        return -1;
+                    }
+                    source.seek(to);
+                    return to;
+                }
+            };
+        }
+        return seekCb;
+    }
+
+    private void freeIo() {
+        if (io != null) {
+            if (io.buffer() != null) {
+                av_free(io.buffer());
+            }
+            avio_context_free(io);
+            io = null;
+        }
+    }
+
+    private void closeSource() {
+        if (source != null) {
+            source.close();
+            source = null;
         }
     }
 

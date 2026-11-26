@@ -185,6 +185,7 @@ public final class VideoPlayer {
                     }
                     live = s.live();
                     opts.put("user_agent", s.userAgent());
+                    opts.put(Decoder.JAVA_HTTP, s.userAgent());
                     videoUrl = s.video();
                     audioUrl = s.audio();
                     if (src.contains("music.youtube.com") && !live) {
