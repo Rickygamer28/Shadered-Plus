@@ -39,20 +39,100 @@ final class HttpSource {
         }
     }
 
+    // ---- the whole of it fetched ahead (its sound): a download running on, reads taken from what has come
+
+    private static final long MAX_AHEAD = 160L << 20;
+    private byte[] data;
+    private volatile long have;
+    private volatile boolean done, gone;
+    private volatile IOException failure;
+
+    /**
+     * Fetches all of it, from the start, on a thread of its own (fresh links asked for if YouTube stops taking one) -
+     * reads then come from what has arrived, waiting for it only if they get ahead. Only when its length is known and
+     * not too big: true if it does.
+     */
+    boolean fetchAhead() {
+        if (length <= 0 || length > MAX_AHEAD) {
+            return false;
+        }
+        data = new byte[(int) length];
+        Thread t = new Thread(() -> {
+            byte[] buf = new byte[64 * 1024];
+            long at = 0;
+            try {
+                while (at < length && !gone) {
+                    pos = at;
+                    int r = readNet(buf, (int) Math.min(buf.length, length - at));
+                    if (r <= 0) {
+                        break;
+                    }
+                    System.arraycopy(buf, 0, data, (int) at, r);
+                    at += r;
+                    have = at;
+                }
+            } catch (IOException e) {
+                failure = e;
+                com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+ television: fetching its sound stopped at {} of {} bytes ({})", at, length,
+                        e.getMessage());
+            } finally {
+                done = true;
+                closeStream();
+            }
+        }, "Shadered+ TV fetch");
+        t.setDaemon(true);
+        ahead = true;
+        readPos = 0;
+        t.start();
+        return true;
+    }
+
+    private boolean ahead;
+    private long readPos;
+
     long length() {
         return length;
     }
 
     long position() {
-        return pos;
+        return ahead ? readPos : pos;
     }
 
     void seek(long to) {
-        pos = Math.max(0, to);
+        if (ahead) {
+            readPos = Math.max(0, to);
+        } else {
+            pos = Math.max(0, to);
+        }
     }
 
     /** Up to n bytes into b; -1 at its end. */
     int read(byte[] b, int n) throws IOException {
+        if (!ahead) {
+            return readNet(b, n);
+        }
+        while (have <= readPos && !done && !gone) {
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return -1;
+            }
+        }
+        if (readPos >= have) {
+            if (failure != null) {
+                throw failure;
+            }
+            return -1;
+        }
+        int r = (int) Math.min(n, have - readPos);
+        System.arraycopy(data, (int) readPos, b, 0, r);
+        readPos += r;
+        return r;
+    }
+
+    /** Up to n bytes into b from the network, at pos; -1 at its end. */
+    private int readNet(byte[] b, int n) throws IOException {
         if (length >= 0 && pos >= length) {
             return -1;
         }
@@ -144,6 +224,9 @@ final class HttpSource {
     }
 
     void close() {
-        closeStream();
+        gone = true;
+        if (!ahead) {
+            closeStream();
+        }
     }
 }

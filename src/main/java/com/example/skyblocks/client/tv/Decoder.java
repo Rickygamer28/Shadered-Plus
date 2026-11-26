@@ -152,6 +152,9 @@ final class Decoder {
                     // (read by Java, given to FFmpeg as it asks)
                     closeSource();
                     source = new HttpSource(url, agent, ytId);
+                    if (!video) {
+                        source.fetchAhead(); // (its sound: all of it fetched ahead - YouTube's stopping part way doesn't stop it)
+                    }
                     BytePointer ioBuf = new BytePointer(av_malloc(IO_BUF));
                     io = avio_alloc_context(ioBuf, IO_BUF, 0, null, reader(), null, seeker());
                     fmt.pb(io);
