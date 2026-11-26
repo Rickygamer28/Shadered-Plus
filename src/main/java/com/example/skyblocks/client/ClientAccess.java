@@ -136,6 +136,10 @@ public final class ClientAccess {
         }
     }
 
+    public static void openTablet(net.minecraft.world.InteractionHand hand) {
+        Minecraft.getInstance().setScreen(TelevisionScreen.tablet(hand));
+    }
+
     public static void openTelevision(net.minecraft.core.BlockPos pos) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.level.getBlockEntity(pos) instanceof com.example.skyblocks.TelevisionBlockEntity) {

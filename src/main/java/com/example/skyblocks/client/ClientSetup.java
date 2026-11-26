@@ -167,6 +167,17 @@ public final class ClientSetup {
                 return renderer;
             }
         }, ModItems.PHOTO.get());
+        event.registerItem(new IClientItemExtensions() {
+            private TabletRenderer renderer;
+
+            @Override
+            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (renderer == null) {
+                    renderer = new TabletRenderer();
+                }
+                return renderer;
+            }
+        }, ModItems.TABLET.get());
         net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions liquidLook =
                 new net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions() {
             private final net.minecraft.resources.ResourceLocation still =

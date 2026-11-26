@@ -21,7 +21,21 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 public class TelevisionScreen extends Screen {
     private static final int W = 330, H = 178, ACCENT = 0xFF4FB3FF;
-    private final BlockPos pos;
+    /** What it controls: a television wall, or the tablet in a hand. */
+    public interface Target {
+        @org.jetbrains.annotations.Nullable
+        com.example.skyblocks.TvState state();
+
+        @org.jetbrains.annotations.Nullable
+        VideoPlayer player();
+
+        void send(int action, String text, long value);
+
+        /** Gone, or too far: the window closes. */
+        boolean gone();
+    }
+
+    private final Target target;
     private EditBox link;
     private MachineUi.Flat pauseButton, loopButton, prevButton, nextButton, shuffleButton;
     private VolumeSlider volume;
@@ -29,8 +43,67 @@ public class TelevisionScreen extends Screen {
     private String dropError = "";
 
     public TelevisionScreen(BlockPos pos) {
-        super(Component.translatable("block.skyblocks.television"));
-        this.pos = pos;
+        this(Component.translatable("block.skyblocks.television"), new Target() {
+            private TelevisionBlockEntity be() {
+                net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+                return mc.level != null && mc.level.getBlockEntity(pos) instanceof TelevisionBlockEntity t ? t : null;
+            }
+
+            public com.example.skyblocks.TvState state() {
+                return be();
+            }
+
+            public VideoPlayer player() {
+                return target.player();
+            }
+
+            public void send(int action, String text, long value) {
+                target.send(action, text, value);
+            }
+
+            public boolean gone() {
+                net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+                return be() == null || mc.player == null || mc.player.distanceToSqr(pos.getCenter()) > 24 * 24;
+            }
+        });
+    }
+
+    /** The tablet in this hand. */
+    public static TelevisionScreen tablet(net.minecraft.world.InteractionHand hand) {
+        int h = hand == net.minecraft.world.InteractionHand.OFF_HAND ? 1 : 0;
+        return new TelevisionScreen(Component.translatable("item.skyblocks.tablet"), new Target() {
+            private com.example.skyblocks.TabletState data() {
+                net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+                if (mc.player == null) return null;
+                net.minecraft.world.item.ItemStack st = mc.player.getItemInHand(hand);
+                return st.is(com.example.skyblocks.ModItems.TABLET.get())
+                        ? st.getOrDefault(com.example.skyblocks.ModComponents.TABLET.get(), com.example.skyblocks.TabletState.EMPTY) : null;
+            }
+
+            public com.example.skyblocks.TvState state() {
+                com.example.skyblocks.TabletState d = data();
+                net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+                return d == null || mc.level == null ? null : d.view(mc.level);
+            }
+
+            public VideoPlayer player() {
+                com.example.skyblocks.TabletState d = data();
+                return d == null ? null : TvPlayers.tablet(d.id());
+            }
+
+            public void send(int action, String text, long value) {
+                PacketDistributor.sendToServer(new com.example.skyblocks.TabletPayload(h, action, text, value));
+            }
+
+            public boolean gone() {
+                return data() == null;
+            }
+        });
+    }
+
+    private TelevisionScreen(Component title, Target target) {
+        super(title);
+        this.target = target;
     }
 
     private int left() {
@@ -41,8 +114,8 @@ public class TelevisionScreen extends Screen {
         return (height - H) / 2;
     }
 
-    private TelevisionBlockEntity tv() {
-        return minecraft != null && minecraft.level != null && minecraft.level.getBlockEntity(pos) instanceof TelevisionBlockEntity t ? t : null;
+    private com.example.skyblocks.TvState tv() {
+        return target.state();
     }
 
     private void send(int action, String text, long value) {
@@ -52,7 +125,7 @@ public class TelevisionScreen extends Screen {
     @Override
     protected void init() {
         int x = left(), y = top();
-        TelevisionBlockEntity tv = tv();
+        com.example.skyblocks.TvState tv = tv();
         link = new EditBox(font, x + 10, y + 34, W - 78, 18, Component.literal("link"));
         link.setMaxLength(TelevisionBlockEntity.MAX_SOURCE);
         link.setHint(Component.literal("Paste a YouTube video or playlist link, or a video link").withColor(0xFF5A6578));
@@ -66,15 +139,15 @@ public class TelevisionScreen extends Screen {
         int by = y + 128;
         prevButton = (MachineUi.Flat) addRenderableWidget(MachineUi.button(x + 10, by, 22, 18, Component.literal("|<"), b -> step(-1), () -> ACCENT));
         pauseButton = (MachineUi.Flat) addRenderableWidget(MachineUi.button(x + 34, by, 48, 18, Component.literal("Pause"), b -> {
-            TelevisionBlockEntity t = tv();
+            com.example.skyblocks.TvState t = tv();
             if (t != null) send(t.paused() ? TelevisionPayload.PLAY : TelevisionPayload.PAUSE, "", 0);
         }, () -> ACCENT));
         nextButton = (MachineUi.Flat) addRenderableWidget(MachineUi.button(x + 84, by, 22, 18, Component.literal(">|"), b -> step(1), () -> ACCENT));
         addRenderableWidget(MachineUi.button(x + 108, by, 34, 18, Component.literal("-10s"), b -> skip(-10_000), () -> ACCENT));
         addRenderableWidget(MachineUi.button(x + 144, by, 34, 18, Component.literal("+10s"), b -> skip(10_000), () -> ACCENT));
         shuffleButton = (MachineUi.Flat) addRenderableWidget(MachineUi.button(x + 180, by, 50, 18, Component.literal("Shuffle"), b -> {
-            TelevisionBlockEntity t = tv();
-            VideoPlayer p = TvPlayers.existing(pos);
+            com.example.skyblocks.TvState t = tv();
+            VideoPlayer p = target.player();
             if (t != null && p != null && p.listSize() > 1) {
                 // (on: a new random order from the video playing; off: back in order, from the video playing)
                 boolean on = !t.shuffle();
@@ -82,7 +155,7 @@ public class TelevisionScreen extends Screen {
             }
         }, () -> ACCENT));
         loopButton = (MachineUi.Flat) addRenderableWidget(MachineUi.button(x + 232, by, 48, 18, Component.literal("Repeat"), b -> {
-            TelevisionBlockEntity t = tv();
+            com.example.skyblocks.TvState t = tv();
             if (t != null) send(TelevisionPayload.LOOP, "", t.loop() ? 0 : 1);
         }, () -> ACCENT));
         addRenderableWidget(MachineUi.button(x + 282, by, 38, 18, Component.literal("Off"), b -> {
@@ -101,15 +174,15 @@ public class TelevisionScreen extends Screen {
 
     /** Back or on along its playlist. */
     private void step(int by) {
-        TelevisionBlockEntity t = tv();
+        com.example.skyblocks.TvState t = tv();
         if (t != null) {
             send(TelevisionPayload.GOTO, "", TelevisionPayload.fromTo(t.item(), t.item() + by));
         }
     }
 
     private void skip(long ms) {
-        TelevisionBlockEntity t = tv();
-        VideoPlayer p = TvPlayers.existing(pos);
+        com.example.skyblocks.TvState t = tv();
+        VideoPlayer p = target.player();
         if (t != null && p != null && !p.live()) {
             long d = p.duration();
             long to = Math.max(0, p.position() + ms);
@@ -156,7 +229,7 @@ public class TelevisionScreen extends Screen {
     public boolean mouseClicked(double mx, double my, int button) {
         // the bar along it: go there
         int x = left() + 10, y = top() + 108, w = W - 20;
-        VideoPlayer p = TvPlayers.existing(pos);
+        VideoPlayer p = target.player();
         if (button == 0 && p != null && !p.live() && p.duration() > 0 && mx >= x - 1 && mx <= x + w + 1 && my >= y - 3 && my <= y + 8) {
             float f = (float) Math.max(0, Math.min(1, (mx - x) / w));
             send(TelevisionPayload.SEEK, "", (long) (p.duration() * f));
@@ -167,14 +240,14 @@ public class TelevisionScreen extends Screen {
 
     @Override
     public void tick() {
-        TelevisionBlockEntity tv = tv();
-        if (tv == null || minecraft.player == null || minecraft.player.distanceToSqr(pos.getCenter()) > 24 * 24) {
+        com.example.skyblocks.TvState tv = tv();
+        if (tv == null || target.gone()) {
             onClose();
             return;
         }
         pauseButton.setMessage(Component.literal(tv.paused() ? "Play" : "Pause"));
         pauseButton.active = !tv.source().isEmpty();
-        VideoPlayer p = TvPlayers.existing(pos);
+        VideoPlayer p = target.player();
         boolean list = p != null && p.listSize() > 1;
         prevButton.active = list;
         nextButton.active = list;
@@ -187,8 +260,8 @@ public class TelevisionScreen extends Screen {
     public void renderBackground(GuiGraphics g, int mx, int my, float pt) {
         super.renderBackground(g, mx, my, pt);
         int x = left(), y = top();
-        TelevisionBlockEntity tv = tv();
-        VideoPlayer p = TvPlayers.existing(pos);
+        com.example.skyblocks.TvState tv = tv();
+        VideoPlayer p = target.player();
         String status;
         int sc;
         if (tv == null || tv.source().isEmpty()) {

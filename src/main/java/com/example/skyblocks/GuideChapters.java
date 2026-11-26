@@ -59,7 +59,7 @@ public final class GuideChapters {
                 ModItems.GALAXY_PROJECTOR, ModItems.WEATHER_GLOBE, ModItems.NEON_TUBE, ModItems.GEODE_LAMP, ModItems.SKY_LANTERN, ModItems.SKY_CLOCK, ModItems.PRISM, ModItems.FERROFLUID,
                 ModItems.AURORA_CURTAIN));
         out.add(of("music", ModItems.DISCO_BALL, ModItems.DANCE_FLOOR, ModItems.LASER_PROJECTOR, ModItems.FOG_MACHINE, ModItems.SPEAKER,
-                ModItems.MUSIC_VISUALIZER, ModItems.MUSIC_BOX, ModItems.ARCADE, ModItems.BIG_SCREEN, ModItems.TELEVISION, ModItems.CLAW_MACHINE, ModItems.STAGE, ModItems.SPOTLIGHT, ModItems.BEAM_LIGHT));
+                ModItems.MUSIC_VISUALIZER, ModItems.MUSIC_BOX, ModItems.ARCADE, ModItems.BIG_SCREEN, ModItems.TELEVISION, ModItems.TABLET, ModItems.CLAW_MACHINE, ModItems.STAGE, ModItems.SPOTLIGHT, ModItems.BEAM_LIGHT));
         out.add(of("fire_water", ModItems.BRICK_HEARTH, ModItems.FIRE_TORNADO, ModItems.MAGMA_BASIN, ModItems.WATER_CAUSTICS,
                 ModItems.RAIN_GLASS, ModItems.WATERFALL, ModItems.WATER_FOUNTAIN, ModItems.HEAT_WAND));
         out.add(of("aquariums", ModItems.AQUARIUM, ModItems.OCEAN_AQUARIUM, ModItems.DEEP_SEA_AQUARIUM, ModItems.REEF_AQUARIUM,

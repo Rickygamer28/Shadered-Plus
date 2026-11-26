@@ -14,7 +14,7 @@ import org.jetbrains.annotations.Nullable;
  * time it started at (so everyone watching sees the same moment, and joining later starts where it is), or where it
  * was paused. The clients play it themselves (client/tv/VideoPlayer).
  */
-public class TelevisionBlockEntity extends BlockEntity {
+public class TelevisionBlockEntity extends BlockEntity implements TvState {
     public static final int MAX_SOURCE = 8192;
     /**
      * A YouTube link (a video or a playlist), a link to a video, "file:" and a path on the computer of whoever chose it,

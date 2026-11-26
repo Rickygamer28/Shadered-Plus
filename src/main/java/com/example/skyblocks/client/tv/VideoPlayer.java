@@ -1,13 +1,12 @@
 package com.example.skyblocks.client.tv;
 
 import com.example.skyblocks.SkyBlocksMod;
-import com.example.skyblocks.TelevisionBlockEntity;
+import com.example.skyblocks.TvState;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.phys.Vec3;
@@ -20,7 +19,10 @@ import net.minecraft.world.phys.Vec3;
 public final class VideoPlayer {
     public enum State { LOADING, PLAYING, PAUSED, ENDED, ERROR }
 
-    private final BlockPos pos;
+    /** Its name (for its textures). */
+    private final String name;
+    /** Asks the server for something (what's asked at a playlist video's end). */
+    private Sender sender = (a, t, v) -> { };
     private final ResourceLocation textureId;
     private final VideoTexture texture = new VideoTexture();
     private final AudioOut audio = new AudioOut();
@@ -57,9 +59,14 @@ public final class VideoPlayer {
     private boolean placed;
     private State state = State.LOADING;
 
-    VideoPlayer(BlockPos pos) {
-        this.pos = pos;
-        textureId = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "tv/" + Long.toHexString(pos.asLong()));
+    /** Asks the server for something about this screen (TelevisionPayload's actions). */
+    public interface Sender {
+        void send(int action, String text, long value);
+    }
+
+    VideoPlayer(String name) {
+        this.name = name;
+        textureId = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "tv/" + name);
         Minecraft.getInstance().getTextureManager().register(textureId, texture);
     }
 
@@ -116,7 +123,7 @@ public final class VideoPlayer {
 
     // ---- starting
 
-    private void start(TelevisionBlockEntity be, long atUs) {
+    private void start(TvState be, long atUs) {
         stopDecoders();
         source = be.source();
         item = be.item();
@@ -232,7 +239,8 @@ public final class VideoPlayer {
 
     // ---- every frame
 
-    void update(TelevisionBlockEntity be, Vec3 centre, float range, float partialTick) {
+    void update(TvState be, Sender send, Vec3 centre, float range, float partialTick) {
+        sender = send;
         Minecraft mc = Minecraft.getInstance();
         long target = be.position(partialTick) * 1000L;
         if (!be.source().equals(source)) {
@@ -363,13 +371,12 @@ public final class VideoPlayer {
     }
 
     /** Asks for its playlist's next video (once; everyone watching asks - the television takes the first). */
-    private void askNext(TelevisionBlockEntity be) {
+    private void askNext(TvState be) {
         if (askedNext || listSize == 0 || !be.loop() && listAlong + 1 >= listSize) {
             return;
         }
         askedNext = true;
-        net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.example.skyblocks.TelevisionPayload(pos,
-                com.example.skyblocks.TelevisionPayload.GOTO, "", com.example.skyblocks.TelevisionPayload.fromTo(item, item + 1)));
+        sender.send(com.example.skyblocks.TelevisionPayload.GOTO, "", com.example.skyblocks.TelevisionPayload.fromTo(item, item + 1));
     }
 
     /** Which of its playlist's videos it is (from 0), and how many; 0 not a playlist. */
@@ -403,7 +410,7 @@ public final class VideoPlayer {
         if (coverTexture == null && m.cover != null) {
             coverTexture = new net.minecraft.client.renderer.texture.DynamicTexture(m.cover);
             coverTexture.setFilter(true, false);
-            coverId = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "tv/cover_" + Long.toHexString(pos.asLong()) + "_" + startGen);
+            coverId = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "tv/cover_" + name + "_" + startGen);
             Minecraft.getInstance().getTextureManager().register(coverId, coverTexture);
         }
         return coverTexture == null ? null : coverId;
@@ -459,7 +466,4 @@ public final class VideoPlayer {
         releaseCover();
     }
 
-    public BlockPos pos() {
-        return pos;
-    }
 }

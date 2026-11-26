@@ -1,14 +1,26 @@
 package com.example.skyblocks.client.tv;
 
+import com.example.skyblocks.ModComponents;
+import com.example.skyblocks.ModItems;
 import com.example.skyblocks.SkyBlocksMod;
+import com.example.skyblocks.TabletPayload;
+import com.example.skyblocks.TabletState;
 import com.example.skyblocks.TelevisionBlock;
 import com.example.skyblocks.TelevisionBlockEntity;
+import com.example.skyblocks.TelevisionPayload;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -17,45 +29,48 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
-/** The televisions playing on this computer (by the bottom left block of each): kept going every frame, let go far away. */
+/**
+ * The screens playing on this computer: televisions (by the bottom left block of each) and tablets held by anyone
+ * near (by the tablet's id) - kept going every frame, let go when gone or far away.
+ */
 @EventBusSubscriber(modid = SkyBlocksMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class TvPlayers {
-    /** How far away a television stops playing (blocks). */
-    private static final double FAR = 96;
-    private static final Map<BlockPos, VideoPlayer> PLAYERS = new HashMap<>();
+    /** How far away a screen stops playing (blocks). */
+    private static final double FAR = 96, FAR_TABLET = 48;
+    private static final Map<Object, VideoPlayer> PLAYERS = new HashMap<>();
     private static Level level;
     /** Where playing just failed, and when (not tried again for a while). */
-    private static final Map<BlockPos, Long> FAILED = new HashMap<>();
-    private static boolean broken;
+    private static final Map<Object, Long> FAILED = new HashMap<>();
 
-    /** Its player (started if it has something to play), or null. */
+    /** A television's player (started if it has something to play), or null. */
     @Nullable
     public static VideoPlayer get(TelevisionBlockEntity be) {
-        VideoPlayer p = PLAYERS.get(be.getBlockPos());
-        if (p == null && !be.source().isEmpty() && !broken && be.getLevel() != null
-                && System.currentTimeMillis() - FAILED.getOrDefault(be.getBlockPos(), 0L) > 5000) {
-            try {
-                p = new VideoPlayer(be.getBlockPos().immutable());
-            } catch (Throwable e) {
-                broken = true; // (FFmpeg not loadable on this computer: shown on the screen, not tried again)
-                SkyBlocksMod.LOGGER.error("Shadered+ television: can't play videos on this computer", e);
-                return null;
-            }
-            PLAYERS.put(be.getBlockPos().immutable(), p);
+        BlockPos key = be.getBlockPos().immutable();
+        VideoPlayer p = PLAYERS.get(key);
+        if (p == null && !be.source().isEmpty() && be.getLevel() != null && System.currentTimeMillis() - FAILED.getOrDefault(key, 0L) > 5000) {
+            p = new VideoPlayer(Long.toHexString(key.asLong()));
+            PLAYERS.put(key, p);
         }
         return p;
     }
 
-    /** Whether videos can't play here (FFmpeg failed to load). */
+    /** Whether videos can't play here (never: kept for the renderer's message). */
     public static boolean broken() {
-        return broken;
+        return false;
     }
 
     @Nullable
     public static VideoPlayer existing(BlockPos pos) {
         return PLAYERS.get(pos);
+    }
+
+    /** A tablet's player, if it's playing. */
+    @Nullable
+    public static VideoPlayer tablet(UUID id) {
+        return PLAYERS.get(id);
     }
 
     @SubscribeEvent
@@ -65,14 +80,56 @@ public final class TvPlayers {
             releaseAll();
             level = mc.level;
         }
-        if (mc.level == null || PLAYERS.isEmpty()) {
+        if (mc.level == null) {
             return;
         }
         Vec3 cam = mc.gameRenderer.getMainCamera().getPosition();
         float pt = event.getPartialTick().getGameTimeDeltaPartialTick(false);
-        for (Iterator<Map.Entry<BlockPos, VideoPlayer>> it = PLAYERS.entrySet().iterator(); it.hasNext(); ) {
-            Map.Entry<BlockPos, VideoPlayer> e = it.next();
-            BlockPos pos = e.getKey();
+        // the tablets held near: started, and where they are
+        Set<UUID> held = new HashSet<>();
+        for (Entity e : mc.level.entitiesForRendering()) {
+            if (!(e instanceof LivingEntity living) || e.distanceToSqr(cam) > FAR_TABLET * FAR_TABLET) {
+                continue;
+            }
+            for (InteractionHand hand : InteractionHand.values()) {
+                ItemStack stack = living.getItemInHand(hand);
+                TabletState s = stack.is(ModItems.TABLET.get()) ? stack.get(ModComponents.TABLET.get()) : null;
+                if (s == null || s.source().isEmpty() || held.contains(s.id())) {
+                    continue;
+                }
+                held.add(s.id());
+                VideoPlayer p = PLAYERS.get(s.id());
+                if (p == null && System.currentTimeMillis() - FAILED.getOrDefault(s.id(), 0L) > 5000) {
+                    p = new VideoPlayer("tablet_" + s.id().toString().replace("-", ""));
+                    PLAYERS.put(s.id(), p);
+                }
+                if (p == null) {
+                    continue;
+                }
+                // (the one holding it asks for its playlist's next; nobody else can)
+                boolean mine = e == mc.player;
+                int h = hand == InteractionHand.OFF_HAND ? 1 : 0;
+                VideoPlayer.Sender send = mine ? (a, t, v) -> PacketDistributor.sendToServer(new TabletPayload(h, a, t, v)) : (a, t, v) -> { };
+                try {
+                    p.update(s.view(mc.level), send, e.getEyePosition(pt).add(0, -0.3, 0), 16.0F, pt);
+                } catch (Throwable ex) {
+                    SkyBlocksMod.LOGGER.error("Shadered+ tablet: playing failed", ex);
+                    FAILED.put(s.id(), System.currentTimeMillis());
+                    p.release();
+                    PLAYERS.remove(s.id());
+                }
+            }
+        }
+        for (Iterator<Map.Entry<Object, VideoPlayer>> it = PLAYERS.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<Object, VideoPlayer> e = it.next();
+            if (e.getKey() instanceof UUID id) {
+                if (!held.contains(id)) { // (put away, or out of reach)
+                    e.getValue().release();
+                    it.remove();
+                }
+                continue;
+            }
+            BlockPos pos = (BlockPos) e.getKey();
             BlockState st = mc.level.getBlockState(pos);
             if (!(mc.level.getBlockEntity(pos) instanceof TelevisionBlockEntity be) || be.source().isEmpty() || !(st.getBlock() instanceof TelevisionBlock)
                     || pos.getCenter().distanceToSqr(cam) > FAR * FAR || !TelevisionBlock.isAnchor(mc.level, pos, st.getValue(TelevisionBlock.FACING))) {
@@ -85,7 +142,8 @@ public final class TvPlayers {
             Vec3 centre = Vec3.atLowerCornerOf(pos).add(0.5, size[1] / 2.0, 0.5)
                     .add(Vec3.atLowerCornerOf(TelevisionBlock.right(facing).getNormal()).scale((size[0] - 1) / 2.0));
             try {
-                e.getValue().update(be, centre, 20.0F + 2.0F * Math.max(size[0], size[1]), pt);
+                e.getValue().update(be, (a, t, v) -> PacketDistributor.sendToServer(new TelevisionPayload(pos, a, t, v)), centre,
+                        20.0F + 2.0F * Math.max(size[0], size[1]), pt);
             } catch (Throwable ex) {
                 SkyBlocksMod.LOGGER.error("Shadered+ television: playing failed", ex);
                 FAILED.put(pos, System.currentTimeMillis());

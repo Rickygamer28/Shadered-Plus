@@ -18,6 +18,10 @@ public final class ModComponents {
                     .networkSynchronized(IslandData.STREAM_CODEC)
                     .build());
 
+    /** What a tablet plays (TabletState). */
+    public static final Supplier<DataComponentType<TabletState>> TABLET = COMPONENTS.register("tablet",
+            () -> DataComponentType.<TabletState>builder().persistent(TabletState.CODEC).networkSynchronized(TabletState.STREAM_CODEC).build());
+
     /** A trophy's engraving: who, at which arcade game, what score. */
     public record Trophy(String name, String game, int score) {
         public static final com.mojang.serialization.Codec<Trophy> CODEC = com.mojang.serialization.codecs.RecordCodecBuilder.create(i -> i.group(
