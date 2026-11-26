@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import java.util.List;
 import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -55,7 +56,7 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
             float[][] sprites = null;
             if (skin == StorageSkins.GALAXY) {
                 rgb = StorageSkins.itemColours(be.shown());
-                sprites = StorageSkins.itemSprites(be.shown());
+                sprites = new float[][] {{-1, -1, -1, -1}}; // (the shader draws only its dust and heart: the items, as themselves, below)
                 if (rgb.length == 0) {
                     rgb = new int[] {be.colour()};
                 }
@@ -65,6 +66,9 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
             float[] shares = new float[rgb.length];
             java.util.Arrays.fill(shares, 1.0F / rgb.length);
             StorageSkins.draw(poseStack, buffers, skin, full, be.chamber() > 0, half, rgb, shares, 0, sprites);
+            if (skin == StorageSkins.GALAXY) {
+                galaxyItems(be, poseStack, buffers, half, full, partialTick);
+            }
             return;
         }
         float t = (float) LavaLampRenderer.seconds();
@@ -79,6 +83,47 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
             float grow = Math.max(0.0F, Math.min(1.0F, (reach - 0.38F) / 0.92F));
             BlackHoleRenderer.hole(be.getBlockPos(), poseStack, buffers, 2, grow, be.colour(), items);
         }
+    }
+
+    /**
+     * The item galaxy's items: each kind it holds once (the most-held first), its own model, strewn along the galaxy's
+     * spiral arms (the shader's dust) and going round with them, each tumbling slowly, lit by the bright heart.
+     */
+    private static void galaxyItems(SingularityBlockEntity be, PoseStack pose, MultiBufferSource buffers, float half, float full, float partialTick) {
+        List<ItemStack> kinds = be.shown();
+        if (kinds.isEmpty() || be.getLevel() == null) {
+            return;
+        }
+        // (the shader's time and disk: so they lie on its arms)
+        float t = ((be.getLevel().getGameTime() % 24000L) + partialTick) / 20.0F;
+        org.joml.Vector3f n = new org.joml.Vector3f(0.22F, 1.0F, 0.14F).normalize();
+        org.joml.Vector3f e1 = new org.joml.Vector3f(n).cross(0, 0, 1).normalize(), e2 = new org.joml.Vector3f(n).cross(e1);
+        float arms = full < 0.5F ? 2.0F : 3.0F, spin = t * 0.08F;
+        int count = Math.min(kinds.size(), 32);
+        var renderer = Minecraft.getInstance().getItemRenderer();
+        for (int k = 0; k < count; k++) {
+            float h1 = hash(k * 1.7F + 0.3F), h2 = hash(k * 3.1F + 1.1F), h3 = hash(k * 5.7F + 2.3F), h4 = hash(k * 7.9F + 4.1F);
+            float r = 0.22F + 0.66F * Mth.sqrt(h1);
+            float ang = (float) Math.log(r + 0.06F) * 2.6F + (k % (int) arms) * Mth.TWO_PI / arms + (h2 - 0.5F) * 0.5F + spin;
+            float lift = (h3 - 0.5F) * 0.16F * (1.1F - r);
+            float px = (e1.x * Mth.cos(ang) + e2.x * Mth.sin(ang)) * r + n.x * lift;
+            float py = (e1.y * Mth.cos(ang) + e2.y * Mth.sin(ang)) * r + n.y * lift;
+            float pz = (e1.z * Mth.cos(ang) + e2.z * Mth.sin(ang)) * r + n.z * lift;
+            float size = (0.13F + 0.05F * h4) * half;
+            pose.pushPose();
+            pose.translate(0.5F + px * half, 0.5F + py * half, 0.5F + pz * half);
+            pose.mulPose(com.mojang.math.Axis.YP.rotation(t * (0.5F + h1) + k * 2.0F));
+            pose.mulPose(com.mojang.math.Axis.XP.rotation(t * (0.35F + 0.6F * h2) + k));
+            pose.scale(size, size, size);
+            renderer.renderStatic(kinds.get(k), net.minecraft.world.item.ItemDisplayContext.FIXED, net.minecraft.client.renderer.LightTexture.FULL_BRIGHT,
+                    net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, pose, buffers, be.getLevel(), k);
+            pose.popPose();
+        }
+    }
+
+    private static float hash(float x) {
+        float s = Mth.sin(x * 127.1F) * 43758.5453F;
+        return s - Mth.floor(s);
     }
 
     /** Some of what it holds, now and then, going slowly round in the disk's plane and in (more the bigger it is - not too many: fewer further away). */

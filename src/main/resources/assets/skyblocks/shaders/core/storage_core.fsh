@@ -485,7 +485,7 @@ vec4 galaxy(vec3 ro, vec3 rd, float t) {
     int n = count();
     float bestT = 1e9;
     vec3 bestC = vec3(0.0);
-    int items = 10 + int(full * 22.0);
+    int items = V0.x < -0.5 ? 0 : 10 + int(full * 22.0); // (V0 -1: its items drawn as themselves, outside the shader)
     for (int k = 0; k < 32; k++) {
         if (k >= items) break;
         float fk = float(k);
