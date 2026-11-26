@@ -143,8 +143,9 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
             pose.mulPose(com.mojang.math.Axis.YP.rotation(t * (0.25F + 0.3F * h1) + k * 2.0F));
             pose.mulPose(com.mojang.math.Axis.XP.rotation(0.35F * Mth.sin(t * (0.2F + 0.3F * h2) + k)));
             pose.scale(s, s, s);
-            if (com.example.skyblocks.SkyLiquidBucketRecipe.skyOf(stack) != null) {
-                skyCube(stack, pose, buffers);
+            com.noodlegamer76.shadered.client.util.SkyblockType sky = skyOf(stack);
+            if (sky != null) {
+                skyCube(sky, pose, buffers);
             } else {
                 renderer.renderStatic(stack, net.minecraft.world.item.ItemDisplayContext.FIXED, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, pose, buffers,
                         be.getLevel(), k);
@@ -172,25 +173,34 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
         return 1.15F - 0.45F * Math.min(1.0F, k / 24.0F);
     }
 
-    /** A sky block in the galaxy: a cube of its sky's picture (its model is its sky, drawn elsewhere - here it'd be flat). */
-    private static void skyCube(ItemStack stack, PoseStack pose, MultiBufferSource buffers) {
-        var sprite = Minecraft.getInstance().getItemRenderer().getModel(stack, null, null, 0).getParticleIcon();
-        com.mojang.blaze3d.vertex.VertexConsumer v = buffers.getBuffer(net.minecraft.client.renderer.RenderType.entityCutoutNoCull(
-                net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS));
-        PoseStack.Pose p = pose.last();
-        float h = 0.25F;
-        float[][] faces = {
-                {-h, -h, h, h, -h, h, h, h, h, -h, h, h, 0, 0, 1}, {h, -h, -h, -h, -h, -h, -h, h, -h, h, h, -h, 0, 0, -1},
-                {h, -h, h, h, -h, -h, h, h, -h, h, h, h, 1, 0, 0}, {-h, -h, -h, -h, -h, h, -h, h, h, -h, h, -h, -1, 0, 0},
-                {-h, h, h, h, h, h, h, h, -h, -h, h, -h, 0, 1, 0}, {-h, -h, -h, h, -h, -h, h, -h, h, -h, -h, h, 0, -1, 0}};
-        float[][] uv = {{0, 1}, {1, 1}, {1, 0}, {0, 0}};
-        for (float[] f : faces) {
-            for (int i = 0; i < 4; i++) {
-                v.addVertex(p, f[i * 3], f[i * 3 + 1], f[i * 3 + 2]).setColor(255, 255, 255, 255)
-                        .setUv(sprite.getU(uv[i][0]), sprite.getV(uv[i][1])).setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightTexture.FULL_BRIGHT)
-                        .setNormal(p, f[12], f[13], f[14]);
-            }
+    /** The sky a sky block (Shadered's, or one of our shapes) shows: null for anything else. */
+    private static com.noodlegamer76.shadered.client.util.SkyblockType skyOf(ItemStack stack) {
+        var sky = com.example.skyblocks.SkyLiquidBucketRecipe.skyOf(stack);
+        if (sky == null && stack.getItem() instanceof net.minecraft.world.item.BlockItem item && item.getBlock() instanceof com.example.skyblocks.ModSkyShapes.Shape s) {
+            sky = s.sky();
         }
+        return sky;
+    }
+
+    /**
+     * A sky block in the galaxy: a cube showing its sky, as the block does. (Drawn through SkyQuads, which makes sure
+     * that sky's picture is drawn this frame - nothing else here asks for it, so the game's own item drew a flat colour.)
+     */
+    private static void skyCube(com.noodlegamer76.shadered.client.util.SkyblockType sky, PoseStack pose, MultiBufferSource buffers) {
+        org.joml.Matrix4f m = pose.last().pose();
+        float h = 0.3F;
+        float[][] c = new float[8][];
+        for (int i = 0; i < 8; i++) {
+            org.joml.Vector3f v = m.transformPosition((i & 1) == 0 ? -h : h, (i & 2) == 0 ? -h : h, (i & 4) == 0 ? -h : h, new org.joml.Vector3f());
+            c[i] = new float[] {v.x, v.y, v.z};
+        }
+        int[][] faces = {{0, 1, 3, 2}, {4, 6, 7, 5}, {0, 4, 5, 1}, {2, 3, 7, 6}, {0, 2, 6, 4}, {1, 5, 7, 3}};
+        float[] quads = new float[6 * 40];
+        int n = 0;
+        for (int[] f : faces) {
+            n = SkyQuads.quad(quads, n, c[f[0]], c[f[1]], c[f[2]], c[f[3]]);
+        }
+        SkyQuads.draw(sky, quads, n, buffers);
     }
 
     private static float ghash(float x) {
