@@ -54,11 +54,11 @@ public class TelevisionScreen extends Screen {
             }
 
             public VideoPlayer player() {
-                return target.player();
+                return TvPlayers.existing(pos);
             }
 
             public void send(int action, String text, long value) {
-                target.send(action, text, value);
+                PacketDistributor.sendToServer(new TelevisionPayload(pos, action, text, value));
             }
 
             public boolean gone() {
@@ -119,7 +119,7 @@ public class TelevisionScreen extends Screen {
     }
 
     private void send(int action, String text, long value) {
-        PacketDistributor.sendToServer(new TelevisionPayload(pos, action, text, value));
+        target.send(action, text, value);
     }
 
     @Override
