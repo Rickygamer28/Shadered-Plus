@@ -49,8 +49,19 @@ final class YouTube {
         return m.find() ? m.group(1) : null;
     }
 
+    /** A link with the user agent to read it with (YouTube's links only work read as the app that asked for them). */
+    static final String UA_TAG = "#shadered-ua=";
+
+    static String tag(String url, String userAgent) {
+        return url + UA_TAG + java.net.URLEncoder.encode(userAgent, java.nio.charset.StandardCharsets.UTF_8);
+    }
+
     static Streams resolve(String id) throws Exception {
         String why = "YouTube didn't answer";
+        // (every app's copies that really read, the first app's first: YouTube refuses one app's now and then)
+        java.util.List<String> allVideo = new java.util.ArrayList<>(), allAudio = new java.util.ArrayList<>();
+        String fTitle = null, fAuthor = "", fThumb = "", fAgent = "";
+        long fSeconds = 0;
         for (Client c : CLIENTS) {
             String body = "{\"context\":{\"client\":{\"clientName\":\"" + c.name + "\",\"clientVersion\":\"" + c.version + "\"," + c.extra
                     + ",\"hl\":\"en\",\"gl\":\"US\"}},\"videoId\":\"" + id + "\",\"contentCheckOk\":true,\"racyCheckOk\":true}";
@@ -123,16 +134,31 @@ final class YouTube {
                 video.add(hls);
                 audio.add(hls);
             }
-            // (only the copies YouTube really lets this computer read: each tried with a tiny download first)
+            // (only the copies YouTube really lets this computer read: each tried with a small download first)
             video = working(video, c.userAgent);
             audio = working(audio, c.userAgent);
             if (video.isEmpty() || audio.isEmpty()) {
                 why = "YouTube refused every copy of it";
                 continue;
             }
-            return new Streams(video, audio, title, live, c.userAgent, author, thumb, seconds);
+            com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+ television: YouTube's {} copies read", c.name);
+            allVideo.addAll(video);
+            allAudio.addAll(audio);
+            if (fTitle == null) {
+                fTitle = title;
+                fAuthor = author;
+                fThumb = thumb;
+                fSeconds = seconds;
+                fAgent = c.userAgent;
+            }
+            if (allVideo.size() > 6) {
+                break; // (plenty to try)
+            }
         }
-        throw new Exception(why);
+        if (fTitle == null) {
+            throw new Exception(why);
+        }
+        return new Streams(allVideo, allAudio, fTitle, false, fAgent, fAuthor, fThumb, fSeconds);
     }
 
     /**
@@ -176,16 +202,24 @@ final class YouTube {
         return out;
     }
 
-    /** From the first copy that answers a tiny download (up to a few tried), the rest after it; empty if none did. */
+    /**
+     * From the first copy that gives a small download whole (up to a few tried), the rest after it - each with the
+     * user agent to read it with; empty if none did.
+     */
     private static java.util.List<String> working(java.util.List<String> urls, String userAgent) {
         for (int i = 0; i < urls.size() && i < 4; i++) {
             try {
-                HttpRequest req = HttpRequest.newBuilder(URI.create(urls.get(i))).timeout(Duration.ofSeconds(8))
-                        .header("User-Agent", userAgent).header("Range", "bytes=0-1").GET().build();
-                HttpResponse<Void> res = HTTP.send(req, HttpResponse.BodyHandlers.discarding());
-                if (res.statusCode() == 200 || res.statusCode() == 206) {
-                    return new java.util.ArrayList<>(urls.subList(i, urls.size()));
+                HttpRequest req = HttpRequest.newBuilder(URI.create(urls.get(i))).timeout(Duration.ofSeconds(10))
+                        .header("User-Agent", userAgent).header("Range", "bytes=0-262143").GET().build();
+                HttpResponse<byte[]> res = HTTP.send(req, HttpResponse.BodyHandlers.ofByteArray());
+                if ((res.statusCode() == 200 || res.statusCode() == 206) && res.body().length > 1000) {
+                    java.util.List<String> out = new java.util.ArrayList<>();
+                    for (String u : urls.subList(i, urls.size())) {
+                        out.add(u.contains("googlevideo.com") ? tag(u, userAgent) : u);
+                    }
+                    return out;
                 }
+                com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+ television: a YouTube copy answered {}", res.statusCode());
             } catch (Exception ignored) {
                 // (the next)
             }

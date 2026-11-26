@@ -136,10 +136,16 @@ final class Decoder {
                     }
                 }
                 String url = urls.get(u);
-                if (javaAgent != null && url.contains("googlevideo.com/videoplayback")) {
+                String agent = javaAgent;
+                int tagAt = url.indexOf(YouTube.UA_TAG);
+                if (tagAt >= 0) {
+                    agent = java.net.URLDecoder.decode(url.substring(tagAt + YouTube.UA_TAG.length()), java.nio.charset.StandardCharsets.UTF_8);
+                    url = url.substring(0, tagAt);
+                }
+                if (agent != null && url.contains("googlevideo.com/videoplayback")) {
                     // (read by Java, given to FFmpeg as it asks)
                     closeSource();
-                    source = new HttpSource(url, javaAgent);
+                    source = new HttpSource(url, agent);
                     BytePointer ioBuf = new BytePointer(av_malloc(IO_BUF));
                     io = avio_alloc_context(ioBuf, IO_BUF, 0, null, reader(), null, seeker());
                     fmt.pb(io);

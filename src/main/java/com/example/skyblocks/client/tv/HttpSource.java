@@ -12,11 +12,11 @@ import java.util.regex.Pattern;
 
 /**
  * A YouTube stream read by Java (which YouTube lets through where FFmpeg's own requests are refused), a piece at a
- * time with the link's "range" part - as yt-dlp reads them - for the decoder to take from (its own reading and going
+ * time (1 MB asked for at once) - for the decoder to take from (its own reading and going
  * to places, Decoder's custom input).
  */
 final class HttpSource {
-    private static final long CHUNK = 2L << 20;
+    private static final long CHUNK = 1L << 20;
     private static final Pattern CLEN = Pattern.compile("[?&]clen=(\\d+)");
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10))
             .followRedirects(HttpClient.Redirect.NORMAL).build();
@@ -78,8 +78,8 @@ final class HttpSource {
         if (length >= 0) {
             end = Math.min(end, length - 1);
         }
-        String u = url + (url.contains("?") ? "&" : "?") + "range=" + pos + "-" + end;
-        HttpRequest req = HttpRequest.newBuilder(URI.create(u)).timeout(Duration.ofSeconds(20)).header("User-Agent", userAgent).GET().build();
+        HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(20)).header("User-Agent", userAgent)
+                .header("Range", "bytes=" + pos + "-" + end).GET().build();
         HttpResponse<InputStream> res;
         try {
             res = HTTP.send(req, HttpResponse.BodyHandlers.ofInputStream());
