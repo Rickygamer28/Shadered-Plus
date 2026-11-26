@@ -54,13 +54,15 @@ final class Playlist {
         String list = lm.group(1);
         Matcher vm = VIDEO.matcher(src);
         String video = vm.find() ? vm.group(1) : null;
-        List<Entry> entries = CACHE.get(list);
+        boolean music = src.contains("music.youtube.com");
+        String key = (music ? "m:" : "") + list;
+        List<Entry> entries = CACHE.get(key);
         if (entries == null) {
-            entries = fetch(list, video);
+            entries = fetch(list, video, music ? "https://music.youtube.com/watch?v=" : "https://www.youtube.com/watch?v=");
             if (entries.isEmpty()) {
                 throw new Exception("couldn't read that playlist (private, or empty?)");
             }
-            CACHE.put(list, entries);
+            CACHE.put(key, entries);
         }
         int first = 0;
         if (video != null) {
@@ -74,13 +76,64 @@ final class Playlist {
         return new List2(entries, first);
     }
 
-    private static List<Entry> fetch(String list, @Nullable String video) throws Exception {
+    /**
+     * Which of its entries the television's count is at: in order from where it started, or - shuffled - in a random
+     * order (the same for everyone, from the television's seed) that starts at the video it was at when turned on.
+     */
+    static int index(List2 l, boolean shuffle, long seed, int first, int item) {
+        int n = l.entries().size();
+        if (!shuffle) {
+            return Math.floorMod(l.first() + item, n);
+        }
+        return order(n, seed, Math.floorMod(first, n))[Math.floorMod(item, n)];
+    }
+
+    /** How far along its order the count is (0 first, size - 1 last). */
+    static int along(List2 l, boolean shuffle, int item) {
+        int n = l.entries().size();
+        return shuffle ? Math.floorMod(item, n) : Math.floorMod(item, n);
+    }
+
+    /** The count that plays entry {@code index} in order (shuffle turned off, staying on it). */
+    static int itemFor(List2 l, int index) {
+        return index - l.first();
+    }
+
+    private static int[] lastOrder;
+    private static long lastKey;
+
+    private static synchronized int[] order(int n, long seed, int anchor) {
+        long key = seed * 31 + n * 7919L + anchor;
+        if (lastOrder != null && lastKey == key && lastOrder.length == n) {
+            return lastOrder;
+        }
+        int[] p = new int[n];
+        for (int i = 0; i < n; i++) p[i] = i;
+        java.util.Random r = new java.util.Random(seed);
+        for (int i = n - 1; i > 0; i--) {
+            int j = r.nextInt(i + 1), t = p[i];
+            p[i] = p[j];
+            p[j] = t;
+        }
+        for (int i = 0; i < n; i++) {
+            if (p[i] == anchor) {
+                p[i] = p[0];
+                p[0] = anchor;
+                break;
+            }
+        }
+        lastOrder = p;
+        lastKey = key;
+        return p;
+    }
+
+    private static List<Entry> fetch(String list, @Nullable String video, String prefix) throws Exception {
         List<Entry> out = new ArrayList<>();
         // the playlist's own page (all of it, a page at a time)
         JsonObject page = post("browse", "{\"context\":" + WEB + ",\"browseId\":\"VL" + list + "\"}");
         for (int pages = 0; page != null && pages < 30; pages++) {
             List<String> next = new ArrayList<>();
-            walk(page, "playlistVideoRenderer", out, next);
+            walk(page, "playlistVideoRenderer", out, next, prefix);
             if (next.isEmpty()) {
                 break;
             }
@@ -90,7 +143,7 @@ final class Playlist {
             // (mixes and the like have no page: the list beside a video playing from it)
             JsonObject watch = post("next", "{\"context\":" + WEB + ",\"playlistId\":\"" + list + "\"" + (video != null ? ",\"videoId\":\"" + video + "\"" : "") + "}");
             if (watch != null) {
-                walk(watch, "playlistPanelVideoRenderer", out, new ArrayList<>());
+                walk(watch, "playlistPanelVideoRenderer", out, new ArrayList<>(), prefix);
             }
         }
         // (once each, in order)
@@ -105,10 +158,10 @@ final class Playlist {
     }
 
     /** Every video of this kind anywhere in it (in order), and where the rest of the list is to be asked for. */
-    private static void walk(JsonElement el, String kind, List<Entry> out, List<String> continuations) {
+    private static void walk(JsonElement el, String kind, List<Entry> out, List<String> continuations, String prefix) {
         if (el.isJsonArray()) {
             for (JsonElement e : el.getAsJsonArray()) {
-                walk(e, kind, out, continuations);
+                walk(e, kind, out, continuations, prefix);
             }
             return;
         }
@@ -120,7 +173,7 @@ final class Playlist {
             JsonObject v = o.getAsJsonObject(kind);
             if (v.has("videoId")) {
                 String id = v.get("videoId").getAsString();
-                out.add(new Entry("https://www.youtube.com/watch?v=" + id, text(v.get("title"))));
+                out.add(new Entry(prefix + id, text(v.get("title"))));
             }
             return;
         }
@@ -131,7 +184,7 @@ final class Playlist {
             }
         }
         for (Map.Entry<String, JsonElement> e : o.entrySet()) {
-            walk(e.getValue(), kind, out, continuations);
+            walk(e.getValue(), kind, out, continuations, prefix);
         }
     }
 

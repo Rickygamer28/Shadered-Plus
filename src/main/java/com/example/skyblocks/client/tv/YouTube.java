@@ -19,7 +19,8 @@ import org.jetbrains.annotations.Nullable;
  */
 final class YouTube {
     /** Where its picture and sound can be read from, best first (the next tried when one is refused). */
-    record Streams(java.util.List<String> video, java.util.List<String> audio, String title, boolean live, String userAgent) {}
+    record Streams(java.util.List<String> video, java.util.List<String> audio, String title, boolean live, String userAgent, String author, String thumbnail,
+                   long seconds) {}
 
     private record Client(String name, int id, String version, String userAgent, String extra) {}
 
@@ -78,6 +79,26 @@ final class YouTube {
             JsonObject details = obj(root, "videoDetails");
             String title = details == null ? "" : str(details, "title");
             boolean live = details != null && details.has("isLive") && details.get("isLive").getAsBoolean();
+            String author = details == null || str(details, "author") == null ? "" : str(details, "author");
+            long seconds = 0;
+            try {
+                seconds = details == null || str(details, "lengthSeconds") == null ? 0 : Long.parseLong(str(details, "lengthSeconds"));
+            } catch (NumberFormatException ignored) {
+            }
+            String thumb = "";
+            JsonObject th = details == null ? null : obj(details, "thumbnail");
+            if (th != null && th.has("thumbnails")) {
+                JsonArray all = th.getAsJsonArray("thumbnails");
+                int bestW = -1;
+                for (JsonElement t : all) {
+                    JsonObject to = t.getAsJsonObject();
+                    int tw = to.has("width") ? to.get("width").getAsInt() : 0;
+                    if (tw > bestW && str(to, "url") != null) {
+                        bestW = tw;
+                        thumb = str(to, "url");
+                    }
+                }
+            }
             JsonObject streaming = obj(root, "streamingData");
             if (streaming == null) {
                 why = "YouTube gave no way to play it";
@@ -85,7 +106,7 @@ final class YouTube {
             }
             String hls = str(streaming, "hlsManifestUrl");
             if (live && hls != null) {
-                return new Streams(java.util.List.of(hls), java.util.List.of(hls), title, true, c.userAgent);
+                return new Streams(java.util.List.of(hls), java.util.List.of(hls), title, true, c.userAgent, author, thumb, seconds);
             }
             java.util.List<String> video = ranked(streaming.getAsJsonArray("adaptiveFormats"), true);
             java.util.List<String> audio = ranked(streaming.getAsJsonArray("adaptiveFormats"), false);
@@ -101,7 +122,7 @@ final class YouTube {
                 why = "YouTube gave no stream that can be read";
                 continue;
             }
-            return new Streams(video, audio, title, live, c.userAgent);
+            return new Streams(video, audio, title, live, c.userAgent, author, thumb, seconds);
         }
         throw new Exception(why);
     }

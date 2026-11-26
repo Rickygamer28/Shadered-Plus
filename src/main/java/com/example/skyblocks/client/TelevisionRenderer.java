@@ -15,6 +15,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -63,7 +64,9 @@ public class TelevisionRenderer implements BlockEntityRenderer<TelevisionBlockEn
         }
         VideoPlayer player = TvPlayers.get(be);
         float cx = 1 - w / 2.0F, cy = h / 2.0F, aw = w - 2 * EDGE, ah = h - 2 * EDGE;
-        if (player != null && player.hasPicture()) {
+        if (player != null && player.music() != null && player.state() != VideoPlayer.State.ERROR) {
+            music(poseStack, buffers, player, player.music(), left, bottom, right, top);
+        } else if (player != null && player.hasPicture()) {
             float ar = player.pictureWidth() / (float) Math.max(1, player.pictureHeight());
             float pw = Math.min(aw, ah * ar), ph = pw / ar;
             VertexConsumer v = buffers.getBuffer(RenderType.text(player.textureId()));
@@ -97,6 +100,101 @@ public class TelevisionRenderer implements BlockEntityRenderer<TelevisionBlockEn
                 text(poseStack, buffers, sub, cx, cy - hgt * 1.3F, aw * 0.9F, hgt * 0.6F, 0xFF8A96AA);
             }
         }
+        poseStack.popPose();
+    }
+
+    /**
+     * A song (YouTube Music): the background in its cover's colour, the cover on the left with its title and artist
+     * under it, and its words on the right - the line being sung bright in the middle, the ones before and after it
+     * fading, moving up as it goes on - and how far along it is, along the bottom.
+     */
+    private void music(PoseStack poseStack, MultiBufferSource buffers, VideoPlayer player, com.example.skyblocks.client.tv.Music m,
+                       float left, float bottom, float right, float top) {
+        Matrix4f mat = poseStack.last().pose();
+        float aw = left - right, ah = top - bottom;
+        int base = m.colour;
+        VertexConsumer bg = buffers.getBuffer(RenderType.textBackground());
+        int hi = 0xFF000000 | MachineUi.shade(base, 0.55F) & 0xFFFFFF, lo = 0xFF000000 | MachineUi.shade(base, 0.28F) & 0xFFFFFF;
+        float z = FRONT - 0.003F;
+        bg.addVertex(mat, left, bottom, z).setColor(lo).setLight(LightTexture.FULL_BRIGHT);
+        bg.addVertex(mat, right, bottom, z).setColor(lo).setLight(LightTexture.FULL_BRIGHT);
+        bg.addVertex(mat, right, top, z).setColor(hi).setLight(LightTexture.FULL_BRIGHT);
+        bg.addVertex(mat, left, top, z).setColor(hi).setLight(LightTexture.FULL_BRIGHT);
+        // its progress, along the bottom
+        long dur = player.duration();
+        float f = dur > 0 ? Math.min(1.0F, player.position() / (float) dur) : 0;
+        float by = bottom + ah * 0.03F, bh = Math.max(0.01F, ah * 0.008F);
+        rect(bg, mat, left - aw * 0.04F, by, right + aw * 0.04F, by + bh, z - 0.0005F, 0x40FFFFFF, LightTexture.FULL_BRIGHT);
+        rect(bg, mat, left - aw * 0.04F, by, left - aw * 0.04F - aw * 0.92F * f, by + bh, z - 0.001F, 0xE6FFFFFF, LightTexture.FULL_BRIGHT);
+
+        // the cover
+        float cs = Math.min(ah * 0.6F, aw * 0.34F);
+        float cx0 = left - aw * 0.07F, cx1 = cx0 - cs;
+        float cyTop = bottom + ah * 0.5F + cs * 0.55F, cyBottom = cyTop - cs;
+        ResourceLocation cover = player.cover();
+        if (cover != null) {
+            VertexConsumer v = buffers.getBuffer(RenderType.text(cover));
+            float cz = FRONT - 0.0045F;
+            v.addVertex(mat, cx0, cyBottom, cz).setColor(0xFFFFFFFF).setUv(0, 1).setLight(LightTexture.FULL_BRIGHT);
+            v.addVertex(mat, cx1, cyBottom, cz).setColor(0xFFFFFFFF).setUv(1, 1).setLight(LightTexture.FULL_BRIGHT);
+            v.addVertex(mat, cx1, cyTop, cz).setColor(0xFFFFFFFF).setUv(1, 0).setLight(LightTexture.FULL_BRIGHT);
+            v.addVertex(mat, cx0, cyTop, cz).setColor(0xFFFFFFFF).setUv(0, 0).setLight(LightTexture.FULL_BRIGHT);
+        } else {
+            VertexConsumer v = buffers.getBuffer(RenderType.textBackground());
+            rect(v, mat, cx0, cyBottom, cx1, cyTop, FRONT - 0.0045F, 0xFF000000 | MachineUi.shade(base, 0.8F) & 0xFFFFFF, LightTexture.FULL_BRIGHT);
+            textAt(poseStack, buffers, "\u266B", cx0 - cs / 2, cyBottom + cs * 0.3F, cs * 0.4F, cs, 0x80FFFFFF, true);
+        }
+        float th = Math.min(ah * 0.055F, aw * 0.03F);
+        textAt(poseStack, buffers, m.title, cx0, cyBottom - th * 1.9F, th, cs * 1.6F, 0xFFFFFFFF, false);
+        textAt(poseStack, buffers, m.artist, cx0, cyBottom - th * 3.3F, th * 0.85F, cs * 1.6F, 0xB4FFFFFF, false);
+
+        // its words
+        float lx = left - aw * 0.47F, room = aw * 0.48F, mid = bottom + ah * 0.52F;
+        float lh = Math.min(ah * 0.11F, aw * 0.06F), lt = lh * 0.55F;
+        java.util.List<com.example.skyblocks.client.tv.Music.Line> lines = m.lyrics;
+        if (lines == null || lines.isEmpty()) {
+            textAt(poseStack, buffers, lines == null ? "Looking for the lyrics..." : "No lyrics found", lx, mid, lt * 0.8F, room, 0x80FFFFFF, false);
+            return;
+        }
+        long pos = player.position();
+        float at;
+        if (m.timed) {
+            int ci = -1;
+            for (int i = 0; i < lines.size(); i++) {
+                if (lines.get(i).ms() <= pos) ci = i;
+            }
+            at = ci;
+            if (ci + 1 < lines.size()) {
+                long next = lines.get(ci + 1).ms();
+                float k = Math.max(0.0F, Math.min(1.0F, (pos - (next - 300)) / 300.0F)); // (moving up just before the next line)
+                at += k * k * (3 - 2 * k);
+            }
+        } else {
+            at = dur > 0 ? f * lines.size() - 1.5F : 0;
+        }
+        int now = Math.round(at);
+        for (int k = (int) Math.floor(at) - 3; k <= (int) Math.ceil(at) + 5; k++) {
+            if (k < 0 || k >= lines.size()) continue;
+            float y = mid - (k - at) * lh;
+            if (y < bottom + ah * 0.08F || y > top - lh * 0.6F) continue;
+            String text = lines.get(k).text();
+            if (text.isEmpty()) text = "\u266A";
+            float d = Math.abs(k - at);
+            int alpha = k == now && m.timed ? 0xFF : Math.max(0x18, (int) (0x78 - d * 0x16));
+            textAt(poseStack, buffers, text, lx, y, lt, room, alpha << 24 | 0xFFFFFF, false);
+        }
+    }
+
+    /** A line of text: its left edge (or its middle) at x, its foot at y, this tall unless too wide for the room. */
+    private void textAt(PoseStack poseStack, MultiBufferSource buffers, String line, float x, float y, float height, float room, int colour, boolean centred) {
+        float scale = height / 9.0F;
+        if (font.width(line) * scale > room) scale = room / Math.max(1, font.width(line));
+        poseStack.pushPose();
+        poseStack.translate(x, y + 9 * scale, FRONT - 0.006F);
+        poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
+        poseStack.scale(scale, -scale, scale);
+        font.drawInBatch(line, centred ? -font.width(line) / 2.0F : 0.0F, 0.0F, colour, false, poseStack.last().pose(), buffers,
+                Font.DisplayMode.POLYGON_OFFSET, 0, LightTexture.FULL_BRIGHT);
         poseStack.popPose();
     }
 

@@ -110,6 +110,12 @@ final class Decoder {
         SwrContext swr = null;
         BytePointer out = null;
         AVIOInterruptCB.Callback_Pointer abort = null;
+        if (urls.isEmpty()) {
+            missing = true; // (nothing to read: e.g. a song, its sound only)
+            error = "nothing to read";
+            failed = true;
+            return;
+        }
         try {
             init();
             abort = new AVIOInterruptCB.Callback_Pointer() {

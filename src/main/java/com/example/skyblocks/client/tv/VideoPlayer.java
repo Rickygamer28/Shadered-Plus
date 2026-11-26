@@ -29,6 +29,19 @@ public final class VideoPlayer {
     private int item;
     private volatile int listSize, listIndex;
     private boolean askedNext;
+    /** How far along its playlist's order (0 first). */
+    private volatile int listAlong;
+    /** Its playlist (once read), and the shuffle it was started with. */
+    private volatile Playlist.List2 list;
+    private boolean shuffled;
+    private long shuffleSeed;
+    private int shuffleFirst;
+    /** Bumped on every start: a link thread of an older one gives up. */
+    private volatile int startGen;
+    /** The song's cover, words and look (a YouTube Music link), or null. */
+    private volatile Music music;
+    private net.minecraft.client.renderer.texture.DynamicTexture coverTexture;
+    private ResourceLocation coverId;
     private long errorAt;
     private volatile Decoder picture, sound;
     private volatile String error = "", title = "";
@@ -107,6 +120,13 @@ public final class VideoPlayer {
         stopDecoders();
         source = be.source();
         item = be.item();
+        shuffled = be.shuffle();
+        shuffleSeed = be.shuffleSeed();
+        shuffleFirst = be.shuffleFirst();
+        int gen = ++startGen;
+        list = null;
+        releaseCover();
+        music = null;
         askedNext = false;
         errorAt = 0;
         listSize = 0;
@@ -121,6 +141,9 @@ public final class VideoPlayer {
         String whole = source.trim();
         String by = be.chosenBy();
         int at = item;
+        boolean shuf = shuffled;
+        long seed = shuffleSeed;
+        int sFirst = shuffleFirst;
         resolving = true;
         Thread t = new Thread(() -> {
             try {
@@ -134,13 +157,18 @@ public final class VideoPlayer {
                 java.util.List<String> videoUrl, audioUrl;
                 String src = whole;
                 if (Playlist.is(whole)) {
-                    Playlist.List2 list = Playlist.resolve(whole);
-                    int n = list.entries().size();
-                    int i = Math.floorMod(list.first() + at, n);
+                    Playlist.List2 l = Playlist.resolve(whole);
+                    int n = l.entries().size();
+                    int i = Playlist.index(l, shuf, seed, sFirst, at);
+                    if (gen != startGen) {
+                        return;
+                    }
+                    list = l;
                     listSize = n;
                     listIndex = i;
-                    src = list.entries().get(i).source();
-                    title = list.entries().get(i).title();
+                    listAlong = Playlist.along(l, shuf, at);
+                    src = l.entries().get(i).source();
+                    title = l.entries().get(i).title();
                 }
                 String id = YouTube.id(src);
                 if (id != null) {
@@ -152,6 +180,11 @@ public final class VideoPlayer {
                     opts.put("user_agent", s.userAgent());
                     videoUrl = s.video();
                     audioUrl = s.audio();
+                    if (src.contains("music.youtube.com") && !live) {
+                        // (a song: its cover and words instead of its video - only its sound is read)
+                        music = Music.load(s.title(), s.author(), s.thumbnail(), id, s.seconds());
+                        videoUrl = java.util.List.of();
+                    }
                 } else if (src.startsWith("file:") || looksLikePath(src)) {
                     Path file = Path.of(src.startsWith("file:") ? src.substring(5) : src);
                     if (!Files.isRegularFile(file)) {
@@ -169,15 +202,15 @@ public final class VideoPlayer {
                     throw new Exception("that isn't a link to a video");
                 }
                 synchronized (this) {
-                    if (!whole.equals(source.trim()) || at != item || released) {
+                    if (gen != startGen || released) {
                         return;
                     }
                     Decoder p = new Decoder(videoUrl, opts, true), s = new Decoder(audioUrl, opts, false);
                     picture = p;
                     sound = s;
-                    long at = live ? 0 : atUs;
-                    p.start(at);
-                    s.start(at);
+                    long from = live ? 0 : atUs;
+                    p.start(from);
+                    s.start(from);
                     seekedAt = System.currentTimeMillis();
                     liveStart = System.nanoTime();
                 }
@@ -202,8 +235,21 @@ public final class VideoPlayer {
     void update(TelevisionBlockEntity be, Vec3 centre, float range, float partialTick) {
         Minecraft mc = Minecraft.getInstance();
         long target = be.position(partialTick) * 1000L;
-        if (!be.source().equals(source) || be.item() != item) {
+        if (!be.source().equals(source)) {
             start(be, target);
+        } else if (be.item() != item || be.shuffle() != shuffled || be.shuffleSeed() != shuffleSeed || be.shuffleFirst() != shuffleFirst) {
+            Playlist.List2 l = list;
+            if (l != null && Playlist.index(l, be.shuffle(), be.shuffleSeed(), be.shuffleFirst(), be.item()) == listIndex) {
+                // (shuffle turned on or off: the same video goes on, only the order after it changed)
+                item = be.item();
+                shuffled = be.shuffle();
+                shuffleSeed = be.shuffleSeed();
+                shuffleFirst = be.shuffleFirst();
+                listAlong = Playlist.along(l, shuffled, item);
+                askedNext = false;
+            } else {
+                start(be, target);
+            }
         }
         Decoder p = picture, s = sound;
         boolean gaveUp = p != null && s != null && !p.open && p.failed && !s.open && s.failed;
@@ -318,7 +364,7 @@ public final class VideoPlayer {
 
     /** Asks for its playlist's next video (once; everyone watching asks - the television takes the first). */
     private void askNext(TelevisionBlockEntity be) {
-        if (askedNext || listSize == 0 || !be.loop() && listIndex + 1 >= listSize) {
+        if (askedNext || listSize == 0 || !be.loop() && listAlong + 1 >= listSize) {
             return;
         }
         askedNext = true;
@@ -333,6 +379,45 @@ public final class VideoPlayer {
 
     public int listSize() {
         return listSize;
+    }
+
+    /** The count that keeps the video playing now with shuffle turned off. */
+    public int itemInOrder() {
+        Playlist.List2 l = list;
+        return l == null ? item : Playlist.itemFor(l, listIndex);
+    }
+
+    /** The song shown instead of a video (YouTube Music), or null. */
+    @org.jetbrains.annotations.Nullable
+    public Music music() {
+        return music;
+    }
+
+    /** Its cover as a texture (made on first asking, on the render thread), or null. */
+    @org.jetbrains.annotations.Nullable
+    public ResourceLocation cover() {
+        Music m = music;
+        if (m == null) {
+            return null;
+        }
+        if (coverTexture == null && m.cover != null) {
+            coverTexture = new net.minecraft.client.renderer.texture.DynamicTexture(m.cover);
+            coverTexture.setFilter(true, false);
+            coverId = ResourceLocation.fromNamespaceAndPath(SkyBlocksMod.MOD_ID, "tv/cover_" + Long.toHexString(pos.asLong()) + "_" + startGen);
+            Minecraft.getInstance().getTextureManager().register(coverId, coverTexture);
+        }
+        return coverTexture == null ? null : coverId;
+    }
+
+    private void releaseCover() {
+        if (coverId != null) {
+            Minecraft.getInstance().getTextureManager().release(coverId); // (frees the picture too)
+        } else if (music != null && music.cover != null) {
+            music.cover.close();
+            music.cover = null;
+        }
+        coverTexture = null;
+        coverId = null;
     }
 
     private void seek(long us) {
@@ -371,6 +456,7 @@ public final class VideoPlayer {
         stopDecoders();
         audio.release();
         Minecraft.getInstance().getTextureManager().release(textureId);
+        releaseCover();
     }
 
     public BlockPos pos() {

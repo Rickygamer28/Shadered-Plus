@@ -20,10 +20,10 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * play/pause, stop, back and on, going anywhere along it, repeat and volume. Doesn't pause the game (it plays on).
  */
 public class TelevisionScreen extends Screen {
-    private static final int W = 300, H = 178, ACCENT = 0xFF4FB3FF;
+    private static final int W = 330, H = 178, ACCENT = 0xFF4FB3FF;
     private final BlockPos pos;
     private EditBox link;
-    private MachineUi.Flat pauseButton, loopButton, prevButton, nextButton;
+    private MachineUi.Flat pauseButton, loopButton, prevButton, nextButton, shuffleButton;
     private VolumeSlider volume;
     private long dropFlash;
     private String dropError = "";
@@ -65,18 +65,27 @@ public class TelevisionScreen extends Screen {
 
         int by = y + 128;
         prevButton = (MachineUi.Flat) addRenderableWidget(MachineUi.button(x + 10, by, 22, 18, Component.literal("|<"), b -> step(-1), () -> ACCENT));
-        pauseButton = (MachineUi.Flat) addRenderableWidget(MachineUi.button(x + 36, by, 50, 18, Component.literal("Pause"), b -> {
+        pauseButton = (MachineUi.Flat) addRenderableWidget(MachineUi.button(x + 34, by, 48, 18, Component.literal("Pause"), b -> {
             TelevisionBlockEntity t = tv();
             if (t != null) send(t.paused() ? TelevisionPayload.PLAY : TelevisionPayload.PAUSE, "", 0);
         }, () -> ACCENT));
-        nextButton = (MachineUi.Flat) addRenderableWidget(MachineUi.button(x + 90, by, 22, 18, Component.literal(">|"), b -> step(1), () -> ACCENT));
-        addRenderableWidget(MachineUi.button(x + 116, by, 34, 18, Component.literal("-10s"), b -> skip(-10_000), () -> ACCENT));
-        addRenderableWidget(MachineUi.button(x + 154, by, 34, 18, Component.literal("+10s"), b -> skip(10_000), () -> ACCENT));
-        loopButton = (MachineUi.Flat) addRenderableWidget(MachineUi.button(x + 192, by, 52, 18, Component.literal("Repeat"), b -> {
+        nextButton = (MachineUi.Flat) addRenderableWidget(MachineUi.button(x + 84, by, 22, 18, Component.literal(">|"), b -> step(1), () -> ACCENT));
+        addRenderableWidget(MachineUi.button(x + 108, by, 34, 18, Component.literal("-10s"), b -> skip(-10_000), () -> ACCENT));
+        addRenderableWidget(MachineUi.button(x + 144, by, 34, 18, Component.literal("+10s"), b -> skip(10_000), () -> ACCENT));
+        shuffleButton = (MachineUi.Flat) addRenderableWidget(MachineUi.button(x + 180, by, 50, 18, Component.literal("Shuffle"), b -> {
+            TelevisionBlockEntity t = tv();
+            VideoPlayer p = TvPlayers.existing(pos);
+            if (t != null && p != null && p.listSize() > 1) {
+                // (on: a new random order from the video playing; off: back in order, from the video playing)
+                boolean on = !t.shuffle();
+                send(TelevisionPayload.SHUFFLE, Integer.toString(on ? 0 : p.itemInOrder()), ((long) p.listIndex() << 1) | (on ? 1 : 0));
+            }
+        }, () -> ACCENT));
+        loopButton = (MachineUi.Flat) addRenderableWidget(MachineUi.button(x + 232, by, 48, 18, Component.literal("Repeat"), b -> {
             TelevisionBlockEntity t = tv();
             if (t != null) send(TelevisionPayload.LOOP, "", t.loop() ? 0 : 1);
         }, () -> ACCENT));
-        addRenderableWidget(MachineUi.button(x + 248, by, 42, 18, Component.literal("Off"), b -> {
+        addRenderableWidget(MachineUi.button(x + 282, by, 38, 18, Component.literal("Off"), b -> {
             send(TelevisionPayload.STOP, "", 0);
             link.setValue("");
         }, () -> 0xFFFF8A7A));
@@ -169,6 +178,8 @@ public class TelevisionScreen extends Screen {
         boolean list = p != null && p.listSize() > 1;
         prevButton.active = list;
         nextButton.active = list;
+        shuffleButton.active = list;
+        shuffleButton.lit = tv.shuffle();
         loopButton.lit = tv.loop();
     }
 

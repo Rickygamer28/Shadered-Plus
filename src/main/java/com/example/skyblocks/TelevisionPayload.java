@@ -12,7 +12,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /** Television window -> server: what to play, play/pause, stop, go to, volume, repeat. */
 public record TelevisionPayload(BlockPos pos, int action, String text, long value) implements CustomPacketPayload {
-    public static final int CHOOSE = 0, PLAY = 1, PAUSE = 2, STOP = 3, SEEK = 4, VOLUME = 5, LOOP = 6, GOTO = 7;
+    public static final int CHOOSE = 0, PLAY = 1, PAUSE = 2, STOP = 3, SEEK = 4, VOLUME = 5, LOOP = 6, GOTO = 7, SHUFFLE = 8;
 
     /** GOTO's value: from one of its playlist's videos to another. */
     public static long fromTo(int from, int to) {
@@ -52,6 +52,12 @@ public record TelevisionPayload(BlockPos pos, int action, String text, long valu
                 case VOLUME -> tv.setVolume((int) p.value());
                 case LOOP -> tv.setLoop(p.value() != 0);
                 case GOTO -> tv.goTo((int) (p.value() >> 32), (int) p.value());
+                case SHUFFLE -> { // (value: on, and the video playing; text: the count keeping it playing)
+                    try {
+                        tv.setShuffle((p.value() & 1) != 0, (int) (p.value() >> 1), Integer.parseInt(p.text()));
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
                 default -> { }
             }
         });

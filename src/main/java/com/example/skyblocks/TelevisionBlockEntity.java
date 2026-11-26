@@ -30,6 +30,10 @@ public class TelevisionBlockEntity extends BlockEntity {
     private int volume = 70;
     /** Which of a playlist's videos it's at (counted on from where it started; the clients wrap it round). */
     private int item;
+    /** Its playlist in a random order (the same for everyone: from this seed), starting at the video it was at. */
+    private boolean shuffle;
+    private long shuffleSeed;
+    private int shuffleFirst;
     private boolean loop = true;
     /** Bumped on every change: clients seeing it change resync. */
     private int revision;
@@ -67,6 +71,32 @@ public class TelevisionBlockEntity extends BlockEntity {
         paused = false;
         pausedAt = 0;
         startTick = level == null ? 0 : level.getGameTime();
+        changed();
+    }
+
+    public boolean shuffle() {
+        return shuffle;
+    }
+
+    public long shuffleSeed() {
+        return shuffleSeed;
+    }
+
+    public int shuffleFirst() {
+        return shuffleFirst;
+    }
+
+    /**
+     * Random order on (a new one, starting at {@code at} - the video playing) or off; {@code newItem}: the count that
+     * keeps that video playing in the new order (the time goes on).
+     */
+    public void setShuffle(boolean on, int at, int newItem) {
+        shuffle = on;
+        if (on) {
+            shuffleSeed = level == null ? 0 : level.getRandom().nextLong();
+            shuffleFirst = at;
+        }
+        item = newItem;
         changed();
     }
 
@@ -145,6 +175,9 @@ public class TelevisionBlockEntity extends BlockEntity {
         volume = o.volume;
         loop = o.loop;
         item = o.item;
+        shuffle = o.shuffle;
+        shuffleSeed = o.shuffleSeed;
+        shuffleFirst = o.shuffleFirst;
         changed();
     }
 
@@ -168,6 +201,9 @@ public class TelevisionBlockEntity extends BlockEntity {
         tag.putBoolean("loop", loop);
         tag.putInt("rev", revision);
         tag.putInt("item", item);
+        tag.putBoolean("shuffle", shuffle);
+        tag.putLong("seed", shuffleSeed);
+        tag.putInt("first", shuffleFirst);
     }
 
     @Override
@@ -182,6 +218,9 @@ public class TelevisionBlockEntity extends BlockEntity {
         loop = !tag.contains("loop") || tag.getBoolean("loop");
         revision = tag.getInt("rev");
         item = tag.getInt("item");
+        shuffle = tag.getBoolean("shuffle");
+        shuffleSeed = tag.getLong("seed");
+        shuffleFirst = tag.getInt("first");
     }
 
     @Override
