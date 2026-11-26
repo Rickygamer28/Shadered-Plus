@@ -186,7 +186,7 @@ public final class VideoPlayer {
             state = State.LOADING;
             return;
         }
-        boolean hasSound = s.open, hasPicture = p.open;
+        boolean hasSound = s.open && audio.available(), hasPicture = p.open;
         long dur = duration() * 1000L;
         boolean ended = false;
         if (live) {

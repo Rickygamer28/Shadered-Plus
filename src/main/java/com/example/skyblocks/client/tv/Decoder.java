@@ -321,9 +321,12 @@ final class Decoder {
     private static String err(int code) {
         BytePointer b = new BytePointer(256);
         av_strerror(code, b, 256);
-        String s = b.getString();
+        byte[] a = new byte[256];
+        b.position(0).limit(256).get(a);
         b.close();
-        return s;
+        int n = 0;
+        while (n < a.length && a[n] != 0) n++;
+        return new String(a, 0, n, java.nio.charset.StandardCharsets.UTF_8);
     }
 
     private static void sleep(long ms) {

@@ -104,6 +104,11 @@ final class AudioOut {
         return front[1] + at * 1_000_000L / Decoder.RATE;
     }
 
+    /** Whether the game has sound here (none: no device - the picture keeps time by itself). */
+    boolean available() {
+        return ready();
+    }
+
     boolean playing() {
         return source != -1 && AL10.alGetSourcei(source, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING;
     }
