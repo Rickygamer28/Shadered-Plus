@@ -52,7 +52,9 @@ final class PlainTank {
         TextureAtlasSprite white = mc.getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(WhirlpoolRenderer.WHITE);
         PoseStack.Pose pose = poseStack.last();
         // ---- the layers: liquids up from the floor (the densest lowest), gases down from the roof, sliding to their heights
-        float filled = (hi - lo) * Math.min(1.0F, Math.max(be.shownFull, 0.0F));
+        // (full, its surface stays a little under the roof: its ripples would poke through the roof and flicker there)
+        float ceil = hi - 0.08F;
+        float filled = (ceil - lo) * Math.min(1.0F, Math.max(be.shownFull, 0.0F));
         List<WhirlpoolRenderer.Look> liquids = new ArrayList<>(), gases = new ArrayList<>();
         for (WhirlpoolRenderer.Look l : looks) {
             (l.gas() ? gases : liquids).add(l);
@@ -71,7 +73,7 @@ final class PlainTank {
         List<Layer> layers = new ArrayList<>();
         float y = lo;
         for (WhirlpoolRenderer.Look l : liquids) {
-            float top = Math.min(hi, y + filled * be.shownShare.get(l.stack().getFluid()));
+            float top = Math.min(ceil, y + filled * be.shownShare.get(l.stack().getFluid()));
             if (top - y > 0.004F) {
                 layers.add(new Layer(l, y, top));
             }
@@ -89,6 +91,7 @@ final class PlainTank {
         }
         float since = (System.currentTimeMillis() - be.rippleAt) / 1000.0F;
         float ripple = (0.012F + 0.05F * Math.max(0.0F, 1.0F - since / 2.5F)) * Math.min(1.0F, (hi - lo) / 3.0F);
+        ripple = Math.min(ripple, Math.max(0.0F, (hi - liquidTop) * 0.5F - 0.01F)); // (calmer near the roof: never touching it)
 
         VertexConsumer v = buffers.getBuffer(WhirlpoolRenderer.Types.POOL);
         for (int i = 0; i < layers.size(); i++) {
@@ -142,11 +145,11 @@ final class PlainTank {
                 caustics(glow, m, lo, hi, Math.max(topLayer.y0, topLayer.y1 - 0.6F), topLayer.y1, t);
             }
             // the bright line where it meets the glass
-            walls(glow, m, lo - 0.002F, hi + 0.002F, topLayer.y1 - 0.012F, topLayer.y1 + 0.02F, Math.min(1, cr + 0.4F), Math.min(1, cg + 0.4F),
+            walls(glow, m, lo - 0.002F, hi + 0.002F, topLayer.y1 - 0.012F, Math.min(hi - 0.01F, topLayer.y1 + 0.02F), Math.min(1, cr + 0.4F), Math.min(1, cg + 0.4F),
                     Math.min(1, cb + 0.4F), 0.5F, 1.0F);
             for (float[] s : splashes) { // (rings spreading where a stream lands)
                 float ring = (t * 1.6F + s[2]) % 1.0F;
-                ringQuads(glow, m, s[0], topLayer.y1 + 0.01F, s[1], 0.12F + ring * 0.45F, 0.9F, 0.95F, 1.0F, 0.5F * (1.0F - ring));
+                ringQuads(glow, m, s[0], Math.min(hi - 0.01F, topLayer.y1 + 0.01F), s[1], 0.12F + ring * 0.45F, 0.9F, 0.95F, 1.0F, 0.5F * (1.0F - ring));
             }
         }
         // ---- the world: embers off hot surfaces, splashes where streams land
