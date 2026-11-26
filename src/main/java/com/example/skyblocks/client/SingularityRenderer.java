@@ -102,7 +102,7 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
         int count = Math.min(kinds.size(), 32);
         var renderer = Minecraft.getInstance().getItemRenderer();
         for (int k = 0; k < count; k++) {
-            float h1 = hash(k * 1.7F + 0.3F), h2 = hash(k * 3.1F + 1.1F), h3 = hash(k * 5.7F + 2.3F), h4 = hash(k * 7.9F + 4.1F);
+            float h1 = ghash(k * 1.7F + 0.3F), h2 = ghash(k * 3.1F + 1.1F), h3 = ghash(k * 5.7F + 2.3F), h4 = ghash(k * 7.9F + 4.1F);
             float r = 0.22F + 0.66F * Mth.sqrt(h1);
             float ang = (float) Math.log(r + 0.06F) * 2.6F + (k % (int) arms) * Mth.TWO_PI / arms + (h2 - 0.5F) * 0.5F + spin;
             float lift = (h3 - 0.5F) * 0.16F * (1.1F - r);
@@ -121,7 +121,7 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
         }
     }
 
-    private static float hash(float x) {
+    private static float ghash(float x) {
         float s = Mth.sin(x * 127.1F) * 43758.5453F;
         return s - Mth.floor(s);
     }
