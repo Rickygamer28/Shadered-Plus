@@ -119,7 +119,8 @@ public final class VideoPlayer {
                 opts.put("reconnect_on_network_error", "1");
                 opts.put("reconnect_delay_max", "5");
                 opts.put("rw_timeout", "15000000");
-                String videoUrl, audioUrl;
+                opts.put("icy", "0");
+                java.util.List<String> videoUrl, audioUrl;
                 String id = YouTube.id(src);
                 if (id != null) {
                     YouTube.Streams s = YouTube.resolve(id);
@@ -135,12 +136,12 @@ public final class VideoPlayer {
                     }
                     title = file.getFileName().toString();
                     opts.clear();
-                    videoUrl = audioUrl = file.toAbsolutePath().toString();
+                    videoUrl = audioUrl = java.util.List.of(file.toAbsolutePath().toString());
                 } else if (src.matches("(?i)^(https?|rtmps?|rtsp|srt)://.+")) {
                     String name = src.replaceAll("[?#].*$", "");
                     title = name.substring(name.lastIndexOf('/') + 1);
                     opts.put("user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36");
-                    videoUrl = audioUrl = src;
+                    videoUrl = audioUrl = java.util.List.of(src);
                 } else {
                     throw new Exception("that isn't a link to a video");
                 }

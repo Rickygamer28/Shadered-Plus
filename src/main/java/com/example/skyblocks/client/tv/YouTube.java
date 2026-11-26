@@ -18,7 +18,8 @@ import org.jetbrains.annotations.Nullable;
  * do (no extra libraries). Tries a couple of the apps, as one may be refused for a video another may play.
  */
 final class YouTube {
-    record Streams(String video, String audio, String title, boolean live, String userAgent) {}
+    /** Where its picture and sound can be read from, best first (the next tried when one is refused). */
+    record Streams(java.util.List<String> video, java.util.List<String> audio, String title, boolean live, String userAgent) {}
 
     private record Client(String name, int id, String version, String userAgent, String extra) {}
 
@@ -84,18 +85,19 @@ final class YouTube {
             }
             String hls = str(streaming, "hlsManifestUrl");
             if (live && hls != null) {
-                return new Streams(hls, hls, title, true, c.userAgent);
+                return new Streams(java.util.List.of(hls), java.util.List.of(hls), title, true, c.userAgent);
             }
-            String video = best(streaming.getAsJsonArray("adaptiveFormats"), true);
-            String audio = best(streaming.getAsJsonArray("adaptiveFormats"), false);
-            if (video == null || audio == null) {
-                String muxed = best(streaming.getAsJsonArray("formats"), true);
-                if (muxed != null) {
-                    return new Streams(muxed, muxed, title, false, c.userAgent);
-                }
-                if (hls != null) {
-                    return new Streams(hls, hls, title, live, c.userAgent);
-                }
+            java.util.List<String> video = ranked(streaming.getAsJsonArray("adaptiveFormats"), true);
+            java.util.List<String> audio = ranked(streaming.getAsJsonArray("adaptiveFormats"), false);
+            // (the copy with both, last: lower quality, but YouTube seldom refuses it)
+            java.util.List<String> muxed = ranked(streaming.getAsJsonArray("formats"), true);
+            video.addAll(muxed);
+            audio.addAll(muxed);
+            if (hls != null) {
+                video.add(hls);
+                audio.add(hls);
+            }
+            if (video.isEmpty() || audio.isEmpty()) {
                 why = "YouTube gave no stream that can be read";
                 continue;
             }
@@ -104,14 +106,16 @@ final class YouTube {
         throw new Exception(why);
     }
 
-    /** The best picture (H.264 first, then VP9; up to 720p) or sound (highest bit rate) that comes with a plain link. */
-    @Nullable
-    private static String best(@Nullable JsonArray formats, boolean video) {
+    /**
+     * Its pictures (H.264 first, then VP9; up to 720p) or sounds (AAC first, the plain mix before a quietened or
+     * dubbed one; higher bit rate first) that come with a plain link, best first.
+     */
+    private static java.util.List<String> ranked(@Nullable JsonArray formats, boolean video) {
+        java.util.List<long[]> scores = new java.util.ArrayList<>();
+        java.util.List<String> urls = new java.util.ArrayList<>();
         if (formats == null) {
-            return null;
+            return urls;
         }
-        String best = null;
-        long bestScore = Long.MIN_VALUE;
         for (JsonElement el : formats) {
             JsonObject f = el.getAsJsonObject();
             String url = str(f, "url"), mime = str(f, "mimeType");
@@ -127,14 +131,20 @@ final class YouTube {
                 score = h * 10L + (mime.contains("avc1") ? 5 : mime.contains("vp9") || mime.contains("vp09") ? 3 : 0);
             } else {
                 long rate = f.has("bitrate") ? f.get("bitrate").getAsLong() : 0;
-                score = rate + (mime.contains("mp4a") ? 1000 : 0);
+                boolean drc = f.has("isDrc") && f.get("isDrc").getAsBoolean();
+                JsonObject track = obj(f, "audioTrack");
+                boolean original = track == null || !track.has("audioIsDefault") || track.get("audioIsDefault").getAsBoolean();
+                score = (mime.contains("mp4a") ? 4_000_000_000L : 0) + (drc ? 0 : 2_000_000_000L) + (original ? 1_000_000_000L : 0) + rate;
             }
-            if (score > bestScore) {
-                bestScore = score;
-                best = url;
-            }
+            scores.add(new long[] {score, urls.size()});
+            urls.add(url);
         }
-        return best;
+        scores.sort((x, y) -> Long.compare(y[0], x[0]));
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (long[] sc : scores) {
+            out.add(urls.get((int) sc[1]));
+        }
+        return out;
     }
 
     @Nullable

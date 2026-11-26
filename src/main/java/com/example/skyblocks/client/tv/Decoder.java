@@ -48,7 +48,8 @@ final class Decoder {
     record Sound(long us, short[] samples, int gen) {}
 
     final boolean video;
-    private final String url;
+    /** Where to read it from: the first that opens (YouTube may refuse one of its copies and give another). */
+    private final java.util.List<String> urls;
     private final Map<String, String> options;
     private final Thread thread;
     private volatile boolean closed;
@@ -66,8 +67,8 @@ final class Decoder {
     volatile long durationUs;
     volatile int width, height;
 
-    Decoder(String url, Map<String, String> options, boolean video) {
-        this.url = url;
+    Decoder(java.util.List<String> urls, Map<String, String> options, boolean video) {
+        this.urls = urls;
         this.options = options;
         this.video = video;
         thread = new Thread(this::run, video ? "Shadered+ TV picture" : "Shadered+ TV sound");
@@ -111,23 +112,32 @@ final class Decoder {
         AVIOInterruptCB.Callback_Pointer abort = null;
         try {
             init();
-            fmt = avformat_alloc_context();
             abort = new AVIOInterruptCB.Callback_Pointer() {
                 @Override
                 public int call(Pointer opaque) {
                     return closed ? 1 : 0;
                 }
             };
-            fmt.interrupt_callback().callback(abort);
-            AVDictionary opts = new AVDictionary(null);
-            for (Map.Entry<String, String> e : options.entrySet()) {
-                av_dict_set(opts, e.getKey(), e.getValue(), 0);
-            }
-            int r = avformat_open_input(fmt, url, (AVInputFormat) null, opts);
-            av_dict_free(opts);
-            if (r < 0) {
-                fail("couldn't open it (" + err(r) + ")");
+            int r = -1;
+            for (int u = 0; u < urls.size() && !closed; u++) {
+                fmt = avformat_alloc_context();
+                fmt.interrupt_callback().callback(abort);
+                AVDictionary opts = new AVDictionary(null);
+                for (Map.Entry<String, String> e : options.entrySet()) {
+                    av_dict_set(opts, e.getKey(), e.getValue(), 0);
+                }
+                r = avformat_open_input(fmt, urls.get(u), (AVInputFormat) null, opts);
+                av_dict_free(opts);
+                if (r >= 0) {
+                    break;
+                }
                 fmt = null; // (freed by FFmpeg when opening fails)
+                if (u + 1 < urls.size()) {
+                    SkyBlocksMod.LOGGER.info("Shadered+ television: its {} wouldn't open ({}), trying another copy", video ? "picture" : "sound", err(r));
+                }
+            }
+            if (r < 0 || fmt == null) {
+                fail("couldn't open it (" + err(r) + ")");
                 return;
             }
             if ((r = avformat_find_stream_info(fmt, (PointerPointer) null)) < 0) {
