@@ -39,6 +39,12 @@ public class ShaderedJeiPlugin implements IModPlugin {
     }
 
     @Override
+    public void registerRecipeTransferHandlers(mezz.jei.api.registration.IRecipeTransferRegistration registration) {
+        // (a singularity opened from a crafting frame: JEI's + lays a recipe in its grid, from what it holds)
+        registration.addRecipeTransferHandler(new CraftingFrameTransfer(registration.getTransferHelper()), mezz.jei.api.constants.RecipeTypes.CRAFTING);
+    }
+
+    @Override
     public void registerGuiHandlers(mezz.jei.api.registration.IGuiHandlerRegistration registration) {
         // (JEI's own panels keep clear of the Shadered+ tab's chapter buttons)
         registration.addGuiContainerHandler(net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen.class,
@@ -56,6 +62,7 @@ public class ShaderedJeiPlugin implements IModPlugin {
         registration.addRecipeCatalyst(new ItemStack(ModItems.PARTICLE_ACCELERATOR.get()), AcceleratorCategory.TYPE);
         registration.addRecipeCatalyst(new ItemStack(ModItems.ACCELERATOR_FRAME.get()), AcceleratorCategory.TYPE);
         registration.addRecipeCatalyst(new ItemStack(ModItems.STAR_FORGE.get()), StarForgeCategory.TYPE);
+        registration.addRecipeCatalyst(new ItemStack(ModItems.CRAFTING_FRAME.get()), mezz.jei.api.constants.RecipeTypes.CRAFTING);
         registration.addRecipeCatalyst(new ItemStack(ModItems.FORGE_FRAME.get()), StarForgeCategory.TYPE);
     }
 }

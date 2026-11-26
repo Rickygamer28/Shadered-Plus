@@ -130,6 +130,82 @@ public class SingularityMenu extends AbstractContainerMenu {
         }
     }
 
+    /**
+     * (JEI's +) A recipe laid in the grid: what's in it back first, then each of its ingredients taken from what it holds
+     * (or, short of that, from your inventory) - one of each, or (max) as many as it can, up to a stack.
+     */
+    private void fill(SingularityBlockEntity be, String recipeId, boolean max) {
+        net.minecraft.resources.ResourceLocation id = net.minecraft.resources.ResourceLocation.tryParse(recipeId);
+        if (id == null || !(player.level() instanceof net.minecraft.server.level.ServerLevel level)) {
+            return;
+        }
+        var holder = level.getServer().getRecipeManager().byKey(id).orElse(null);
+        if (holder == null || !(holder.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe recipe)) {
+            return;
+        }
+        clearGrid(player);
+        net.minecraft.world.item.crafting.Ingredient[] at = new net.minecraft.world.item.crafting.Ingredient[9];
+        var ings = recipe.getIngredients();
+        int w = recipe instanceof net.minecraft.world.item.crafting.ShapedRecipe s ? s.getWidth() : 3;
+        for (int i = 0; i < ings.size() && i < 9; i++) {
+            int slot = (i / w) * 3 + i % w;
+            if (slot < 9) {
+                at[slot] = ings.get(i);
+            }
+        }
+        // how many times over: the fewest any ingredient allows (max), else once
+        int times = 1;
+        if (max) {
+            times = 64;
+            java.util.Map<net.minecraft.world.item.crafting.Ingredient, Integer> needs = new java.util.HashMap<>();
+            for (var ing : at) {
+                if (ing != null && !ing.isEmpty()) {
+                    needs.merge(ing, 1, Integer::sum);
+                }
+            }
+            for (var e : needs.entrySet()) {
+                long have = 0;
+                int stack = 64;
+                for (SingularityBlockEntity.Entry en : be.entries()) {
+                    if (e.getKey().test(en.item)) {
+                        have = Math.max(have, en.count);
+                        stack = Math.min(stack, en.item.getMaxStackSize());
+                    }
+                }
+                times = (int) Math.min(times, Math.min(stack, Math.max(1, have / e.getValue())));
+            }
+        }
+        for (int i = 0; i < 9; i++) {
+            var ing = at[i];
+            if (ing == null || ing.isEmpty()) {
+                continue;
+            }
+            ItemStack got = ItemStack.EMPTY;
+            SingularityBlockEntity.Entry best = null;
+            for (SingularityBlockEntity.Entry en : be.entries()) {
+                if (ing.test(en.item) && en.count > 0 && (best == null || en.count > best.count)) {
+                    best = en;
+                }
+            }
+            if (best != null) {
+                got = be.extract(best.item, Math.min(times, best.item.getMaxStackSize()), false);
+            }
+            if (got.isEmpty()) { // (from your inventory)
+                for (int k = 0; k < player.getInventory().items.size(); k++) {
+                    ItemStack s = player.getInventory().items.get(k);
+                    if (!s.isEmpty() && ing.test(s)) {
+                        got = s.split(Math.min(times, s.getCount()));
+                        break;
+                    }
+                }
+            }
+            if (!got.isEmpty()) {
+                grid.setItem(i, got);
+            }
+        }
+        slotsChanged(grid);
+    }
+
     private void clearGrid(Player who) {
         SingularityBlockEntity be = blockEntity();
         for (int i = 0; i < 9; i++) {
@@ -236,7 +312,7 @@ public class SingularityMenu extends AbstractContainerMenu {
 
     // ---- the actions from the menu (SingularityPayloads.Action, on the server) ----
 
-    public static final int TAKE = 0, PUT = 1, DESTROY = 2, VACUUM = 3, DESTROY_TAG = 4, SKIN = 5, CLEAR_GRID = 6;
+    public static final int TAKE = 0, PUT = 1, DESTROY = 2, VACUUM = 3, DESTROY_TAG = 4, SKIN = 5, CLEAR_GRID = 6, FILL_RECIPE = 7;
     private static final int PAGE = 256;
     // (client: the pages coming in)
     private final List<ItemStack> incomingItems = new ArrayList<>();
@@ -277,6 +353,11 @@ public class SingularityMenu extends AbstractContainerMenu {
             case CLEAR_GRID -> {
                 if (crafting) {
                     clearGrid(player);
+                }
+            }
+            case FILL_RECIPE -> {
+                if (crafting) {
+                    fill(be, text, button == 1);
                 }
             }
             default -> {

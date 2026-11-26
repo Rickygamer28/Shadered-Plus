@@ -1,16 +1,496 @@
 {
-  "variants": {
-    "formed=false,output=false": {
-      "model": "skyblocks:block/crafting_frame"
-    },
-    "formed=false,output=true": {
-      "model": "skyblocks:block/crafting_frame"
-    },
-    "formed=true,output=false": {
-      "model": "skyblocks:block/crafting_frame_formed"
-    },
-    "formed=true,output=true": {
-      "model": "skyblocks:block/crafting_frame_formed"
-    }
+ "variants": {
+  "formed=false,output=false,part=none,quad=0": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=none,quad=1": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=none,quad=2": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=none,quad=3": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=corner_low,quad=0": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=corner_low,quad=1": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=corner_low,quad=2": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=corner_low,quad=3": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=corner_high,quad=0": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=corner_high,quad=1": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=corner_high,quad=2": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=corner_high,quad=3": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=edge_x,quad=0": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=edge_x,quad=1": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=edge_x,quad=2": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=edge_x,quad=3": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=edge_y,quad=0": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=edge_y,quad=1": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=edge_y,quad=2": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=edge_y,quad=3": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=edge_z,quad=0": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=edge_z,quad=1": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=edge_z,quad=2": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=edge_z,quad=3": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=face_x,quad=0": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=face_x,quad=1": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=face_x,quad=2": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=face_x,quad=3": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=face_y,quad=0": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=face_y,quad=1": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=face_y,quad=2": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=face_y,quad=3": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=face_z,quad=0": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=face_z,quad=1": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=face_z,quad=2": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=false,part=face_z,quad=3": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=none,quad=0": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=none,quad=1": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=none,quad=2": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=none,quad=3": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=corner_low,quad=0": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=corner_low,quad=1": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=corner_low,quad=2": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=corner_low,quad=3": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=corner_high,quad=0": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=corner_high,quad=1": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=corner_high,quad=2": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=corner_high,quad=3": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=edge_x,quad=0": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=edge_x,quad=1": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=edge_x,quad=2": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=edge_x,quad=3": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=edge_y,quad=0": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=edge_y,quad=1": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=edge_y,quad=2": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=edge_y,quad=3": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=edge_z,quad=0": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=edge_z,quad=1": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=edge_z,quad=2": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=edge_z,quad=3": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=face_x,quad=0": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=face_x,quad=1": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=face_x,quad=2": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=face_x,quad=3": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=face_y,quad=0": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=face_y,quad=1": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=face_y,quad=2": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=face_y,quad=3": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=face_z,quad=0": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=face_z,quad=1": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=face_z,quad=2": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=false,output=true,part=face_z,quad=3": {
+   "model": "skyblocks:block/crafting_frame"
+  },
+  "formed=true,output=false,part=none,quad=0": {
+   "model": "skyblocks:block/crafting_frame_formed"
+  },
+  "formed=true,output=false,part=none,quad=1": {
+   "model": "skyblocks:block/crafting_frame_formed"
+  },
+  "formed=true,output=false,part=none,quad=2": {
+   "model": "skyblocks:block/crafting_frame_formed"
+  },
+  "formed=true,output=false,part=none,quad=3": {
+   "model": "skyblocks:block/crafting_frame_formed"
+  },
+  "formed=true,output=false,part=corner_low,quad=0": {
+   "model": "skyblocks:block/special_crafting_corner_low"
+  },
+  "formed=true,output=false,part=corner_low,quad=1": {
+   "model": "skyblocks:block/special_crafting_corner_low",
+   "y": 90
+  },
+  "formed=true,output=false,part=corner_low,quad=2": {
+   "model": "skyblocks:block/special_crafting_corner_low",
+   "y": 180
+  },
+  "formed=true,output=false,part=corner_low,quad=3": {
+   "model": "skyblocks:block/special_crafting_corner_low",
+   "y": 270
+  },
+  "formed=true,output=false,part=corner_high,quad=0": {
+   "model": "skyblocks:block/special_crafting_corner_high"
+  },
+  "formed=true,output=false,part=corner_high,quad=1": {
+   "model": "skyblocks:block/special_crafting_corner_high",
+   "y": 90
+  },
+  "formed=true,output=false,part=corner_high,quad=2": {
+   "model": "skyblocks:block/special_crafting_corner_high",
+   "y": 180
+  },
+  "formed=true,output=false,part=corner_high,quad=3": {
+   "model": "skyblocks:block/special_crafting_corner_high",
+   "y": 270
+  },
+  "formed=true,output=false,part=edge_x,quad=0": {
+   "model": "skyblocks:block/special_crafting_edge",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,output=false,part=edge_x,quad=1": {
+   "model": "skyblocks:block/special_crafting_edge",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,output=false,part=edge_x,quad=2": {
+   "model": "skyblocks:block/special_crafting_edge",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,output=false,part=edge_x,quad=3": {
+   "model": "skyblocks:block/special_crafting_edge",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,output=false,part=edge_y,quad=0": {
+   "model": "skyblocks:block/special_crafting_edge"
+  },
+  "formed=true,output=false,part=edge_y,quad=1": {
+   "model": "skyblocks:block/special_crafting_edge"
+  },
+  "formed=true,output=false,part=edge_y,quad=2": {
+   "model": "skyblocks:block/special_crafting_edge"
+  },
+  "formed=true,output=false,part=edge_y,quad=3": {
+   "model": "skyblocks:block/special_crafting_edge"
+  },
+  "formed=true,output=false,part=edge_z,quad=0": {
+   "model": "skyblocks:block/special_crafting_edge",
+   "x": 90
+  },
+  "formed=true,output=false,part=edge_z,quad=1": {
+   "model": "skyblocks:block/special_crafting_edge",
+   "x": 90
+  },
+  "formed=true,output=false,part=edge_z,quad=2": {
+   "model": "skyblocks:block/special_crafting_edge",
+   "x": 90
+  },
+  "formed=true,output=false,part=edge_z,quad=3": {
+   "model": "skyblocks:block/special_crafting_edge",
+   "x": 90
+  },
+  "formed=true,output=false,part=face_x,quad=0": {
+   "model": "skyblocks:block/special_crafting_face",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,output=false,part=face_x,quad=1": {
+   "model": "skyblocks:block/special_crafting_face",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,output=false,part=face_x,quad=2": {
+   "model": "skyblocks:block/special_crafting_face",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,output=false,part=face_x,quad=3": {
+   "model": "skyblocks:block/special_crafting_face",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,output=false,part=face_y,quad=0": {
+   "model": "skyblocks:block/special_crafting_face"
+  },
+  "formed=true,output=false,part=face_y,quad=1": {
+   "model": "skyblocks:block/special_crafting_face"
+  },
+  "formed=true,output=false,part=face_y,quad=2": {
+   "model": "skyblocks:block/special_crafting_face"
+  },
+  "formed=true,output=false,part=face_y,quad=3": {
+   "model": "skyblocks:block/special_crafting_face"
+  },
+  "formed=true,output=false,part=face_z,quad=0": {
+   "model": "skyblocks:block/special_crafting_face",
+   "x": 90
+  },
+  "formed=true,output=false,part=face_z,quad=1": {
+   "model": "skyblocks:block/special_crafting_face",
+   "x": 90
+  },
+  "formed=true,output=false,part=face_z,quad=2": {
+   "model": "skyblocks:block/special_crafting_face",
+   "x": 90
+  },
+  "formed=true,output=false,part=face_z,quad=3": {
+   "model": "skyblocks:block/special_crafting_face",
+   "x": 90
+  },
+  "formed=true,output=true,part=none,quad=0": {
+   "model": "skyblocks:block/crafting_frame_formed"
+  },
+  "formed=true,output=true,part=none,quad=1": {
+   "model": "skyblocks:block/crafting_frame_formed"
+  },
+  "formed=true,output=true,part=none,quad=2": {
+   "model": "skyblocks:block/crafting_frame_formed"
+  },
+  "formed=true,output=true,part=none,quad=3": {
+   "model": "skyblocks:block/crafting_frame_formed"
+  },
+  "formed=true,output=true,part=corner_low,quad=0": {
+   "model": "skyblocks:block/special_crafting_corner_low"
+  },
+  "formed=true,output=true,part=corner_low,quad=1": {
+   "model": "skyblocks:block/special_crafting_corner_low",
+   "y": 90
+  },
+  "formed=true,output=true,part=corner_low,quad=2": {
+   "model": "skyblocks:block/special_crafting_corner_low",
+   "y": 180
+  },
+  "formed=true,output=true,part=corner_low,quad=3": {
+   "model": "skyblocks:block/special_crafting_corner_low",
+   "y": 270
+  },
+  "formed=true,output=true,part=corner_high,quad=0": {
+   "model": "skyblocks:block/special_crafting_corner_high"
+  },
+  "formed=true,output=true,part=corner_high,quad=1": {
+   "model": "skyblocks:block/special_crafting_corner_high",
+   "y": 90
+  },
+  "formed=true,output=true,part=corner_high,quad=2": {
+   "model": "skyblocks:block/special_crafting_corner_high",
+   "y": 180
+  },
+  "formed=true,output=true,part=corner_high,quad=3": {
+   "model": "skyblocks:block/special_crafting_corner_high",
+   "y": 270
+  },
+  "formed=true,output=true,part=edge_x,quad=0": {
+   "model": "skyblocks:block/special_crafting_edge",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,output=true,part=edge_x,quad=1": {
+   "model": "skyblocks:block/special_crafting_edge",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,output=true,part=edge_x,quad=2": {
+   "model": "skyblocks:block/special_crafting_edge",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,output=true,part=edge_x,quad=3": {
+   "model": "skyblocks:block/special_crafting_edge",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,output=true,part=edge_y,quad=0": {
+   "model": "skyblocks:block/special_crafting_edge"
+  },
+  "formed=true,output=true,part=edge_y,quad=1": {
+   "model": "skyblocks:block/special_crafting_edge"
+  },
+  "formed=true,output=true,part=edge_y,quad=2": {
+   "model": "skyblocks:block/special_crafting_edge"
+  },
+  "formed=true,output=true,part=edge_y,quad=3": {
+   "model": "skyblocks:block/special_crafting_edge"
+  },
+  "formed=true,output=true,part=edge_z,quad=0": {
+   "model": "skyblocks:block/special_crafting_edge",
+   "x": 90
+  },
+  "formed=true,output=true,part=edge_z,quad=1": {
+   "model": "skyblocks:block/special_crafting_edge",
+   "x": 90
+  },
+  "formed=true,output=true,part=edge_z,quad=2": {
+   "model": "skyblocks:block/special_crafting_edge",
+   "x": 90
+  },
+  "formed=true,output=true,part=edge_z,quad=3": {
+   "model": "skyblocks:block/special_crafting_edge",
+   "x": 90
+  },
+  "formed=true,output=true,part=face_x,quad=0": {
+   "model": "skyblocks:block/special_crafting_face",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,output=true,part=face_x,quad=1": {
+   "model": "skyblocks:block/special_crafting_face",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,output=true,part=face_x,quad=2": {
+   "model": "skyblocks:block/special_crafting_face",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,output=true,part=face_x,quad=3": {
+   "model": "skyblocks:block/special_crafting_face",
+   "x": 90,
+   "y": 90
+  },
+  "formed=true,output=true,part=face_y,quad=0": {
+   "model": "skyblocks:block/special_crafting_face"
+  },
+  "formed=true,output=true,part=face_y,quad=1": {
+   "model": "skyblocks:block/special_crafting_face"
+  },
+  "formed=true,output=true,part=face_y,quad=2": {
+   "model": "skyblocks:block/special_crafting_face"
+  },
+  "formed=true,output=true,part=face_y,quad=3": {
+   "model": "skyblocks:block/special_crafting_face"
+  },
+  "formed=true,output=true,part=face_z,quad=0": {
+   "model": "skyblocks:block/special_crafting_face",
+   "x": 90
+  },
+  "formed=true,output=true,part=face_z,quad=1": {
+   "model": "skyblocks:block/special_crafting_face",
+   "x": 90
+  },
+  "formed=true,output=true,part=face_z,quad=2": {
+   "model": "skyblocks:block/special_crafting_face",
+   "x": 90
+  },
+  "formed=true,output=true,part=face_z,quad=3": {
+   "model": "skyblocks:block/special_crafting_face",
+   "x": 90
   }
+ }
 }

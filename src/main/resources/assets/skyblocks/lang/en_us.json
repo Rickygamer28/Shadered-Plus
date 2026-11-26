@@ -1496,5 +1496,7 @@
   "guide.skyblocks.crafting_frame": "A chamber frame you craft at. Right-click it: the singularity's screen with a crafting grid beside it. Click what it holds to pick it up and lay it in the grid; take what it makes (shift-click: as many as it can) and the grid fills again from what it holds, so you can craft on and on. Clear grid puts it all back; closing the screen does too.",
   "gui.skyblocks.singularity.crafting": "Crafting",
   "gui.skyblocks.singularity.clear_grid": "Clear grid",
-  "gui.skyblocks.singularity.crafting_hint": "Refills from storage as you craft"
+  "gui.skyblocks.singularity.crafting_hint": "Refills from storage as you craft",
+  "jei.skyblocks.crafting_frame.needed": "Open the singularity from a crafting frame to craft here",
+  "jei.skyblocks.crafting_frame.missing": "Not in the singularity or your inventory"
 }
