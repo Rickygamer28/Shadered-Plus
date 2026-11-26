@@ -24,7 +24,12 @@ final class YouTube {
 
     private record Client(String name, int id, String version, String userAgent, String extra) {}
 
+    // (as yt-dlp does: visionOS first - since August 2026 YouTube refuses Android VR's downloads; it needs no script run)
     private static final Client[] CLIENTS = {
+            new Client("VISIONOS", 101, "1.02",
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15",
+                    "\"deviceMake\":\"Apple\",\"deviceModel\":\"RealityDevice17,1\",\"osName\":\"visionOS\",\"osVersion\":\"26.5.23O471\","
+                            + "\"userAgent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15\""),
             new Client("ANDROID_VR", 28, "1.65.10",
                     "com.google.android.apps.youtube.vr.oculus/1.65.10 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip",
                     "\"deviceMake\":\"Oculus\",\"deviceModel\":\"Quest 3\",\"androidSdkVersion\":32,\"osName\":\"Android\",\"osVersion\":\"12L\""),
@@ -118,8 +123,11 @@ final class YouTube {
                 video.add(hls);
                 audio.add(hls);
             }
+            // (only the copies YouTube really lets this computer read: each tried with a tiny download first)
+            video = working(video, c.userAgent);
+            audio = working(audio, c.userAgent);
             if (video.isEmpty() || audio.isEmpty()) {
-                why = "YouTube gave no stream that can be read";
+                why = "YouTube refused every copy of it";
                 continue;
             }
             return new Streams(video, audio, title, live, c.userAgent, author, thumb, seconds);
@@ -166,6 +174,23 @@ final class YouTube {
             out.add(urls.get((int) sc[1]));
         }
         return out;
+    }
+
+    /** From the first copy that answers a tiny download (up to a few tried), the rest after it; empty if none did. */
+    private static java.util.List<String> working(java.util.List<String> urls, String userAgent) {
+        for (int i = 0; i < urls.size() && i < 4; i++) {
+            try {
+                HttpRequest req = HttpRequest.newBuilder(URI.create(urls.get(i))).timeout(Duration.ofSeconds(8))
+                        .header("User-Agent", userAgent).header("Range", "bytes=0-1").GET().build();
+                HttpResponse<Void> res = HTTP.send(req, HttpResponse.BodyHandlers.discarding());
+                if (res.statusCode() == 200 || res.statusCode() == 206) {
+                    return new java.util.ArrayList<>(urls.subList(i, urls.size()));
+                }
+            } catch (Exception ignored) {
+                // (the next)
+            }
+        }
+        return new java.util.ArrayList<>();
     }
 
     @Nullable
