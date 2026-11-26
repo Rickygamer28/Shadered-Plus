@@ -143,7 +143,7 @@ final class Decoder {
                     BytePointer ioBuf = new BytePointer(av_malloc(IO_BUF));
                     io = avio_alloc_context(ioBuf, IO_BUF, 0, null, reader(), null, seeker());
                     fmt.pb(io);
-                    fmt.flags(fmt.flags() | AVFMT_FLAG_CUSTOM_IO);
+                    fmt.flags(fmt.flags() | 0x0080); // (AVFMT_FLAG_CUSTOM_IO)
                     url = "";
                 }
                 r = avformat_open_input(fmt, url, (AVInputFormat) null, opts);
