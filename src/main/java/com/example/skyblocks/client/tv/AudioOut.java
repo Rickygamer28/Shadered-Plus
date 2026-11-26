@@ -21,7 +21,23 @@ final class AudioOut {
     private ShortBuffer scratch;
     private boolean paused;
 
+    /** No sound here (no device: the game's sound never started). */
+    private static boolean none;
+
     private boolean ready() {
+        if (none) {
+            return false;
+        }
+        try {
+            return readyNow();
+        } catch (Throwable e) {
+            none = true;
+            com.example.skyblocks.SkyBlocksMod.LOGGER.warn("Shadered+ television: no sound ({})", e.toString());
+            return false;
+        }
+    }
+
+    private boolean readyNow() {
         if (source != -1 && AL10.alIsSource(source)) {
             return true;
         }
@@ -96,7 +112,7 @@ final class AudioOut {
 
     /** Where it is (us), or -1 with nothing queued. */
     long clock() {
-        if (source == -1 || queued.isEmpty()) {
+        if (none || source == -1 || queued.isEmpty()) {
             return -1;
         }
         long[] front = queued.peek();
@@ -110,12 +126,12 @@ final class AudioOut {
     }
 
     boolean playing() {
-        return source != -1 && AL10.alGetSourcei(source, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING;
+        return !none && source != -1 && AL10.alGetSourcei(source, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING;
     }
 
     /** Everything queued thrown away (gone somewhere else). */
     void flush() {
-        if (source == -1 || !AL10.alIsSource(source)) {
+        if (none || source == -1 || !AL10.alIsSource(source)) {
             return;
         }
         AL10.alSourceStop(source);
@@ -128,7 +144,7 @@ final class AudioOut {
     }
 
     void release() {
-        if (source != -1 && AL10.alIsSource(source)) {
+        if (!none && source != -1 && AL10.alIsSource(source)) {
             AL10.alSourceStop(source);
             int done = AL10.alGetSourcei(source, AL10.AL_BUFFERS_PROCESSED);
             for (int i = 0; i < done; i++) {

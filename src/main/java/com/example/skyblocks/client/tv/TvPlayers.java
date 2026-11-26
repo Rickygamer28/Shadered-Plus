@@ -26,13 +26,16 @@ public final class TvPlayers {
     private static final double FAR = 96;
     private static final Map<BlockPos, VideoPlayer> PLAYERS = new HashMap<>();
     private static Level level;
+    /** Where playing just failed, and when (not tried again for a while). */
+    private static final Map<BlockPos, Long> FAILED = new HashMap<>();
     private static boolean broken;
 
     /** Its player (started if it has something to play), or null. */
     @Nullable
     public static VideoPlayer get(TelevisionBlockEntity be) {
         VideoPlayer p = PLAYERS.get(be.getBlockPos());
-        if (p == null && !be.source().isEmpty() && !broken && be.getLevel() != null) {
+        if (p == null && !be.source().isEmpty() && !broken && be.getLevel() != null
+                && System.currentTimeMillis() - FAILED.getOrDefault(be.getBlockPos(), 0L) > 5000) {
             try {
                 p = new VideoPlayer(be.getBlockPos().immutable());
             } catch (Throwable e) {
@@ -85,6 +88,7 @@ public final class TvPlayers {
                 e.getValue().update(be, centre, 20.0F + 2.0F * Math.max(size[0], size[1]), pt);
             } catch (Throwable ex) {
                 SkyBlocksMod.LOGGER.error("Shadered+ television: playing failed", ex);
+                FAILED.put(pos, System.currentTimeMillis());
                 e.getValue().release();
                 it.remove();
             }
@@ -99,6 +103,7 @@ public final class TvPlayers {
     private static void releaseAll() {
         PLAYERS.values().forEach(VideoPlayer::release);
         PLAYERS.clear();
+        FAILED.clear();
     }
 
     private TvPlayers() {}
