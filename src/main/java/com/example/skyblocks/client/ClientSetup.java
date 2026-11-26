@@ -90,6 +90,7 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.LASER_PROJECTOR.get(), LaserProjectorRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.ARCADE.get(), ArcadeRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.BIG_SCREEN.get(), BigScreenRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.TELEVISION.get(), TelevisionRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.CLAW_MACHINE.get(), ClawMachineRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.TROPHY.get(), TrophyRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.WATERFALL.get(), WaterfallRenderer::new);

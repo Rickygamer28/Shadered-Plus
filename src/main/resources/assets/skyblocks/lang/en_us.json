@@ -1498,5 +1498,8 @@
   "gui.skyblocks.singularity.clear_grid": "Clear grid",
   "gui.skyblocks.singularity.crafting_hint": "Refills from storage as you craft",
   "jei.skyblocks.crafting_frame.needed": "Open the singularity from a crafting frame to craft here",
-  "jei.skyblocks.crafting_frame.missing": "Not in the singularity or your inventory"
+  "jei.skyblocks.crafting_frame.missing": "Not in the singularity or your inventory",
+  "block.skyblocks.television": "Television",
+  "tooltip.skyblocks.television": "Plays YouTube links, links to videos, and video files you drag onto its window. Put them together in a wall facing the same way (up to 16 by 12) for one big television",
+  "guide.skyblocks.television": "A thin flat television. Use it to open its window: paste a YouTube link or a link to a video and press Play, or drag a video file from your computer onto the window. Everyone nearby sees and hears the same moment. Build a wall of them facing the same way, up to 16 by 12, and it is one big television. Its sound comes from the screen and fades with distance; set its volume in the window (the game's Jukebox/Note Blocks volume applies too). A dragged file only plays for players who have that file at the same place."
 }

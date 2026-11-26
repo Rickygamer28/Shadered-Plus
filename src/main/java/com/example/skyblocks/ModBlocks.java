@@ -212,6 +212,11 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 10)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
 
+    /** A television: plays YouTube links, video links and video files; a wall of them is one big television (TelevisionBlock). */
+    public static final DeferredBlock<TelevisionBlock> TELEVISION = BLOCKS.registerBlock("television", TelevisionBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 4)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+
     /** A claw machine, two blocks tall: win plushies (ClawMachineBlock). */
     public static final DeferredBlock<ClawMachineBlock> CLAW_MACHINE = BLOCKS.registerBlock("claw_machine", ClawMachineBlock::new,
             BlockBehaviour.Properties.of().strength(2.0F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 9)

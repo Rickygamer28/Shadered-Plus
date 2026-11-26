@@ -52,6 +52,8 @@ public final class ModBlockEntities {
     public static final Supplier<BlockEntityType<BrickHearthBlockEntity>> BRICK_HEARTH = TYPES.register("brick_hearth",
             () -> BlockEntityType.Builder.of(BrickHearthBlockEntity::new, ModBlocks.BRICK_HEARTH.get()).build(null));
 
+    public static final Supplier<BlockEntityType<TelevisionBlockEntity>> TELEVISION = TYPES.register("television",
+            () -> BlockEntityType.Builder.of(TelevisionBlockEntity::new, ModBlocks.TELEVISION.get()).build(null));
     public static final Supplier<BlockEntityType<NeonSignBlockEntity>> NEON_SIGN = TYPES.register("neon_sign",
             () -> BlockEntityType.Builder.of(NeonSignBlockEntity::new, ModBlocks.NEON_SIGN.get()).build(null));
 
