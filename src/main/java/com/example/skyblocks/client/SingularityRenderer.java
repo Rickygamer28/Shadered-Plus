@@ -86,8 +86,10 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
     }
 
     /**
-     * The item galaxy's items: each kind it holds once (the most-held first), its own model, strewn along the galaxy's
-     * spiral arms (the shader's dust) and going round with them, each tumbling slowly, lit by the bright heart.
+     * The item galaxy's items: each kind it holds once (the most-held first, and largest), its own model, strewn along
+     * the galaxy's spiral arms (the shader's dust) and going round with them - the inner ones a little faster, drifting
+     * along the arms - each tumbling slowly, with a soft glow of its own colour behind it and a faint trail of light. (A
+     * sky block, whose model is its sky drawn elsewhere, shows as a little cube of its sky's picture.)
      */
     private static void galaxyItems(SingularityBlockEntity be, PoseStack pose, MultiBufferSource buffers, float half, float full, float partialTick) {
         List<ItemStack> kinds = be.shown();
@@ -100,24 +102,78 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
         org.joml.Vector3f e1 = new org.joml.Vector3f(n).cross(0, 0, 1).normalize(), e2 = new org.joml.Vector3f(n).cross(e1);
         float arms = full < 0.5F ? 2.0F : 3.0F, spin = t * 0.08F;
         int count = Math.min(kinds.size(), 32);
+        int[] colours = StorageSkins.itemColours(kinds);
+        float[][] at = new float[count][];
+        for (int k = 0; k < count; k++) {
+            float h1 = ghash(k * 1.7F + 0.3F), h2 = ghash(k * 3.1F + 1.1F), h3 = ghash(k * 5.7F + 2.3F);
+            // (spread out along the arms evenly-ish: the k-th along its arm, a little jitter)
+            float along = (k / (int) arms + h1 * 0.6F) / Math.max(1.0F, count / arms + 0.6F);
+            float r = 0.2F + 0.7F * along;
+            float drift = t * 0.02F / (0.3F + r); // (inner ones ahead, a little)
+            float ang = (float) Math.log(r + 0.06F) * 2.6F + (k % (int) arms) * Mth.TWO_PI / arms + (h2 - 0.5F) * 0.22F + spin + drift;
+            float lift = (h3 - 0.5F) * 0.1F * (1.1F - r);
+            at[k] = new float[] {(e1.x * Mth.cos(ang) + e2.x * Mth.sin(ang)) * r + n.x * lift, (e1.y * Mth.cos(ang) + e2.y * Mth.sin(ang)) * r + n.y * lift,
+                    (e1.z * Mth.cos(ang) + e2.z * Mth.sin(ang)) * r + n.z * lift, ang, r};
+        }
+        // (first their glows and trails - all at once: then the items)
+        org.joml.Vector3f[] cam = MachineRenderers.camera();
+        com.mojang.blaze3d.vertex.VertexConsumer glow = MachineRenderers.glows(buffers);
+        org.joml.Matrix4f m = pose.last().pose();
+        for (int k = 0; k < count; k++) {
+            int c = k < colours.length ? colours[k] : 0xB0A0FF;
+            float cr = (c >> 16 & 255) / 255.0F, cg = (c >> 8 & 255) / 255.0F, cb = (c & 255) / 255.0F;
+            float x = 0.5F + at[k][0] * half, y = 0.5F + at[k][1] * half, z = 0.5F + at[k][2] * half;
+            MachineRenderers.glow(glow, m, cam[0], cam[1], x, y, z, 0.32F * half * size(k), cr, cg, cb, 0.5F);
+            for (int j = 1; j <= 5; j++) { // (its trail: back along its arm)
+                float ang = at[k][3] - j * 0.07F, r = at[k][4];
+                float tx = 0.5F + (e1.x * Mth.cos(ang) + e2.x * Mth.sin(ang)) * r * half, ty = 0.5F + (e1.y * Mth.cos(ang) + e2.y * Mth.sin(ang)) * r * half;
+                float tz = 0.5F + (e1.z * Mth.cos(ang) + e2.z * Mth.sin(ang)) * r * half;
+                MachineRenderers.sprite(glow, m, cam[0], cam[1], tx, ty, tz, 0.05F * half * (1.0F - j / 6.0F), cr, cg, cb, 0.45F * (1.0F - j / 6.0F));
+            }
+        }
         var renderer = Minecraft.getInstance().getItemRenderer();
         for (int k = 0; k < count; k++) {
-            float h1 = ghash(k * 1.7F + 0.3F), h2 = ghash(k * 3.1F + 1.1F), h3 = ghash(k * 5.7F + 2.3F), h4 = ghash(k * 7.9F + 4.1F);
-            float r = 0.22F + 0.66F * Mth.sqrt(h1);
-            float ang = (float) Math.log(r + 0.06F) * 2.6F + (k % (int) arms) * Mth.TWO_PI / arms + (h2 - 0.5F) * 0.5F + spin;
-            float lift = (h3 - 0.5F) * 0.16F * (1.1F - r);
-            float px = (e1.x * Mth.cos(ang) + e2.x * Mth.sin(ang)) * r + n.x * lift;
-            float py = (e1.y * Mth.cos(ang) + e2.y * Mth.sin(ang)) * r + n.y * lift;
-            float pz = (e1.z * Mth.cos(ang) + e2.z * Mth.sin(ang)) * r + n.z * lift;
-            float size = (0.13F + 0.05F * h4) * half;
+            ItemStack stack = kinds.get(k);
+            float h1 = ghash(k * 1.7F + 0.3F), h2 = ghash(k * 3.1F + 1.1F);
+            float s = 0.16F * half * size(k);
             pose.pushPose();
-            pose.translate(0.5F + px * half, 0.5F + py * half, 0.5F + pz * half);
-            pose.mulPose(com.mojang.math.Axis.YP.rotation(t * (0.5F + h1) + k * 2.0F));
-            pose.mulPose(com.mojang.math.Axis.XP.rotation(t * (0.35F + 0.6F * h2) + k));
-            pose.scale(size, size, size);
-            renderer.renderStatic(kinds.get(k), net.minecraft.world.item.ItemDisplayContext.FIXED, net.minecraft.client.renderer.LightTexture.FULL_BRIGHT,
-                    net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, pose, buffers, be.getLevel(), k);
+            pose.translate(0.5F + at[k][0] * half, 0.5F + at[k][1] * half, 0.5F + at[k][2] * half);
+            pose.mulPose(com.mojang.math.Axis.YP.rotation(t * (0.25F + 0.3F * h1) + k * 2.0F));
+            pose.mulPose(com.mojang.math.Axis.XP.rotation(0.35F * Mth.sin(t * (0.2F + 0.3F * h2) + k)));
+            pose.scale(s, s, s);
+            if (com.example.skyblocks.SkyLiquidBucketRecipe.skyOf(stack) != null) {
+                skyCube(stack, pose, buffers);
+            } else {
+                renderer.renderStatic(stack, net.minecraft.world.item.ItemDisplayContext.FIXED, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, pose, buffers,
+                        be.getLevel(), k);
+            }
             pose.popPose();
+        }
+    }
+
+    /** How big the k-th (by how many it holds) is: the most-held largest. */
+    private static float size(int k) {
+        return 1.15F - 0.45F * Math.min(1.0F, k / 24.0F);
+    }
+
+    /** A sky block in the galaxy: a cube of its sky's picture (its model is its sky, drawn elsewhere - here it'd be flat). */
+    private static void skyCube(ItemStack stack, PoseStack pose, MultiBufferSource buffers) {
+        var sprite = Minecraft.getInstance().getItemRenderer().getModel(stack, null, null, 0).getParticleIcon();
+        com.mojang.blaze3d.vertex.VertexConsumer v = buffers.getBuffer(net.minecraft.client.renderer.RenderType.entityCutoutNoCull(
+                net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS));
+        PoseStack.Pose p = pose.last();
+        float h = 0.25F;
+        float[][] faces = {
+                {-h, -h, h, h, -h, h, h, h, h, -h, h, h, 0, 0, 1}, {h, -h, -h, -h, -h, -h, -h, h, -h, h, h, -h, 0, 0, -1},
+                {h, -h, h, h, -h, -h, h, h, -h, h, h, h, 1, 0, 0}, {-h, -h, -h, -h, -h, h, -h, h, h, -h, h, -h, -1, 0, 0},
+                {-h, h, h, h, h, h, h, h, -h, -h, h, -h, 0, 1, 0}, {-h, -h, -h, h, -h, -h, h, -h, h, -h, -h, h, 0, -1, 0}};
+        float[][] uv = {{0, 1}, {1, 1}, {1, 0}, {0, 0}};
+        for (float[] f : faces) {
+            for (int i = 0; i < 4; i++) {
+                v.addVertex(p, f[i * 3], f[i * 3 + 1], f[i * 3 + 2]).setColor(255, 255, 255, 255)
+                        .setUv(sprite.getU(uv[i][0]), sprite.getV(uv[i][1])).setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightTexture.FULL_BRIGHT)
+                        .setNormal(p, f[12], f[13], f[14]);
+            }
         }
     }
 
