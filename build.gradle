@@ -21,6 +21,7 @@ neoForge {
 }
 
 repositories {
+    mavenCentral()
     // Shadered is downloaded from Modrinth's maven at build time.
     maven {
         name = 'Modrinth'
@@ -38,6 +39,33 @@ repositories {
         name = 'Jared'
         url = 'https://maven.blamejared.com/'
         content { includeGroup 'mezz.jei' }
+    }
+}
+
+// The television's video player: FFmpeg (LGPL build) through JavaCV/JavaCPP, packed inside our jar with its natives
+// for Windows, Linux and macOS (no other mod needed). Compiled against, on the dev game's classpath, and copied into
+// the jar (see jar below).
+configurations {
+    bundle { transitive = false }
+    compileOnly.extendsFrom bundle
+    additionalRuntimeClasspath.extendsFrom bundle
+}
+
+dependencies {
+    def cpp = '1.5.11'
+    bundle "org.bytedeco:javacv:${cpp}"
+    bundle "org.bytedeco:javacpp:${cpp}"
+    bundle "org.bytedeco:ffmpeg:7.1-${cpp}"
+    ['linux-x86_64', 'windows-x86_64', 'macosx-x86_64', 'macosx-arm64'].each { p ->
+        bundle "org.bytedeco:javacpp:${cpp}:${p}"
+        bundle "org.bytedeco:ffmpeg:7.1-${cpp}:${p}"
+    }
+}
+
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from({ configurations.bundle.collect { zipTree(it) } }) {
+        exclude 'META-INF/MANIFEST.MF', 'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.DSA', '**/module-info.class', 'META-INF/maven/**'
     }
 }
 

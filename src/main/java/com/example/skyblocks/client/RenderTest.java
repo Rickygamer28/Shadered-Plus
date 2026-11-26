@@ -868,6 +868,9 @@ public final class RenderTest {
 
     @SubscribeEvent
     public static void onRenderTestTick(ClientTickEvent.Post event) {
+        if (ON) {
+            com.example.skyblocks.client.tv.VideoProbe.run();
+        }
         if (!ON) {
             return;
         }
