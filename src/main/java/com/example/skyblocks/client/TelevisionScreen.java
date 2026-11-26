@@ -183,7 +183,7 @@ public class TelevisionScreen extends Screen {
         }
         g.fill(x + 10, dy, x + 11, dy + 22, edge);
         g.fill(x + W - 11, dy, x + W - 10, dy + 22, edge);
-        String hint = !dropError.isEmpty() ? dropError : "...or drag a video file from your computer onto this window";
+        String hint = !dropError.isEmpty() ? dropError : "...or drag a video file onto this window";
         g.drawString(font, MachineUi.fit(font, hint, W - 30), x + 16, dy + 7, dropError.isEmpty() ? MachineUi.FAINT : MachineUi.BAD, false);
         // what's on
         MachineUi.divider(g, x + 10, y + 86, W - 20);
