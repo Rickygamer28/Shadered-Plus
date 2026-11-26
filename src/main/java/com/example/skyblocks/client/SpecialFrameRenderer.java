@@ -31,7 +31,7 @@ import org.joml.Vector3f;
  */
 public class SpecialFrameRenderer implements BlockEntityRenderer<SpecialFrameBlockEntity> {
     /** The face's screen sits on the frame's plate, this far out from the block's middle (just past its glow). */
-    private static final float FACE = 0.3855F;
+    private static final float FACE = 0.3855F, DISPLAY_FACE = 0.504F;
 
     public SpecialFrameRenderer(BlockEntityRendererProvider.Context context) {}
 
@@ -64,7 +64,8 @@ public class SpecialFrameRenderer implements BlockEntityRenderer<SpecialFrameBlo
             } else {
                 poseStack.mulPose(Axis.XP.rotationDegrees(d == Direction.UP ? -90.0F : 90.0F));
             }
-            poseStack.translate(0.0, 0.0, FACE);
+            // (a display frame, formed, is a whole block: its screen right on its face)
+            poseStack.translate(0.0, 0.0, kind == SpecialFrameBlock.Kind.DISPLAY ? DISPLAY_FACE : FACE);
             if (wall != null) {
                 wallScreen(poseStack, buffers, s, wall[0], wall[1]);
             } else if (kind == SpecialFrameBlock.Kind.DISPLAY) {
@@ -166,7 +167,7 @@ public class SpecialFrameRenderer implements BlockEntityRenderer<SpecialFrameBlo
         Minecraft mc = Minecraft.getInstance();
         Font font = mc.font;
         poseStack.pushPose();
-        poseStack.translate((w - 1) / 2.0F, -(h - 1) / 2.0F, 0.5F - FACE + 0.012F); // (just in front of the frames' faces: one screen over them all)
+        poseStack.translate((w - 1) / 2.0F, -(h - 1) / 2.0F, 0.004F); // (just in front of the frames' faces: one screen over them all)
         float px = 1.0F / 112.0F; // (112 of the font's pixels to a block)
         float sw = w * 112.0F - 20.0F, sh = h * 112.0F - 20.0F;
         int bright = LightTexture.FULL_BRIGHT;
