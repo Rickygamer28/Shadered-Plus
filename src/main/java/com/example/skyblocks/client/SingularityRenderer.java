@@ -115,20 +115,20 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
             at[k] = new float[] {(e1.x * Mth.cos(ang) + e2.x * Mth.sin(ang)) * r + n.x * lift, (e1.y * Mth.cos(ang) + e2.y * Mth.sin(ang)) * r + n.y * lift,
                     (e1.z * Mth.cos(ang) + e2.z * Mth.sin(ang)) * r + n.z * lift, ang, r};
         }
-        // (first their glows and trails - all at once: then the items)
+        // (first their glows and trails - soft puffs, blended (so they work under shader packs too), all at once: then the items)
         org.joml.Vector3f[] cam = MachineRenderers.camera();
-        com.mojang.blaze3d.vertex.VertexConsumer glow = MachineRenderers.glows(buffers);
-        org.joml.Matrix4f m = pose.last().pose();
+        com.mojang.blaze3d.vertex.VertexConsumer glow = buffers.getBuffer(net.minecraft.client.renderer.RenderType.entityTranslucentEmissive(PUFF));
+        PoseStack.Pose gp = pose.last();
         for (int k = 0; k < count; k++) {
             int c = k < colours.length ? colours[k] : 0xB0A0FF;
             float cr = (c >> 16 & 255) / 255.0F, cg = (c >> 8 & 255) / 255.0F, cb = (c & 255) / 255.0F;
             float x = 0.5F + at[k][0] * half, y = 0.5F + at[k][1] * half, z = 0.5F + at[k][2] * half;
-            MachineRenderers.glow(glow, m, cam[0], cam[1], x, y, z, 0.32F * half * size(k), cr, cg, cb, 0.5F);
-            for (int j = 1; j <= 5; j++) { // (its trail: back along its arm)
-                float ang = at[k][3] - j * 0.07F, r = at[k][4];
+            puff(glow, gp, cam, x, y, z, 0.3F * half * size(k), Math.min(1, cr * 0.6F + 0.4F), Math.min(1, cg * 0.6F + 0.4F), Math.min(1, cb * 0.6F + 0.4F), 0.45F);
+            for (int j = 1; j <= 6; j++) { // (its trail: back along its arm)
+                float ang = at[k][3] - j * 0.06F, r = at[k][4];
                 float tx = 0.5F + (e1.x * Mth.cos(ang) + e2.x * Mth.sin(ang)) * r * half, ty = 0.5F + (e1.y * Mth.cos(ang) + e2.y * Mth.sin(ang)) * r * half;
                 float tz = 0.5F + (e1.z * Mth.cos(ang) + e2.z * Mth.sin(ang)) * r * half;
-                MachineRenderers.sprite(glow, m, cam[0], cam[1], tx, ty, tz, 0.05F * half * (1.0F - j / 6.0F), cr, cg, cb, 0.45F * (1.0F - j / 6.0F));
+                puff(glow, gp, cam, tx, ty, tz, 0.06F * half * (1.0F - j / 7.0F), cr, cg, cb, 0.5F * (1.0F - j / 7.0F));
             }
         }
         var renderer = Minecraft.getInstance().getItemRenderer();
@@ -148,6 +148,20 @@ public class SingularityRenderer implements BlockEntityRenderer<SingularityBlock
                         be.getLevel(), k);
             }
             pose.popPose();
+        }
+    }
+
+    private static final net.minecraft.resources.ResourceLocation PUFF = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
+            com.example.skyblocks.SkyBlocksMod.MOD_ID, "textures/misc/cloud_puff.png");
+
+    /** A soft round puff of light facing you. */
+    private static void puff(com.mojang.blaze3d.vertex.VertexConsumer v, PoseStack.Pose p, org.joml.Vector3f[] cam, float x, float y, float z, float size, float r,
+                             float g, float b, float a) {
+        float rx = cam[0].x() * size, ry = cam[0].y() * size, rz = cam[0].z() * size, ux = cam[1].x() * size, uy = cam[1].y() * size, uz = cam[1].z() * size;
+        float[][] c = {{-1, -1, 0, 1}, {1, -1, 1, 1}, {1, 1, 1, 0}, {-1, 1, 0, 0}};
+        for (float[] q : c) {
+            v.addVertex(p, x + rx * q[0] + ux * q[1], y + ry * q[0] + uy * q[1], z + rz * q[0] + uz * q[1]).setColor(r, g, b, a).setUv(q[2], q[3])
+                    .setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightTexture.FULL_BRIGHT).setNormal(p, 0.0F, 1.0F, 0.0F);
         }
     }
 
