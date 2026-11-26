@@ -8,6 +8,7 @@ import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.server.packs.resources.ResourceManager;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
+import org.lwjgl.opengl.GL21;
 
 /** A television's picture: a texture the newest frame is copied into (on the render thread). */
 final class VideoTexture extends AbstractTexture {
@@ -19,6 +20,14 @@ final class VideoTexture extends AbstractTexture {
 
     void upload(ByteBuffer rgba, int w, int h) {
         RenderSystem.assertOnRenderThread();
+        if (rgba.remaining() < w * h * 4) {
+            return;
+        }
+        // (another mod may have left a pixel buffer bound: the upload would read from it instead, past its end)
+        int pbo = GL11.glGetInteger(GL21.GL_PIXEL_UNPACK_BUFFER_BINDING);
+        if (pbo != 0) {
+            GlStateManager._glBindBuffer(GL21.GL_PIXEL_UNPACK_BUFFER, 0);
+        }
         int id = getId();
         if (w != width || h != height) {
             TextureUtil.prepareImage(id, 0, w, h);
@@ -35,5 +44,8 @@ final class VideoTexture extends AbstractTexture {
         GlStateManager._pixelStore(GL11.GL_UNPACK_SKIP_ROWS, 0);
         GlStateManager._pixelStore(GL11.GL_UNPACK_ALIGNMENT, 4);
         GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0, w, h, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, rgba);
+        if (pbo != 0) {
+            GlStateManager._glBindBuffer(GL21.GL_PIXEL_UNPACK_BUFFER, pbo);
+        }
     }
 }
