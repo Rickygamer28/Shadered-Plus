@@ -35,6 +35,8 @@ public final class VideoPlayer {
     private Decoder.Picture current;
     private long liveStart;
     private long lastPosition;
+    /** Whether it has gone to where it should be once its length is known (joining a repeating video part way). */
+    private boolean placed;
     private State state = State.LOADING;
 
     VideoPlayer(BlockPos pos) {
@@ -97,6 +99,7 @@ public final class VideoPlayer {
         title = "";
         live = false;
         shown = false;
+        placed = false;
         current = null;
         state = State.LOADING;
         String src = source.trim();
@@ -209,6 +212,17 @@ public final class VideoPlayer {
         long clock = hasSound ? audio.clock() : -1;
         long now;
         boolean settling = System.currentTimeMillis() - seekedAt < 1500;
+        if (!placed && !live) {
+            placed = true;
+            if (be.position(partialTick) * 1000L != target) {
+                seek(target); // (it started at where it'd be without repeating: past its end)
+                settling = true;
+            }
+        }
+        if (!live && !settling && hasPicture && current == null && p.ended && p.pictures.isEmpty()) {
+            seek(target); // (ran out with nothing to show: back to where it should be)
+            settling = true;
+        }
         if (!live) {
             // drifted from where everyone is (or gone somewhere): everything goes there
             long ref = clock >= 0 && !pause ? clock : -1;
