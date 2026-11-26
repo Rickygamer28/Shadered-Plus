@@ -95,18 +95,26 @@ public class SingularityBlock extends BaseEntityBlock {
 
     /** Right-click (here or on its chamber's frame): what it holds; sneaking, vacuum mode on / off. */
     public InteractionResult open(BlockState state, Level level, BlockPos pos, Player player) {
+        return open(state, level, pos, player, false);
+    }
+
+    /** Its screen; with {@code crafting} (from a crafting frame) a crafting grid beside it, fed from what it holds. */
+    public InteractionResult open(BlockState state, Level level, BlockPos pos, Player player, boolean crafting) {
         if (!(level.getBlockEntity(pos) instanceof SingularityBlockEntity be)) {
             return InteractionResult.PASS;
         }
         if (!level.isClientSide) {
-            if (player.isShiftKeyDown()) {
+            if (player.isShiftKeyDown() && !crafting) {
                 be.toggleVacuum();
                 player.displayClientMessage(Component.translatable(be.vacuum() ? "message.skyblocks.singularity.vacuum_on" : "message.skyblocks.singularity.vacuum_off")
                         .withStyle(ChatFormatting.LIGHT_PURPLE), true);
                 level.playSound(null, pos, be.vacuum() ? SoundEvents.BEACON_ACTIVATE : SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 0.7F, 1.4F);
             } else if (player instanceof ServerPlayer sp) {
-                sp.openMenu(new SimpleMenuProvider((id, inventory, p) -> new SingularityMenu(id, inventory, pos),
-                        Component.translatable("block.skyblocks.singularity")), buf -> buf.writeBlockPos(pos));
+                sp.openMenu(new SimpleMenuProvider((id, inventory, p) -> new SingularityMenu(id, inventory, pos, crafting),
+                        Component.translatable("block.skyblocks.singularity")), buf -> {
+                            buf.writeBlockPos(pos);
+                            buf.writeBoolean(crafting);
+                        });
             }
         }
         return InteractionResult.sidedSuccess(level.isClientSide);

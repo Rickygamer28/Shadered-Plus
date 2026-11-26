@@ -15,6 +15,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -98,6 +99,8 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
     @Override
     public void render(PowerCoreBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
         links(be, pose, buffers);
+        arcs(be, pose, buffers);
+        readout(be, pose, buffers, light);
         if (shader == null) {
             return;
         }
@@ -242,6 +245,129 @@ public class PowerCoreRenderer implements BlockEntityRenderer<PowerCoreBlockEnti
                 }
             }
         }
+    }
+
+    /**
+     * Energy moving through its links: a flickering arc from its chamber's nearest side to each block it's taking from
+     * (green) or giving to (orange), thicker the more is flowing.
+     */
+    /** (The render test: every link drawn as if energy moved through it.) */
+    public static boolean testArcs;
+
+    private static void arcs(PowerCoreBlockEntity be, PoseStack pose, MultiBufferSource buffers) {
+        if (be.links().isEmpty()) {
+            return;
+        }
+        int r = be.chamber() > 0 ? (be.chamber() - 1) / 2 : 0;
+        BlockPos o = be.getBlockPos();
+        long tick = System.currentTimeMillis() / 70; // (it jumps about ~14 times a second)
+        VertexConsumer v = buffers.getBuffer(RenderType.lightning());
+        Matrix4f m = pose.last().pose();
+        Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition().subtract(o.getX(), o.getY(), o.getZ());
+        for (PowerCoreBlockEntity.Link l : be.links()) {
+            if (!testArcs && (l.mode() == PowerCoreBlockEntity.OFF || l.flow() <= 0)) {
+                continue;
+            }
+            float tx = l.pos().getX() - o.getX() + 0.5F, ty = l.pos().getY() - o.getY() + 0.5F, tz = l.pos().getZ() - o.getZ() + 0.5F;
+            float edge = r + 0.5F; // (its chamber's outer faces, from its middle)
+            float sx = 0.5F + Mth.clamp(tx - 0.5F, -edge, edge), sy = 0.5F + Mth.clamp(ty - 0.5F, -edge, edge), sz = 0.5F + Mth.clamp(tz - 0.5F, -edge, edge);
+            int c = PowerCoreScreen.MODE_COLOUR[testArcs && l.mode() == 0 ? (l.canTake() ? 2 : 1) : l.mode()];
+            float cr = (c >> 16 & 255) / 255.0F, cg = (c >> 8 & 255) / 255.0F, cb = (c & 255) / 255.0F;
+            float width = 0.025F + 0.035F * Math.min(1.0F, (float) Math.log10(1 + l.flow()) / 7.0F);
+            java.util.Random rnd = new java.util.Random(l.pos().asLong() * 31 + tick);
+            float dx = tx - sx, dy = ty - sy, dz = tz - sz, len = Mth.sqrt(dx * dx + dy * dy + dz * dz);
+            int n = Math.max(3, (int) (len * 4));
+            float px = sx, py = sy, pz = sz;
+            for (int i = 1; i <= n; i++) {
+                float f = i / (float) n, j = i == n ? 0.0F : 0.22F * Mth.sin(f * Mth.PI);
+                float qx = sx + dx * f + (rnd.nextFloat() - 0.5F) * j, qy = sy + dy * f + (rnd.nextFloat() - 0.5F) * j, qz = sz + dz * f + (rnd.nextFloat() - 0.5F) * j;
+                ribbon(v, m, cam, px, py, pz, qx, qy, qz, width * 3.0F, cr, cg, cb, 0.18F);
+                ribbon(v, m, cam, px, py, pz, qx, qy, qz, width, Math.min(1, cr + 0.4F), Math.min(1, cg + 0.4F), Math.min(1, cb + 0.4F), 0.85F);
+                px = qx;
+                py = qy;
+                pz = qz;
+            }
+        }
+    }
+
+    /** A flat strip from one point to another, turned to face you. */
+    private static void ribbon(VertexConsumer v, Matrix4f m, Vec3 cam, float ax, float ay, float az, float bx, float by, float bz, float w, float r, float g,
+                               float b, float a) {
+        float dx = bx - ax, dy = by - ay, dz = bz - az;
+        float vx = (float) cam.x - ax, vy = (float) cam.y - ay, vz = (float) cam.z - az;
+        float sx = dy * vz - dz * vy, sy = dz * vx - dx * vz, sz = dx * vy - dy * vx;
+        float sl = Mth.sqrt(sx * sx + sy * sy + sz * sz);
+        if (sl < 1.0E-5F) {
+            return;
+        }
+        sx *= w / sl;
+        sy *= w / sl;
+        sz *= w / sl;
+        v.addVertex(m, ax - sx, ay - sy, az - sz).setColor(r, g, b, a);
+        v.addVertex(m, ax + sx, ay + sy, az + sz).setColor(r, g, b, a);
+        v.addVertex(m, bx + sx, by + sy, bz + sz).setColor(r, g, b, a);
+        v.addVertex(m, bx - sx, by - sy, bz - sz).setColor(r, g, b, a);
+        v.addVertex(m, bx - sx, by - sy, bz - sz).setColor(r, g, b, a);
+        v.addVertex(m, bx + sx, by + sy, bz + sz).setColor(r, g, b, a);
+        v.addVertex(m, ax + sx, ay + sy, az + sz).setColor(r, g, b, a);
+        v.addVertex(m, ax - sx, ay - sy, az - sz).setColor(r, g, b, a);
+    }
+
+    /**
+     * A readout plate on each side of its chamber you're outside of, low in the middle: how full (a bar in its colour and
+     * the percent), how much it holds, and energy in or out each tick.
+     */
+    private static void readout(PowerCoreBlockEntity be, PoseStack pose, MultiBufferSource buffers, int light) {
+        if (be.chamber() <= 0) {
+            return;
+        }
+        int r = (be.chamber() - 1) / 2;
+        Minecraft mc = Minecraft.getInstance();
+        BlockPos o = be.getBlockPos();
+        Vec3 cam = mc.gameRenderer.getMainCamera().getPosition().subtract(o.getX() + 0.5, o.getY(), o.getZ() + 0.5);
+        double[] facing = {cam.z, cam.x, -cam.z, -cam.x};
+        double full = be.capacity() <= 0 ? 0 : Math.min(1.0, (double) be.energy() / be.capacity());
+        long flow = be.rateIn() - be.rateOut();
+        String pct = String.format(java.util.Locale.ROOT, full >= 0.9995 ? "100%%" : "%.1f%%", full * 100);
+        String rate = (flow > 0 ? "+" : flow < 0 ? "-" : "") + PowerCoreBlockEntity.fe(Math.abs(flow)) + "/t";
+        int rateColour = flow > 0 ? 0xFF8FEFA0 : flow < 0 ? 0xFFFF8A7A : 0xFF8A96AA;
+        int accent = LIGHT[Math.floorMod(be.skin(), LIGHT.length)] | 0xFF000000;
+        net.minecraft.client.gui.Font font = mc.font;
+        float pw = 96, ph = 24, scale = 0.0105F;
+        for (int side = 0; side < 4; side++) {
+            if (facing[side] < r + 0.5) {
+                continue;
+            }
+            pose.pushPose();
+            pose.translate(0.5F, -r + 0.5F, 0.5F);
+            pose.mulPose(com.mojang.math.Axis.YP.rotationDegrees(side * 90.0F));
+            pose.translate(0.0F, 0.0F, r + 0.5F + 0.012F);
+            pose.scale(scale, -scale, scale);
+            Matrix4f m = pose.last().pose();
+            VertexConsumer bg = buffers.getBuffer(RenderType.textBackground());
+            float x0 = -pw / 2, x1 = pw / 2, y0 = -ph / 2, y1 = ph / 2;
+            plate(bg, m, x0 - 1, y0 - 1, x1 + 1, y1 + 1, -0.4F, 0xFF4A3A26, light);
+            plate(bg, m, x0, y0, x1, y1, -0.3F, 0xFF8A6A3A, light);
+            plate(bg, m, x0 + 1, y0 + 1, x1 - 1, y1 - 1, -0.2F, 0xFF121620, light);
+            plate(bg, m, x0 + 4, y0 + 13, x1 - 4, y0 + 16, -0.15F, 0xFF0B0F17, light);
+            plate(bg, m, x0 + 4, y0 + 13, x0 + 4 + (pw - 8) * (float) full, y0 + 16, -0.1F, accent, light);
+            font.drawInBatch(pct, x0 + 4, y0 + 3, 0xFFE6EDF7, false, m, buffers, net.minecraft.client.gui.Font.DisplayMode.POLYGON_OFFSET, 0, light);
+            font.drawInBatch(rate, x1 - 4 - font.width(rate), y0 + 3, rateColour, false, m, buffers,
+                    net.minecraft.client.gui.Font.DisplayMode.POLYGON_OFFSET, 0, light);
+            pose.popPose();
+        }
+    }
+
+    /** A flat rectangle (a plate) at depth z, seen from both sides. */
+    private static void plate(VertexConsumer v, Matrix4f m, float x0, float y0, float x1, float y1, float z, int argb, int light) {
+        v.addVertex(m, x0, y0, z).setColor(argb).setLight(light);
+        v.addVertex(m, x0, y1, z).setColor(argb).setLight(light);
+        v.addVertex(m, x1, y1, z).setColor(argb).setLight(light);
+        v.addVertex(m, x1, y0, z).setColor(argb).setLight(light);
+        v.addVertex(m, x1, y0, z).setColor(argb).setLight(light);
+        v.addVertex(m, x1, y1, z).setColor(argb).setLight(light);
+        v.addVertex(m, x0, y1, z).setColor(argb).setLight(light);
+        v.addVertex(m, x0, y0, z).setColor(argb).setLight(light);
     }
 
     /**

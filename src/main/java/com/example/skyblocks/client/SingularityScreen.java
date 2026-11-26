@@ -25,7 +25,7 @@ import org.lwjgl.glfw.GLFW;
  * tags, one after another, into the tag box). Vacuum: pull in dropped items from round it.
  */
 public class SingularityScreen extends AbstractContainerScreen<SingularityMenu> {
-    private static final int COLS = 9, ROWS = 5, GRID_X = 8, GRID_Y = 24, CELL = 18, ACCENT = 0xFF9A6BFF, RED = 0xFFFF6A7A;
+    private static final int COLS = 9, ROWS = 5, GRID_X = 8, GRID_Y = 24, CELL = 18, ACCENT = 0xFF9A6BFF, RED = 0xFFFF6A7A, MAIN_W = 194;
     private EditBox search;
     private Button vacuumButton, destroyButton, addTagButton, skinButton;
     private EditBox tagBox;
@@ -43,7 +43,7 @@ public class SingularityScreen extends AbstractContainerScreen<SingularityMenu> 
 
     public SingularityScreen(SingularityMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
-        imageWidth = 194;
+        imageWidth = menu.crafting ? 292 : 194; // (from a crafting frame: a crafting grid beside it)
         imageHeight = SingularityMenu.INVENTORY_Y + 82;
         inventoryLabelY = SingularityMenu.INVENTORY_Y - 10;
     }
@@ -51,6 +51,10 @@ public class SingularityScreen extends AbstractContainerScreen<SingularityMenu> 
     @Override
     protected void init() {
         super.init();
+        if (menu.crafting) {
+            addRenderableWidget(MachineUi.button(leftPos + SingularityMenu.CRAFT_X, topPos + SingularityMenu.CRAFT_Y + 60, 92, 14,
+                    Component.translatable("gui.skyblocks.singularity.clear_grid"), b -> send(SingularityMenu.CLEAR_GRID, ItemStack.EMPTY, 0), () -> ACCENT));
+        }
         search = new EditBox(font, leftPos + 100, topPos + 5, 82, 10, Component.translatable("gui.skyblocks.singularity.search"));
         search.setHint(Component.translatable("gui.skyblocks.singularity.search").withStyle(st -> st.withColor(MachineUi.FAINT & 0xFFFFFF)));
         search.setBordered(false);
@@ -199,10 +203,22 @@ public class SingularityScreen extends AbstractContainerScreen<SingularityMenu> 
         int x0 = leftPos, y0 = topPos;
         MachineUi.panel(g, x0, y0, imageWidth, imageHeight, ACCENT);
         // (the search field's bed, on the header band)
-        g.fill(x0 + 96, y0 + 3, x0 + imageWidth - 8, y0 + 15, MachineUi.SLOT_EDGE);
-        g.fill(x0 + 97, y0 + 4, x0 + imageWidth - 9, y0 + 14, MachineUi.TRACK);
+        g.fill(x0 + 96, y0 + 3, x0 + MAIN_W - 8, y0 + 15, MachineUi.SLOT_EDGE);
+        g.fill(x0 + 97, y0 + 4, x0 + MAIN_W - 9, y0 + 14, MachineUi.TRACK);
         MachineUi.slots(g, menu, x0, y0);
-        MachineUi.divider(g, x0 + 8, y0 + SingularityMenu.INVENTORY_Y - 13, imageWidth - 16);
+        MachineUi.divider(g, x0 + 8, y0 + SingularityMenu.INVENTORY_Y - 13, MAIN_W - 16);
+        if (menu.crafting) { // the crafting side: a line down between, the arrow to what it makes
+            g.fill(x0 + MAIN_W, y0 + 24, x0 + MAIN_W + 1, y0 + imageHeight - 8, MachineUi.RULE);
+            int ax = x0 + SingularityMenu.CRAFT_X + 56, ay = y0 + SingularityMenu.CRAFT_Y + 24;
+            g.fill(ax, ay, ax + 12, ay + 4, MachineUi.SLOT_EDGE);
+            for (int k = 0; k < 4; k++) {
+                g.fill(ax + 12 + k, ay - 2 + k, ax + 13 + k, ay + 6 - k, MachineUi.SLOT_EDGE);
+            }
+            int rx = x0 + SingularityMenu.CRAFT_X + 76, ry = y0 + SingularityMenu.CRAFT_Y + 18;
+            g.fill(rx - 4, ry - 4, rx + 20, ry + 20, ACCENT);
+            g.fill(rx - 3, ry - 3, rx + 19, ry + 19, MachineUi.BG);
+            MachineUi.slot(g, rx, ry);
+        }
         if (filterView) {
             renderFilter(g, mouseX, mouseY);
             return;
@@ -272,7 +288,7 @@ public class SingularityScreen extends AbstractContainerScreen<SingularityMenu> 
         // the tags: chips, wrapping, two lines (the mouse wheel scrolls them)
         tagChips.clear();
         int x = GRID_X, line = 0;
-        int maxX = imageWidth - 8;
+        int maxX = MAIN_W - 8;
         List<String> tags = menu.tags;
         for (int i = 0; i < tags.size(); i++) {
             String label = "#" + tags.get(i) + " x";
@@ -299,14 +315,22 @@ public class SingularityScreen extends AbstractContainerScreen<SingularityMenu> 
 
     @Override
     protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-        MachineUi.header(g, font, title, null, 0, 0, imageWidth, ACCENT);
+        MachineUi.header(g, font, title, null, 0, 0, MAIN_W, ACCENT);
         MachineUi.label(g, font, playerInventoryTitle, 8, inventoryLabelY);
         long total = 0;
         for (long c : menu.counts) {
             total += c;
         }
         Component info = Component.translatable("gui.skyblocks.singularity.info", SingularityMenu.amount(total), menu.items.size());
-        g.drawString(font, info, imageWidth - 8 - font.width(info), inventoryLabelY, ACCENT, false);
+        g.drawString(font, info, MAIN_W - 8 - font.width(info), inventoryLabelY, ACCENT, false);
+        if (menu.crafting) {
+            MachineUi.label(g, font, Component.translatable("gui.skyblocks.singularity.crafting"), SingularityMenu.CRAFT_X, 26);
+            int y = SingularityMenu.CRAFT_Y + 82;
+            for (net.minecraft.util.FormattedCharSequence line : font.split(Component.translatable("gui.skyblocks.singularity.crafting_hint"), imageWidth - MAIN_W - 14)) {
+                g.drawString(font, line, SingularityMenu.CRAFT_X, y, MachineUi.FAINT, false);
+                y += 10;
+            }
+        }
     }
 
     @Override

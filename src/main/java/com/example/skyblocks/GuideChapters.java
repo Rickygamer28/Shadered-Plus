@@ -68,7 +68,7 @@ public final class GuideChapters {
         out.add(of("ponds", ModItems.KOI_POND, ModItems.VANILLA_KOI_POND, ModItems.POND_STEPPING_STONE, ModItems.POND_BRIDGE,
                 ModItems.BAMBOO_SPOUT));
         out.add(of("space", ModItems.ORRERY, ModItems.PLANETARIUM, ModItems.BLACK_HOLE, ModItems.BIG_BLACK_HOLE, ModItems.SINGULARITY,
-                ModItems.CONTAINMENT_FRAME, ModItems.PORT_FRAME, ModItems.DISPLAY_FRAME, ModItems.MONITOR_FRAME, ModItems.REDSTONE_FRAME,
+                ModItems.CONTAINMENT_FRAME, ModItems.PORT_FRAME, ModItems.DISPLAY_FRAME, ModItems.MONITOR_FRAME, ModItems.REDSTONE_FRAME, ModItems.CRAFTING_FRAME,
                 ModItems.WHIRLPOOL, ModItems.TANK_FRAME, ModItems.TANK_GLASS, ModItems.POWER_CORE, ModItems.CORE_FRAME, ModItems.PLANET_GLOBE));
         out.add(of("machines", ModItems.STAR_FORGE, ModItems.FORGE_FRAME, ModItems.STAR_GOLD_INGOT, ModItems.NEBULA_STEEL_INGOT,
                 ModItems.PARTICLE_ACCELERATOR, ModItems.ACCELERATOR_FRAME, ModItems.WEATHER_MACHINE, ModItems.WEATHER_MAST));

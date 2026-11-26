@@ -48,6 +48,16 @@ public final class MachineRenderers {
                 .setLight(0xF000F0).setNormal(0, 1, 0);
     }
 
+    /** A flat quad of solid glow (the glow dot's bright middle), seen from both sides: p holds its 4 corners' x, y, z. */
+    static void flat(VertexConsumer v, Matrix4f m, float[] p, float r, float g, float b) {
+        for (int i = 0; i < 4; i++) {
+            corner(v, m, p[i * 3], p[i * 3 + 1], p[i * 3 + 2], 0.5F, 0.5F, r, g, b);
+        }
+        for (int i = 3; i >= 0; i--) {
+            corner(v, m, p[i * 3], p[i * 3 + 1], p[i * 3 + 2], 0.5F, 0.5F, r, g, b);
+        }
+    }
+
     /** A soft glow: a few dots, one in another (a bright middle, fading out). */
     static void glow(VertexConsumer v, Matrix4f m, Vector3f right, Vector3f up, float x, float y, float z, float size, float r, float g, float b, float a) {
         sprite(v, m, right, up, x, y, z, size, r, g, b, a * 0.55F);
@@ -104,6 +114,21 @@ public final class MachineRenderers {
             for (int q = 0; q < 4; q++) {
                 int dx = q == 0 ? r : q == 2 ? -r : 0, dz = q == 1 ? r : q == 3 ? -r : 0;
                 glow(v, m, cam[0], cam[1], 0.5F + dx, 1.0F, 0.5F + dz, 0.35F, lr, lg, lb, blink);
+                // (round each junction box, over its flanges: a bar - how fast its beams go)
+                float y0 = 13.25F / 16.0F, y1 = 13.85F / 16.0F, a0 = 0.2F, a1 = 0.8F, fill = a0 + (a1 - a0) * Math.min(1.0F, s);
+                for (int f = 0; f < 4; f++) {
+                    float pl = f % 2 == 0 ? 1.0F / 16.0F - 0.004F : 15.0F / 16.0F + 0.004F;
+                    for (int part = 0; part < 2; part++) {
+                        float b0 = part == 0 ? a0 : a0, b1 = part == 0 ? a1 : fill;
+                        if (part == 1 && s < 0.01F) {
+                            continue;
+                        }
+                        float k = part == 0 ? 0.12F : 0.9F, yy0 = part == 0 ? y0 - 0.01F : y0, yy1 = part == 0 ? y1 + 0.01F : y1;
+                        float[] p = f < 2 ? new float[] {dx + pl, yy0, dz + b0, dx + pl, yy1, dz + b0, dx + pl, yy1, dz + b1, dx + pl, yy0, dz + b1}
+                                : new float[] {dx + b0, yy0, dz + pl, dx + b0, yy1, dz + pl, dx + b1, yy1, dz + pl, dx + b1, yy0, dz + pl};
+                        flat(v, m, p, (part == 0 ? 0.2F : 0.3F) * k, (part == 0 ? 0.6F : 0.9F) * k, k);
+                    }
+                }
                 if (s > 0.01F) {
                     for (int j = 0; j < 3; j++) {
                         float f = ((t * (0.4F + s) + j / 3.0F) % 1.0F);
@@ -205,6 +230,26 @@ public final class MachineRenderers {
                     sprite(v, m, cam[0], cam[1], 0.5F + Mth.cos(a) * wr, 0.7F + 0.6F * (1 - wave), 0.5F + Mth.sin(a) * wr, 0.35F, 0.5F, 0.9F, 1.0F,
                             0.7F * (1.0F - wave));
                 }
+            }
+            // debris: glowing bits thrown out to the ring, bouncing back off its tube, fading
+            java.util.Random bits = new java.util.Random(be.flashAt);
+            for (int i = 0; i < 12; i++) {
+                float a = bits.nextFloat() * Mth.TWO_PI, speed = 2.5F + bits.nextFloat() * 3.0F, lift = 0.4F + bits.nextFloat() * 0.8F;
+                float reach = r - 0.35F, hitAt = reach / speed, d;
+                if (since < hitAt) {
+                    d = speed * since;
+                } else {
+                    d = Math.max(0.0F, reach - (since - hitAt) * speed * 0.35F);
+                }
+                float life = 1.0F - since / 1.6F;
+                if (life <= 0) {
+                    continue;
+                }
+                float y = cy - 0.55F + lift * Mth.sin(Math.min(1.0F, since / (hitAt * 1.4F)) * Mth.PI) * 0.6F;
+                y = Math.max(0.5F, y);
+                float bx = 0.5F + Mth.cos(a) * d, bz = 0.5F + Mth.sin(a) * d;
+                sprite(v, m, cam[0], cam[1], bx, y, bz, 0.07F, 1.0F * life, 0.75F * life, 0.4F * life, 1.0F);
+                sprite(v, m, cam[0], cam[1], 0.5F + Mth.cos(a) * d * 0.9F, y, 0.5F + Mth.sin(a) * d * 0.9F, 0.05F, 0.7F * life, 0.45F * life, 0.2F * life, 1.0F);
             }
             // sparks: once, flying out of the burst
             if (!be.clientSparked && be.getLevel() != null) {
@@ -360,6 +405,104 @@ public final class MachineRenderers {
     // ---- the weather machine ----
 
     public static class Weather implements BlockEntityRenderer<WeatherMachineBlockEntity> {
+        /** (The render test: a weather to show over its dish, -1 normally.) */
+        public static int testCloud = -1;
+        /**
+         * A little weather of its own over its dish: a cloud gathering while it turns the weather (as far as it's got), and
+         * held there in rain (raining on the dish) or thunder (darker, small bolts down to the dish now and then).
+         */
+        private static void cloud(WeatherMachineBlockEntity be, PoseStack pose, MultiBufferSource buffers, float t, float y0, int mode, boolean holding,
+                                  boolean turning) {
+            float amount = turning ? be.charge() : holding && mode >= 2 ? 1.0F : 0.0F;
+            if (amount <= 0.02F) {
+                return;
+            }
+            boolean thunder = mode == 3, rain = holding && mode >= 2;
+            float cy = y0 + 3.0F;
+            long window = (long) (t / 2.7F);
+            float sinceBolt = t - window * 2.7F;
+            boolean bolt = thunder && holding && (testCloud == 3 || new java.util.Random(window * 7919L).nextFloat() < 0.7F && sinceBolt < 0.18F);
+            float shade = thunder ? 0.42F : rain ? 0.7F : 0.92F;
+            if (bolt) {
+                shade = 1.0F;
+            }
+            Vector3f[] cam = camera();
+            VertexConsumer v = buffers.getBuffer(RenderType.entityTranslucent(GLOW));
+            PoseStack.Pose p = pose.last();
+            int light = net.minecraft.client.renderer.LightTexture.FULL_BRIGHT;
+            java.util.Random rnd = new java.util.Random(be.getBlockPos().asLong());
+            int puffs = 28;
+            for (int i = 0; i < puffs; i++) {
+                float a = rnd.nextFloat() * Mth.TWO_PI + t * 0.05F, d = (float) Math.sqrt(rnd.nextFloat()) * 1.55F;
+                float px = 0.5F + Mth.cos(a) * d, pz = 0.5F + Mth.sin(a) * d * 0.85F, py = cy + (rnd.nextFloat() - 0.35F) * 0.6F * (1.0F - d / 2.2F)
+                        + 0.04F * Mth.sin(t * 0.7F + i);
+                float size = (0.55F + rnd.nextFloat() * 0.5F) * (0.5F + 0.5F * amount);
+                float k = shade * (0.85F + 0.15F * rnd.nextFloat()) * (py > cy ? 1.0F : 0.85F); // (darker underneath)
+                billboard(v, p, cam, px, py, pz, size, k, k, Math.min(1.0F, k * 1.04F), 0.55F * amount, light);
+            }
+            if (rain) { // rain: streaks falling from it onto the dish
+                float top = cy - 0.3F, bottom = y0 + 0.7F, h = top - bottom;
+                for (int i = 0; i < 36; i++) {
+                    float a = rnd.nextFloat() * Mth.TWO_PI, d = (float) Math.sqrt(rnd.nextFloat()) * 1.2F;
+                    float f = (rnd.nextFloat() + t * 1.6F) % 1.0F;
+                    float x = 0.5F + Mth.cos(a) * d, z = 0.5F + Mth.sin(a) * d, y = top - f * h;
+                    streak(v, p, cam, x, y, z, 0.012F, 0.28F, 0.72F, 0.82F, 1.0F, 0.6F, light);
+                }
+            }
+            if (bolt) { // (thunder: a small bolt down to the dish)
+                VertexConsumer l = buffers.getBuffer(RenderType.lightning());
+                Matrix4f m = pose.last().pose();
+                java.util.Random br = new java.util.Random(window * 31L + (long) (sinceBolt * 30));
+                float bx = 0.5F + (br.nextFloat() - 0.5F) * 1.2F, bz = 0.5F + (br.nextFloat() - 0.5F) * 1.2F, by = cy - 0.3F;
+                float ex = 0.5F, ey = y0 + 0.9F, ez = 0.5F;
+                int n = 7;
+                float px = bx, py = by, pz = bz;
+                for (int i = 1; i <= n; i++) {
+                    float f = i / (float) n, j = i == n ? 0 : 0.25F;
+                    float qx = Mth.lerp(f, bx, ex) + (br.nextFloat() - 0.5F) * j, qy = Mth.lerp(f, by, ey), qz = Mth.lerp(f, bz, ez) + (br.nextFloat() - 0.5F) * j;
+                    for (int s = 0; s < 2; s++) { // (two strips, crossed: seen from any side)
+                        float ox = s == 0 ? 0.03F : 0, oz = s == 0 ? 0 : 0.03F;
+                        l.addVertex(m, px - ox, py, pz - oz).setColor(0.85F, 0.9F, 1.0F, 0.9F);
+                        l.addVertex(m, px + ox, py, pz + oz).setColor(0.85F, 0.9F, 1.0F, 0.9F);
+                        l.addVertex(m, qx + ox, qy, qz + oz).setColor(0.85F, 0.9F, 1.0F, 0.9F);
+                        l.addVertex(m, qx - ox, qy, qz - oz).setColor(0.85F, 0.9F, 1.0F, 0.9F);
+                        l.addVertex(m, qx - ox, qy, qz - oz).setColor(0.85F, 0.9F, 1.0F, 0.9F);
+                        l.addVertex(m, qx + ox, qy, qz + oz).setColor(0.85F, 0.9F, 1.0F, 0.9F);
+                        l.addVertex(m, px + ox, py, pz + oz).setColor(0.85F, 0.9F, 1.0F, 0.9F);
+                        l.addVertex(m, px - ox, py, pz - oz).setColor(0.85F, 0.9F, 1.0F, 0.9F);
+                    }
+                    px = qx;
+                    py = qy;
+                    pz = qz;
+                }
+            }
+        }
+
+        /** A soft round puff facing you (translucent: it can be dark). */
+        private static void billboard(VertexConsumer v, PoseStack.Pose p, Vector3f[] cam, float x, float y, float z, float size, float r, float g, float b,
+                                      float a, int light) {
+            float rx = cam[0].x() * size, ry = cam[0].y() * size, rz = cam[0].z() * size, ux = cam[1].x() * size, uy = cam[1].y() * size, uz = cam[1].z() * size;
+            puffVertex(v, p, x - rx - ux, y - ry - uy, z - rz - uz, 0, 1, r, g, b, a, light);
+            puffVertex(v, p, x + rx - ux, y + ry - uy, z + rz - uz, 1, 1, r, g, b, a, light);
+            puffVertex(v, p, x + rx + ux, y + ry + uy, z + rz + uz, 1, 0, r, g, b, a, light);
+            puffVertex(v, p, x - rx + ux, y - ry + uy, z - rz + uz, 0, 0, r, g, b, a, light);
+        }
+
+        /** A thin upright streak (a raindrop falling), turned to you round its length. */
+        private static void streak(VertexConsumer v, PoseStack.Pose p, Vector3f[] cam, float x, float y, float z, float w, float len, float r, float g, float b,
+                                   float a, int light) {
+            float rx = cam[0].x() * w, rz = cam[0].z() * w;
+            puffVertex(v, p, x - rx, y - len, z - rz, 0.45F, 0.5F, r, g, b, a, light);
+            puffVertex(v, p, x + rx, y - len, z + rz, 0.55F, 0.5F, r, g, b, a, light);
+            puffVertex(v, p, x + rx, y, z + rz, 0.55F, 0.5F, r, g, b, a, light);
+            puffVertex(v, p, x - rx, y, z - rz, 0.45F, 0.5F, r, g, b, a, light);
+        }
+
+        private static void puffVertex(VertexConsumer v, PoseStack.Pose p, float x, float y, float z, float u, float w, float r, float g, float b, float a,
+                                       int light) {
+            v.addVertex(p, x, y, z).setColor(r, g, b, a).setUv(u, w).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, 0.0F, 1.0F, 0.0F);
+        }
+
         private static final ResourceLocation METAL = ResourceLocation.withDefaultNamespace("textures/block/iron_block.png");
         private static final float[][] COLOURS = {{0.6F, 0.65F, 0.75F}, {1.0F, 0.88F, 0.45F}, {0.45F, 0.72F, 1.0F}, {0.78F, 0.55F, 1.0F}};
 
@@ -375,6 +518,11 @@ public final class MachineRenderers {
             boolean holding = be.holding(), turning = mode != 0 && !holding;
             float y0 = be.masts() + 1.0F;
             int dishLight = LevelRenderer.getLightColor(be.getLevel(), be.dish());
+            if (testCloud >= 0) { // (the render test: its rain, its thunder)
+                cloud(be, pose, buffers, t, y0, testCloud, true, false);
+            } else {
+                cloud(be, pose, buffers, t, y0, mode, holding, turning);
+            }
             // its dish: a shallow metal bowl on a post, turning (fast while it turns the weather)
             pose.pushPose();
             pose.translate(0.5F, y0, 0.5F);
@@ -533,6 +681,43 @@ public final class MachineRenderers {
             ItemStreams.render(be.getBlockPos(), pose, buffers); // (what it's working, flying in; what it made, out)
             PowerCoreRenderer.drawBox(pose, buffers, half, 4 + colour, Math.round(full * 255), 255);
             dressing(be, pose, buffers, (chamber - 1) / 2, full); // (after the box: getting another buffer ends its one)
+            hot(be, pose, buffers, (chamber - 1) / 2);
+        }
+
+        /**
+         * What it just made, on its crucible: glowing red-hot, a shimmer of heat round it and smoke rising, cooling over a
+         * few seconds - dimming from white-orange through red to its own colours - then gone.
+         */
+        private static void hot(StarForgeBlockEntity be, PoseStack pose, MultiBufferSource buffers, int r) {
+            if (be.hotItem.isEmpty()) {
+                return;
+            }
+            float age = (System.currentTimeMillis() - be.hotAt) / 1000.0F, life = 4.0F;
+            if (age > life) {
+                be.hotItem = ItemStack.EMPTY;
+                return;
+            }
+            float heat = 1.0F - age / life, rise = Math.min(1.0F, age * 2.5F);
+            float y = -r + 9.0F / 16.0F + 0.5F + 0.42F + 0.28F * rise;
+            Vector3f[] cam = camera();
+            VertexConsumer v = glows(buffers);
+            Matrix4f m = pose.last().pose();
+            // (the heat: white-orange to deep red as it cools)
+            float g = 0.25F + 0.5F * heat * heat, b = 0.1F * heat * heat;
+            glow(v, m, cam[0], cam[1], 0.5F, y + 0.12F, 0.5F, 0.55F + 0.35F * heat, 1.0F, g, b, 0.85F * heat);
+            glow(v, m, cam[0], cam[1], 0.5F, y + 0.12F, 0.5F, 0.25F, 1.0F, 0.6F + 0.3F * heat, 0.3F * heat, heat);
+            pose.pushPose();
+            pose.translate(0.5F, y, 0.5F);
+            pose.mulPose(Axis.YP.rotationDegrees(age * 40.0F));
+            pose.scale(0.55F, 0.55F, 0.55F);
+            Minecraft.getInstance().getItemRenderer().renderStatic(be.hotItem, net.minecraft.world.item.ItemDisplayContext.GROUND,
+                    net.minecraft.client.renderer.LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, pose, buffers, be.getLevel(), 0);
+            pose.popPose();
+            var level = be.getLevel();
+            if (level != null && heat > 0.25F && level.random.nextFloat() < 0.08F) {
+                var bp = be.getBlockPos();
+                level.addParticle(net.minecraft.core.particles.ParticleTypes.SMOKE, bp.getX() + 0.5, bp.getY() + y + 0.3, bp.getZ() + 0.5, 0, 0.03, 0);
+            }
         }
 
         private static final float[][] TINT = {{1.0F, 0.35F, 0.21F}, {1.0F, 0.7F, 0.23F}, {0.35F, 0.66F, 1.0F}, {0.93F, 0.96F, 1.0F}};

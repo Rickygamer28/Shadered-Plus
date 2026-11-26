@@ -477,6 +477,8 @@ public class StarForgeBlockEntity extends MachineBlockEntity {
         }
         if (!making.isEmpty()) {
             stream(level, making.get(0), true);
+            // (seen coming out of its crucible red-hot, cooling)
+            level.blockEvent(worldPosition, getBlockState().getBlock(), 5, net.minecraft.core.registries.BuiltInRegistries.ITEM.getId(making.get(0).getItem()));
         }
         working.clear();
         making.clear();
@@ -484,6 +486,22 @@ public class StarForgeBlockEntity extends MachineBlockEntity {
         level.playSound(null, worldPosition, SoundEvents.FIRECHARGE_USE, SoundSource.BLOCKS, 0.5F, 1.3F);
         setChanged();
         sync();
+    }
+
+    /** (Client: what it made last - shown red-hot on its crucible, cooling - and when.) */
+    public ItemStack hotItem = ItemStack.EMPTY;
+    public long hotAt;
+
+    @Override
+    public boolean triggerEvent(int id, int param) {
+        if (id == 5) {
+            if (level != null && level.isClientSide) {
+                hotItem = new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.byId(param));
+                hotAt = System.currentTimeMillis();
+            }
+            return true; // (the server too: only then is it sent on to the players watching)
+        }
+        return super.triggerEvent(id, param);
     }
 
     /** (What it's working, seen flying into its star - or what it made, out of it - from one of its frames.) */

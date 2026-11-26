@@ -1490,5 +1490,11 @@
   "screen.skyblocks.power_core.dir.up": "up",
   "screen.skyblocks.power_core.dir.down": "down",
   "screen.skyblocks.power_core.dir.south": "south",
-  "screen.skyblocks.power_core.dir.north": "north"
+  "screen.skyblocks.power_core.dir.north": "north",
+  "block.skyblocks.crafting_frame": "Crafting Frame",
+  "tooltip.skyblocks.crafting_frame": "A chamber frame: right-click it for the singularity's screen with a crafting grid beside it - take what you need from what it holds, and the grid refills from it as you craft.",
+  "guide.skyblocks.crafting_frame": "A chamber frame you craft at. Right-click it: the singularity's screen with a crafting grid beside it. Click what it holds to pick it up and lay it in the grid; take what it makes (shift-click: as many as it can) and the grid fills again from what it holds, so you can craft on and on. Clear grid puts it all back; closing the screen does too.",
+  "gui.skyblocks.singularity.crafting": "Crafting",
+  "gui.skyblocks.singularity.clear_grid": "Clear grid",
+  "gui.skyblocks.singularity.crafting_hint": "Refills from storage as you craft"
 }

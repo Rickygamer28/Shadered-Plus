@@ -90,6 +90,7 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> PORT_FRAME = ITEMS.registerSimpleBlockItem("port_frame", ModBlocks.PORT_FRAME);
     public static final DeferredItem<BlockItem> DISPLAY_FRAME = ITEMS.registerSimpleBlockItem("display_frame", ModBlocks.DISPLAY_FRAME);
     public static final DeferredItem<BlockItem> MONITOR_FRAME = ITEMS.registerSimpleBlockItem("monitor_frame", ModBlocks.MONITOR_FRAME);
+    public static final DeferredItem<BlockItem> CRAFTING_FRAME = ITEMS.registerSimpleBlockItem("crafting_frame", ModBlocks.CRAFTING_FRAME);
     public static final DeferredItem<BlockItem> REDSTONE_FRAME = ITEMS.registerSimpleBlockItem("redstone_frame", ModBlocks.REDSTONE_FRAME);
     public static final DeferredItem<BlockItem> SINGULARITY = ITEMS.registerSimpleBlockItem("singularity", ModBlocks.SINGULARITY,
             new net.minecraft.world.item.Item.Properties().stacksTo(1).fireResistant());

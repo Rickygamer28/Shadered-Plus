@@ -25,7 +25,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public class SingularityMenu extends AbstractContainerMenu {
     public static final DeferredRegister<MenuType<?>> MENUS = DeferredRegister.create(net.minecraft.core.registries.Registries.MENU, SkyBlocksMod.MOD_ID);
     public static final DeferredHolder<MenuType<?>, MenuType<SingularityMenu>> TYPE = MENUS.register("singularity",
-            () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create((id, inv, buf) -> new SingularityMenu(id, inv, buf.readBlockPos())));
+            () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create((id, inv, buf) -> new SingularityMenu(id, inv, buf.readBlockPos(), buf.readBoolean())));
 
     /** Where your inventory starts in the menu (pixels; client/SingularityScreen draws round it). */
     public static final int INVENTORY_Y = 148;
@@ -42,10 +42,22 @@ public class SingularityMenu extends AbstractContainerMenu {
     public boolean vacuum;
     public int contentsVersion;
 
+    /** Opened from a crafting frame: a crafting grid beside it (slots 36: the result, 37-45: the grid), fed from what it holds. */
+    public final boolean crafting;
+    public static final int RESULT = 36, GRID = 37, CRAFT_X = 200, CRAFT_Y = 40;
+    private final net.minecraft.world.inventory.CraftingContainer grid;
+    private final net.minecraft.world.inventory.ResultContainer result = new net.minecraft.world.inventory.ResultContainer();
+
     public SingularityMenu(int id, Inventory inventory, BlockPos pos) {
+        this(id, inventory, pos, false);
+    }
+
+    public SingularityMenu(int id, Inventory inventory, BlockPos pos, boolean crafting) {
         super(TYPE.get(), id);
         this.pos = pos;
         this.player = inventory.player;
+        this.crafting = crafting;
+        this.grid = new net.minecraft.world.inventory.TransientCraftingContainer(this, 3, 3);
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 addSlot(new Slot(inventory, col + row * 9 + 9, 8 + col * 18, INVENTORY_Y + row * 18));
@@ -54,6 +66,82 @@ public class SingularityMenu extends AbstractContainerMenu {
         for (int col = 0; col < 9; col++) {
             addSlot(new Slot(inventory, col, 8 + col * 18, INVENTORY_Y + 58));
         }
+        if (crafting) {
+            addSlot(new Result(player, grid, result, 0, CRAFT_X + 76, CRAFT_Y + 18));
+            for (int r = 0; r < 3; r++) {
+                for (int c = 0; c < 3; c++) {
+                    addSlot(new Slot(grid, c + r * 3, CRAFT_X + c * 18, CRAFT_Y + r * 18));
+                }
+            }
+        }
+    }
+
+    /** The crafted thing: taking it uses up one of each in the grid - then the grid is filled again from what it holds. */
+    private class Result extends net.minecraft.world.inventory.ResultSlot {
+        Result(Player player, net.minecraft.world.inventory.CraftingContainer grid, net.minecraft.world.Container result, int index, int x, int y) {
+            super(player, grid, result, index, x, y);
+        }
+
+        @Override
+        public void onTake(Player taker, ItemStack stack) {
+            ItemStack[] before = new ItemStack[9];
+            for (int i = 0; i < 9; i++) {
+                before[i] = grid.getItem(i).copyWithCount(1);
+            }
+            super.onTake(taker, stack);
+            SingularityBlockEntity be = blockEntity();
+            if (be != null && !taker.level().isClientSide) {
+                for (int i = 0; i < 9; i++) {
+                    if (!before[i].isEmpty() && grid.getItem(i).isEmpty()) {
+                        ItemStack got = be.extract(before[i], 1, false);
+                        if (!got.isEmpty()) {
+                            grid.setItem(i, got);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /** (The grid changed: what it makes, worked out on the server.) */
+    @Override
+    public void slotsChanged(net.minecraft.world.Container container) {
+        if (crafting && container == grid && player.level() instanceof net.minecraft.server.level.ServerLevel level) {
+            var input = grid.asCraftInput();
+            ItemStack made = level.getServer().getRecipeManager().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING, input, level)
+                    .map(h -> h.value().assemble(input, level.registryAccess())).orElse(ItemStack.EMPTY);
+            result.setItem(0, made);
+            broadcastChanges();
+        }
+        super.slotsChanged(container);
+    }
+
+    @Override
+    public boolean canTakeItemForPickAll(ItemStack stack, Slot slot) {
+        return slot.container != result && super.canTakeItemForPickAll(stack, slot);
+    }
+
+    /** (Closed: what's left in the grid back into it - or, if it won't take it, to you.) */
+    @Override
+    public void removed(Player who) {
+        super.removed(who);
+        if (crafting && !who.level().isClientSide) {
+            clearGrid(who);
+        }
+    }
+
+    private void clearGrid(Player who) {
+        SingularityBlockEntity be = blockEntity();
+        for (int i = 0; i < 9; i++) {
+            ItemStack s = grid.removeItemNoUpdate(i);
+            if (!s.isEmpty()) {
+                ItemStack left = be == null ? s : be.insert(s, false);
+                if (!left.isEmpty() && !who.getInventory().add(left)) {
+                    who.drop(left, false);
+                }
+            }
+        }
+        slotsChanged(grid);
     }
 
     public SingularityBlockEntity blockEntity() {
@@ -69,6 +157,38 @@ public class SingularityMenu extends AbstractContainerMenu {
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         Slot slot = slots.get(index);
+        if (crafting && index == RESULT) { // (shift-click what it makes: as many as it can, into your inventory)
+            if (!slot.hasItem()) {
+                return ItemStack.EMPTY;
+            }
+            ItemStack stack = slot.getItem(), copy = stack.copy();
+            stack.getItem().onCraftedBy(stack, player.level(), player);
+            if (!moveItemStackTo(stack, 0, 36, true)) {
+                return ItemStack.EMPTY;
+            }
+            slot.onQuickCraft(stack, copy);
+            if (stack.isEmpty()) {
+                slot.setByPlayer(ItemStack.EMPTY);
+            } else {
+                slot.setChanged();
+            }
+            if (stack.getCount() == copy.getCount()) {
+                return ItemStack.EMPTY;
+            }
+            slot.onTake(player, stack);
+            return copy;
+        }
+        if (crafting && index >= GRID) { // (from the grid: into your inventory)
+            if (!slot.hasItem()) {
+                return ItemStack.EMPTY;
+            }
+            ItemStack stack = slot.getItem(), copy = stack.copy();
+            if (!moveItemStackTo(stack, 0, 36, false)) {
+                return ItemStack.EMPTY;
+            }
+            slot.setChanged();
+            return copy;
+        }
         SingularityBlockEntity be = blockEntity();
         if (be == null || !slot.hasItem() || player.level().isClientSide) {
             return ItemStack.EMPTY;
@@ -116,7 +236,7 @@ public class SingularityMenu extends AbstractContainerMenu {
 
     // ---- the actions from the menu (SingularityPayloads.Action, on the server) ----
 
-    public static final int TAKE = 0, PUT = 1, DESTROY = 2, VACUUM = 3, DESTROY_TAG = 4, SKIN = 5;
+    public static final int TAKE = 0, PUT = 1, DESTROY = 2, VACUUM = 3, DESTROY_TAG = 4, SKIN = 5, CLEAR_GRID = 6;
     private static final int PAGE = 256;
     // (client: the pages coming in)
     private final List<ItemStack> incomingItems = new ArrayList<>();
@@ -154,6 +274,11 @@ public class SingularityMenu extends AbstractContainerMenu {
             case VACUUM -> be.toggleVacuum();
             case SKIN -> be.cycleSkin();
             case DESTROY_TAG -> be.toggleDestroyTag(text);
+            case CLEAR_GRID -> {
+                if (crafting) {
+                    clearGrid(player);
+                }
+            }
             default -> {
             }
         }

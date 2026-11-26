@@ -44,6 +44,8 @@ public class PowerCoreBlockEntity extends BlockEntity {
     /** The blocks near it that hold energy, as last found (server: scanned now and then; client: as sent). */
     private List<Link> links = new ArrayList<>();
     private boolean scanSoon = true;
+    /** (Server: energy moved through each link since the last scan - sent as its flow, FE/t.) */
+    private final java.util.Map<BlockPos, Long> moved = new java.util.HashMap<>();
     /** Energy in and out: counted over a second, then shown as FE per tick (its screen). */
     private long inCount, outCount;
     private long rateIn, rateOut;
@@ -63,7 +65,7 @@ public class PowerCoreBlockEntity extends BlockEntity {
     }
 
     /** A block near it that holds energy: where, what it's set to, whether it can give / take energy, how much it holds. */
-    public record Link(BlockPos pos, int mode, boolean canGive, boolean canTake, long stored, long cap) {}
+    public record Link(BlockPos pos, int mode, boolean canGive, boolean canTake, long stored, long cap, long flow) {}
 
     public static final int OFF = 0, TAKE = 1, GIVE = 2, REACH = 5, MAX_LINKS = 48;
 
@@ -120,7 +122,7 @@ public class PowerCoreBlockEntity extends BlockEntity {
         for (int i = 0; i < links.size(); i++) {
             Link l = links.get(i);
             if (l.pos.equals(target)) {
-                links.set(i, new Link(l.pos, mode, l.canGive, l.canTake, l.stored, l.cap));
+                links.set(i, new Link(l.pos, mode, l.canGive, l.canTake, l.stored, l.cap, 0));
             }
         }
         setChanged();
@@ -370,11 +372,13 @@ public class PowerCoreBlockEntity extends BlockEntity {
                     if (legacyPush && e.canReceive() && Math.max(Math.abs(dx), Math.max(Math.abs(dy), Math.abs(dz))) == r + 1) {
                         modes.put(at, GIVE);
                     }
-                    found.add(new Link(at, modes.getOrDefault(at, OFF), e.canExtract(), e.canReceive(), e.getEnergyStored(), e.getMaxEnergyStored()));
+                    found.add(new Link(at, modes.getOrDefault(at, OFF), e.canExtract(), e.canReceive(), e.getEnergyStored(), e.getMaxEnergyStored(),
+                            moved.getOrDefault(at, 0L) / 40));
                 }
             }
         }
         legacyPush = false;
+        moved.clear();
         // (linked ones first, then the nearest)
         found.sort((x, y) -> x.mode != OFF && y.mode == OFF ? -1 : x.mode == OFF && y.mode != OFF ? 1
                 : Double.compare(x.pos.distSqr(worldPosition), y.pos.distSqr(worldPosition)));
@@ -410,6 +414,7 @@ public class PowerCoreBlockEntity extends BlockEntity {
                 int can = e.receiveEnergy(offer, true);
                 int took = can > 0 ? e.receiveEnergy(Math.min(can, offer), false) : 0;
                 if (took > 0) {
+                    moved.merge(l.pos, (long) took, Long::sum);
                     energy -= took;
                     outCount += took;
                     changed(false);
@@ -419,6 +424,7 @@ public class PowerCoreBlockEntity extends BlockEntity {
                 int can = e.extractEnergy(want, true);
                 int got = can > 0 ? e.extractEnergy(Math.min(can, want), false) : 0;
                 if (got > 0) {
+                    moved.merge(l.pos, (long) got, Long::sum);
                     energy += got;
                     inCount += got;
                     changed(false);
@@ -488,7 +494,7 @@ public class PowerCoreBlockEntity extends BlockEntity {
             List<Link> got = new ArrayList<>();
             for (net.minecraft.nbt.Tag t : tag.getList("found", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
                 CompoundTag c = (CompoundTag) t;
-                got.add(new Link(BlockPos.of(c.getLong("p")), c.getByte("m"), c.getBoolean("g"), c.getBoolean("t"), c.getLong("s"), c.getLong("c")));
+                got.add(new Link(BlockPos.of(c.getLong("p")), c.getByte("m"), c.getBoolean("g"), c.getBoolean("t"), c.getLong("s"), c.getLong("c"), c.getLong("f")));
             }
             links = got;
         }
@@ -513,6 +519,7 @@ public class PowerCoreBlockEntity extends BlockEntity {
             c.putBoolean("t", l.canTake);
             c.putLong("s", l.stored);
             c.putLong("c", l.cap);
+            c.putLong("f", l.flow);
             found.add(c);
         }
         tag.put("found", found);

@@ -353,6 +353,7 @@ public final class ModBlocks {
     public static final DeferredBlock<SpecialFrameBlock> PORT_FRAME = specialFrame("port_frame", SpecialFrameBlock.Kind.PORT);
     public static final DeferredBlock<SpecialFrameBlock> DISPLAY_FRAME = specialFrame("display_frame", SpecialFrameBlock.Kind.DISPLAY);
     public static final DeferredBlock<SpecialFrameBlock> MONITOR_FRAME = specialFrame("monitor_frame", SpecialFrameBlock.Kind.MONITOR);
+    public static final DeferredBlock<SpecialFrameBlock> CRAFTING_FRAME = specialFrame("crafting_frame", SpecialFrameBlock.Kind.CRAFTING);
     public static final DeferredBlock<SpecialFrameBlock> REDSTONE_FRAME = specialFrame("redstone_frame", SpecialFrameBlock.Kind.REDSTONE);
 
     private static DeferredBlock<SpecialFrameBlock> specialFrame(String name, SpecialFrameBlock.Kind kind) {

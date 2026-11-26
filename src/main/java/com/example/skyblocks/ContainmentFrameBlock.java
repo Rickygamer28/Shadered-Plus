@@ -71,7 +71,8 @@ public class ContainmentFrameBlock extends BaseEntityBlock {
         BlockPos core = frame.master();
         BlockState coreState = level.getBlockState(core);
         if (coreState.getBlock() instanceof SingularityBlock singularity) {
-            return singularity.open(coreState, level, core, player);
+            boolean crafting = state.getBlock() instanceof SpecialFrameBlock sf && sf.kind() == SpecialFrameBlock.Kind.CRAFTING;
+            return singularity.open(coreState, level, core, player, crafting);
         }
         return InteractionResult.PASS;
     }

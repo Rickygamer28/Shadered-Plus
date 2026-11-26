@@ -35,7 +35,7 @@ import org.jetbrains.annotations.Nullable;
  * how many of it there are; a redstone frame gives off a signal by how full it is.
  */
 public class SpecialFrameBlock extends ContainmentFrameBlock {
-    public enum Kind { PORT, DISPLAY, MONITOR, REDSTONE }
+    public enum Kind { PORT, DISPLAY, MONITOR, REDSTONE, CRAFTING }
 
     /** (A port: putting out of the singularity, not into it.) */
     public static final BooleanProperty OUTPUT = BooleanProperty.create("output");
