@@ -52,8 +52,68 @@ final class YouTube {
     /** A link with the user agent to read it with (YouTube's links only work read as the app that asked for them). */
     static final String UA_TAG = "#shadered-ua=";
 
-    static String tag(String url, String userAgent) {
-        return url + UA_TAG + java.net.URLEncoder.encode(userAgent, java.nio.charset.StandardCharsets.UTF_8);
+    /** ...and the video's id (to ask for a fresh link to the same copy when YouTube stops taking the old one). */
+    static final String ID_TAG = "&shadered-yt=";
+
+    static String tag(String url, String userAgent, String id) {
+        return url + UA_TAG + java.net.URLEncoder.encode(userAgent, java.nio.charset.StandardCharsets.UTF_8) + ID_TAG + id;
+    }
+
+    private static final Pattern ITAG = Pattern.compile("[?&]itag=(\\d+)");
+
+    /**
+     * A fresh link to the same copy (the same app, the same itag) of a video - YouTube refuses an old link part way
+     * through now and then; null if it gave none.
+     */
+    @Nullable
+    static String fresh(String id, String oldUrl, String userAgent) {
+        Matcher m = ITAG.matcher(oldUrl);
+        if (!m.find()) {
+            return null;
+        }
+        String itag = m.group(1);
+        for (Client c : CLIENTS) {
+            if (!c.userAgent.equals(userAgent)) {
+                continue;
+            }
+            try {
+                JsonObject root = player(c, id);
+                JsonObject streaming = root == null ? null : obj(root, "streamingData");
+                if (streaming == null) {
+                    return null;
+                }
+                for (String list : new String[] {"adaptiveFormats", "formats"}) {
+                    JsonArray all = streaming.has(list) ? streaming.getAsJsonArray(list) : null;
+                    if (all == null) continue;
+                    for (JsonElement el : all) {
+                        JsonObject f = el.getAsJsonObject();
+                        if (f.has("itag") && itag.equals(f.get("itag").getAsString()) && str(f, "url") != null) {
+                            return str(f, "url");
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    /** YouTube's player answer for a video, asked as this app; null if it didn't answer. */
+    @Nullable
+    private static JsonObject player(Client c, String id) throws Exception {
+        String body = "{\"context\":{\"client\":{\"clientName\":\"" + c.name + "\",\"clientVersion\":\"" + c.version + "\"," + c.extra
+                + ",\"hl\":\"en\",\"gl\":\"US\"}},\"videoId\":\"" + id + "\",\"contentCheckOk\":true,\"racyCheckOk\":true}";
+        HttpRequest req = HttpRequest.newBuilder(URI.create("https://www.youtube.com/youtubei/v1/player?prettyPrint=false"))
+                .timeout(Duration.ofSeconds(15))
+                .header("Content-Type", "application/json")
+                .header("User-Agent", c.userAgent)
+                .header("X-YouTube-Client-Name", Integer.toString(c.id))
+                .header("X-YouTube-Client-Version", c.version)
+                .header("Origin", "https://www.youtube.com")
+                .POST(HttpRequest.BodyPublishers.ofString(body)).build();
+        HttpResponse<String> res = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+        return res.statusCode() == 200 ? JsonParser.parseString(res.body()).getAsJsonObject() : null;
     }
 
     static Streams resolve(String id) throws Exception {
@@ -135,8 +195,8 @@ final class YouTube {
                 audio.add(hls);
             }
             // (only the copies YouTube really lets this computer read: each tried with a small download first)
-            video = working(video, c.userAgent);
-            audio = working(audio, c.userAgent);
+            video = working(video, c.userAgent, id);
+            audio = working(audio, c.userAgent, id);
             if (video.isEmpty() || audio.isEmpty()) {
                 why = "YouTube refused every copy of it";
                 continue;
@@ -206,7 +266,7 @@ final class YouTube {
      * From the first copy that gives a small download whole (up to a few tried), the rest after it - each with the
      * user agent to read it with; empty if none did.
      */
-    private static java.util.List<String> working(java.util.List<String> urls, String userAgent) {
+    private static java.util.List<String> working(java.util.List<String> urls, String userAgent, String id) {
         for (int i = 0; i < urls.size() && i < 4; i++) {
             try {
                 HttpRequest req = HttpRequest.newBuilder(URI.create(urls.get(i))).timeout(Duration.ofSeconds(10))
@@ -215,7 +275,7 @@ final class YouTube {
                 if ((res.statusCode() == 200 || res.statusCode() == 206) && res.body().length > 1000) {
                     java.util.List<String> out = new java.util.ArrayList<>();
                     for (String u : urls.subList(i, urls.size())) {
-                        out.add(u.contains("googlevideo.com") ? tag(u, userAgent) : u);
+                        out.add(u.contains("googlevideo.com") ? tag(u, userAgent, id) : u);
                     }
                     return out;
                 }

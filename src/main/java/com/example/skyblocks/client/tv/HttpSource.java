@@ -21,13 +21,18 @@ final class HttpSource {
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10))
             .followRedirects(HttpClient.Redirect.NORMAL).build();
 
-    private final String url, userAgent;
+    private String url;
+    private final String userAgent;
+    /** The YouTube video it's of (a fresh link asked for when YouTube stops taking this one), or null. */
+    private final String videoId;
+    private int refreshes;
     private long length = -1, pos, inPos = -1, inEnd;
     private InputStream in;
 
-    HttpSource(String url, String userAgent) {
+    HttpSource(String url, String userAgent, String videoId) {
         this.url = url;
         this.userAgent = userAgent;
+        this.videoId = videoId;
         Matcher m = CLEN.matcher(url);
         if (m.find()) {
             length = Long.parseLong(m.group(1));
@@ -105,8 +110,22 @@ final class HttpSource {
             Thread.currentThread().interrupt();
             throw new IOException("interrupted");
         }
+        if ((res.statusCode() == 403 || res.statusCode() == 410) && videoId != null && refreshes < 20) {
+            // (YouTube stopped taking this link part way: a fresh one to the same copy, going on from here)
+            res.body().close();
+            refreshes++;
+            String fresh = YouTube.fresh(videoId, url, userAgent);
+            com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+ television: YouTube refused part way ({}), {}", res.statusCode(),
+                    fresh == null ? "no fresh link" : "going on with a fresh link");
+            if (fresh != null) {
+                url = fresh;
+                open();
+                return;
+            }
+        }
         if (res.statusCode() != 200 && res.statusCode() != 206) {
             res.body().close();
+            com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+ television: YouTube answered {} at byte {}", res.statusCode(), pos);
             throw new IOException("YouTube answered " + res.statusCode());
         }
         in = res.body();
