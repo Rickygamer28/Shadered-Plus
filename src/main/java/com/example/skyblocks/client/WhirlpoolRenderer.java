@@ -68,6 +68,12 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
 
     @Override
     public void render(WhirlpoolBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
+        if (be.tank() > 0) {
+            if (be.entries().isEmpty()) {
+                be.shownFull = be.shownFull < 0 ? 0 : be.shownFull * 0.95F;
+            }
+            gauges(be, poseStack.last(), buffers, light);
+        }
         if (be.entries().isEmpty()) {
             return;
         }
@@ -77,6 +83,7 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
         }
         float full = be.fullness();
         be.shownFull = be.shownFull < 0 ? full : be.shownFull + (full - be.shownFull) * 0.05F;
+
         float seconds = (System.currentTimeMillis() % 3_600_000L) / 1000.0F;
         if (be.skin() != 0 && !be.still() && StorageSkins.ready()) {
             // (one of its other skins: the water planet, the bubbles, the fluid helix - StorageSkins; alone, inside its
@@ -551,6 +558,57 @@ public class WhirlpoolRenderer implements BlockEntityRenderer<WhirlpoolBlockEnti
             column(v, pose, l, lo, b, lo, a, lo, surface - 0.035F, detail, lit);
             column(v, pose, l, hi, a, hi, b, lo, surface - 0.035F, detail, lit);
         }
+    }
+
+    /**
+     * The brass gauges on its tank's bottom corners: a needle on each dial, from empty (lower left) round over the top to
+     * full (lower right), sliding as it fills and drains and flicking when something goes in or out.
+     */
+    private static void gauges(WhirlpoolBlockEntity be, PoseStack.Pose pose, MultiBufferSource buffers, int light) {
+        int r = (be.tank() - 1) / 2;
+        float since = (System.currentTimeMillis() - be.rippleAt) / 1000.0F;
+        float f = Math.max(0.0F, Math.min(1.0F, be.shownFull)) + 0.035F * (float) Math.sin(since * 18.0F) * (float) Math.exp(-since * 3.0F);
+        double angle = Math.toRadians(225.0 - 270.0 * Math.max(-0.02F, Math.min(1.02F, f)));
+        float cos = (float) Math.cos(angle), sin = (float) Math.sin(angle);
+        TextureAtlasSprite white = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(WHITE);
+        VertexConsumer v = buffers.getBuffer(Types.POOL);
+        float out = 0.5F / 16.0F + 0.004F, cy = -r + 9.0F / 16.0F, len = 4.6F / 16.0F, half = 0.45F / 16.0F;
+        for (int sx = -1; sx <= 1; sx += 2) {
+            for (int sz = -1; sz <= 1; sz += 2) {
+                float minX = sx * r, minZ = sz * r;
+                // its two outer faces: across x (normal along x) and across z (normal along z)
+                for (int face = 0; face < 2; face++) {
+                    float nx = face == 0 ? sx : 0, nz = face == 0 ? 0 : sz;
+                    float px = face == 0 ? (sx < 0 ? minX - out : minX + 1 + out) : minX + 0.5F;
+                    float pz = face == 0 ? minZ + 0.5F : (sz < 0 ? minZ - out : minZ + 1 + out);
+                    // (seen from outside: its right is forward x up, forward being into the face)
+                    float rx = nz, rz = -nx;
+                    float tx = px + rx * cos * len, ty = cy + sin * len, tz = pz + rz * cos * len;
+                    float wx = -rx * sin * half, wy = cos * half, wz = -rz * sin * half; // (across the needle)
+                    int red = 0xFFC8281E, hub = 0xFF3A2A12;
+                    needleQuad(v, pose, white, px + wx, cy + wy, pz + wz, tx, ty, tz, px - wx, cy - wy, pz - wz, red, light);
+                    float hb = 0.9F / 16.0F;
+                    needleQuad(v, pose, white, px + rx * hb, cy + hb, pz + rz * hb, px - rx * hb, cy + hb, pz - rz * hb, px - rx * hb, cy - hb, pz - rz * hb,
+                            hub, light);
+                    needleQuad(v, pose, white, px + rx * hb, cy + hb, pz + rz * hb, px - rx * hb, cy - hb, pz - rz * hb, px + rx * hb, cy - hb, pz + rz * hb,
+                            hub, light);
+                }
+            }
+        }
+    }
+
+    /** A triangle (as a quad with its last corner twice), seen from both sides. */
+    private static void needleQuad(VertexConsumer v, PoseStack.Pose pose, TextureAtlasSprite s, float x0, float y0, float z0, float x1, float y1, float z1,
+                                   float x2, float y2, float z2, int argb, int light) {
+        float u = 0.5F;
+        vertex(v, pose, x0, y0, z0, s, u, u, argb, light);
+        vertex(v, pose, x1, y1, z1, s, u, u, argb, light);
+        vertex(v, pose, x2, y2, z2, s, u, u, argb, light);
+        vertex(v, pose, x2, y2, z2, s, u, u, argb, light);
+        vertex(v, pose, x2, y2, z2, s, u, u, argb, light);
+        vertex(v, pose, x2, y2, z2, s, u, u, argb, light);
+        vertex(v, pose, x1, y1, z1, s, u, u, argb, light);
+        vertex(v, pose, x0, y0, z0, s, u, u, argb, light);
     }
 
     /** A fluid's four sides from y0 to y1, its picture a block at a time. */
