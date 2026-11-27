@@ -65,6 +65,24 @@ final class YouTube {
      * A fresh link to the same copy (the same app, the same itag) of a video - YouTube refuses an old link part way
      * through now and then; null if it gave none.
      */
+    /** A fresh link to the same copy, from the same app if it'll give one, else from any of them: its link and user agent. */
+    @Nullable
+    static String[] freshAny(String id, String oldUrl, String userAgent) {
+        String same = fresh(id, oldUrl, userAgent);
+        if (same != null) {
+            return new String[] {same, userAgent};
+        }
+        for (Client c : CLIENTS) {
+            if (!c.userAgent.equals(userAgent)) {
+                String u = fresh(id, oldUrl, c.userAgent);
+                if (u != null) {
+                    return new String[] {u, c.userAgent};
+                }
+            }
+        }
+        return null;
+    }
+
     @Nullable
     static String fresh(String id, String oldUrl, String userAgent) {
         Matcher m = ITAG.matcher(oldUrl);

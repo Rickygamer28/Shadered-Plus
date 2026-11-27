@@ -22,7 +22,7 @@ final class HttpSource {
             .followRedirects(HttpClient.Redirect.NORMAL).build();
 
     private String url;
-    private final String userAgent;
+    private String userAgent;
     /** The YouTube video it's of (a fresh link asked for when YouTube stops taking this one), or null. */
     private final String videoId;
     private int refreshes;
@@ -85,6 +85,16 @@ final class HttpSource {
         readPos = 0;
         t.start();
         return true;
+    }
+
+    /** How much of it has come (0-1; 1 not fetched ahead), and why it stopped coming (null: it didn't). */
+    float fetched() {
+        return !ahead || length <= 0 ? 1.0F : have / (float) length;
+    }
+
+    @org.jetbrains.annotations.Nullable
+    String fetchProblem() {
+        return failure == null ? null : failure.getMessage();
     }
 
     private boolean ahead;
@@ -194,11 +204,12 @@ final class HttpSource {
             // (YouTube stopped taking this link part way: a fresh one to the same copy, going on from here)
             res.body().close();
             refreshes++;
-            String fresh = YouTube.fresh(videoId, url, userAgent);
+            String[] fresh = YouTube.freshAny(videoId, url, userAgent);
             com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+ television: YouTube refused part way ({}), {}", res.statusCode(),
                     fresh == null ? "no fresh link" : "going on with a fresh link");
             if (fresh != null) {
-                url = fresh;
+                url = fresh[0];
+                userAgent = fresh[1];
                 open();
                 return;
             }

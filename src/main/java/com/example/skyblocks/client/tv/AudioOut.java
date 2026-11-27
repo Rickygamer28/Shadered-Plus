@@ -21,18 +21,31 @@ final class AudioOut {
     private ShortBuffer scratch;
     private boolean paused, started;
 
-    /** No sound here (no device: the game's sound never started). */
+    /**
+     * No sound here for now (no device, or the game's sound restarting): tried again after a moment - never for good
+     * (a hiccup of the game's sound used to leave it silent till the game restarted).
+     */
     private static boolean none;
+    private static long noneSince;
 
     private boolean ready() {
         if (none) {
-            return false;
+            if (System.currentTimeMillis() - noneSince < 3000) {
+                return false;
+            }
+            none = false;
+            source = -1; // (made anew)
+            queued.clear();
+            free.clear();
         }
         try {
             return readyNow();
         } catch (Throwable e) {
+            if (noneSince == 0) {
+                com.example.skyblocks.SkyBlocksMod.LOGGER.warn("Shadered+ television: no sound for now ({})", e.toString());
+            }
             none = true;
-            com.example.skyblocks.SkyBlocksMod.LOGGER.warn("Shadered+ television: no sound ({})", e.toString());
+            noneSince = System.currentTimeMillis();
             return false;
         }
     }

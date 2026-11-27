@@ -370,7 +370,7 @@ final class Decoder {
     /** Options' key: read http links by Java with this user agent (YouTube's). */
     static final String JAVA_HTTP = "shadered_java_http";
     private static final int IO_BUF = 64 * 1024;
-    private HttpSource source;
+    private volatile HttpSource source;
     private org.bytedeco.ffmpeg.avformat.AVIOContext io;
     private org.bytedeco.ffmpeg.avformat.Read_packet_Pointer_BytePointer_int readCb;
     private org.bytedeco.ffmpeg.avformat.Seek_Pointer_long_int seekCb;
@@ -429,6 +429,18 @@ final class Decoder {
             };
         }
         return seekCb;
+    }
+
+    /** Its source's fetching (sound fetched ahead): how much has come, 1 if it isn't fetched ahead. */
+    float fetched() {
+        HttpSource src = source;
+        return src == null ? 1.0F : src.fetched();
+    }
+
+    @org.jetbrains.annotations.Nullable
+    String fetchProblem() {
+        HttpSource src = source;
+        return src == null ? null : src.fetchProblem();
     }
 
     private void freeIo() {

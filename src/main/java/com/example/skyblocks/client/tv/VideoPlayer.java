@@ -82,6 +82,20 @@ public final class VideoPlayer {
         return error;
     }
 
+    /** How its sound is coming (fetched ahead): "" once all there, or nothing to say. */
+    public String soundStatus() {
+        Decoder s = sound;
+        if (s == null || !s.open) {
+            return "";
+        }
+        String problem = s.fetchProblem();
+        float f = s.fetched();
+        if (problem != null) {
+            return "Sound stopped downloading at " + Math.round(f * 100) + "% (" + problem + ")";
+        }
+        return f < 1.0F ? "Sound downloading: " + Math.round(f * 100) + "%" : "";
+    }
+
     /** Why there's no sound, if its sound couldn't play (the picture still can). */
     public String soundProblem() {
         Decoder s = sound;
