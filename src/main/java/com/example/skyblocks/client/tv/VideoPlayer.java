@@ -487,8 +487,11 @@ public final class VideoPlayer {
     /** The song shown instead of a video (YouTube Music), or null. */
     @org.jetbrains.annotations.Nullable
     public Music music() {
-        return music;
+        return testMusic != null ? testMusic : music;
     }
+
+    /** (The render test: every screen shows this song.) */
+    public static volatile Music testMusic;
 
     /** Its cover as a texture (made on first asking, on the render thread), or null. */
     @org.jetbrains.annotations.Nullable

@@ -47,6 +47,18 @@ public final class Music {
         this.artist = artist;
     }
 
+    /** A made-up song with timed words (the render test). */
+    public static Music sample() {
+        Music m = new Music("A Song Round the Corner", "Shadered+");
+        m.colour = 0xFF5A3A78;
+        List<Line> l = new ArrayList<>();
+        String[] words = {"The first line of the song", "Bending round the corner now", "Every word along the glass", "Still in step as it goes on", "And the last line fades away"};
+        for (int i = 0; i < words.length; i++) l.add(new Line(i * 1500L, words[i]));
+        m.lyrics = l;
+        m.timed = true;
+        return m;
+    }
+
     /** The song's details, then (still on the link's thread) its cover and lyrics. */
     static Music load(String rawTitle, String rawArtist, String thumbnail, String id, long seconds) {
         String artist = rawArtist.replaceAll("(?i)\\s*-\\s*topic$", "").replaceAll("(?i)vevo$", "").trim();

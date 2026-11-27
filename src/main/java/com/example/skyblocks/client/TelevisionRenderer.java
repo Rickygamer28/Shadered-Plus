@@ -49,43 +49,23 @@ public class TelevisionRenderer implements BlockEntityRenderer<TelevisionBlockEn
             poseStack.popPose();
             return;
         }
-        // round corners: its glass, and its picture spread along it, a column at a time
+        // round corners: its glass a column at a time, and everything on it - picture, song, words - drawn as if the
+        // wall were flat and bent round its corners with it
         int n = wall.width(), h = wall.height();
-        boolean picture = player != null && player.hasPicture() && player.music() == null && player.state() != VideoPlayer.State.ERROR;
-        float ar = picture ? player.pictureWidth() / (float) Math.max(1, player.pictureHeight()) : 1;
-        float aw = n - 2 * EDGE, ah = h - 2 * EDGE;
-        float pw = Math.min(aw, ah * ar), ph = pw / ar, s0 = (n - pw) / 2, y0 = h / 2.0F - ph / 2, y1 = h / 2.0F + ph / 2;
+        Matrix4f[] frames = new Matrix4f[n];
         for (int i = 0; i < n; i++) {
             column(poseStack, pos, wall.columns().get(i));
             Matrix4f m = poseStack.last().pose();
+            frames[i] = new Matrix4f(m);
             float l = i == 0 ? 1 - EDGE : 1, r = i == n - 1 ? EDGE : 0;
             rect(buffers.getBuffer(RenderType.textBackground()), m, l, EDGE, r, h - EDGE, FRONT - 0.002F, on ? 0xFF050608 : 0xFF0C0D11,
                     on ? LightTexture.FULL_BRIGHT : light);
-            float a0 = Math.max(i, s0), a1 = Math.min(i + 1, s0 + pw);
-            if (picture && a0 < a1) {
-                VertexConsumer v = buffers.getBuffer(RenderType.text(player.textureId()));
-                float x0 = 1 - (a0 - i), x1 = 1 - (a1 - i), u0 = (a0 - s0) / pw, u1 = (a1 - s0) / pw, z = FRONT - 0.004F;
-                int c = player.state() == VideoPlayer.State.PAUSED || player.state() == VideoPlayer.State.ENDED ? 0xFFB8B8B8 : 0xFFFFFFFF;
-                v.addVertex(m, x0, y0, z).setColor(c).setUv(u0, 1).setLight(LightTexture.FULL_BRIGHT);
-                v.addVertex(m, x1, y0, z).setColor(c).setUv(u1, 1).setLight(LightTexture.FULL_BRIGHT);
-                v.addVertex(m, x1, y1, z).setColor(c).setUv(u1, 0).setLight(LightTexture.FULL_BRIGHT);
-                v.addVertex(m, x0, y1, z).setColor(c).setUv(u0, 0).setLight(LightTexture.FULL_BRIGHT);
-            }
             poseStack.popPose();
         }
-        if (on && !picture) {
-            // (anything else - loading, why it can't, a song - on its longest straight stretch)
-            int bestStart = 0, bestLen = 1;
-            for (int i = 0, start = 0; i < n; i++) {
-                if (i > 0 && wall.columns().get(i).facing() != wall.columns().get(i - 1).facing()) start = i;
-                if (i - start + 1 > bestLen) {
-                    bestLen = i - start + 1;
-                    bestStart = start;
-                }
-            }
-            column(poseStack, pos, wall.columns().get(bestStart));
-            flat(poseStack, buffers, be, player, bestLen, h, light, false);
-            poseStack.popPose();
+        if (on) {
+            CurvedBuffers bent = new CurvedBuffers(buffers, frames);
+            flat(new PoseStack(), bent, be, player, n, h, light, false);
+            bent.finish();
         }
     }
 

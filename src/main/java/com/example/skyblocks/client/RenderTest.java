@@ -1282,6 +1282,11 @@ public final class RenderTest {
                                     : tvp.state() + " '" + tvp.title() + "' " + tvp.position() + "/" + tvp.duration() + " ms, picture " + tvp.pictureWidth() + "x"
                                     + tvp.pictureHeight() + (tvp.error().isEmpty() ? "" : ", error: " + tvp.error()));
                         }
+                        if (spot == 373 && com.example.skyblocks.client.tv.VideoPlayer.testMusic == null) {
+                            com.example.skyblocks.client.tv.VideoPlayer.testMusic = com.example.skyblocks.client.tv.Music.sample();
+                        } else if (spot != 373) {
+                            com.example.skyblocks.client.tv.VideoPlayer.testMusic = null;
+                        }
                         com.example.skyblocks.client.BeatRenderers.testBeat = spot == 375 ? (float) (0.5 + 0.5 * Math.sin(ticks * 0.6)) : -1;
                         if (spot == 372 && ticks == 2 && mc.getSingleplayerServer() != null) {
                             var server = mc.getSingleplayerServer();
