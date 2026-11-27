@@ -117,6 +117,9 @@ final class YouTube {
         return null;
     }
 
+    /** A link to an HLS list to be read by Java (HlsSource). */
+    static final String HLS = "shadered-hls:";
+    private static final Pattern BANDWIDTH = Pattern.compile("BANDWIDTH=(\\d+)");
     private static final Pattern RES = Pattern.compile("RESOLUTION=(\\d+)x(\\d+)");
     private static final Pattern URI_ATTR = Pattern.compile("URI=\"([^\"]+)\"");
 
@@ -133,8 +136,9 @@ final class YouTube {
                 return null;
             }
             String[] lines = res.body().split("\n");
-            String audio = null, video = null;
-            long best = -1;
+            URI base = URI.create(master);
+            String audio = null, video = null, lowest = null;
+            long best = -1, lowestBw = Long.MAX_VALUE;
             for (int i = 0; i < lines.length; i++) {
                 String l = lines[i].trim();
                 if (l.startsWith("#EXT-X-MEDIA:") && l.contains("TYPE=AUDIO")) {
@@ -150,16 +154,27 @@ final class YouTube {
                     }
                     long score = h * 10L + (l.contains("avc1") ? 5 : 0);
                     String uri = lines[i + 1].trim();
+                    Matcher bw = BANDWIDTH.matcher(l);
+                    long b = bw.find() ? Long.parseLong(bw.group(1)) : Long.MAX_VALUE - 1;
+                    if (b < lowestBw && !uri.startsWith("#") && !l.contains("AUDIO=")) {
+                        lowestBw = b; // (the smallest with its sound in it: the sound's, without a sound list of its own)
+                        lowest = uri;
+                    }
                     if (score > best && !uri.startsWith("#")) {
                         best = score;
                         video = uri;
                     }
                 }
             }
+            if (audio == null) {
+                audio = lowest != null ? lowest : video;
+            }
             if (video == null && audio == null) {
                 return null;
             }
-            return new String[] {video != null ? video : audio, audio != null ? audio : video};
+            String ua = UA_TAG + java.net.URLEncoder.encode(userAgent, java.nio.charset.StandardCharsets.UTF_8);
+            String v = video != null ? video : audio, a = audio;
+            return new String[] {HLS + base.resolve(v) + ua, HLS + base.resolve(a) + ua};
         } catch (Exception e) {
             return null;
         }

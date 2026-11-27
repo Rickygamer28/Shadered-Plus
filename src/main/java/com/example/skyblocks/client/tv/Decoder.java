@@ -136,6 +136,10 @@ final class Decoder {
                     }
                 }
                 String url = urls.get(u);
+                boolean hlsLink = url.startsWith(YouTube.HLS);
+                if (hlsLink) {
+                    url = url.substring(YouTube.HLS.length());
+                }
                 String agent = javaAgent, ytId = null;
                 int tagAt = url.indexOf(YouTube.UA_TAG);
                 if (tagAt >= 0) {
@@ -148,7 +152,23 @@ final class Decoder {
                     agent = java.net.URLDecoder.decode(rest, java.nio.charset.StandardCharsets.UTF_8);
                     url = url.substring(0, tagAt);
                 }
-                if (agent != null && url.contains("googlevideo.com/videoplayback")) {
+                if (hlsLink) {
+                    // (its pieces fetched by Java, given to FFmpeg as one stream)
+                    closeSource();
+                    try {
+                        hls = new HlsSource(url, agent != null ? agent : "Mozilla/5.0");
+                    } catch (Exception e) {
+                        SkyBlocksMod.LOGGER.info("Shadered+ television: its HLS list wouldn't come ({}), trying another copy", e.getMessage());
+                        avformat_free_context(fmt);
+                        fmt = null;
+                        continue;
+                    }
+                    BytePointer ioBuf = new BytePointer(av_malloc(IO_BUF));
+                    io = avio_alloc_context(ioBuf, IO_BUF, 0, null, reader(), null, seeker());
+                    fmt.pb(io);
+                    fmt.flags(fmt.flags() | 0x0080); // (AVFMT_FLAG_CUSTOM_IO)
+                    url = "";
+                } else if (agent != null && url.contains("googlevideo.com/videoplayback")) {
                     // (read by Java, given to FFmpeg as it asks)
                     closeSource();
                     source = new HttpSource(url, agent, ytId);
@@ -168,6 +188,7 @@ final class Decoder {
                 }
                 fmt = null; // (freed by FFmpeg when opening fails)
                 freeIo();
+                closeSource();
                 if (u + 1 < urls.size()) {
                     SkyBlocksMod.LOGGER.info("Shadered+ television: its {} wouldn't open ({}), trying another copy", video ? "picture" : "sound", err(r));
                 }
@@ -203,6 +224,14 @@ final class Decoder {
             double tb = st.time_base().num() / (double) st.time_base().den();
             long start = fmt.start_time() != AV_NOPTS_VALUE ? fmt.start_time() : 0L;
             durationUs = fmt.duration() != AV_NOPTS_VALUE && fmt.duration() > 0 ? fmt.duration() : 0L;
+            if (hls != null) {
+                durationUs = hls.durationUs();
+                String kind = fmt.iformat() == null ? "" : fmt.iformat().name().getString();
+                if (!video && !kind.contains("mpegts")) {
+                    countFromUs = 0; // (plain AAC pieces: its times counted)
+                    counted = 0;
+                }
+            }
             int ow = 0, oh = 0;
             if (video) {
                 int w = par.width(), h = par.height();
@@ -230,7 +259,18 @@ final class Decoder {
             while (!closed) {
                 long s = seekTo.getAndSet(-1);
                 if (s >= 0) {
-                    av_seek_frame(fmt, -1, s + start, AVSEEK_FLAG_BACKWARD);
+                    if (hls != null) {
+                        // (back to the piece holding it, its stream started again there)
+                        int piece = hls.pieceAt(s);
+                        avio_seek(io, hls.jumpTo(piece), 0);
+                        avformat_flush(fmt);
+                        if (countFromUs >= 0) {
+                            countFromUs = hls.pieceStartUs(piece);
+                            counted = 0;
+                        }
+                    } else {
+                        av_seek_frame(fmt, -1, s + start, AVSEEK_FLAG_BACKWARD);
+                    }
                     avcodec_flush_buffers(ctx);
                     gen++;
                     pictures.clear();
@@ -261,6 +301,10 @@ final class Decoder {
                 while (!closed && avcodec_receive_frame(ctx, frame) == 0) {
                     long ts = frame.best_effort_timestamp();
                     long us = ts == AV_NOPTS_VALUE ? lastUs : (long) (ts * tb * 1_000_000.0) - start;
+                    if (countFromUs >= 0 && frame.sample_rate() > 0) {
+                        us = countFromUs + counted * 1_000_000L / frame.sample_rate();
+                        counted += frame.nb_samples();
+                    }
                     lastUs = us;
                     if (dropBefore >= 0 && us < dropBefore - (video ? 20_000 : 0)) {
                         av_frame_unref(frame);
@@ -371,6 +415,9 @@ final class Decoder {
     static final String JAVA_HTTP = "shadered_java_http";
     private static final int IO_BUF = 64 * 1024;
     private volatile HttpSource source;
+    private volatile HlsSource hls;
+    /** Its sound's times counted from its samples (HLS sound pieces carry none FFmpeg reads): from this, so many since. */
+    private long countFromUs = -1, counted;
     private org.bytedeco.ffmpeg.avformat.AVIOContext io;
     private org.bytedeco.ffmpeg.avformat.Read_packet_Pointer_BytePointer_int readCb;
     private org.bytedeco.ffmpeg.avformat.Seek_Pointer_long_int seekCb;
@@ -381,14 +428,14 @@ final class Decoder {
             readCb = new org.bytedeco.ffmpeg.avformat.Read_packet_Pointer_BytePointer_int() {
                 @Override
                 public int call(Pointer opaque, BytePointer buf, int size) {
-                    if (closed || source == null) {
+                    if (closed || source == null && hls == null) {
                         return AVERROR_EXIT;
                     }
                     try {
                         if (ioBytes.length < size) {
                             ioBytes = new byte[size];
                         }
-                        int r = source.read(ioBytes, size);
+                        int r = hls != null ? hls.read(ioBytes, size) : source.read(ioBytes, size);
                         if (r <= 0) {
                             return AVERROR_EOF;
                         }
@@ -409,6 +456,12 @@ final class Decoder {
             seekCb = new org.bytedeco.ffmpeg.avformat.Seek_Pointer_long_int() {
                 @Override
                 public long call(Pointer opaque, long offset, int whence) {
+                    if (hls != null) {
+                        if ((whence & AVSEEK_SIZE) != 0 || (whence & 3) == 2) {
+                            return -1;
+                        }
+                        return hls.seek((whence & 3) == 1 ? hls.position() + offset : offset);
+                    }
                     if (source == null) {
                         return -1;
                     }
@@ -433,12 +486,20 @@ final class Decoder {
 
     /** Its source's fetching (sound fetched ahead): how much has come, 1 if it isn't fetched ahead. */
     float fetched() {
+        HlsSource h = hls;
+        if (h != null) {
+            return h.failure() == null ? 1.0F : h.fetched();
+        }
         HttpSource src = source;
         return src == null ? 1.0F : src.fetched();
     }
 
     @org.jetbrains.annotations.Nullable
     String fetchProblem() {
+        HlsSource h = hls;
+        if (h != null) {
+            return h.failure();
+        }
         HttpSource src = source;
         return src == null ? null : src.fetchProblem();
     }
@@ -457,6 +518,10 @@ final class Decoder {
         if (source != null) {
             source.close();
             source = null;
+        }
+        if (hls != null) {
+            hls.close();
+            hls = null;
         }
     }
 
