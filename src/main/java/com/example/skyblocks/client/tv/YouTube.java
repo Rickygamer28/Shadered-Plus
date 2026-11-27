@@ -180,19 +180,66 @@ final class YouTube {
         }
     }
 
-    /** YouTube's player answer for a video, asked as this app; null if it didn't answer. */
-    @Nullable
-    private static JsonObject player(Client c, String id) throws Exception {
+    /** YouTube's player asked about a video as this app, as this visitor (ytm-rs: the visionOS player needs one). */
+    private static HttpRequest playerRequest(Client c, String id, String visitor) {
+        String vd = visitor.isEmpty() ? "" : ",\"visitorData\":\"" + visitor + "\"";
         String body = "{\"context\":{\"client\":{\"clientName\":\"" + c.name + "\",\"clientVersion\":\"" + c.version + "\"," + c.extra
-                + ",\"hl\":\"en\",\"gl\":\"US\"}},\"videoId\":\"" + id + "\",\"contentCheckOk\":true,\"racyCheckOk\":true}";
-        HttpRequest req = HttpRequest.newBuilder(URI.create("https://www.youtube.com/youtubei/v1/player?prettyPrint=false"))
+                + ",\"hl\":\"en\",\"gl\":\"US\"" + vd + "}},\"videoId\":\"" + id + "\",\"contentCheckOk\":true,\"racyCheckOk\":true}";
+        HttpRequest.Builder b = HttpRequest.newBuilder(URI.create("https://www.youtube.com/youtubei/v1/player?prettyPrint=false"))
                 .timeout(Duration.ofSeconds(15))
                 .header("Content-Type", "application/json")
                 .header("User-Agent", c.userAgent)
                 .header("X-YouTube-Client-Name", Integer.toString(c.id))
                 .header("X-YouTube-Client-Version", c.version)
-                .header("Origin", "https://www.youtube.com")
-                .POST(HttpRequest.BodyPublishers.ofString(body)).build();
+                .header("Origin", "https://www.youtube.com");
+        if (!visitor.isEmpty()) {
+            b.header("X-Goog-Visitor-Id", visitor);
+        }
+        return b.POST(HttpRequest.BodyPublishers.ofString(body)).build();
+    }
+
+    private static volatile String visitor = "";
+    private static volatile long visitorAt;
+    private static final Pattern VISITOR = Pattern.compile("\"VISITOR_DATA\":\"([^\"]+)\"");
+
+    /**
+     * An anonymous visitor id, from music.youtube.com's own page (as ytm-rs gets it; kept an hour, or fresh when
+     * asked); "" if none came.
+     */
+    static String visitorData(boolean fresh) {
+        if (!fresh && !visitor.isEmpty() && System.currentTimeMillis() - visitorAt < 3_600_000L) {
+            return visitor;
+        }
+        try {
+            HttpResponse<String> res = HTTP.send(HttpRequest.newBuilder(URI.create("https://music.youtube.com")).timeout(Duration.ofSeconds(15))
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
+                    .header("Cookie", "SOCS=CAISAiAD").GET().build(), HttpResponse.BodyHandlers.ofString());
+            String vd = null;
+            for (String c : res.headers().allValues("set-cookie")) {
+                if (c.startsWith("__Secure-YEC=")) {
+                    String v = c.substring(13).split(";")[0];
+                    if (!v.isEmpty()) vd = v;
+                }
+            }
+            if (vd == null) {
+                Matcher m = VISITOR.matcher(res.body());
+                if (m.find()) vd = m.group(1);
+            }
+            if (vd != null) {
+                visitor = vd.replace("\\u003d", "=").replace("%3D", "=");
+                visitorAt = System.currentTimeMillis();
+            }
+            com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+ television: YouTube visitor id {}", vd == null ? "not found" : "got");
+        } catch (Exception e) {
+            com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+ television: no YouTube visitor id ({})", e.toString());
+        }
+        return visitor;
+    }
+
+    /** YouTube's player answer for a video, asked as this app; null if it didn't answer. */
+    @Nullable
+    private static JsonObject player(Client c, String id) throws Exception {
+        HttpRequest req = playerRequest(c, id, visitorData(false));
         HttpResponse<String> res = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
         return res.statusCode() == 200 ? JsonParser.parseString(res.body()).getAsJsonObject() : null;
     }
@@ -203,17 +250,9 @@ final class YouTube {
         java.util.List<String> allVideo = new java.util.ArrayList<>(), allAudio = new java.util.ArrayList<>();
         String fTitle = null, fAuthor = "", fThumb = "", fAgent = "";
         long fSeconds = 0;
+        String visitor = visitorData(false);
         for (Client c : CLIENTS) {
-            String body = "{\"context\":{\"client\":{\"clientName\":\"" + c.name + "\",\"clientVersion\":\"" + c.version + "\"," + c.extra
-                    + ",\"hl\":\"en\",\"gl\":\"US\"}},\"videoId\":\"" + id + "\",\"contentCheckOk\":true,\"racyCheckOk\":true}";
-            HttpRequest req = HttpRequest.newBuilder(URI.create("https://www.youtube.com/youtubei/v1/player?prettyPrint=false"))
-                    .timeout(Duration.ofSeconds(15))
-                    .header("Content-Type", "application/json")
-                    .header("User-Agent", c.userAgent)
-                    .header("X-YouTube-Client-Name", Integer.toString(c.id))
-                    .header("X-YouTube-Client-Version", c.version)
-                    .header("Origin", "https://www.youtube.com")
-                    .POST(HttpRequest.BodyPublishers.ofString(body)).build();
+            HttpRequest req = playerRequest(c, id, visitor);
             HttpResponse<String> res;
             try {
                 res = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
@@ -278,6 +317,9 @@ final class YouTube {
             // (only the copies YouTube really lets this computer read: each tried with a small download first)
             video = working(video, c.userAgent, id);
             audio = working(audio, c.userAgent, id);
+            if (c.name.equals("VISIONOS")) {
+                com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+ television: visionOS gave {}", hls == null ? "no HLS list" : "an HLS list");
+            }
             if (hls != null && c.name.equals("VISIONOS")) {
                 // (its HLS pieces first: on some networks YouTube cuts this app's whole-file links off after 1 MiB -
                 // about a minute of a song - but not its HLS pieces, as ytm-rs found)
@@ -285,6 +327,8 @@ final class YouTube {
                 if (h != null) {
                     video.add(0, h[0]);
                     audio.add(0, h[1]);
+                } else {
+                    com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+ television: visionOS's HLS list couldn't be read");
                 }
             }
             if (video.isEmpty() || audio.isEmpty()) {
