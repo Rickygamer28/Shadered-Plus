@@ -170,17 +170,32 @@ public final class TvPlayers {
         }
     }
 
+    /** The speakers within 24 blocks of a screen (up to 8): they play its sound too. */
     private static java.util.List<Vec3> speakersNear(Minecraft mc, Vec3 centre) {
         java.util.List<Vec3> speakers = new java.util.ArrayList<>();
-        for (Iterator<BlockPos> sp = com.example.skyblocks.SpeakerBlockEntity.LOADED.iterator(); sp.hasNext(); ) {
-            BlockPos spk = sp.next();
-            if (!(mc.level.getBlockEntity(spk) instanceof com.example.skyblocks.SpeakerBlockEntity)) {
-                sp.remove();
-            } else if (spk.getCenter().distanceToSqr(centre) < 24 * 24 && speakers.size() < 8) {
-                speakers.add(spk.getCenter());
+        synchronized (com.example.skyblocks.SpeakerBlockEntity.CLIENT_SPEAKERS) {
+            for (BlockPos spk : com.example.skyblocks.SpeakerBlockEntity.CLIENT_SPEAKERS) {
+                if (spk.getCenter().distanceToSqr(centre) < 24 * 24 && speakers.size() < 8) {
+                    speakers.add(spk.getCenter());
+                }
             }
         }
         return speakers;
+    }
+
+    /** How hard the beat of the screens playing near the camera hits, fading with distance as their sound does (0-1). */
+    public static float beatHeard() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.gameRenderer == null) return 0;
+        Vec3 cam = mc.gameRenderer.getMainCamera().getPosition();
+        float best = 0;
+        for (VideoPlayer p : PLAYERS.values()) {
+            if (p.state() == VideoPlayer.State.PLAYING) {
+                double d = p.at().distanceTo(cam);
+                best = Math.max(best, p.beat() * (float) Math.max(0, 1 - d / 32.0));
+            }
+        }
+        return best;
     }
 
     /** How hard the beat of the screens playing within this distance hits (the hardest); -1 none playing there. */

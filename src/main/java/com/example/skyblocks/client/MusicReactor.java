@@ -201,6 +201,15 @@ public final class MusicReactor {
             }
             loudest = Math.max(loudest, weight);
         }
+        // televisions, projectors and tablets playing near: their beat in the low bands (everything reacting to a
+        // jukebox reacts to them too)
+        float tv = com.example.skyblocks.client.tv.TvPlayers.beatHeard();
+        if (tv > 0.0F) {
+            for (int b = 0; b < 6; b++) {
+                target[b] = Math.max(target[b], tv * (1.0F - b * 0.14F));
+            }
+            loudest = Math.max(loudest, Math.min(1.0F, 0.4F + tv));
+        }
 
         float decay = (float) Math.exp(-dt * 7.0); // (falls back smoothly, jumps up at once)
         float kickDecay = (float) Math.exp(-dt * 5.0);

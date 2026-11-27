@@ -59,7 +59,7 @@ public class BeatLampBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new SpeakerBlockEntity(pos, state);
+        return new BeatLampBlockEntity(pos, state);
     }
 
     @Override

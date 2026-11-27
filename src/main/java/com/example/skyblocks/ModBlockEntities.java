@@ -56,10 +56,8 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(TelevisionBlockEntity::new, ModBlocks.TELEVISION.get()).build(null));
     public static final Supplier<BlockEntityType<TelevisionBlockEntity>> PROJECTOR = TYPES.register("projector",
             () -> BlockEntityType.Builder.of(TelevisionBlockEntity::new, ModBlocks.PROJECTOR.get()).build(null));
-    public static final Supplier<BlockEntityType<SpeakerBlockEntity>> SPEAKER = TYPES.register("speaker",
-            () -> BlockEntityType.Builder.of(SpeakerBlockEntity::new, ModBlocks.SPEAKER.get()).build(null));
-    public static final Supplier<BlockEntityType<SpeakerBlockEntity>> BEAT_LAMP = TYPES.register("beat_lamp",
-            () -> BlockEntityType.Builder.of(SpeakerBlockEntity::new, ModBlocks.BEAT_LAMP.get()).build(null));
+    public static final Supplier<BlockEntityType<BeatLampBlockEntity>> BEAT_LAMP = TYPES.register("beat_lamp",
+            () -> BlockEntityType.Builder.of(BeatLampBlockEntity::new, ModBlocks.BEAT_LAMP.get()).build(null));
     public static final Supplier<BlockEntityType<NeonSignBlockEntity>> NEON_SIGN = TYPES.register("neon_sign",
             () -> BlockEntityType.Builder.of(NeonSignBlockEntity::new, ModBlocks.NEON_SIGN.get()).build(null));
 
