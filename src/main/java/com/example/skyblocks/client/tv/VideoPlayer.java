@@ -192,7 +192,11 @@ public final class VideoPlayer {
                     title = l.entries().get(i).title();
                 }
                 String id = YouTube.id(src);
-                if (id != null) {
+                if (src.startsWith(YouTube.HLS)) {
+                    // (an HLS list read by Java, as YouTube's are - for trying that way out)
+                    videoUrl = audioUrl = java.util.List.of(src);
+                    title = "HLS";
+                } else if (id != null) {
                     YouTube.Streams s = YouTube.resolve(id);
                     if (!s.title().isEmpty()) {
                         title = s.title();
