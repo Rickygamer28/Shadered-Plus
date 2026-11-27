@@ -117,6 +117,54 @@ final class YouTube {
         return null;
     }
 
+    private static final Pattern RES = Pattern.compile("RESOLUTION=(\\d+)x(\\d+)");
+    private static final Pattern URI_ATTR = Pattern.compile("URI=\"([^\"]+)\"");
+
+    /**
+     * From an HLS master list: its picture's list (the best up to 720p, H.264 first) and its sound's (the AAC one, else
+     * the picture's own, which carries its sound too); null if it can't be read.
+     */
+    @Nullable
+    private static String[] hlsStreams(String master, String userAgent) {
+        try {
+            HttpResponse<String> res = HTTP.send(HttpRequest.newBuilder(URI.create(master)).timeout(Duration.ofSeconds(10))
+                    .header("User-Agent", userAgent).GET().build(), HttpResponse.BodyHandlers.ofString());
+            if (res.statusCode() != 200) {
+                return null;
+            }
+            String[] lines = res.body().split("\n");
+            String audio = null, video = null;
+            long best = -1;
+            for (int i = 0; i < lines.length; i++) {
+                String l = lines[i].trim();
+                if (l.startsWith("#EXT-X-MEDIA:") && l.contains("TYPE=AUDIO")) {
+                    Matcher u = URI_ATTR.matcher(l);
+                    if (u.find() && (audio == null || l.contains("GROUP-ID=\"234\""))) {
+                        audio = u.group(1);
+                    }
+                } else if (l.startsWith("#EXT-X-STREAM-INF:") && i + 1 < lines.length) {
+                    Matcher r = RES.matcher(l);
+                    int h = r.find() ? Integer.parseInt(r.group(2)) : 0;
+                    if (h > 720) {
+                        continue;
+                    }
+                    long score = h * 10L + (l.contains("avc1") ? 5 : 0);
+                    String uri = lines[i + 1].trim();
+                    if (score > best && !uri.startsWith("#")) {
+                        best = score;
+                        video = uri;
+                    }
+                }
+            }
+            if (video == null && audio == null) {
+                return null;
+            }
+            return new String[] {video != null ? video : audio, audio != null ? audio : video};
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     /** YouTube's player answer for a video, asked as this app; null if it didn't answer. */
     @Nullable
     private static JsonObject player(Client c, String id) throws Exception {
@@ -215,6 +263,15 @@ final class YouTube {
             // (only the copies YouTube really lets this computer read: each tried with a small download first)
             video = working(video, c.userAgent, id);
             audio = working(audio, c.userAgent, id);
+            if (hls != null && c.name.equals("VISIONOS")) {
+                // (its HLS pieces first: on some networks YouTube cuts this app's whole-file links off after 1 MiB -
+                // about a minute of a song - but not its HLS pieces, as ytm-rs found)
+                String[] h = hlsStreams(hls, c.userAgent);
+                if (h != null) {
+                    video.add(0, h[0]);
+                    audio.add(0, h[1]);
+                }
+            }
             if (video.isEmpty() || audio.isEmpty()) {
                 why = "YouTube refused every copy of it";
                 continue;
