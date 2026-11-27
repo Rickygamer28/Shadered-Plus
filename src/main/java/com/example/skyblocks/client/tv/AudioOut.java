@@ -22,6 +22,10 @@ final class AudioOut {
     private static final int AL_DISTANCE_MODEL = 0xD000, AL_LINEAR_DISTANCE = 0xD003;
     private int source = -1;
     private int[] extras = new int[0];
+    private int wanted;
+    private long triedAt;
+    /** Each band's running level and loudest lately (what its loud moments are measured against). */
+    private final float[] bandAverage = new float[16], bandPeak = new float[16], bandsNow = new float[16];
     private final ArrayDeque<Integer> free = new ArrayDeque<>();
     /** How many sources still hold each buffer queued (it's free again once none do). */
     private final Map<Integer, Integer> holders = new HashMap<>();
@@ -46,6 +50,7 @@ final class AudioOut {
             none = false;
             source = -1; // (made anew)
             extras = new int[0];
+        wanted = 0;
             queued.clear();
             free.clear();
             holders.clear();
@@ -71,6 +76,7 @@ final class AudioOut {
         free.clear();
         holders.clear();
         extras = new int[0];
+        wanted = 0;
         source = newSource();
         if (source == -1) {
             return false;
@@ -85,8 +91,11 @@ final class AudioOut {
     }
 
     private static int newSource() {
+        AL10.alGetError(); // (an earlier call's error isn't this one's)
         int s = AL10.alGenSources();
         if (AL10.alGetError() != AL10.AL_NO_ERROR || s == 0) {
+            if (s != 0 && AL10.alIsSource(s)) AL10.alDeleteSources(s);
+            AL10.alGetError();
             return -1;
         }
         AL10.alSourcei(s, AL_DISTANCE_MODEL, AL_LINEAR_DISTANCE);
@@ -114,12 +123,17 @@ final class AudioOut {
             return false;
         }
         boolean changed = false;
-        if (at.size() != extras.length) {
+        int want = Math.min(at.size(), 8);
+        // (a different number of them than asked for last time - not than made: if the game had no more sources to
+        // give, it doesn't ask again every frame, flushing and going back each time)
+        if (want != wanted && (want < wanted || System.currentTimeMillis() - triedAt > 5000)) {
+            wanted = want;
+            triedAt = System.currentTimeMillis();
             flush();
             for (int s : extras) {
                 if (AL10.alIsSource(s)) AL10.alDeleteSources(s);
             }
-            int n = Math.min(at.size(), 8);
+            int n = want;
             int[] made = new int[n];
             int k = 0;
             for (int i = 0; i < n; i++) {
@@ -127,9 +141,12 @@ final class AudioOut {
                 if (s != -1) made[k++] = s;
             }
             extras = java.util.Arrays.copyOf(made, k);
+            if (k < n) {
+                com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+ television: only {} of {} speakers could play it (the game's sound has no more room)", k, n);
+            }
             changed = true;
         }
-        for (int i = 0; i < extras.length; i++) {
+        for (int i = 0; i < extras.length && i < at.size(); i++) {
             Vec3 p = at.get(i);
             AL10.alSource3f(extras[i], AL10.AL_POSITION, (float) p.x, (float) p.y, (float) p.z);
             AL10.alSourcef(extras[i], AL10.AL_MAX_DISTANCE, 24.0F);
@@ -184,7 +201,18 @@ final class AudioOut {
                 AL10.alSourceQueueBuffers(src, buf);
             }
             holders.put(buf, sources.length);
-            queued.add(new long[] {buf, s.us(), n, (long) (bass(s.samples(), n) * 1000)});
+            // (its sound's bands - 1024 samples at a time - kept with it, to show when it plays)
+            int frames = Math.min(64, (n + 1023) / 1024);
+            long[] entry = new long[4 + frames * 16];
+            entry[0] = buf;
+            entry[1] = s.us();
+            entry[2] = n;
+            entry[3] = (long) (bass(s.samples(), n) * 1000);
+            for (int f = 0; f < frames; f++) {
+                float[] sp = com.example.skyblocks.client.MusicReactor.spectrum(s.samples(), f * 1024, Math.min(n, f * 1024 + 1024), Decoder.RATE);
+                for (int b = 0; b < 16; b++) entry[4 + f * 16 + b] = (long) (sp[b] * 10000);
+            }
+            queued.add(entry);
         }
         int state = AL10.alGetSourcei(source, AL10.AL_SOURCE_STATE);
         if (pause) {
@@ -209,6 +237,21 @@ final class AudioOut {
             now = front[3] / 1000.0F;
         }
         bassAverage += (now - bassAverage) * 0.02F;
+        // its 16 bands now: each against its own running level, so the loud moments of any song reach 1
+        int frame = front == null || !playing() ? -1 : AL10.alGetSourcei(source, AL11.AL_SAMPLE_OFFSET) / 1024;
+        for (int b = 0; b < 16; b++) {
+            float v = 0;
+            if (frame >= 0 && 4 + frame * 16 + b < front.length) {
+                v = front[4 + frame * 16 + b] / 10000.0F;
+            }
+            if (v > 0) {
+                bandAverage[b] += (v - bandAverage[b]) * 0.01F;
+                bandPeak[b] = Math.max(v, bandPeak[b] - 0.0008F);
+            }
+            float floor = bandAverage[b] * 0.85F;
+            float x = v <= 0 ? 0 : Math.max(0, Math.min(1, (v - floor) / Math.max(0.05F, bandPeak[b] - floor)));
+            bandsNow[b] = x * x;
+        }
         float hit = Math.max(0, Math.min(1, (now / Math.max(0.005F, bassAverage) - 0.9F) * 1.4F));
         beat = Math.max(hit, beat * 0.86F);
         AL10.alGetError();
@@ -232,6 +275,11 @@ final class AudioOut {
             sum += lowPass * lowPass;
         }
         return n == 0 ? 0 : (float) Math.sqrt(sum / n);
+    }
+
+    /** How loud each of its 16 bands (40 Hz .. 12 kHz) is right now, against how loud it's been (0-1). */
+    float[] bands() {
+        return bandsNow;
     }
 
     /** How hard the beat hits right now (0-1; falls away between beats). */
@@ -288,6 +336,7 @@ final class AudioOut {
         }
         source = -1;
         extras = new int[0];
+        wanted = 0;
         free.clear();
         holders.clear();
         queued.clear();

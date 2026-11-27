@@ -31,6 +31,7 @@ public final class VideoPlayer {
     private int item;
     private volatile int listSize, listIndex;
     private boolean askedNext, askedQueue;
+    private long soundGoneAt;
     private int playId;
     /** How far along its playlist's order (0 first). */
     private volatile int listAlong;
@@ -278,12 +279,20 @@ public final class VideoPlayer {
         return state == State.PLAYING ? audio.beat() : 0;
     }
 
+    private static final float[] SILENT = new float[16];
+
+    /** How loud each of 16 bands of its sound is right now (0-1). */
+    public float[] bands() {
+        return state == State.PLAYING ? audio.bands() : SILENT;
+    }
+
     void update(TvState be, Sender send, Vec3 centre, float range, float partialTick) {
         sender = send;
         at = centre;
         Minecraft mc = Minecraft.getInstance();
         long target = be.position(partialTick) * 1000L;
         if (!be.source().equals(source) || be.playId() != playId) {
+            SkyBlocksMod.LOGGER.info("Shadered+ television {}: starting ({})", name, !be.source().equals(source) ? "something else chosen" : "chosen again");
             playId = be.playId();
             start(be, target);
         } else if (be.item() != item || be.shuffle() != shuffled || be.shuffleSeed() != shuffleSeed || be.shuffleFirst() != shuffleFirst) {
@@ -297,6 +306,7 @@ public final class VideoPlayer {
                 listAlong = Playlist.along(l, shuffled, item);
                 askedNext = false;
             } else {
+                SkyBlocksMod.LOGGER.info("Shadered+ television {}: starting playlist video {} (was {})", name, be.item(), item);
                 start(be, target);
             }
         }
@@ -359,6 +369,19 @@ public final class VideoPlayer {
                 seek(target); // (it started at where it'd be without repeating: past its end)
                 settling = true;
             }
+        }
+        // (its sound stopped coming while it should be playing - stuck: it goes on from where it should be)
+        if (!live && hasSound && !pause && clock < 0 && !settling) {
+            if (soundGoneAt == 0) {
+                soundGoneAt = System.currentTimeMillis();
+            } else if (System.currentTimeMillis() - soundGoneAt > 3000) {
+                SkyBlocksMod.LOGGER.info("Shadered+ television {}: its sound stopped coming at {} ms, going on from there", name, target / 1000);
+                soundGoneAt = 0;
+                seek(target);
+                settling = true;
+            }
+        } else {
+            soundGoneAt = 0;
         }
         // (its sound ran out before its end - the link dropped: it goes on from where it should be)
         if (!live && !settling && hasSound && s.ended && s.sounds.isEmpty() && dur > 0 && target < dur - 2_000_000L && !pause
@@ -431,6 +454,8 @@ public final class VideoPlayer {
             return;
         }
         askedNext = true;
+        SkyBlocksMod.LOGGER.info("Shadered+ television {}: asking for its playlist's next ({} of {}, at {} of {} ms, {})", name, listAlong + 1, listSize,
+                lastPosition / 1000, duration(), errorAt != 0 ? "it couldn't play" : "it ended");
         sender.send(com.example.skyblocks.TelevisionPayload.GOTO, "", com.example.skyblocks.TelevisionPayload.fromTo(item, item + 1));
     }
 
@@ -440,6 +465,7 @@ public final class VideoPlayer {
             return;
         }
         askedQueue = true;
+        SkyBlocksMod.LOGGER.info("Shadered+ television {}: asking for its queue's next", name);
         sender.send(com.example.skyblocks.TelevisionPayload.QUEUE_NEXT, source, 0);
     }
 

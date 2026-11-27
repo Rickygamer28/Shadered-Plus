@@ -82,13 +82,21 @@ public class TelevisionBlock extends BaseEntityBlock {
         // (facing you - or, put against the side of another, the way it faces: a wall goes on growing)
         Direction face = context.getClickedFace();
         BlockState against = context.getLevel().getBlockState(context.getClickedPos().relative(face.getOpposite()));
-        if (against.is(this) && (face.getAxis().isVertical() || face.getAxis() != against.getValue(FACING).getAxis())) {
+        Direction mine = context.getHorizontalDirection().getOpposite();
+        boolean sneaking = context.getPlayer() != null && context.getPlayer().isShiftKeyDown();
+        // (put against another: as it faces when you're facing it too, or sneaking, or on its top or bottom - otherwise
+        // facing you, so a wall can turn a corner)
+        if (against.is(this) && (face.getAxis().isVertical() || sneaking || mine == against.getValue(FACING))
+                && (face.getAxis().isVertical() || face.getAxis() != against.getValue(FACING).getAxis())) {
             return defaultBlockState().setValue(FACING, against.getValue(FACING)).setValue(FRAME, against.getValue(FRAME));
         }
         if (against.getBlock() instanceof TvStandBlock) {
             return defaultBlockState().setValue(FACING, against.getValue(TvStandBlock.FACING)); // (on a stand or mount: facing as it does)
         }
-        return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+        if (against.is(this)) {
+            return defaultBlockState().setValue(FACING, mine).setValue(FRAME, against.getValue(FRAME));
+        }
+        return defaultBlockState().setValue(FACING, mine);
     }
 
     private static boolean same(BlockGetter level, BlockPos pos, Direction facing) {

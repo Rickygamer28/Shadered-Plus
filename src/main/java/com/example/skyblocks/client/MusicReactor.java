@@ -203,12 +203,18 @@ public final class MusicReactor {
         }
         // televisions, projectors and tablets playing near: their beat in the low bands (everything reacting to a
         // jukebox reacts to them too)
+        // (all 16 bands of what they play, as loud as it's heard here; their beat on top in the lowest)
+        float[] heard = com.example.skyblocks.client.tv.TvPlayers.bandsHeard();
         float tv = com.example.skyblocks.client.tv.TvPlayers.beatHeard();
-        if (tv > 0.0F) {
-            for (int b = 0; b < 6; b++) {
-                target[b] = Math.max(target[b], tv * (1.0F - b * 0.14F));
-            }
-            loudest = Math.max(loudest, Math.min(1.0F, 0.4F + tv));
+        float any = tv;
+        for (int b = 0; b < BANDS; b++) {
+            float v = heard[b];
+            if (b < 3) v = Math.max(v, tv * (1.0F - b * 0.2F));
+            target[b] = Math.max(target[b], v);
+            any = Math.max(any, heard[b]);
+        }
+        if (any > 0.0F) {
+            loudest = Math.max(loudest, Math.min(1.0F, 0.4F + any));
         }
 
         float decay = (float) Math.exp(-dt * 7.0); // (falls back smoothly, jumps up at once)
@@ -382,6 +388,22 @@ public final class MusicReactor {
             out[b] = (float) Math.log1p(Math.sqrt(energy / Math.max(1, to - from)) * 10.0);
         }
         return out;
+    }
+
+    private static final float[] HANN = new float[FFT];
+    private static final java.util.Map<Integer, int[]> EDGES = new java.util.concurrent.ConcurrentHashMap<>();
+
+    static {
+        for (int i = 0; i < FFT; i++) HANN[i] = 0.5F - 0.5F * (float) Math.cos(2.0 * Math.PI * i / (FFT - 1));
+    }
+
+    /** The 16 bands (as a jukebox song's are worked out) of some sound, samples {@code from} to {@code to}. */
+    public static float[] spectrum(short[] samples, int from, int to, int rate) {
+        float[] mono = new float[FFT];
+        for (int i = from; i < to && i - from < FFT; i++) {
+            mono[i - from] = samples[i] / 32768.0F;
+        }
+        return bands(mono, HANN, new float[FFT], new float[FFT], EDGES.computeIfAbsent(rate, r -> bandEdges(r)));
     }
 
     /** In-place radix-2 FFT. */

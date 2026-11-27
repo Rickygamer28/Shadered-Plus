@@ -29,7 +29,9 @@ public record TabletPayload(int hand, int action, String text, long value) imple
     public static void handle(TabletPayload p, IPayloadContext context) {
         context.enqueueWork(() -> {
             Player player = context.player();
-            ItemStack stack = player.getItemInHand(p.hand() == 1 ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND);
+            // (0 main hand, 1 off hand, 2 on: a slot of its inventory - a tablet put away)
+            ItemStack stack = p.hand() >= 2 ? (p.hand() - 2 < player.getInventory().getContainerSize() ? player.getInventory().getItem(p.hand() - 2) : ItemStack.EMPTY)
+                    : player.getItemInHand(p.hand() == 1 ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND);
             if (!stack.is(ModItems.TABLET.get())) {
                 return;
             }

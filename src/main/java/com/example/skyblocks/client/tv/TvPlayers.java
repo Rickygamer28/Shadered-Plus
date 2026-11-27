@@ -91,8 +91,11 @@ public final class TvPlayers {
             if (!(e instanceof LivingEntity living) || e.distanceToSqr(cam) > FAR_TABLET * FAR_TABLET) {
                 continue;
             }
-            for (InteractionHand hand : InteractionHand.values()) {
-                ItemStack stack = living.getItemInHand(hand);
+            // (in a hand - and your own anywhere in your inventory: it keeps playing put away)
+            int slots = e == mc.player ? 2 + mc.player.getInventory().getContainerSize() : 2;
+            for (int h = 0; h < slots; h++) {
+                ItemStack stack = h < 2 ? living.getItemInHand(h == 1 ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND)
+                        : mc.player.getInventory().getItem(h - 2);
                 TabletState s = stack.is(ModItems.TABLET.get()) ? stack.get(ModComponents.TABLET.get()) : null;
                 if (s == null || s.source().isEmpty() || held.contains(s.id())) {
                     continue;
@@ -108,8 +111,8 @@ public final class TvPlayers {
                 }
                 // (the one holding it asks for its playlist's next; nobody else can)
                 boolean mine = e == mc.player;
-                int h = hand == InteractionHand.OFF_HAND ? 1 : 0;
-                VideoPlayer.Sender send = mine ? (a, t, v) -> PacketDistributor.sendToServer(new TabletPayload(h, a, t, v)) : (a, t, v) -> { };
+                int slot = h;
+                VideoPlayer.Sender send = mine ? (a, t, v) -> PacketDistributor.sendToServer(new TabletPayload(slot, a, t, v)) : (a, t, v) -> { };
                 try {
                     p.update(s.view(mc.level), send, e.getEyePosition(pt).add(0, -0.3, 0), 16.0F, pt);
                 } catch (Throwable ex) {
@@ -123,9 +126,13 @@ public final class TvPlayers {
         for (Iterator<Map.Entry<Object, VideoPlayer>> it = PLAYERS.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<Object, VideoPlayer> e = it.next();
             if (e.getKey() instanceof UUID id) {
-                if (!held.contains(id)) { // (put away, or out of reach)
-                    e.getValue().release();
-                    it.remove();
+                if (!held.contains(id)) { // (thrown away, or out of reach - for a moment: a stack moved isn't gone)
+                    if (gone(id, "its tablet isn't held")) {
+                        e.getValue().release();
+                        it.remove();
+                    }
+                } else {
+                    MISSING.remove(id);
                 }
                 continue;
             }
@@ -150,10 +157,15 @@ public final class TvPlayers {
             }
             if (!(mc.level.getBlockEntity(pos) instanceof TelevisionBlockEntity be) || be.source().isEmpty() || !(st.getBlock() instanceof TelevisionBlock)
                     || pos.getCenter().distanceToSqr(cam) > FAR * FAR || !TelevisionBlock.isAnchor(mc.level, pos, st.getValue(TelevisionBlock.FACING))) {
-                e.getValue().release();
-                it.remove();
+                if (gone(pos, !(mc.level.getBlockEntity(pos) instanceof TelevisionBlockEntity b2) ? "its television is gone"
+                        : b2.source().isEmpty() ? "it was stopped" : pos.getCenter().distanceToSqr(cam) > FAR * FAR ? "too far"
+                        : "no longer its wall's first")) {
+                    e.getValue().release();
+                    it.remove();
+                }
                 continue;
             }
+            MISSING.remove(pos);
             com.example.skyblocks.TvWall wall = com.example.skyblocks.TvWall.of(mc.level, pos);
             Vec3 centre = wall.centre();
             int[] size = {wall.width(), wall.height()};
@@ -168,6 +180,37 @@ public final class TvPlayers {
                 it.remove();
             }
         }
+    }
+
+    private static final Map<Object, Long> MISSING = new HashMap<>();
+
+    /** Whether a player has been without its screen for over a second (then it's let go: true, once). */
+    private static boolean gone(Object key, String why) {
+        long now = System.currentTimeMillis();
+        long since = MISSING.computeIfAbsent(key, k -> now);
+        if (now - since < 1000 && !why.equals("it was stopped")) {
+            return false;
+        }
+        MISSING.remove(key);
+        SkyBlocksMod.LOGGER.info("Shadered+ television: let go of a player ({})", why);
+        return true;
+    }
+
+    private static final float[] HEARD = new float[16];
+
+    /** The 16 bands of what the screens near the camera play, as loud as each is heard here (0-1). */
+    public static float[] bandsHeard() {
+        java.util.Arrays.fill(HEARD, 0);
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.gameRenderer == null) return HEARD;
+        Vec3 cam = mc.gameRenderer.getMainCamera().getPosition();
+        for (VideoPlayer p : PLAYERS.values()) {
+            if (p.state() != VideoPlayer.State.PLAYING) continue;
+            float w = (float) Math.max(0, 1 - p.at().distanceTo(cam) / 32.0);
+            float[] b = p.bands();
+            for (int i = 0; i < 16; i++) HEARD[i] = Math.max(HEARD[i], b[i] * w);
+        }
+        return HEARD;
     }
 
     /** The speakers within 24 blocks of a screen (up to 8): they play its sound too. */
@@ -218,6 +261,7 @@ public final class TvPlayers {
         PLAYERS.values().forEach(VideoPlayer::release);
         PLAYERS.clear();
         FAILED.clear();
+        MISSING.clear();
     }
 
     private TvPlayers() {}
