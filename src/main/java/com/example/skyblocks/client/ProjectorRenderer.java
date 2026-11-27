@@ -52,7 +52,8 @@ public class ProjectorRenderer implements BlockEntityRenderer<TelevisionBlockEnt
         // (on the wall: right as you face it is the projector's right, up is up)
         Direction right = f.getClockWise();
         float rx = right.getStepX() * w / 2, rz = right.getStepZ() * w / 2;
-        float cx = (float) c.x, cy = (float) c.y, cz = (float) c.z;
+        // (thrown a little upwards, as projectors are: its bottom edge where the beam's middle lands)
+        float cx = (float) c.x, cy = (float) c.y + h * 0.5F, cz = (float) c.z;
         float[][] q = {{cx - rx, cy - h / 2, cz - rz}, {cx + rx, cy - h / 2, cz + rz}, {cx + rx, cy + h / 2, cz + rz}, {cx - rx, cy + h / 2, cz - rz}};
         Matrix4f m = pose.last().pose();
         Music music = player.music();
