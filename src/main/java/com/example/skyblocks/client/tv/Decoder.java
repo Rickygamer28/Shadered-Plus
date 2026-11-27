@@ -262,6 +262,7 @@ final class Decoder {
                     if (hls != null) {
                         // (back to the piece holding it, its stream started again there)
                         int piece = hls.pieceAt(s);
+                        SkyBlocksMod.LOGGER.info("Shadered+ television: {} going to {} ms (HLS piece {})", video ? "picture" : "sound", s / 1000, piece);
                         avio_seek(io, hls.jumpTo(piece), 0);
                         avformat_flush(fmt);
                         if (countFromUs >= 0) {
@@ -323,6 +324,10 @@ final class Decoder {
                         b.clear();
                         b.put(out.position(0).limit((long) ow * oh * 4).asByteBuffer());
                         b.flip();
+                        if (hls != null && !firstLogged) {
+                            firstLogged = true;
+                            SkyBlocksMod.LOGGER.info("Shadered+ television: first HLS picture at {} ms", us / 1000);
+                        }
                         while (!closed && gen == g && !pictures.offer(new Picture(us, b, ow, oh, g))) {
                             sleep(3);
                         }
@@ -418,6 +423,7 @@ final class Decoder {
     private volatile HlsSource hls;
     /** Its sound's times counted from its samples (HLS sound pieces carry none FFmpeg reads): from this, so many since. */
     private long countFromUs = -1, counted;
+    private boolean firstLogged;
     private org.bytedeco.ffmpeg.avformat.AVIOContext io;
     private org.bytedeco.ffmpeg.avformat.Read_packet_Pointer_BytePointer_int readCb;
     private org.bytedeco.ffmpeg.avformat.Seek_Pointer_long_int seekCb;

@@ -22,6 +22,7 @@ final class HlsSource {
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10))
             .followRedirects(HttpClient.Redirect.NORMAL).build();
     private static final int AHEAD = 24;
+    private int logged;
 
     private final String userAgent;
     private final List<Piece> pieces = new ArrayList<>();
@@ -102,7 +103,12 @@ final class HlsSource {
                 IOException last = null;
                 for (int attempt = 0; attempt < 6 && !gone; attempt++) {
                     try {
+                        long t0 = System.currentTimeMillis();
                         data[next] = getBytes(pieces.get(next).url());
+                        if (logged++ < 3) {
+                            SkyBlocksMod.LOGGER.info("Shadered+ television: HLS piece {} came ({} KB in {} ms)", next, data[next].length / 1024,
+                                    System.currentTimeMillis() - t0);
+                        }
                         last = null;
                         break;
                     } catch (IOException e) {
@@ -193,6 +199,13 @@ final class HlsSource {
         while (piece < data.length) {
             byte[] d = data[piece];
             if (d == null) {
+                if (at == to) {
+                    // (the start of a piece still coming: read from there once it has)
+                    readPiece = piece;
+                    readOffset = 0;
+                    pos = to;
+                    return to;
+                }
                 return -1;
             }
             if (at + d.length > to) {
