@@ -46,7 +46,7 @@ public class ProjectorRenderer implements BlockEntityRenderer<TelevisionBlockEnt
         if (hit == null || player == null) return;
         Vec3 c = hit.getLocation().subtract(Vec3.atLowerCornerOf(pos)).subtract(f.getStepX() * 0.012, 0, f.getStepZ() * 0.012);
         double dist = Math.max(1.0, hit.getLocation().distanceTo(Vec3.atLowerCornerOf(pos).add(lens)));
-        float w = (float) Math.min(24.0, dist * 0.55);
+        float w = be.projection() > 0 ? be.projection() : (float) Math.min(24.0, dist * 0.55); // (as chosen, or by its distance)
         float ar = player.hasPicture() ? player.pictureWidth() / (float) Math.max(1, player.pictureHeight()) : 16.0F / 9;
         float h = w / ar;
         // (on the wall: right as you face it is the projector's right, up is up)

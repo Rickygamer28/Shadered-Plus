@@ -140,7 +140,8 @@ public class TelevisionScreen extends Screen {
         int x = left(), y = top();
         com.example.skyblocks.TvState tv = tv();
         boolean isTv = target.television() != null;
-        H = isTv ? 256 : 220;
+        boolean projector = isTv && target.television().getBlockState().getBlock() instanceof com.example.skyblocks.ProjectorBlock;
+        H = projector ? 278 : isTv ? 256 : 220;
         y = top();
         link = new EditBox(font, x + 10, y + 34, W - (isTv ? 132 : 78), 18, Component.literal("link"));
         link.setMaxLength(TelevisionBlockEntity.MAX_SOURCE);
@@ -215,6 +216,10 @@ public class TelevisionScreen extends Screen {
                     () -> 0xFFFF8A7A));
         } else {
             addRenderableWidget(MachineUi.button(x + 10, cy, W - 20, 18, Component.literal("Cast to the television you're looking at"), b -> cast(), () -> ACCENT));
+        }
+        if (target.television() != null && target.television().getBlockState().getBlock() instanceof com.example.skyblocks.ProjectorBlock) {
+            // (a projector: how big its picture is, in place of the queue list's room)
+            addRenderableWidget(new SizeSlider(x + 10, cy + 64, W - 20, 14, target.television().projection()));
         }
     }
 
@@ -449,6 +454,28 @@ public class TelevisionScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    /** A projector's picture: Auto (by its distance), or 1 to 32 blocks wide. */
+    private final class SizeSlider extends AbstractSliderButton {
+        SizeSlider(int x, int y, int w, int h, int v) {
+            super(x, y, w, h, Component.empty(), v / 32.0);
+            updateMessage();
+        }
+
+        private int blocks() {
+            return (int) Math.round(value * 32);
+        }
+
+        @Override
+        protected void updateMessage() {
+            setMessage(Component.literal("Picture size: " + (blocks() == 0 ? "Auto (by distance)" : blocks() + " blocks wide")));
+        }
+
+        @Override
+        protected void applyValue() {
+            send(TelevisionPayload.PROJECTION, "", blocks()); // (live, as it's dragged)
+        }
     }
 
     private final class VolumeSlider extends AbstractSliderButton {

@@ -40,6 +40,8 @@ public class TelevisionBlockEntity extends BlockEntity implements TvState {
     private final String[] channels = new String[CHANNELS];
     private int channel = -1;
     private int playId;
+    /** A projector's picture width (blocks; 0: by its distance). */
+    private int projection;
     /** What plays after this, in turn: a link and who added it. */
     public record Queued(String source, String by) {}
     private final java.util.List<Queued> queue = new java.util.ArrayList<>();
@@ -81,6 +83,15 @@ public class TelevisionBlockEntity extends BlockEntity implements TvState {
 
     public java.util.List<Queued> queue() {
         return java.util.Collections.unmodifiableList(queue);
+    }
+
+    public int projection() {
+        return projection;
+    }
+
+    public void setProjection(int blocks) {
+        projection = Math.max(0, Math.min(32, blocks));
+        changed();
     }
 
     @Override
@@ -322,6 +333,7 @@ public class TelevisionBlockEntity extends BlockEntity implements TvState {
         tag.put("channels", ch);
         tag.putInt("channel", channel);
         tag.putInt("play", playId);
+        tag.putInt("projection", projection);
         net.minecraft.nbt.ListTag qu = new net.minecraft.nbt.ListTag();
         for (Queued q : queue) {
             CompoundTag e = new CompoundTag();
@@ -352,6 +364,7 @@ public class TelevisionBlockEntity extends BlockEntity implements TvState {
         for (int i = 0; i < Math.min(CHANNELS, ch.size()); i++) channels[i] = ch.getString(i);
         channel = tag.contains("channel") ? tag.getInt("channel") : -1;
         playId = tag.getInt("play");
+        projection = tag.getInt("projection");
         queue.clear();
         net.minecraft.nbt.ListTag qu = tag.getList("queue", net.minecraft.nbt.Tag.TAG_COMPOUND);
         for (int i = 0; i < qu.size(); i++) queue.add(new Queued(qu.getCompound(i).getString("s"), qu.getCompound(i).getString("by")));
