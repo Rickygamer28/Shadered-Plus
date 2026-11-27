@@ -20,6 +20,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
 
 /**
  * A television wall's screen (drawn once, by its bottom left block): one dark glass across the whole wall, and on it
@@ -49,24 +50,146 @@ public class TelevisionRenderer implements BlockEntityRenderer<TelevisionBlockEn
             poseStack.popPose();
             return;
         }
-        // round corners: its glass a column at a time, and everything on it - picture, song, words - drawn as if the
-        // wall were flat and bent round its corners with it
+        // round corners: its glass a column at a time - and where one column's glass doesn't meet the next's (the
+        // screens are thin, at the backs of their blocks), a bend of glass and case between them, curving from one
+        // to the other - and everything on it drawn as if the wall were flat, bent round with it
         int n = wall.width(), h = wall.height();
-        Matrix4f[] frames = new Matrix4f[n];
+        Matrix4f base = new Matrix4f(poseStack.last().pose());
+        Vector3f[] lefts = new Vector3f[n], rights = new Vector3f[n];
+        Matrix4f[] locals = new Matrix4f[n];
         for (int i = 0; i < n; i++) {
-            column(poseStack, pos, wall.columns().get(i));
-            Matrix4f m = poseStack.last().pose();
-            frames[i] = new Matrix4f(m);
+            PoseStack ps = new PoseStack();
+            column(ps, pos, wall.columns().get(i));
+            locals[i] = new Matrix4f(ps.last().pose());
+            lefts[i] = locals[i].transformPosition(new Vector3f(1, 0, FRONT));
+            rights[i] = locals[i].transformPosition(new Vector3f(0, 0, FRONT));
+        }
+        java.util.List<Matrix4f> frames = new java.util.ArrayList<>();
+        java.util.List<Float> widths = new java.util.ArrayList<>();
+        java.util.List<Matrix4f> bends = new java.util.ArrayList<>();
+        java.util.List<Float> bendWidths = new java.util.ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            Matrix4f m = new Matrix4f(base).mul(locals[i]);
+            frames.add(m);
+            widths.add(1.0F);
             float l = i == 0 ? 1 - EDGE : 1, r = i == n - 1 ? EDGE : 0;
             rect(buffers.getBuffer(RenderType.textBackground()), m, l, EDGE, r, h - EDGE, FRONT - 0.002F, on ? 0xFF050608 : 0xFF0C0D11,
                     on ? LightTexture.FULL_BRIGHT : light);
-            poseStack.popPose();
+            if (i + 1 < n && rights[i].distance(lefts[i + 1]) > 0.01F) {
+                Vector3f d0 = new Vector3f(rights[i]).sub(lefts[i]).normalize(), d1 = new Vector3f(rights[i + 1]).sub(lefts[i + 1]).normalize();
+                for (Matrix4f[] seg : bend(rights[i], d0, lefts[i + 1], d1)) {
+                    Matrix4f bm = new Matrix4f(base).mul(seg[0]);
+                    float w = seg[1].m00();
+                    frames.add(bm);
+                    widths.add(w);
+                    bends.add(bm);
+                    bendWidths.add(w);
+                    rect(buffers.getBuffer(RenderType.textBackground()), bm, 1, EDGE, 0, h - EDGE, FRONT - 0.002F, on ? 0xFF050608 : 0xFF0C0D11,
+                            on ? LightTexture.FULL_BRIGHT : light);
+                }
+            }
+        }
+        if (!bends.isEmpty()) {
+            caseOf(buffers, st, bends, bendWidths, h, light);
         }
         if (on) {
-            CurvedBuffers bent = new CurvedBuffers(buffers, frames);
-            flat(new PoseStack(), bent, be, player, n, h, light, false);
+            float[] ws = new float[widths.size()];
+            float total = 0;
+            for (int i = 0; i < ws.length; i++) total += ws[i] = widths.get(i);
+            CurvedBuffers bent = new CurvedBuffers(buffers, frames.toArray(new Matrix4f[0]), ws);
+            flat(new PoseStack(), bent, be, player, total, h, light, false);
             bent.finish();
         }
+    }
+
+    /**
+     * The bend from one column's glass (ending at a, going along da) to the next's (starting at b, going along db): a
+     * curve through where the two lines meet, in a few flat pieces - each its frame (as a column's: x from 1 at its
+     * start to 0, its glass at FRONT) and, in the second's m00, how wide it is.
+     */
+    private static java.util.List<Matrix4f[]> bend(Vector3f a, Vector3f da, Vector3f b, Vector3f db) {
+        // (where the lines meet: a + t da = b - u db)
+        float cross = da.x * db.z - da.z * db.x;
+        float ex = b.x - a.x, ez = b.z - a.z;
+        Vector3f c;
+        float t = Math.abs(cross) < 1.0e-3F ? -1 : (ex * db.z - ez * db.x) / cross;
+        if (t <= 0 || t > 2) {
+            c = new Vector3f(a).add(b).mul(0.5F); // (no corner to round: straight across)
+        } else {
+            c = new Vector3f(a).fma(t, da);
+        }
+        int segs = 6;
+        java.util.List<Matrix4f[]> out = new java.util.ArrayList<>();
+        Vector3f prev = new Vector3f(a);
+        for (int k = 1; k <= segs; k++) {
+            float s = k / (float) segs, r = 1 - s;
+            Vector3f p = new Vector3f(a).mul(r * r).fma(2 * r * s, c).fma(s * s, b);
+            float dx = p.x - prev.x, dz = p.z - prev.z, len = (float) Math.sqrt(dx * dx + dz * dz);
+            if (len > 1.0e-4F) {
+                float nx = -dz / len, nz = dx / len; // (out of the glass)
+                // local x 1 -> prev, 0 -> p; z FRONT on the glass, less out of it
+                Matrix4f m = new Matrix4f(prev.x - p.x, 0, prev.z - p.z, 0, 0, 1, 0, 0, -nx, 0, -nz, 0,
+                        p.x + nx * FRONT, prev.y, p.z + nz * FRONT, 1);
+                out.add(new Matrix4f[] {m, new Matrix4f().m00(len)});
+            }
+            prev = p;
+        }
+        return out;
+    }
+
+    /** The bends' case: their frame above and below the glass, their back, their top and bottom - in the wall's case. */
+    private static void caseOf(MultiBufferSource buffers, BlockState st, java.util.List<Matrix4f> bends, java.util.List<Float> widths, int h, int light) {
+        int frame = st.hasProperty(TelevisionBlock.FRAME) ? st.getValue(TelevisionBlock.FRAME) : 0;
+        String tex = switch (frame) {
+            case 1 -> "block/television_case_white";
+            case 2 -> "block/television_case_wood";
+            case 3 -> "block/television_case_retro";
+            default -> "block/television_case";
+        };
+        net.minecraft.client.renderer.texture.TextureAtlasSprite sp = net.minecraft.client.Minecraft.getInstance()
+                .getTextureAtlas(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS)
+                .apply(ResourceLocation.fromNamespaceAndPath("skyblocks", tex));
+        VertexConsumer v = buffers.getBuffer(RenderType.entityCutoutNoCull(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+        float back = 1.0F;
+        for (int i = 0; i < bends.size(); i++) {
+            Matrix4f m = bends.get(i);
+            org.joml.Matrix3f nm = new org.joml.Matrix3f(m).invert().transpose();
+            // front: the frame above and below the glass
+            face(v, nm, m, sp, 1, 0, FRONT - 0.001F, FRONT - 0.001F, 0, EDGE, 0, 0, -1, light);
+            face(v, nm, m, sp, 1, 0, FRONT - 0.001F, FRONT - 0.001F, h - EDGE, h, 0, 0, -1, light);
+            // back
+            face(v, nm, m, sp, 0, 1, back, back, 0, h, 0, 0, 1, light);
+            // top and bottom
+            faceFlat(v, nm, m, sp, h, FRONT - 0.001F, back, 0, 1, 0, light);
+            faceFlat(v, nm, m, sp, 0, back, FRONT - 0.001F, 0, -1, 0, light);
+        }
+    }
+
+    /** An upright face, x0 to x1 across, at depth z0 (at x0) to z1 (at x1), y0 up to y1. */
+    private static void face(VertexConsumer v, org.joml.Matrix3f nm, Matrix4f m, net.minecraft.client.renderer.texture.TextureAtlasSprite sp,
+                             float x0, float x1, float z0, float z1, float y0, float y1, float nx, float ny, float nz, int light) {
+        Vector3f n = nm.transform(new Vector3f(nx, ny, nz)).normalize();
+        float u0 = sp.getU0(), u1 = sp.getU1(), va = sp.getV(1 - y0 / Math.max(1, y1)), vb = sp.getV0();
+        vert(v, m, x0, y0, z0, u0, sp.getV1(), n, light);
+        vert(v, m, x1, y0, z1, u1, sp.getV1(), n, light);
+        vert(v, m, x1, y1, z1, u1, vb, n, light);
+        vert(v, m, x0, y1, z0, u0, vb, n, light);
+    }
+
+    /** A level face at height y, from depth za to zb, across the piece. */
+    private static void faceFlat(VertexConsumer v, org.joml.Matrix3f nm, Matrix4f m, net.minecraft.client.renderer.texture.TextureAtlasSprite sp,
+                                 float y, float za, float zb, float nx, float ny, float nz, int light) {
+        Vector3f n = nm.transform(new Vector3f(nx, ny, nz)).normalize();
+        float u0 = sp.getU0(), u1 = sp.getU1(), v0 = sp.getV0(), v1 = sp.getV(2.0F / 16);
+        vert(v, m, 1, y, za, u0, v0, n, light);
+        vert(v, m, 0, y, za, u1, v0, n, light);
+        vert(v, m, 0, y, zb, u1, v1, n, light);
+        vert(v, m, 1, y, zb, u0, v1, n, light);
+    }
+
+    private static void vert(VertexConsumer v, Matrix4f m, float x, float y, float z, float u, float vv, Vector3f n, int light) {
+        v.addVertex(m, x, y, z).setColor(0xFFFFFFFF).setUv(u, vv).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY)
+                .setLight(light).setNormal(n.x, n.y, n.z);
     }
 
     /** Into a column's frame (pushed): x from 1 (its left, as you look at it) to 0, y from its bottom up, its front at FRONT. */
@@ -79,7 +202,7 @@ public class TelevisionRenderer implements BlockEntityRenderer<TelevisionBlockEn
     }
 
     /** A flat stretch w wide and h tall from the frame's column (x from 1 - w to 1): its glass (if asked) and what's on it. */
-    private void flat(PoseStack poseStack, MultiBufferSource buffers, TelevisionBlockEntity be, VideoPlayer player, int w, int h, int light, boolean glassToo) {
+    private void flat(PoseStack poseStack, MultiBufferSource buffers, TelevisionBlockEntity be, VideoPlayer player, float w, int h, int light, boolean glassToo) {
         Matrix4f m = poseStack.last().pose();
         float left = 1 - EDGE, right = 1 - w + EDGE, bottom = EDGE, top = h - EDGE;
         boolean on = !be.source().isEmpty();

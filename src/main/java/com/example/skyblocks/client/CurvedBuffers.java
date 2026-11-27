@@ -19,12 +19,19 @@ import org.joml.Vector4f;
 final class CurvedBuffers implements MultiBufferSource {
     private final MultiBufferSource target;
     private final Matrix4f[] columns;
+    private final float[] starts, widths;
     private final Map<RenderType, Bender> made = new HashMap<>();
 
-    /** @param columns each column's frame (as TelevisionRenderer.column leaves it: x from 1 to 0 across it) */
-    CurvedBuffers(MultiBufferSource target, Matrix4f[] columns) {
+    /**
+     * @param columns each piece's frame (as TelevisionRenderer.column leaves a column's: x from 1 to 0 across it)
+     * @param widths how wide each is along the wall (a column 1; the bends between them what they are)
+     */
+    CurvedBuffers(MultiBufferSource target, Matrix4f[] columns, float[] widths) {
         this.target = target;
         this.columns = columns;
+        this.widths = widths;
+        starts = new float[widths.length];
+        for (int i = 1; i < widths.length; i++) starts[i] = starts[i - 1] + widths[i - 1];
     }
 
     @Override
@@ -155,12 +162,13 @@ final class CurvedBuffers implements MultiBufferSource {
                 lo = Math.min(lo, s);
                 hi = Math.max(hi, s);
             }
-            int first = Math.max(0, Math.min(n - 1, (int) Math.floor(lo))), last = Math.max(0, Math.min(n - 1, (int) Math.ceil(hi) - 1));
             VertexConsumer out = null;
-            for (int i = first; i <= last; i++) {
+            for (int i = 0; i < n; i++) {
+                float s0 = starts[i], s1 = s0 + widths[i];
+                if (i > 0 && hi <= s0 || i < n - 1 && lo >= s1) continue;
                 List<V> piece = q;
-                if (i > 0) piece = clip(piece, i, true);
-                if (i < n - 1) piece = clip(piece, i + 1, false);
+                if (i > 0) piece = clip(piece, s0, true);
+                if (i < n - 1) piece = clip(piece, s1, false);
                 if (piece.size() < 3) continue;
                 if (out == null) out = target.getBuffer(type);
                 // (as quads: a fan, the last corner doubled where there's one short)
@@ -194,7 +202,8 @@ final class CurvedBuffers implements MultiBufferSource {
         private final Vector4f p = new Vector4f();
 
         private void put(VertexConsumer out, V v, int column) {
-            columns[column].transform(p.set(v.x + column, v.y, v.z, 1.0F)); // (into its column: x from 1 to 0 across it)
+            float x = 1 - (1 - v.x - starts[column]) / widths[column]; // (into its piece: x from 1 to 0 across it)
+            columns[column].transform(p.set(x, v.y, v.z, 1.0F));
             out.addVertex(p.x, p.y, p.z);
             if (v.hasColour) out.setColor(v.colour);
             if (v.hasUv) out.setUv(v.u, v.v);
