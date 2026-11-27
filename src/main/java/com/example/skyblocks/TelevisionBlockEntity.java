@@ -52,7 +52,7 @@ public class TelevisionBlockEntity extends BlockEntity implements TvState {
     private int revision;
 
     public TelevisionBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.TELEVISION.get(), pos, state);
+        super(state.getBlock() instanceof ProjectorBlock ? ModBlockEntities.PROJECTOR.get() : ModBlockEntities.TELEVISION.get(), pos, state);
     }
 
     public String source() {

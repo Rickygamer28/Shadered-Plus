@@ -130,6 +130,10 @@ public class NeonSignRenderer implements BlockEntityRenderer<NeonSignBlockEntity
             }
             case NeonSignBlockEntity.PULSE -> (float) (0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * 2.2 + seed)));
             case NeonSignBlockEntity.BLINK -> (float) (0.06 + 0.94 * smooth(-0.15, 0.15, Math.sin(t * 3.0 + seed)));
+            case NeonSignBlockEntity.BEAT -> { // (to the beat of a television or tablet playing near; steady without one)
+                float b = com.example.skyblocks.client.tv.TvPlayers.beatNear(sign.getBlockPos().getCenter(), 24);
+                yield b < 0 ? 1.0F : 0.18F + 0.82F * b;
+            }
             default -> 1.0F;
         };
     }

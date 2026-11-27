@@ -1,0 +1,28 @@
+{
+  "variants": {
+    "colour=0": {
+      "model": "skyblocks:block/beat_lamp"
+    },
+    "colour=1": {
+      "model": "skyblocks:block/beat_lamp"
+    },
+    "colour=2": {
+      "model": "skyblocks:block/beat_lamp"
+    },
+    "colour=3": {
+      "model": "skyblocks:block/beat_lamp"
+    },
+    "colour=4": {
+      "model": "skyblocks:block/beat_lamp"
+    },
+    "colour=5": {
+      "model": "skyblocks:block/beat_lamp"
+    },
+    "colour=6": {
+      "model": "skyblocks:block/beat_lamp"
+    },
+    "colour=7": {
+      "model": "skyblocks:block/beat_lamp"
+    }
+  }
+}

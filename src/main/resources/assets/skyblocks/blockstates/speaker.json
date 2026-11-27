@@ -1,8 +1,7 @@
 {
   "variants": {
     "facing=north": {
-      "model": "skyblocks:block/speaker",
-      "y": 0
+      "model": "skyblocks:block/speaker"
     },
     "facing=east": {
       "model": "skyblocks:block/speaker",

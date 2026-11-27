@@ -1,17 +1,14 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "redstone",
+  "category": "misc",
   "pattern": [
-    "PWP",
     "PNP",
-    "PRP"
+    "PRP",
+    "PNP"
   ],
   "key": {
     "P": {
       "tag": "minecraft:planks"
-    },
-    "W": {
-      "item": "minecraft:black_wool"
     },
     "N": {
       "item": "minecraft:note_block"
@@ -22,6 +19,6 @@
   },
   "result": {
     "id": "skyblocks:speaker",
-    "count": 1
+    "count": 2
   }
 }

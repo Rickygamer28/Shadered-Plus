@@ -260,8 +260,27 @@ public final class VideoPlayer {
 
     // ---- every frame
 
+    /** Where it plays from now (its sound's middle). */
+    private Vec3 at = Vec3.ZERO;
+    private java.util.List<Vec3> speakers = java.util.List.of();
+
+    /** The speakers playing it (where they are). */
+    void speakers(java.util.List<Vec3> positions) {
+        speakers = positions;
+    }
+
+    public Vec3 at() {
+        return at;
+    }
+
+    /** How hard its beat hits right now (0-1). */
+    public float beat() {
+        return state == State.PLAYING ? audio.beat() : 0;
+    }
+
     void update(TvState be, Sender send, Vec3 centre, float range, float partialTick) {
         sender = send;
+        at = centre;
         Minecraft mc = Minecraft.getInstance();
         long target = be.position(partialTick) * 1000L;
         if (!be.source().equals(source) || be.playId() != playId) {
@@ -325,6 +344,9 @@ public final class VideoPlayer {
         // the sound: in the world, its volume the television's times the game's jukebox volume
         float gain = be.volume() / 100.0F * mc.options.getSoundSourceVolume(SoundSource.RECORDS);
         audio.place(centre.x, centre.y, centre.z, range, gain);
+        if (audio.speakers(speakers, gain) && hasSoundNow()) {
+            seek(be.position(partialTick) * 1000L); // (speakers came or went: everything queued again, from where it is)
+        }
         if (hasSound) {
             audio.pump(s, soundGen, pause, live ? -1 : target);
         }
@@ -467,6 +489,11 @@ public final class VideoPlayer {
         }
         coverTexture = null;
         coverId = null;
+    }
+
+    private boolean hasSoundNow() {
+        Decoder s = sound;
+        return s != null && s.open && !live;
     }
 
     private void seek(long us) {

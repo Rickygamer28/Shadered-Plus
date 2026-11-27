@@ -1,222 +1,77 @@
 {
-  "parent": "minecraft:block/block",
+  "parent": "block/block",
   "textures": {
-    "particle": "skyblocks:block/speaker_side",
+    "front": "skyblocks:block/speaker_front",
     "side": "skyblocks:block/speaker_side",
-    "baffle": "skyblocks:block/speaker_baffle",
-    "lip": "skyblocks:block/speaker_lip",
-    "back": "skyblocks:block/speaker_back",
-    "badge": "skyblocks:block/speaker_badge"
+    "top": "skyblocks:block/speaker_top",
+    "particle": "skyblocks:block/speaker_side"
   },
   "elements": [
     {
       "from": [
+        3,
         0,
-        0,
-        1
+        3
       ],
       "to": [
-        16,
-        16,
-        16
-      ],
-      "faces": {
-        "south": {
-          "texture": "#back",
-          "cullface": "south"
-        },
-        "east": {
-          "texture": "#side",
-          "cullface": "east"
-        },
-        "west": {
-          "texture": "#side",
-          "cullface": "west"
-        },
-        "up": {
-          "texture": "#side",
-          "cullface": "up"
-        },
-        "down": {
-          "texture": "#side",
-          "cullface": "down"
-        },
-        "north": {
-          "texture": "#baffle"
-        }
-      }
-    },
-    {
-      "from": [
-        1,
-        1,
-        0.5
-      ],
-      "to": [
-        15,
-        15,
-        1
-      ],
-      "faces": {
-        "north": {
-          "texture": "#baffle"
-        }
-      }
-    },
-    {
-      "from": [
-        0,
-        15,
-        0
-      ],
-      "to": [
-        16,
-        16,
-        1
-      ],
-      "faces": {
-        "north": {
-          "texture": "#lip"
-        },
-        "south": {
-          "texture": "#lip"
-        },
-        "east": {
-          "texture": "#lip"
-        },
-        "west": {
-          "texture": "#lip"
-        },
-        "up": {
-          "texture": "#lip"
-        },
-        "down": {
-          "texture": "#lip"
-        }
-      }
-    },
-    {
-      "from": [
-        0,
-        0,
-        0
-      ],
-      "to": [
-        16,
-        1,
-        1
-      ],
-      "faces": {
-        "north": {
-          "texture": "#lip"
-        },
-        "south": {
-          "texture": "#lip"
-        },
-        "east": {
-          "texture": "#lip"
-        },
-        "west": {
-          "texture": "#lip"
-        },
-        "up": {
-          "texture": "#lip"
-        },
-        "down": {
-          "texture": "#lip"
-        }
-      }
-    },
-    {
-      "from": [
-        0,
-        1,
-        0
-      ],
-      "to": [
-        1,
-        15,
-        1
-      ],
-      "faces": {
-        "north": {
-          "texture": "#lip"
-        },
-        "south": {
-          "texture": "#lip"
-        },
-        "east": {
-          "texture": "#lip"
-        },
-        "west": {
-          "texture": "#lip"
-        },
-        "up": {
-          "texture": "#lip"
-        },
-        "down": {
-          "texture": "#lip"
-        }
-      }
-    },
-    {
-      "from": [
-        15,
-        1,
-        0
-      ],
-      "to": [
-        16,
-        15,
-        1
-      ],
-      "faces": {
-        "north": {
-          "texture": "#lip"
-        },
-        "south": {
-          "texture": "#lip"
-        },
-        "east": {
-          "texture": "#lip"
-        },
-        "west": {
-          "texture": "#lip"
-        },
-        "up": {
-          "texture": "#lip"
-        },
-        "down": {
-          "texture": "#lip"
-        }
-      }
-    },
-    {
-      "from": [
-        11,
         13,
-        0.3
-      ],
-      "to": [
-        14,
-        14,
-        0.5
+        15,
+        13
       ],
       "faces": {
         "north": {
-          "texture": "#badge"
+          "texture": "#front",
+          "uv": [
+            3,
+            1,
+            13,
+            16
+          ]
         },
-        "up": {
-          "texture": "#badge"
-        },
-        "down": {
-          "texture": "#badge"
+        "south": {
+          "texture": "#side",
+          "uv": [
+            3,
+            1,
+            13,
+            16
+          ]
         },
         "east": {
-          "texture": "#badge"
+          "texture": "#side",
+          "uv": [
+            3,
+            1,
+            13,
+            16
+          ]
         },
         "west": {
-          "texture": "#badge"
+          "texture": "#side",
+          "uv": [
+            3,
+            1,
+            13,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#top",
+          "uv": [
+            3,
+            3,
+            13,
+            13
+          ]
+        },
+        "down": {
+          "texture": "#top",
+          "uv": [
+            3,
+            3,
+            13,
+            13
+          ]
         }
       }
     }

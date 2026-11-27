@@ -18,7 +18,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public class NeonSignScreen extends Screen {
     private static final int PANEL_W = 236;
     private static final int PANEL_H = 262;
-    private static final String[] MODES = {"steady", "flicker", "pulse", "rainbow", "scroll", "typing", "blink", "broken", "fade"};
+    private static final String[] MODES = {"steady", "flicker", "pulse", "rainbow", "scroll", "typing", "blink", "broken", "fade", "beat"};
     private static final String[] FONTS = {"classic", "italic", "bold", "thin", "wide", "narrow"};
 
     private final BlockPos pos;

@@ -35,6 +35,9 @@ import org.jetbrains.annotations.Nullable;
 public class TelevisionBlock extends BaseEntityBlock {
     public static final MapCodec<TelevisionBlock> CODEC = simpleCodec(TelevisionBlock::new);
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
+    /** Its frame: black, white, wood or retro (walnut, with a silver line) - a dye or planks on it change its whole wall's. */
+    public static final net.minecraft.world.level.block.state.properties.IntegerProperty FRAME =
+            net.minecraft.world.level.block.state.properties.IntegerProperty.create("frame", 0, 3);
     public static final int MAX_W = 16, MAX_H = 12;
     /** Against the wall behind it (the model faces north: its back at the south side). */
     private static final VoxelShape[] SHAPES = {
@@ -45,7 +48,7 @@ public class TelevisionBlock extends BaseEntityBlock {
 
     public TelevisionBlock(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
+        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(FRAME, 0));
     }
 
     @Override
@@ -55,7 +58,7 @@ public class TelevisionBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
+        builder.add(FACING, FRAME);
     }
 
     @Override
@@ -80,7 +83,10 @@ public class TelevisionBlock extends BaseEntityBlock {
         Direction face = context.getClickedFace();
         BlockState against = context.getLevel().getBlockState(context.getClickedPos().relative(face.getOpposite()));
         if (against.is(this) && (face.getAxis().isVertical() || face.getAxis() != against.getValue(FACING).getAxis())) {
-            return defaultBlockState().setValue(FACING, against.getValue(FACING));
+            return defaultBlockState().setValue(FACING, against.getValue(FACING)).setValue(FRAME, against.getValue(FRAME));
+        }
+        if (against.getBlock() instanceof TvStandBlock) {
+            return defaultBlockState().setValue(FACING, against.getValue(TvStandBlock.FACING)); // (on a stand or mount: facing as it does)
         }
         return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
     }
@@ -103,6 +109,47 @@ public class TelevisionBlock extends BaseEntityBlock {
     /** Whether it's the first of its wall (the one that keeps what it plays, and draws the picture). */
     public static boolean isAnchor(BlockGetter level, BlockPos pos, Direction facing) {
         return TvWall.anchor(level, pos).equals(pos);
+    }
+
+    /** Which frame an item gives (black dye, white dye, any planks, brown dye), or -1. */
+    private static int frameOf(ItemStack stack) {
+        if (stack.is(net.minecraft.world.item.Items.BLACK_DYE)) return 0;
+        if (stack.is(net.minecraft.world.item.Items.WHITE_DYE)) return 1;
+        if (stack.is(net.minecraft.tags.ItemTags.PLANKS)) return 2;
+        if (stack.is(net.minecraft.world.item.Items.BROWN_DYE)) return 3;
+        return -1;
+    }
+
+    @Override
+    protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
+                                                                  net.minecraft.world.InteractionHand hand, BlockHitResult hit) {
+        int frame = frameOf(stack);
+        if (frame < 0) {
+            return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        }
+        if (!level.isClientSide) {
+            // (its whole wall's frame)
+            TvWall wall = TvWall.of(level, anchor(level, pos));
+            boolean changed = false;
+            for (TvWall.Column c : wall.columns()) {
+                for (int y = 0; y < wall.height(); y++) {
+                    BlockPos p = c.bottom().above(y);
+                    BlockState st = level.getBlockState(p);
+                    if (st.getBlock() instanceof TelevisionBlock && st.getValue(FRAME) != frame) {
+                        level.setBlock(p, st.setValue(FRAME, frame), Block.UPDATE_ALL);
+                        changed = true;
+                    }
+                }
+            }
+            if (!wall.contains(pos) && state.getValue(FRAME) != frame) {
+                level.setBlock(pos, state.setValue(FRAME, frame), Block.UPDATE_ALL);
+                changed = true;
+            }
+            if (changed && !player.getAbilities().instabuild && !stack.is(net.minecraft.tags.ItemTags.PLANKS)) {
+                stack.shrink(1);
+            }
+        }
+        return net.minecraft.world.ItemInteractionResult.sidedSuccess(level.isClientSide);
     }
 
     @Override

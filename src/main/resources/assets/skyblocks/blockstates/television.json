@@ -1,18 +1,63 @@
 {
   "variants": {
-    "facing=north": {
+    "facing=north,frame=0": {
       "model": "skyblocks:block/television"
     },
-    "facing=east": {
+    "facing=north,frame=1": {
+      "model": "skyblocks:block/television_white"
+    },
+    "facing=north,frame=2": {
+      "model": "skyblocks:block/television_wood"
+    },
+    "facing=north,frame=3": {
+      "model": "skyblocks:block/television_retro"
+    },
+    "facing=east,frame=0": {
       "model": "skyblocks:block/television",
       "y": 90
     },
-    "facing=south": {
+    "facing=east,frame=1": {
+      "model": "skyblocks:block/television_white",
+      "y": 90
+    },
+    "facing=east,frame=2": {
+      "model": "skyblocks:block/television_wood",
+      "y": 90
+    },
+    "facing=east,frame=3": {
+      "model": "skyblocks:block/television_retro",
+      "y": 90
+    },
+    "facing=south,frame=0": {
       "model": "skyblocks:block/television",
       "y": 180
     },
-    "facing=west": {
+    "facing=south,frame=1": {
+      "model": "skyblocks:block/television_white",
+      "y": 180
+    },
+    "facing=south,frame=2": {
+      "model": "skyblocks:block/television_wood",
+      "y": 180
+    },
+    "facing=south,frame=3": {
+      "model": "skyblocks:block/television_retro",
+      "y": 180
+    },
+    "facing=west,frame=0": {
       "model": "skyblocks:block/television",
+      "y": 270
+    },
+    "facing=west,frame=1": {
+      "model": "skyblocks:block/television_white",
+      "y": 270
+    },
+    "facing=west,frame=2": {
+      "model": "skyblocks:block/television_wood",
+      "y": 270
+    },
+    "facing=west,frame=3": {
+      "model": "skyblocks:block/television_retro",
       "y": 270
     }
   }

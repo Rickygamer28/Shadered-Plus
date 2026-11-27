@@ -64,6 +64,10 @@
     "skyblocks:weather_mast",
     "skyblocks:star_forge",
     "skyblocks:forge_frame",
-    "skyblocks:television"
+    "skyblocks:television",
+    "skyblocks:beat_lamp",
+    "skyblocks:projector",
+    "skyblocks:tv_stand",
+    "skyblocks:tv_wall_mount"
   ]
 }

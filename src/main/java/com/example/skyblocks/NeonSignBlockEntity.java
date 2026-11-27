@@ -15,7 +15,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public class NeonSignBlockEntity extends BlockEntity {
     public static final int MAX_LENGTH = 40;
-    public static final int STEADY = 0, FLICKER = 1, PULSE = 2, RAINBOW = 3, SCROLL = 4, TYPING = 5, BLINK = 6, BROKEN = 7, FADE = 8, MODES = 9;
+    public static final int STEADY = 0, FLICKER = 1, PULSE = 2, RAINBOW = 3, SCROLL = 4, TYPING = 5, BLINK = 6, BROKEN = 7, FADE = 8, BEAT = 9, MODES = 10;
     /** The lettering: the font's strokes drawn upright, slanted, with fat or thin tubes, wider or narrower. */
     public static final int CLASSIC = 0, ITALIC = 1, BOLD = 2, THIN = 3, WIDE = 4, NARROW = 5, FONTS = 6;
     /** (In the packet: the mode plus this when the chasing outline is on.) */

@@ -10,6 +10,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
@@ -18,16 +19,18 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A speaker: its cone thumps with the bass of the music playing nearby (client/SpeakerRenderer), and it carries the
- * music's reaction further: a speaker within 24 blocks of a playing jukebox makes everything near the speaker react
- * as if the jukebox were there.
+ * A speaker: plays the sound of the televisions (and projectors) playing within 24 blocks, from where it stands - fill
+ * a room, or a whole base. Its cone moves to the beat.
  */
 public class SpeakerBlock extends BaseEntityBlock {
     public static final MapCodec<SpeakerBlock> CODEC = simpleCodec(SpeakerBlock::new);
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
+    private static final VoxelShape SHAPE = Block.box(3, 0, 3, 13, 15, 13);
 
     public SpeakerBlock(Properties properties) {
         super(properties);
@@ -49,45 +52,15 @@ public class SpeakerBlock extends BaseEntityBlock {
         return RenderShape.MODEL;
     }
 
+    @Override
+    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return SHAPE;
+    }
+
     @Nullable
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
-    }
-
-    /** Right-click with a dye: the light's colour (ends RGB mode). */
-    @Override
-    protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, net.minecraft.world.level.Level level,
-                                                                  BlockPos pos, net.minecraft.world.entity.player.Player player,
-                                                                  net.minecraft.world.InteractionHand hand, net.minecraft.world.phys.BlockHitResult hit) {
-        if (!(stack.getItem() instanceof net.minecraft.world.item.DyeItem dye) || !(level.getBlockEntity(pos) instanceof SpeakerBlockEntity speaker)) {
-            return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-        }
-        if (!level.isClientSide) {
-            speaker.setColour(dye.getDyeColor().getTextureDiffuseColor());
-            if (!player.getAbilities().instabuild) {
-                stack.shrink(1);
-            }
-            level.playSound(null, pos, net.minecraft.sounds.SoundEvents.DYE_USE, net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);
-        }
-        return net.minecraft.world.ItemInteractionResult.sidedSuccess(level.isClientSide);
-    }
-
-    /** Sneak + right-click with an empty hand: RGB mode on / off. */
-    @Override
-    protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, net.minecraft.world.level.Level level, BlockPos pos,
-                                                                   net.minecraft.world.entity.player.Player player, net.minecraft.world.phys.BlockHitResult hit) {
-        if (!player.isShiftKeyDown() || !(level.getBlockEntity(pos) instanceof SpeakerBlockEntity speaker)) {
-            return net.minecraft.world.InteractionResult.PASS;
-        }
-        if (!level.isClientSide) {
-            speaker.setRgb(!speaker.rgb());
-            player.displayClientMessage(Component.translatable(speaker.rgb() ? "message.skyblocks.speaker_rgb_on" : "message.skyblocks.speaker_rgb_off")
-                    .withStyle(ChatFormatting.LIGHT_PURPLE), true);
-            level.playSound(null, pos, net.minecraft.sounds.SoundEvents.NOTE_BLOCK_BIT.value(), net.minecraft.sounds.SoundSource.BLOCKS, 0.6F,
-                    speaker.rgb() ? 1.4F : 0.8F);
-        }
-        return net.minecraft.world.InteractionResult.sidedSuccess(level.isClientSide);
     }
 
     @Nullable
@@ -99,6 +72,5 @@ public class SpeakerBlock extends BaseEntityBlock {
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.skyblocks.speaker").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("tooltip.skyblocks.speaker_colour").withStyle(ChatFormatting.GRAY));
     }
 }

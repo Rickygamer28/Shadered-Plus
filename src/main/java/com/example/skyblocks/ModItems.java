@@ -48,6 +48,9 @@ public final class ModItems {
 
     public static final DeferredItem<BlockItem> FOG_MACHINE = ITEMS.registerSimpleBlockItem("fog_machine", ModBlocks.FOG_MACHINE);
 
+    public static final DeferredItem<BlockItem> PROJECTOR = ITEMS.registerSimpleBlockItem("projector", ModBlocks.PROJECTOR);
+    public static final DeferredItem<BlockItem> TV_STAND = ITEMS.registerSimpleBlockItem("tv_stand", ModBlocks.TV_STAND);
+    public static final DeferredItem<BlockItem> TV_WALL_MOUNT = ITEMS.registerSimpleBlockItem("tv_wall_mount", ModBlocks.TV_WALL_MOUNT);
     public static final DeferredItem<BlockItem> SPEAKER = ITEMS.registerSimpleBlockItem("speaker", ModBlocks.SPEAKER);
 
     public static final DeferredItem<BlockItem> AQUARIUM = ITEMS.registerSimpleBlockItem("aquarium", ModBlocks.AQUARIUM);
@@ -144,6 +147,8 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> ARCADE = ITEMS.registerSimpleBlockItem("arcade", ModBlocks.ARCADE);
     public static final DeferredItem<BlockItem> BIG_SCREEN = ITEMS.registerSimpleBlockItem("big_screen", ModBlocks.BIG_SCREEN);
     public static final DeferredItem<BlockItem> TELEVISION = ITEMS.registerSimpleBlockItem("television", ModBlocks.TELEVISION);
+    public static final DeferredItem<BlockItem> SPEAKER = ITEMS.registerSimpleBlockItem("speaker", ModBlocks.SPEAKER);
+    public static final DeferredItem<BlockItem> BEAT_LAMP = ITEMS.registerSimpleBlockItem("beat_lamp", ModBlocks.BEAT_LAMP);
     public static final DeferredItem<RemoteItem> REMOTE = ITEMS.register("remote", () -> new RemoteItem(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<TabletItem> TABLET = ITEMS.register("tablet", () -> new TabletItem(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<BlockItem> CLAW_MACHINE = ITEMS.registerSimpleBlockItem("claw_machine", ModBlocks.CLAW_MACHINE);

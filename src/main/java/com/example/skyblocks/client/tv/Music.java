@@ -166,6 +166,18 @@ public final class Music {
         }
     }
 
+    /** The line being sung at this moment (ms), or "" (no timed lyrics, or between lines). */
+    public String lineAt(long ms) {
+        List<Line> l = lyrics;
+        if (l == null || !timed) return "";
+        String now = "";
+        for (Line line : l) {
+            if (line.ms() <= ms) now = line.text();
+            else break;
+        }
+        return now;
+    }
+
     @Nullable
     private static HttpResponse<String> get(String url) {
         try {

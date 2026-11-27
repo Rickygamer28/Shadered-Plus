@@ -56,6 +56,12 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion().mapColor(net.minecraft.world.level.material.MapColor.METAL));
 
     /** A speaker: its cone thumps with the bass, and it carries the music's reaction further (SpeakerBlock). */
+    public static final DeferredBlock<ProjectorBlock> PROJECTOR = BLOCKS.registerBlock("projector", ProjectorBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 3));
+    public static final DeferredBlock<TvStandBlock> TV_STAND = BLOCKS.registerBlock("tv_stand", p -> new TvStandBlock(p, TvStandBlock.STAND_SHAPES),
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion());
+    public static final DeferredBlock<TvStandBlock> TV_WALL_MOUNT = BLOCKS.registerBlock("tv_wall_mount", p -> new TvStandBlock(p, TvStandBlock.MOUNT_SHAPES),
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion());
     public static final DeferredBlock<SpeakerBlock> SPEAKER = BLOCKS.registerBlock("speaker", SpeakerBlock::new,
             BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.WOOD)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
@@ -216,6 +222,11 @@ public final class ModBlocks {
     public static final DeferredBlock<TelevisionBlock> TELEVISION = BLOCKS.registerBlock("television", TelevisionBlock::new,
             BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 4)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+
+    public static final DeferredBlock<SpeakerBlock> SPEAKER = BLOCKS.registerBlock("speaker", SpeakerBlock::new,
+            BlockBehaviour.Properties.of().strength(1.0F).sound(SoundType.WOOD).noOcclusion().mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+    public static final DeferredBlock<BeatLampBlock> BEAT_LAMP = BLOCKS.registerBlock("beat_lamp", BeatLampBlock::new,
+            BlockBehaviour.Properties.of().strength(0.6F).sound(SoundType.GLASS).noOcclusion().lightLevel(state -> 7));
 
     /** A claw machine, two blocks tall: win plushies (ClawMachineBlock). */
     public static final DeferredBlock<ClawMachineBlock> CLAW_MACHINE = BLOCKS.registerBlock("claw_machine", ClawMachineBlock::new,

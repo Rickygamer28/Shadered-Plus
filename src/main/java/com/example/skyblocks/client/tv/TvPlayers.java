@@ -131,6 +131,23 @@ public final class TvPlayers {
             }
             BlockPos pos = (BlockPos) e.getKey();
             BlockState st = mc.level.getBlockState(pos);
+            if (st.getBlock() instanceof com.example.skyblocks.ProjectorBlock && mc.level.getBlockEntity(pos) instanceof TelevisionBlockEntity pbe
+                    && !pbe.source().isEmpty() && pos.getCenter().distanceToSqr(cam) < FAR * FAR) {
+                // (a projector: its sound from where its picture lands)
+                net.minecraft.world.phys.BlockHitResult hit = com.example.skyblocks.ProjectorBlock.screen(mc.level, pos,
+                        st.getValue(com.example.skyblocks.ProjectorBlock.FACING));
+                Vec3 centre = hit != null ? hit.getLocation() : pos.getCenter();
+                e.getValue().speakers(speakersNear(mc, centre));
+                try {
+                    e.getValue().update(pbe, (a, t, v) -> PacketDistributor.sendToServer(new TelevisionPayload(pos, a, t, v)), centre, 32.0F, pt);
+                } catch (Throwable ex) {
+                    SkyBlocksMod.LOGGER.error("Shadered+ projector: playing failed", ex);
+                    FAILED.put(pos, System.currentTimeMillis());
+                    e.getValue().release();
+                    it.remove();
+                }
+                continue;
+            }
             if (!(mc.level.getBlockEntity(pos) instanceof TelevisionBlockEntity be) || be.source().isEmpty() || !(st.getBlock() instanceof TelevisionBlock)
                     || pos.getCenter().distanceToSqr(cam) > FAR * FAR || !TelevisionBlock.isAnchor(mc.level, pos, st.getValue(TelevisionBlock.FACING))) {
                 e.getValue().release();
@@ -140,6 +157,7 @@ public final class TvPlayers {
             com.example.skyblocks.TvWall wall = com.example.skyblocks.TvWall.of(mc.level, pos);
             Vec3 centre = wall.centre();
             int[] size = {wall.width(), wall.height()};
+            e.getValue().speakers(speakersNear(mc, centre)); // (the speakers within 24 blocks of it play it too)
             try {
                 e.getValue().update(be, (a, t, v) -> PacketDistributor.sendToServer(new TelevisionPayload(pos, a, t, v)), centre,
                         20.0F + 2.0F * Math.max(size[0], size[1]), pt);
@@ -150,6 +168,30 @@ public final class TvPlayers {
                 it.remove();
             }
         }
+    }
+
+    private static java.util.List<Vec3> speakersNear(Minecraft mc, Vec3 centre) {
+        java.util.List<Vec3> speakers = new java.util.ArrayList<>();
+        for (Iterator<BlockPos> sp = com.example.skyblocks.SpeakerBlockEntity.LOADED.iterator(); sp.hasNext(); ) {
+            BlockPos spk = sp.next();
+            if (!(mc.level.getBlockEntity(spk) instanceof com.example.skyblocks.SpeakerBlockEntity)) {
+                sp.remove();
+            } else if (spk.getCenter().distanceToSqr(centre) < 24 * 24 && speakers.size() < 8) {
+                speakers.add(spk.getCenter());
+            }
+        }
+        return speakers;
+    }
+
+    /** How hard the beat of the screens playing within this distance hits (the hardest); -1 none playing there. */
+    public static float beatNear(Vec3 pos, double distance) {
+        float best = -1;
+        for (VideoPlayer p : PLAYERS.values()) {
+            if (p.state() == VideoPlayer.State.PLAYING && p.at().distanceToSqr(pos) < distance * distance) {
+                best = Math.max(best, p.beat());
+            }
+        }
+        return best;
     }
 
     @SubscribeEvent
