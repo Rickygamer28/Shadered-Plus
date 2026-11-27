@@ -115,6 +115,10 @@ public record TvWall(BlockPos anchor, List<Column> columns, int height, boolean 
             boolean seen = false;
             for (Column o : chain) if (o.bottom().equals(n.bottom())) seen = true;
             if (seen) break;
+            // (one that's another's next too - two walls reaching it: only the one it says is before it takes it,
+            // so no screen is ever drawn twice, nor plays twice)
+            Column back = prev(level, n.bottom(), n.facing());
+            if (back != null && !back.bottom().equals(c.bottom())) break;
             chain.add(n);
             c = n;
         }

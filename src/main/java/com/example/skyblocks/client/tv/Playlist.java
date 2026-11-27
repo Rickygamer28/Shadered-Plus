@@ -58,10 +58,16 @@ final class Playlist {
         String key = (music ? "m:" : "") + list;
         List<Entry> entries = CACHE.get(key);
         if (entries == null) {
-            entries = fetch(list, video, music ? "https://music.youtube.com/watch?v=" : "https://www.youtube.com/watch?v=");
+            entries = fetch(list, video, music ? "https://music.youtube.com/watch?v=" : "https://www.youtube.com/watch?v=", music);
             if (entries.isEmpty()) {
-                throw new Exception("couldn't read that playlist (private, or empty?)");
+                if (video == null) {
+                    throw new Exception("couldn't read that playlist (private, or empty?)");
+                }
+                // (its list wouldn't come, but there's a video in the link: that, on its own)
+                com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+ television: playlist {} wouldn't come - playing its video alone", list);
+                return new List2(List.of(new Entry((music ? "https://music.youtube.com/watch?v=" : "https://www.youtube.com/watch?v=") + video, "")), 0);
             }
+            com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+ television: playlist {} read ({} videos)", list, entries.size());
             CACHE.put(key, entries);
         }
         int first = 0;
@@ -127,21 +133,25 @@ final class Playlist {
         return p;
     }
 
-    private static List<Entry> fetch(String list, @Nullable String video, String prefix) throws Exception {
+    private static List<Entry> fetch(String list, @Nullable String video, String prefix, boolean music) throws Exception {
         List<Entry> out = new ArrayList<>();
-        // the playlist's own page (all of it, a page at a time)
-        JsonObject page = post("browse", "{\"context\":" + WEB + ",\"browseId\":\"VL" + list + "\"}");
-        for (int pages = 0; page != null && pages < 30; pages++) {
-            List<String> next = new ArrayList<>();
-            walk(page, "playlistVideoRenderer", out, next, prefix);
-            if (next.isEmpty()) {
-                break;
+        // its page, a page at a time - YouTube Music's own for its links (albums, its playlists), YouTube's - then, for
+        // mixes and the like (no page), the list beside a video playing from it
+        for (boolean remix : music ? new boolean[] {true, false} : new boolean[] {false, true}) {
+            String ctx = context(remix);
+            JsonObject page = post(remix, "browse", "{\"context\":" + ctx + ",\"browseId\":\"VL" + list + "\"}");
+            for (int pages = 0; page != null && pages < 30; pages++) {
+                List<String> next = new ArrayList<>();
+                walk(page, remix ? "musicResponsiveListItemRenderer" : "playlistVideoRenderer", out, next, prefix);
+                if (next.isEmpty()) break;
+                page = post(remix, "browse", "{\"context\":" + ctx + ",\"continuation\":\"" + next.get(0) + "\"}");
             }
-            page = post("browse", "{\"context\":" + WEB + ",\"continuation\":\"" + next.get(0) + "\"}");
+            if (!out.isEmpty()) break;
         }
-        if (out.isEmpty()) {
-            // (mixes and the like have no page: the list beside a video playing from it)
-            JsonObject watch = post("next", "{\"context\":" + WEB + ",\"playlistId\":\"" + list + "\"" + (video != null ? ",\"videoId\":\"" + video + "\"" : "") + "}");
+        for (boolean remix : music ? new boolean[] {true, false} : new boolean[] {false, true}) {
+            if (!out.isEmpty()) break;
+            JsonObject watch = post(remix, "next", "{\"context\":" + context(remix) + ",\"playlistId\":\"" + list + "\""
+                    + (video != null ? ",\"videoId\":\"" + video + "\"" : "") + "}");
             if (watch != null) {
                 walk(watch, "playlistPanelVideoRenderer", out, new ArrayList<>(), prefix);
             }
@@ -171,6 +181,18 @@ final class Playlist {
         JsonObject o = el.getAsJsonObject();
         if (o.has(kind) && o.get(kind).isJsonObject()) {
             JsonObject v = o.getAsJsonObject(kind);
+            if (kind.equals("musicResponsiveListItemRenderer")) {
+                // (YouTube Music's: its video in playlistItemData, its name the first column's words)
+                try {
+                    String id = v.getAsJsonObject("playlistItemData").get("videoId").getAsString();
+                    String name = text(v.getAsJsonArray("flexColumns").get(0).getAsJsonObject()
+                            .getAsJsonObject("musicResponsiveListItemFlexColumnRenderer").get("text"));
+                    out.add(new Entry(prefix + id, name));
+                } catch (RuntimeException ignored) {
+                    // (not a song: a header or the like)
+                }
+                return;
+            }
             if (v.has("videoId")) {
                 String id = v.get("videoId").getAsString();
                 out.add(new Entry(prefix + id, text(v.get("title"))));
@@ -209,14 +231,37 @@ final class Playlist {
     }
 
     @Nullable
-    private static JsonObject post(String what, String body) {
+    /** Who's asking: YouTube's web page, or YouTube Music's - with the visitor id YouTube gave (it wants one now). */
+    private static String context(boolean remix) {
+        String visitor = "";
         try {
-            HttpRequest req = HttpRequest.newBuilder(URI.create("https://www.youtube.com/youtubei/v1/" + what + "?prettyPrint=false"))
+            visitor = YouTube.visitorData(false);
+        } catch (RuntimeException ignored) {
+            // (none: asked without)
+        }
+        return "{\"client\":{\"clientName\":\"" + (remix ? "WEB_REMIX" : "WEB") + "\",\"clientVersion\":\""
+                + (remix ? "1.20250310.01.00" : "2.20250312.04.00") + "\",\"hl\":\"en\",\"gl\":\"US\""
+                + (visitor == null || visitor.isEmpty() ? "" : ",\"visitorData\":\"" + visitor + "\"") + "}}";
+    }
+
+    private static JsonObject post(boolean remix, String what, String body) {
+        try {
+            String host = remix ? "https://music.youtube.com" : "https://www.youtube.com";
+            String visitor = "";
+            try {
+                visitor = YouTube.visitorData(false);
+            } catch (RuntimeException ignored) {
+                // (none)
+            }
+            HttpRequest.Builder b = HttpRequest.newBuilder(URI.create(host + "/youtubei/v1/" + what + "?prettyPrint=false"))
                     .timeout(Duration.ofSeconds(15))
                     .header("Content-Type", "application/json")
                     .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36")
-                    .header("Origin", "https://www.youtube.com")
-                    .POST(HttpRequest.BodyPublishers.ofString(body)).build();
+                    .header("Origin", host)
+                    .header("Referer", host + "/")
+                    .header("Cookie", "SOCS=CAISAiAD");
+            if (visitor != null && !visitor.isEmpty()) b.header("X-Goog-Visitor-Id", visitor);
+            HttpRequest req = b.POST(HttpRequest.BodyPublishers.ofString(body)).build();
             HttpResponse<String> res = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
             return res.statusCode() == 200 ? JsonParser.parseString(res.body()).getAsJsonObject() : null;
         } catch (Exception e) {
