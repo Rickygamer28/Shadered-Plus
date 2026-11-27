@@ -34,6 +34,15 @@ public record TabletPayload(int hand, int action, String text, long value) imple
                 return;
             }
             TabletState s = stack.getOrDefault(ModComponents.TABLET.get(), TabletState.EMPTY);
+            if (p.action() == TelevisionPayload.CAST) {
+                // (what it plays, where it is, onto a television: value its position)
+                net.minecraft.core.BlockPos at = net.minecraft.core.BlockPos.of(p.value());
+                if (player.distanceToSqr(at.getCenter()) < 48 * 48 && player.level().isLoaded(at)
+                        && player.level().getBlockEntity(TelevisionBlock.anchor(player.level(), at)) instanceof TelevisionBlockEntity tv && !s.source().isEmpty()) {
+                    tv.castFrom(s, player.getGameProfile().getName());
+                }
+                return;
+            }
             stack.set(ModComponents.TABLET.get(), s.apply(p.action(), p.text(), p.value(), player.level().getGameTime(),
                     player.getGameProfile().getName(), player.getRandom()));
         });

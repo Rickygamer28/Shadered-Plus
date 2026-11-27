@@ -144,6 +144,7 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> ARCADE = ITEMS.registerSimpleBlockItem("arcade", ModBlocks.ARCADE);
     public static final DeferredItem<BlockItem> BIG_SCREEN = ITEMS.registerSimpleBlockItem("big_screen", ModBlocks.BIG_SCREEN);
     public static final DeferredItem<BlockItem> TELEVISION = ITEMS.registerSimpleBlockItem("television", ModBlocks.TELEVISION);
+    public static final DeferredItem<RemoteItem> REMOTE = ITEMS.register("remote", () -> new RemoteItem(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<TabletItem> TABLET = ITEMS.register("tablet", () -> new TabletItem(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<BlockItem> CLAW_MACHINE = ITEMS.registerSimpleBlockItem("claw_machine", ModBlocks.CLAW_MACHINE);
     public static final DeferredItem<BlockItem> TROPHY = ITEMS.registerSimpleBlockItem("trophy", ModBlocks.TROPHY);

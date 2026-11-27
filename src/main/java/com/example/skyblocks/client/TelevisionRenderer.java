@@ -38,31 +38,83 @@ public class TelevisionRenderer implements BlockEntityRenderer<TelevisionBlockEn
         Level level = be.getLevel();
         BlockState st = be.getBlockState();
         if (level == null || !(st.getBlock() instanceof TelevisionBlock)) return;
-        Direction facing = st.getValue(TelevisionBlock.FACING);
         BlockPos pos = be.getBlockPos();
-        if (!TelevisionBlock.isAnchor(level, pos, facing)) return; // (drawn by the wall's bottom left one)
-        int[] size = TelevisionBlock.size(level, pos, facing);
-        int w = size[0], h = size[1];
-
-        poseStack.pushPose();
-        poseStack.translate(0.5F, 0.0F, 0.5F);
-        poseStack.mulPose(Axis.YP.rotationDegrees(-(facing.toYRot() + 180.0F))); // (as the model's turned: its front to the north)
-        poseStack.translate(-0.5F, 0.0F, -0.5F);
-        // (the wall in this frame: x from 1 - w to 1 - its right towards -x - and y from 0 to h)
-        Matrix4f m = poseStack.last().pose();
-        float left = 1 - EDGE, right = 1 - w + EDGE, bottom = EDGE, top = h - EDGE;
+        if (!TelevisionBlock.isAnchor(level, pos, st.getValue(TelevisionBlock.FACING))) return; // (drawn by the wall's first one)
+        com.example.skyblocks.TvWall wall = com.example.skyblocks.TvWall.of(level, pos);
         boolean on = !be.source().isEmpty();
-        VertexConsumer glass = buffers.getBuffer(RenderType.textBackground());
-        int g = on ? 0xFF050608 : 0xFF0C0D11;
-        rect(glass, m, left, bottom, right, top, FRONT - 0.002F, g, on ? LightTexture.FULL_BRIGHT : light);
-        if (!on) {
-            // (off: a faint sheen across the glass)
-            float sx = left - (left - right) * 0.18F, ex = left - (left - right) * 0.42F;
-            sheen(glass, m, sx, ex, bottom, top, FRONT - 0.003F, light);
+        VideoPlayer player = on ? TvPlayers.get(be) : null;
+        if (!wall.curved()) {
+            column(poseStack, pos, wall.columns().get(0));
+            flat(poseStack, buffers, be, player, wall.width(), wall.height(), light, true);
             poseStack.popPose();
             return;
         }
-        VideoPlayer player = TvPlayers.get(be);
+        // round corners: its glass, and its picture spread along it, a column at a time
+        int n = wall.width(), h = wall.height();
+        boolean picture = player != null && player.hasPicture() && player.music() == null && player.state() != VideoPlayer.State.ERROR;
+        float ar = picture ? player.pictureWidth() / (float) Math.max(1, player.pictureHeight()) : 1;
+        float aw = n - 2 * EDGE, ah = h - 2 * EDGE;
+        float pw = Math.min(aw, ah * ar), ph = pw / ar, s0 = (n - pw) / 2, y0 = h / 2.0F - ph / 2, y1 = h / 2.0F + ph / 2;
+        for (int i = 0; i < n; i++) {
+            column(poseStack, pos, wall.columns().get(i));
+            Matrix4f m = poseStack.last().pose();
+            float l = i == 0 ? 1 - EDGE : 1, r = i == n - 1 ? EDGE : 0;
+            rect(buffers.getBuffer(RenderType.textBackground()), m, l, EDGE, r, h - EDGE, FRONT - 0.002F, on ? 0xFF050608 : 0xFF0C0D11,
+                    on ? LightTexture.FULL_BRIGHT : light);
+            float a0 = Math.max(i, s0), a1 = Math.min(i + 1, s0 + pw);
+            if (picture && a0 < a1) {
+                VertexConsumer v = buffers.getBuffer(RenderType.text(player.textureId()));
+                float x0 = 1 - (a0 - i), x1 = 1 - (a1 - i), u0 = (a0 - s0) / pw, u1 = (a1 - s0) / pw, z = FRONT - 0.004F;
+                int c = player.state() == VideoPlayer.State.PAUSED || player.state() == VideoPlayer.State.ENDED ? 0xFFB8B8B8 : 0xFFFFFFFF;
+                v.addVertex(m, x0, y0, z).setColor(c).setUv(u0, 1).setLight(LightTexture.FULL_BRIGHT);
+                v.addVertex(m, x1, y0, z).setColor(c).setUv(u1, 1).setLight(LightTexture.FULL_BRIGHT);
+                v.addVertex(m, x1, y1, z).setColor(c).setUv(u1, 0).setLight(LightTexture.FULL_BRIGHT);
+                v.addVertex(m, x0, y1, z).setColor(c).setUv(u0, 0).setLight(LightTexture.FULL_BRIGHT);
+            }
+            poseStack.popPose();
+        }
+        if (on && !picture) {
+            // (anything else - loading, why it can't, a song - on its longest straight stretch)
+            int bestStart = 0, bestLen = 1;
+            for (int i = 0, start = 0; i < n; i++) {
+                if (i > 0 && wall.columns().get(i).facing() != wall.columns().get(i - 1).facing()) start = i;
+                if (i - start + 1 > bestLen) {
+                    bestLen = i - start + 1;
+                    bestStart = start;
+                }
+            }
+            column(poseStack, pos, wall.columns().get(bestStart));
+            flat(poseStack, buffers, be, player, bestLen, h, light, false);
+            poseStack.popPose();
+        }
+    }
+
+    /** Into a column's frame (pushed): x from 1 (its left, as you look at it) to 0, y from its bottom up, its front at FRONT. */
+    private static void column(PoseStack poseStack, BlockPos anchor, com.example.skyblocks.TvWall.Column c) {
+        poseStack.pushPose();
+        poseStack.translate(c.bottom().getX() - anchor.getX(), c.bottom().getY() - anchor.getY(), c.bottom().getZ() - anchor.getZ());
+        poseStack.translate(0.5F, 0.0F, 0.5F);
+        poseStack.mulPose(Axis.YP.rotationDegrees(-(c.facing().toYRot() + 180.0F))); // (as the model's turned: its front to the north)
+        poseStack.translate(-0.5F, 0.0F, -0.5F);
+    }
+
+    /** A flat stretch w wide and h tall from the frame's column (x from 1 - w to 1): its glass (if asked) and what's on it. */
+    private void flat(PoseStack poseStack, MultiBufferSource buffers, TelevisionBlockEntity be, VideoPlayer player, int w, int h, int light, boolean glassToo) {
+        Matrix4f m = poseStack.last().pose();
+        float left = 1 - EDGE, right = 1 - w + EDGE, bottom = EDGE, top = h - EDGE;
+        boolean on = !be.source().isEmpty();
+        if (glassToo) {
+            VertexConsumer glass = buffers.getBuffer(RenderType.textBackground());
+            int g = on ? 0xFF050608 : 0xFF0C0D11;
+            rect(glass, m, left, bottom, right, top, FRONT - 0.002F, g, on ? LightTexture.FULL_BRIGHT : light);
+            if (!on) {
+                // (off: a faint sheen across the glass)
+                float sx = left - (left - right) * 0.18F, ex = left - (left - right) * 0.42F;
+                sheen(glass, m, sx, ex, bottom, top, FRONT - 0.003F, light);
+                return;
+            }
+        }
+        if (!on) return;
         float cx = 1 - w / 2.0F, cy = h / 2.0F, aw = w - 2 * EDGE, ah = h - 2 * EDGE;
         if (player != null && player.music() != null && player.state() != VideoPlayer.State.ERROR) {
             music(poseStack, buffers, player, player.music(), left, bottom, right, top);
@@ -83,8 +135,7 @@ public class TelevisionRenderer implements BlockEntityRenderer<TelevisionBlockEn
             String line, sub = "";
             int colour = 0xFFB8C2D2;
             if (player == null) {
-                line = "Can't play videos on this computer";
-                colour = 0xFFFF8A7A;
+                line = "Starting...";
             } else if (player.state() == VideoPlayer.State.ERROR) {
                 line = "Can't play this";
                 sub = player.error();
@@ -100,7 +151,6 @@ public class TelevisionRenderer implements BlockEntityRenderer<TelevisionBlockEn
                 text(poseStack, buffers, sub, cx, cy - hgt * 1.3F, aw * 0.9F, hgt * 0.6F, 0xFF8A96AA);
             }
         }
-        poseStack.popPose();
     }
 
     /**
@@ -245,6 +295,7 @@ public class TelevisionRenderer implements BlockEntityRenderer<TelevisionBlockEn
 
     @Override
     public AABB getRenderBoundingBox(TelevisionBlockEntity be) {
-        return new AABB(be.getBlockPos()).inflate(TelevisionBlock.MAX_W, 0, TelevisionBlock.MAX_W).expandTowards(0, TelevisionBlock.MAX_H, 0);
+        return new AABB(be.getBlockPos()).inflate(com.example.skyblocks.TvWall.MAX_COLUMNS / 2.0, 0, com.example.skyblocks.TvWall.MAX_COLUMNS / 2.0)
+                .expandTowards(0, com.example.skyblocks.TvWall.MAX_H, 0);
     }
 }

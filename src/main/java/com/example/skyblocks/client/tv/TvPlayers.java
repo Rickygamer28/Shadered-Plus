@@ -137,10 +137,9 @@ public final class TvPlayers {
                 it.remove();
                 continue;
             }
-            Direction facing = st.getValue(TelevisionBlock.FACING);
-            int[] size = TelevisionBlock.size(mc.level, pos, facing);
-            Vec3 centre = Vec3.atLowerCornerOf(pos).add(0.5, size[1] / 2.0, 0.5)
-                    .add(Vec3.atLowerCornerOf(TelevisionBlock.right(facing).getNormal()).scale((size[0] - 1) / 2.0));
+            com.example.skyblocks.TvWall wall = com.example.skyblocks.TvWall.of(mc.level, pos);
+            Vec3 centre = wall.centre();
+            int[] size = {wall.width(), wall.height()};
             try {
                 e.getValue().update(be, (a, t, v) -> PacketDistributor.sendToServer(new TelevisionPayload(pos, a, t, v)), centre,
                         20.0F + 2.0F * Math.max(size[0], size[1]), pt);

@@ -95,77 +95,14 @@ public class TelevisionBlock extends BaseEntityBlock {
         return facing.getCounterClockWise();
     }
 
-    /**
-     * The bottom left one of the wall it's in (as you look at it). A wall is a full rectangle of them: one standing out
-     * of it (on top of a square, say) isn't part of it - it's a television of its own (with any beside it in its row).
-     */
+    /** The first column's bottom of the wall it's in (TvWall: walls may turn corners). */
     public static BlockPos anchor(BlockGetter level, BlockPos pos) {
-        BlockState st = level.getBlockState(pos);
-        if (!(st.getBlock() instanceof TelevisionBlock)) {
-            return pos;
-        }
-        Direction facing = st.getValue(FACING), left = right(facing).getOpposite();
-        // (the furthest down and left it reaches, then just along its own row: the first whose wall has it in it)
-        BlockPos p = pos;
-        for (int i = 0; i < MAX_W + MAX_H; i++) {
-            if (same(level, p.relative(left), facing)) {
-                p = p.relative(left);
-            } else if (same(level, p.below(), facing)) {
-                p = p.below();
-            } else {
-                break;
-            }
-        }
-        if (contains(level, p, facing, pos)) {
-            return p;
-        }
-        BlockPos row = pos;
-        for (int i = 0; i < MAX_W && same(level, row.relative(left), facing); i++) {
-            row = row.relative(left);
-        }
-        while (!row.equals(pos)) {
-            if (contains(level, row, facing, pos)) {
-                return row;
-            }
-            row = row.relative(right(facing));
-        }
-        return pos;
+        return TvWall.anchor(level, pos);
     }
 
-    private static boolean contains(BlockGetter level, BlockPos anchor, Direction facing, BlockPos pos) {
-        int[] size = size(level, anchor, facing);
-        Direction right = right(facing);
-        int dx = (pos.getX() - anchor.getX()) * right.getStepX() + (pos.getZ() - anchor.getZ()) * right.getStepZ(), dy = pos.getY() - anchor.getY();
-        boolean inPlane = right.getAxis() == Direction.Axis.X ? pos.getZ() == anchor.getZ() : pos.getX() == anchor.getX();
-        return inPlane && dx >= 0 && dx < size[0] && dy >= 0 && dy < size[1];
-    }
-
-    /**
-     * How wide and tall the wall from its bottom left one is (blocks): the biggest full rectangle of them going right
-     * and up from it (rows narrower than the one below cut it down: the most screen wins).
-     */
-    public static int[] size(BlockGetter level, BlockPos anchor, Direction facing) {
-        Direction right = right(facing);
-        int bestW = 1, bestH = 1, minW = MAX_W;
-        for (int y = 0; y < MAX_H; y++) {
-            BlockPos rowStart = anchor.above(y);
-            if (!same(level, rowStart, facing)) {
-                break;
-            }
-            int w = 1;
-            while (w < minW && same(level, rowStart.relative(right, w), facing)) w++;
-            minW = Math.min(minW, w);
-            if (minW * (y + 1) > bestW * bestH) {
-                bestW = minW;
-                bestH = y + 1;
-            }
-        }
-        return new int[] {bestW, bestH};
-    }
-
-    /** Whether it's the bottom left one of its wall (the one that keeps what it plays, and draws the picture). */
+    /** Whether it's the first of its wall (the one that keeps what it plays, and draws the picture). */
     public static boolean isAnchor(BlockGetter level, BlockPos pos, Direction facing) {
-        return anchor(level, pos).equals(pos);
+        return TvWall.anchor(level, pos).equals(pos);
     }
 
     @Override
@@ -182,8 +119,10 @@ public class TelevisionBlock extends BaseEntityBlock {
         if (!level.isClientSide && !state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof TelevisionBlockEntity tv && !tv.source().isEmpty()) {
             Direction facing = state.getValue(FACING);
             super.onRemove(state, level, pos, newState, moved);
-            for (BlockPos next : new BlockPos[] {pos.relative(right(facing)), pos.above()}) {
-                if (same(level, next, facing) && level.getBlockEntity(anchor(level, next)) instanceof TelevisionBlockEntity other && other.source().isEmpty()) {
+            TvWall.Column after = TvWall.next(level, pos, facing);
+            for (BlockPos next : new BlockPos[] {after == null ? pos.above() : after.bottom(), pos.above()}) {
+                if (level.getBlockState(next).getBlock() instanceof TelevisionBlock
+                        && level.getBlockEntity(anchor(level, next)) instanceof TelevisionBlockEntity other && other.source().isEmpty()) {
                     other.copyFrom(tv);
                     break;
                 }

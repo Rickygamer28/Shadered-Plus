@@ -35,6 +35,19 @@ public class TelevisionBlockEntity extends BlockEntity implements TvState {
     private long shuffleSeed;
     private int shuffleFirst;
     private boolean loop = true;
+    /** Its saved channels (links; "" empty), and which it's on (-1 none). */
+    public static final int CHANNELS = 9, MAX_QUEUE = 32;
+    private final String[] channels = new String[CHANNELS];
+    private int channel = -1;
+    private int playId;
+    /** What plays after this, in turn: a link and who added it. */
+    public record Queued(String source, String by) {}
+    private final java.util.List<Queued> queue = new java.util.ArrayList<>();
+
+    {
+        java.util.Arrays.fill(channels, "");
+    }
+
     /** Bumped on every change: clients seeing it change resync. */
     private int revision;
 
@@ -56,6 +69,103 @@ public class TelevisionBlockEntity extends BlockEntity implements TvState {
 
     public int volume() {
         return volume;
+    }
+
+    public String channel(int i) {
+        return i >= 0 && i < CHANNELS ? channels[i] : "";
+    }
+
+    public int channel() {
+        return channel;
+    }
+
+    public java.util.List<Queued> queue() {
+        return java.util.Collections.unmodifiableList(queue);
+    }
+
+    @Override
+    public int playId() {
+        return playId;
+    }
+
+    @Override
+    public int queueSize() {
+        return queue.size();
+    }
+
+    /** Saves a link (or, given none, what's on) to a channel. */
+    public void saveChannel(int i, String link) {
+        if (i < 0 || i >= CHANNELS) return;
+        String l = link.isEmpty() ? source : link;
+        channels[i] = l.length() > MAX_SOURCE ? l.substring(0, MAX_SOURCE) : l;
+        if (!l.isEmpty() && l.equals(source)) channel = i;
+        changed();
+    }
+
+    public void playChannel(int i, String by) {
+        if (i < 0 || i >= CHANNELS || channels[i].isEmpty()) return;
+        choose(channels[i], by);
+        channel = i;
+        changed();
+    }
+
+    /** On to the next saved channel up or down from the one it's on (round). */
+    public void stepChannel(int dir, String by) {
+        for (int k = 1; k <= CHANNELS; k++) {
+            int i = Math.floorMod((channel < 0 ? (dir > 0 ? -1 : 0) : channel) + dir * k, CHANNELS);
+            if (!channels[i].isEmpty()) {
+                playChannel(i, by);
+                return;
+            }
+        }
+    }
+
+    /** What a tablet plays, from where it is in it, onto this (cast). */
+    public void castFrom(TabletState s, String by) {
+        source = s.source();
+        chosenBy = by;
+        playId++;
+        channel = -1;
+        item = s.item();
+        shuffle = s.shuffle();
+        shuffleSeed = s.shuffleSeed();
+        shuffleFirst = s.shuffleFirst();
+        paused = s.paused();
+        pausedAt = s.at();
+        startTick = s.start();
+        loop = s.loop();
+        changed();
+    }
+
+    public void enqueue(String link, String by) {
+        if (link.isEmpty()) return;
+        if (source.isEmpty()) {
+            choose(link, by); // (nothing on: it plays now)
+            return;
+        }
+        if (queue.size() < MAX_QUEUE) {
+            queue.add(new Queued(link.length() > MAX_SOURCE ? link.substring(0, MAX_SOURCE) : link, by));
+            changed();
+        }
+    }
+
+    /** The next in its queue (only if it's still on {@code current}: everyone watching asks at its end). */
+    public void nextInQueue(String current) {
+        if (queue.isEmpty() || !current.equals(source)) return;
+        Queued q = queue.remove(0);
+        choose(q.source(), q.by());
+    }
+
+    public void clearQueue() {
+        queue.clear();
+        changed();
+    }
+
+    public void removeFromQueue(int i) {
+        if (i >= 0 && i < queue.size()) {
+            queue.remove(i);
+            changed();
+        }
     }
 
     public int item() {
@@ -119,6 +229,8 @@ public class TelevisionBlockEntity extends BlockEntity implements TvState {
     public void choose(String src, String by) {
         source = src.length() > MAX_SOURCE ? src.substring(0, MAX_SOURCE) : src;
         chosenBy = by;
+        playId++;
+        channel = -1;
         item = 0;
         paused = false;
         pausedAt = 0;
@@ -175,6 +287,10 @@ public class TelevisionBlockEntity extends BlockEntity implements TvState {
         volume = o.volume;
         loop = o.loop;
         item = o.item;
+        System.arraycopy(o.channels, 0, channels, 0, CHANNELS);
+        channel = o.channel;
+        queue.clear();
+        queue.addAll(o.queue);
         shuffle = o.shuffle;
         shuffleSeed = o.shuffleSeed;
         shuffleFirst = o.shuffleFirst;
@@ -201,6 +317,19 @@ public class TelevisionBlockEntity extends BlockEntity implements TvState {
         tag.putBoolean("loop", loop);
         tag.putInt("rev", revision);
         tag.putInt("item", item);
+        net.minecraft.nbt.ListTag ch = new net.minecraft.nbt.ListTag();
+        for (String c : channels) ch.add(net.minecraft.nbt.StringTag.valueOf(c));
+        tag.put("channels", ch);
+        tag.putInt("channel", channel);
+        tag.putInt("play", playId);
+        net.minecraft.nbt.ListTag qu = new net.minecraft.nbt.ListTag();
+        for (Queued q : queue) {
+            CompoundTag e = new CompoundTag();
+            e.putString("s", q.source());
+            e.putString("by", q.by());
+            qu.add(e);
+        }
+        tag.put("queue", qu);
         tag.putBoolean("shuffle", shuffle);
         tag.putLong("seed", shuffleSeed);
         tag.putInt("first", shuffleFirst);
@@ -218,6 +347,14 @@ public class TelevisionBlockEntity extends BlockEntity implements TvState {
         loop = !tag.contains("loop") || tag.getBoolean("loop");
         revision = tag.getInt("rev");
         item = tag.getInt("item");
+        java.util.Arrays.fill(channels, "");
+        net.minecraft.nbt.ListTag ch = tag.getList("channels", net.minecraft.nbt.Tag.TAG_STRING);
+        for (int i = 0; i < Math.min(CHANNELS, ch.size()); i++) channels[i] = ch.getString(i);
+        channel = tag.contains("channel") ? tag.getInt("channel") : -1;
+        playId = tag.getInt("play");
+        queue.clear();
+        net.minecraft.nbt.ListTag qu = tag.getList("queue", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        for (int i = 0; i < qu.size(); i++) queue.add(new Queued(qu.getCompound(i).getString("s"), qu.getCompound(i).getString("by")));
         shuffle = tag.getBoolean("shuffle");
         shuffleSeed = tag.getLong("seed");
         shuffleFirst = tag.getInt("first");

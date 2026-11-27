@@ -22,4 +22,14 @@ public interface TvState {
     long shuffleSeed();
 
     int shuffleFirst();
+
+    /** How many links are waiting to play after this one (a television's queue; a tablet has none). */
+    default int queueSize() {
+        return 0;
+    }
+
+    /** Bumped every time something is chosen (the same link chosen again starts again). */
+    default int playId() {
+        return 0;
+    }
 }

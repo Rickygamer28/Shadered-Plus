@@ -30,7 +30,8 @@ public final class VideoPlayer {
     /** Which of its playlist's videos (as the television counts them), how many there are and which one that is. */
     private int item;
     private volatile int listSize, listIndex;
-    private boolean askedNext;
+    private boolean askedNext, askedQueue;
+    private int playId;
     /** How far along its playlist's order (0 first). */
     private volatile int listAlong;
     /** Its playlist (once read), and the shuffle it was started with. */
@@ -149,6 +150,7 @@ public final class VideoPlayer {
         releaseCover();
         music = null;
         askedNext = false;
+        askedQueue = false;
         errorAt = 0;
         listSize = 0;
         listIndex = 0;
@@ -262,7 +264,8 @@ public final class VideoPlayer {
         sender = send;
         Minecraft mc = Minecraft.getInstance();
         long target = be.position(partialTick) * 1000L;
-        if (!be.source().equals(source)) {
+        if (!be.source().equals(source) || be.playId() != playId) {
+            playId = be.playId();
             start(be, target);
         } else if (be.item() != item || be.shuffle() != shuffled || be.shuffleSeed() != shuffleSeed || be.shuffleFirst() != shuffleFirst) {
             Playlist.List2 l = list;
@@ -310,11 +313,12 @@ public final class VideoPlayer {
                 askNext(be);
             }
         } else if (dur > 0) {
-            if (be.loop()) {
+            if (be.loop() && be.queueSize() == 0) {
                 target %= dur;
             } else if (target >= dur) {
                 target = dur;
                 ended = true;
+                askQueue(be);
             }
         }
         boolean pause = be.paused() || mc.isPaused() || ended;
@@ -397,11 +401,24 @@ public final class VideoPlayer {
 
     /** Asks for its playlist's next video (once; everyone watching asks - the television takes the first). */
     private void askNext(TvState be) {
+        if (listSize > 0 && listAlong + 1 >= listSize && be.queueSize() > 0) {
+            askQueue(be); // (the list done: what's queued plays next)
+            return;
+        }
         if (askedNext || listSize == 0 || !be.loop() && listAlong + 1 >= listSize) {
             return;
         }
         askedNext = true;
         sender.send(com.example.skyblocks.TelevisionPayload.GOTO, "", com.example.skyblocks.TelevisionPayload.fromTo(item, item + 1));
+    }
+
+    /** Asks for what's next in the television's queue (once; everyone watching asks - it takes the first). */
+    private void askQueue(TvState be) {
+        if (askedQueue || be.queueSize() == 0) {
+            return;
+        }
+        askedQueue = true;
+        sender.send(com.example.skyblocks.TelevisionPayload.QUEUE_NEXT, source, 0);
     }
 
     /** Which of its playlist's videos it is (from 0), and how many; 0 not a playlist. */
