@@ -67,8 +67,9 @@ public record TvWall(BlockPos anchor, List<Column> columns, int height, boolean 
     public static Column next(BlockGetter level, BlockPos p, Direction f) {
         Direction r = f.getCounterClockWise();
         if (tv(level, p.relative(r), f)) return new Column(p.relative(r), f);
-        if (tv(level, p.relative(r).relative(f), r.getOpposite())) return new Column(p.relative(r).relative(f), r.getOpposite());
+        // (a television in the corner itself first: its screen, at the back of its block, looks out past this one)
         if (tv(level, p.relative(r), r.getOpposite())) return new Column(p.relative(r), r.getOpposite());
+        if (tv(level, p.relative(r).relative(f), r.getOpposite())) return new Column(p.relative(r).relative(f), r.getOpposite());
         if (tv(level, p.relative(r).relative(f.getOpposite()), r)) return new Column(p.relative(r).relative(f.getOpposite()), r);
         return null;
     }

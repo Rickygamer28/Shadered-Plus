@@ -113,12 +113,20 @@ public class TelevisionRenderer implements BlockEntityRenderer<TelevisionBlockEn
         float ex = b.x - a.x, ez = b.z - a.z;
         Vector3f c;
         float t = Math.abs(cross) < 1.0e-3F ? -1 : (ex * db.z - ez * db.x) / cross;
+        float u = Math.abs(cross) < 1.0e-3F ? -1 : (da.x * ez - da.z * ex) / cross;
+        int segs = 6;
         if (t <= 0 || t > 2) {
             c = new Vector3f(a).add(b).mul(0.5F); // (no corner to round: straight across)
+            segs = 1;
+        } else if (u <= 0.02F) {
+            // (the next one's glass starts back behind where this one's line meets it - a television in the corner
+            // itself: this one's glass carried on straight to that corner)
+            c = new Vector3f(a).fma(t, da);
+            b = c;
+            segs = 1;
         } else {
             c = new Vector3f(a).fma(t, da);
         }
-        int segs = 6;
         java.util.List<Matrix4f[]> out = new java.util.ArrayList<>();
         Vector3f prev = new Vector3f(a);
         for (int k = 1; k <= segs; k++) {
