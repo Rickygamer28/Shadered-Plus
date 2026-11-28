@@ -83,6 +83,9 @@ public final class TvPlayers {
         if (mc.level == null) {
             return;
         }
+        if (!PLAYERS.isEmpty()) {
+            OwnSound.listener(); // (the screens' sound heard from where the game's is)
+        }
         Vec3 cam = mc.gameRenderer.getMainCamera().getPosition();
         float pt = event.getPartialTick().getGameTimeDeltaPartialTick(false);
         // the tablets held near: started, and where they are

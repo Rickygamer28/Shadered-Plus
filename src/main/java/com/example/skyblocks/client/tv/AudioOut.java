@@ -105,7 +105,7 @@ final class AudioOut {
         return s;
     }
 
-    void place(double x, double y, double z, float range, float gain) {
+    private void place0(double x, double y, double z, float range, float gain) {
         if (!ready()) {
             return;
         }
@@ -118,7 +118,7 @@ final class AudioOut {
      * Its speakers (where each is): placed, as loud as the screen. A different number of them than before: all made
      * anew, what was queued thrown away - true (it has to be gone back to).
      */
-    boolean speakers(List<Vec3> at, float gain) {
+    private boolean speakers0(List<Vec3> at, float gain) {
         if (!ready()) {
             return false;
         }
@@ -164,7 +164,7 @@ final class AudioOut {
     }
 
     /** Hands back what has played, queues what's waiting (of this seek or later), and plays unless paused. */
-    void pump(Decoder d, int wantGen, boolean pause, long target) {
+    private void pump0(Decoder d, int wantGen, boolean pause, long target) {
         if (!ready()) {
             return;
         }
@@ -288,7 +288,7 @@ final class AudioOut {
     }
 
     /** Where it is (us), or -1 with nothing queued. */
-    long clock() {
+    private long clock0() {
         if (none || source == -1 || queued.isEmpty()) {
             return -1;
         }
@@ -298,16 +298,16 @@ final class AudioOut {
     }
 
     /** Whether the game has sound here (none: no device - the picture keeps time by itself). */
-    boolean available() {
+    private boolean available0() {
         return ready();
     }
 
-    boolean playing() {
+    private boolean playing0() {
         return !none && source != -1 && AL10.alGetSourcei(source, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING;
     }
 
     /** Everything queued thrown away (gone somewhere else). */
-    void flush() {
+    private void flush0() {
         if (none || source == -1 || !AL10.alIsSource(source)) {
             return;
         }
@@ -323,7 +323,7 @@ final class AudioOut {
         AL10.alGetError();
     }
 
-    void release() {
+    private void release0() {
         if (!none && source != -1 && AL10.alIsSource(source)) {
             flush();
             for (int s : all()) {
@@ -343,6 +343,79 @@ final class AudioOut {
         if (scratch != null) {
             MemoryUtil.memFree(scratch);
             scratch = null;
+        }
+    }
+
+    // (each into the screens' own sound context while it works - see OwnSound)
+    void place(double x, double y, double z, float range, float gain) {
+        long t = OwnSound.enter();
+        try {
+            place0(x, y, z, range, gain);
+        } finally {
+            OwnSound.leave(t);
+        }
+    }
+
+    boolean speakers(List<Vec3> at, float gain) {
+        long t = OwnSound.enter();
+        try {
+            return speakers0(at, gain);
+        } finally {
+            OwnSound.leave(t);
+        }
+    }
+
+    void pump(Decoder d, int wantGen, boolean pause, long target) {
+        long t = OwnSound.enter();
+        try {
+            pump0(d, wantGen, pause, target);
+        } finally {
+            OwnSound.leave(t);
+        }
+    }
+
+    long clock() {
+        long t = OwnSound.enter();
+        try {
+            return clock0();
+        } finally {
+            OwnSound.leave(t);
+        }
+    }
+
+    boolean available() {
+        long t = OwnSound.enter();
+        try {
+            return available0();
+        } finally {
+            OwnSound.leave(t);
+        }
+    }
+
+    boolean playing() {
+        long t = OwnSound.enter();
+        try {
+            return playing0();
+        } finally {
+            OwnSound.leave(t);
+        }
+    }
+
+    void flush() {
+        long t = OwnSound.enter();
+        try {
+            flush0();
+        } finally {
+            OwnSound.leave(t);
+        }
+    }
+
+    void release() {
+        long t = OwnSound.enter();
+        try {
+            release0();
+        } finally {
+            OwnSound.leave(t);
         }
     }
 }
