@@ -147,6 +147,28 @@ public final class ClientAccess {
         }
     }
 
+    /** The window of the nearest gaming monitor (or, none, television) within 8 blocks - its wall's. */
+    public static void openNearestScreen(net.minecraft.core.BlockPos from) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) return;
+        net.minecraft.core.BlockPos best = null;
+        double bestD = Double.MAX_VALUE;
+        for (net.minecraft.core.BlockPos p : net.minecraft.core.BlockPos.betweenClosed(from.offset(-8, -4, -8), from.offset(8, 4, 8))) {
+            net.minecraft.world.level.block.state.BlockState st = mc.level.getBlockState(p);
+            if (!(st.getBlock() instanceof com.example.skyblocks.TelevisionBlock)) continue;
+            double d = p.distSqr(from) + (st.is(com.example.skyblocks.ModBlocks.GAMING_MONITOR.get()) ? 0 : 1000); // (monitors first)
+            if (d < bestD) {
+                bestD = d;
+                best = p.immutable();
+            }
+        }
+        if (best == null) {
+            if (mc.player != null) mc.player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.skyblocks.no_monitor"), true);
+            return;
+        }
+        openTelevision(com.example.skyblocks.TelevisionBlock.anchor(mc.level, best));
+    }
+
     public static void openNeonSign(net.minecraft.core.BlockPos pos) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.level.getBlockEntity(pos) instanceof com.example.skyblocks.NeonSignBlockEntity sign) {

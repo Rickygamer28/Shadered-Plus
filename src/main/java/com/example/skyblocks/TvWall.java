@@ -57,20 +57,21 @@ public record TvWall(BlockPos anchor, List<Column> columns, int height, boolean 
 
     // ---- finding them
 
-    private static boolean tv(BlockGetter level, BlockPos pos, Direction facing) {
+    /** Whether there's a screen of the same kind as the one at {@code like} here, facing so (televisions and monitors don't mix). */
+    private static boolean tv(BlockGetter level, BlockPos pos, Direction facing, BlockPos like) {
         BlockState st = level.getBlockState(pos);
-        return st.getBlock() instanceof TelevisionBlock && st.getValue(TelevisionBlock.FACING) == facing;
+        return st.getBlock() instanceof TelevisionBlock && st.getValue(TelevisionBlock.FACING) == facing && st.getBlock() == level.getBlockState(like).getBlock();
     }
 
     /** The column after this one going right: straight on, round an inside corner (either way it's built), or an outside one. */
     @Nullable
     public static Column next(BlockGetter level, BlockPos p, Direction f) {
         Direction r = f.getCounterClockWise();
-        if (tv(level, p.relative(r), f)) return new Column(p.relative(r), f);
+        if (tv(level, p.relative(r), f, p)) return new Column(p.relative(r), f);
         // (a television in the corner itself first: its screen, at the back of its block, looks out past this one)
-        if (tv(level, p.relative(r), r.getOpposite())) return new Column(p.relative(r), r.getOpposite());
-        if (tv(level, p.relative(r).relative(f), r.getOpposite())) return new Column(p.relative(r).relative(f), r.getOpposite());
-        if (tv(level, p.relative(r).relative(f.getOpposite()), r)) return new Column(p.relative(r).relative(f.getOpposite()), r);
+        if (tv(level, p.relative(r), r.getOpposite(), p)) return new Column(p.relative(r), r.getOpposite());
+        if (tv(level, p.relative(r).relative(f), r.getOpposite(), p)) return new Column(p.relative(r).relative(f), r.getOpposite());
+        if (tv(level, p.relative(r).relative(f.getOpposite()), r, p)) return new Column(p.relative(r).relative(f.getOpposite()), r);
         return null;
     }
 
@@ -127,7 +128,7 @@ public record TvWall(BlockPos anchor, List<Column> columns, int height, boolean 
         for (int i = 0; i < chain.size(); i++) {
             Column col = chain.get(i);
             int h = 1;
-            while (h < minH && tv(level, col.bottom().above(h), col.facing())) h++;
+            while (h < minH && tv(level, col.bottom().above(h), col.facing(), col.bottom())) h++;
             minH = Math.min(minH, h);
             if (minH * (i + 1) >= bestN * bestH) {
                 bestN = i + 1;
@@ -159,7 +160,7 @@ public record TvWall(BlockPos anchor, List<Column> columns, int height, boolean 
         Direction f = facing;
         Set<BlockPos> seen = new HashSet<>();
         for (int i = 0; i < MAX_COLUMNS + MAX_H; i++) {
-            if (tv(level, p.below(), f) && p.getY() > pos.getY() - MAX_H) {
+            if (tv(level, p.below(), f, p) && p.getY() > pos.getY() - MAX_H) {
                 p = p.below();
                 continue;
             }

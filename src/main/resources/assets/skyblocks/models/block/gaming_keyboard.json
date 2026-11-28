@@ -1,0 +1,105 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "top": "skyblocks:block/gaming_keyboard_top",
+    "side": "skyblocks:block/gaming_keyboard_side",
+    "pad": "skyblocks:block/gaming_mousepad",
+    "mouse": "skyblocks:block/gaming_mouse",
+    "particle": "skyblocks:block/gaming_keyboard_side"
+  },
+  "elements": [
+    {
+      "from": [
+        1,
+        0,
+        4
+      ],
+      "to": [
+        12,
+        1,
+        11
+      ],
+      "faces": {
+        "up": {
+          "texture": "#top"
+        },
+        "north": {
+          "texture": "#side"
+        },
+        "south": {
+          "texture": "#side"
+        },
+        "east": {
+          "texture": "#side"
+        },
+        "west": {
+          "texture": "#side"
+        },
+        "down": {
+          "texture": "#side"
+        }
+      }
+    },
+    {
+      "from": [
+        12.2,
+        0,
+        4.5
+      ],
+      "to": [
+        15.8,
+        0.25,
+        10.8
+      ],
+      "faces": {
+        "up": {
+          "texture": "#pad"
+        },
+        "north": {
+          "texture": "#pad"
+        },
+        "south": {
+          "texture": "#pad"
+        },
+        "east": {
+          "texture": "#pad"
+        },
+        "west": {
+          "texture": "#pad"
+        },
+        "down": {
+          "texture": "#pad"
+        }
+      }
+    },
+    {
+      "from": [
+        13.3,
+        0.25,
+        6
+      ],
+      "to": [
+        14.7,
+        1.25,
+        8.6
+      ],
+      "faces": {
+        "up": {
+          "texture": "#mouse"
+        },
+        "north": {
+          "texture": "#mouse"
+        },
+        "south": {
+          "texture": "#mouse"
+        },
+        "east": {
+          "texture": "#mouse"
+        },
+        "west": {
+          "texture": "#mouse"
+        }
+      }
+    }
+  ]
+}

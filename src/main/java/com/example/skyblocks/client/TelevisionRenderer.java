@@ -148,11 +148,11 @@ public class TelevisionRenderer implements BlockEntityRenderer<TelevisionBlockEn
     /** The bends' case: their frame above and below the glass, their back, their top and bottom - in the wall's case. */
     private static void caseOf(MultiBufferSource buffers, BlockState st, java.util.List<Matrix4f> bends, java.util.List<Float> widths, int h, int light) {
         int frame = st.hasProperty(TelevisionBlock.FRAME) ? st.getValue(TelevisionBlock.FRAME) : 0;
-        String tex = switch (frame) {
-            case 1 -> "block/television_case_white";
-            case 2 -> "block/television_case_wood";
-            case 3 -> "block/television_case_retro";
-            default -> "block/television_case";
+        String tex = (st.is(com.example.skyblocks.ModBlocks.GAMING_MONITOR.get()) ? "block/gaming_monitor_case" : "block/television_case") + switch (frame) {
+            case 1 -> "_white";
+            case 2 -> "_wood";
+            case 3 -> "_retro";
+            default -> "";
         };
         net.minecraft.client.renderer.texture.TextureAtlasSprite sp = net.minecraft.client.Minecraft.getInstance()
                 .getTextureAtlas(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS)
@@ -200,6 +200,40 @@ public class TelevisionRenderer implements BlockEntityRenderer<TelevisionBlockEn
                 .setLight(light).setNormal(n.x, n.y, n.z);
     }
 
+    /**
+     * A gaming monitor's light: a line of colour along its bottom edge, running along it - each part as bright as its
+     * band of what it plays (low at the left), softly breathing when nothing does.
+     */
+    private static void rgbEdge(MultiBufferSource buffers, Matrix4f m, TelevisionBlockEntity be, @org.jetbrains.annotations.Nullable VideoPlayer player, float w) {
+        float t = (be.getLevel() == null ? 0 : be.getLevel().getGameTime() % 72000) / 20.0F + net.minecraft.client.Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false) / 20.0F;
+        float[] bands = player != null && player.state() == VideoPlayer.State.PLAYING ? player.bands() : null;
+        VertexConsumer v = buffers.getBuffer(RenderType.lightning());
+        int parts = Math.max(8, Math.round(w * 8));
+        float y0 = 0.18F / 16, y1 = 0.82F / 16, z = FRONT - 0.003F;
+        for (int i = 0; i < parts; i++) {
+            float xa = 1 - EDGE * 0.5F - (w - EDGE) * i / parts, xb = 1 - EDGE * 0.5F - (w - EDGE) * (i + 1) / parts;
+            float bright = bands != null ? 0.35F + 0.65F * bands[Math.min(15, i * 16 / parts)] : 0.25F + 0.15F * net.minecraft.util.Mth.sin(t * 1.5F);
+            float hue = t * 0.12F - i / (float) parts * 0.6F;
+            hue -= net.minecraft.util.Mth.floor(hue);
+            int rgb = net.minecraft.util.Mth.hsvToRgb(hue, 0.85F, 1.0F);
+            int c = 0xFF000000 | (int) ((rgb >> 16 & 255) * bright) << 16 | (int) ((rgb >> 8 & 255) * bright) << 8 | (int) ((rgb & 255) * bright);
+            for (int side = 0; side < 2; side++) {
+                float za = side == 0 ? z : z;
+                if (side == 0) {
+                    v.addVertex(m, xa, y0, za).setColor(c);
+                    v.addVertex(m, xb, y0, za).setColor(c);
+                    v.addVertex(m, xb, y1, za).setColor(c);
+                    v.addVertex(m, xa, y1, za).setColor(c);
+                } else {
+                    v.addVertex(m, xa, y1, za).setColor(c);
+                    v.addVertex(m, xb, y1, za).setColor(c);
+                    v.addVertex(m, xb, y0, za).setColor(c);
+                    v.addVertex(m, xa, y0, za).setColor(c);
+                }
+            }
+        }
+    }
+
     /** Into a column's frame (pushed): x from 1 (its left, as you look at it) to 0, y from its bottom up, its front at FRONT. */
     private static void column(PoseStack poseStack, BlockPos anchor, com.example.skyblocks.TvWall.Column c) {
         poseStack.pushPose();
@@ -214,6 +248,9 @@ public class TelevisionRenderer implements BlockEntityRenderer<TelevisionBlockEn
         Matrix4f m = poseStack.last().pose();
         float left = 1 - EDGE, right = 1 - w + EDGE, bottom = EDGE, top = h - EDGE;
         boolean on = !be.source().isEmpty();
+        if (be.getBlockState().is(com.example.skyblocks.ModBlocks.GAMING_MONITOR.get())) {
+            rgbEdge(buffers, m, be, player, w);
+        }
         if (glassToo) {
             VertexConsumer glass = buffers.getBuffer(RenderType.textBackground());
             int g = on ? 0xFF050608 : 0xFF0C0D11;

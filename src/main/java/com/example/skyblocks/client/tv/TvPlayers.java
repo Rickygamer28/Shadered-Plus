@@ -216,6 +216,21 @@ public final class TvPlayers {
         return HEARD;
     }
 
+    private static final float[] NEAR = new float[16];
+
+    /** The 16 bands of what plays near a place (0-1, fainter further off; up to {@code dist} blocks). Shared: copy to keep. */
+    public static float[] bandsNear(Vec3 at, double dist) {
+        java.util.Arrays.fill(NEAR, 0);
+        for (VideoPlayer p : PLAYERS.values()) {
+            if (p.state() != VideoPlayer.State.PLAYING) continue;
+            float w = (float) Math.max(0, 1 - p.at().distanceTo(at) / dist);
+            if (w <= 0) continue;
+            float[] b = p.bands();
+            for (int i = 0; i < 16; i++) NEAR[i] = Math.max(NEAR[i], b[i] * w);
+        }
+        return NEAR;
+    }
+
     /** The speakers within 24 blocks of a screen (up to 8): they play its sound too. */
     private static java.util.List<Vec3> speakersNear(Minecraft mc, Vec3 centre) {
         java.util.List<Vec3> speakers = new java.util.ArrayList<>();

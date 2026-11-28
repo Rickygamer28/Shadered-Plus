@@ -223,6 +223,19 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 4)
                     .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
 
+    /** A gaming monitor: a television in a monitor's frame, with colour-shifting light along its bottom edge (TelevisionBlock). */
+    public static final DeferredBlock<TelevisionBlock> GAMING_MONITOR = BLOCKS.registerBlock("gaming_monitor", TelevisionBlock::new,
+            BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 5)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+    /** A gaming PC tower, lit inside (GamingGearBlock). */
+    public static final DeferredBlock<GamingGearBlock> GAMING_PC = BLOCKS.registerBlock("gaming_pc", p -> new GamingGearBlock(p, false),
+            BlockBehaviour.Properties.of().strength(2.0F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 7)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+    /** A gaming keyboard and mouse (GamingGearBlock). */
+    public static final DeferredBlock<GamingGearBlock> GAMING_KEYBOARD = BLOCKS.registerBlock("gaming_keyboard", p -> new GamingGearBlock(p, true),
+            BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 3)
+                    .mapColor(net.minecraft.world.level.material.MapColor.COLOR_BLACK));
+
     public static final DeferredBlock<BeatLampBlock> BEAT_LAMP = BLOCKS.registerBlock("beat_lamp", BeatLampBlock::new,
             BlockBehaviour.Properties.of().strength(0.6F).sound(SoundType.GLASS).noOcclusion().lightLevel(state -> 7));
 

@@ -53,9 +53,11 @@ public final class ModBlockEntities {
             () -> BlockEntityType.Builder.of(BrickHearthBlockEntity::new, ModBlocks.BRICK_HEARTH.get()).build(null));
 
     public static final Supplier<BlockEntityType<TelevisionBlockEntity>> TELEVISION = TYPES.register("television",
-            () -> BlockEntityType.Builder.of(TelevisionBlockEntity::new, ModBlocks.TELEVISION.get()).build(null));
+            () -> BlockEntityType.Builder.of(TelevisionBlockEntity::new, ModBlocks.TELEVISION.get(), ModBlocks.GAMING_MONITOR.get()).build(null));
     public static final Supplier<BlockEntityType<TelevisionBlockEntity>> PROJECTOR = TYPES.register("projector",
             () -> BlockEntityType.Builder.of(TelevisionBlockEntity::new, ModBlocks.PROJECTOR.get()).build(null));
+    public static final Supplier<BlockEntityType<GamingGearBlockEntity>> GAMING_GEAR = TYPES.register("gaming_gear",
+            () -> BlockEntityType.Builder.of(GamingGearBlockEntity::new, ModBlocks.GAMING_PC.get(), ModBlocks.GAMING_KEYBOARD.get()).build(null));
     public static final Supplier<BlockEntityType<BeatLampBlockEntity>> BEAT_LAMP = TYPES.register("beat_lamp",
             () -> BlockEntityType.Builder.of(BeatLampBlockEntity::new, ModBlocks.BEAT_LAMP.get()).build(null));
     public static final Supplier<BlockEntityType<NeonSignBlockEntity>> NEON_SIGN = TYPES.register("neon_sign",

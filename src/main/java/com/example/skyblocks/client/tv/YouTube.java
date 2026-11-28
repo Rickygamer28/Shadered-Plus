@@ -236,6 +236,67 @@ final class YouTube {
         return visitor;
     }
 
+    /** The first song YouTube Music finds for these words (its video id), or - none - the first video YouTube does. */
+    @Nullable
+    static String searchSong(String words) {
+        String visitor = visitorData(false);
+        com.google.gson.JsonPrimitive query = new com.google.gson.JsonPrimitive(words);
+        for (int attempt = 0; attempt < 3; attempt++) {
+            boolean remix = attempt < 2;
+            String host = remix ? "https://music.youtube.com" : "https://www.youtube.com";
+            String ctx = "{\"client\":{\"clientName\":\"" + (remix ? "WEB_REMIX" : "WEB") + "\",\"clientVersion\":\""
+                    + (remix ? "1.20250310.01.00" : "2.20250312.04.00") + "\",\"hl\":\"en\",\"gl\":\"US\""
+                    + (visitor.isEmpty() ? "" : ",\"visitorData\":\"" + visitor + "\"") + "}}";
+            // (songs only, first; then anything YouTube Music has; then YouTube)
+            String body = "{\"context\":" + ctx + ",\"query\":" + query + (attempt == 0 ? ",\"params\":\"EgWKAQIIAWoMEA4QChADEAQQCRAF\"" : "") + "}";
+            try {
+                HttpRequest.Builder rb = HttpRequest.newBuilder(URI.create(host + "/youtubei/v1/search?prettyPrint=false"))
+                        .timeout(Duration.ofSeconds(15))
+                        .header("Content-Type", "application/json")
+                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
+                        .header("Origin", host).header("Referer", host + "/").header("Cookie", "SOCS=CAISAiAD");
+                if (!visitor.isEmpty()) rb.header("X-Goog-Visitor-Id", visitor);
+                HttpResponse<String> res = HTTP.send(rb.POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofString());
+                if (res.statusCode() != 200) continue;
+                String id = firstVideo(JsonParser.parseString(res.body()), remix ? "musicResponsiveListItemRenderer" : "videoRenderer");
+                if (id != null) {
+                    com.example.skyblocks.SkyBlocksMod.LOGGER.info("Shadered+ television: \"{}\" found as {}", words, id);
+                    return id;
+                }
+            } catch (Exception e) {
+                // (next way)
+            }
+        }
+        return null;
+    }
+
+    /** The first video of this kind of result anywhere in a search's answer. */
+    @Nullable
+    private static String firstVideo(com.google.gson.JsonElement el, String kind) {
+        if (el.isJsonArray()) {
+            for (com.google.gson.JsonElement e : el.getAsJsonArray()) {
+                String f = firstVideo(e, kind);
+                if (f != null) return f;
+            }
+            return null;
+        }
+        if (!el.isJsonObject()) return null;
+        JsonObject o = el.getAsJsonObject();
+        if (o.has(kind) && o.get(kind).isJsonObject()) {
+            JsonObject r = o.getAsJsonObject(kind);
+            if (r.has("videoId")) return r.get("videoId").getAsString();
+            if (r.has("playlistItemData") && r.getAsJsonObject("playlistItemData").has("videoId")) {
+                return r.getAsJsonObject("playlistItemData").get("videoId").getAsString();
+            }
+            return null; // (an artist, an album: not a song)
+        }
+        for (var e : o.entrySet()) {
+            String f = firstVideo(e.getValue(), kind);
+            if (f != null) return f;
+        }
+        return null;
+    }
+
     /** YouTube's player answer for a video, asked as this app; null if it didn't answer. */
     @Nullable
     private static JsonObject player(Client c, String id) throws Exception {

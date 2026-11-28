@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "skyblocks:block/gaming_pc"
+    },
+    "facing=east": {
+      "model": "skyblocks:block/gaming_pc",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "skyblocks:block/gaming_pc",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "skyblocks:block/gaming_pc",
+      "y": 270
+    }
+  }
+}

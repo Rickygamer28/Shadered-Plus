@@ -1,0 +1,64 @@
+{
+  "variants": {
+    "facing=north,frame=0": {
+      "model": "skyblocks:block/gaming_monitor"
+    },
+    "facing=north,frame=1": {
+      "model": "skyblocks:block/gaming_monitor_white"
+    },
+    "facing=north,frame=2": {
+      "model": "skyblocks:block/gaming_monitor_wood"
+    },
+    "facing=north,frame=3": {
+      "model": "skyblocks:block/gaming_monitor_retro"
+    },
+    "facing=east,frame=0": {
+      "model": "skyblocks:block/gaming_monitor",
+      "y": 90
+    },
+    "facing=east,frame=1": {
+      "model": "skyblocks:block/gaming_monitor_white",
+      "y": 90
+    },
+    "facing=east,frame=2": {
+      "model": "skyblocks:block/gaming_monitor_wood",
+      "y": 90
+    },
+    "facing=east,frame=3": {
+      "model": "skyblocks:block/gaming_monitor_retro",
+      "y": 90
+    },
+    "facing=south,frame=0": {
+      "model": "skyblocks:block/gaming_monitor",
+      "y": 180
+    },
+    "facing=south,frame=1": {
+      "model": "skyblocks:block/gaming_monitor_white",
+      "y": 180
+    },
+    "facing=south,frame=2": {
+      "model": "skyblocks:block/gaming_monitor_wood",
+      "y": 180
+    },
+    "facing=south,frame=3": {
+      "model": "skyblocks:block/gaming_monitor_retro",
+      "y": 180
+    },
+    "facing=west,frame=0": {
+      "model": "skyblocks:block/gaming_monitor",
+      "y": 270
+    },
+    "facing=west,frame=1": {
+      "model": "skyblocks:block/gaming_monitor_white",
+      "y": 270
+    },
+    "facing=west,frame=2": {
+      "model": "skyblocks:block/gaming_monitor_wood",
+      "y": 270
+    },
+    "facing=west,frame=3": {
+      "model": "skyblocks:block/gaming_monitor_retro",
+      "y": 270
+    }
+  }
+}

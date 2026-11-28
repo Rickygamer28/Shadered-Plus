@@ -35,7 +35,7 @@ final class Playlist {
 
     /** Whether a source is a playlist. */
     static boolean is(String src) {
-        return src.startsWith("files:") || src.contains("youtu") && LIST.matcher(src).find();
+        return src.startsWith("files:") || src.contains("youtu") && LIST.matcher(src).find() || Spotify.is(src);
     }
 
     static List2 resolve(String src) throws Exception {
@@ -48,6 +48,14 @@ final class Playlist {
                 }
             }
             return new List2(out, 0);
+        }
+        if (Spotify.is(src)) {
+            List<Entry> songs = CACHE.get(src);
+            if (songs == null) {
+                songs = Spotify.songs(src);
+                CACHE.put(src, songs);
+            }
+            return new List2(songs, 0);
         }
         Matcher lm = LIST.matcher(src);
         lm.find();

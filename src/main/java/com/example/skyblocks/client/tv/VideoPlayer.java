@@ -194,6 +194,16 @@ public final class VideoPlayer {
                     src = l.entries().get(i).source();
                     title = l.entries().get(i).title();
                 }
+                String songTitle = null, songArtist = null;
+                if (src.startsWith(Spotify.SEARCH)) {
+                    // (a song from Spotify: found on YouTube Music, by its name and artist)
+                    songTitle = Spotify.title(src);
+                    songArtist = Spotify.artist(src);
+                    src = Spotify.find(src);
+                    if (gen != startGen) {
+                        return;
+                    }
+                }
                 String id = YouTube.id(src);
                 if (src.startsWith(YouTube.HLS)) {
                     // (an HLS list read by Java, as YouTube's are - for trying that way out)
@@ -211,7 +221,8 @@ public final class VideoPlayer {
                     audioUrl = s.audio();
                     if (src.contains("music.youtube.com") && !live) {
                         // (a song: its cover and words instead of its video - only its sound is read)
-                        music = Music.load(s.title(), s.author(), s.thumbnail(), id, s.seconds());
+                        music = Music.load(songTitle != null ? songTitle : s.title(), songArtist != null && !songArtist.isEmpty() ? songArtist : s.author(),
+                                s.thumbnail(), id, s.seconds());
                         videoUrl = java.util.List.of();
                     }
                 } else if (src.startsWith("file:") || looksLikePath(src)) {

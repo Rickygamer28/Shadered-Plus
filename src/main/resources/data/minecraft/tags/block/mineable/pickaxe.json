@@ -68,6 +68,9 @@
     "skyblocks:beat_lamp",
     "skyblocks:projector",
     "skyblocks:tv_stand",
-    "skyblocks:tv_wall_mount"
+    "skyblocks:tv_wall_mount",
+    "skyblocks:gaming_monitor",
+    "skyblocks:gaming_pc",
+    "skyblocks:gaming_keyboard"
   ]
 }
